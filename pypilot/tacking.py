@@ -10,6 +10,54 @@
 from signalk.values import *
 from resolv import *
 
+class TackSensorLog(object):
+  def __init__(self, threshold):
+    self.log = []
+    self.time = time.time()
+    self.threshold = threshold
+
+  def update(self, value):
+    t = time.time()
+    dt = t - self.time
+    # limit update rate
+    if dt < .25:
+      return False
+
+    self.time = t
+
+    # if lagged by second or more, reset
+    if dt > 1:
+      self.log = []
+      return False
+    
+    
+    if len(self.log) < 20:
+      self.log.append(value)
+      return
+
+    self.log = self.log[1:] + [value]
+    port, starboard = True, True
+    avg = 0
+    for d in self.log:
+      if d <= -self.threshold:
+        starboard = False
+      if d >= self.threshold:
+        port = False
+      avg += d
+
+    avg /= len(self.log)
+    if avg <= 0:
+      starboard = False
+    if avg >= 0:
+      port = False
+
+    if starboard:
+      return 'starboard'
+    if port:
+      return 'port'
+    return False
+
+
 class Tack(object):
   def __init__(self, ap):
     self.ap = ap
@@ -30,8 +78,10 @@ class Tack(object):
     self.count = self.Register(ResettableValue, 'count', 0, persistent=True)
     self.direction = self.Register(EnumProperty, 'direction', 'port', ['port', 'starboard'])
     self.current_direction = 'port' # so user can't change while tacking
-    self.direction_heel = 0
-    self.direction_heel_time = 0
+    self.time = time.time()
+
+    self.wind_log = TackSensorLog(12)
+    self.heel_log = TackSensorLog(7)
 
   def Register(self, _type, name, *args, **kwargs):
     return self.ap.server.Register(_type(*(['ap.tack.' + name] + list(args)), **kwargs))
@@ -43,33 +93,27 @@ class Tack(object):
     if not self.ap.enabled.value:
       self.state.set('none')
 
-    # simple lowpass heel
-    self.direction_heel = self.ap.boatimu.heel * .1 + self.direction_heel * .9
-
     if self.state.value == 'none': # not tacking
       # if we have wind data, use it to determine the tacking direction
+      r = False
       if self.ap.sensors.wind.source.value != 'none':
-        if self.ap.sensors.wind.direction.value < 180:
-            self.direction.update('starboard')
-        else:
-            self.direction.update('port')
-      elif self.direction_heel_time > 30:
-        # if we have tacked more than 30 seconds ago, and heeling
-        # more than 10 degrees, use this to update tacking direction
-        if self.direction_heel > 10:
-            self.direction.update('starboard')
-        elif self.direction_heel < -10:
-            self.direction.update('port')
+        d = resolv(self.ap.sensors.wind.direction.value)
+        r = self.wind_log.update(d)
+      elif t-self.time > 30:
+        r = self.heel_log.update(self.ap.boatimu.heel)
+
+      if r:
+        self.direction.update(r)
 
     # tacking initiated, enter waiting state
     if self.state.value == 'begin':
-      self.begin_time = t
+      self.time = t
       self.current_direction = self.direction.value
       self.state.set('waiting')
 
     # waiting to tack, update timeout
     if self.state.value == 'waiting':
-      remaining = self.delay.value - (t - self.begin_time)
+      remaining = self.delay.value - (t - self.time)
       if remaining > 0:
         self.timeout.set(remaining)
       else:

@@ -54,7 +54,7 @@ class SignalKScope(SignalKScopeBase):
                     self.watches[name] = True
                     watches.remove(name)
         for arg in watches:
-            print 'value not found:', arg
+            print('value not found:', arg)
 
         self.on_con(self.client)
 
@@ -117,7 +117,7 @@ class SignalKScope(SignalKScopeBase):
         self.plot.fft_on = self.cbfftw.GetValue()
 
         if self.plot_reshape:
-            apply(self.plot.reshape, self.plot_reshape)
+            self.plot.reshape(*self.plot_reshape)
             self.plot_reshape = False
 
         self.plot.display()
@@ -192,7 +192,7 @@ class SignalKScope(SignalKScopeBase):
 
     def onTime(self, event):
         self.plot.disptime = self.sTime.GetValue()
-	self.glArea.Refresh()
+        self.glArea.Refresh()
 
     def onClose( self, event ):
         self.Close()

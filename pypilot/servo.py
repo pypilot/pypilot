@@ -557,7 +557,7 @@ class Servo(object):
         if result & ServoTelemetry.MOTOR_TEMP:
             self.motor_temp.set(self.driver.motor_temp)
         if result & ServoTelemetry.RUDDER:
-            if not math.isnan(self.driver.rudder):
+            if self.driver.rudder and not math.isnan(self.driver.rudder):
                 data = {'angle': self.driver.rudder, 'timestamp' : t,
                         'device': self.device.path}
                 self.sensors.write('rudder', data, 'servo')

@@ -88,19 +88,24 @@ def parse_nmea_wind(line):
         return False
 
     data = line.split(',')
+    msg = {}
     try:
-        direction = float(data[1])
-        speed = float(data[3])
+        msg['direction'] = float(data[1])
     except:
-        direction = 0 # should it be 'N/A' ??
-        speed = 0
+        pass
+
+    try:
+        speed = float(data[3])
+        speedunit = data[4]
+        if speedunit == 'K': # km/h
+            speed *= .53995
+        elif speedunit == 'M': # m/s
+            speed *= 1.94384
+        msg['speed'] = speed
+    except:
+        pass
         
-    speedunit = data[4]
-    if speedunit == 'K': # km/h
-        speed *= .53995
-    elif speedunit == 'M': # m/s
-        speed *= 1.94384
-    return 'wind', {'direction': direction, 'speed': speed}
+    return 'wind', msg
 
 def parse_nmea_rudder(line):
     if line[3:6] != 'RSA':
@@ -190,7 +195,11 @@ class NMEASocket(object):
                 if self.sendfailcount == self.failcountmsg:
                     print 'nmea socket', self.socket.fileno(), 'failed to send', self.sendfailcount
                     self.failcountmsg *= 10 # print only at 1, 10, 100 etc frequency
+                    
                 self.out_buffer = '' # drop nmea data
+                if self.sendfailcount > 100:
+                    print 'closing nmea socket', self.socket.fileno()
+                    self.socket.close() # fail to send too many times, close socket
                 return
             count = self.socket.send(self.out_buffer)
             if count < 0:
