@@ -52,7 +52,7 @@ def check_nmea_cksum(line):
         return False
 
 def parse_nmea_gps(line):
-    if line[:6] != '$GPRMC':
+    if line[3:6] != 'RMC':
         return False
 
     try:
@@ -269,6 +269,7 @@ class Nmea(object):
             if result:
                 name, msg = result
                 msg['device'] = device.path[0]
+                #msg['id'] = line[1:3]
                 serial_msgs[name] = msg
                 break
 
@@ -419,6 +420,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
             if result:
                 name, msg = result
                 msg['device'] = device
+                #+ line[1:3]
                 msgs[name] = msg
                 return
 
