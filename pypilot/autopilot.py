@@ -260,10 +260,10 @@ class Autopilot(object):
       compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
       headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
 
-      #switch back to the last mode if possible
+      #switch back to the lost mode if possible
       if self.lost_mode.value and self.lastmode in self.sensors.sensors and \
          self.sensors.sensors[self.lastmode].source.value != 'none':
-        mode_found()
+        self.mode_found()
 
       #update wind and gps offsets
       if self.sensors.gps.source.value != 'none':
@@ -296,15 +296,12 @@ class Autopilot(object):
               self.mode_lost('wind')
 
           wind_speed = self.wind_speed.value
-          if wind_speed < 1: # below 1 knots wind speed, not reliable
-              self.mode_lost('gps')
           gps_speed = self.gps_speed.value
-          if gps_speed < 1:
-              self.mode_lost('wind')
 
           rd = math.radians(self.wind_direction.value)
           windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
           truewindd = math.degrees(math.atan2(windv[0], windv[1] - gps_speed))
+          print 'truewindd', truewindd
 
           offset = resolv(truewindd + compass_heading, self.true_wind_compass_offset.value)
           d = .005
