@@ -56,10 +56,10 @@ for walk in os.walk('lcd/locale'):
         if file[len(file)-3:] == '.mo':
             locale_files.append(os.path.join(path, file))
 
-from pypilot import autopilot
-            
+from pypilot import version
+
 setup (name = 'pypilot',
-       version = autopilot.strversion,
+       version = version.strversion,
        description = 'pypilot sailboat autopilot',
        license = 'GPLv3',
        author="Sean D'Epagnier",
