@@ -385,8 +385,8 @@ class BoatIMU(object):
     data['heel'] = self.heel = data['roll']*.03 + self.heel*.97
     #data['roll'] -= data['heel']
 
-    data['gyro'] = map(math.degrees, data['gyro'])
-    data['gyrobias'] = map(math.degrees, data['gyrobias'])
+    data['gyro'] = list(map(math.degrees, data['gyro']))
+    data['gyrobias'] = list(map(math.degrees, data['gyrobias']))
 
     # lowpass heading and rate
     llp = self.heading_lowpass_constant.value
@@ -419,7 +419,7 @@ class BoatIMU(object):
       self.alignmentPose = [0, 0, 0, 0]
 
     if self.alignmentCounter.value > 0:
-      self.alignmentPose = map(lambda x, y : x + y, self.alignmentPose, data['fusionQPose'])
+      self.alignmentPose = list(map(lambda x, y : x + y, self.alignmentPose, data['fusionQPose']))
       self.alignmentCounter.set(self.alignmentCounter.value-1)
 
       if self.alignmentCounter.value == 0:

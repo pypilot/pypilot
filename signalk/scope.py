@@ -220,11 +220,11 @@ class SignalKPlot():
     # because glutbitmapcharacter doesn't get the glcolor unless the raster position is set
     def synccolor(self):
         vp = glGetDoublev(GL_VIEWPORT)
-        apply(glRasterPos2d, self.lastrasterpos);
+        glRasterPos2d(*self.lastrasterpos)
 
     def rasterpos(self, pos):
         #pos = glGetDoublev(GL_CURRENT_RASTER_POSITION)
-        apply(glRasterPos2d, pos)
+        glRasterPos2d(*pos)
         self.lastrasterpos = pos
 
     def drawticks(self):
@@ -271,13 +271,13 @@ class SignalKPlot():
         SignalKPlot.drawputs("name: %s offset: %g  value: %g  visible: %s  " % \
                  (self.curtrace.name, self.curtrace.offset, val, 'T' if self.curtrace.visible else 'F'))
         glColor3d(1, 1, 1)
-        self.synccolor()
+        #self.synccolor()
         SignalKPlot.drawputs("scale: %g  time: %g  " % (self.scale, self.disptime))
         
         glColor3dv(self.curtrace.color)
-        self.synccolor()
+        #self.synccolor()
         
-        SignalKPlot.drawputs("noise: %g" % self.curtrace.noise());
+        SignalKPlot.drawputs("noise: %g" % self.curtrace.noise())
 
     def init(self, value_list):
         glClearColor (0.0, 0.0, 0.0, 0.0)
@@ -406,7 +406,7 @@ class SignalKPlot():
 
 def main():
     def usage():
-        print 'usage: ' + sys.argv[0] + ' [host] [VAR1] [VAR2] .. [VARN]'
+        print('usage: ' + sys.argv[0] + ' [host] [VAR1] [VAR2] .. [VARN]')
         exit(1)
 
     if len(sys.argv) < 2:
@@ -419,7 +419,7 @@ def main():
     if not client.have_watches:
         usage()
     
-    print 'connected'
+    print('connected')
     def idle():
         while True:
             try:

@@ -40,7 +40,7 @@ extern "C" {
 #define DAVIS     // uncomment only for davis sensors
 //#define CCW   //  voltage decreases with wind direction (not davis!)
 
-#define LCD_BL_HIGH  // if backlight pin is high rather than gnd
+//#define LCD_BL_HIGH  // if backlight pin is high rather than gnd
 //#define FARENHEIT
 
 #ifdef LCD

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -10,6 +10,7 @@
 # the pipe server communicates traffic via a pipe to
 # offload socket and parsing work to a separate process
 
+from __future__ import print_function
 import time
 from server import SignalKServer, DEFAULT_PORT, default_persistent_path, LoadPersistentData
 from values import *
@@ -35,7 +36,7 @@ class NonBlockingPipeEnd(object):
         if self.pollin.poll(1000.0*timeout):
             return self.pipe.recv()
         if not self.recvfailok:
-            print 'error pipe block on recv!', self.name
+            print('error pipe block on recv!', self.name)
         return False
 
     def send(self, value, block=True):
@@ -45,7 +46,7 @@ class NonBlockingPipeEnd(object):
         
         self.sendfailcount += 1
         if self.sendfailcount == self.failcountmsg:
-            print 'pipe full (%d)' % self.sendfailcount, self.name, 'cannot send'
+            print('pipe full (%d)' % self.sendfailcount, self.name, 'cannot send')
             self.failcountmsg *= 10
         return False
 
@@ -107,7 +108,7 @@ class SignalKPipeServerClient(SignalKServer):
             del self.watches[name]
             self.pipe.send({'method': 'watch', 'name': name, 'value': False})
         else:
-          print 'unimplemented pipe method', method
+          print('unimplemented pipe method', method)
 
     def HandlePipeMessage(self):
         msgs = self.pipe.recv()
@@ -140,7 +141,7 @@ class SignalKPipeServerClient(SignalKServer):
         return True
 
 def pipe_server_process(pipe, port, persistent_path):
-    #print 'pipe server on', os.getpid()
+    #print('pipe server on', os.getpid())
     server = SignalKPipeServerClient(pipe, port, persistent_path)
     # handle only pipe messages (to get all registrations) for first second
     t0 = time.time()
@@ -255,7 +256,7 @@ class SignalKPipeServer(object):
 
             dta = time.time() - ta
             if dta > .02:
-              print 'too long to send sets down pipe', dta, l
+              print('too long to send sets down pipe', dta, l)
 
         while True:
             request = self.pipe.recv()
@@ -265,7 +266,7 @@ class SignalKPipeServer(object):
                 break
     
 if __name__ == '__main__':
-    print 'pipe server demo'
+    print('pipe server demo')
     server = SignalKPipeServer()
 #    server = SignalKServer()
     test_sensor = server.Register(SensorValue('sensor', server.TimeStamp('testtime')))
@@ -280,4 +281,3 @@ if __name__ == '__main__':
         test_sensor.set(test_sensor.value+1)
         server.HandleRequests()
         time.sleep(.02)
-

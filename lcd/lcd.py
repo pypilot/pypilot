@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import sys, os, time, math
 
 import gettext
@@ -16,22 +17,22 @@ _ = lambda x : x # initially no translation
 orangepi = False
 try:
     import RPi.GPIO as GPIO
-    print 'have gpio for raspberry pi'
+    print('have gpio for raspberry pi')
 
 except ImportError:
     try:
         import OPi.GPIO as GPIO
         orangepi = True
-        print 'have gpio for orange pi'
+        print('have gpio for orange pi')
     except:
-        print 'No gpio available'
+        print('No gpio available')
         GPIO = None
 
 try:
     import pylirc as LIRC
-    print 'have lirc for remote control'
+    print('have lirc for remote control')
 except:
-    print 'no lirc available'
+    print('no lirc available')
     LIRC = None
 
 from signalk.client import SignalKClient
@@ -174,14 +175,14 @@ class LCDClient():
         self.config['lcd'] = 'default'
         self.gains = []
 
-        print 'loading load config file:', self.configfilename
+        print('loading load config file:', self.configfilename)
         try:
             file = open(self.configfilename)
             config = json.loads(file.readline())
             for name in config:
                 self.config[name] = config[name]
         except:
-            print 'failed to load config file:', self.configfilename
+            print('failed to load config file:', self.configfilename)
 
         lcd = False
         for possible_lcd in ['nokia5110', 'default', 'none']:
@@ -194,26 +195,26 @@ class LCDClient():
             self.config['lcd'] = lcd
         lcd = self.config['lcd']
 
-        print 'Using lcd', lcd
+        print('Using lcd', lcd)
 
         self.use_glut = False
         if lcd == 'none':
             screen = None
         elif lcd == 'nokia5110':
-            print 'using nokia5110'
+            print('using nokia5110')
             screen = ugfx.nokia5110screen()
         else:
             self.use_glut = 'DISPLAY' in os.environ
         
             if self.use_glut:
-                print 'using glut'
+                print('using glut')
                 import glut
                 #screen = glut.screen((120, 210))
                 #screen = glut.screen((64, 128))
                 screen = glut.screen((48, 84))
                 #screen = glut.screen((96, 168))
             else:
-                print 'using framebuffer'
+                print('using framebuffer')
                 screen = ugfx.screen("/dev/fb0")
 
             if screen.width > 480:
@@ -227,7 +228,7 @@ class LCDClient():
             self.bw = 1 if w < 256 else False
 
             width = min(w, 48*mul)
-            self.surface = ugfx.surface(width, width*h/w, screen.bypp, None)
+            self.surface = ugfx.surface(width, int(width*h/w), screen.bypp, None)
             self.frameperiod = .25 # 4 frames a second possible
 
         else:
@@ -291,7 +292,7 @@ class LCDClient():
                 try:
                     GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
                 except Exception as e:
-                    print 'WARNING', e
+                    print('WARNING', e)
 
         global LIRC
         if LIRC:
@@ -299,7 +300,7 @@ class LCDClient():
                 LIRC.init('pypilot')
                 self.lirctime = False
             except:
-                print 'failed to initialize lirc. is .lircrc missing?'
+                print('failed to initialize lirc. is .lircrc missing?')
                 LIRC = None
 
     def get(self, name):
@@ -307,11 +308,14 @@ class LCDClient():
             self.client.get(name)
 
     def set_language(self, name):
-        language = gettext.translation('pypilot_lcdclient',
-                                       os.path.abspath(os.path.dirname(__file__)) + '/locale',
-                                       languages=[name], fallback=True)
-        global _
-        _ = language.ugettext
+        try:
+            language = gettext.translation('pypilot_lcdclient',
+                                           os.path.abspath(os.path.dirname(__file__)) + '/locale',
+                                           languages=[name], fallback=True)
+            global _
+            _ = language.ugettext
+        except Exception as e:
+            print('no languages', e)
         self.config['language'] = name
 
     def save_config(self):
@@ -319,7 +323,7 @@ class LCDClient():
             file = open(self.configfilename, 'w')
             file.write(json.dumps(self.config) + '\n')
         except IOError:
-            print 'failed to save config file:', self.configfilename
+            print('failed to save config file:', self.configfilename)
             
     def create_mainmenu(self):
         def value_edit(name, desc, signalk_name, value=False):
@@ -391,10 +395,9 @@ class LCDClient():
                 n = gain[gain.rfind('.')+1:]
                 return value_edit(n, n, gain, True)
             
-            gain_list = map(gain_edit, curgains())
             self.menu = LCDMenu(self, _('Gain'),
                                 [(_('pilot'), pilot)] +
-                                gain_list,
+                                map(gain_edit, curgains()),
                                  self.menu)
             return self.display_menu
 
@@ -507,11 +510,11 @@ class LCDClient():
                             f.write(setting+'='+self.wifi_settings[setting]+'\n')
                         f.close()
                     except Exception as e:
-                        print 'exception writing', networking, ':', e
+                        print('exception writing', networking, ':', e)
 
                 def select_wifi_ap_toggle(ap):
                     def thunk():
-                        print 'modet', mode
+                        print('modet', mode)
                         self.wifi_settings['mode'] = 'Master' if ap else 'Managed'
                         write()
                         return self.display_menu
@@ -612,7 +615,7 @@ class LCDClient():
         return float(size[0])/self.surface.width, float(size[1])/self.surface.height
 
     def fittext(self, rect, text, wordwrap=False, fill='none'):
-        #print 'fittext', text, wordwrap, fill
+        #print('fittext', text, wordwrap, fill)
         if fill != 'none':
             self.surface.box(*(self.convrect(rect) + [fill]))
         metric_size = 16
@@ -621,11 +624,12 @@ class LCDClient():
             spacewidth = font.draw(self.surface, False, ' ', metric_size, self.bw)[0]
             if len(words) < 2: # need at least 2 words to wrap
                 return self.fittext(rect, text, False, fill)
-            metrics = map(lambda word : (word, font.draw(self.surface, False, word, metric_size, self.bw)), words)
+            metrics = list(map(lambda word : (word, font.draw(self.surface, False, word, metric_size, self.bw)), words))
 
-            widths = map(lambda metric : metric[1][0], metrics)
-            maxwordwidth = apply(max, widths)
+            widths = list(map(lambda metric : metric[1][0], metrics))
+            maxwordwidth = max(*widths)
             totalwidth = sum(widths) + spacewidth * (len(words) - 1)
+
             size = 0
             # not very efficient... just tries each x position
             # for wrapping to maximize final font size
@@ -682,16 +686,16 @@ class LCDClient():
         return [int(x1*w), int(y1*h), int(x2*w), int(y2*h)]
 
     def invertrectangle(self, rect):
-        apply(self.surface.invert, self.convbox(rect.x, rect.y, rect.x+rect.width, rect.y+rect.height))
+        self.surface.invert(*self.convbox(rect.x, rect.y, rect.x+rect.width, rect.y+rect.height))
     def convrect(self, rect):
         return self.convbox(rect.x, rect.y, rect.x+rect.width, rect.y+rect.height)
 
     def rectangle(self, rect, width = False):
         if not width:
-            apply(self.surface.box, self.convrect(rect) + [white])
+            self.surface.box(*(self.convrect(rect) + [white]))
         else:
             box = self.convrect(rect)
-            apply(self.surface.invert, box)
+            self.surface.invert(*box)
             if width:
                 w, h = self.surface.width - 1, self.surface.height - 1
                 px_width = int(max(1, min(w*width, h*width)))
@@ -730,12 +734,12 @@ class LCDClient():
                 
             if self.value_list:
                 self.display_page = self.display_control
-                print 'connected'
+                print('connected')
             else:
                 client.disconnect()
                 raise 1
         except Exception as e:
-            print e
+            print(e)
             self.client = False
             time.sleep(1)
 
@@ -774,7 +778,7 @@ class LCDClient():
             control['mode'] = mode
             control['modes'] = modes()
 
-        #print 'mode', self.last_val('ap.mode')
+        #print('mode', self.last_val('ap.mode'))
         modes = {'compass': ('C', self.have_compass, rectangle(0, .74, .25, .16)),
                  'gps':     ('G', self.have_gps,     rectangle(.25, .74, .25, .16)),
                  'wind':    ('W', self.have_wind,    rectangle(.5, .74, .25, .16)),
@@ -1040,7 +1044,7 @@ class LCDClient():
                 cal = self.last_val('imu.compass.calibration')
                 deviation = ['%.2f' % cal[1][0], '%.2f' % cal[1][1]]
                 dim = str(int(cal[2]))
-                #print ndeviation
+                #print(ndeviation)
                 names = [(0, _('incomplete')), (.01, _('excellent')), (.02, _('good')),
                          (.04, _('fair')), (.06, _('poor')), (1000, _('bad'))]
                 for n in names:
@@ -1102,7 +1106,7 @@ class LCDClient():
         # status cursor
         w, h = self.surface.width, self.surface.height
         self.blink = self.blink[1], self.blink[0]
-        size = h / 40
+        size = h // 40
         self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
 
     def set(self, name, value):
@@ -1211,7 +1215,7 @@ class LCDClient():
         elif self.display_page == self.display_connecting:
             pass # no keys handled for this page
         else:
-            print 'unknown display page', self.display_page
+            print('unknown display page', self.display_page)
 
         for key in range(len(keynames)):
             if self.keypadup[key]:
@@ -1304,13 +1308,13 @@ class LCDClient():
                 self.keypad[self.lirckey] = 0
                 self.keypadup[self.lirckey] = True
                 self.lirctime = False
-                #print 'keypad', self.keypad, self.keypadup
+                #print('keypad', self.keypad, self.keypadup)
                 
             while True:
                 code = LIRC.nextcode(1)
                 if not code:
                     break
-                print 'LIRC code', code # tracking strange bug...
+                print('LIRC code', code) # tracking strange bug...
                 sys.stdout.flush() # update log so timestamp is accurate
                 repeat = code[0]['repeat']
 
@@ -1347,7 +1351,7 @@ class LCDClient():
             try:
                 result = self.client.receive_single()
             except Exception as e:
-                print 'disconnected', e
+                print('disconnected', e)
                 self.client = False
 
             if not result:
@@ -1360,14 +1364,14 @@ class LCDClient():
 
             for token in ['min', 'max', 'choices', 'AutopilotGain']:
                 if token in data:
-                    #print 'name', name, token, ' = ', data[token]
+                    #print('name', name, token, ' = ', data[token])
                     if not name in self.value_list:
                         self.value_list[name] = {}
                     self.value_list[name][token] = data[token]
 
 
 def main():
-    print 'init...'
+    print('init...')
 
     lcdclient = LCDClient()
     screen = lcdclient.screen
@@ -1375,7 +1379,7 @@ def main():
         # magnify to fill screen
         mag = min(screen.width / lcdclient.surface.width, screen.height / lcdclient.surface.height)
         if mag != 1:
-            print "magnifying lcd surface to fit screen"
+            print("magnifying lcd surface to fit screen")
             magsurface = ugfx.surface(screen)
 
         invsurface = ugfx.surface(lcdclient.surface)

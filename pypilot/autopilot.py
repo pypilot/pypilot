@@ -167,7 +167,6 @@ class Autopilot(object):
     for pilot_type in pilots.default:
       self.pilots.append(pilot_type(self))
 
-    #names = map(lambda pilot : pilot.name, self.pilots)
     self.pilot = self.Register(EnumProperty, 'pilot', 'basic', ['simple', 'basic', 'learning'])
 
     timestamp = self.server.TimeStamp('ap')

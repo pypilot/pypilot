@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -8,10 +8,10 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-import kjson, socket, select, sys, os, time
-from values import *
-from bufferedsocket import LineBufferedNonBlockingSocket
-
+import socket, select, sys, os, time
+from signalk import kjson
+from signalk.values import *
+from signalk.bufferedsocket import LineBufferedNonBlockingSocket
 
 DEFAULT_PORT = 21311
 
@@ -146,8 +146,7 @@ class SignalKClient(object):
         try:
             if not self.poll(timeout):
                 return False
-        except Exception as e:
-            print('exception', type(e))
+        except:
             self.disconnected()
         dt = time.time()-t
         return self.receive_line(timeout - dt)
