@@ -56,7 +56,7 @@ class Sensor(object):
         self.update(data)
                 
         if self.source.value != source:
-            print 'found source for sensor', self.name, 'source', source, 'device', data['device']
+            print 'found', self.name, 'on', source, data['device']
             self.source.set(source)
             self.device = data['device']
         self.lastupdate = time.time()
