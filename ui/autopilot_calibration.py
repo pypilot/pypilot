@@ -82,7 +82,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             ['imu.fusionQPose', 'imu.alignmentCounter', 'imu.heading',
              'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading_offset'],
             calwatch('accel'),
-            calwatch('compass') + ['imu.fusionQPose'],
+            calwatch('compass') + ['imu.fusionQPose', 'imu.alignmentQ'],
             ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity',
              'rudder.range', 'servo.flags']]
 
@@ -156,6 +156,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.timer.Start(50)
         except ConnectionLost:
             self.client = False
+        except Exception as e:
+            print(e)
 
     def request_msg(self, event):
         if not self.client:

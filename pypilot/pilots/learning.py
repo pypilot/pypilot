@@ -9,8 +9,7 @@
 
 from signalk.values import Value
 
-import sys, multiprocessing, select
-sys.path.append('..')
+import multiprocessing, select
 from pilot import AutopilotPilot, AutopilotGain
 from signalk.values import *
 from signalk.pipeserver import NonBlockingPipe
@@ -51,7 +50,7 @@ class LearningPilot(AutopilotPilot):
 
     data = {}
     for sensor in self.meta['sensors']:
-      v = self.ap.server.values[sensor].value:
+      v = self.ap.server.values[sensor].value
       if v:
         data[sensor] = v
     self.history.put(data)

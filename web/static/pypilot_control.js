@@ -17,10 +17,11 @@
     tablinks = document.getElementsByClassName("tablink");
     for (i = 0; i < x.length; i++) {
         tablinks[i].className = tablinks[i].className.replace(" w3-red", "");
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
     }
     document.getElementById(tabName).style.display = "block";
       evt.currentTarget.firstElementChild.className += " w3-red";
-
+      evt.currentTarget.firstElementChild.className += " active";
       currentTab = tabName;
   }
   currentTab="Control";
@@ -530,6 +531,73 @@ $(document).ready(function() {
             $(this).css('left', w/12+"px")
         });
     }
+
+    // Set the theme on page load
+    setTheme( getCookie('theme') )
+
+    // Bind setTheme action when the user change the theme via the radio buttons
+    $('.theme_option').on('click', function(){ setTheme() })
+
     $(window).resize(window_resize);
     window_resize();
 });
+
+/**
+ * When called, setTheme will read selected theme from fround .theme_option and change the theme.
+ * 
+ * @function setTheme
+ * @param themeName {null|string} the name of the theme to apply or null value to read input.theme_option selection (default is null)
+ * @return {string} The applyed theme name.
+ *
+ */
+function setTheme( themeName=null ){
+
+    if(themeName==null){
+        themeName = $('input.theme_option:checked').val()
+    }else{
+        $('input.theme_option:checked').prop("checked", false);
+        $("input.theme_option[value="+themeName+"]" ).prop("checked", true );
+    }
+
+    $('body').attr('theme', themeName )
+    setCookie('theme', themeName)
+
+    // The w3 framework use !important 213 times. So it's impossible to cascade over it. Therefor it must be disabled.
+    if(themeName == 'dark'){
+        $("link[href*='w3.css']").prop('disabled', true);
+    }else{
+        $("link[href*='w3.css']").prop('disabled', false);
+    }
+
+    return themeName
+}
+
+/**
+ * Create or edit a cookie.
+ * 
+ * @function setCookie
+ * @param key {string} The name of the cookie to set/edit.
+ * @param value {string} The value you want to store.
+ * @param expiry {int|number|null} The time to live of the cookie in days (default value is 365 days).
+ * @return {void} This function does not return anything.
+ *
+ */
+function setCookie(key, value, expiry=365) {
+    var expires = new Date();
+    expires.setTime(expires.getTime() + (expiry * 24 * 60 * 60 * 1000));
+    document.cookie = key + '=' + value + ';expires=' + expires.toUTCString();
+}
+
+/**
+ * Get the value of a cookie.
+ * 
+ * @function getCookie
+ * @param key {string} the name of the cookie to query.
+ * @return {string|null} Return the value of the cookie or null if the cooky is not found.
+ *
+ */
+function getCookie(key) {
+    var keyValue = document.cookie.match('(^|;) ?' + key + '=([^;]*)(;|$)');
+    return keyValue ? keyValue[2] : null;
+}
+

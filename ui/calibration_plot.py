@@ -289,7 +289,7 @@ if __name__ == '__main__':
         host = sys.argv[1]
 
     def on_con(client):
-        watchlist = ['imu.accel', 'imu.compass', 'imu.compass.calibration', 'imu.compass.calibration', 'imu.compass.calibration.sigmapoints', 'imu.fusionQPose']
+        watchlist = ['imu.accel', 'imu.compass', 'imu.compass.calibration', 'imu.compass.calibration', 'imu.compass.calibration.sigmapoints', 'imu.fusionQPose', 'imu.alignmentQ']
         for name in watchlist:
             client.watch(name)
         
