@@ -109,7 +109,7 @@ class Sensors(object):
             if sensor.source.value == 'none':
                 continue
             if t - sensor.lastupdate > 8:
-                print 'sensor timeout for', name, 'source', sensor.source.value, t - sensor.lastupdate
+                print 'sensor timeout for', name, 'source', sensor.source.value
                 sensor.source.set('none')
                 sensor.device = None
                 break
@@ -124,9 +124,9 @@ class Sensors(object):
     def lostdevice(self, device):
         # optional routine  useful when a device is
         # unplugged to skip the normal data timeout
-        print 'sensor lost device', device
         for name in self.sensors:
             sensor = self.sensors[name]
-            if sensor.device[2:] == device:
+            if sensor.device and sensor.device[2:] == device:
+                print 'sensor lost device', sensor.device
                 sensor.source.set('none')
                 sensor.device = None
