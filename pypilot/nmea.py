@@ -271,10 +271,15 @@ class Nmea(object):
         self.devices_lastmsg[device] = t
         parsers = []
 
-        # only process if we are the correct device or do not have a device for this data
+        # only process if
+        # 1) current source is lower priority
+        # 2) we do not have a source yet
+        # 3) this the correct device for this data
         for name in nmea_parsers:
             name_device = self.sensors.sensors[name].device
-            if not name_device or name_device[2:] == device.path[0]:
+            current_source = self.sensors.sensors[name].source.value
+            if source_priority[current_source] > source_priority['serial'] or \
+               not name_device or name_device[2:] == device.path[0]:
                 parsers.append(nmea_parsers[name])
 
         # parse the nmea line, and update serial messages
@@ -353,7 +358,9 @@ class Nmea(object):
         t = time.time()
         for name in ['wind', 'rudder'] if self.process.sockets else []:
             dt = t - self.nmea_times[name] if name in self.nmea_times else -1
-            if (dt > .2 or dt < 0) and self.sensors.sensors[name].source.value != 'none':
+            source = self.sensors.sensors[name].source.value
+            # only output to tcp if we have a better source
+            if (dt > .2 or dt < 0) and source_priority[source] < source_priority['tcp']:
                 if name == 'wind':
                     wind = self.sensors.wind
                     self.send_nmea('APMWV,%.3f,R,%.3f,K,A' % (wind.direction.value, wind.speed.value))
