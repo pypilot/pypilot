@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -12,23 +12,34 @@ try:
 except:
   from pypilot.autopilot import *
 
-class SimplePilot(AutopilotPilot):
+class WindPilot(AutopilotPilot):
   def __init__(self, ap):
-    super(SimplePilot, self).__init__('simple', ap)
+    super(WindPilot, self).__init__('wind', ap)
 
+    # wind pilot
     # create simple pid filter
     self.gains = {}
     timestamp = self.ap.server.TimeStamp('ap')
-    self.Gain('P', .005, 0, .025)
-    self.Gain('I', 0, 0, .05)
-    self.Gain('D', .15, 0, .5)
+    def Gain(name, default, max_val):
+      self.gains[name] = {'apgain': self.Register(AutopilotGain, name, default, 0, max_val),
+                          'sensor': self.Register(SensorValue, name+'gain', timestamp)}
+    Gain('P', .005, .025)
+    Gain('I', 0, .05)
+    Gain('D', .15, .5)
+    Gain('WS', .15, .5)
+    
 
   def process_imu_data(self):
     ap = self.ap
+    command = 0
     headingrate = ap.boatimu.SensorValues['headingrate'].value
+
+    wind_speed = ap.sensors.wind.speed
+    
     gain_values = {'P': ap.heading_error.value,
                    'I': ap.heading_error_int.value,
-                   'D': headingrate}
+                   'D': headingrate,
+                   'WS': ws}
 
     command = self.Compute(gain_values)
 
