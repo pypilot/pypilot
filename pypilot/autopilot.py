@@ -351,10 +351,10 @@ class Autopilot(object):
           self.wind_compass_offset.update(wind_direction + compass, d)
 
           if self.sensors.gps.source.value != 'none':
-            self.true_wind = compute_true_wind(self.gps_speed.value,
+            true_wind = compute_true_wind(self.gps_speed.value,
                                                self.wind_speed.value,
-                                               self.wind_direction)
-            offset = resolv(self.truewind + compass, self.true_wind_compass_offset.value)
+                                               self.wind_direction.value)
+            offset = resolv(true_wind + compass, self.true_wind_compass_offset.value)
             d = .05
             self.true_wind_compass_offset.update(offset, d)
     
