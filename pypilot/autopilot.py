@@ -232,7 +232,7 @@ class Autopilot(object):
     for pilot_type in pilots.default:
       self.pilots.append(pilot_type(self))
 
-    self.pilot = self.Register(EnumProperty, 'pilot', 'basic', ['simple', 'basic', 'learning', 'wind'])
+    self.pilot = self.Register(EnumProperty, 'pilot', 'basic', ['simple', 'basic', 'learning', 'wind'], persistent=True)
 
     timestamp = self.server.TimeStamp('ap')
     self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)
@@ -372,13 +372,13 @@ class Autopilot(object):
           # with compass calibration updates, adjust the autopilot heading_command
           # to prevent actual course change
           last_heading = resolv(self.last_heading, data['heading'])
-          compass_change += data['heading'] - headingrate*dt - last_heading
+          self.compass_change += data['heading'] - headingrate*dt - last_heading
         self.last_heading = data['heading']
 
       # if heading offset alignment changed, keep same course
       if self.last_heading_off != self.boatimu.heading_off.value:
           self.last_heading_off = resolv(self.last_heading_off, self.boatimu.heading_off.value)
-          compass_change += self.boatimu.heading_off.value - self.last_heading_off
+          self.compass_change += self.boatimu.heading_off.value - self.last_heading_off
           self.last_heading_off = self.boatimu.heading_off.value
 
       if self.compass_change:

@@ -218,7 +218,7 @@ class Servo(object):
 
         self.max_slew_speed = self.Register(RangeProperty, 'max_slew_speed', 30, 0, 100, persistent=True)
         self.max_slew_slow = self.Register(RangeProperty, 'max_slew_slow', 50, 0, 100, persistent=True)
-        self.gain = self.Register(RangeSetting, 'gain', 1, -10, 10, 'x')
+        self.gain = self.Register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
         self.period = self.Register(RangeSetting, 'period', .4, .1, 3, 'sec')
         self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'compensate_voltage', False, persistent=True)
