@@ -119,6 +119,7 @@ class LCDClient():
         self.bw = 1 if w < 256 else False
 #        w, h, self.bw = 44, 84, 1
 #        w, h, self.bw = 64, 128, 1
+#        w, h, self.bw = 320, 480, 0
 
         self.config = {}
         self.configfilename = os.getenv('HOME') + '/.pypilot/lcdclient.conf' 
@@ -379,6 +380,9 @@ class LCDClient():
             host = sys.argv[1]
         
         def on_con(client):
+            self.value_list = {}
+            request = {'method' : 'list'}
+            client.send(request)
             for name in watchlist:
                 client.watch(name)
 
@@ -386,7 +390,6 @@ class LCDClient():
             self.client = SignalKClient(on_con, host)
             self.display_page = self.display_control
             print 'connected'
-            self.value_list = self.client.list_values()
 
             for request in self.initial_gets:
                 self.client.get(request)
@@ -433,7 +436,7 @@ class LCDClient():
         if self.last_msg['ap/mode'] == 'wind' and not self.have_wind():
             self.fittext(rectangle(0, .65, 1, .35), _('WARNING WIND not detected'), True)
         else:
-            print 'mode', self.last_msg['ap/mode']
+            #print 'mode', self.last_msg['ap/mode']
             modes = {'compass': ('C', self.have_compass, rectangle(.03, .74, .30, .16)),
                      'gps':     ('G', self.have_gps,     rectangle(.34, .74, .30, .16)),
                      'wind':    ('W', self.have_wind,    rectangle(.65, .74, .30, .16))}
@@ -661,9 +664,18 @@ class LCDClient():
                 break
 
             name, data = result
-            print name, ' = ', data
-            self.last_msg[name] = data['value']
-            if name == 'gps/track':
+            #print name, ' = ', data
+            if 'value' in data:
+                self.last_msg[name] = data['value']
+
+            for token in ['min', 'max']:
+                if token in data:
+                    #print 'name', name, token, ' = ', data[token]
+                    if not name in self.value_list:
+                        self.value_list[name] = {}
+                    self.value_list[name][token] = data[token]
+
+            if name == 'gps/track' and 'value' in data and data['value']:
                 self.last_gps_time = time.time()
 
 

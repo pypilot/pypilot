@@ -1,0 +1,6 @@
+#!/bin/sh
+
+GPSDATE=`gpspipe -w | grep -m 1 "TPV" | sed -r 's/.*"time":"([^"]*)".*/\1/' | sed -e 's/^\(
+.\{10\}\)T\(.\{8\}\).*/\1 \2/'`
+echo 'gps date' : $GPSDATE
+date -u -s "$GPSDATE"

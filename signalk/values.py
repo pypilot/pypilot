@@ -70,7 +70,7 @@ class SensorValue(Value): # same as a Value with added timestamp
         self.timestampholder = timestampholder
 
     def get_request(self):
-        try:
+        try: # round to places, plus it's faster than json dumping
             if type(self.value) == type([]):
                 strvalue = '['
                 first = True
@@ -80,6 +80,8 @@ class SensorValue(Value): # same as a Value with added timestamp
                     first = False
                     strvalue += '%.4f' % value
                 strvalue += ']'
+            elif type(self.value) == type(True):
+                strvalue = 'true' if self.value else 'false'
             else:
                 strvalue = '%.4f' % self.value
             request = '{"' + self.name + ('": {"value": %s, "timestamp": %.3f }}' % (strvalue, self.timestampholder.timestamp))
@@ -157,8 +159,9 @@ class BooleanProperty(Property):
         super(BooleanProperty, self).set(not not value)
 
     def get_request(self):
-        try: # faster than json, saving digits
-            request = '{"' + self.name + ('": {"value": %.4f}}' % self.value)
+        try: # faster
+            strvalue = 'true' if self.value else 'false'
+            request = '{"' + self.name + '": {"value": ' + strvalue + '}}'
         except:
             request = json.dumps({self.name : {'value' : self.value}})
         return request
