@@ -109,7 +109,7 @@ class MainFrame(wx.Frame):
                     self.controls[name] = c
                     cname = name
                     def onchoice(event):
-                        self.client.set(cname, c.GetStringSelection() )
+                        self.client.set(cname, str(c.GetStringSelection()) )
                     c.Bind( wx.EVT_CHOICE, onchoice )
                 proc()
             elif t == 'ResettableValue':
@@ -173,7 +173,8 @@ class MainFrame(wx.Frame):
 
             for name in result:
                 if not 'value' in result[name]:
-                    raise 'no value', result[name]
+                    print 'no value', result
+                    raise 'no value'
 
                 value = round3(result[name]['value'])
 

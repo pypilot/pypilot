@@ -52,7 +52,7 @@ void loop()
    uint8_t cksum = 0;
    for(int i=0; i<strlen(buf); i++)
        cksum ^= buf[i];
-   
+
    char buf2[128];
    snprintf(buf2, sizeof buf2, "$%s*%02x\r\n", buf, cksum);
    Serial.print(buf2);

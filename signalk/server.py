@@ -53,6 +53,7 @@ class LineBufferedNonBlockingSocket():
 
         self.no_newline = False
         self.in_buffer += data
+
         l = len(data)
         if l == 0:
             return False

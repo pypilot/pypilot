@@ -123,4 +123,5 @@ if __name__ == "__main__":
         if wind.poll():
             print 'Wind demo', count, wind.direction.value
         count += 1
-        time.sleep(.1)
+        server.HandleRequests(.1)
+

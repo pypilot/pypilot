@@ -95,7 +95,7 @@ class SignalKClient(object):
     def poll(self, timeout = 0):
         t0 = time.time()
         self.socket.flush()
-        events = self.poller.poll(1000.0 * timeout)        
+        events = self.poller.poll(1000.0 * timeout)
         while events != []:
             event = events.pop()
             fd, flag = event
@@ -124,7 +124,6 @@ class SignalKClient(object):
             else:
                 f = self.serial
             while timeout - (t1 - t0) >= 0:
-                self.poll(timeout - (t1 - t0) > 0)
                 line = f.readline()
                 if line:
 #                    msg = json.loads(line.rstrip())
@@ -136,7 +135,9 @@ class SignalKClient(object):
                         sys.exit(-2)
 
                     return msg
-            
+                else:
+                    self.poll(timeout - (t1 - t0) > 0)
+
                 #dt = time.time() - t1
                 # maybe sleep for up to 10 ms
                 #if dt < .01:
@@ -168,6 +169,8 @@ class SignalKClient(object):
         msg = self.receive_single(timeout)
         while msg:
             name, value = msg
+            if name in ret:
+                break
             ret[name] = value
             msg = self.receive_single()
         return ret
@@ -205,11 +208,13 @@ class SignalKClient(object):
         self.send(request)
 
     def set(self, name, value):
-        #request = {'method' : 'set', 'name' : name, 'value' : value}
-        #self.send(request)
-
+        # quote strings
+        if type(value) == type(''):
+            value = '"' + value + '"'
+        elif type(value) == type(True):
+            value = 'true' if value else 'false'
+                                        
         request = '{"method": "set", "name": "' + name + '", "value": ' + str(value) + '}\n'
-        #print 'request', request
         self.socket.send(request)
 
     def watch(self, name, value=True):
@@ -225,11 +230,19 @@ class SignalKClient(object):
 
         for name in sorted(self.values):
             self.get(name)
-            result = self.receive(2)
-            if result:
-                print name, '=', result[name]['value']
-            else:
-                print 'no result', name
+
+        count = 0
+        results = {}
+        while count < len(self.values):
+            msgs = self.receive(10)
+            for name in msgs:
+                count+=1
+                results[name] = msgs[name]
+
+        for name in sorted(results):
+            print name, '=', results[name]['value']
+
+            
 
 def SignalKClientFromArgs(argv, watch, *cargs):
     host = False
