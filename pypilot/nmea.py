@@ -92,7 +92,7 @@ def parse_nmea_wind(line):
     try:
         msg['direction'] = float(data[1])
     except:
-        pass
+        return False  # require direction
 
     try:
         speed = float(data[3])
@@ -269,7 +269,7 @@ class Nmea(object):
         # only process if we are the correct device or do not have a device for this data
         for name in nmea_parsers:
             name_device = self.sensors.sensors[name].device
-            if not name_device or name_device == device.path[0]:
+            if not name_device or name_device[2:] == device.path[0]:
                 parsers.append(nmea_parsers[name])
 
         # parse the nmea line, and update serial messages
@@ -277,20 +277,17 @@ class Nmea(object):
             result = parser(line)
             if result:
                 name, msg = result
-                msg['device'] = device.path[0]
-                #msg['id'] = line[1:3]
+                msg['device'] = line[1:3]+device.path[0]
                 serial_msgs[name] = msg
                 break
 
     def remove_serial_device(self, device):
         index = self.devices.index(device)
         print 'lost serial nmea%d' % index
+        self.sensors.lostdevice(self.devices[index].path[0])
         self.devices[index] = False
         self.poller.unregister(device.device.fileno())
         del self.devices_lastmsg[device]
-        for name in self.values:
-            if device == self.values[name]['device']:
-                self.values[name]['device'] = None
         device.close()
             
     def poll(self):
@@ -331,7 +328,7 @@ class Nmea(object):
             if dt > 2:
                 if dt < 3:
                     print 'serial device dt', dt, device.path, 'is another process accessing it?'
-            if dt > 15:
+            if dt > 15: # no data for 15 seconds
                 print 'serial device timed out', dt, device
                 self.remove_serial_device(device)
         t4 = time.time()
@@ -351,7 +348,7 @@ class Nmea(object):
         t = time.time()
         for name in ['wind', 'rudder'] if self.process.sockets else []:
             dt = t - self.nmea_times[name] if name in self.nmea_times else -1
-            if dt > .2 or dt < 0 and self.sensors.sensors[name].source.value != 'none':
+            if (dt > .2 or dt < 0) and self.sensors.sensors[name].source.value != 'none':
                 if name == 'wind':
                     wind = self.sensors.wind
                     self.send_nmea('APMWV,%.3f,R,%.3f,K,A' % (wind.direction.value, wind.speed.value))
@@ -428,8 +425,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
             result = parser(line)
             if result:
                 name, msg = result
-                msg['device'] = device
-                #+ line[1:3]
+                msg['device'] = line[1:3]+device
                 msgs[name] = msg
                 return
 

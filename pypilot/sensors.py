@@ -80,7 +80,8 @@ class Wind(Sensor):
 
     def update(self, data):
         self.direction.set(resolv(data['direction'] + self.offset.value, 180))
-        self.speed.set(data['speed'])
+        if 'speed' in data:
+            self.speed.set(data['speed'])
         
 class Sensors(object):
     def __init__(self, server):
@@ -111,6 +112,7 @@ class Sensors(object):
                 print 'sensor timeout for', name, 'source', sensor.source.value, t - sensor.lastupdate
                 sensor.source.set('none')
                 sensor.device = None
+                break
 
     def write(self, sensor, data, source):
         if not sensor in self.sensors:
@@ -118,3 +120,13 @@ class Sensors(object):
             return
 
         self.sensors[sensor].write(data, source)
+
+    def lostdevice(self, device):
+        # optional routine  useful when a device is
+        # unplugged to skip the normal data timeout
+        for name in self.sensors:
+            sensor = self.sensors[name]
+            if sensor.device == device:
+                sensor.source.set('none')
+                sensor.device = None
+                break

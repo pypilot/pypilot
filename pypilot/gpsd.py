@@ -91,7 +91,7 @@ class Gpsd(Sensor):
 
         if 'device' in fix:
             device = fix['device']
-            if not device in self.devices:
+            if device and not device in self.devices:
                 self.devices.append(device)
                 print 'gpsd is using device', device
                 serialprobe.reserve(device)
