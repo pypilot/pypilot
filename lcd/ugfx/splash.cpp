@@ -17,7 +17,7 @@
 surface *load_logo(int bypp)
 {    
     #include "pypilot_logo.h"
-    char *data = header_data;
+    const char *data = header_data;
     char pixel[4] = {0};
     char data32[4*width*height], *p = data32;
 

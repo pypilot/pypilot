@@ -558,7 +558,6 @@ screen::~screen()
     close(fbfd);
 }
 
-
 #ifdef WIRINGPI
 #include <wiringPiSPI.h>
 

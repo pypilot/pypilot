@@ -26,7 +26,7 @@ arduino_servo_module = Extension('_arduino_servo',
 
 
 
-ugfx_defs = '-DWIRINGPI'
+ugfx_defs = ['-DWIRINGPI']
 try:
     import RPi.GPIO
     ugfx_libraries=['wiringPi']
@@ -37,14 +37,14 @@ except:
     except:
         print('no wiring library for ugfx')
         ugfx_libraries=[]
-        ugfx_defs = ''
+        ugfx_defs = []
 
 ugfx_module = Extension('_ugfx',
                         sources=['lcd/ugfx/ugfx.cpp',
                                  'lcd/ugfx/ugfx.i'],
-                        extra_compile_args=['-Wno-unused-result' + ' ' + ugfx_defs],
+                        extra_compile_args=['-Wno-unused-result'] + ugfx_defs,
                         libraries=ugfx_libraries,
-                        swig_opts=['-c++']
+                        swig_opts=['-c++'] + ugfx_defs
 )
 
 import os, os.path
@@ -59,7 +59,7 @@ for walk in os.walk('lcd/locale'):
 
             
 setup (name = 'pypilot',
-       version = '0.2',
+       version = '0.7',
        description = 'pypilot sailboat autopilot',
        license = 'GPLv3',
        author="Sean D'Epagnier",

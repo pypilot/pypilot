@@ -5,5 +5,5 @@ install: splash
 	strip /usr/local/bin/pypilot_splash
 
 splash: splash.cpp ugfx.cpp
-	g++ -Os -o splash splash.cpp ugfx.cpp -g -lwiringPi -lpthread
+	g++ -Os -o splash splash.cpp ugfx.cpp -g -lwiringPi -lpthread -DWIRINGPI
 
