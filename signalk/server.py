@@ -216,7 +216,7 @@ class SignalKServer(object):
           try:
               self.server_socket.bind(('0.0.0.0', self.port))
           except:
-              print('signalk_server: bind failed, try again.')
+              print('signalk_server: bind failed; already running a server?')
               time.sleep(1)
               return
 

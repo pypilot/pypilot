@@ -288,9 +288,8 @@ class BoatIMU(object):
     self.heading_lowpass_constant = self.Register(RangeProperty, 'heading_lowpass_constant', .1, .01, 1)
     self.headingrate_lowpass_constant = self.Register(RangeProperty, 'headingrate_lowpass_constant', .1, .01, 1)
     self.headingraterate_lowpass_constant = self.Register(RangeProperty, 'headingraterate_lowpass_constant', .1, .01, 1)
-          
-    sensornames = ['accel', 'gyro', 'compass', 'accel.residuals', 'pitch', 'roll']
 
+    sensornames = ['accel', 'gyro', 'compass', 'accel.residuals', 'pitch', 'roll']
     sensornames += ['pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']
     sensornames += ['headingrate_lowpass', 'headingraterate_lowpass']
     directional_sensornames = ['heading', 'heading_lowpass']
@@ -347,7 +346,7 @@ class BoatIMU(object):
       return False
   
     if vector.norm(data['accel']) == 0:
-      print('vector n', data['accel'])
+      print('accel values invalid', data['accel'])
       return False
 
     self.last_imuread = time.time()

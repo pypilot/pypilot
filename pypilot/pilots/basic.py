@@ -35,12 +35,6 @@ class BasicPilot(AutopilotPilot):
     PosGain('I', 0, .1)      # integral
     PosGain('D',  .1, 1.0)   # derivative (gyro)
     PosGain('DD',  .05, 1.0) # rate of derivative
-    
-    def PosGain2(name, default, max_val):
-      def compute2(value):
-        return value * abs(value) * self.gains[name]['apgain'].value
-      self.Gain(name, default, 0, max_val, compute2)
-
     PosGain('PR',  0, .05)  # position root
     PosGain('FF',  .5, 3.0) # feed forward
     PosGain('R',  .1, 1.0)  # reactive
@@ -88,8 +82,8 @@ class BasicPilot(AutopilotPilot):
     reactive_value = self.servocommand_queue.take(t - self.reactive_time.value)
     self.reactive_value.set(reactive_value)
     
-    if not 'wind' in ap.mode.value:
-      feedforward_value = -feedforward_value
+    if not 'wind' in ap.mode.value: # wind mode needs opposite gain
+        feedforward_value = -feedforward_value
     gain_values = {'P': ap.heading_error.value,
                    'I': ap.heading_error_int.value,
                    'D': headingrate,      
