@@ -1,6 +1,6 @@
 /*
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -31,6 +31,7 @@ $(document).ready(function() {
     $('#connection').text('Not Connected');
     $('#pitch').text("N/A");
     $('#roll').text("N/A");
+    $('#rudder').text("N/A");
     $('#power_consumption').text("N/A");
     $('#runtime').text("N/A");
 
@@ -38,10 +39,8 @@ $(document).ready(function() {
                       ['servo.max_speed', 'max_speed',''],
                       ['servo.max_current', 'max_current','Amps'],
                       ['servo.max_controller_temp', 'max_controller_temp','Degrees C'],
-                      ['servo.period', 'period', 'seconds'],
-                      ['imu.heading_lowpass_constant', 'heading_lowpass_constant', ''],
-                      ['imu.headingrate_lowpass_constant', 'headingrate_lowpass_constant', ''],
-                      ['imu.headingraterate_lowpass_constant', 'headingraterate_lowpass_constant', '']];      
+                      ['servo.period', 'period', 'seconds']];
+
     // Connect to the Socket.IO server.
     var port = location.port;
     port = pypilot_webapp_port;
@@ -71,6 +70,7 @@ $(document).ready(function() {
     var servo_command = 0, servo_command_timeout=0;
     var gains = [];
     socket.on('signalk_connect', function(msg) {
+        var list_values = JSON.parse(msg)
         $('#connection').text('Connected')
         $('#aperrors0').text("");
         $('#aperrors1').text("");
@@ -78,11 +78,27 @@ $(document).ready(function() {
         // control
         watch('ap.enabled')
         watch('ap.mode')
+
         watch('ap.heading_command')
 
         // gain
+        watch('ap.pilot')
         $('#gain_container').text('')
-        var list_values = JSON.parse(msg)
+
+        $('#gain_container').append('<div class="w3-row"><select id="pilot">')
+        if('ap.pilot' in list_values && 'choices' in list_values['ap.pilot']) {
+            var pilots = list_values['ap.pilot']['choices']
+            for (var pilot in pilots)
+                $('#pilot').append('<option value="' + pilots[pilot] + '">' + pilots[pilot] + '</option')
+        }
+
+        $('#gain_container').append('</select></div>')
+
+        $('#pilot').change(function(event) {
+            signalk_set('ap.pilot', $('#pilot').val)
+        });
+
+        
         gains = [];
         for (var name in list_values)
             if('AutopilotGain' in list_values[name] && name.substr(0, 3) == 'ap.')
@@ -109,6 +125,11 @@ $(document).ready(function() {
             signalk_set('imu.compass_calibration_locked', check);
             block_polling = 2;
         });
+
+        watch('rudder.offset')
+        watch('rudder.scale')
+        watch('rudder.nonlinearity')
+        watch('rudder.range')
 
         // configuration
         $('#configuration_container').text('')
@@ -175,6 +196,7 @@ $(document).ready(function() {
         } else if(tab == 'Calibration') {
             poll('imu.pitch');
             poll('imu.roll');
+            poll('rudder.angle');
         } else if(tab == 'Configuration') {
             for(i=0; i < conf_names.length; i++)
                 poll(conf_names[i][0]);
@@ -220,12 +242,15 @@ $(document).ready(function() {
     var heading_command = 0;
     var heading_set_time = new Date().getTime();
     var heading_local_command;
+    var last_data = {}
     socket.on('signalk', function(msg) {
         if(block_polling > 0) {
             return;
         }
 
         data = JSON.parse(msg);
+        for(var name in data)
+            last_data[name] = data[name]['value'];
 
         if('ap.heading' in data) {
             heading = data['ap.heading']['value'];
@@ -261,6 +286,11 @@ $(document).ready(function() {
             $('#mode').val(value);
         }
 
+        if('ap.pilot' in data) {
+            value= data['ap.pilot']['value'];
+            $('#pilot').val(value);
+        }
+
         for (var i = 0; i<gains.length; i++)
             if('ap.' + gains[i] in data) {
                 data = data['ap.' + gains[i]]
@@ -294,6 +324,19 @@ $(document).ready(function() {
             $('.myBar').width((100-data['imu.alignmentCounter']['value'])+'%');
         if('imu.compass_calibration_locked' in data)
             $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']['value']);
+        if('rudder.angle' in data) {
+            $('#rudder').text(data['rudder.angle']['value']);
+            var dict = {'rudder.offset': 'Offset',
+                        'rudder.scale': 'Scale',
+                        'rudder.nonlinearity': 'Non Linearity'};
+            for(var d in dict)
+                if(d in last_data)
+                    $('#rudder').append(' ' + dict[d] + ' ' + last_data[d]);
+        }
+
+        if('rudder.range' in data)
+            $('#rudder_range').val(data['rudder.range']['value']);
+            
 
         // configuration
         names = conf_names;
@@ -385,6 +428,22 @@ $(document).ready(function() {
         signalk_set('imu.alignmentCounter', 100);
         signalk_set('imu.alignmentType', 'level');
         return false;
+    });
+
+    $('#rudder_centered').click(function(event) {
+        signalk_set('rudder.calibration_state', 'centered');
+    });
+
+    $('#rudder_port_range').click(function(event) {
+        signalk_set('rudder.calibration_state', 'port_range');
+    });
+
+    $('#rudder_starboard_range').click(function(event) {
+        signalk_set('rudder.calibration_state', 'starboard_range');
+    });
+
+    $('#rudder_range').change(function(event) {
+        signalk_set('rudder.range', $('#rudder_range').value());
     });
 
     // Configuration

@@ -13,13 +13,20 @@ from resolv import *
 class Tack(object):
   def __init__(self, ap):
     self.ap = ap
-    self.state = self.Register(EnumProperty, 'state', '', ['', 'begin', 'waiting', 'tacking', 'finishing'])
+
+    # tacking states
+    # none - not tacking, normal ap operation
+    # begin - control application sets this to initiate tack
+    # waiting - waiting delay seconds before beginning to tack
+    # tacking - rudder is moving at tack rate until threshold
+    
+    self.state = self.Register(EnumProperty, 'state', 'none', ['none', 'begin', 'waiting', 'tacking'])
     self.timeout = self.Register(Value, 'timeout', 0)
-    self.wait_real_time = 0
+
     self.delay = self.Register(RangeProperty, 'delay', 0, 0, 60)
     self.angle = self.Register(RangeProperty, 'angle', 100, 10, 180)
-    self.speed = self.Register(RangeProperty, 'speed', 80, 10, 100)
-    self.complete = self.Register(RangeProperty, 'complete', .5, 0, 1)
+    self.rate = self.Register(RangeProperty, 'rate', 20, 1, 100)
+    self.threshold = self.Register(RangeProperty, 'threshold', .5, .1, 1)
     self.count = self.Register(ResettableValue, 'count', 0, persistent=True)
     self.direction = self.Register(EnumProperty, 'direction', 'port', ['port', 'starboard'])
     self.current_direction = 'port' # so user can't change while tacking
@@ -32,13 +39,17 @@ class Tack(object):
   def process(self):
     t = time.time()
 
+    # disengage cancels any tacking
+    if not self.ap.enabled.value:
+      self.state.set('none')
+
     # simple lowpass heel
     self.direction_heel = self.ap.boatimu.heel * .1 + self.direction_heel * .9
 
-    if self.state.value == '': # not tacking
+    if self.state.value == 'none': # not tacking
       # if we have wind data, use it to determine the tacking direction
-      if self.ap.nmea.values['wind']['source'].value != 'none':
-        if self.ap.nmea.values['wind']['direction'].value < 180:
+      if self.ap.sensors.wind.source.value != 'none':
+        if self.ap.sensors.wind.direction.value < 180:
             self.direction.update('starboard')
         else:
             self.direction.update('port')
@@ -52,43 +63,44 @@ class Tack(object):
 
     # tacking initiated, enter waiting state
     if self.state.value == 'begin':
-      self.timeout.set(self.delay.value)
-      self.wait_real_time = t
+      self.begin_time = t
       self.current_direction = self.direction.value
       self.state.set('waiting')
 
     # waiting to tack, update timeout
     if self.state.value == 'waiting':
-      remaining = self.delay.value - self.timeout.value + t
+      remaining = self.delay.value - (t - self.begin_time)
       if remaining > 0:
         self.timeout.set(remaining)
       else:
+        self.timeout.set(0)
         self.state.set('tacking')
         if 'wind' in self.ap.mode.value:
-          command = -self.ap.command
-        elif self.current_direction == 'port':
-          command = self.ap.command - self.angle
+          self.tack_angle = 2*self.ap.command # opposite wind direction for wind  mode
         else:
-          command = self.ap.command + self.angle
+          self.tack_angle = self.angle.value
 
-        self.complete_angle = resolv(self.complete*(self.ap.command + command))
-        self.ap.command.set(resolv(command, 180))
-
-    # tacking, moving rudder continuously at tack speed
+    # tacking, moving rudder continuously at tack rate
     if self.state.value == 'tacking':
       mul = 1 if self.current_direction == 'port' else -1
-      self.ap.servo.command(mul*self.speed)
-      if mul*resolv(self.ap.boatimu.heading - self.complete_angle) > 0:
-          self.state.set('finishing')
+      # command servo to turn boat at tack rate
+      headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
+      headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
 
-    # reached complete angle, move rudder the opposite direction
-    if self.state.value == 'finishing':
+      # for now very simple fixed PD filter on turn rate for tacking
+      P = headingrate - mul*self.rate.value
+      D = headingraterate
+      command = .1*P + .1*D
+      self.ap.servo.command(command)
+
       mul = 1 if self.current_direction == 'port' else -1
-      if mul*resolv(self.ap.boatimu.heading - self.ap.command.value) > 0:
-          self.ap.servo.command(-mul*self.speed)
-      else:
-          self.state.set('')
-          self.tacks.set(self.tacks.value + 1)
+      current = mul*resolv(self.ap.command.value - self.ap.heading) / self.tack_angle
 
-    # in these two states, take over servo control
-    return self.state.value == 'tacking' or self.state.value == 'finishing'
+      # if we reach the threshold, tacking is complete, set the heading command
+      # to the new value
+      if current > self.threshold.value:
+        command = self.ap.command - mul*tack_angle
+        self.ap.command.set(resolv(command, 180))
+        self.state.set('none')
+
+    return self.state.value == 'tacking'

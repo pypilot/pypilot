@@ -26,6 +26,7 @@ arduino_servo_module = Extension('_arduino_servo',
 
 
 
+ugfx_defs = '-DWIRINGPI'
 try:
     import RPi.GPIO
     ugfx_libraries=['wiringPi']
@@ -34,13 +35,14 @@ except:
         import OPi.GPIO
         ugfx_libraries=['wiringPi']
     except:
-        print 'no wiring library for ugfx'
+        print('no wiring library for ugfx')
         ugfx_libraries=[]
+        ugfx_defs = ''
 
 ugfx_module = Extension('_ugfx',
                         sources=['lcd/ugfx/ugfx.cpp',
                                  'lcd/ugfx/ugfx.i'],
-                        extra_compile_args=['-Wno-unused-result'],
+                        extra_compile_args=['-Wno-unused-result' + ' ' + ugfx_defs],
                         libraries=ugfx_libraries,
                         swig_opts=['-c++']
 )
@@ -69,7 +71,7 @@ setup (name = 'pypilot',
                      'ui': ['*.png', '*.mtl', '*.obj'],
                      'webapp': ['static/*', 'templates/*']},
 #       requires=['flask', 'gevent'], # webapp
-#       dependency_links	= ['https://github.com/adafruit/Adafruit_Nokia_LCD/tarball/master#egg=Adafruit-Nokia-LCD-0.1.0'],
+       #       dependency_links	= ['https://github.com/adafruit/Adafruit_Nokia_LCD/tarball/master#egg=Adafruit-Nokia-LCD-0.1.0'],
 #       install_requires	= ['Adafruit-Nokia-LCD>=0.1.0'],
        entry_points={
            'console_scripts': [
@@ -77,7 +79,7 @@ setup (name = 'pypilot',
                'pypilot_boatimu=pypilot.boatimu:main',
                'pypilot_servo=pypilot.servo:main',
                'pypilot_webapp=webapp.webapp:main',
-               'pypilot_lcdclient=lcd.client:main',
+               'pypilot_lcd=lcd.lcd:main',
                'pypilot_control=ui.autopilot_control:main',
                'pypilot_calibration=ui.autopilot_calibration:main',
                'signalk_client=signalk.client:main',

@@ -58,6 +58,7 @@ public:
     long int screensize;
 };
 
+#ifdef WIRINGPI
 
 // nokia5110 spi device
 class PCD8544;
@@ -75,3 +76,4 @@ private:
     PCD8544 *disp;
 };
 
+#endif

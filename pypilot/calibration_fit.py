@@ -278,7 +278,7 @@ def FitPointsCompass(points, current, norm):
         return r0 + r1
     new_sphere2d_fit = FitLeastSq([0, 0, initial[3], 0], f_new_sphere2, zpoints, 2)
     if not new_sphere2d_fit or new_sphere2d_fit[2] < 0 or abs(new_sphere2d_fit[3]) >= 1:
-        debug('FitLeastSq sphere2 failed!!!! ', len(points), new_sphere2d_fit[3])
+        debug('FitLeastSq sphere2 failed!!!! ', len(points), new_sphere2d_fit)
         return False
     new_sphere2d_fit = map(lambda x, a, b: x + new_sphere2d_fit[0]*a + new_sphere2d_fit[1]*b, initial[:3], u, v) + [new_sphere2d_fit[2], math.degrees(math.asin(new_sphere2d_fit[3]))]
     new_sphere2d_fit = [new_sphere2d_fit, ComputeDeviation(points, new_sphere2d_fit), 2]
@@ -844,7 +844,7 @@ if __name__ == '__main__':
     n = [0,0,1]
     n = [0.9983170254035888, 0.03953416279367987, 0.042428372129188596]
 
-    fit = FitPoints(points, [20,53,-7,30], n)
+    fit = FitPointsCompass(points, [20,53,-7,30, 0], n)
     print 'fit', fit
     
     #allpoints = [points1, points2, points3, points4, points5]

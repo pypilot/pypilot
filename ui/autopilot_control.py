@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2018 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -30,6 +30,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.heading = 0
         self.lastcommand = False
         self.recv = {}
+        self.rudder = False
+        self.apenabled = False
+        #self.bCenter.Show(False)
 
         self.timer = wx.Timer(self, self.ID_MESSAGES)
         self.timer.Start(100)
@@ -39,11 +42,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def on_con(self, client):
         self.fgGains.Clear(True)
         self.watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
+                          'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
+                          'ap.heading', 'ap.pilot',
                           'gps.source', 'wind.source',
-                          'ap.heading', 'servo.flags',
-                          'ap.pilot',
-                          'servo.controller',
-                          'servo.mode', 'servo.engaged']
+                          'servo.controller', 'servo.engaged', 'servo.flags',
+                          'rudder.angle']
         value_list = client.list_values()
         self.gains = {}
         pilots = {}
@@ -230,6 +233,17 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'ap.enabled':
                 self.tbAP.SetValue(value)
                 self.set_mode_color()
+                self.apenabled = value
+                self.bCenter.Show(not self.apenabled and self.rudder)
+            elif name == 'rudder.angle':
+                try:
+                    value = round(value, 1)
+                except:
+                    pass
+                self.rudder = value
+                if (not (not self.apenabled and self.rudder)) == self.bCenter.IsShown():
+                    self.bCenter.Show(not self.bCenter.IsShown())
+                self.stRudder.SetLabel(str(value))
             elif name == 'ap.mode':
                 rb = {'compass': self.rbCompass, 'gps': self.rbGPS, 'wind': self.rbWind, 'true wind': self.rbTrueWind}
                 rb[value].SetValue(True)
@@ -251,14 +265,21 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'ap.heading':
                 self.stHeading.SetLabel('%.1f' % value)
                 self.heading = value
+            elif name == 'ap.tack.state':
+                self.stTackState.SetLabel(value)
+                self.bTack.SetLabel('Tack' if value == 'none' else 'Cancel')
+                self.tackstate = value
+            elif name == 'ap.tack.timeout':
+                if self.tackstate == 'waiting':
+                    self.stTackState.SetLabel(str(value))
+            elif name == 'ap.tack.direction':
+                self.cTackDirection.SetSelection(value == 'starboard')
             elif name == 'servo.engaged':
                 self.stEngaged.SetLabel('Engaged' if value else 'Disengaged')
             elif name == 'servo.flags':
                 self.stStatus.SetLabel(value)
             elif name == 'servo.controller':
                 self.stController.SetLabel(value)
-            elif name == 'servo.mode':
-                self.stMode.SetLabel(value)
             elif name == 'servo.current':
                 pass # timeout value to know we are receiving
             elif 'ap.pilot.' in name:
@@ -289,7 +310,18 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def onPilot(self, event):
         self.client.set('ap.pilot', self.cPilot.GetStringSelection())
 
+    def onTack(self, event):
+        if self.bTack.GetLabel() == 'Tack':
+            self.tackstate = 'begin'
+        else:
+            self.tackstate = 'none'
+        self.client.set('ap.tack.state', self.tackstate)
+
+    def onTackDirection(self, event):
+        self.client.set('ap.tack.direction', 'port' if self.cTackDirection.GetSelection() else 'starboard')
+
     def onPaintControlSlider( self, event ):
+        return
         # gtk3 is a bit broken
         if 'gtk3' in wx.version():
             return
@@ -297,9 +329,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         dc = wx.PaintDC( self.sCommand )        
         s = self.sCommand.GetSize()
 
-        #dc.SetTextForeground(wx.BLACK);
-        dc.SetPen(wx.Pen(wx.BLACK));
-        dc.SetBrush(wx.TRANSPARENT_BRUSH);
+        #dc.SetTextForeground(wx.BLACK)
+        dc.SetPen(wx.Pen(wx.BLACK))
+        dc.SetBrush(wx.TRANSPARENT_BRUSH)
         y = 10
         x = 0
         for l in self.sliderlabels:
@@ -343,6 +375,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             val = self.sCommand.GetMin() + (self.sCommand.GetMax() - self.sCommand.GetMin()) * x / self.sCommand.GetSize().x
             self.sCommand.SetValue(val)
 
+    def onCenter( self, event ):
+        self.client.set('servo.position_command', 0)
+
     def onScope( self, event ):
         subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/scope_wx.py'] + sys.argv[1:])
 	
@@ -362,4 +397,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

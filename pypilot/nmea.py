@@ -11,13 +11,13 @@
 # A separate process listens on port 20220 for tcp connections
 # any nmea data received is relayed to all clients
 #
-# serial ports are probed for incomming nmea data
-# this daemon translates nmea tcp messages to signalk
-# serving as a tcp nmea server and signalk client
-# allowing the autopilot to work with an unmodified opencpn
+# serial ports are probed for incoming nmea data, if found
+# this port will be managed and sentences translated used
+# for sensor inputs such as:
+#  wind, gps, rudder
 #
-# signalk->nmea: pitch, roll, and heading messages
-# nmea->signalk: autopilot commands
+# inputs nmea: wind, rudder, autopilot commands (serial and tcp)
+# outputs nmea: pitch, roll, and heading messages, wind, rudder (tcp)
 
 DEFAULT_PORT = 20220
 
@@ -28,16 +28,14 @@ from signalk.client import SignalKClient
 from signalk.server import SignalKServer
 from signalk.values import *
 from signalk.pipeserver import NonBlockingPipe
+from sensors import source_priority
 import serialprobe
-from gpsdpoller import GpsdPoller
 
 import fcntl
 # these are not defined in python module
 TIOCEXCL = 0x540C
 TIOCNXCL = 0x540D
 
-# favor lower priority sources
-source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'none' : 4}
 
 # nmea uses a simple xor checksum
 def nmea_cksum(msg):
@@ -113,6 +111,8 @@ def parse_nmea_rudder(line):
 
     return 'rudder', {'angle': angle}
 
+nmea_parsers = {'gps': parse_nmea_gps, 'wind': parse_nmea_wind, 'rudder': parse_nmea_rudder}
+
 
 # because serial.readline() is very slow
 class LineBufferedSerialDevice(object):
@@ -141,12 +141,10 @@ from signalk.linebuffer import linebuffer
 class NMEASerialDevice(object):
     def __init__(self, path):
         self.device = serial.Serial(*path)
+        self.path = path
         self.device.timeout=0 #nonblocking
         fcntl.ioctl(self.device.fileno(), TIOCEXCL)
         self.b = linebuffer.LineBuffer(self.device.fileno())
-
-#    def recv(self):
-#        return self.b.recv()
 
     def readline(self):
         return self.b.readline_nmea()
@@ -157,12 +155,13 @@ class NMEASerialDevice(object):
 class NMEASocket(object):
     def __init__(self, connection):
         connection.setblocking(0)
-        #super(NMEASocket, self).__init__(connection.fileno())
         self.socket = connection
         self.b = linebuffer.LineBuffer(connection.fileno())
         self.out_buffer = ''
         self.pollout = select.poll()
         self.pollout.register(connection, select.POLLOUT)
+        self.sendfailcount = 0
+        self.failcountmsg = 1
 
     def recv(self):
         return self.b.recv()
@@ -184,8 +183,11 @@ class NMEASocket(object):
             return
         try:
             if not self.pollout.poll(0):
-                print 'nmea socket failed to send'
-                self.out_buffer = ''
+                self.sendfailcount += 1
+                if self.sendfailcount == self.failcountmsg:
+                    print 'nmea socket', self.socket.fileno(), 'failed to send', self.sendfailcount
+                    self.failcountmsg *= 10 # print only at 1, 10, 100 etc frequency
+                self.out_buffer = '' # drop nmea data
                 return
             count = self.socket.send(self.out_buffer)
             if count < 0:
@@ -199,43 +201,24 @@ class NMEASocket(object):
             self.out_buffer = ''
             self.socket.close()
 
-    
 class Nmea(object):
-    def __init__(self, server):
+    def __init__(self, server, sensors):
         self.server = server
-        self.values = {'gps': {}, 'wind': {}, 'rudder': {}}
-
-        def make_source(name, dirname, speed=True):
-            timestamp = server.TimeStamp(name)
-            self.values[name][dirname] = server.Register(SensorValue(name + '.' + dirname, timestamp, directional=True))
-            if speed:
-                self.values[name]['speed'] = server.Register(SensorValue(name + '.speed', timestamp))
-            self.values[name]['source'] = server.Register(StringValue(name + '.source', 'none'))
-            self.values[name]['lastupdate'] = 0
-
-        make_source('gps', 'track')
-        make_source('wind', 'direction')
-        make_source('rudder', 'angle')
-
-        self.devices = []
-        self.devices_lastmsg = {}
-        self.probedevice = None
-        self.primarydevices = {'gps': None, 'wind': None, 'rudder': None}
-        self.gpsdpoller = GpsdPoller(self)
-
+        self.sensors = sensors
         self.process = NmeaBridgeProcess()
         self.process.start()
         self.poller = select.poll()
         self.process_fd = self.process.pipe.fileno()
         self.poller.register(self.process_fd, select.POLLIN)
-        self.gps_fd = self.gpsdpoller.process.pipe.fileno()
-        self.poller.register(self.gps_fd, select.POLLIN)
         self.device_fd = {}
 
         self.nmea_times = {}
         self.last_imu_time = time.time()
         self.last_rudder_time = time.time()
-        self.starttime = time.time()
+
+        self.devices = []
+        self.devices_lastmsg = {}
+        self.probedevice = None
 
     def __del__(self):
         print 'terminate nmea process'
@@ -248,7 +231,8 @@ class Nmea(object):
         elif msgs == 'nosockets':
             self.process.sockets = False
         else:
-            self.handle_messages(msgs, 'tcp')
+            for name in msgs:
+                self.sensors.write(name, msgs[name], 'tcp')
 
     def read_serial_device(self, device, serial_msgs):
         t = time.time()
@@ -257,30 +241,31 @@ class Nmea(object):
             return
         if self.process.sockets:
             nmea_name = line[:6]
-            # do not output nmea data over tcp faster than 5hz
-            # for each message time
-            if not nmea_name in self.nmea_times or t-self.nmea_times[nmea_name]>.2:
-                self.process.pipe.send(line, False)
-                self.nmea_times[nmea_name] = t
+            # we output these messages after calibration
+            if not nmea_name[3:] in ['MWV', 'RSA']:
+                # do not output nmea data over tcp faster than 5hz
+                # for each message time
+                # forward nmea lines from serial to tcp
+                dt = t-self.nmea_times[nmea_name] if nmea_name in self.nmea_times else -1
+                if dt>.2 or dt < 0:
+                    self.process.pipe.send(line, False)
+                    self.nmea_times[nmea_name] = t
 
         self.devices_lastmsg[device] = t
         parsers = []
-        if not self.primarydevices['wind'] or self.primarydevices['wind'] == device:
-            parsers.append(parse_nmea_wind)
-        if self.values['gps']['source'] != 'gpsd' and \
-           (not self.primarydevices['gps'] or self.primarydevices['gps'] == device):
-            parsers.append(parse_nmea_gps)
-        if self.values['rudder']['source'] != 'servo' and \
-           (not self.primarydevices['rudder'] or self.primarydevices['rudder'] == device):
-            parsers.append(parse_nmea_rudder)
-                
+
+        # only process if we are the correct device or do not have a device for this data
+        for name in nmea_parsers:
+            name_device = self.sensors.sensors[name].device
+            if not name_device or name_device == device.path[0]:
+                parsers.append(nmea_parsers[name])
+
+        # parse the nmea line, and update serial messages
         for parser in parsers:
             result = parser(line)
             if result:
                 name, msg = result
-                if not self.primarydevices[name]:
-                    print 'found primary serial device for', name
-                    self.primarydevices[name] = device
+                msg['device'] = device.path[0]
                 serial_msgs[name] = msg
                 break
 
@@ -290,9 +275,9 @@ class Nmea(object):
         self.devices[index] = False
         self.poller.unregister(device.device.fileno())
         del self.devices_lastmsg[device]
-        for name in self.primarydevices:
-            if device == self.primarydevices[name]:
-                self.primarydevices[name] = None
+        for name in self.values:
+            if device == self.values[name]['device']:
+                self.values[name]['device'] = None
         device.close()
             
     def poll(self):
@@ -314,20 +299,15 @@ class Nmea(object):
                         print 'nmea got flag for process pipe:', flag
                     else:
                         self.read_process_pipe()
-                elif fd == self.gps_fd:
-                    if flag != select.POLLIN:
-                        print 'nmea got flag for gpsdpoller pipe:', flag
-                    else:
-                        self.gpsdpoller.read()
                 elif flag == select.POLLIN:
                     #if flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
                     self.read_serial_device(self.device_fd[fd], serial_msgs)
                 else:
                     self.remove_serial_device(self.device_fd[fd])
-                    
 
         t2 = time.time()
-        self.handle_messages(serial_msgs, 'serial')
+        for name in serial_msgs:
+            self.sensors.write(name, serial_msgs[name], 'serial')
         t3 = time.time()
                 
         for device in self.devices:
@@ -335,23 +315,15 @@ class Nmea(object):
             if not device:
                 continue
             dt = time.time() - self.devices_lastmsg[device]
-            if dt > 1:
-                print 'serial device dt', dt, device
+            if dt > 2:
+                if dt < 3:
+                    print 'serial device dt', dt, device.path, 'is another process accessing it?'
             if dt > 15:
                 print 'serial device timed out', dt, device
                 self.remove_serial_device(device)
         t4 = time.time()
 
-        # timeout sources
-        for name in self.values:
-            value = self.values[name]
-            if value['source'].value == 'none':
-                continue
-            if t4 - value['lastupdate'] > 8:
-                print 'nmea timeout for', name, 'source', value['source'].value, time.time(), t4 - value['lastupdate']
-                value['source'].set('none')
-
-        # send nmea messages to sockets
+        # send nmea messages to sockets at 2hz
         dt = time.time() - self.last_imu_time
         if self.process.sockets and (dt > .5 or dt < 0) and \
            'imu.pitch' in self.server.values:
@@ -360,20 +332,19 @@ class Nmea(object):
             self.send_nmea('APHDM,%.3f,M' % self.server.values['imu.heading_lowpass'].value)
             self.last_imu_time = time.time()
 
-        # update rudder from servo
-        if 'servo.rudder' in self.server.values:
-            value = self.server.values['servo.rudder'].value
-            if value:
-                self.handle_messages({'rudder': {'angle': value}}, 'servo')
+        # should we output gps?  for now no
             
-        # limit to 5hz output of servo rudder
-        dt = time.time() - self.last_rudder_time
-        if self.process.sockets and (dt > .2 or dt < 0) and self.values['rudder']['source'].value == 'servo':
-            # if the servo has rudder, output nmea rudder angle
-            value = self.values['rudder']['angle'].value
-            if value:
-                self.send_nmea('APRSA,%.3f,A,,' % value)
-            self.last_rudder_time = time.time()
+        # limit to 5hz output of wind and rudder
+        t = time.time()
+        for name in ['wind', 'rudder'] if self.process.sockets else []:
+            dt = t - self.nmea_times[name] if name in self.nmea_times else -1
+            if dt > .2 or dt < 0 and self.sensors.sensors[name].source.value != 'none':
+                if name == 'wind':
+                    wind = self.sensors.wind
+                    self.send_nmea('APMWV,%.3f,R,%.3f,K,A' % (wind.direction.value, wind.speed.value))
+                else:
+                    self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
+                self.nmea_times[name] = t
             
         t5 = time.time()
         if t5 - t0 > .1:
@@ -417,29 +388,7 @@ class Nmea(object):
         line = '$' + msg + ('*%02X' % nmea_cksum(msg))
         self.process.pipe.send(line, False)
 
-    def handle_messages(self, msgs, source):
-        for name in msgs:
-            if not name in self.values:
-                print 'unknown data parsed!', name
-                break
-            value = self.values[name]
 
-            if source_priority[value['source'].value] < source_priority[source]:
-                continue
-
-            msg = msgs[name]
-            timestamp = msg['timestamp'] if 'timestamp' in msg else time.time()-self.starttime
-            self.server.TimeStamp(name, timestamp)
-
-            for vname in msg:
-                if vname != 'timestamp':
-                    value[vname].set(msg[vname])
-            if value['source'].value != source:
-                print 'nmea source for', name, 'source', source, time.time()
-            value['source'].update(source)
-            value['lastupdate'] = time.time()
-
-    
 class NmeaBridgeProcess(multiprocessing.Process):
     def __init__(self):
         self.pipe, pipe = NonBlockingPipe('nmea pipe', True)
@@ -451,19 +400,22 @@ class NmeaBridgeProcess(multiprocessing.Process):
         for name in watchlist:
             self.client.watch(name, watch)
 
-    def receive_nmea(self, line, msgs):
+    def receive_nmea(self, line, device, msgs):
         parsers = []
-        if source_priority[self.last_values['gps.source']] >= source_priority['tcp']:
-            parsers.append(parse_nmea_gps)
-        if source_priority[self.last_values['wind.source']] >= source_priority['tcp']:
-            parsers.append(parse_nmea_wind)
-        if source_priority[self.last_values['rudder.source']] >= source_priority['tcp']:
-            parsers.append(parse_nmea_rudder)
+
+        # optimization to only to parse sentences here that would be discarded
+        # in the main process anyway because they are already handled by a source
+        # with a higher priority than tcp
+        tcp_priority = source_priority['tcp']
+        for name in nmea_parsers:
+            if source_priority[self.last_values[name + '.source']] >= tcp_priority:
+                parsers.append(nmea_parsers[name])
 
         for parser in  parsers:
             result = parser(line)
             if result:
                 name, msg = result
+                msg['device'] = device
                 msgs[name] = msg
                 return
 
@@ -575,7 +527,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
         self.sockets = []
         self.last_apb_time = time.time()
         def on_con(client):
-            print 'nmea client connected'
+            print 'nmea ready for connections'
             if self.sockets:
                 self.setup_watches()
 
@@ -603,7 +555,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         self.last_values = {'ap.enabled': False, 'ap.mode': 'N/A',
                             'ap.heading_command' : 1000,
-                            'gps.source' : 'none', 'wind.source' : 'none'}
+                            'gps.source' : 'none', 'wind.source' : 'none', 'rudder.source': 'none'}
         self.addresses = {}
         cnt = 0
 
@@ -650,7 +602,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
                             if not line:
                                 break
                             if not self.receive_apb(line, msgs):
-                                self.receive_nmea(line, msgs)
+                                self.receive_nmea(line, 'socket' + str(sock.socket.fileno()), msgs)
                 else:
                     print 'nmea bridge unhandled poll flag', flag
 
