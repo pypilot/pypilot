@@ -100,7 +100,7 @@ void ArduinoServo::command(double command)
 }
 
 int ArduinoServo::process_packet(uint8_t *in_buf)
-{
+{    
     if(packet_count < 255)
         packet_count++;
     uint16_t value = in_buf[1] + (in_buf[2]<<8);
@@ -170,6 +170,12 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
             // validate ranges
             params(max_current, max_controller_temp, max_motor_temp, rudder_range, rudder_offset, rudder_scale, rudder_nonlinearity, max_slew_speed, max_slew_slow, current_factor, current_offset, voltage_factor, voltage_offset, min_motor_speed, max_motor_speed, gain);
             return EEPROM;
+        } else if(!eeprom.initial_read) {
+            // if we got an eeprom value, but did not get the initial read,
+            // send a lot of disengage commands to speed up communication speed which
+            // will complete reading eeprom faster
+            for(int i=0; i<16; i++)
+                disengauge();
         }
     }
     }
@@ -229,7 +235,7 @@ int ArduinoServo::poll()
         static int cnt;
         struct timeval tv;
         gettimeofday(&tv, 0);
-        printf("input %d %ld:%ld %x %x %x %x %x\n", cnt++, tv.tv_sec, tv.tv_usec, in_buf[0], in_buf[1], in_buf[2], in_buf[3], crc);
+        printf("input %d %ld:%ld %x %x %x %x %x %d\n", cnt++, tv.tv_sec, tv.tv_usec, in_buf[0], in_buf[1], in_buf[2], in_buf[3], crc, in_buf_len);
 #endif
         if(crc == in_buf[3]) { // valid packet
             if(in_sync_count >= 2)
