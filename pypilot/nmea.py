@@ -63,6 +63,9 @@ def parse_nmea_gps(line):
     except:
         return False
 
+    if data[1] == 'V':
+        return False
+
     return 'gps', {'timestamp': timestamp, 'track': heading, 'speed': speed}
 
 
