@@ -262,7 +262,6 @@ class LCDClient():
         self.blink = black, white
         self.control = False
         self.wifi = False
-        self.overcurrent_time = 0
         
         if orangepi:
             self.pins = [11, 16, 13, 15, 12]
@@ -858,21 +857,22 @@ class LCDClient():
             self.control['heading'] = self.last_val('ap.heading')
 
         mode = self.last_val('ap.mode')
-        if 'OVERCURRENT' in self.last_val('servo.flags'):
-            self.overcurrent_time = time.time()
 
         if self.last_val('servo.controller') == 'none':
             if self.control['heading_command'] != 'no controller':
                 self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
                 self.control['heading_command'] = 'no controller'
-        elif time.time() - self.overcurrent_time < 5: # 5 seconds
-            if self.control['heading_command'] != 'overcurrent':
-                self.fittext(rectangle(0, .4, 1, .35), _('OVER CURRENT'), True, black)
-                self.control['heading_command'] = 'overcurrent'
-        elif 'OVERTEMP' in self.last_val('servo.flags'):
-            if self.control['heading_command'] != 'overtemp':
-                self.fittext(rectangle(0, .4, 1, .35), _('OVER TEMP'), True, black)
-                self.control['heading_command'] = 'overtemp'
+
+        # display warning about any servo faults
+        flags = self.last_val('servo.flags').split()
+        warning = ''
+        for flag in flags:
+            if flag.endswith('_FAULT'):
+                warning += flag[:-6] + ' '
+
+        if warning and self.control['heading_command'] != warning:
+            self.fittext(rectangle(0, .4, 1, .35), _(warning), True, black)
+            self.control['heading_command'] = warning
         elif mode == 'gps' and not self.have_gps():
             if self.control['heading_command'] != 'no gps':
                 self.fittext(rectangle(0, .4, 1, .4), _('GPS not detected'), True, black)

@@ -635,6 +635,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 
 		fgSizer32 = wx.FlexGridSizer( 1, 0, 0, 0 )
 		fgSizer32.AddGrowableCol( 1 )
+		fgSizer32.AddGrowableCol( 2 )
 		fgSizer32.SetFlexibleDirection( wx.BOTH )
 		fgSizer32.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
@@ -647,6 +648,11 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.stRudderAngle.Wrap( -1 )
 
 		fgSizer32.Add( self.stRudderAngle, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.stServoFlags = wx.StaticText( self.m_panel71, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stServoFlags.Wrap( -1 )
+
+		fgSizer32.Add( self.stServoFlags, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_button161 = wx.Button( self.m_panel71, wx.ID_ANY, u"Reset Calibration", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer32.Add( self.m_button161, 0, wx.ALL, 5 )
