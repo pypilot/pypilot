@@ -92,18 +92,20 @@ class Web(object):
         self.hat = hat
         import atexit, signal
         def cleanup(signal_number, frame=None):
-            print('cleanup web process')
+            print('cleanup web process', signal_number)            
             if self.process:
-                self.process.terminate()
+                print('pid kill ', self.process.pid)
+                os.kill(self.process.pid, signal.SIGTERM) # get backtrace
+            self.process = False
             sys.stdout.flush()
             if signal_number:
                 raise KeyboardInterrupt # to get backtrace on all processes
-                
 
         atexit.register(lambda : cleanup(None)) # get backtrace
-        for s in range(1, 12):
-            if s != 9:
+        for s in range(1, 16):
+            if s != 9 and s != 13:
                 signal.signal(s, cleanup)
+        #signal.signal(signal.SIGCHLD, cleanup)
 
     def send(self, value):
         if self.process:
@@ -122,7 +124,6 @@ class Web(object):
             self.process = multiprocessing.Process(target=web_process, args=(pipe, keyspipe, self.hat.actions))
             self.process.start()
             self.send({'status': self.status})
-            print('web on', self.process.pid)
 
         if not self.process.is_alive():
             self.process = False

@@ -51,7 +51,10 @@ class gpio(object):
                 GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
                 pass
             except RuntimeError:
-                os.system("sudo chown tc /dev/gpiomem")
+                print('failed to open /dev/gpiomem, no permission')
+                # if failed, attempt to give current user privilege if no sudo pw
+                user = os.getenv('USER')
+                os.system('sudo chown ' + user + '/dev/gpiomem')
                 GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
                     
             def cbr(pin):
