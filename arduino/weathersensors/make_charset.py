@@ -63,4 +63,4 @@ numeric = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 alpha = map(lambda x : '%c' % x, range(ord('A'), ord('Z') + 1))
 lower = map(lambda x : '%c' % (ord(x) + 32), alpha)
 
-create_fonts([(numeric + list('C.'), 12), (numeric, 14), (numeric, 16), (numeric, 24)])
+create_fonts([(numeric + list('CF.'), 12), (numeric, 14), (numeric, 16), (numeric, 24)])

@@ -107,7 +107,7 @@ class BoatPlot():
 
         #glTranslatef(0, -2*s, 0)
         
-        def draw_string(str, pos):
+        def draw_string(s, pos):
             viewport = glGetIntegerv(GL_VIEWPORT)
             proj = glGetDoublev(GL_PROJECTION_MATRIX)
             model = glGetDoublev(GL_MODELVIEW_MATRIX)
@@ -118,7 +118,7 @@ class BoatPlot():
             glPushMatrix()
             glLoadIdentity()
             glRasterPos2d(2*winpos[0]/viewport[2]-1, 2*winpos[1]/viewport[3]-1)
-            for c in str:
+            for c in s:
                 glutBitmapCharacter(GLUT_BITMAP_9_BY_15, ctypes.c_int(ord(c)))
 
             glPopMatrix()

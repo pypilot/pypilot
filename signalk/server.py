@@ -149,7 +149,7 @@ class SignalKServer(object):
         else:
             name = data['name']
             if not name in self.values:
-                socket.send('invalid request: unknown value: ' + name + '\n')
+                socket.send('invalid request: ' + data['method'] + ' unknown value: ' + name + '\n')
             else:
                 self.HandleNamedRequest(socket, data)
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2017 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -7,7 +7,7 @@
  */
 
 /* this program interfaces with the bmp280 pressure sensor and outputs
- calibrated signalk data over serial at 38400 baud
+   calibrated signalk data over serial at 38400 baud
  */
 
 /* anemometer wires
@@ -33,10 +33,15 @@ extern "C" {
   #include <twi.h>
 }
 
+// comment/uncomment these settings as needed
 #define ANEMOMETER   // comment to show only baro graph
-#define LCD
+
+#define LCD          // if nokia5110 lcd on spi port
+#define DAVIS     // uncomment only for davis sensors
+//#define CCW   //  voltage decreases with wind direction (not davis!)
 
 #define LCD_BL_HIGH  // if backlight pin is high rather than gnd
+//#define FARENHEIT
 
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
@@ -45,6 +50,8 @@ static PCD8544 lcd(13, 11, 8, 7, 4);
 const int analogInPin = A7;  // Analog input pin that the potentiometer is attached to
 const int analogLightPin = A6;
 const int analogBacklightPin = 9;
+
+int16_t cross_count = 1000; // calibrate range during first 1000 crossings of 0
 
 uint8_t have_bmp280 = 0;
 uint8_t bmX280_tries = 10;  // try 10 times to configure
@@ -136,17 +143,35 @@ void bmX280_setup()
 
 volatile unsigned int rotation_count;
 volatile uint16_t lastperiod;
+
 void isr_anemometer_count()
 {
-    static uint16_t lastt;
-    int t = millis();
-    uint16_t period = t-lastt;
-    if(period < 15) // debounce, at least for less than 130 knots of wind
-        return;
+    uint8_t pin = digitalRead(2);
 
-    lastt = t;
-    lastperiod += period;
-    rotation_count++;
+    static uint16_t lastt, lastofft;
+    static uint8_t lastpin;
+    int t = millis();
+
+    if(!pin && lastpin) {
+        uint16_t period = t-lastt;
+        uint16_t offperiod = t-lastofft;
+
+#ifdef DAVIS
+        if(period > 10)
+#else
+        if(offperiod > 10 && // debounce, at least for less than 120 knots of wind
+           /*offperiod > period/2 &&*/ offperiod < period/10*9) // test good reading
+#endif
+        {
+            lastt = t;            
+            lastperiod += period;
+            rotation_count++;
+        } else { // bad reading, reset
+
+        }
+    }
+    lastpin = pin;
+    lastofft = t;
 }
 
 #include <avr/wdt.h>
@@ -165,22 +190,36 @@ void setup()
   WDTCSR = (1<<WDIE) | (1<<WDP2) | (1<<WDP1); // interrupt in 1 second
   sei();
 
+  Serial.begin(38400);  // start serial for output
+
   // default values
-  char signature[] =  "arws10";
-  memcpy(eeprom_data.signature, signature, sizeof eeprom_data.signature);
-  eeprom_data.wind_min_reading = 300;
-  eeprom_data.wind_max_reading = 650;
   
   // read eeprom and determine if it is valid
   struct eeprom_data_struct ram_eeprom;
   eeprom_read_block(&ram_eeprom, 0, sizeof ram_eeprom);
-  if(memcmp(ram_eeprom.signature, signature, sizeof ram_eeprom.signature) != 0)
-      eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
-  else
-      memcpy(&eeprom_data, &ram_eeprom, sizeof eeprom_data);
-  
-  Serial.begin(38400);  // start serial for output
 
+
+  char signature[] =  "arws12";
+  memcpy(eeprom_data.signature, signature, sizeof eeprom_data.signature);
+  eeprom_data.wind_min_reading = 300;
+  eeprom_data.wind_max_reading = 650;
+
+  if(memcmp(ram_eeprom.signature, signature, sizeof ram_eeprom.signature) == 0 &&
+     ram_eeprom.wind_min_reading > 0 && // ensure somewhat sane range
+     ram_eeprom.wind_max_reading < 1024 &&
+     ram_eeprom.wind_min_reading < ram_eeprom.wind_max_reading-100) {
+      memcpy(&eeprom_data, &ram_eeprom, sizeof eeprom_data);
+      Serial.print("Calibration valid  ");
+      Serial.print(ram_eeprom.wind_min_reading);
+      Serial.print("  ");
+      Serial.println(ram_eeprom.wind_max_reading);
+
+      // no more calibration if valid
+      // do not recalibrate as eventually bad readings may
+      // corrupt calibration in the future.
+      cross_count = 0;
+  }
+  
   // read fuses, and report this as flag if they are wrong
     uint8_t lowBits      = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
     uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
@@ -193,7 +232,7 @@ void setup()
   bmX280_setup();
 
 #ifdef ANEMOMETER
-  attachInterrupt(0, isr_anemometer_count, FALLING);
+  attachInterrupt(0, isr_anemometer_count, CHANGE);
   pinMode(analogInPin, INPUT);
   pinMode(2, INPUT_PULLUP);
 #endif
@@ -235,7 +274,7 @@ ISR(ADC_vect)
             ADMUX = _BV(REFS0) | 7, adcchannel = 1;
         }
     } else {
-        uint8_t b = adcw < 256 ? 1 : adcw < 768 ? 2 : 3;
+        uint8_t b = adcw < 448 ? 1 : adcw < 576 ? 2 : 3;
         if(adccount[b] < 4000) {
             adccount[b]++;
             if(adccount[b] > 0)
@@ -302,7 +341,7 @@ float wind_dir, wind_speed, wind_speed_30;
 void read_anemometer()
 {
     static float lpdir;
-    const float lp = .1; // lowpass filter constant
+    const float lp = .2; // lowpass filter constant
 
     if(adccount[1] < 100 && adccount[2] < 100 && adccount[3] < 100)
         return; // not enough data
@@ -319,6 +358,7 @@ void read_anemometer()
         adcval[i] = 0;
         adccount[i] = -4;
     }
+
 #ifdef LCD
     // read from backlight sense
     adcchannel = 0;
@@ -330,11 +370,32 @@ void read_anemometer()
 
     // read the analog in value:
     int16_t sensorValue = 0;
-
     // discard this since we crossed zero and read
     // possibly invalid data
-    if(count[0] != -4 && count[2] != -4) {
-        //Serial.println("CROSS!!!!");
+    if(count[0] > 0 && count[2] > 0) {
+#if 0
+        Serial.print ("CROSS!!!!   ");
+        Serial.print(float(val[0]) / count[0]);
+        Serial.print("  ");
+        Serial.println(float(val[2]) / count[2]);
+#endif
+        if(cross_count > 0) {
+#if 1
+            Serial.print("Calibrating  ");
+            Serial.print(sensorValue);
+            Serial.print("  ");
+            Serial.print(eeprom_data.wind_min_reading);
+            Serial.print(" ");
+            Serial.print(eeprom_data.wind_max_reading);
+            Serial.print(" ");
+            Serial.println(cross_count);
+#endif
+            cross_count--;
+        }
+        if(cross_count == 0) { // write at zero
+            Serial.println("Calibration Finished");
+            eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
+        }
         return;
     }
 
@@ -347,48 +408,61 @@ void read_anemometer()
         }
     }
 
+
     if(tcount < 64) {
-        Serial.println(count[0]);
-        Serial.println(count[1]);
-        Serial.println(count[2]);
-        Serial.println(tcount);
-        Serial.println("Not enough data!!");
+        //Serial.println(count[0]);
+        //Serial.println(count[1]);
+        //Serial.println(count[2]);
+        //Serial.println(tcount);
+        //Serial.println("Not enough data!!");
         return; // not enough data
     }
 
     sensorValue = tval / tcount; // average data
+    //Serial.println(sensorValue);
+
       
     // make sure the value is sane
-    if(sensorValue < 0 || sensorValue > 1024) {
+    if(sensorValue < 0 || sensorValue > 1023) {
         Serial.println("invalid range: program error");
         return;
     }
-    
-    if(sensorValue < eeprom_data.wind_min_reading / 2 && eeprom_data.wind_min_reading > 20)
+
+    float dir = 0;
+#ifdef DAVIS
+    // compensate 13 degree deadband in potentiometer over full range
+    dir = (sensorValue + 13) * .34;
+#else
+    if(sensorValue < eeprom_data.wind_min_reading - 40 && eeprom_data.wind_min_reading >= 40)
         lpdir = -1; // invalid
-    else {
-        int noise = 5;
-        if(sensorValue < eeprom_data.wind_min_reading - noise) {
-            // new minimum
-            eeprom_data.wind_min_reading = sensorValue + noise;
-            eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
-        } else if(sensorValue < eeprom_data.wind_min_reading)
-            sensorValue = eeprom_data.wind_min_reading;
-        else if(sensorValue > eeprom_data.wind_max_reading + noise) {
-            eeprom_data.wind_max_reading = sensorValue - noise;
-            eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
+    else
+    {
+        int noise = 0;
+        if(cross_count > 0) {
+            if(sensorValue < eeprom_data.wind_min_reading - noise)
+                eeprom_data.wind_min_reading = sensorValue + noise;
+            else if(sensorValue > eeprom_data.wind_max_reading + noise)
+                eeprom_data.wind_max_reading = sensorValue - noise;
         }
+        
+        if(sensorValue < eeprom_data.wind_min_reading)
+            sensorValue = eeprom_data.wind_min_reading;
         else if(sensorValue > eeprom_data.wind_max_reading)
             sensorValue = eeprom_data.wind_max_reading;
 
-        // compensate 13 degree deadband in potentiometer
-        float dir;
-        if(eeprom_data.wind_min_reading < 20 && eeprom_data.wind_max_reading > 1000)
+        if(eeprom_data.wind_min_reading < 40 || eeprom_data.wind_max_reading > 1000)
             dir = (sensorValue + 13) * .34;
         else
             dir = float(sensorValue - eeprom_data.wind_min_reading)
                 / (eeprom_data.wind_max_reading - eeprom_data.wind_min_reading) * 360.0;
+    }
+#endif
 
+    // lowpass wind direction
+    if(dir >= 0) {
+#ifdef CCW
+        dir = 360 - dir;
+#endif
         if(lpdir - dir > 180)
             dir += 360;
         else if(dir - lpdir > 180)
@@ -417,30 +491,40 @@ void read_anemometer()
         sei();
         
         static uint16_t nowindcount;
-        static float knots = 0;
+        static float knots = 0, lastnewknots = 0;
         const int nowindtimeout = 30;
         if(count) {
-            if(nowindcount!=nowindtimeout)
-                knots = .868976 * 2.25 * 1000 * count / period;
+            if(nowindcount!=nowindtimeout) {
+                float newknots = .868976 * 2.25 * 1000 * count / period;
+#if 0
+                Serial.print(lastnewknots);
+                Serial.print("   ");
+                Serial.print(newknots);
+                Serial.print("   ");
+                Serial.println(lastnewknots/newknots-1);
+#endif
+                // if changing too fast, maybe bad reading
+                if(lastnewknots == 0 || fabs(lastnewknots - newknots) < 5 || fabs(lastnewknots/newknots-1) <= .5)
+                    knots = newknots;
+
+                lastnewknots = newknots;
+            }
+
             nowindcount = 0;
         } else {
             if(nowindcount<nowindtimeout)
                 nowindcount++;
             else
-                knots = 0;
+                knots = lastnewknots = 0;
         }
 
         char buf[128];
-        if(lpdir >= 0)
+        if(dir >= 0)
             snprintf(buf, sizeof buf, "ARMWV,%d.%02d,R,%d.%02d,N,A", (int)lpdir, (uint16_t)(lpdir*100.0)%100U, (int)knots, (int)(knots*100)%100);
         else // invalid wind direction (no magnet?)
             snprintf(buf, sizeof buf, "ARMWV,,R,%d.%02d,N,A", (int)knots, (int)(knots*100)%100);
-        //        Serial.println(lpdir*100);
-        //        Serial.println((int)(uint16_t)(lpdir*100.0)%100U);
-
-//        Serial.println(sensorValue);
         send_nmea(buf);
-
+        
         wind_dir = lpdir;
         wind_speed = knots;
         wind_speed_30 = wind_speed_30*299.0/300.0 + wind_speed/300.0;
@@ -599,9 +683,16 @@ void draw_anemometer()
         lcd.setpos(a*7+6, 61);
         lcd.print(status_buf[2]);
 
-        a = temperature_comp / 100;
-        r = temperature_comp - a*100;
-        snprintf(status_buf[3], sizeof status_buf[3], "%d.%02dC", a, abs(r));
+        char unit = 'C';
+        int32_t temp = temperature_comp;
+#ifdef FARENHEIT
+        unit = 'F';
+        temp = temp*9/5+3200;
+#endif
+        
+        a = temp / 100;
+        r = temp - a*100;
+        snprintf(status_buf[3], sizeof status_buf[3], "%d.%02d%c", a, abs(r), unit);
         
         lcd.setfont(0);
         lcd.setpos(1, 71);

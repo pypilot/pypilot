@@ -35,7 +35,7 @@ class LineBufferedNonBlockingSocket(object):
         self.out_buffer += data
         if len(self.out_buffer) > 65536:
             self.out_buffer = data
-            print 'overflow in signalk socket', len(data)
+            print('overflow in signalk socket', len(data))
     
     def flush(self):
         if not self.out_buffer:
@@ -43,20 +43,22 @@ class LineBufferedNonBlockingSocket(object):
         try:
             if not self.pollout.poll(0):
                 if sendfail_cnt >= sendfail_msg:
-                    print 'signalk socket failed to send', sendfail_cnt
+                    print('signalk socket failed to send', sendfail_cnt)
                     self.sendfail_msg *= 10
                 self.sendfail_cnt += 1
                 return
             t0 = time.time()
-            count = self.socket.send(self.out_buffer)
+            count = self.socket.send(str.encode(str(self.out_buffer)))
             t1 = time.time()
+
             if t1-t0 > .1:
-                print 'socket send took too long!?!?', t1-t0
+                print('socket send took too long!?!?', t1-t0)
             if count < 0:
-                print 'socket send error', count
+                print('socket send error', count)
                 self.socket.close()
             self.out_buffer = self.out_buffer[count:]
-        except:
+        except Exception as e:
+            print('exception', e)
             self.socket.close()
 
 class LineBufferedNonBlockingSocketPython(object):
@@ -76,7 +78,7 @@ class LineBufferedNonBlockingSocketPython(object):
         try:
             count = self.socket.send(self.out_buffer)
             if count < 0:
-                print 'socket send error in server flush'
+                print('socket send error in server flush')
                 self.out_buffer = ''
                 self.socket.close()
                 return
@@ -109,4 +111,3 @@ class LineBufferedNonBlockingSocketPython(object):
                 return ret
             self.no_newline_pos += 1
         return ''
-

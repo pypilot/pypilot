@@ -133,7 +133,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
         if t > 0 and t < period:
           time.sleep(t)
         else:
-          print 'imu process failed to keep time'
+          print('imu process failed to keep time', t)
 
 class LoopFreqValue(Value):
     def __init__(self, name, initial):
