@@ -17,7 +17,7 @@ from PIL import ImageFont
 
 
 ifont = ImageFont.truetype('../font.ttf', 14)
-version = "0.14"#pypilot.version.strversion
+version = pypilot.version.strversion
 size = ifont.getsize(version)
 image = Image.new('RGBA', size)
 draw = ImageDraw.Draw(image)
