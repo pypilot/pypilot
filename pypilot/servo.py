@@ -75,9 +75,10 @@ class RaspberryHWPWMServoDriver(object):
 # as well as voltage and current feedback
 class ServoFlags(Value):
     SYNC = 1
-    FAULTPIN = 2
+    OVERTEMP = 2
     OVERCURRENT = 4
     ENGAUGED = 8
+    FAULTPIN = 16
     
     def __init__(self, name):
         super(ServoFlags, self).__init__(name, 0)
@@ -86,12 +87,14 @@ class ServoFlags(Value):
         ret = ''
         if self.value & self.SYNC:
             ret += 'SYNC '
-        if self.value & self.FAULTPIN:
-            ret += 'FAULTPIN '
+        if self.value & self.OVERTEMP:
+            ret += 'OVERTEMP '
         if self.value & self.OVERCURRENT:
             ret += 'OVERCURRENT '
         if self.value & self.ENGAUGED:
             ret += 'ENGAUGED '
+        if self.value & self.FAULTPIN:
+            ret += 'FAULTPIN '
         return ret
         
     def get_signalk(self):
@@ -180,10 +183,6 @@ class Servo(object):
             self.velocity_command(command)
 
     def velocity_command(self, speed):
-        if speed == 0: # optimization
-            self.raw_command(0)
-            return
-
         if self.fault():
             if self.speed > 0:
                 self.fwd_fault = True
@@ -193,6 +192,10 @@ class Servo(object):
                 self.position = -1
 
             self.stop()
+            return
+
+        if speed == 0: # optimization
+            self.raw_command(0)
             return
 
         if self.fwd_fault and speed > 0 or \
@@ -296,7 +299,6 @@ class Servo(object):
             self.mode.update('forward')
 
         if not self.driver:
-            t0 = time.time()
             device_path = self.serialprobe.probe('servo', [38400], 1)
             if device_path:
                 #from arduino_servo.arduino_servo_python import ArduinoServo
@@ -359,6 +361,7 @@ class Servo(object):
     def poll(self):
         if not self.driver:
             return
+        #print 'servo poll'
         result = self.driver.poll()
         if result == -1:
             print 'poll -1'

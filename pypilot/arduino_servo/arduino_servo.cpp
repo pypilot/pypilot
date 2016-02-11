@@ -15,7 +15,7 @@
 #include "arduino_servo.h"
 
 enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_ARDUINO_TEMP_CODE = 0xa7, REPROGRAM_CODE = 0x19};
-enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, ARDUINO_TEMP_CODE=0xf9, FLAGS_CODE = 0x41};
+enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, ARDUINO_TEMP_CODE=0xf9, FLAGS_CODE = 0x8f};
 
 const unsigned char crc8_table[256]
 = {
@@ -116,15 +116,20 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
     switch(in_buf[0]) {
     case CURRENT_CODE:
         current = value / 100.0;
+        //printf("servo current  %f\n", current);
         return CURRENT;
     case VOLTAGE_CODE:
         voltage = value / 100.0;
+        //printf("servo voltage  %f\n", voltage);
         return VOLTAGE;
     case ARDUINO_TEMP_CODE:
         arduino_temp = (int16_t)value / 100.0;
+        //printf("servo temp  %f\n", arduino_temp);
         return ARDUINO_TEMP;
     case FLAGS_CODE:
         flags = value;
+//        if(flags != 9)
+        //printf("servo flags %d %x\n", flags, flags);
         return FLAGS;
     }
     return 0;
@@ -166,7 +171,7 @@ int ArduinoServo::poll()
 
 bool ArduinoServo::fault()
 {
-    return flags & (FAULTPIN | OVERCURRENT);
+    return flags & (OVERTEMP | OVERCURRENT | FAULTPIN);
 }
 
 void ArduinoServo::max_values(double current, double arduino_temp)
@@ -177,9 +182,9 @@ void ArduinoServo::max_values(double current, double arduino_temp)
 
 void ArduinoServo::send_value(uint8_t command, uint16_t value)
 {
-    uint8_t code[3] = {command, (uint8_t)(value&0xff), (uint8_t)((value>>8)&0xff)};
-    uint8_t b[4] = {code[0], code[1], code[2], crc8(code, 3)};
-    write(fd, b, 4);
+    uint8_t code[4] = {command, (uint8_t)(value&0xff), (uint8_t)((value>>8)&0xff), 0};
+    code[3] = crc8(code, 3);
+    write(fd, code, 4);
 }
 
 void ArduinoServo::raw_command(uint16_t value)
