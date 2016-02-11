@@ -74,7 +74,7 @@ class BasicAutopilot(AutopilotBase):
         return
     
     # filter the heading command to compute feed-forward gain
-    heading_command_diff = self.heading_command.value - self.last_heading_command
+    heading_command_diff = resolv(self.heading_command.value - self.last_heading_command)
     self.last_heading_command = self.heading_command.value
     lp = .1
     command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
@@ -88,7 +88,7 @@ class BasicAutopilot(AutopilotBase):
                    'I': self.heading_error_int.value,
                    'D': headingrate,
                    'DD': headingraterate,
-                   'FF': self.heading_command_rate.value}
+                   'FF': -self.heading_command_rate.value}
     gain_values['P2'] = gain_values['P']
     gain_values['D2'] = gain_values['D']
 

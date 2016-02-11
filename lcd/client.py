@@ -43,15 +43,6 @@ from signalk.client import SignalKClient
 from ugfx import ugfx
 import font
 
-def nr(x):
-    try:
-        s = str(int(x))
-        while len(s) < 3:
-            s = ' ' + s
-        return s
-    except:
-        return x
-
 class LCDMenu():
     def __init__(self, lcd, name, items, prev=False):
         self.lcd = lcd
@@ -452,14 +443,17 @@ class LCDClient():
         size = font.draw(self.surface, pos, text, size, self.bw, crop)
         return float(size[0])/self.surface.width, float(size[1])/self.surface.height
 
-    def fittext(self, rect, text, wordwrap=False, crop=False):
+    def fittext(self, rect, text, wordwrap=False, fill='none'):
+        #print 'fittext', text, wordwrap, fill
+        if fill != 'none':
+            self.surface.box(*(self.convrect(rect) + [fill]))
         metric_size = 16
         if wordwrap:
             words = text.split(' ')
-            spacewidth = font.draw(self.surface, False, ' ', metric_size, self.bw, crop)[0]
+            spacewidth = font.draw(self.surface, False, ' ', metric_size, self.bw)[0]
             if len(words) < 2: # need at least 2 words to wrap
-                return self.fittext(rect, text, False, crop)
-            metrics = map(lambda word : (word, font.draw(self.surface, False, word, metric_size, self.bw, crop)), words)
+                return self.fittext(rect, text, False, fill)
+            metrics = map(lambda word : (word, font.draw(self.surface, False, word, metric_size, self.bw)), words)
 
             widths = map(lambda metric : metric[1][0], metrics)
             maxwordwidth = apply(max, widths)
@@ -500,7 +494,7 @@ class LCDClient():
                     size = cursize
                     text = curtext
         else:
-            s = font.draw(self.surface, False, text, metric_size, self.bw, crop)
+            s = font.draw(self.surface, False, text, metric_size, self.bw)
             if s[0] == 0 or s[1] == 0:
                 return 0, 0
             sw = self.surface.width * float(rect.width) / s[0]
@@ -508,7 +502,7 @@ class LCDClient():
             size = int(min(sw*metric_size, sh*metric_size))
 
         pos = int(rect.x*self.surface.width), int(rect.y*self.surface.height)
-        size = font.draw(self.surface, pos, text, size, self.bw, crop)
+        size = font.draw(self.surface, pos, text, size, self.bw)
         return float(size[0])/self.surface.width, float(size[1])/self.surface.height
 
     def line(self, x1, y1, x2, y2):
@@ -619,17 +613,25 @@ class LCDClient():
     def display_control(self):
         if not self.control:
             self.surface.fill(black)
-            self.control = {'heading': False, 'heading_command': True, 'mode': False}
+            self.control = {'heading': '   ', 'heading_command': '   ', 'mode': False}
         
         def draw_big_number(pos, num, lastnum):
+            def nr(x):
+                try:
+                    s = str(int(round(x)))
+                    while len(s) < 3:
+                        s = ' ' + s
+                    return s
+                except:
+                    return x
+
             num = nr(num)
             if lastnum:
                 lastnum = nr(lastnum)
 
             if num == 'N/A' and lastnum != num:
                 r = rectangle(pos[0], pos[1], 1, .4)
-                self.surface.box(*(self.convrect(r) + [black]))
-                self.fittext(r, num)
+                self.fittext(r, num, False, black)
                 return
 
             if self.surface.width < 256:
@@ -637,23 +639,19 @@ class LCDClient():
             else:
                 size = 30
 
-            def drawnum(ind, c):
-                x = pos[0]+float(ind)/3
-                self.surface.box(*(self.convrect(rectangle(x, pos[1], .34, .4)) + [black]))
-                self.text((x, pos[1]), c, size, True)
-
             for i in range(3):
                 try:
                     if num[i] == lastnum[i]:
                         continue
                 except:
                     pass
-                drawnum(i, num[i])
+                x = pos[0]+float(i)/3
+                self.surface.box(*(self.convrect(rectangle(x, pos[1], .34, .4)) + [black]))
+                self.text((x, pos[1]), num[i], size, True)
 
         if type(self.last_msg['ap.heading']) == type(False):
             r = rectangle(0, 0, 1, .8)
-            self.surface.box(*(self.convrect(r) + [black]))
-            self.fittext(r, _('ERROR\ncompass or gyro failure!'), True)
+            self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
             self.control['heading_command'] = 'no imu'
         else:
             draw_big_number((0,0), self.last_msg['ap.heading'], self.control['heading'])
@@ -665,31 +663,30 @@ class LCDClient():
 
         if self.last_msg['servo.controller'] == 'none':
             if self.control['heading_command'] != 'no controller':
-                self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True)
+                self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
                 self.control['heading_command'] = 'no controller'
         elif time.time() - self.overcurrent_time < 5: # 5 seconds
             if self.control['heading_command'] != 'overcurrent':
-                self.fittext(rectangle(0, .4, 1, .35), _('OVER CURRENT'), True)
+                self.fittext(rectangle(0, .4, 1, .35), _('OVER CURRENT'), True, black)
                 self.control['heading_command'] = 'overcurrent'
         elif 'OVERTEMP' in self.last_msg['servo.flags']:
             if self.control['heading_command'] != 'overtemp':
-                self.fittext(rectangle(0, .4, 1, .35), _('OVER TEMP'), True)
+                self.fittext(rectangle(0, .4, 1, .35), _('OVER TEMP'), True, black)
                 self.control['heading_command'] = 'overtemp'
         elif mode == 'gps' and not self.have_gps():
             if self.control['heading_command'] != 'no gps':
-                self.fittext(rectangle(0, .4, 1, .4), _('GPS not detected'), True)
+                self.fittext(rectangle(0, .4, 1, .4), _('GPS not detected'), True, black)
                 self.control['heading_command'] = 'no gps'
         elif (mode == 'wind' or mode == 'true wind') and not self.have_wind():
             if self.control['heading_command'] != 'no wind':
-                self.fittext(rectangle(0, .4, 1, .4), _('WIND not detected'), True)
+                self.fittext(rectangle(0, .4, 1, .4), _('WIND not detected'), True, black)
                 self.control['heading_command'] = 'no wind'
         else:
             # no warning, display the desired course or 'standby'
             if self.last_msg['ap.enabled'] != True:
-                if self.control['heading_command'] != 'standby' or True:
+                if self.control['heading_command'] != 'standby':
                     r = rectangle(0, .4, 1, .34)
-                    self.surface.box(*(self.convrect(r) + [black]))
-                    self.fittext(r, _('standby'))
+                    self.fittext(r, _('standby'), False, black)
                     self.control['heading_command'] = 'standby'
             else:
                 if self.control['heading_command'] != self.last_msg['ap.heading_command']:
@@ -707,17 +704,16 @@ class LCDClient():
             if cal == 'N/A':
                 ndeviation = 0
             else:
-                ndeviation = cal[0][3] - cal[1][3]
+                ndeviation = cal[0][3] - cal[2][3]
             def warncal(s):
-                r = rectangle(0, .75, 1, .3)
-                apply(self.surface.box, self.convrect(r) + [white])
-                self.fittext(r, s, True)
+                r = rectangle(0, .75, 1, .15)
+                self.fittext(r, s, True, white)
                 self.invertrectangle(r)
                 self.control['mode'] = 'warning'
-            if ndeviation == 0:
+            if ndeviation == 0 and False:
                 warncal(_('No Cal'))
                 warning = True
-            if ndeviation > 4:
+            if ndeviation > 6:
                 warncal(_('Bad Cal'))
                 warning = True
 
@@ -752,9 +748,8 @@ class LCDClient():
         counter = self.last_msg['imu.alignmentCounter']
         if counter:
             r = rectangle(0, 0, 1, .25)
-            self.surface.box(*(self.convrect(r) + [black]))
             r.height = .2
-            self.fittext(r, ' %d%%' % (100-counter))
+            self.fittext(r, ' %d%%' % (100-counter), False, black)
             r.width = 1-float(counter)/100
             r.height = .25
             self.invertrectangle(r)
@@ -815,10 +810,10 @@ class LCDClient():
         deviation = _('N/A')
         try:
             cal = self.last_msg['imu.compass_calibration']
-            ndeviation = cal[0][3] - cal[1][3]
+            ndeviation = cal[0][3] - cal[2][3]
             #print ndeviation
             names = [(0, _('incomplete')), (1, _('excellent')), (2, _('good')),
-                     (3, _('fair')), (4, _('poor')), (1000, _('bad'))]
+                     (4, _('fair')), (6, _('poor')), (1000, _('bad'))]
             for n in names:
                 if ndeviation <= n[0]:
                     deviation = n[1]
@@ -1020,7 +1015,7 @@ class LCDClient():
             self.keystate[pini] = value
 
         if LIRC:
-            if self.lirctime and time.time()- self.lirctime > .4:
+            if self.lirctime and time.time()- self.lirctime > .35:
                 self.keypad[self.lirckey] = 0
                 self.keypadup[self.lirckey] = True
                 self.lirctime = False
@@ -1033,7 +1028,7 @@ class LCDClient():
                 repeat = code[0]['repeat']
 
                 lirc_mapping = {'up': UP, 'down': DOWN, 'left': LEFT, 'right': RIGHT,
-                                'power': AUTO, 'select': MENU, 'tab': SELECT}
+                                'power': AUTO, 'select': SELECT, 'mute': MENU, 'tab': MENU}
                 code = code[0]['config']
                 if not code in lirc_mapping:
                     continue
@@ -1041,14 +1036,19 @@ class LCDClient():
                 if not self.surface and (pini == MENU or pini == SELECT):
                     continue
 
-                self.keypad[pini] += 1
-                if repeat == 0: # ignore first repeat
-                    if self.lirctime:
-                        self.keypad[self.lirckey] = self.keypadup[self.lirckey] = False
+                if repeat == 1: # ignore first repeat
+                    #if self.lirctime:
+                    #    self.keypad[self.lirckey] = self.keypadup[self.lirckey] = False
+                    pass
+                else:
+                    if repeat == 0:
+                        if self.lirctime:
+                            self.keypad[self.lirckey] = 0
+                            self.keypadup[self.lirckey] = True
+                        self.keypad[pini] = 0
                     self.lirckey = pini;
-                    self.keypad[pini] = 0
-                self.lirctime = time.time()
-                self.keypad[pini] += 1
+                    self.keypad[pini] += 1
+                    self.lirctime = time.time()
 
         self.process_keys()
 
@@ -1082,28 +1082,28 @@ class LCDClient():
 
 def main():
     print 'init...'
-    if 'nokia5110' in sys.argv:
-        sys.argv.remove('nokia5110')
-        print 'using nokia5110'
-        #import nokia5110lcd
-        #screen = nokia5110lcd.screen()
-        screen = ugfx.nokia5110screen()
+    screen = None
+    for arg in sys.argv:
+        if 'nokia5110' in arg:
+            sys.argv.remove(arg)
+            print 'using nokia5110'
+            screen = ugfx.nokia5110screen()
 
-    elif use_glut:
-        screen = glut.screen((120, 210))
-        #screen = glut.screen((64, 128))
-        #screen = glut.screen((48, 84))
-    else:
-        screen = ugfx.screen("/dev/fb0")
-        if screen.width == 416 and screen.height == 656:
-            # no actual device or display
-            print 'no actual screen, running headless'
-            screen = None
+    if not screen:
+        if use_glut:
+            screen = glut.screen((120, 210))
+            #screen = glut.screen((64, 128))
+            #screen = glut.screen((48, 84))
+        else:
+            screen = ugfx.screen("/dev/fb0")
+            if screen.width == 416 and screen.height == 656:
+                # no actual device or display
+                print 'no actual screen, running headless'
+                screen = None
 
-        if screen.width > 480:
-            screen.width = 480
-            screen.height= min(screen.height, 640)
-
+            if screen.width > 480:
+                screen.width = 480
+                screen.height= min(screen.height, 640)
 
     lcdclient = LCDClient(screen)
     if screen:
