@@ -13,6 +13,9 @@ RTIMULib2
 
 client dependencies (viewers control applications)
 python-opengl
+python-pip
+pip install pyglet
+pip install pywavefront
 
 sudo apt-get install swig python-numpy python-scipy python-serial python-gps python-PIL python-dev
 

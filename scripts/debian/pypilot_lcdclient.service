@@ -1,0 +1,14 @@
+[Unit]
+Description=pypilot lcdclient
+DefaultDependencies=false
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/pypilot_lcdclient nokia5110
+User=pi
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=local-fs.target
+

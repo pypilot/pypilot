@@ -1,0 +1,14 @@
+[Unit]
+Description=pypilot
+DefaultDependencies=false
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/pypilot
+User=pi
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=local-fs.target
+
