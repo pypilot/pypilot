@@ -24,10 +24,24 @@ arduino_servo_module = Extension('_arduino_servo',
                         swig_opts=['-c++']
 )
 
+
+
+try:
+    import RPi.GPIO
+    ugfx_libraries=['wiringPi']
+except:
+    try:
+        import OPi.GPIO
+        ugfx_libraries=['wiringPi']
+    except:
+        print 'no wiring library for ugfx'
+        ugfx_libraries=[]
+
 ugfx_module = Extension('_ugfx',
                         sources=['lcd/ugfx/ugfx.cpp',
                                  'lcd/ugfx/ugfx.i'],
                         extra_compile_args=['-Wno-unused-result'],
+                        libraries=ugfx_libraries,
                         swig_opts=['-c++']
 )
 
