@@ -80,18 +80,23 @@ class AutopilotBase(object):
   def __init__(self, name):
     super(AutopilotBase, self).__init__()
 
-    if True:  # disabled debugging from keyboard interrupt
-        # setup all processes to exit on any signal
-        def cleanup(signal_number, frame):
-           # if signal_number == 2:
-            raise KeyboardInterrupt # to get backtrace on all processes
-            exit(1)
+    # setup all processes to exit on any signal
+    self.childpids = []
+    def cleanup(signal_number, frame):
+        print 'got signal', signal_number
+        while self.childpids:
+            pid = self.childpids.pop()
+            print 'kill child', pid
+            os.kill(pid, signal.SIGINT) # get backtrace
+            # if signal_number == 2:
+        sys.stdout.flush()
+        raise KeyboardInterrupt # to get backtrace on all processes
+        exit(1)
 
-        import signal
-        for s in range(1, 16):
-            if s != 9 and s!=2:
-                signal.signal(s, cleanup)
-            pass
+    import signal
+    for s in range(1, 16):
+        if s != 9 and s!=2:
+            signal.signal(s, cleanup)
 
     serial_probe = serialprobe.SerialProbe()
 #    self.server = SignalKServer()
@@ -135,6 +140,11 @@ class AutopilotBase(object):
 
     self.starttime = time.time()
     self.times = 4*[0]
+
+    self.childpids = [self.boatimu.imu_process.pid, self.boatimu.compass_auto_cal.process.pid,
+                 self.server.process.pid, self.nmea.process.pid, self.nmea.gpsdpoller.process.pid]
+    signal.signal(signal.SIGCHLD, cleanup)
+
     # read initial value from imu as this takes time
 #    while not self.boatimu.IMURead():
 #        time.sleep(.1)
@@ -187,7 +197,7 @@ class AutopilotBase(object):
               d = .001
               gps_heading = resolv(self.nmea.values['gps']['track'].value, gps_heading_ap)
               gps_heading_ap = (1-d)*gps_heading_ap * d*gps_heading
-          self.gps_heading.set(resolv(compass_heading + self.gps_heading_offset, 180))
+          #self.gps_heading.set(resolv(compass_heading + self.gps_heading_offset, 180))
       if self.nmea.values['wind']['source'].value != 'none':
           d = .01
           wind_speed = self.nmea.values['wind']['speed'].value

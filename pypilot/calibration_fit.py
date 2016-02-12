@@ -18,6 +18,7 @@ from signalk.pipeserver import NonBlockingPipe
 import numpy
 
 debug=True
+calibration_fit_period = 10  # run every 10 seconds
 
 def FitLeastSq(beta0, f, zpoints):
     try:
@@ -41,16 +42,15 @@ def FitPoints(points, sphere_fit):
         zpoints[i] = map(lambda x : x[i], points)
 
     # with few sigma points, adjust only bias
-    '''   #Useful if no other cal can be found??
+    #Useful if no other cal can be found??
     def f_sphere_bias3(beta, x, r):
         return ((x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2)/r**2 - 1
-    sphere_bias_fit = FitLeastSq(sphere_fit[:3], f_sphere_bias3, (zpoints, sphere_fit[3]))
+    sphere_bias_fit = FitLeastSq(sphere_fit[:3], f_sphere_bias3, (zpoints, sphere_fit[3])) + [sphere_fit[3]]
     if not sphere_bias_fit:
         print 'sphere bias failed!!! ', len(points), points
         return False
     print 'sphere bias fit', sphere_bias_fit
 #    sphere_fit = sphere_bias_fit + [sphere_fit[3]]
-    '''
 
     if len(points) < 5:
         return False
@@ -59,7 +59,7 @@ def FitPoints(points, sphere_fit):
         return ((x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2) - beta[3]
     sphere_fit = FitLeastSq([0, 0, 0, 30], f_sphere3, zpoints)
     if not sphere_fit:
-        print 'FitLeastSq failed!!!! ', len(points), points
+        print 'FitLeastSq failed!!!! ', len(points)
         return False
         #sphere_fit[3] = abs(sphere_fit[3])
     sphere_fit[3] = math.sqrt(sphere_fit[3])
@@ -78,18 +78,34 @@ def FitPoints(points, sphere_fit):
         #print 'beta', beta
         b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
         m = list(numpy.array(b.transpose()))
-        r0 = map(lambda y : beta[3]**2 - vector.dot(y, y), m)
+        r0 = map(lambda y : beta[3] - vector.dot(y, y), m)
         g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
-        r1 = map(lambda y, z : 600*(beta[4] - vector.dot(y, z)/vector.norm(y)), m, g)
+        fac = 0 #.8 # weight deviation less
+        # tan(x)/pi_2 restricts the dot product to the range -1 to 1
+        r1 = map(lambda y, z : fac*beta[3]*(math.atan(beta[4])/math.pi*2 - vector.dot(y, z)/vector.norm(y)), m, g)
         return r0+r1
         
     new_bias_fit = FitLeastSq(sphere_fit[:4] + [0], f_new_bias3, zpoints)
+    new_bias_fit[3] = math.sqrt(new_bias_fit[3])
+    new_bias_fit[4] = math.atan(new_bias_fit[4]) / math.pi * 2
+
     if debug:
+        r12 = f_new_bias3(new_bias_fit, zpoints)
+        l = len(r12)/2
+        for i in range(l):
+            m = zpoints[0][i], zpoints[1][i], zpoints[2][i]
+            g = zpoints[3][i], zpoints[4][i], zpoints[5][i]
+            #a0 = math.degrees(math.acos(vector.dot(m, g)/vector.norm(m)))
+            #m = vector.sub(m, new_bias_fit[:3])
+            #r1 = (new_bias_fit[4] - vector.dot(m, g)/vector.norm(m))
+            #a1 = math.degrees(math.acos(vector.dot(m, g)/vector.norm(m)))
+            #print i, r12[i]/new_bias_fit[3]**2, r12[l+i]/600, r1, a1
+            
         print 'new bias fit', new_bias_fit, math.degrees(math.asin(new_bias_fit[4]))
 
     if not ellipsoid_fit:
         ellipsoid_fit = sphere_fit + [1, 1]
-    return [new_bias_fit, sphere_fit, ellipsoid_fit]
+    return [new_bias_fit, sphere_fit, ellipsoid_fit, sphere_bias_fit]
 
 def avg(fac, v0, v1):
     return map(lambda a, b : (1-fac)*a + fac*b, v0, v1)
@@ -111,7 +127,7 @@ class SigmaPoint(object):
 class SigmaPoints(object):
     sigma = 1.6**2 # distance between sigma points
     down_sigma = .05 # distance between down vectors
-    max_sigma_points = 64
+    max_sigma_points = 18
 
     def __init__(self):
         self.sigma_points = []
@@ -123,14 +139,14 @@ class SigmaPoints(object):
             return
 
         if vector.dist2(self.lastpoint.compass, compass) < SigmaPoints.sigma:
-            fac = .2
+            fac = .005
             for i in range(3):
                 self.lastpoint.compass[i] = fac*compass[i] + (1-fac)*self.lastpoint.compass[i]
                 self.lastpoint.down[i] += down[i]
             self.lastpoint.count += 1
             return
 
-        if self.lastpoint.count < 3: # require 3 in a row
+        if self.lastpoint.count < 5: # require 5 measurements
             self.lastpoint = False
             return
 
@@ -200,9 +216,17 @@ def CalibrationProcess(points, fit_output, initial):
     cal = SigmaPoints()
 
     while True:
+        # each iteration remove oldest point if we have many
+        if len(cal.sigma_points) > 12:
+            oldest_sigma = cal.sigma_points[0]
+            for sigma in cal.sigma_points:
+                if sigma.time < oldest_sigma.time:
+                    oldest_sigma = sigma
+            cal.sigma_points.remove(oldest_sigma)
+        
         t = time.time()
         addedpoint = False
-        while time.time() - t < 60:
+        while time.time() - t < calibration_fit_period:
             p = points.recv(1)
             if p:
                 cal.AddPoint(p[:3], p[3:6])
@@ -212,6 +236,7 @@ def CalibrationProcess(points, fit_output, initial):
             continue
         # remove points with less than 5 measurements, or older than 1 hour
         p = []
+        print 'len', len(cal.sigma_points)
         for sigma in cal.sigma_points:
             # only use measurements in last hour
             if time.time() - sigma.time < 3600:
@@ -223,15 +248,21 @@ def CalibrationProcess(points, fit_output, initial):
         for sigma in cal.sigma_points:
             p.append(sigma.compass + sigma.down)
 
+        if False: # inject points for debugging
+            p = [[9.076,19.17,32.66,-0.078,-0.037,0.996],[8.106,14.431,32.2,-0.077,-0.042,0.996],[9.184,16.653,32.451,-0.07,-0.032,0.997],[11.645,21.557,32.988,-0.077,-0.042,0.996],[20.508,27.569,32.798,-0.075,-0.044,0.996],[22.091,28.787,32.86,-0.076,-0.046,0.996],[11.541,19.82,32.848,-0.075,-0.046,0.996],[10.679,18.367,32.569,-0.076,-0.043,0.996],[8.628,11.927,31.855,-0.075,-0.045,0.996],[14.149,22.908,33.247,-0.072,-0.04,0.997],[18.136,25.664,32.971,-0.074,-0.038,0.997],[16.213,24.721,33.405,-0.071,-0.048,0.996]]
+            cal.sigma_points = []
+            for q in p:
+                cal.sigma_points.append(SigmaPoint(q[:3], q[3:]))
+            
         fit = FitPoints(p, initial)
         if not fit:
             continue
 
         if debug:
-            print 'fit', fit
+            print 'fit', fit, p
         mag = fit[0][3]
         if mag < 9 or mag > 70:
-            print 'fit found field outside of normal earth field strength', fit
+            print 'fit found field outside of normal earth field strength', mag
             continue
 
         bias = fit[0][:3]
@@ -251,12 +282,14 @@ def CalibrationProcess(points, fit_output, initial):
         # sphere fit should basically agree with new bias
         spherebias = fit[1][:3]
         sbd = vector.norm(vector.sub(bias, spherebias))
-        if sbd > 5:
+        if sbd > 4 and fit[0][4]:
             if debug:
                 print 'sphere and newbias disagree', sbd
-            continue
+                #continue
+                print 'using bias fit', fit[3]
+            fit[0] = fit[3]
 
-        # if the bias has sufficiently changed
+        # if the bias has sufficiently changed, otherwise the fit didn't change much
         n = map(lambda a, b: (a-b)**2, bias, initial[:3])
         d = n[0]+n[1]+n[2]
         initial = fit[0]
@@ -453,7 +486,10 @@ if __name__ == '__main__':
               [ s, 0,-s, 0, 1, 0]]
 
     
-    FitPoints(points, [0, 0, 0, r])
+    #FitPoints(points, [0, 0, 0, r])
+
+    points = [[9.076,19.17,32.66,-0.078,-0.037,0.996],[8.106,14.431,32.2,-0.077,-0.042,0.996],[9.184,16.653,32.451,-0.07,-0.032,0.997],[11.645,21.557,32.988,-0.077,-0.042,0.996],[20.508,27.569,32.798,-0.075,-0.044,0.996],[22.091,28.787,32.86,-0.076,-0.046,0.996],[11.541,19.82,32.848,-0.075,-0.046,0.996],[10.679,18.367,32.569,-0.076,-0.043,0.996],[8.628,11.927,31.855,-0.075,-0.045,0.996],[14.149,22.908,33.247,-0.072,-0.04,0.997],[18.136,25.664,32.971,-0.074,-0.038,0.997],[16.213,24.721,33.405,-0.071,-0.048,0.996]]
+    FitPoints(points, [0, 0, 0, 30])
     
     #allpoints = [points1, points2, points3, points4, points5]
     #for points in allpoints:
