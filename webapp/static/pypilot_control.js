@@ -34,8 +34,15 @@ $(document).ready(function() {
     $('#power_consumption').text("N/A");
     $('#runtime').text("N/A");
 
-    var gains = ['P', 'I', 'D'];
-    
+    var gains = ['P', 'I', 'D', 'P2', 'D2'];
+    var conf_names = [['servo/min_speed', 'min_speed',''],
+                      ['servo/max_speed', 'max_speed',''],
+                      ['servo/max_current', 'max_current','Amps'],
+                      ['servo/max_controller_temp', 'max_controller_temp','Degrees C'],
+                      ['servo/period', 'period', 'seconds'],
+                      ['imu/heading_lowpass_constant', 'heading_lowpass_constant', ''],
+                      ['imu/headingrate_lowpass_constant', 'headingrate_lowpass_constant', ''],
+                      ['imu/headingraterate_lowpass_constant', 'headingraterate_lowpass_constant', '']];      
     // Connect to the Socket.IO server.
     var port = location.port;
     port = pypilot_webapp_port;
@@ -61,6 +68,8 @@ $(document).ready(function() {
 
     var last_poll_Tab;
     var block_polling = 0;
+
+    var servo_command = 0, servo_command_timeout=0;
     socket.on('signalk_connect', function(msg) {
         $('#connection').text('Connected')
         $('#aperrors0').text("");
@@ -79,7 +88,7 @@ $(document).ready(function() {
             var info = list_values['ap/' + gains[i]]
             var min = info['min']
             var max = info['max']
-            $('#gain_container').append('<br>'+gains[i]+' <input type="range" id="' + gains[i] + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" style="width:'+w*3/4+'px"><span id="' + gains[i] + 'label"></span>');
+            $('#gain_container').append('<br>'+gains[i]+' <input type="range" id="' + gains[i] + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" style="width:'+w*3/4+'px"><span id="' + gains[i] + 'label"></span><br>');
             $('#'+gains[i]).change(function(event) {
                 signalk_set('ap/'+this.id, this.valueAsNumber);
                 block_polling = 2;
@@ -91,15 +100,23 @@ $(document).ready(function() {
         watch('imu/alignmentCounter');
 
         // configuration
-        var info = list_values['servo/Max Current']
-        var min = info['min']
-        var max = info['max']
-        $('#max_current_container').text('')
-        $('#max_current_container').append('<input type="range" id="max_current" min="' + min + '" max="' + max + '" step=".1" value="2" style="width: 240px"></input><span id="max_currentlabel"></span> Amps');
-        $('#max_current').change(function(event) {
-            signalk_set('servo/Max Current', parseFloat($('#max_current').val()));
-            block_polling = 2;
-        });
+        $('#configuration_container').text('')
+        var names = conf_names;
+        for(i=0; i<names.length; i++) {
+            var name = names[i][0];
+            var namf = names[i][1];
+            var namg = names[i][2];
+            var info = list_values[name];
+
+            var min = info['min'];
+            var max = info['max'];
+
+            $('#configuration_container').append('<div class="w3-row"><div class="w3-col s4 m4 l4">' + name + '</div><div class="w3-col s3 m3 l3"><input type="range" id="'+namf+'" min="' + min + '" max="' + max + '" step=".01" value="2" style="width: 240px" name="'+name+'"></input></div><div class="w3-col s2 m2 l2"><span id="'+namf+'label"></span></div><div class="w3-col s3 m3 l3">' + namg + '</div></div>');
+            $('#'+namf).change(function(event) {
+                signalk_set(this.name, this.valueAsNumber);
+                block_polling = 2;
+            });
+        }
 
         watch('servo/controller');
 
@@ -112,12 +129,17 @@ $(document).ready(function() {
     // we poll rather than watch some values to avoid excessive cpu in browser
     function poll_signalk() {
         setTimeout(poll_signalk, 1000)
+        if(servo_command_timeout > 0) {
+            if(servo_command_timeout-- <= 0)
+                servo_command = 0;
+            signalk_set('servo/command', servo_command);
+        }
 
         if(block_polling > 0) {
             block_polling--;
             return;
         }
-
+        
         //var tab = $('input:radio[name=tabbed]:checked').val();
         var tab = currentTab;
         if(tab == last_poll_Tab)
@@ -135,9 +157,10 @@ $(document).ready(function() {
             poll('imu/pitch');
             poll('imu/roll');
         } else if(tab == 'Configuration') {
-            poll('servo/Max Current');
+            for(i=0; i < conf_names.length; i++)
+                poll(conf_names[i][0]);
         } else if(tab == 'Statistics') {
-            poll('servo/Amp Hours');
+            poll('servo/amp_hours');
             poll('ap/runtime');
             poll('servo/engauged');
         }
@@ -238,15 +261,18 @@ $(document).ready(function() {
             $('.myBar').width((100-data['imu/alignmentCounter']['value'])+'%');
 
         // configuration
-        if('servo/Max Current' in data) {
-            value = data['servo/Max Current']['value'];
-            $('#max_current').val(value);
-            $('#max_currentlabel').text(value);
+        names = conf_names;
+        for(i=0; i < names.length; i++) {
+            if(names[i][0] in data) {
+                value = data[names[i][0]]['value'];
+                $('#' + names[i][1]).val(value);
+                $('#' + names[i][1]+'label').text(value);
+            }
         }
 
         // statistics
-        if('servo/Amp Hours' in data) {
-            value = data['servo/Amp Hours']['value'];
+        if('servo/amp_hours' in data) {
+            value = data['servo/amp_hours']['value'];
             $('#amp_hours').text(Math.round(1e4*value)/1e4);
         }
         
@@ -286,8 +312,8 @@ $(document).ready(function() {
         } else {
             if(x != 0) {
                 sign = x > 0 ? 1 : -1;
-                x = Math.max(2, Math.abs(x));
-                signalk_set('servo/command', sign*x/3.0);
+                servo_command = -sign;
+                servo_command_timeout = Math.pow(Math.abs(x),.5);
             }
         }
     }
@@ -314,7 +340,7 @@ $(document).ready(function() {
 
     // Statistics
     $('#reset_amp_hours').click(function(event) {
-        signalk_set('servo/Amp Hours', 0);
+        signalk_set('servo/amp_hours', 0);
         return false;
     });
     

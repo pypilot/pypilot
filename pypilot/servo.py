@@ -133,13 +133,13 @@ class Servo(object):
         self.calibration = self.Register(JSONValue, 'calibration', {})
         self.load_calibration()
 
-        self.min_speed = self.Register(RangeProperty, 'Min Speed', .2, 0, 1, persistent=True)
-        self.max_speed = self.Register(RangeProperty, 'Max Speed', 1, 0, 1, persistent=True)
-        brake_hack = 'Brake Hack' in self.calibration.value and self.calibration.value['Brake Hack']
-        self.brake_hack = self.Register(BooleanProperty, 'Brake Hack', brake_hack, persistent=True)
+        self.min_speed = self.Register(RangeProperty, 'min_speed', .5, 0, 1, persistent=True)
+        self.max_speed = self.Register(RangeProperty, 'max_speed', 1, 0, 1, persistent=True)
+        brake_hack = 'brake_hack' in self.calibration.value and self.calibration.value['brake_hack']
+        self.brake_hack = self.Register(BooleanProperty, 'brake_hack', brake_hack, persistent=True)
         self.brake_hack_state = 0
 
-        self.faults = self.Register(Property, 'Faults', 0)
+        self.faults = self.Register(Property, 'faults', 0)
 
         # power usage
         self.command = self.Register(TimedProperty, 'command', 0)
@@ -150,13 +150,13 @@ class Servo(object):
         self.current = self.Register(SensorValue, 'current', timestamp)
         self.temperature = self.Register(SensorValue, 'temperature', timestamp)
         self.engauged = self.Register(BooleanValue, 'engauged', False)
-        self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 10, persistent=True)
-        self.max_controller_temp = self.Register(RangeProperty, 'Max Controller Temp', 65, 30, 80, persistent=True)
-        self.period = self.Register(RangeProperty, 'Period', .7, .1, 3, persistent=True)
-        self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False, persistent=True)
-        self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
-        self.amphours = self.Register(ResettableValue, 'Amp Hours', 0, persistent=True)
-        self.watts = self.Register(SensorValue, 'Watts', timestamp)
+        self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 10, persistent=True)
+        self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 65, 30, 80, persistent=True)
+        self.period = self.Register(RangeProperty, 'period', .7, .1, 3, persistent=True)
+        self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
+        self.compensate_voltage = self.Register(BooleanProperty, 'compensate_voltage', False, persistent=True)
+        self.amphours = self.Register(ResettableValue, 'amp_hours', 0, persistent=True)
+        self.watts = self.Register(SensorValue, 'watts', timestamp)
 
         self.position = .5
         self.speed = 0
