@@ -290,4 +290,6 @@ if __name__ == '__main__':
         clock.set(clock.value + 1)
         server.TimeStamp('testtime', time.time())
         test_sensor.set(test_sensor.value+1)
-        server.HandleRequests(.1)
+        server.HandleRequests()
+        time.sleep(.02)
+
