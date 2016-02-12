@@ -132,9 +132,8 @@ class LoopFreqValue(Value):
 
 class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
-        self.value = time.time()
-        super(AgeValue, self).__init__(name, '', **kwargs)
-        self.dt = 0
+        super(AgeValue, self).__init__(name, time.time(), **kwargs)
+        self.dt = time.time() - self.value
 
     def readable_timespan(self, total):
         mods = [('s', 1), ('m', 60), ('h', 60), ('d', 24), ('y', 365.24)]          
