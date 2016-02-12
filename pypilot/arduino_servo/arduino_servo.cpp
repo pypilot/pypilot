@@ -137,6 +137,7 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
 
 int ArduinoServo::poll()
 {
+    int debug = true;
     if(in_buf_len < 4) {
         int c = read(fd, in_buf + in_buf_len, sizeof in_buf - in_buf_len);
         if(c<=0) // todo: support failure if the device is unplugged
@@ -150,7 +151,7 @@ int ArduinoServo::poll()
     while(in_buf_len >= 4) {
         uint8_t crc = crc8(in_buf, 3);
         if(crc == in_buf[3]) { // valid packet
-            if(in_sync_count >= 3)
+            if(in_sync_count >= 1)
                 ret |= process_packet(in_buf);
             else
                 in_sync_count++;
@@ -212,4 +213,9 @@ void ArduinoServo::stop()
 void ArduinoServo::disengauge()
 {
     send_value(DISENGAUGE_CODE, 0);
+}
+
+void ArduinoServo::reprogram()
+{
+    send_value(REPROGRAM_CODE, 0);
 }
