@@ -132,44 +132,36 @@ class LoopFreqValue(Value):
 
 class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
+        self.value = time.time()
         super(AgeValue, self).__init__(name, '', **kwargs)
-        self.time = os.times()[4]
+        self.dt = 0
 
-        mods = {'s': 1, 'm': 60, 'h': 60, 'd': 24, 'y': 365.24}
-        self.total = 0
-        try:
-          for arg in self.value.split(' '):
-            if len(arg):
-              total += mods[arg[-1:]] * float(arg[:-1])
-        except:
-          print 'invalid timespan', self.value
-            
-    def readable_timespan(self):
-        time = self.total
-        mods = [('s', 1), ('m', 60), ('h', 60), ('d', 24), ('y', 365.24)]
-            
+    def readable_timespan(self, total):
+        mods = [('s', 1), ('m', 60), ('h', 60), ('d', 24), ('y', 365.24)]          
         def loop(i, mod):
-            if i == len(mods) or (int(time / (mods[i][1]*mod)) == 0 and i > 0):
+            if i == len(mods) or (int(total / (mods[i][1]*mod)) == 0 and i > 0):
                 return ''
             if i < len(mods) - 1:
                 div = mods[i][1]*mods[i+1][1]*mod
-                t = int(time%int(div))
+                t = int(total%int(div))
             else:
-                t = time
+                t = total
             return loop(i+1, mods[i][1]*mod) + (('%d' + mods[i][0] + ' ') % (t/(mods[i][1]*mod)))
         return loop(0, 1)
-
-    def update(self):
-      now = os.times()[4]
-      dt = now - self.time
-      if dt > 1:
-        self.total += dt
-        super(AgeValue, self).update(self.readable_timespan())
-        self.time = now
         
     def reset(self):
-        self.time = os.times()[4]
-        self.total = 0
+        self.set(time.time())
+
+    def update(self):
+        self.send()
+
+    def get_signalk(self):
+        dt = time.time() - self.value
+        if abs(dt - self.dt) > 1:
+            self.dt = dt
+            self.lastage = self.readable_timespan(dt))
+        return '{"' + self.name + '": {"value": "' + self.lastage + '"}}'
+
 
 class QuaternionValue(ResettableValue):
     def __init__(self, name, initial, **kwargs):
@@ -205,7 +197,7 @@ class BoatIMU(object):
     self.last_alignmentCounter = False
 
     self.uptime = self.Register(AgeValue, 'uptime')
-    self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age')
+    self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age', persistent=True)
 
     self.compass_calibration = self.Register(RoundedValue, 'compass_calibration', [[0, 0, 0, 30, 0], [0, 0, 0, 30], [0, 0, 0, 30, 1, 1]], persistent=True)
 
@@ -280,7 +272,6 @@ class BoatIMU(object):
       return False
   
     self.last_imuread = time.time()
-    
     self.loopfreq.strobe()
 
     if not self.FirstTimeStamp:
