@@ -79,7 +79,6 @@ class StringValue(Value):
             strvalue = 'true' if self.value else 'false'
         else:
             strvalue = '"' + self.value + '"'
-
         return '{"' + self.name + '": {"value": ' + strvalue + '}}'
 
 class SensorValue(Value): # same as Value with added timestamp

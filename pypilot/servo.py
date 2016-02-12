@@ -87,7 +87,7 @@ class ServoFlags(Value):
 
     FWD_FAULT=256*1
     REV_FAULT=256*2
-    
+    DRIVE_TIMEOUT = 256*4
     def __init__(self, name):
         super(ServoFlags, self).__init__(name, 0)
 
@@ -112,13 +112,26 @@ class ServoFlags(Value):
             ret += 'FWD_FAULT '
         if self.value & self.REV_FAULT:
             ret += 'REV_FAULT '
+        if self.value & self.DRIVER_TIMEOUT:
+            ret += 'DRIVER_TIMEOUT '
         return ret
 
-    def setbit(self, bit):
-        self.update(self.value | bit)
+    def setbit(self, bit, t=True):
+        if t:
+            self.update(self.value | bit)
+        else:
+            self.update(self.value & ~bit)
 
     def clearbit(self, bit):
-        self.update(self.value & ~bit)
+        self.setbit(bit, False)
+            
+    def fwd_fault(self):
+        update((self.flags.value | ServoFlags.FWD_FAULT) \
+               & ~ServoFlags.REV_FAULT)
+
+    def rev_fault(self):
+        update((self.flags.value | ServoFlags.REV_FAULT) \
+               & ~ServoFlags.FWD_FAULT)
         
     def get_signalk(self):
         return '{"' + self.name + '": {"value": "' + self.strvalue() + '"}}'
@@ -199,6 +212,7 @@ class Servo(object):
         self.force_engauged = False
 
         self.last_zero_command_time = self.command_timeout = time.time()
+        self.last_current_measured = time.time()
 
         self.mode = self.Register(StringValue, 'mode', 'none')
         self.controller = self.Register(StringValue, 'controller', 'none')
@@ -267,12 +281,12 @@ class Servo(object):
         if self.position.value > .1:
             self.flags.clearbit(ServoFlags.REV_FAULT)
 
-        if False: # don't keep moving too long in same direction.....
+        if False: # don't keep moving really long in same direction.....
             rng = 5;
             if self.position.value > 1 + rng:
-                self.setbit(ServoFlags.FWD_FAULT)
+                self.flags.fwd_fault()
             if self.position.value < -rng:
-                self.setbit(ServoFlags.REV_FAULT)
+                self.flags.rev_fault()
             
         if self.compensate_voltage.value:
             speed *= 12 / self.voltage.value
@@ -376,9 +390,9 @@ class Servo(object):
             self.mode.update('forward')
             self.lastdirpos = True
 
-        # only send at .5 seconds when command is zero
         t = time.time()
         if command == 0:
+            # only send at .5 seconds when command is zero
             #if t > self.command_timeout and t - self.last_zero_command_time < .5:
             #    return
             self.last_zero_command_time = t
@@ -473,12 +487,10 @@ class Servo(object):
             # this prevents moving further in this direction
             if self.flags.value & ServoFlags.OVERCURRENT:
                 if self.lastdirpos:
-                    self.flags.update(self.flags.value | ServoFlags.FWD_FAULT \
-                                      & ~ServoFlags.REV_FAULT)
+                    self.flags.fwd_fault()
                     self.position.set(1)
                 else:
-                    self.flags.update(self.flags.value | ServoFlags.REV_FAULT \
-                                      & ~ServoFlags.FWD_FAULT)
+                    self.flags.rev_fault()
                     self.position.set(-1)
 
             self.stop() # clear fault condition
@@ -496,13 +508,17 @@ class Servo(object):
             self.current.set(self.driver.current)
             # integrate power consumption
             dt = (self.timestamp-lasttimestamp)
-            amphours = self.current.value*dt/3600
-            self.amphours.set(self.amphours.value + amphours)
+            if self.current.value:
+                amphours = self.current.value*dt/3600
+                self.amphours.set(self.amphours.value + amphours)
+                self.last_current_measured = time.time()
             lp = .003*dt # 5 minute time constant to average wattage
             self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
         if result & ServoTelemetry.FLAGS:
             self.flags.updatedriver(self.driver.flags)
             self.engauged.update(not not self.driver.flags & ServoFlags.ENGAUGED)
+
+        self.flags.setbit(DRIVER_TIMEOUT, self.command_timeout - self.last_current_measured > 1)
         self.send_command()
 
     def fault(self):
