@@ -1,3 +1,12 @@
+/*
+#
+#   Copyright (C) 2017 Sean D'Epagnier
+#
+# This Program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.  
+*/
 
   function openTab(evt, tabName) {
     var i, x, tablinks;
@@ -106,7 +115,7 @@ $(document).ready(function() {
             get('servo/Max Current');
         } else if(tab == 'Statistics') {
             get('servo/Power Consumption');
-            get('imu/runtime');
+            get('ap/runtime');
             get('servo/engauged');
         }
     }
@@ -214,8 +223,8 @@ $(document).ready(function() {
             $('#power_consumption').text(Math.round(1e4*value)/1e4);
         }
         
-        if('imu/runtime' in msg.data) {
-            value = msg.data['imu/runtime']['value'];
+        if('ap/runtime' in msg.data) {
+            value = msg.data['ap/runtime']['value'];
             $('#runtime').text(value);
         }
 
