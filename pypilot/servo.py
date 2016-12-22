@@ -547,17 +547,17 @@ class Servo:
                 elif self.speed < 0:
                     self.rev_fault = True
 
-            if 'voltage' in result and False:
+            if 'voltage' in result:
                 self.voltage.set(result['voltage'])
-            if 'current' in result and False:
+            if 'current' in result:
                 lasttimestamp = self.current.timestamp
                 self.current.set(result['current'])
 
                 # integrate power consumption
                 dt = (self.current.timestamp-lasttimestamp)
-                self.amphours.set(self.amphours.value + self.current.value*dt/3600)
-                power = self.voltage.value*self.current.value
-                self.powerconsumption.set(self.powerconsumption.value + dt*power/3600)
+                amphours = self.current.value*dt/3600
+                self.amphours.set(self.amphours.value + amphours)
+                self.powerconsumption.set(self.powerconsumption.value + self.voltage.value*amphours)
 
         if self.driver:
             self.engauged.set(not not self.driver.flags.value & ArduinoServoFlags.ENGAUGED)

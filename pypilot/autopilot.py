@@ -138,7 +138,7 @@ class AutopilotBase(object):
           self.ap_iteration()
 
   def ap_iteration(self):
-      period = .1
+      period = .1 # 10hz
       data = False
       # try 7 times to read data within the period
       for i in range(7):

@@ -426,8 +426,7 @@ class BoatIMU(object):
 
     self.uptime.update()
 
-#    result = self.compass_auto_cal.UpdatedCalibration()
-    result = False
+    result = self.compass_auto_cal.UpdatedCalibration()
     if result:
       self.compass_calibration_sigmapoints.set(result[1])
 
