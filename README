@@ -1,0 +1,7 @@
+Installing:
+
+python setup.py install
+
+
+pypilot.build is a build script to build tinycore linux packages
+it can be run to update the packages in tinypilot
