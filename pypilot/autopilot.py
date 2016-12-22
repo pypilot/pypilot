@@ -77,11 +77,8 @@ class AutopilotBase(object):
     super(AutopilotBase, self).__init__(*args, **keywords)
 
     # setup all processes to exit on any signal
-    self.clean = False
     def cleanup(signal_number, frame):
-        if not self.clean:
-            self.clean = True
-            exit(1)
+        exit(1)
 
     import signal
     for s in range(1, 16):
@@ -173,12 +170,8 @@ class AutopilotBase(object):
           self.enabled.set(False)
 
       dt3 = time.time() - t0
-
-      self.gps.poll()
-      self.wind.poll()
-      self.nmea_bridge.poll()
       
-      compass_heading = self.boatimu.SensorValues['heading'].value
+      compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
       if self.mode.value == 'compass':
           self.heading.set(compass_heading)
       elif self.mode.value == 'gps':
@@ -218,10 +211,14 @@ class AutopilotBase(object):
       t2 = time.time()
       if t2-t1 > period/2:
           print 'servo is running too _slowly_', t2-t1
-          
+
+      self.gps.poll()
+      self.wind.poll()
+      self.nmea_bridge.poll()
+
       t3 = time.time()
       if t3 - t2 > period/2:
-          print 'gps is running too _slowly_', t2-t1
+          print 'gps is running too _slowly_', t3-t2
 
       t = max(period - (t3 - t0), .025)
       self.server.HandleRequests(t)

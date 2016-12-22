@@ -163,8 +163,13 @@ class SignalKServer:
                     fd_to_socket[fd] = socket
                 except:
                     self.RemoveSocket(socket)
-                    
-            events = poller.poll(1000.0 * (totaltime - (t2 - t1)))
+
+            dt = t2 - t1
+            if dt > totaltime:
+                print 'time overflow, clock adjusted?'
+                dt = totaltime / 2
+                
+            events = poller.poll(1000.0 * (totaltime - dt))
             while t2 - t1 < totaltime and events != []:
                 event = events.pop()
                 fd, flag = event

@@ -119,8 +119,7 @@ class ArduinoServo:
                 pass
             time.sleep(.001)
             cnt+=1
-            if cnt == 600:
-                print 'failed to initialize servo', device
+            if cnt == 1000:
                 raise Exception
 
     def send_value(self, value):
@@ -471,10 +470,15 @@ class Servo:
             self.mode.set('forward')
 
         if not self.driver:
-            return
-            self.driver = serialprobe.probe('servo', ArduinoServo, [115200])
+            device = serialprobe.probe('servo', [115200])
+            if device:
+                try:
+                    self.driver = ArduinoServo(device)
+                except:
+                    print 'failed to initialize servo on', device
 
             if self.driver:
+                serialprobe.probe_success('servo')
                 self.driver.servo = self
                 self.controller.set('arduino')
                 self.server.Register(self.driver.flags)
