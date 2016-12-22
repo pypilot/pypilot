@@ -568,7 +568,11 @@ class LCDClient():
             pass
 
         if self.control['wifi'] != wifi:
-            self.fittext(rectangle(.3, .9, .6, .12), 'WIFI')
+            wifirect = rectangle(.3, .9, .6, .12)
+            if wifi:           
+                self.fittext(wifirect, 'WIFI')
+            else:
+                self.surface.box(*(self.convrect(wifirect) + [black]))
             self.control['wifi'] = wifi
 
     def display_menu(self):
