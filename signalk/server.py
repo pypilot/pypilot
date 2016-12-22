@@ -101,7 +101,12 @@ class SignalKServer:
 
     def RemoveSocket(self, socket):
         self.sockets.remove(socket)
+        fd = socket.socket.fileno()
+        self.poller.unregister(socket.socket)
+
         socket.socket.close()
+
+        del self.fd_to_socket[fd]
 
         for value in self.values:
             if socket in self.values[value].watchers:
@@ -136,6 +141,7 @@ class SignalKServer:
                     socket.send('invalid method: ' + method + ' for ' + name + '\n')
     
     def HandleRequests(self, totaltime):
+        READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
         if not self.init:
             try:
                 self.server_socket.bind(('0.0.0.0', self.port))
@@ -146,21 +152,18 @@ class SignalKServer:
 
             self.server_socket.listen(5)
             self.init = True
+            self.fd_to_socket = {self.server_socket.fileno() : self.server_socket}
+            self.poller = select.poll()
+            self.poller.register(self.server_socket, READ_ONLY)
         
         t1 = t2 = time.time()
-        READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
         while t2 - t1 < totaltime:
-            poller = select.poll()
-            poller.register(self.server_socket, READ_ONLY)
-            fd_to_socket = {self.server_socket.fileno() : self.server_socket}
             for socket in list(self.sockets):
                 flags = READ_ONLY
                 if socket.out_buffer != '':
                     flags |= select.POLLOUT
                 try:
-                    fd = socket.socket.fileno()
-                    poller.register(fd, flags)
-                    fd_to_socket[fd] = socket
+                    self.poller.register(socket.socket, flags)
                 except:
                     self.RemoveSocket(socket)
 
@@ -169,23 +172,22 @@ class SignalKServer:
                 print 'time overflow, clock adjusted?'
                 dt = totaltime / 2
                 
-            events = poller.poll(1000.0 * (totaltime - dt))
+            events = self.poller.poll(1000.0 * (totaltime - dt))
             while t2 - t1 < totaltime and events != []:
                 event = events.pop()
                 fd, flag = event
-                socket = fd_to_socket[fd]
+                socket = self.fd_to_socket[fd]
                 if socket == self.server_socket:
                     connection, address = socket.accept()
                     print 'new client', address
                     if len(self.sockets) == max_connections:
                         print 'max connections reached!!!', len(self.sockets)
-                        if True:
-                            self.RemoveSocket(self.sockets[0])
-                        else:
-                            connection.close()
-                    else:
-                        self.sockets.append(LineBufferedNonBlockingSocket(connection))
-                        #print 'connections: ', len(self.sockets)
+                        self.RemoveSocket(self.sockets[0]) # dump first socket
+
+                    socket = LineBufferedNonBlockingSocket(connection)
+                    self.sockets.append(socket)
+                    fd = socket.socket.fileno()
+                    self.fd_to_socket[fd] = socket
                 elif flag & (select.POLLHUP | select.POLLERR):
                     self.RemoveSocket(socket)
                     continue
@@ -202,7 +204,7 @@ class SignalKServer:
                 if not line:
                     continue
 
-                if True: # true to debug
+                if False: # true to debug
                     self.HandleRequest(socket, line)
                 else:
                     try:
@@ -226,7 +228,7 @@ if __name__ == '__main__':
     if True:
         while True:
             # handle requests for 1 second, then increment clock 1 second
-            server.HandleRequests(1)
+            server.HandleRequests(.02)
             clock.set(clock.value + 1)
 #    except:
 #        pass

@@ -38,6 +38,8 @@ def multiply(q1, q2):
             q1[0]*q2[2] - q1[1]*q2[3] + q1[2]*q2[0] + q1[3]*q2[1], \
             q1[0]*q2[3] + q1[1]*q2[2] - q1[2]*q2[1] + q1[3]*q2[0]]
 
+
+
 # take a vector and quaternion, and rotate the vector by the quaternion
 def rotvecquat(v, q):
     w = [0, v[0], v[1], v[2]]

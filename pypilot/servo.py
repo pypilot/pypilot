@@ -98,7 +98,7 @@ class ArduinoServo:
     sync_bytes = [0xe7, 0xf9, 0xc7, 0x1e, 0xa7, 0x19, 0x1c, 0xb3]
     def __init__(self, device):
         self.in_sync = self.out_sync = 0
-        self.in_sync_count = 0        
+        self.in_sync_count = 0
         self.in_buf = []
         self.device = serial.Serial(*device)
 
@@ -116,12 +116,12 @@ class ArduinoServo:
         while self.flags.value & ArduinoServoFlags.OVERCURRENT or \
           not self.flags.value & ArduinoServoFlags.SYNC:
             self.stop()
-            while self.poll():
+            if self.poll():
                 data = True
-                pass
+
             time.sleep(.001)
             cnt+=1
-            if cnt == 100 and not data:
+            if cnt == 400 and not data:
                 raise Exception
             if cnt == 1000:
                 raise Exception
@@ -141,11 +141,11 @@ class ArduinoServo:
                 max_current = self.servo.max_current.value
             else:
                 max_current = 10
-            self.send_value(max_current*65536.0/11)
+            self.send_value(max_current*65536.0*.05/1.1)
         self.send_value(command)
         if self.out_sync == len(ArduinoServo.sync_bytes):
             self.out_sync = 0;
-        
+
     def command(self, command):
         if command == self.lastcommand:
             dt = time.time() - self.lasttime
@@ -163,8 +163,11 @@ class ArduinoServo:
         self.raw_command(0x5342)
 
     def poll(self):
+        #t0 = time.time()
         c = self.device.read(1)
-        self.device.flush()
+        #print 'dt', time.time() - t0
+        #self.device.flush()
+        #print 'poll', len(c), c
         if len(c) == 0:
             return False
 
@@ -178,7 +181,7 @@ class ArduinoServo:
                 if self.in_sync_count == 2:
                     value = self.in_buf[0] + (self.in_buf[1]<<8)
                     if self.in_sync > 0:
-                        ret['current'] = value * 1.1 / .1 / 65536
+                        ret['current'] = value * 1.1 / .05 / 65536
                     else:
                         ret['voltage'] = (value >> 4) * 1.1 * 10560 / 560 / 4096
                         self.flags.set(value & 0xf)
@@ -302,7 +305,7 @@ class Servo:
                 self.velocity_command(command)
             else:
                 print 'unknown servo drive type'
-    
+
     # estimate position from integrating speed commands
     def position_command(self, position):
 
@@ -502,7 +505,7 @@ class Servo:
     def stop(self):
         if self.driver:
             self.driver.stop()
-        
+         
         if self.brake_hack.value and self.mode.value == 'forward':
             if self.driver:
                 self.driver.command(-.18)
@@ -518,6 +521,7 @@ class Servo:
 
 
     def poll(self):
+    	i = 0
         while self.driver:
             try:
                 result = self.driver.poll()
@@ -527,6 +531,7 @@ class Servo:
 
             if not result:
                 d = time.time() - self.lastpolltime
+                #print 'i', i, d
                 if d > 10: # correct for clock skew
                     self.lastpolltime = time.time()
                 elif d > 8:
@@ -536,16 +541,15 @@ class Servo:
                 break
             self.lastpolltime = time.time()
 
-            self.engauged.set(not not self.driver.flags.value & ArduinoServoFlags.ENGAUGED)
             if self.fault():
                 if self.speed > 0:
                     self.fwd_fault = True
                 elif self.speed < 0:
                     self.rev_fault = True
 
-            if 'voltage' in result:
+            if 'voltage' in result and False:
                 self.voltage.set(result['voltage'])
-            if 'current' in result:
+            if 'current' in result and False:
                 lasttimestamp = self.current.timestamp
                 self.current.set(result['current'])
 
@@ -555,11 +559,14 @@ class Servo:
                 power = self.voltage.value*self.current.value
                 self.powerconsumption.set(self.powerconsumption.value + dt*power/3600)
 
+        if self.driver:
+            self.engauged.set(not not self.driver.flags.value & ArduinoServoFlags.ENGAUGED)
+
     def fault(self):
         if not self.driver:
             return False
         return self.driver.fault()
-    
+
     def load_calibration(self):
         try:
             filename = Servo.calibration_filename

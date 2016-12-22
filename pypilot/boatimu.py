@@ -41,8 +41,9 @@ def imu_process(queue, cal_queue, compass_cal, gyrobias):
     s.MPU9255AccelFsr = 0 # +- 2g
     s.MPU9255GyroFsr = 0 # +- 250 deg/s
     # compass noise by rate 10=.043, 20=.033, 40=.024, 80=.017, 100=.015
-    s.MPU9255GyroAccelSampleRate = 100
-    s.MPU9255CompassSampleRate = 100
+    rate = 20
+    s.MPU9255GyroAccelSampleRate = rate
+    s.MPU9255CompassSampleRate = rate
 
     s.GyroBiasValid = True
     if gyrobias:
@@ -210,7 +211,6 @@ class HeadingOffset(RangeProperty):
       return super(HeadingOffset, self).get_request()
 
 
-
 class BoatIMU(object):
   def __init__(self, server, *args, **keywords):
     self.server = server
@@ -220,7 +220,6 @@ class BoatIMU(object):
     self.heading_off = self.Register(HeadingOffset, 'heading_offset', self.alignmentQ)
 
     self.alignmentCounter = self.Register(Property, 'alignmentCounter', 0)
-    self.alignmentType = self.Register(EnumProperty, 'alignmentType', 'level', ['level', 'port', 'starbord'])
     self.last_alignmentCounter = False
     self.port_down = self.starboard_down = False
     
@@ -240,9 +239,10 @@ class BoatIMU(object):
 #      imu_cal_queue.put(tuple(self.compass_calibration.value[0][:3]))
 
     self.compass_auto_cal = MagnetometerAutomaticCalibration(imu_cal_queue, self.compass_calibration.value[0])
+
     self.lastqpose = False
     self.FirstTimeStamp = False
-    self.DataBank = []
+
     self.headingrate = self.heel = 0
     self.calupdates = 0
     self.heading_lowpass3 = self.heading_lowpass3a = self.heading_lowpass3b = False
@@ -265,7 +265,6 @@ class BoatIMU(object):
 
   def alignment_heading(self):
     self.alignmentQ
-
       
   def IMURead(self):
     if not self.imu_process.is_alive():
@@ -280,12 +279,14 @@ class BoatIMU(object):
         for name in self.SensorValues:
           self.SensorValues[name].set(False)
       return False
+
     self.last_imuread = time.time()
     # flush queue
+    DataBank = []
     while self.imu_queue.qsize() > 0:
       data = self.imu_queue.get()
-      self.DataBank.append(data)
-
+      DataBank.append(data)
+  
     fixtime = True
     if fixtime: # override buggy imu library timestamp with current time here
       data['timestamp'] = time.time()
@@ -294,19 +295,23 @@ class BoatIMU(object):
       self.FirstTimeStamp = data['timestamp']
 
     data['timestamp'] -= self.FirstTimeStamp
-    if not fixtime:
-      data['timestamp'] /= 1000000.0
 
     self.loopfreq.strobe()
     
     data = {}
 
     def avgsensor(sensor, n=3):
-      data[sensor] = [0]*len(self.DataBank[0][sensor])
-      for i in range(n):
-        for d in self.DataBank:
+      data[sensor] = list(DataBank[0][sensor])
+      l = len(DataBank)
+      if l == 1:
+        return
+
+      for d in DataBank[1:]:
+        for i in range(n):
           data[sensor][i] += d[sensor][i]
-        data[sensor][i] /= len(self.DataBank)
+
+      for i in range(n):
+        data[sensor][i] /= l
 
     avgsensor('accel')
     avgsensor('gyro')
@@ -314,26 +319,26 @@ class BoatIMU(object):
 
     avgsensor('accelresiduals')
     avgsensor('gyrobias')
-    
+
     # when the calibration updates, we cannot average fusion pose
     # so we just take the last one
-    calupdates = self.DataBank[len(self.DataBank)-1]['calupdates']
+    calupdates = DataBank[len(DataBank)-1]['calupdates']
     if self.calupdates != calupdates:
-      data['fusionQPose'] = self.DataBank[len(self.DataBank)-1]['fusionQPose']
+      data['fusionQPose'] = DataBank[len(DataBank)-1]['fusionQPose']
       data['calupdate'] = True
       self.calupdates = calupdates
     else:
       avgsensor('fusionQPose', 4)
 
-    down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(data['fusionQPose']))
     # apply alignment calibration
-    data['fusionQPose'] = list(quaternion.multiply(data['fusionQPose'], self.alignmentQ.value))
 
+    down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(data['fusionQPose']))
+    data['fusionQPose'] = quaternion.multiply(data['fusionQPose'], self.alignmentQ.value)
     accel = data['accel']
     data['accel_comp'] = quaternion.rotvecquat(vector.sub(accel, down), self.alignmentQ.value)
 
     # count down to alignment
-    if (self.alignmentCounter.value, self.alignmentType.value) != self.last_alignmentCounter:
+    if self.alignmentCounter.value != self.last_alignmentCounter:
       self.alignmentPose = [0, 0, 0, 0]
 
     if self.alignmentCounter.value > 0:
@@ -344,13 +349,9 @@ class BoatIMU(object):
         self.alignmentPose = quaternion.normalize(self.alignmentPose)
         adown = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(self.alignmentPose))
         alignment = []
-        if self.alignmentType.value == 'level':
-          alignment = quaternion.vec2vec2quat([0, 0, 1], adown)
-          alignment = quaternion.multiply(self.alignmentQ.value, alignment)
-        elif self.alignmentType.value == 'starboard':
-          self.starboard_down = list(adown)
-        elif self.alignmentType.value == 'port':
-          self.port_down = list(adown)
+
+        alignment = quaternion.vec2vec2quat([0, 0, 1], adown)
+        alignment = quaternion.multiply(self.alignmentQ.value, alignment)
         
         if self.starboard_down and self.port_down:
           ang = math.atan2(self.port_down[0] - self.starboard_down[0], \
@@ -363,29 +364,26 @@ class BoatIMU(object):
           print 'self.alignmentQ', self.alignmentQ.value, alignment
           self.alignmentQ.set(alignment)
 
-    self.last_alignmentCounter = self.alignmentCounter.value, self.alignmentType.value
+    self.last_alignmentCounter = self.alignmentCounter.value
     self.heading_off.update()
 
-    #q = quaternion.multiply(data['fusionQPose'], quaternion.conjugate(self.alignmentQ.value))
-    #down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(q))
     self.compass_auto_cal.AddPoint(data['compass'] + down)
     if vector.norm(data['accel']) == 0:
       print 'vector n', data['accel']
 
     data['roll'], data['pitch'], data['heading'] = map(math.degrees, quaternion.toeuler(data['fusionQPose']))
 
-    #data['heading'] -= self.heading_off.value
-
     if data['heading'] < 0:
       data['heading'] += 360
 
-      
     gyro_q = quaternion.rotvecquat(data['gyro'], data['fusionQPose'])
+
     data['pitchrate'] = math.degrees(gyro_q[0])
     data['rollrate'] = math.degrees(gyro_q[1])
     data['headingrate'] = math.degrees(gyro_q[2])
 
-    data['timestamp'] = self.DataBank[len(self.DataBank)-1]['timestamp']
+    data['timestamp'] = DataBank[len(DataBank)-1]['timestamp']
+
     dt = data['timestamp'] - self.timestamp
     self.timestamp = data['timestamp']
 
@@ -423,14 +421,13 @@ class BoatIMU(object):
     data['gyro'] = map(math.degrees, data['gyro'])
     data['gyrobias'] = map(math.degrees, data['gyrobias'])
 
-    self.DataBank = []
-
     for name in data:
       self.SensorValues[name].set(data[name])
 
     self.uptime.update()
 
-    result = self.compass_auto_cal.UpdatedCalibration()
+#    result = self.compass_auto_cal.UpdatedCalibration()
+    result = False
     if result:
       self.compass_calibration_sigmapoints.set(result[1])
 
@@ -450,7 +447,7 @@ if __name__ == "__main__":
 
   while True:
     data = boatimu.IMURead()
-    if data:
-      print 'pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading']
+#    if data:
+#      print 'pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading']
 
-    server.HandleRequests(.002)
+    server.HandleRequests(.02)

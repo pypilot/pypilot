@@ -65,7 +65,7 @@ class GpsPoller():
         self.lastsource = self.source.value
         self.process = False
         self.devices = []
-        serialprobe.gpsdevices(self.devices)
+        serialprobe.setgpsdevices(self.devices)
 
 
     def Register(self, _type, name, *args):
