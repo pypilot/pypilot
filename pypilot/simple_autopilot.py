@@ -20,21 +20,24 @@ class SimpleAutopilot(AutopilotBase):
     self.heading_error_int = self.CreateFilter('heading_error_int', 0, .02)
     
     # create simple pid filter
-    self.P = self.Register(AutopilotGain, 'P', .01, 0, .05)
-    self.I = self.Register(AutopilotGain, 'I', 0, 0, .05)
-    self.D = self.Register(AutopilotGain, 'D', .1, 0, .25)
-    self.DD = self.Register(AutopilotGain, 'DD', 0, 0, 1)
-    self.lastheadingrate = 0
+    self.gains = {}
+    def Gain(name, default, max_val):
+      self.gains[name] = (self.Register(AutopilotGain, name, default, 0, max_val),
+                          self.Register(SensorValue, name+'gain'))
 
-    self.hP = self.Register(AutopilotGain, 'hP', 0, 0, .1)
-    self.hD = self.Register(AutopilotGain, 'hD', 0, 0, .1)
+    Gain('P', .01, .05)
+    Gain('I', 0, .05)
+    Gain('D', .1, .25)
+    Gain('DD', 0, 1)
+    Gain('rP', 0, .1)
+    Gain('rD', 0, .1)
 
   def process_imu_data(self, boatimu):
     heading = self.heading.value
     headingrate = boatimu.SensorValues['headingrate'].value
-    headingraterate = boatimu.SensorValues['headingrate'].value - self.lastheadingrate
-    self.lastheadingrate = headingrate
-    heel = boatimu.SensorValues['heel'].value
+    headingraterate = boatimu.SensorValues['headingraterate'].value
+
+    roll = boatimu.SensorValues['roll'].value
     rollrate = boatimu.SensorValues['rollrate'].value
 
     heading_command = self.heading_command.value
@@ -45,14 +48,26 @@ class SimpleAutopilot(AutopilotBase):
       err -= 360
     elif err <= -180:
       err += 360
+
+    # error +- 60 degrees
+    err = min(max(err, -60), 60)
+      
     self.heading_error.set(err)
     self.heading_error_int.update(err)
 
-    command = self.P.value*self.heading_error.value + \
-              self.I.value*self.heading_error_int.filtered.value + \
-              self.D.value*headingrate + \
-              self.DD.value*headingraterate*10 + \
-              self.hP.value*heel + self.hD.value*rollrate
+    command = 0
+    gain_values = {'P': self.heading_error.value,
+                   'I': self.heading_error_int.filtered.value,
+                   'D': headingrate,
+                   'DD': headingraterate,
+                   'rP': roll,
+                   'rD': rollrate}
+
+    for gain in self.gains:
+      value = gain_values[gain]
+      gains = self.gains[gain]
+      gains[1].set(gains[0].value*value)
+      command += gains[1].value
 
     self.servo.command.set(command)
 

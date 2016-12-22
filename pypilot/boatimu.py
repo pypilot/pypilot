@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2017 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -29,11 +29,14 @@ try:
 except ImportError:
   print "RTIMU library not detected, please install it"
 
-def imu_process(queue, cal_queue):
+def imu_process(queue, cal_queue, compass_cal):
     SETTINGS_FILE = "RTIMULib"
     s = RTIMU.Settings(SETTINGS_FILE)
     s.FusionType = 1
     s.CompassCalValid = False
+
+    s.CompassCalEllipsoidOffset = tuple(compass_cal[:3])
+    
     s.CompassCalEllipsoidValid = True
     s.MPU9255AccelFsr = 0 # +- 2g
     s.MPU9255GyroFsr = 0 # +- 250 deg/s
@@ -93,11 +96,14 @@ def imu_process(queue, cal_queue):
         if t > 0:
           time.sleep(t)
 
-def except_imu_process(queue, cal_queue):
+def except_imu_process(*args):
   try:
-    imu_process(queue, cal_queue)
+    imu_process(*args)
   except KeyboardInterrupt:
     print 'Keyboard interrupt, boatimu process exit'
+    pass
+  except:
+    print 'unhandled imu exception!!! except'
     pass
 
 class LoopFreqValue(Value):
@@ -116,13 +122,21 @@ class LoopFreqValue(Value):
 
 
 class AgeValue(Value):
-    def __init__(self, name):
-        super(AgeValue, self).__init__(name, False)
+    def __init__(self, name, **kwargs):
+        super(AgeValue, self).__init__(name, '', **kwargs)
         self.timestamp = os.times()[4]
-        self.total = 0
 
-    @staticmethod
-    def readable_timespan(time):
+        mods = {'s': 1, 'm': 60, 'h': 60, 'd': 24, 'y': 365.24}
+        self.total = 0
+        try:
+          for arg in self.value.split(' '):
+            if len(arg):
+              total += mods[arg[-1:]] * float(arg[:-1])
+        except:
+          print 'invalid timespan', self.value
+            
+    def readable_timespan(self):
+        time = self.total
         mods = [('s', 1), ('m', 60), ('h', 60), ('d', 24), ('y', 365.24)]
             
         def loop(i, mod):
@@ -141,27 +155,71 @@ class AgeValue(Value):
       dt = now - self.timestamp
       if dt < 1:
         self.total += dt
-        self.set(AgeValue.readable_timespan(self.total))
+        self.set(self.readable_timespan())
       self.timestamp = now
         
     def reset(self):
         self.timestamp = os.times()[4]
+        self.total = 0
 
-class QuaternionProperty(Property):
+class QuaternionValue(ResettableValue):
     def __init__(self, name, initial, **kwargs):
-        super(QuaternionProperty, self).__init__(name, initial, **kwargs)
+      super(QuaternionValue, self).__init__(name, initial, **kwargs)
+      self.set(self.value)
 
     def set(self, value):
-        return super(QuaternionProperty, self).set(quaternion.normalize(value))
+        return super(QuaternionValue, self).set(quaternion.normalize(value))
+
+class HeadingOffset(RangeProperty):
+  def __init__(self, name, qvalue, **kwargs):
+    self.qvalue = qvalue
+    super(HeadingOffset, self).__init__(name, self.heading_offset(), -180, 180, **kwargs)
+
+  def heading_offset(self):
+      q = self.qvalue.value
+
+      #q1 = [cos(a0/2), sin(a1)*sin(a0/2), cos(a1)*sin(a0/2), 0]
+      #q2 = [cos(a2/2), 0, 0, sin(a2/2)]
+      #q1*q2 = q
+
+      #q = [cos(a0/2)*cos(a2/2),
+      #     sin(a1)*sin(a0/2)*cos(a2/2) + cos(a1)*sin(a0/2)*sin(a2/2),
+      #    -sin(a1)*sin(a0/2)*sin(a2/2) + cos(a1)*sin(a0/2)*cos(a2/2),
+      #     cos(a0/2)*sin(a2/2)]
+
+      #cos(a0/2)*cos(a2/2) = q[0]
+      #cos(a0/2)*sin(a2/2) = q[3]
+      #tan(a2/2) = (q[3]/cos(a0/2)) / (q[0] / cos(a0/2))
+      #a2 = 2*atan(q[3], q[0])
+      a2 = 2*math.atan2(q[3], q[0])
+
+      return a2*180/math.pi
+
+  def update(self):
+    value = self.heading_offset()
+    if self.value != value:
+      super(HeadingOffset, self).set(value)
+
+  def set(self, value):
+      off = value - self.heading_offset()
+      q = quaternion.angvec2quat(off*math.pi/180, [0, 0, 1])
+      self.qvalue.set(quaternion.normalize(quaternion.multiply(self.qvalue.value, q)))
+      super(HeadingOffset, self).set(value)
+
+  def get_request(self):
+      self.value = self.heading_offset()
+      return super(HeadingOffset, self).get_request()
+
 
 
 class BoatIMU(object):
   def __init__(self, server, *args, **keywords):
     self.server = server
-    self.heading_off = self.Register(RangeProperty, 'heading_offset', 0, 0, 360, persistent=True)
 
     self.loopfreq = self.Register(LoopFreqValue, 'loopfreq', 0)
-    self.alignmentQ = self.Register(QuaternionProperty, 'alignmentQ', [1, 0, 0, 0], persistent=True)
+    self.alignmentQ = self.Register(QuaternionValue, 'alignmentQ', [1, 0, 0, 0], persistent=True)
+    self.heading_off = self.Register(HeadingOffset, 'heading_offset', self.alignmentQ)
+
     self.alignmentCounter = self.Register(Property, 'alignmentCounter', 0)
     self.alignmentType = self.Register(EnumProperty, 'alignmentType', 'level', ['level', 'port', 'starbord'])
     self.last_alignmentCounter = False
@@ -169,38 +227,33 @@ class BoatIMU(object):
     
     self.timestamp = 0
 
-    self.runtime = self.Register(AgeValue, 'runtime')
+    self.uptime = self.Register(AgeValue, 'uptime')
     self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age')
     self.SensorValues = {}
 
     self.compass_calibration = self.Register(Value, 'compass_calibration', [[0, 0, 0, 30], 0], persistent=True)
-    self.compass_calibration_sigmapoints = self.Register(Value, 'compass_calibration_sigmapoints', False)
 
+    self.compass_calibration_sigmapoints = self.Register(Value, 'compass_calibration_sigmapoints', False)
     self.imu_queue = multiprocessing.Queue()
     imu_cal_queue = multiprocessing.Queue()
 
 #    if self.load_calibration():
 #      imu_cal_queue.put(tuple(self.compass_calibration.value[0][:3]))
     
-    self.imu_process = multiprocessing.Process(target=except_imu_process, args=(self.imu_queue,imu_cal_queue))
-    self.imu_process.start()
+    self.imu_process = multiprocessing.Process(target=except_imu_process, args=(self.imu_queue,imu_cal_queue, self.compass_calibration.value[0]))
 
-    self.compass_auto_cal = MagnetometerAutomaticCalibration(imu_cal_queue)
-    
+    self.compass_auto_cal = MagnetometerAutomaticCalibration(imu_cal_queue, self.compass_calibration.value[0])
     self.lastqpose = False
-
     self.FirstTimeStamp = False
-
     self.DataBank = []
-    self.heel = 0
-
+    self.headingrate = self.heel = 0
     self.calupdates = 0
-
     self.heading_lowpass3 = self.heading_lowpass3a = self.heading_lowpass3b = False
 
-    for name in ['timestamp', 'fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'heading_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'heel', 'calupdate']:
+    for name in ['timestamp', 'fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'heading_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel', 'calupdate']:
         if not name in self.SensorValues:
             self.SensorValues[name] = self.Register(SensorValue, name)
+    self.last_imuread = time.time()
     
   def __del__(self):
     self.imu_process.terminate()
@@ -208,16 +261,25 @@ class BoatIMU(object):
 
   def Register(self, _type, name, *args, **kwargs):
     return self.server.Register(_type(*(['imu/' + name] + list(args)), **kwargs))
+
+  def alignment_heading(self):
+    self.alignmentQ
+
       
   def IMURead(self):
+    if not self.imu_process.is_alive():
+      print 'launching imu process...'
+      self.imu_process.start()
+      return False
+    
     if self.imu_queue.qsize() == 0:
-      if time.time() - self.loopfreq.t0 > 1 and self.loopfreq.value:
+      if time.time() - self.last_imuread > 1 and self.loopfreq.value:
         print 'IMURead failed!'
         self.loopfreq.set(0)
         for name in self.SensorValues:
           self.SensorValues[name].set(False)
       return False
-
+    self.last_imuread = time.time()
     # flush queue
     while self.imu_queue.qsize() > 0:
       data = self.imu_queue.get()
@@ -297,22 +359,35 @@ class BoatIMU(object):
           self.alignmentQ.set(alignment)
 
     self.last_alignmentCounter = self.alignmentCounter.value, self.alignmentType.value
+    self.heading_off.update()
 
     self.compass_auto_cal.AddPoint(data['compass'] + vector.normalize(data['accel']))
     if vector.norm(data['accel']) == 0:
       print 'vector n', data['accel']
-    
+
     data['roll'], data['pitch'], data['heading'] = map(math.degrees, quaternion.toeuler(data['fusionQPose']))
 
-    data['heading'] -= self.heading_off.value
+    #data['heading'] -= self.heading_off.value
 
     if data['heading'] < 0:
       data['heading'] += 360
 
+      
     gyro_q = quaternion.rotvecquat(data['gyro'], data['fusionQPose'])
     data['pitchrate'] = math.degrees(gyro_q[0])
     data['rollrate'] = math.degrees(gyro_q[1])
     data['headingrate'] = math.degrees(gyro_q[2])
+
+    data['timestamp'] = self.DataBank[len(self.DataBank)-1]['timestamp']
+    dt = data['timestamp'] - self.timestamp
+    self.timestamp = data['timestamp']
+
+    if dt > .02:
+      data['headingraterate'] = (data['headingrate'] - self.headingrate) / dt
+    else:
+      data['headingraterate'] = 0
+
+    self.headingrate = data['headingrate']
 
     data['heel'] = self.heel = data['roll']*.05 + self.heel*.95
 
@@ -340,17 +415,13 @@ class BoatIMU(object):
     data['heading_lowpass'] = self.heading_lowpass3
     data['gyro'] = map(math.degrees, data['gyro'])
     data['gyrobias'] = map(math.degrees, data['gyrobias'])
-    data['timestamp'] = self.DataBank[len(self.DataBank)-1]['timestamp']
 
     self.DataBank = []
-
-    dt = data['timestamp'] - self.timestamp
-    self.timestamp = data['timestamp']
 
     for name in data:
       self.SensorValues[name].set(data[name])
 
-    self.runtime.update()
+    self.uptime.update()
 
     result = self.compass_auto_cal.UpdatedCalibration()
     if result:

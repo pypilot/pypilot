@@ -90,7 +90,7 @@ class AutopilotBase(object):
     self.gps_heading_offset = self.Register(Value, 'gps_heading_offset', 0)
     self.wind_heading_offset = self.Register(Value, 'wind_heading_offset', 0)
 
-    self.runtime = self.Register(AgeValue, 'runtime')
+    self.runtime = self.Register(AgeValue, 'runtime') #, persistent=True)
 
     # read initial value from imu as this takes time
 #    while not self.boatimu.IMURead():

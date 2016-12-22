@@ -56,5 +56,8 @@ def conjugate(q):
     return [q[0], -q[1], -q[2], -q[3]]
 
 def normalize(q):
-    d = math.sqrt(vector.dot(q, q))
+    total = 0
+    for v in q:
+        total += v*v
+    d = math.sqrt(total)
     return [q[0] / d, q[1] / d, q[2] / d, q[3] / d]

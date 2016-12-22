@@ -30,9 +30,12 @@ import font
 
 def nr(x):
     try:
-        return int(x)
+        s = str(int(x))
+        while len(s) < 3:
+            s = ' ' + s
+            return s
     except:
-        return '   '
+        return x
 
 class LCDMenu():
     def __init__(self, lcd, name, items, prev=False):
@@ -73,7 +76,10 @@ class LCDMenu():
 class RangeEdit():
     def __init__(self, name, desc, value, signalk_id, lcd, minval, maxval, step):
         self.name = name
-        self.desc = desc
+        if type(desc) == type(''):
+            self.desc = lambda : desc
+        else:
+            self.desc = desc
         self.value = value
         self.signalk_id = signalk_id
         self.range = minval, maxval, step
@@ -91,7 +97,7 @@ class RangeEdit():
     def display(self):
         self.lcd.surface.fill(black)
         self.lcd.fittext(rectangle(0, 0, 1, .3), self.name, True)
-        self.lcd.fittext(rectangle(0, .3, 1, .3), self.desc, True)
+        self.lcd.fittext(rectangle(0, .3, 1, .3), self.desc(), True)
 
         # update name
         if time.time()-self.lastmovetime > 1:
@@ -233,10 +239,18 @@ class LCDClient():
         def level():
             self.client.set('imu/alignmentCounter', 100)
             return self.display_page
-                
+
         def calibrate():
+            def getheading():
+                self.client.get('imu/heading')
+                try:
+                    return '%.1f' % self.last_msg['imu/heading']
+                except:
+                    return str(self.last_msg['imu/heading'])
+
             self.menu = LCDMenu(self, _('Calibrate'),
                                 [(_('level'), level),
+                                 value_edit(_('heading'), getheading, 'imu/heading_offset', 1),
                                  (_('info'), lambda : self.display_calibrate_info)],
                                 self.menu)
             self.menu.display_hook = self.display_calibrate
@@ -401,6 +415,8 @@ class LCDClient():
                      'ap/heading', 'servo/controller']
         nalist = watchlist + ['imu/pitch', 'imu/heel', 'imu/runtime',
                               'ap/P', 'ap/I', 'ap/D',
+                              'imu/heading',
+                              'imu/heading_offset',
                               'imu/alignmentCounter',
                               'imu/compass_calibration',
                               'imu/compass_calibration_age',
@@ -454,14 +470,10 @@ class LCDClient():
         self.frameperiod = .2 # 5 frames a second possible
         
         def draw_big_number(pos, num, lastnum):
-            num = str(nr(num))
-            while len(num) < 3:
-                num = ' ' + num
+            num = nr(num)
 
             if lastnum:
-                lastnum = str(nr(lastnum))
-                while len(lastnum) < 3:
-                    lastnum = ' ' + lastnum
+                lastnum = nr(lastnum)
 
             if self.surface.width < 256:
                 size = 34
