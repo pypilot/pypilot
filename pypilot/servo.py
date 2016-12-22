@@ -190,6 +190,7 @@ class ArduinoServo:
 class CalibrationProperty(Property):
     def __init__(self, name, initial):
         super(CalibrationProperty, self).__init__(name, initial)
+        self.set(initial)
 
     def set(self, value):
         nvalue = {}
@@ -197,18 +198,25 @@ class CalibrationProperty(Property):
             nvalue[float(cal)] = value[cal]
         if not 0 in nvalue: #remove?
             nvalue[0] = 0, 0, 0, 12, 0
+
+        # cache min and max speed
+        self.max_forward_speed = self.max_reverse_speed = 0
+        for cal in nvalue: 
+            calspeed = nvalue[cal][0]
+            self.max_forward_speed = max(self.max_forward_speed, calspeed)
+            self.max_reverse_speed = min(self.max_reverse_speed, calspeed)
+
         return super(CalibrationProperty, self).set(nvalue)
 
 # a property which records the time when it is updated
 class TimestampProperty(Property):
     def __init__(self, name, initial):
         super(TimestampProperty, self).__init__(name, initial)
-        self.timestamp = time.time()
+        self.set(initial)
 
     def set(self, value):
         self.timestamp = time.time()
         return super(TimestampProperty, self).set(value)
-
 
 class Servo:
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
@@ -216,6 +224,7 @@ class Servo:
     def __init__(self, server):
         self.server = server
         self.fwd_fault = self.rev_fault = False
+        self.min_speed = self.Register(RangeProperty, 'Min Speed', .3, 0, 1)
         self.max_speed = self.Register(RangeProperty, 'Max Speed', 1, 0, 1)
         self.brake_hack = self.Register(BooleanProperty, 'Brake Hack', True)
         self.brake_hack_state = 0
@@ -323,24 +332,25 @@ class Servo:
         self.position = min(max(self.position, 0), 1)
 
         # get current
+        
         ampseconds = 3600*(self.amphours.value - self.lastpositionamphours)
         current = ampseconds / dt
         self.lastpositionamphours = self.amphours.value
 
-        # bound speed
-        max_forward_speed = max_reverse_speed = 0
-        for cal in self.calibration.value: 
-            calspeed = self.calibration.value[cal][0]
-
-            max_forward_speed = max(max_forward_speed, calspeed)
-            max_reverse_speed = min(max_reverse_speed, calspeed)
-
-        speed = min(max(speed, max_reverse_speed*self.max_speed.value),\
-                    max_forward_speed*self.max_speed.value)
+        speed = min(max(speed, self.calibration.max_reverse_speed*self.max_speed.value),\
+                    self.calibration.max_forward_speed*self.max_speed.value)
 
         # apply calibration
         cal0 = cal1 = False
         for calspeed in sorted(self.calibration.value):
+            if calspeed < 0:
+                rawspeed = calspeed/self.calibration.max_reverse_speed
+            else:
+                rawspeed = calspeed/self.calibration.max_forward_speed
+
+            if rawspeed > 0 and rawspeed < self.min_speed.value:
+                continue
+            
             cal = self.calibration.value[calspeed]
             command, idle_current, stall_current, cal_voltage, dt = cal
             if self.compensate_current.value:

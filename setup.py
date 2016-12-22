@@ -20,7 +20,7 @@ setup (name = 'pypilot',
        author="Sean D'Epagnier",
        url='http://pypilot.org/',
        packages=['pypilot', 'pypilot_ui', 'pypilot_lcd', 'pypilot_webapp', 'signalk'],
-       package_data={'pypilot_lcd': ['ugfxfonts'],
+       package_data={'pypilot_lcd': ['font.ttf'],
                      'pypilot_webapp': ['static/*', 'templates/*']},
 #       requires=['flask', 'gevent'], # webapp
        entry_points={

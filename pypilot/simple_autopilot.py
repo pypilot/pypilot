@@ -22,8 +22,8 @@ class SimpleAutopilot(AutopilotBase):
     # create simple pid filter
     self.P = self.Register(AutopilotGain, 'P', .002, 0, .1)
     self.I = self.Register(AutopilotGain, 'I', 0, 0, .1)
-    self.D = self.Register(AutopilotGain, 'D', .002, 0, .1)
-    self.DD = self.Register(AutopilotGain, 'DD', 0, 0, .1)
+    self.D = self.Register(AutopilotGain, 'D', .002, 0, .5)
+    self.DD = self.Register(AutopilotGain, 'DD', 0, 0, 1)
     self.lastheadingrate = 0
 
     self.hP = self.Register(AutopilotGain, 'hP', 0, 0, .1)
@@ -49,9 +49,9 @@ class SimpleAutopilot(AutopilotBase):
     command = self.P.value*self.heading_error.value + \
               self.I.value*self.heading_error_int.filtered.value + \
               self.D.value*headingrate + \
-              self.DD.value*headingraterate + \
+              self.DD.value*headingraterate*10 + \
               self.hP.value*heel + self.hD.value*rollrate
-      
+       
     self.servo.command.set(command)
 
 def main():
@@ -69,8 +69,8 @@ def main():
     ap.run()
   except KeyboardInterrupt:
     print 'Keyboard interrupt, autopilot process exit'
-  except:
-    print 'exception'
+#  except:
+#    print 'exception'
 
 if __name__ == '__main__':
   main()

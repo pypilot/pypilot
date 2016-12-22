@@ -111,7 +111,7 @@ class AutopilotBase(object):
               break
           time.sleep(period/2)
               
-      dt = time.time() - t0
+      dt1 = time.time() - t0
 
       if 'calupdate' in data and self.last_heading:
           # with compass calibration updates, adjust the autopilot heading_command
@@ -125,12 +125,14 @@ class AutopilotBase(object):
               new_command += 360
           self.heading_command.set(new_command)
 
+      dt2 = time.time() - t0
       self.last_heading = data['heading']
 
       # calibration or other mode, disable autopilot
       if self.servo.drive.value == 'raw':
           self.mode.set('disabled')
 
+      dt3 = time.time() - t0
       magnetic_heading_command = self.heading_command.value
       self.gps.poll()
       if self.gps.fix and self.gps.fix.speed > 1:

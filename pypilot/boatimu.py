@@ -40,6 +40,10 @@ def imu_process(queue, cal_queue):
     s.MPU9255GyroFsr = 0 # +- 250 deg/s
     s.MPU9255GyroAccelSampleRate = 10
     s.MPU9255CompassSampleRate = 10
+
+    s.GyroBiasValid = True
+    s.GyroBias = (-.003, 0.021000, -.01)
+
     rtimu = RTIMU.RTIMU(s)    
 
     print("Using settings file " + SETTINGS_FILE + ".ini")
@@ -73,6 +77,8 @@ def imu_process(queue, cal_queue):
           s.CompassCalEllipsoidOffset = new_cal
           #rtimu.resetFusion()
           calupdates+=1
+
+        data['gyrobias'] = s.GyroBias
         data['calupdates'] = calupdates
         queue.put(data)
         
@@ -175,7 +181,6 @@ class BoatIMU(object):
     self.Period = .05 # 10hz
     self.DataBank = []
     self.heel = 0
-    self.rollog = []
 
     self.calupdates = 0
 
@@ -230,6 +235,8 @@ class BoatIMU(object):
     avgsensor('gyro')
     avgsensor('compass')
 
+    avgsensor('gyrobias')
+    
     # when the calibration updates, we cannot average fusion pose
     # so we just take the last one
     calupdates = self.DataBank[len(self.DataBank)-1]['calupdates']
@@ -262,11 +269,6 @@ class BoatIMU(object):
     data['heel'] = self.heel = data['roll']*.05 + self.heel*.95
 
     filtername = 'heading'
-    self.rollog.append([data[filtername]])
-    if len(self.rollog) > 600/self.Period:
-      self.rollog = self.rollog[1:]
-    x = self.rollog
-
     def heading_filter(lp, a, b):
       if not a:
         return b
@@ -281,6 +283,7 @@ class BoatIMU(object):
         result += 360
       return result
 
+    # third order lowpass
     llp = .18
     self.heading_lowpass3a = heading_filter(llp, data[filtername], self.heading_lowpass3a)
     self.heading_lowpass3b = heading_filter(llp, self.heading_lowpass3a, self.heading_lowpass3b)
@@ -288,6 +291,7 @@ class BoatIMU(object):
 
     data['heading_lowpass'] = self.heading_lowpass3
     data['gyro'] = map(math.degrees, data['gyro'])
+    data['gyrobias'] = map(math.degrees, data['gyrobias'])
     data['timestamp'] = self.DataBank[len(self.DataBank)-1]['timestamp']
 
     self.DataBank = []
