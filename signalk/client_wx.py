@@ -27,7 +27,7 @@ class MainFrame(wx.Frame):
 	wx.Frame.__init__(self, None, title="signalk client", size=(1000,600))
 
         self.value_list = []
-        self.client = SignalKClientFromArgs(sys.argv, self.Refresh)
+        self.client = SignalKClientFromArgs(sys.argv, True, self.Refresh)
 
         ssizer = wx.FlexGridSizer(0, 1, 0, 0)
         ssizer.AddGrowableRow( 0 )

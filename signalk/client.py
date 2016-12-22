@@ -118,7 +118,7 @@ class SignalKClient(object):
                     except:
                         # ignore garbage
                         print 'invalid message from server:', line
-                        return False
+                        sys.exit(-2)
 
                     return msg
             
@@ -212,7 +212,7 @@ class SignalKClient(object):
             else:
                 print 'no result', name
 
-def SignalKClientFromArgs(argv, *cargs):
+def SignalKClientFromArgs(argv, watch, *cargs):
     host = False
     port = False
     if len(argv) > 1:
@@ -225,7 +225,10 @@ def SignalKClientFromArgs(argv, *cargs):
 
     def on_con(client):
         for arg in argv[2:]:
-            client.watch(arg)
+            if watch:
+                client.watch(arg)
+            else:
+                client.get(arg)
         if len(cargs) == 1:
             cargs[0]()
             
@@ -235,7 +238,11 @@ def SignalKClientFromArgs(argv, *cargs):
 # connects, enumerates the values, and then requests
 # each value, printing them
 def main():
-    client = SignalKClientFromArgs(sys.argv)
+    continuous = '-c' in sys.argv
+    if continuous:
+        sys.argv.remove('-c')
+
+    client = SignalKClientFromArgs(sys.argv, continuous)
     if len(sys.argv) <= 2:
         client.print_values()
         exit()
@@ -244,6 +251,8 @@ def main():
         result = client.receive(1000)
         if result:
             print json.dumps(result)
+            if not continuous:
+                return
 
 if __name__ == '__main__':
     main()

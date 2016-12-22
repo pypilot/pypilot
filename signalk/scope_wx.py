@@ -39,7 +39,7 @@ class SignalKScope(SignalKScopeBase):
                     self.client.watch(self.clValues.GetString(i))
             self.plot.reset()
 
-        self.client = SignalKClientFromArgs(sys.argv[:2], on_con)
+        self.client = SignalKClientFromArgs(sys.argv[:2], True, on_con)
         self.value_list = self.client.list_values()
 
         for name in sorted(self.value_list):
