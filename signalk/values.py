@@ -121,7 +121,25 @@ class Value(object):
         request = {self.name : {'ops', list(self.processes())}}
         socket.send(json.dumps(request) + '\n')
 
-class SensorValue(Value): # same as a Value with added timestamp
+def round_value(value):
+  if type(value) == type([]):
+    ret = '['
+    if len(value):
+      ret += round_value(value[0])
+      for item in value[1:]:
+        ret += ', ' + round_value(item)
+    return ret + ']'
+  else:
+    return '%.3f' % value
+
+class RoundedValue(Value):
+    def __init__(self, name, initial, **kwargs):
+      super(RoundedValue, self).__init__(name, initial, **kwargs)
+      
+    def get_request(self):
+      return '{"' + self.name + '": {"value": ' + round_value(self.value) + '}}'
+
+class SensorValue(Value): # same as Value with added timestamp
     def __init__(self, name, initial=False):
         super(SensorValue, self).__init__(name, initial)
         self.timestampholder = self ## it's possible to share timestamp with another value
@@ -133,25 +151,7 @@ class SensorValue(Value): # same as a Value with added timestamp
         super(SensorValue, self).set(value)
 
     def get_request(self):
-        try: # round to places, plus it's faster than json dumping
-            if type(self.value) == type([]):
-                strvalue = '['
-                first = True
-                for value in self.value:
-                    if not first:
-                        strvalue += ','
-                    first = False
-                    strvalue += '%.4f' % value
-                strvalue += ']'
-            elif type(self.value) == type(True):
-                strvalue = 'true' if self.value else 'false'
-            else:
-                strvalue = '%.4f' % self.value
-            request = '{"' + self.name + ('": {"value": %s, "timestamp": %.3f }}' % (strvalue, self.timestampholder.timestamp))
-        except:
-            # fallback to json dump which is slower
-            request = json.dumps({self.name : {'value' : self.value, 'timestamp' : self.timestampholder.timestamp}})
-        return request
+        return '{"' + self.name + '": {"value": ' + round_value(self.value) + ', "timestamp": %.3f }}' % self.timestampholder.timestamp
 
     def type(self):
         return 'SensorValue'

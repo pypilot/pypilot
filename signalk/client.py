@@ -25,6 +25,8 @@ except:
 class ConnectionLost(Exception):
     pass
 
+READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
+
 class SignalKClient(object):
     def __init__(self, f_on_connected, host=False, port=False, autoreconnect=False, have_watches=False):
         self.autoreconnect = autoreconnect
@@ -82,18 +84,18 @@ class SignalKClient(object):
         self.values = []
         self.msg_queue = []
         self.f_on_connected(self)
-
-    def poll(self, timeout = 0):
-        t0 = time.time()
-        poller = select.poll()
-
+        self.poller = select.poll()
         if self.socket:
             fd = self.socket.socket.fileno()
         else:
             fd = self.serial.fileno()
-        poller.register(fd, select.POLLIN | select.POLLOUT | \
-                        select.POLLPRI | select.POLLHUP | select.POLLERR)
-        events = poller.poll(1000.0 * timeout)        
+        self.poller.register(fd, READ_ONLY)
+
+
+    def poll(self, timeout = 0):
+        t0 = time.time()
+        self.socket.flush()
+        events = self.poller.poll(1000.0 * timeout)        
         while events != []:
             event = events.pop()
             fd, flag = event
@@ -106,8 +108,12 @@ class SignalKClient(object):
             if flag & select.POLLOUT:
                 if self.socket:
                     self.socket.flush()
+                    #if not self.socket.out_buffer:
+                    #    self.poller.register(self.socket.socket, READ_ONLY)
 
     def send(self, request):
+        #if not self.socket.out_buffer:
+        #    self.poller.register(self.socket.socket, READ_ONLY | select.POLLOUT)
         self.socket.send(json.dumps(request)+'\n')
 
     def receive_line(self, timeout = 0):
@@ -131,12 +137,12 @@ class SignalKClient(object):
 
                     return msg
             
-                dt = time.time() - t1
+                #dt = time.time() - t1
                 # maybe sleep for up to 10 ms
-                if dt < .01:
-                    time.sleep(.01 - dt)
-
+                #if dt < .01:
+                #    time.sleep(.01 - dt)
                 t1 = time.time()
+
         except ConnectionLost:
             self.socket.socket.close()
             if not self.autoreconnect:
@@ -199,8 +205,12 @@ class SignalKClient(object):
         self.send(request)
 
     def set(self, name, value):
-        request = {'method' : 'set', 'name' : name, 'value' : value}
-        self.send(request)
+        #request = {'method' : 'set', 'name' : name, 'value' : value}
+        #self.send(request)
+
+        request = '{"method": "set", "name": "' + name + '", "value": ' + str(value) + '}\n'
+        #print 'request', request
+        self.socket.send(request)
 
     def watch(self, name, value=True):
         request = {'method' : 'watch', 'name' : name, 'value' : value}

@@ -40,8 +40,10 @@ class NmeaBridge:
         while self.process.gps_queue.qsize() > 0:
             data = self.process.gps_queue.get()
             # if internal gps track is more than 2 seconds old, use externally supplied gps
-            if gps.track.timestamp - time.time() > 2:
+            if self.gps.source.value == 'external' or \
+               time.time() - self.gps.track.timestamp > 2:
                 name, value = data
+                #print 'gps', name, 'val', value
                 if name == 'gps/track':
                     self.gps.track.set(value)
                 elif name == 'gps/speed':
@@ -55,6 +57,8 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
 
 def nmea_bridge_process(gps_queue=False):
+    import os
+    print 'nmeapid', os.getpid()
     sockets = []
     watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command', 'imu/pitch', 'imu/roll', 'imu/heading_lowpass']
 
@@ -91,26 +95,23 @@ def nmea_bridge_process(gps_queue=False):
 
     server.listen(5)
     max_connections = 10
-    READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
+    READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
 
     ap_enabled = 'N/A'
     ap_mode = 'N/A'
     ap_heading_command = 180
     addresses = {}
+    cnt = 0
 
+    poller = select.poll()
+    poller.register(server, READ_ONLY)
+    fd_to_socket = {server.fileno() : server}
     while True:
-        poller = select.poll()
-        poller.register(server, READ_ONLY)
-        fd_to_socket = {server.fileno() : server}
-        for sock in sockets:
-            flags = READ_ONLY
-            if sock.out_buffer != '':
-                flags |= select.POLLOUT
-            fd = sock.socket.fileno()
-            poller.register(fd, flags)
-            fd_to_socket[fd] = sock
-
-        events = poller.poll(50) # 50 milliseconds
+        if sockets:
+            timeout = 100
+        else:
+            timeout = 10000
+        events = poller.poll(timeout)
         while events:
             event = events.pop()
             fd, flag = event
@@ -126,6 +127,11 @@ def nmea_bridge_process(gps_queue=False):
                     sockets.append(sock)
                     print 'new connection: ', address
                     addresses[sock] = address
+                    fd = sock.socket.fileno()
+                    fd_to_socket[fd] = sock
+
+                    poller.register(sock.socket, READ_ONLY)
+
             elif (flag & (select.POLLHUP | select.POLLERR)) or \
                  (flag & select.POLLIN and not sock.recv()):
                 print 'lost connection: ', addresses[sock]
@@ -133,9 +139,14 @@ def nmea_bridge_process(gps_queue=False):
 #                addresses.remove(sock)
                 if not sockets:
                     setup_watches(client, False)
+                poller.unregister(sock.socket)
+                fd = sock.socket.fileno()
+                del fd_to_socket[fd]
                 sock.socket.close()
-            elif flag & select.POLLOUT:
-                sock.flush()
+#            elif flag & select.POLLOUT:
+#                sock.flush()
+#                if not sock.out_buffer:
+#                    poller.register(sock.socket, READ_ONLY)
 
         for sock in sockets:
             line = sock.readline()
@@ -164,6 +175,17 @@ def nmea_bridge_process(gps_queue=False):
                 if abs(ap_heading_command - float(data[7])) > .1:
                     client.set('ap/heading_command', float(data[7]))
 
+#        while True:
+#            client.poll()
+#            #line = client.socket.readline()
+#            line = client.socket.in_buffer
+#            client.socket.in_buffer = ''
+#
+#            if not line:
+#                break
+#            print 'line', line
+#        continue
+                    
         msgs = client.receive()
         for name in msgs:
             data = msgs[name]
@@ -186,7 +208,10 @@ def nmea_bridge_process(gps_queue=False):
             if msg:
                 msg = '$' + msg + '*' + cksum(msg) + '\r\n'
                 for sock in sockets:
+                    #if not sock.out_buffer:
+                    #poller.register(sock.socket, READ_ONLY | select.POLLOUT)
                     sock.send(msg)
+                    sock.flush()
 
 if __name__ == '__main__':
     nmea_bridge_process()

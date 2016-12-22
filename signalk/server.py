@@ -141,7 +141,7 @@ class SignalKServer:
                     socket.send('invalid method: ' + method + ' for ' + name + '\n')
     
     def HandleRequests(self, totaltime):
-        READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
+        READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
         if not self.init:
             try:
                 self.server_socket.bind(('0.0.0.0', self.port))
@@ -158,14 +158,14 @@ class SignalKServer:
         
         t1 = t2 = time.time()
         while t2 - t1 < totaltime:
-            for socket in list(self.sockets):
-                flags = READ_ONLY
-                if socket.out_buffer != '':
-                    flags |= select.POLLOUT
-                try:
-                    self.poller.register(socket.socket, flags)
-                except:
-                    self.RemoveSocket(socket)
+#            for socket in list(self.sockets):
+#                flags = READ_ONLY
+#                if socket.out_buffer != '':
+#                    flags |= select.POLLOUT
+#                try:
+#                    self.poller.register(socket.socket, flags)
+#                except:
+#                    self.RemoveSocket(socket)
 
             dt = t2 - t1
             if dt > totaltime:
@@ -188,6 +188,7 @@ class SignalKServer:
                     self.sockets.append(socket)
                     fd = socket.socket.fileno()
                     self.fd_to_socket[fd] = socket
+                    self.poller.register(socket.socket, READ_ONLY)
                 elif flag & (select.POLLHUP | select.POLLERR):
                     self.RemoveSocket(socket)
                     continue
@@ -201,16 +202,16 @@ class SignalKServer:
 
             for socket in self.sockets:
                 line = socket.readline()
-                if not line:
-                    continue
-
-                if False: # true to debug
-                    self.HandleRequest(socket, line)
-                else:
-                    try:
+                if line:
+                    if True: # true to debug
                         self.HandleRequest(socket, line)
-                    except:
-                        socket.send('invalid request: ' + line + '\n')
+                    else:
+                        try:
+                            self.HandleRequest(socket, line)
+                        except:
+                            socket.send('invalid request: ' + line + '\n')
+
+                socket.flush()
 
                 if t2 - t1 >= totaltime:
                     return

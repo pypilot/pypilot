@@ -207,11 +207,10 @@ class CalibrationProperty(Property):
     def __init__(self, name, initial):
         super(CalibrationProperty, self).__init__(name, initial)
         self.set(initial)
-
     def set(self, value):
         nvalue = {}
-        for cal in value: 
-            nvalue[float(cal)] = value[cal]
+        for cal in value:
+            nvalue[round(1000*float(cal))/1000.0] = map(lambda x : round(1000*x)/1000.0, value[cal])
         if not 0 in nvalue: #remove?
             nvalue[0] = 0, 0, 0, 12, 0
 

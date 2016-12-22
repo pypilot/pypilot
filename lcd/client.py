@@ -849,7 +849,6 @@ class LCDClient():
             if name in self.last_msg and self.last_msg[name] != 'N/A': # ignore initial message
                 if name == 'gps/track' and 'value' in data:
                     self.last_gps_time = time.time()
-                    print 'last msg', self.last_msg[name]
                 if name == 'wind/direction' and 'value' in data:
                     self.last_wind_time = time.time()
 

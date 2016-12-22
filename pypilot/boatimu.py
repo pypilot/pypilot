@@ -29,7 +29,9 @@ try:
 except ImportError:
   print "RTIMU library not detected, please install it"
 
-def imu_process(queue, cal_queue, compass_cal, gyrobias):
+def imu_process(pipe, cal_queue, compass_cal, gyrobias):
+    import os
+    #os.system("sudo renice -10 %d" % os.getpid())
     SETTINGS_FILE = "RTIMULib"
     s = RTIMU.Settings(SETTINGS_FILE)
     s.FusionType = 1
@@ -41,7 +43,7 @@ def imu_process(queue, cal_queue, compass_cal, gyrobias):
     s.MPU9255AccelFsr = 0 # +- 2g
     s.MPU9255GyroFsr = 0 # +- 250 deg/s
     # compass noise by rate 10=.043, 20=.033, 40=.024, 80=.017, 100=.015
-    rate = 20
+    rate = 100
     s.MPU9255GyroAccelSampleRate = rate
     s.MPU9255CompassSampleRate = rate
 
@@ -77,14 +79,10 @@ def imu_process(queue, cal_queue, compass_cal, gyrobias):
 
       c = 0
       calupdates = 0
-      t1 = time.time()
       while True:
         t0 = time.time()
-        if t0 - t1 > 2:
-          break;
         
         if rtimu.IMURead():
-          t1 = t0
           data = rtimu.getIMUData()
 
           if cal_queue.qsize() > 0:
@@ -98,10 +96,13 @@ def imu_process(queue, cal_queue, compass_cal, gyrobias):
             
           data['gyrobias'] = s.GyroBias
           data['calupdates'] = calupdates
-          queue.put(data)
+          pipe.send(data)
+          pass
         
         dt = time.time() - t0
-        t = poll_interval/1000.0 - dt
+        #t = poll_interval/1000.0 - dt
+        #t = .4 / rate - dt
+        t = .1 - dt
 
         if t > 0:
           time.sleep(t)
@@ -169,7 +170,7 @@ class QuaternionValue(ResettableValue):
 
     def set(self, value):
         return super(QuaternionValue, self).set(quaternion.normalize(value))
-
+      
 class HeadingOffset(RangeProperty):
   def __init__(self, name, qvalue, **kwargs):
     self.qvalue = qvalue
@@ -211,6 +212,14 @@ class HeadingOffset(RangeProperty):
       return super(HeadingOffset, self).get_request()
 
 
+def nonblockingpipe():
+  import _multiprocessing, socket
+  s = socket.socketpair()
+  map(lambda t : t.setblocking(False), s)
+  p = map(lambda t : _multiprocessing.Connection(os.dup(t.fileno())), s)
+  s[0].close(), s[1].close()
+  return p
+
 class BoatIMU(object):
   def __init__(self, server, *args, **keywords):
     self.server = server
@@ -221,7 +230,6 @@ class BoatIMU(object):
 
     self.alignmentCounter = self.Register(Property, 'alignmentCounter', 0)
     self.last_alignmentCounter = False
-    self.port_down = self.starboard_down = False
     
     self.timestamp = 0
 
@@ -229,14 +237,14 @@ class BoatIMU(object):
     self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age')
     self.SensorValues = {}
 
-    self.compass_calibration = self.Register(Value, 'compass_calibration', [[0, 0, 0, 30], 0, False], persistent=True)
+    self.compass_calibration = self.Register(RoundedValue, 'compass_calibration', [[0, 0, 0, 30], 0, [0, 0, 0, 30, 1, 1], [0, 0, 0, 30, 0], [1, 0, 0, 0]], persistent=True)
 
-    self.compass_calibration_sigmapoints = self.Register(Value, 'compass_calibration_sigmapoints', False)
-    self.imu_queue = multiprocessing.Queue()
+    self.compass_calibration_sigmapoints = self.Register(RoundedValue, 'compass_calibration_sigmapoints', False)
+    self.imu_pipe = nonblockingpipe()
     imu_cal_queue = multiprocessing.Queue()
 
-#    if self.load_calibration():
-#      imu_cal_queue.put(tuple(self.compass_calibration.value[0][:3]))
+    #if self.load_calibration():
+    #  imu_cal_queue.put(tuple(self.compass_calibration.value[0][:3]))
 
     self.compass_auto_cal = MagnetometerAutomaticCalibration(imu_cal_queue, self.compass_calibration.value[0])
 
@@ -247,13 +255,13 @@ class BoatIMU(object):
     self.calupdates = 0
     self.heading_lowpass3 = self.heading_lowpass3a = self.heading_lowpass3b = False
 
-    for name in ['timestamp', 'fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'accelresiduals', 'accel_comp', 'heading_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel', 'calupdate']:
+    for name in ['timestamp', 'fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'accelresiduals', 'heading_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel', 'calupdate']:
         if not name in self.SensorValues:
             self.SensorValues[name] = self.Register(SensorValue, name)
 
     self.SensorValues['gyrobias'].make_persistent(120) # write gyrobias every 2 minutes
 
-    self.imu_process = multiprocessing.Process(target=imu_process, args=(self.imu_queue,imu_cal_queue, self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
+    self.imu_process = multiprocessing.Process(target=imu_process, args=(self.imu_pipe[1],imu_cal_queue, self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
     self.last_imuread = time.time()
     
   def __del__(self):
@@ -272,38 +280,38 @@ class BoatIMU(object):
       self.imu_process.start()
       return False
     
-    if self.imu_queue.qsize() == 0:
+    # flush queue
+    DataBank = []
+    data = False
+    while True: # read all the data from the non-blocking pipe
+      try:
+        data = self.imu_pipe[0].recv()
+        DataBank.append(data)
+      except IOError:
+        break
+
+    if not data:
       if time.time() - self.last_imuread > 1 and self.loopfreq.value:
         print 'IMURead failed!'
         self.loopfreq.set(0)
         for name in self.SensorValues:
           self.SensorValues[name].set(False)
       return False
-
-    self.last_imuread = time.time()
-    # flush queue
-    DataBank = []
-    while self.imu_queue.qsize() > 0:
-      data = self.imu_queue.get()
-      DataBank.append(data)
   
-    fixtime = True
-    if fixtime: # override buggy imu library timestamp with current time here
-      data['timestamp'] = time.time()
-    
-    if not self.FirstTimeStamp:
-      self.FirstTimeStamp = data['timestamp']
+    self.last_imuread = time.time()
 
-    data['timestamp'] -= self.FirstTimeStamp
-
-    self.loopfreq.strobe()
+#    fixtime = True
+#    if fixtime: # override buggy imu library timestamp with current time here
+#      data['timestamp'] = time.time()
     
     data = {}
 
+    self.loopfreq.strobe()
+
+    DataBankLen = len(DataBank)
     def avgsensor(sensor, n=3):
       data[sensor] = list(DataBank[0][sensor])
-      l = len(DataBank)
-      if l == 1:
+      if DataBankLen == 1:
         return
 
       for d in DataBank[1:]:
@@ -311,7 +319,7 @@ class BoatIMU(object):
           data[sensor][i] += d[sensor][i]
 
       for i in range(n):
-        data[sensor][i] /= l
+        data[sensor][i] /= DataBankLen
 
     avgsensor('accel')
     avgsensor('gyro')
@@ -320,22 +328,28 @@ class BoatIMU(object):
     avgsensor('accelresiduals')
     avgsensor('gyrobias')
 
+    data['timestamp'] = DataBank[DataBankLen-1]['timestamp']
+    if not self.FirstTimeStamp:
+      self.FirstTimeStamp = data['timestamp']
+
+    data['timestamp'] -= self.FirstTimeStamp
+    data['timestamp'] /= 1e6
+
     # when the calibration updates, we cannot average fusion pose
     # so we just take the last one
-    calupdates = DataBank[len(DataBank)-1]['calupdates']
+    calupdates = DataBank[DataBankLen-1]['calupdates']
     if self.calupdates != calupdates:
-      data['fusionQPose'] = DataBank[len(DataBank)-1]['fusionQPose']
+      data['fusionQPose'] = DataBank[DataBankLen-1]['fusionQPose']
       data['calupdate'] = True
       self.calupdates = calupdates
     else:
       avgsensor('fusionQPose', 4)
 
-    # apply alignment calibration
-
     down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(data['fusionQPose']))
+    #data['accel_comp'] = quaternion.rotvecquat(vector.sub(data['accel'], down), self.alignmentQ.value)
+
+    # apply alignment calibration
     data['fusionQPose'] = quaternion.multiply(data['fusionQPose'], self.alignmentQ.value)
-    accel = data['accel']
-    data['accel_comp'] = quaternion.rotvecquat(vector.sub(accel, down), self.alignmentQ.value)
 
     # count down to alignment
     if self.alignmentCounter.value != self.last_alignmentCounter:
@@ -353,13 +367,6 @@ class BoatIMU(object):
         alignment = quaternion.vec2vec2quat([0, 0, 1], adown)
         alignment = quaternion.multiply(self.alignmentQ.value, alignment)
         
-        if self.starboard_down and self.port_down:
-          ang = math.atan2(self.port_down[0] - self.starboard_down[0], \
-                           self.starboard_down[1] - self.port_down[1])
-          alignment = quaternion.angvec2quat(ang, [0, 0, 1])
-          print 'downs:', self.starboard_down, self.port_down, ang*180/math.pi, alignment
-          alignment = quaternion.multiply(self.alignmentQ.value, alignment)
-
         if len(alignment):
           print 'self.alignmentQ', self.alignmentQ.value, alignment
           self.alignmentQ.set(alignment)
@@ -382,8 +389,6 @@ class BoatIMU(object):
     data['rollrate'] = math.degrees(gyro_q[1])
     data['headingrate'] = math.degrees(gyro_q[2])
 
-    data['timestamp'] = DataBank[len(DataBank)-1]['timestamp']
-
     dt = data['timestamp'] - self.timestamp
     self.timestamp = data['timestamp']
 
@@ -396,7 +401,6 @@ class BoatIMU(object):
 
     data['heel'] = self.heel = data['roll']*.05 + self.heel*.95
 
-    filtername = 'heading'
     def heading_filter(lp, a, b):
       if not a:
         return b
@@ -413,11 +417,13 @@ class BoatIMU(object):
 
     # third order lowpass
     llp = .2
-    self.heading_lowpass3a = heading_filter(llp, data[filtername], self.heading_lowpass3a)
-    self.heading_lowpass3b = heading_filter(llp, self.heading_lowpass3a, self.heading_lowpass3b)
-    self.heading_lowpass3 = heading_filter(llp, self.heading_lowpass3b, self.heading_lowpass3)
+#    self.heading_lowpass3a = heading_filter(llp, data['heading'], self.heading_lowpass3a)
+#    self.heading_lowpass3b = heading_filter(llp, self.heading_lowpass3a, self.heading_lowpass3b)
+#    self.heading_lowpass3 = heading_filter(llp, self.heading_lowpass3b, self.heading_lowpass3)
 
-    data['heading_lowpass'] = self.heading_lowpass3
+ #   data['heading_lowpass'] = self.heading_lowpass3
+    data['heading_lowpass'] = data['heading']
+
     data['gyro'] = map(math.degrees, data['gyro'])
     data['gyrobias'] = map(math.degrees, data['gyrobias'])
 
