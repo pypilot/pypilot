@@ -75,6 +75,19 @@ class AutopilotGain(RangeProperty):
 class AutopilotBase(object):
   def __init__(self, *args, **keywords):
     super(AutopilotBase, self).__init__(*args, **keywords)
+
+    # setup all processes to exit on any signal
+    self.clean = False
+    def cleanup(signal_number, frame):
+        if not self.clean:
+            self.clean = True
+            exit(1)
+
+    import signal
+    for s in range(1, 16):
+        if s != 9:
+            signal.signal(s, cleanup)
+
     self.server = SignalKServer()
     self.boatimu = BoatIMU(self.server)
     self.servo = servo.Servo(self.server)
@@ -95,6 +108,14 @@ class AutopilotBase(object):
 
     self.runtime = self.Register(AgeValue, 'runtime') #, persistent=True)
 
+    device = '/dev/watchdog0'
+    self.watchdog_device = False
+    try:
+        self.watchdog_device = open(device, 'w')
+    except:
+        print 'failed to open special file', device, 'for writing:'
+        print 'autopilot cannot strobe the watchdog'
+        
     # read initial value from imu as this takes time
 #    while not self.boatimu.IMURead():
 #        time.sleep(.1)
@@ -102,8 +123,10 @@ class AutopilotBase(object):
   def __del__(self):
       if self.gps.process:
           self.gps.process.terminate()
-      self.nmea_bridge.terminate()
-      self.boatimu.__del__()
+      self.nmea_bridge.process.terminate()
+      if self.watchdog_device:
+          print 'close watchdog'
+          self.watchdog_device.close()
 
   def Register(self, _type, name, *args, **kwargs):
     return self.server.Register(_type(*(['ap/' + name] + list(args)), **kwargs))
@@ -113,8 +136,8 @@ class AutopilotBase(object):
                   self.Register(RangeProperty, name+'_lp_constant', initial_constant, 0, 1))
       
   def run(self):
-          while True:
-              self.ap_iteration()
+      while True:
+          self.ap_iteration()
 
   def ap_iteration(self):
       period = .1
@@ -203,6 +226,8 @@ class AutopilotBase(object):
       t = max(period - (t3 - t0), .025)
       self.server.HandleRequests(t)
 
+      if self.watchdog_device:
+          self.watchdog_device.write('c')
 
 if __name__ == '__main__':
   print 'You must run an actual autopilot implementation, eg: simple_autopilot.py'

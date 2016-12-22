@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2017 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -42,13 +42,9 @@ class GpsProcess(multiprocessing.Process):
                 break
 
     def gps_process(self, queue):
-        try:
-            while True:
-                self.connect()
-                self.read(queue)
-        except KeyboardInterrupt:
-            print 'Keyboard interrupt, gps process exit'
-            
+        while True:
+            self.connect()
+            self.read(queue)
             
 class GpsPoller():
     def __init__(self, server):
@@ -65,6 +61,7 @@ class GpsPoller():
     def poll(self):
         if not self.process or not self.process.is_alive():
             self.process = GpsProcess()
+            print 'start gps'
             self.process.start()
         
         if self.process.queue.qsize() > 0:

@@ -96,16 +96,6 @@ def imu_process(queue, cal_queue, compass_cal):
         if t > 0:
           time.sleep(t)
 
-def except_imu_process(*args):
-  try:
-    imu_process(*args)
-  except KeyboardInterrupt:
-    print 'Keyboard interrupt, boatimu process exit'
-    pass
-  except:
-    print 'unhandled imu exception!!! except'
-    pass
-
 class LoopFreqValue(Value):
     def __init__(self, name, initial):
         super(LoopFreqValue, self).__init__(name, initial)
@@ -240,7 +230,7 @@ class BoatIMU(object):
 #    if self.load_calibration():
 #      imu_cal_queue.put(tuple(self.compass_calibration.value[0][:3]))
     
-    self.imu_process = multiprocessing.Process(target=except_imu_process, args=(self.imu_queue,imu_cal_queue, self.compass_calibration.value[0]))
+    self.imu_process = multiprocessing.Process(target=imu_process, args=(self.imu_queue,imu_cal_queue, self.compass_calibration.value[0]))
 
     self.compass_auto_cal = MagnetometerAutomaticCalibration(imu_cal_queue, self.compass_calibration.value[0])
     self.lastqpose = False

@@ -205,20 +205,13 @@ def CalibrationProcess(points, fit_output, initial):
         else:
             time.sleep(15) # wait 15 seconds then run fit algorithm again
 
-def CalibrationProcessExceptions(*args):
-  try:
-    CalibrationProcess(*args)
-  except KeyboardInterrupt:
-    print 'Keyboard interrupt, calibration fit process exit'
-    pass
-
 class MagnetometerAutomaticCalibration():
     def __init__(self, cal_queue, initial):
         self.cal_queue = cal_queue
         self.sphere_fit = initial
         self.points = multiprocessing.Queue()
         self.fit_output = multiprocessing.Queue()
-        self.process = multiprocessing.Process(target=CalibrationProcessExceptions, args=(self.points, self.fit_output, self.sphere_fit))
+        self.process = multiprocessing.Process(target=CalibrationProcess, args=(self.points, self.fit_output, self.sphere_fit))
         self.process.start()
 
     def AddPoint(self, point):

@@ -53,6 +53,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
         self.gps_queue = multiprocessing.Queue()
         super(NmeaBridgeProcess, self).__init__(target=nmea_bridge_process, args=(self.gps_queue, ))
 
+
 def nmea_bridge_process(gps_queue=False):
     sockets = []
     watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command', 'imu/pitch', 'imu/roll', 'imu/heading_lowpass']
@@ -62,16 +63,19 @@ def nmea_bridge_process(gps_queue=False):
             client.watch(name, watch)
 
     def on_con(client):
+        print 'nmea client connected'
         if sockets:
             watch(client)
 
     # we actually use a local connection to the server to simplify logic
+    print 'nmea try connections'
     while True:
         try:
             client = SignalKClient(on_con, 'localhost', autoreconnect=True)
             break
         except:
             time.sleep(2)
+    print 'nmea connected'
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setblocking(0)
