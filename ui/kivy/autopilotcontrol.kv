@@ -1,0 +1,55 @@
+#:kivy 1.0
+
+<AutopilotControl>:
+    ap: ap
+    heading_label: heading_label
+    heading_command_label: heading_command_label
+    compass: compass
+
+    size_hint: 1, 1
+    pos_hint: {'center_x': .5, 'center_y': .5}
+    do_default_tab: False
+
+    TabbedPanelItem:
+        text: 'Control'
+        BoxLayout:
+            orientation: 'vertical'
+            BoxLayout:
+                orientation: 'horizontal'
+                ToggleButton:
+                    id: ap
+                    text: 'AP'
+                    markup: True
+                    on_release: app.onAP()
+                Label:
+                    id: heading_label
+                    text: 'N/A'
+                Label:
+                    id: heading_command_label
+                    text: 'N/A'
+            Image:
+                heading: 0
+                id: compass
+                source: 'compass.png'
+                canvas.before:
+                    PushMatrix
+                    Rotate:
+                        angle: self.heading
+                        origin: self.center
+                canvas.after:
+                    PopMatrix
+  
+    TabbedPanelItem:
+        text: 'Calibration'
+        BoxLayout:
+            Label:
+                text: 'Second tab content area'
+            Button:
+                text: 'Button that does nothing'
+    TabbedPanelItem:
+        text: 'Settings'
+        RstDocument:
+            text:
+                '\\n'.join(("Hello world", "-----------",
+                "You are in the third tab."))
+

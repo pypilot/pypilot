@@ -306,7 +306,7 @@ uint16_t TakeVolts()
 void debug_amps()
 {
   uint32_t amps = TakeAmps();
-  uint32_t ampsout =  amps * 11000 / 1024 / 64
+  uint32_t ampsout =  amps * 11000 / 1024 / 64;
   
   debug("%lu.%03lu  ", ampsout/1000, ampsout%1000);
 }
@@ -331,8 +331,9 @@ void loop()
     // serial input
     while(Serial.available()) {
       uint8_t c = Serial.read();
-      if(serialin < 12)
-        serialin+=3; // output at 3x input rate
+      if(serialin < 6)
+     //    serialin+=3; //   output at 3x input rate
+        serialin++; // output at input rate
       
       switch(sync_b) {
       case 0:
@@ -395,7 +396,7 @@ void loop()
         flags |= FAULTPIN;
     }
     
-    // test overcurrent
+    // test current
     uint16_t amps = GetAmps();
     if(flags & ENGAUGED && ampcount > 0 && amps >= max_current) {
         disengauge();

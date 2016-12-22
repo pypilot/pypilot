@@ -229,6 +229,7 @@ class CompassCalibrationPlot():
         elif name == 'imu/compass_calibration_sigmapoints':
             self.sigmapoints = data['value']
         elif name == 'imu/compass_calibration' and data['value']:
+            print 'data', data['value']
             self.mag_cal_sphere = data['value'][0]
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
@@ -329,7 +330,7 @@ class CompassCalibrationPlot():
             if self.fusionQPose:
                 if self.alignmentQ:
                     q = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
-                down = quaternion.rotvecquat(down, quaternion.conjugate(q))
+                    down = quaternion.rotvecquat(down, quaternion.conjugate(q))
                 #down =             self.accel
 
             try:
