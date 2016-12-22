@@ -14,6 +14,8 @@ def norm(v):
 
 def normalize(v):
     n = norm(v)
+    if n == 0:
+        return v
     return map(lambda x : x / n, v)
 
 def cross(a, b):

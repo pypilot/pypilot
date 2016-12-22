@@ -56,10 +56,21 @@ class SimpleAutopilot(AutopilotBase):
 
 def main():
   ap = SimpleAutopilot()
+
+  def cleanup(signal_number, frame):
+    exit(1)
+
+  import signal
+  for s in range(1, 16):
+    if s != 9:
+      signal.signal(s, cleanup)
+  
   try:
     ap.run()
   except KeyboardInterrupt:
     print 'Keyboard interrupt, autopilot process exit'
+  except:
+    print 'exception'
 
 if __name__ == '__main__':
   main()

@@ -56,7 +56,7 @@ def main():
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     try:
-        server.bind(('0.0.0.0', 12345))
+        server.bind(('0.0.0.0', 10110))
     except:
         print 'nmea_bridge: bind failed.'
         exit(1)

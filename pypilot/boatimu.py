@@ -182,6 +182,8 @@ class BoatIMU(object):
     self.heading_lowpass3 = self.heading_lowpass3a = self.heading_lowpass3b = False
     
   def __del__(self):
+    self.imu_process.terminate()
+    self.compass_auto_cal.process.terminate()
     self.save_calibration()
 
   def Register(self, _type, name, *args):
@@ -242,6 +244,8 @@ class BoatIMU(object):
     data['fusionQPose'] = list(quaternion.multiply(data['fusionQPose'], self.alignmentQ.value))
 
     self.compass_auto_cal.AddPoint(data['compass'] + vector.normalize(data['accel']))
+    if vector.norm(data['accel']) == 0:
+      print 'vector n', data['accel']
     
     data['roll'], data['pitch'], data['heading'] = map(math.degrees, quaternion.toeuler(data['fusionQPose']))
 

@@ -86,6 +86,8 @@ class AutopilotBase(object):
         time.sleep(.1)
 
   def __del__(self):
+      print 'autopilot __del__ called'
+      self.gps.process.terminate()
       self.boatimu.__del__()
 
   def Register(self, _type, name, *args):

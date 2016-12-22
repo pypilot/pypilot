@@ -50,6 +50,9 @@ def FitPoints(points):
             return (x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2 - r**2
 
         sphere_bias_fit = FitLeastSq([0, 0, 0], f_sphere_bias3, (zpoints, sphere_fit[3]))
+        if not sphere_bias_fit:
+            return False
+
         sphere_fit = sphere_bias_fit + [sphere_fit[3]]
         print 'bias fit', sphere_bias_fit
 
@@ -74,13 +77,16 @@ def FitPoints(points):
         
     else:
         sphere_fit = FitLeastSq([0, 0, 0, 30], f_sphere3, zpoints)
+        if not sphere_fit:
+            print 'FitLeastSq failed!!!! ', len(points), points
+            return False
         sphere_fit[3] = abs(sphere_fit[3])
 #        print 'sphere fit', sphere_fit
 
     return [sphere_fit, CalcError(sphere_fit, f_sphere3, points)]
 
 class SigmaPoints():
-    sigma = 8 # distance between sigma points
+    sigma = 5 # distance between sigma points
     max_sigma_points = 12
 
     def __init__(self):
