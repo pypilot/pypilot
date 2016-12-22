@@ -1,88 +1,82 @@
-import pickle
-import ctypes
+#!/usr/bin/env python
+#
+#   Copyright (C) 2016 Sean D'Epagnier
+#
+# This Program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.  
+
+import os
 import ugfx
 
-def load(filename, bypp):
-    data = pickle.load(open(filename, 'rb'))
-    fonts = {}
-    for s in data:
-        fonts[s] = {}
-        for c in data[s]:
-            d = data[s][c]
-            count = d['size'][0]*d['size'][1]*4
-            bytes = d['data']
+global fonts
+fonts = {}
 
-            fonts[s][c] = ugfx.surface(d['size'][0], d['size'][1], bypp, bytes)
-    return fonts
+fontpath = os.path.abspath(os.getenv('HOME') + '/.pypilot/ugfxfonts/')
 
-def draw(surface, pos, text, font):
+if not os.path.exists(fontpath):
+    os.mkdir(fontpath)
+if not os.path.isdir(fontpath):
+    raise 'ugfxfonts should be a directory'
+
+def draw(surface, pos, text, size, bw, crop=False):
+    if not size in fonts:
+        fonts[size] = {}
+
+    font = fonts[size]
+
     x, y = pos
     for c in text:
-        if c in font:
-            surface.blit(font[c], x, y)
-            x += font[c].width
+        if not c in font:
+            filename = fontpath + '/%03d%03d' % (size, ord(c))               
+            font[c] = ugfx.surface(filename)
+            if font[c].bypp == 0:
+                font[c] = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
+                font[c].store_grey(filename)
+            
+        surface.blit(font[c], x, y)
+        x += font[c].width
+
+def create_character(fontpath, size, c, bypp, crop, bpp):
+    try:
+        from PIL import Image
+        from PIL import ImageDraw
+        from PIL import ImageFont
+        from PIL import ImageChops
+
+    except:
+        # we will get respawn hopefully after python-PIL is loaded
+        print 'failed to load PIL to create fonts, aborting...'
+        import time
+        time.sleep(3)
+        exit(1)
+
+    ifont = ImageFont.truetype(fontpath, size)
+    size = ifont.getsize(c)
+    image = Image.new('RGBA', size)
+    draw = ImageDraw.Draw(image)
+    draw.text((0, 0), c, font=ifont)
+
+    if crop:
+        bg = Image.new(image.mode, image.size, image.getpixel((0, 0)))
+        diff = ImageChops.difference(image, bg)
+        bbox = diff.getbbox()
+        if bbox:
+            image = image.crop(bbox)
+
+    if bpp:
+        data = list(image.getdata())
+        for i in range(len(data)):
+            d = 255 / (1<<bpp)
+            v = int(round(data[i][0] / (255 / (1<<bpp))) * (255 / ((1<<bpp)-1)))
+            data[i] = (v,v,v,v)
+        image.putdata(data)
+    return ugfx.surface(image.size[0], image.size[1], bypp, image.tobytes())
+    
+
 
 if __name__ == '__main__':
-    import ctypes
-    from PIL import Image
-    from PIL import ImageDraw
-    from PIL import ImageFont
-    from PIL import ImageChops
-
-    def create(filename, fontpath, size, alpha=False, symbol=False):
-        ifont = ImageFont.truetype(fontpath, size)
-        font = {}
-
-        
-        numbers = '0123456789'
-        numeric = numbers + '.+- '
-        letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + \
-                  'abcdefghijklmnopqrstuvwxyz'
-        symbols = '`~!@#$%^&*()+=,/;\'<>?:"[{}]'
-        
-        chars = numeric
-        if alpha:
-            chars += letters
-        if symbol:
-            chars += symbols
-        for c in chars:
-            size = ifont.getsize(c)
-            image = Image.new('RGBA', size)
-            draw = ImageDraw.Draw(image)
-            draw.text((0, 0), c, font=ifont)
-
-            def trim(im):
-                bg = Image.new(im.mode, im.size, im.getpixel((0, 0)))
-                diff = ImageChops.difference(im, bg)
-                bbox = diff.getbbox()
-                if bbox:
-                    return im.crop(bbox)
-
-            if c in numbers and not alpha:
-                image = trim(image)
-
-            if image:
-                font[c] = {'size' : image.size, 'data' : image.tobytes()} 
-
-        return font
-
-    fonts = {}
-    for s in [8, 10, 12, 16, 28]:
-        fonts[s] = create('font'+str(s), 'font.ttf', s, s < 16)
-
-    pickle.dump(fonts, open('ugfxfonts', 'wb'))
-
-    data = fonts
+    print 'ugfx test program'
     screen = ugfx.display("/dev/fb0")
-
-    fonts = {}
-    for s in data:
-        fonts[s] = {}
-        for c in data[s]:
-            d = data[s][c]
-            count = d['size'][0]*d['size'][1]*4
-            bytes = d['data']
-
-            fonts[s][c] = ugfx.surface(d['size'][0], d['size'][1], screen.bypp, bytes)
-
-    draw(screen, (0, 100), "1234567890", fonts[28])
+    draw(screen, (0, 100), "1234567890", 28);

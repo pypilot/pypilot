@@ -2,6 +2,7 @@ all: ugfx.py splash
 	python setup.py build
 
 install: ugfx.py ugfx.cpp ugfx_wrap.cxx
+	rm -rf build dist
 	sudo python setup.py install
 
 splash: splash.cpp ugfx.cpp

@@ -7,18 +7,17 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import sys, os, time
+import sys, os, time, math
 
 import ugfx
 import font
 from signalk.client import SignalKClient
 
-
 def nr(x):
     try:
         return int(x)
     except:
-        return x
+        return '   '
 
 class lcd_menu():
     def __init__(self, name, items, prev=False):
@@ -28,14 +27,14 @@ class lcd_menu():
         self.prev = prev
 
     def display(self, lcd):
-        lcd.text((0, 0), self.name, 16)
-        y = 20
+        lcd.text((0, 0), self.name, 14)
+        y = .2
         for item in self.items:
-            lcd.text((2, y), item[0], 12)
-            y += 12
+            lcd.text((0, y), item[0], 9)
+            y += .15
 
-        y = 12*self.selection + 20
-        lcd.rectangle(0,y,43,y+12)
+        y = .15*self.selection + .2
+        lcd.invert(0,y,1,y+.15)
 
 class RangeEdit():
     def __init__(self, name, value, signalk_id, client, minval, maxval, step):
@@ -52,18 +51,15 @@ class RangeEdit():
 
 white = ugfx.color(255, 255, 255)
 black = ugfx.color(0, 0, 0)
+
 class LCDClient():
     def __init__(self, screen):
-
-        fontpath = os.path.abspath(os.path.dirname(__file__)) + '/' + 'ugfxfonts'
-        t0 = time.time()
-        self.fonts = font.load(fontpath, screen.bypp)
-        t1 = time.time();
-        print "loaded fonts in ", t1 - t0
-
         w, h = screen.width, screen.height
-        #w, h = 44, 84
-        width = min(w, 48)
+        mul = int(w / 48)
+        self.bw = 1 if w < 256 else False
+#        w, h, self.bw = 44, 84, 1
+
+        width = min(w, 48*mul)
         self.surface = ugfx.surface(width, width*h/w, screen.bypp, None)
         
         self.display_page = self.display_control
@@ -98,19 +94,29 @@ class LCDClient():
 
         self.client = False
 
+        self.keystate = {}
         self.keypad = [False, False, False, False, False, False]
         self.keypadup = list(self.keypad)
 
         self.blink = black, white
 
-    def text(self, pos, text, size):
-        font.draw(self.surface, pos, text, self.fonts[size])
+    def text(self, pos, text, size, crop=False):
+        pos =int(pos[0]*self.surface.width), int(pos[1]*self.surface.height)
+        size = int(size*self.surface.width/48)
+        font.draw(self.surface, pos, text, size, self.bw, crop)
 
     def line(self, x1, y1, x2, y2):
         self.surface.line(x1, y1, x2, y2, black)
 
-    def rectangle(self, x1, y1, x2, y2):
-        self.surface.rectangle(x1, y1, x2, y2, black)
+    def convbox(self, x1, y1, x2, y2):
+        return [int(x1*self.surface.width), int(y1*self.surface.height),
+                int(x2*self.surface.width), int(y2*self.surface.height)]
+
+    def box(self, x1, y1, x2, y2):
+        apply(self.surface.box, self.convbox(x1, y1, x2, y2).append(black))
+
+    def invert(self, x1, y1, x2, y2):
+        apply(self.surface.invert, self.convbox(x1, y1, x2, y2))
 
     def connect(self):
         watchlist = ['ap/mode', 'ap/heading_command',
@@ -143,21 +149,21 @@ class LCDClient():
             while len(num) < 3:
                 num = ' ' + num
 
-            s = 0 if self.surface.width < 48 else 1
-            self.text((pos[0]+1*s+ 0, pos[1]), num[0], 28)
-            self.text((pos[0]+2*s+15, pos[1]), num[1], 28)
-            self.text((pos[0]+3*s+30, pos[1]), num[2], 28)
+            size = 30
+            self.text((pos[0]+.00, pos[1]), num[0], size, True)
+            self.text((pos[0]+.33, pos[1]), num[1], size, True)
+            self.text((pos[0]+.67, pos[1]), num[2], size, True)
 
-        draw_big_number((-1,0), self.last_msg['imu/heading_lowpass'])
+        draw_big_number((0,0), self.last_msg['imu/heading_lowpass'])
 
         if self.last_msg['ap/mode'] == 'disabled' or self.last_msg['ap/mode'] == 'N/A':
-            self.text((0,24), 'standby', 12)
+            self.text((0,.4), 'standby', 12)
         else: #if self.last_msg['ap/mode'] != 'N/A':
-            draw_big_number((-1,24), self.last_msg['ap/heading_command'])
+            draw_big_number((0,.4), self.last_msg['ap/heading_command'])
 
-        modepos = 0, 68
+        modepos = 0, .7
         if self.mode == 'compass':
-            self.text(modepos, 'COMPAS', 10)
+            self.text(modepos, 'COMPASS', 10)
         elif self.mode == 'gps':
             self.text(modepos, 'GPS', 16)
             if not self.have_gps():
@@ -167,7 +173,7 @@ class LCDClient():
             self.text(modepos, 'WIND', 16)
 
     def display_menu(self):
-        self.menu.display(draw)
+        self.menu.display(self)
 
     gains = [('P', 'ap/P'), ('I', 'ap/I'), ('D', 'ap/D')]
     def display_gain(self):
@@ -195,38 +201,44 @@ class LCDClient():
     def display_mode(self):
         self.text((0, 0), 'MODE', 12)
 
-        y = 16
-        modes = {'compass': y, 'gps' : 12+y, 'wind' : 24+y}
+        y = .2
+        modes = {'compass': y, 'gps' : .15+y, 'wind' : .3+y}
         self.text((0, y), 'COMPASS', 10)
         self.text((0, 12+y), '   GPS', 12)
         self.text((0, 24+y), '  WIND', 12)
 
         y = modes[self.mode]
-        rectangle(0,y,43,y+12)
+        rectangle(0,y,43,y+.15)
 
         if self.mode == 'gps' and not self.have_gps():
-            self.text((0, 52), 'WARNING', 10)
-            self.text((0, 64), 'GPS not', 10)
-            self.text((0, 74), 'detected', 10)
+            self.text((0, .65), 'WARNING', 10)
+            self.text((0, .77), 'GPS not', 10)
+            self.text((0, .89), 'detected', 10)
         if self.mode == 'wind':
-            self.text((0, 52), 'WARNING', 10)
-            self.text((0, 64), 'WIND not', 10)
-            self.text((0, 74), 'detected', 10)
+            self.text((0, .65), 'WARNING', 10)
+            self.text((0, .77), 'WIND not', 10)
+            self.text((0, .89), 'detected', 10)
 
     def display_connecting(self):
         self.text((0, 0), 'connect', 12)
-        self.text((0, 12), 'to server', 10)
+        self.text((0, .2), 'to server', 10)
         dots = ''
         for i in range(self.connecting_dots):
             dots += '.'
-        self.text((0, 22), dots, 12)
+        self.text((0, .4), dots, 12)
         self.connecting_dots += 1
         if self.connecting_dots > 16:
             self.connecting_dots = 0
             
     def display_info(self):
-        self.text((0, 0), 'Info', 16)
-        self.text((0, 20), 'Amp Hours', 10)
+        self.text((0, 0), 'Info', 14)
+
+        y = .2
+        spacing = .12
+        fontsize = 10
+        
+        self.text((0, y), 'Amp Hours', fontsize)
+        y += spacing
 
         v =self.last_msg['servo/Amp Hours']
         try:
@@ -234,11 +246,15 @@ class LCDClient():
         except:
             pass
             
-        self.text((0, 30), v, 10)
-        self.text((0, 40), 'runtime', 10)
-        self.text((0, 50), self.last_msg['imu/runtime'], 10)
-        self.text((0, 60), 'pypilot', 10)
-        self.text((0, 70), 'ver 0.1', 10)
+        self.text((0, y), v, fontsize)
+        y += spacing
+        self.text((0, y), 'runtime', fontsize)
+        y += spacing
+        self.text((0, y), self.last_msg['imu/runtime'], fontsize)
+        y += spacing
+        self.text((0, y), 'pypilot', fontsize)
+        y += spacing
+        self.text((0, y), 'ver 0.1', fontsize)
 
         self.client.get('servo/Amp Hours')
         self.client.get('imu/runtime')
@@ -252,26 +268,20 @@ class LCDClient():
         h = self.surface.height
 
         self.blink = self.blink[1], self.blink[0]
-        self.surface.box(0, h-2, 4, h-1, self.blink[0])
+        size = h / 20
+        self.surface.box(0, h-size-1, size, h-1, self.blink[0])
 
         try:
             wlan0 = open('/sys/class/net/wlan0/operstate')
             line = wlan0.readline().rstrip()
             if line == 'up':
-                self.text((12, h-10), 'WIFI', 10)
+                self.text((.2, .88), 'WIFI', 9)
         except:
             pass
-
 
     def set(self, name, value):
         if self.client:
             self.client.set(name, value)
-
-    def keydown(self, key):
-        self.keypad[key] = True
-
-    def keyup(self, key):
-        self.keypadup[key] = True
 
     def process_keys(self):
         AUTO = 0
@@ -387,6 +397,27 @@ class LCDClient():
                 self.keypad[key] = self.keypadup[key] = False
 
     def idle(self):
+        # read from keys
+        t0 = time.time()
+        pins = [5, 6, 13, 19, 26]
+        for pini in range(len(pins)):
+            pin = pins[pini]
+            f = open('/sys/class/gpio/gpio%d/value' % pin)
+            a = f.readline()
+            #import subprocess
+            #proc = subprocess.Popen(['gpio', 'read', str(pin)], stdout=subprocess.PIPE)
+            #a, b = proc.communicate()
+
+            value = bool(int(a))
+            if pini in self.keystate and self.keystate[pini] != value:
+                if value:
+                    self.keypadup[pini] = True
+                else:
+                    self.keypad[pini] = True
+                
+            self.keystate[pini] = value
+        t1 = time.time()
+
         self.process_keys()
         while True:
             result = False
@@ -396,7 +427,6 @@ class LCDClient():
                 self.connect()
 
             if not result:
-                time.sleep(.4)
                 return
 
             name, data = result
@@ -419,15 +449,19 @@ def main():
 
     # magnify to fill screen
     mag = min(screen.width / lcdclient.surface.width, screen.height / lcdclient.surface.height)
-    
+
     while True:
-        lcdclient.idle()
         lcdclient.display()
         s = ugfx.surface(lcdclient.surface)
         s.magnify(mag)
 
-        screen.blit(s, 0, 0)       
-        time.sleep(.1)
+        screen.blit(s, 0, 0)
+
+        idletime = time.time()
+        while time.time() - idletime < .5:
+            lcdclient.idle()
+            time.sleep(.05)
+
 
 if __name__ == '__main__':
     main()

@@ -22,6 +22,11 @@ static uint16_t color16(uint32_t c)
     return (c&0xfc)<<11 | (c&0xfd00) >> 3 | (c&0xfc0000) >> 16;
 }
 
+static uint16_t color16gray(uint8_t c)
+{
+    return (c&0xfc)<<11 | (c&0xfc)<<5 | (c&0xfc);
+}
+
 uint32_t color(int r, int g, int b)
 {
     return (r<<16) + (g<<8) + (b);
@@ -62,9 +67,100 @@ surface::surface(int w, int h, int internal_bypp, const char *data32)
         memcpy(p, data32, 4*width*height);
 }
 
+
+surface::surface(const char* filename)
+{
+    width = height = bypp = 0;
+    p = NULL;
+
+    FILE *f = fopen(filename, "r");
+    if(!f)
+        return;
+
+    uint16_t file_bypp, colors;
+    if(fread(&width, 2, 1, f) != 1 || fread(&height, 2, 1, f) != 1 ||
+       fread(&file_bypp, 2, 1, f) != 1 || fread(&colors, 2, 1, f) != 1)
+        goto fail;
+
+    xoffset = yoffset = 0;
+    p = new char [width*height*file_bypp];
+    line_length = width*file_bypp;
+
+    if(colors != 1) // only greyscale supported
+        goto fail;  
+
+    {
+        char gray_data[width*height];
+        unsigned int i=0;
+        while(i<sizeof gray_data) {
+            uint8_t run, value;
+            if(fread(&run, 1, 1, f) != 1 || fread(&value, 1, 1, f) != 1) {
+                printf("fail\n");
+                goto fail;
+            }
+            while(run-- > 0)
+            gray_data[i++] = value;
+        }
+
+        if(file_bypp == 2)
+            for(int i = 0; i<width*height; i++)
+                ((uint16_t*)p)[i] = color16gray(gray_data[i]);
+        else
+            for(int i = 0; i<width*height; i++)
+                memset(p + 4*i, gray_data[i], 3);
+    }
+
+    bypp = file_bypp;
+
+fail:
+    fclose(f);
+    return;
+}
+
 surface::~surface()
 {
     delete [] p;
+}
+
+void surface::store_grey(const char *filename)
+{
+    char gray_data[width*height];
+    for(unsigned int i=0; i<sizeof gray_data; i++)
+        if(bypp == 2)
+            gray_data[i] = p[2*i]&0xfc;
+        else
+            gray_data[i] = p[4*i];
+
+    FILE *f = fopen(filename, "w");
+    uint16_t colors = 1; // grey
+    fwrite(&width, 1, 2, f);
+    fwrite(&height, 1, 2, f);
+    fwrite(&bypp, 1, 2, f);
+    fwrite(&colors, 1, 2, f);
+
+    char last = 0;
+    uint8_t run = 0;
+    for(int i=0; i<sizeof gray_data; i++) {
+        if(gray_data[i] == last) {
+            if(run == 255) {
+                fwrite(&run, 1, 1, f);
+                fwrite(&last, 1, 1, f);
+                run = 0;
+            }
+            run++;
+        } else {
+            if(run > 0) {
+                fwrite(&run, 1, 1, f);
+                fwrite(&last, 1, 1, f);
+            }
+            last = gray_data[i];
+            run = 1;
+        }
+    }
+    
+    fwrite(&run, 1, 1, f);
+    fwrite(&last, 1, 1, f);
+    fclose(f);
 }
 
 void surface::blit(surface *src, int xoff, int yoff)
@@ -197,6 +293,16 @@ void surface::box(int x1, int y1, int x2, int y2, uint32_t c)
         for(int y = y1; y <= y2; y++)
             for(int x = x1; x <= x2; x++)
                 *(uint32_t*)(p + y*line_length + x*bypp) = c;
+}
+
+void surface::invert(int x1, int y1, int x2, int y2)
+{
+    for(int y = y1; y <= y2; y++)
+        for(int x = x1; x <= x2; x++)
+            for(int c = 0; c<bypp; c++) {
+                int i = y*line_length + x*bypp + c;
+                p[i] = ~p[i];
+            }
 }
 
 void surface::fill(uint32_t c)

@@ -7,6 +7,7 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
@@ -29,11 +30,24 @@ surface *load_logo(int bypp)
     return new surface(width, height, bypp, data32);
 }
 
+
 int main()
 {
     display screen("/dev/fb0");
-    surface *logo = load_logo(screen.bypp);
+    const char *path = "/home/tc/.pypilot/splash.surf";
+    surface *logo = new surface(path);
+    if(logo->bypp != screen.bypp) {
+        logo = load_logo(screen.bypp);
+        logo->store_grey(path);
+        delete logo;
 
+        logo = new surface(path);
+        if(logo->bypp != screen.bypp) {
+            printf("failed to load %s\n", path);
+            exit(1);
+        }
+    }
+    
     int facw = screen.width / logo->width, fach = screen.height / logo->height;
     int fac = facw < fach ? facw : fach;
     logo->magnify(fac);
@@ -42,5 +56,4 @@ int main()
         screen.blit(logo, 0, 0);
         usleep(100000);
     }
-    
 }
