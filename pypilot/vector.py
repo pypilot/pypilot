@@ -28,3 +28,6 @@ def dot(a, b):
 
 def sub(a, b):
     return map(lambda x, y : x - y, a, b)
+
+def dist(a, b):
+    return norm(sub(a, b))

@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 #
 #   Copyright (C) 2017 Sean D'Epagnier
@@ -47,7 +46,7 @@ def CalcError(beta, f, points):
     return math.sqrt(mean)
 
 def FitPoints(points, sphere_fit):
-    if len(points) < 5:
+    if len(points) < 4:
         return False
 
     zpoints = [[], [], [], [], [], []]
@@ -55,20 +54,32 @@ def FitPoints(points, sphere_fit):
         zpoints[i] = map(lambda x : x[i], points)
 
     print 'fit points with', sphere_fit
+
+
+    def f_3dfit(beta, x, sphere_fit, down):
+        return \
+            (x[0] - beta[0]*down[0] - sphere_fit[0])**2 + \
+            (x[1] - beta[0]*down[1] - sphere_fit[1])**2 + \
+            (x[2] - beta[0]*down[2] - sphere_fit[2])**2 - beta[1]**2
+
+    down = [0, 0, 1]
+    new_3d_fit = FitLeastSq([0, sphere_fit[3]], f_3dfit, (zpoints, sphere_fit, down))
+    print 'new 3d fit', new_3d_fit
+    new_sphere_fit = map(lambda a, b : a + new_3d_fit[0]*b, sphere_fit[:3], down) + [new_3d_fit[1]]
+    print 'new sphere fit', new_sphere_fit
+
     
     # with few sigma points, adjust only bias
-    if len(points) < 9: # useful only if geographic location is the same?
+    if len(points) < 9: # useful only if geographic location is the same?!/
         def f_sphere_bias3(beta, x, r):
             return (x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2 - r**2
 
         sphere_bias_fit = FitLeastSq(sphere_fit[:3], f_sphere_bias3, (zpoints, sphere_fit[3]))
-        if not sphere_bias_fit:
-            return False
 
-        sphere_fit = sphere_bias_fit + [sphere_fit[3]]
         print 'sphere bias fit', sphere_bias_fit
-        
-        ellipsoid_fit = sphere_fit + [1, 1]
+#        sphere_fit = sphere_bias_fit + [sphere_fit[3]]
+
+        ellipsoid_fit = False
     else:
         def f_sphere3(beta, x):
             return (x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2 - beta[3]**2
@@ -108,61 +119,6 @@ def FitPoints(points, sphere_fit):
         #print 'rotellipsoid_fit2', rotellipsoid_fit2
 
 
-        def f_uppermatrixfit(beta, x):
-            b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
-            r = numpy.matrix([beta[3:6], [0]+list(beta[6:8]), [0, 0]+[beta[8]]])
-            print 'b', beta
-
-            m = r * b
-            m = list(numpy.array(m.transpose()))
-            r0 = map(lambda y : 1 - vector.dot(y, y), m)
-
-            return r0
-
-        def f_matrixfit(beta, x, efit):
-            b = numpy.matrix(map(lambda a, b : a - b, x[:3], efit[:3]))
-            r = numpy.matrix([[1,       beta[0], beta[1]],
-                              [beta[2], efit[4], beta[3]],
-                              [beta[4], beta[5], efit[5]]])
-
-            m = r * b
-            m = list(numpy.array(m.transpose()))
-            r0 = map(lambda y : efit[3]**2 - vector.dot(y, y), m)
-            #return r0
-
-            g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
-            r1 = map(lambda y, z : beta[6] - vector.dot(y, z), m, g)
-
-            return r0+r1
-
-        def f_matrix2fit(beta, x, efit):
-            b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
-            r = numpy.matrix([[1,       efit[0], efit[1]],
-                              [efit[2], beta[4], efit[3]],
-                              [efit[4], efit[5], beta[5]]])
-
-            m = r * b
-            m = list(numpy.array(m.transpose()))
-            r0 = map(lambda y : beta[3]**2 - vector.dot(y, y), m)
-            #return r0
-
-            g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
-            r1 = map(lambda y, z : beta[6] - vector.dot(y, z), m, g)
-
-            return r0+r1
-
-        if False:
-         matrix_fit = FitLeastSq([0, 0, 0, 0, 0, 0, 0], f_matrixfit, (zpoints, ellipsoid_fit))
-         #print 'matrix_fit', matrix_fit
-
-         matrix2_fit = FitLeastSq(ellipsoid_fit + [matrix_fit[6]], f_matrix2fit, (zpoints, matrix_fit))
-         #print 'matrix2_fit', matrix2_fit
-
-         matrix_fit2 = FitLeastSq(matrix_fit, f_matrixfit, (zpoints, matrix2_fit))
-         #print 'matrix_fit2', matrix_fit2
-
-         matrix2_fit2 = FitLeastSq(matrix2_fit[:6] + [matrix_fit2[6]], f_matrix2fit, (zpoints, matrix_fit2))
-         print 'matrix2_fit2', matrix2_fit2
 
     def rot(v, beta):
         sin, cos = math.sin, math.cos
@@ -198,6 +154,7 @@ def FitPoints(points, sphere_fit):
 
     #import numpy
     def f_quat(beta, x, sphere_fit):
+        sphere_fit = numpy.array(sphere_fit)
         n = [x[0]-sphere_fit[0], x[1]-sphere_fit[1], x[2]-sphere_fit[2]]
         q = [1 - vector.norm(beta[:3])] + list(beta[:3])
         q = angvec2quat(vector.norm(beta[:3]), beta[:3])
@@ -216,6 +173,7 @@ def FitPoints(points, sphere_fit):
 
     
     def f_rot(beta, x, sphere_fit):
+        sphere_fit = numpy.array(sphere_fit)
         n = [x[0]-sphere_fit[0], x[1]-sphere_fit[1], x[2]-sphere_fit[2]]
         m = map(lambda v : rot(v, beta), zip(n[0], n[1], n[2]))
         m = numpy.array(zip(*m))
@@ -257,7 +215,8 @@ def FitPoints(points, sphere_fit):
         c[1] *= ellipsoid_fit[4]
         c[2] *= ellipsoid_fit[5]
         return vector.normalize(c)
-    dip_error('ellipse', apply_ellipse)
+    if ellipsoid_fit:
+        dip_error('ellipse', apply_ellipse)
 
     def apply_sphere_rot(p):
         c = vector.sub(p, sphere_fit[:3])
@@ -270,7 +229,8 @@ def FitPoints(points, sphere_fit):
         c[1] *= ellipsoid_fit[4]
         c[2] *= ellipsoid_fit[5]
         return rot(c, rot_fit);
-    dip_error('ellipsoid rot', apply_ellipsoid_rot)
+    if ellipsoid_fit:
+        dip_error('ellipsoid rot', apply_ellipsoid_rot)
 
     def apply_sphere_quat(p):
         c = vector.sub(p, sphere_fit[:3])
@@ -286,52 +246,67 @@ def FitPoints(points, sphere_fit):
         q = angvec2quat(vector.norm(quat_fit[:3]), quat_fit[:3])
         return rotvecquat(vector.normalize(c), q)
 
-    dip_error('ellipsoid quat', apply_ellipsoid_rot)
+    if ellipsoid_fit:
+        dip_error('ellipsoid quat', apply_ellipsoid_rot)
 
 #    return [sphere_fit, CalcError(sphere_fit, f_sphere3, points)]
     q = angvec2quat(vector.norm(quat_fit[:3]), quat_fit[:3])
-    return [sphere_fit, 1, ellipsoid_fit, new_bias_fit, q]
 
+    if not ellipsoid_fit:
+        ellipsoid_fit = sphere_fit + [1, 1]
+    return [sphere_fit, 1, ellipsoid_fit, new_bias_fit, q, new_sphere_fit]
+
+def avg(fac, v0, v1):
+    return map(lambda a, b : (1-fac)*a + fac*b, v0, v1)
+
+class SigmaPoint():
+    def __init__(self, compass, down):
+        self.compass = compass
+        self.down = down
+        self.count = 1
+        self.time = time.time()
+
+    def add_measurement(self, compass, down):
+        self.count += 1
+        fac = max(1/self.count, .01)
+        self.compass = avg(fac, self.compass, compass)
+        self.down = avg(fac, self.down, down)
+        self.time = time.time()
 
 class SigmaPoints():
-    sigma = 3 # distance between sigma points
-    max_sigma_points = 64
+    sigma = 1.6 # distance between sigma points
+    down_sigma = .05 # distance between down vectors
+    max_sigma_points = 24
 
     def __init__(self):
         self.sigma_points = []
-        self.lastmindisti = 0
 
-    def AddPoint(self, point):
-        for i in range(len(self.sigma_points)):
-            dist = vector.norm(map(lambda x, y: x - y, self.sigma_points[i][:3], point[:3]))
-            if dist < SigmaPoints.sigma:
-                #fac = 1/self.sigma_points[i][3]
-                fac = .01
-                self.sigma_points[i] = map(lambda a, b : (1-fac)*a + fac*b, self.sigma_points[i][:6], point) + [self.sigma_points[i][6] + 1]
+    def AddPoint(self, compass, down):
+        for point in self.sigma_points:
+            dist = vector.dist(point.compass, compass)
+            down_dist = vector.dist(point.down, down)
+            #print 'dist', dist, 'down_dist', down_dist
+            if dist < SigmaPoints.sigma and down_dist < SigmaPoints.down_sigma:
+                point.add_measurement(compass, down)
                 return
 
         index = len(self.sigma_points)
-        p = list(point) + [1]
+        p = SigmaPoint(compass, down)
         if index == SigmaPoints.max_sigma_points:
-            if False:
-                self.lastmindisti += 1
-                if self.lastmindisti == SigmaPoints.max_sigma_points:
-                    self.lastmindisti = 0
-                mindisti = self.lastmindisti
-            else:
-                # replace point that is closest to other points
-                mindisti = 0
-                mindist = 1e20
-                for i in range(len(self.sigma_points)):
-                    for q in self.sigma_points:
-                        dist = vector.norm(map(lambda x, y : x - y, q[:3], self.sigma_points[i][:3]))
-                        if dist > 0 and dist < mindist:
-                            mindisti = i
-                            mindist = dist
+            # replace point that is closest to other points
+            mindisti = 0
+            mindist = 1e20
+            for i in range(len(self.sigma_points)):
+                for j in range(i):
+                    dist = vector.dist(self.sigma_points[i].compass, self.sigma_points[i].compass)
+                    if dist < mindist:
+                        mindisti = i
+                        mindist = dist
 
             self.sigma_points[mindisti] = p
         else:
             self.sigma_points.append(p)
+
 
 
 def CalibrationProcess(points, fit_output, initial):
@@ -339,18 +314,22 @@ def CalibrationProcess(points, fit_output, initial):
 
     while True:
         for i in range(points.qsize()):
-            cal.AddPoint(points.get())
+            p = points.get()
+            cal.AddPoint(p[:3], p[3:6])
 
+        # remove points with less than 5 measurements, or older than 1 hour
         p = []
+        hour_ago = time.time() - 3600
         for sigma in cal.sigma_points:
-            #print sigma
-
-            if sigma[6] >= 5:
+            if sigma.count >= 5 and sigma.time > hour_ago:
                 p.append(sigma)
         cal.sigma_points = p
 
+        # attempt to perform least squares fit
+        p = []
+        for sigma in cal.sigma_points:
+            p.append(sigma.compass + sigma.down)
         print 'sigma:', len(p)
-
         fit = FitPoints(p, initial)
         if fit:
             mag = fit[0][3]
@@ -366,12 +345,37 @@ def CalibrationProcess(points, fit_output, initial):
                 d = n[0]+n[1]+n[2]
                 initial = fit[0]
                 print 'd', d
-                if True:
-                    if d > .1:
-                        fit_output.put((fit, cal.sigma_points))
-                        last_bias = bias
-                else:
-                    fit_output.put((fit, cal.sigma_points))
+
+                # if the bias has sufficiently changed
+                if d > .1 or True:
+                    def ang(p):
+                        v = rotvecquat(vector.sub(p.compass, bias), vec2vec2quat(p.down, [0, 0, 1]))
+                        return math.atan2(v[1], v[0])
+
+                    angles = sorted(map(ang, cal.sigma_points))
+                    print 'angles', angles
+                    
+                    max_diff = 0
+                    for i in range(len(angles)):
+                        diff = -angles[i]
+                        j = i+1
+                        if j == len(angles):
+                            diff += 2*math.pi
+                            j = 0
+                        diff += angles[j]
+                        max_diff = max(max_diff, diff)
+
+                    print 'max diff', max_diff
+
+                    if max_diff < 2*math.pi*(1 - 1/3.):  # require 1/3 of circle coverage
+                        print 'have 1/3'
+                        fit_output.put((fit, map(lambda p : p.compass + p.down, cal.sigma_points)))
+                    else:
+                        sphere_fit, d, ellipsoid_fit, new_bias_fit, q, new_sphere_fit = fit
+                        fit = new_sphere_fit, d, ellipsoid_fit, new_bias_fit, q, new_sphere_fit
+                        print 'use new sphere fit', new_sphere_fit
+
+                        fit_output.put((fit, map(lambda p : p.compass + p.down, cal.sigma_points)))
 
 #            time.sleep(120) # wait 2 minutes then run fit algorithm again
             time.sleep(12)
@@ -388,7 +392,7 @@ class MagnetometerAutomaticCalibration():
         self.process.start()
 
     def AddPoint(self, point):
-        if self.points.qsize() < 64:
+        if self.points.qsize() < 256:
             self.points.put(point)
     
     def UpdatedCalibration(self):
@@ -457,3 +461,61 @@ if __name__ == '__main__':
     
     for points in allpoints:
         FitPoints(points, [0, 0, 0, r])
+
+
+def unused():
+        def f_uppermatrixfit(beta, x):
+            b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
+            r = numpy.matrix([beta[3:6], [0]+list(beta[6:8]), [0, 0]+[beta[8]]])
+            print 'b', beta
+
+            m = r * b
+            m = list(numpy.array(m.transpose()))
+            r0 = map(lambda y : 1 - vector.dot(y, y), m)
+
+            return r0
+
+        def f_matrixfit(beta, x, efit):
+            b = numpy.matrix(map(lambda a, b : a - b, x[:3], efit[:3]))
+            r = numpy.matrix([[1,       beta[0], beta[1]],
+                              [beta[2], efit[4], beta[3]],
+                              [beta[4], beta[5], efit[5]]])
+
+            m = r * b
+            m = list(numpy.array(m.transpose()))
+            r0 = map(lambda y : efit[3]**2 - vector.dot(y, y), m)
+            #return r0
+
+            g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
+            r1 = map(lambda y, z : beta[6] - vector.dot(y, z), m, g)
+
+            return r0+r1
+
+        def f_matrix2fit(beta, x, efit):
+            b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
+            r = numpy.matrix([[1,       efit[0], efit[1]],
+                              [efit[2], beta[4], efit[3]],
+                              [efit[4], efit[5], beta[5]]])
+
+            m = r * b
+            m = list(numpy.array(m.transpose()))
+            r0 = map(lambda y : beta[3]**2 - vector.dot(y, y), m)
+            #return r0
+
+            g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
+            r1 = map(lambda y, z : beta[6] - vector.dot(y, z), m, g)
+
+            return r0+r1
+
+        if False:
+         matrix_fit = FitLeastSq([0, 0, 0, 0, 0, 0, 0], f_matrixfit, (zpoints, ellipsoid_fit))
+         #print 'matrix_fit', matrix_fit
+
+         matrix2_fit = FitLeastSq(ellipsoid_fit + [matrix_fit[6]], f_matrix2fit, (zpoints, matrix_fit))
+         #print 'matrix2_fit', matrix2_fit
+
+         matrix_fit2 = FitLeastSq(matrix_fit, f_matrixfit, (zpoints, matrix2_fit))
+         #print 'matrix_fit2', matrix_fit2
+
+         matrix2_fit2 = FitLeastSq(matrix2_fit[:6] + [matrix_fit2[6]], f_matrix2fit, (zpoints, matrix_fit2))
+         print 'matrix2_fit2', matrix2_fit2
