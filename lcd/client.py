@@ -22,7 +22,7 @@ try:
 except ImportError:
     print 'No gpio available'
     GPIO = False
-    
+
 from signalk.client import SignalKClient
 
 import ugfx
@@ -130,13 +130,10 @@ class rectangle():
     def __init__(self, x, y, width, height):
         self.x, self.y, self.width, self.height = x, y, width, height
 
+AUTO, MENU, UP, DOWN, SELECT = range(5)
+
 class LCDClient():
     def __init__(self, screen):
-        self.longsleep = 30
-        w, h = screen.width, screen.height
-        mul = int(math.ceil(w / 48.0))
-
-        self.bw = 1 if w < 256 else False
 #        w, h, self.bw = 44, 84, 1
 #        w, h, self.bw = 64, 128, 1
 #        w, h, self.bw = 320, 480, 0
@@ -151,12 +148,21 @@ class LCDClient():
             self.config['invert'] = False
             self.config['language'] = 'en'
 
-        self.set_language(self.config['language'])
+        if screen:
+            w, h = screen.width, screen.height
+            mul = int(math.ceil(w / 48.0))
 
-        width = min(w, 48*mul)
-        self.surface = ugfx.surface(width, width*h/w, screen.bypp, None)
-        
-        self.display_page = self.display_control
+            self.bw = 1 if w < 256 else False
+
+            width = min(w, 48*mul)
+            self.surface = ugfx.surface(width, width*h/w, screen.bypp, None)
+            self.frameperiod = .2 # 5 frames a second possible
+
+        else:
+            self.surface = None
+            self.frameperiod = 1
+
+        self.set_language(self.config['language'])
         self.range_edit = False
 
         self.modes = {'compass': self.have_compass,
@@ -170,6 +176,7 @@ class LCDClient():
 
         self.last_gps_time = self.last_wind_time = 0
 
+        self.longsleep = 30
         self.display_page = self.display_connecting
         self.connecting_dots = 0
 
@@ -183,7 +190,7 @@ class LCDClient():
         self.control = False
         self.wifi = False
 
-        self.pins = [5, 19, 13, 26, 6]
+        self.pins = [26, 19, 13, 6, 5]
         if GPIO:
             GPIO.setmode(GPIO.BCM)
             for pin in self.pins:
@@ -413,7 +420,7 @@ class LCDClient():
     def connect(self):
         watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command',
                      'gps/track', 'wind/direction',
-                     'ap/heading', 'servo/controller']
+                     'servo/controller']
         nalist = watchlist + ['imu/pitch', 'imu/heel', 'imu/runtime',
                               'ap/P', 'ap/I', 'ap/D',
                               'imu/heading',
@@ -448,6 +455,7 @@ class LCDClient():
                 self.client.get(request)
         except:
             self.client = False
+            time.sleep(1)
 
     def round_last_msg(self, name, places):
         n = 10**places
@@ -487,7 +495,6 @@ class LCDClient():
         if not self.control:
             self.surface.fill(black)
             self.control = {'heading': False, 'heading_command': True, 'mode': False}
-        self.frameperiod = .2 # 5 frames a second possible
         
         def draw_big_number(pos, num, lastnum):
             num = nr(num)
@@ -658,7 +665,6 @@ class LCDClient():
         self.client.get('imu/compass_calibration_age')
 
     def display(self):
-        self.frameperiod = .25
         self.display_page()
 
         if self.display_page != self.display_control:
@@ -685,13 +691,7 @@ class LCDClient():
             return self.display_menu
         return self.display_control
             
-    def process_keys(self):
-        AUTO = 0
-        MENU = 1
-        UP =   2
-        DOWN = 3
-        SELECT = 4
-                           
+    def process_keys(self):                           
         if self.keypadup[AUTO]: # AUTO
             if self.last_msg['ap/enabled'] == False and self.display_page == self.display_control:
                 self.set('ap/heading_command', self.last_msg['ap/heading'])
@@ -789,6 +789,9 @@ class LCDClient():
             glutPostRedisplay()
 
     def idle(self):
+        if self.client:
+            self.client.get('ap/heading')
+
         if any(self.keypadup):
             self.longsleep = 0
 
@@ -797,12 +800,15 @@ class LCDClient():
         else:
             self.longsleep += 10
         while self.longsleep > 20:
-            dt = self.frameperiod / 10
+            dt = self.frameperiod / 10.0
             time.sleep(dt)
-            self.longsleep -= 1;
+            self.longsleep -= 1
 
         # read from keys
         for pini in range(len(self.pins)):
+            if not self.surface and (pini == MENU or pini == SELECT):
+                continue
+        
             pin = self.pins[pini]
             value = True
 
@@ -822,10 +828,11 @@ class LCDClient():
                     self.keypadup[pini] = True
                 else:
                     self.keypad[pini] = 1
-                
+
             self.keystate[pini] = value
 
         self.process_keys()
+
         while True:
             result = False
             if self.client:
@@ -837,7 +844,7 @@ class LCDClient():
                 break
 
             name, data = result
-#            print name, ' = ', data
+            #print name, ' = ', data
 
             if name in self.last_msg and self.last_msg[name] != 'N/A': # ignore initial message
                 if name == 'gps/track' and 'value' in data:
@@ -864,34 +871,40 @@ def main():
         screen = glut.screen((64, 128))
     else:
         screen = ugfx.screen("/dev/fb0")
+        if screen.width == 416 and screen.height == 656:
+            # no actual device or display
+            print 'no actual screen, running headless'
+            screen = None
 
     lcdclient = LCDClient(screen)
     print 'complete'
 
-    # magnify to fill screen
-    mag = min(screen.width / lcdclient.surface.width, screen.height / lcdclient.surface.height)
-    if mag != 1:
-        print "magnifying lcd surface to fit screen"
-        magsurface = ugfx.surface(screen)
+    if screen:
+        # magnify to fill screen
+        mag = min(screen.width / lcdclient.surface.width, screen.height / lcdclient.surface.height)
+        if mag != 1:
+            print "magnifying lcd surface to fit screen"
+            magsurface = ugfx.surface(screen)
 
-    invsurface = ugfx.surface(lcdclient.surface)
+        invsurface = ugfx.surface(lcdclient.surface)
         
     def idle():
-        lcdclient.display()
+        if screen:
+            lcdclient.display()
 
-        surface = lcdclient.surface
-        if lcdclient.config['invert']:
-            invsurface.blit(surface, 0, 0)
-            surface = invsurface
-            surface.invert(0, 0, surface.width, surface.height)
+            surface = lcdclient.surface
+            if lcdclient.config['invert']:
+                invsurface.blit(surface, 0, 0)
+                surface = invsurface
+                surface.invert(0, 0, surface.width, surface.height)
 
-        if mag != 1:
-            magsurface.magnify(surface, mag)
-            surface = magsurface
-            #        mag = 2
-            #surface.magnify(mag)
+            if mag != 1:
+                magsurface.magnify(surface, mag)
+                surface = magsurface
+                #        mag = 2
+                #surface.magnify(mag)
 
-        screen.blit(surface, 0, 0)
+            screen.blit(surface, 0, 0)
 
         lcdclient.idle()
 
