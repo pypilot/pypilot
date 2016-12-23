@@ -58,7 +58,6 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
 def nmea_bridge_process(gps_queue=False):
     import os
-    print 'nmeapid', os.getpid()
     sockets = []
     watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command', 'imu/pitch', 'imu/roll', 'imu/heading_lowpass']
 

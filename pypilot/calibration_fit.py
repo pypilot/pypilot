@@ -355,11 +355,11 @@ class SigmaPoints():
 
 
 def CalibrationProcess(points, fit_output, initial):
-    try:
-        import os
-        os.system("renice 20 %d" % os.getpid())
-    except:
-        print "warning, failed to renice calibration process"
+    import os
+    if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
+      print 'warning, failed to make calibration process idle, trying renice'
+      if os.system("renice 20 %d" % os.getpid()):
+          print 'warning, failed to renice calibration process'
 
     cal = SigmaPoints()
 

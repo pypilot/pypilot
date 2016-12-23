@@ -10,7 +10,6 @@
 import time, serial
 
 from signalk.values import *
-import serialprobe
 
 '''
    ** MWV - Wind Speed and Angle
@@ -72,18 +71,20 @@ class NMEAWindSensor():
             return parse_nmea(line.rstrip())
 
 class Wind():
-    def __init__(self, server):
+    def __init__(self, server, serialprobe):
         self.driver = False
         self.server = server
-        self.direction = self.Register(SensorValue, 'direction')
-        self.speed = self.Register(SensorValue, 'speed')
+        self.serialprobe = serialprobe
+        self.timestamp = time.time()
+        self.direction = self.Register(SensorValue, 'direction', self)
+        self.speed = self.Register(SensorValue, 'speed', self)
 
     def Register(self, _type, name, *args):
         return self.server.Register(_type(*(['wind/' + name] + list(args))))
 
     def poll(self):
         if not self.driver:
-            device = serialprobe.probe('wind', [38400, 4800])
+            device = self.serialprobe.probe('wind', [38400, 4800])
             if device:
                 try:
                     self.driver = NMEAWindSensor(device)
@@ -104,7 +105,8 @@ class Wind():
                 winddata = val
 
             if winddata:
-                serialprobe.probe_success('wind')
+                self.serialprobe.probe_success('wind')
+                self.timestamp = time.time()
                 self.direction.set(winddata['direction'])
                 self.speed.set(winddata['speed'])
                 return True

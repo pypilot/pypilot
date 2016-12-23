@@ -9,8 +9,6 @@
 
 import gps, multiprocessing, time, socket
 
-import serialprobe
-
 from signalk.values import *
 
 class GpsProcess(multiprocessing.Process):
@@ -57,15 +55,16 @@ class GpsProcess(multiprocessing.Process):
             self.read(queue)
             
 class GpsPoller():
-    def __init__(self, server):
+    def __init__(self, server, serialprobe):
         self.server = server
-        self.track = self.Register(SensorValue, 'track')
-        self.speed = self.Register(SensorValue, 'speed')
+        self.track = self.Register(SensorValue, 'track', self)
+        self.speed = self.Register(SensorValue, 'speed', self)
+        self.timestamp = 0
         self.source = self.Register(Value, 'source', 'none')
         self.lastsource = self.source.value
         self.process = False
         self.devices = []
-        serialprobe.setgpsdevices(self.devices)
+        serialprobe.gpsdevices = self.devices
 
 
     def Register(self, _type, name, *args):
@@ -90,11 +89,12 @@ class GpsPoller():
                 def fval(name):
                     return self.fix[name] if name in self.fix else False
             
+                self.timestamp = self.fix['timestamp']
                 self.track.set(fval('track'))
                 self.speed.set(fval('speed'))
                 self.source.update('internal')
 
-        if time.time() - self.track.timestamp > 3:
+        if time.time() - self.timestamp > 3:
             self.source.update('none')
 
         source = self.source.value

@@ -87,13 +87,14 @@ class Value(object):
         self.value = value
         if self.persistent:
             self.store_persistent()    
-        
+
         if not self.watchers:
             return
 
         request = self.get_request()
         for socket in self.watchers:
             socket.send(request + '\n')
+
 
     def update(self, value):
         if self.value != value:
@@ -140,18 +141,15 @@ class RoundedValue(Value):
       return '{"' + self.name + '": {"value": ' + round_value(self.value) + '}}'
 
 class SensorValue(Value): # same as Value with added timestamp
-    def __init__(self, name, initial=False):
+    def __init__(self, name, timestampholder, initial=False):
         super(SensorValue, self).__init__(name, initial)
-        self.timestampholder = self ## it's possible to share timestamp with another value
-        self.timestamp = time.time()
-
-    def set(self, value):
-        if self.timestampholder == self:
-            self.timestamp = time.time()
-        super(SensorValue, self).set(value)
+        self.timestampholder = timestampholder
 
     def get_request(self):
-        return '{"' + self.name + '": {"value": ' + round_value(self.value) + ', "timestamp": %.3f }}' % self.timestampholder.timestamp
+        value = self.value
+        if type(value) == type(tuple()):
+            value = list(value)
+        return '{"' + self.name + '": {"value": ' + round_value(value) + ', "timestamp": %.3f }}' % self.timestampholder.timestamp
 
     def type(self):
         return 'SensorValue'
