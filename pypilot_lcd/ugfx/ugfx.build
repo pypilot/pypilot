@@ -47,7 +47,7 @@ export CXXFLAGS="-march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp"
 
 # Build and Install
 
-python setup.py bdist
+sudo python setup.py bdist
 tar xvf dist/*tar.gz -C $TMPDIR
 
 INSDIR=$TMPDIR$PYTDIR/$PYNAM

@@ -119,6 +119,7 @@ class AgeValue(Value):
     def __init__(self, name):
         super(AgeValue, self).__init__(name, False)
         self.timestamp = os.times()[4]
+        self.total = 0
 
     @staticmethod
     def readable_timespan(time):
@@ -136,9 +137,14 @@ class AgeValue(Value):
         return loop(0, 1)
 
     def update(self):
-        self.set(AgeValue.readable_timespan(os.times()[4] - self.timestamp))
+      now = os.times()[4]
+      dt = now - self.timestamp
+      if dt < 1:
+        self.total += dt
+        self.set(AgeValue.readable_timespan(self.total))
+      self.timestamp = now
         
-    def strobe(self):
+    def reset(self):
         self.timestamp = os.times()[4]
 
 class QuaternionProperty(Property):
@@ -206,6 +212,7 @@ class BoatIMU(object):
   def IMURead(self):
     if self.imu_queue.qsize() == 0:
       if time.time() - self.loopfreq.t0 > 1 and self.loopfreq.value:
+        print 'IMURead failed!'
         self.loopfreq.set(0)
         for name in self.SensorValues:
           self.SensorValues[name].set(False)
@@ -350,7 +357,7 @@ class BoatIMU(object):
       self.compass_calibration_sigmapoints.set(result[1])
 
       if result[0]:
-        self.compass_calibration_age.strobe()
+        self.compass_calibration_age.reset()
         self.compass_calibration.set(result[0])
 
     self.compass_calibration_age.update()
