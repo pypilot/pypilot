@@ -21,6 +21,7 @@ from calibration_fit import MagnetometerAutomaticCalibration
 import vector
 import quaternion
 from signalk.server import SignalKServer
+from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 
 try:
@@ -122,7 +123,7 @@ class LoopFreqValue(Value):
             self.loopc = 0
 
 
-class AgeValue(Value):
+class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
         super(AgeValue, self).__init__(name, '', **kwargs)
         self.timestamp = os.times()[4]
@@ -166,36 +167,10 @@ class AgeValue(Value):
 class QuaternionValue(ResettableValue):
     def __init__(self, name, initial, **kwargs):
       super(QuaternionValue, self).__init__(name, initial, **kwargs)
-      self.set(self.value)
+
 
     def set(self, value):
-        return super(QuaternionValue, self).set(quaternion.normalize(value))
-      
-class HeadingOffset(RangeProperty):
-  def __init__(self, name, qvalue, **kwargs):
-    self.qvalue = qvalue
-    super(HeadingOffset, self).__init__(name, self.heading_offset(), -180, 180, **kwargs)
-
-  def heading_offset(self):
-      q = self.qvalue.value
-      a2 = 2*math.atan2(q[3], q[0])
-      return a2*180/math.pi
-
-  def update(self):
-    value = self.heading_offset()
-    if self.value != value:
-      super(HeadingOffset, self).set(value)
-
-  def set(self, value):
-      off = value - self.heading_offset()
-      q = quaternion.angvec2quat(off*math.pi/180, [0, 0, 1])
-      self.qvalue.set(quaternion.normalize(quaternion.multiply(self.qvalue.value, q)))
-      super(HeadingOffset, self).set(value)
-
-  def get_request(self):
-      self.value = self.heading_offset()
-      return super(HeadingOffset, self).get_request()
-
+      super(QuaternionValue, self).set(quaternion.normalize(value))
 
 def nonblockingpipe():
   import _multiprocessing, socket
@@ -211,12 +186,10 @@ class BoatIMU(object):
 
     self.loopfreq = self.Register(LoopFreqValue, 'loopfreq', 0)
     self.alignmentQ = self.Register(QuaternionValue, 'alignmentQ', [1, 0, 0, 0], persistent=True)
-    self.heading_off = self.Register(HeadingOffset, 'heading_offset', self.alignmentQ)
+    self.heading_off = self.Register(RangeProperty, 'heading_offset', 0, -180, 180)
 
     self.alignmentCounter = self.Register(Property, 'alignmentCounter', 0)
     self.last_alignmentCounter = False
-    
-    self.timestamp = 0
 
     self.uptime = self.Register(AgeValue, 'uptime')
     self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age')
@@ -239,21 +212,32 @@ class BoatIMU(object):
     self.heading_lowpass3 = self.heading_lowpass3a = self.heading_lowpass3b = False
 
     self.SensorValues = {}
+    timestamp = server.TimeStamp('imu')
     for name in ['timestamp', 'fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'accelresiduals', 'heading_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']:
-      self.SensorValues[name] = self.Register(SensorValue, name, self)
+      self.SensorValues[name] = self.Register(SensorValue, name, timestamp)
 
     self.SensorValues['gyrobias'].make_persistent(120) # write gyrobias every 2 minutes
 
     self.imu_process = multiprocessing.Process(target=imu_process, args=(self.imu_pipe[1],imu_cal_queue, self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
     self.last_imuread = time.time()
-    
+    self.lasttimestamp = 0
+    self.last_heading_off = 0
+
   def __del__(self):
     self.imu_process.terminate()
     self.compass_auto_cal.process.terminate()
 
   def Register(self, _type, name, *args, **kwargs):
-    return self.server.Register(_type(*(['imu/' + name] + list(args)), **kwargs))
+    value = _type(*(['imu/' + name] + list(args)), **kwargs)
+    return self.server.Register(value)
       
+  def update_alignment(self, q):
+    a2 = 2*math.atan2(q[3], q[0])
+    heading_offset = a2*180/math.pi
+    off = self.heading_off.value - heading_offset
+    o = quaternion.angvec2quat(off*math.pi/180, [0, 0, 1])
+    self.alignmentQ.update(quaternion.normalize(quaternion.multiply(q, o)))
+
   def IMURead(self):
     if not self.imu_process.is_alive():
       print 'launching imu process...'
@@ -305,9 +289,9 @@ class BoatIMU(object):
     gyro_q = quaternion.rotvecquat(data['gyro'], data['fusionQPose'])
     data['pitchrate'], data['rollrate'], data['headingrate'] = map(math.degrees, gyro_q)
 
-    dt = data['timestamp'] - self.timestamp
-    self.timestamp = data['timestamp']
-    if dt > .02:
+    dt = data['timestamp'] - self.lasttimestamp
+    self.lasttimestamp = data['timestamp']
+    if dt > .02 and dt < .5:
       data['headingraterate'] = (data['headingrate'] - self.headingrate) / dt
     else:
       data['headingraterate'] = 0
@@ -342,6 +326,7 @@ class BoatIMU(object):
     data['gyro'] = map(math.degrees, data['gyro'])
     data['gyrobias'] = map(math.degrees, data['gyrobias'])
 
+    self.server.TimeStamp('imu', data['timestamp'])
     for name in self.SensorValues:
       self.SensorValues[name].set(data[name])
 
@@ -368,11 +353,12 @@ class BoatIMU(object):
         alignment = quaternion.multiply(self.alignmentQ.value, alignment)
         
         if len(alignment):
-          print 'self.alignmentQ', self.alignmentQ.value, alignment
-          self.alignmentQ.set(alignment)
+          self.update_alignment(alignment)
 
       self.last_alignmentCounter = self.alignmentCounter.value
-      self.heading_off.update()
+    if self.heading_off.value != self.last_heading_off:
+      self.update_alignment(self.alignmentQ.value)
+      self.last_heading_off = self.heading_off.value
 
     result = self.compass_auto_cal.UpdatedCalibration()
     if result:
@@ -387,7 +373,8 @@ class BoatIMU(object):
 
 
 if __name__ == "__main__":
-  server = SignalKServer()
+#  server = SignalKServer()
+  server = SignalKPipeServer()
   boatimu = BoatIMU(server)
 
   heading_lp = 0
@@ -400,5 +387,6 @@ if __name__ == "__main__":
 
     dt = time.time() - t0
     t1=time.time()
-    server.HandleRequests(.1 - dt)
+#    server.HandleRequests(.1 - dt)
+    server.HandleRequests(.1)
 

@@ -7,24 +7,32 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-# a value visible to external clients
-
 import os, time, json
 persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
 
 class Value(object):
     def __init__(self, name, initial, **kwargs):
         self.name = name
-
-        # load from persistent data...
-        self.value = initial
+        self.set(initial)
+        self.client_can_set = False
+        
         self.watchers = []
         self.persistent = False # value is stored to config file
         if 'persistent' in kwargs and kwargs['persistent']:
-            timeout = 0
+            timeout = 60
             if 'persistent_timeout' in kwargs:
                 timeout = kwargs['persistent_timeout']
             self.make_persistent(timeout)
+
+    def type(self):
+        return 'Value'
+
+    def update(self, value):
+        if self.value != value:
+            self.set(value)
+
+    def get_signalk(self):
+        return '{"' + self.name + '": {"value": ' + str(self.value) + '}}'
 
     def make_persistent(self, timeout=0):
         self.persistent = True
@@ -41,30 +49,16 @@ class Value(object):
         if self.name in data:
             self.value = data[self.name]
 
-    def processes(self):
-        return {'ops'   : self.ops,
-                'get'   : self.get,
-                'watch' : self.watch}
-
-    def get_request(self):
-        return json.dumps({self.name : {'value' : self.value}})
-
-    def get(self, socket, data={}):
-        socket.send(self.get_request() + '\n')
-
-    def setdata(self, socket, data):
-        self.set(data['value'])
-
-    def type(self):
-        return 'Value'
-
-    def store_persistent(self):
+    def need_persistent_store(self):
+        if not self.persistent:
+            return False
         t = time.time()
         if t-self.persistent_time < self.persistent_timeout:
-            return
-
+            return False
         self.persistent_time = t
-        
+        return True
+
+    def store_persistent(self):
         data = {}
         try:
             file = open(persistent_path, 'r')
@@ -82,45 +76,12 @@ class Value(object):
         except:
             print 'failed to write', persistent_path
 
-
     def set(self, value):
         self.value = value
-        if self.persistent:
-            self.store_persistent()    
+        self.send()
 
-        if not self.watchers:
-            return
-
-        request = self.get_request()
-        for socket in self.watchers:
-            socket.send(request + '\n')
-
-
-    def update(self, value):
-        if self.value != value:
-            self.set(value)
-
-    def watch(self, socket, data):
-        value = True
-        if 'value' in data:
-            value = str(data['value'])
-            if value == 'False':
-                value = False
-            elif value != 'True':
-                print 'watch value invalid', value
-                raise
-
-        if socket in self.watchers:
-            if not value:
-                self.watchers.remove(socket)
-        else:
-            if value:    
-                self.get(socket) # retrieve current value when starting to watch
-                self.watchers.append(socket)
-
-    def ops(self, socket, data):
-        request = {self.name : {'ops', list(self.processes())}}
-        socket.send(json.dumps(request) + '\n')
+    def send(self):
+        pass
 
 def round_value(value):
   if type(value) == type([]):
@@ -137,74 +98,68 @@ class RoundedValue(Value):
     def __init__(self, name, initial, **kwargs):
       super(RoundedValue, self).__init__(name, initial, **kwargs)
       
-    def get_request(self):
+    def get_signalk(self):
       return '{"' + self.name + '": {"value": ' + round_value(self.value) + '}}'
 
-class SensorValue(Value): # same as Value with added timestamp
-    def __init__(self, name, timestampholder, initial=False):
-        super(SensorValue, self).__init__(name, initial)
-        self.timestampholder = timestampholder
+class StringValue(Value):
+    def __init__(self, name, initial):
+        super(StringValue, self).__init__(name, initial)
 
-    def get_request(self):
-        value = self.value
-        if type(value) == type(tuple()):
-            value = list(value)
-        return '{"' + self.name + '": {"value": ' + round_value(value) + ', "timestamp": %.3f }}' % self.timestampholder.timestamp
+    def get_signalk(self):
+        return '{"' + self.name + '": {"value": "' + self.value + '"}}'
+
+class SensorValue(Value): # same as Value with added timestamp
+    def __init__(self, name, timestamp, initial=False):
+        super(SensorValue, self).__init__(name, initial)
+        self.timestamp = timestamp
 
     def type(self):
         return 'SensorValue'
+
+    def get_signalk(self):
+        value = self.value
+        if type(value) == type(tuple()):
+            value = list(value)
+        return '{"' + self.name + '": {"value": ' + round_value(value) + ', "timestamp": %.3f }}' % self.timestamp[0]
 
 # a value that may be modified by external clients
 class Property(Value):
     def __init__(self, name, initial, **kwargs):
         super(Property, self).__init__(name, initial, **kwargs)
-
-    def processes(self):
-        p = super(Property, self).processes()
-        p['set'] = self.setdata
-        return p
+        self.client_can_set = True
 
     def type(self):
         return 'Property'
 
 class ResettableValue(Property):
     def __init__(self, name, initial, **kwargs):
-        super(ResettableValue, self).__init__(name, initial, **kwargs)
         self.initial = initial
-
-    def processes(self):
-        p = super(Property, self).processes()
-        p['set'] = self.setdata
-        return p
-
-    def setdata(self, socket, data):
-        if data['value'] != self.initial:
-            print 'resettable value', self.name, 'invalid set'
-        else:
-            self.set(data['value'])
+        super(ResettableValue, self).__init__(name, initial, **kwargs)
 
     def type(self):
         return 'ResettableValue'
+
+    def set(self, value):
+        if not value:
+            value = self.initial
+        super(ResettableValue, self).set(value)
     
 
 class RangeProperty(Property):
     def __init__(self, name, initial, min_value, max_value, **kwargs):
-        super(RangeProperty, self).__init__(name, initial, **kwargs)
         self.min_value = min_value
         self.max_value = max_value
+        super(RangeProperty, self).__init__(name, initial, **kwargs)
 
-    def get_request(self):
-        # faster than json, saving digits in transmission also
+    def type(self):
+        return {'type' : 'RangeProperty', 'min' : self.min_value, 'max' : self.max_value}
+
+    def get_signalk(self):
         return '{"' + self.name + ('": {"value": %.4f}}' % self.value)
         
     def set(self, value):
         if value >= self.min_value and value <= self.max_value:
             super(RangeProperty, self).set(value)
-            return True
-        return False
-
-    def type(self):
-        return {'type' : 'RangeProperty', 'min' : self.min_value, 'max' : self.max_value}
 
 class HeadingProperty(RangeProperty):
     def __init__(self, name, initial):
@@ -219,33 +174,39 @@ class HeadingProperty(RangeProperty):
 
 class EnumProperty(Property):
     def __init__(self, name, initial, choices, **kwargs):
-        super(EnumProperty, self).__init__(name, initial, **kwargs)
         self.choices = choices
+        super(EnumProperty, self).__init__(name, initial, **kwargs)
+
+    def type(self):
+        return {'type' : 'EnumProperty', 'choices' : self.choices}
+
+    def get_signalk(self):
+        return '{"' + self.name + '": {"value": "' + self.value + '"}}'
 
     def set(self, value):
         for choice in self.choices:
             if choice == value:
                 super(EnumProperty, self).set(value)
-                return True
-        return False
+                return
 
-    def type(self):
-        return {'type' : 'EnumProperty', 'choices' : self.choices}
+class BooleanValue(Value):
+    def __init__(self, name, initial, **kwargs):
+        super(BooleanValue, self).__init__(name, initial, **kwargs)
+
+    def get_signalk(self):
+        strvalue = 'true' if self.value else 'false'
+        return '{"' + self.name + '": {"value": ' + strvalue + '}}'
 
 class BooleanProperty(Property):
     def __init__(self, name, initial, **kwargs):
         super(BooleanProperty, self).__init__(name, initial, **kwargs)
 
-    def set(self, value):
-        super(BooleanProperty, self).set(not not value)
-
-    def get_request(self):
-        try: # faster
-            strvalue = 'true' if self.value else 'false'
-            request = '{"' + self.name + '": {"value": ' + strvalue + '}}'
-        except:
-            request = json.dumps({self.name : {'value' : self.value}})
-        return request
-
     def type(self):
         return 'BooleanProperty'
+
+    def get_signalk(self):
+        strvalue = 'true' if self.value else 'false'
+        return '{"' + self.name + '": {"value": ' + strvalue + '}}'
+
+    def set(self, value):
+        super(BooleanProperty, self).set(not not value)

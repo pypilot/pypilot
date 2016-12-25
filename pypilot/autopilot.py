@@ -18,6 +18,7 @@ sys.path.append('.')
 
 import os.path
 from signalk.server import *
+from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 from boatimu import *
 
@@ -87,7 +88,8 @@ class AutopilotBase(object):
             signal.signal(s, cleanup)
 
     serial_probe = serialprobe.serialprobe()
-    self.server = SignalKServer()
+    #self.server = SignalKServer()
+    self.server = SignalKPipeServer()
     self.boatimu = BoatIMU(self.server)
     self.servo = servo.Servo(self.server, serial_probe)
     self.gps = GpsPoller(self.server, serial_probe)
@@ -100,7 +102,7 @@ class AutopilotBase(object):
     self.lastmode = False
     self.last_heading = False
 
-    self.heading = self.Register(SensorValue, 'heading', self.boatimu)
+    self.heading = self.Register(Value, 'heading', 0)
 
     self.gps_heading_offset = self.Register(Value, 'gps_heading_offset', 0)
     self.wind_heading_offset = self.Register(Value, 'wind_heading_offset', 0)
@@ -114,6 +116,11 @@ class AutopilotBase(object):
     except:
         print 'failed to open special file', device, 'for writing:'
         print 'autopilot cannot strobe the watchdog'
+
+
+    if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
+      print 'warning, failed to make autopilot process realtime'
+
         
     # read initial value from imu as this takes time
 #    while not self.boatimu.IMURead():

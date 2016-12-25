@@ -57,25 +57,23 @@ class GpsProcess(multiprocessing.Process):
 class GpsPoller():
     def __init__(self, server, serialprobe):
         self.server = server
-        self.track = self.Register(SensorValue, 'track', self)
-        self.speed = self.Register(SensorValue, 'speed', self)
+        timestamp = server.TimeStamp('gps')
+        self.track = self.Register(SensorValue, 'track', timestamp)
+        self.speed = self.Register(SensorValue, 'speed', timestamp)
         self.timestamp = 0
-        self.source = self.Register(Value, 'source', 'none')
+        self.source = self.Register(StringValue, 'source', 'none')
         self.lastsource = self.source.value
         self.process = False
         self.devices = []
         serialprobe.gpsdevices = self.devices
 
+        self.process = GpsProcess()
+        self.process.start()
 
     def Register(self, _type, name, *args):
         return self.server.Register(apply(_type, ['gps/' + name] + list(args)))
 
-    def poll(self):
-        if not self.process or not self.process.is_alive():
-            self.process = GpsProcess()
-            print 'start gps'
-            self.process.start()
-        
+    def poll(self):        
         if self.process.queue.qsize() > 0:
             fix = False
             # flush queue entries
@@ -89,7 +87,7 @@ class GpsPoller():
                 def fval(name):
                     return self.fix[name] if name in self.fix else False
             
-                self.timestamp = self.fix['timestamp']
+                self.server.TimeStamp('gps', self.fix['timestamp'])
                 self.track.set(fval('track'))
                 self.speed.set(fval('speed'))
                 self.source.update('internal')

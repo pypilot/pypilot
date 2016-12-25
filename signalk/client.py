@@ -208,6 +208,9 @@ class SignalKClient(object):
         #request = {'method' : 'set', 'name' : name, 'value' : value}
         #self.send(request)
 
+        print 'value', value
+        if type(value) == type(""):
+            value = '"' + value + '"'
         request = '{"method": "set", "name": "' + name + '", "value": ' + str(value) + '}\n'
         #print 'request', request
         self.socket.send(request)

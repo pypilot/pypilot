@@ -202,7 +202,7 @@ class ArduinoServo:
 class CalibrationProperty(Property):
     def __init__(self, name, initial):
         super(CalibrationProperty, self).__init__(name, initial)
-        self.set(initial)
+
     def set(self, value):
         nvalue = {}
         for cal in value:
@@ -212,34 +212,19 @@ class CalibrationProperty(Property):
 
         return super(CalibrationProperty, self).set(nvalue)
 
+    def get_signalk(self):
+        return '{"' + self.name + '": {"value": ' + '"calibration"' + '}}'
+
+
 # a property which records the time when it is updated
 class TimestampProperty(Property):
     def __init__(self, name, initial):
         super(TimestampProperty, self).__init__(name, initial)
-        self.set(initial)
+        self.timestamp = 0
 
     def set(self, value):
         self.timestamp = time.time()
         return super(TimestampProperty, self).set(value)
-
-class ResettableValue(Property):
-    def __init__(self, name, initial, **kwargs):
-        super(ResettableValue, self).__init__(name, initial, **kwargs)
-        self.initial = initial
-
-    def processes(self):
-        p = super(Property, self).processes()
-        p['set'] = self.setdata
-        return p
-
-    def setdata(self, socket, data):
-        if data['value'] != self.initial:
-            print 'resettable value', self.name, 'invalid set'
-        else:
-            self.set(data['value'])
-
-    def type(self):
-        return 'ResettableValue'
     
 class Servo:
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
@@ -255,17 +240,18 @@ class Servo:
 
         # power usage
         self.command = self.Register(TimestampProperty, 'command', 0)
-        self.rawcommand = self.Register(TimestampProperty, 'raw_command', False)
+        self.rawcommand = self.Register(TimestampProperty, 'raw_command', 0)
         self.timestamp = time.time()
-        self.voltage = self.Register(SensorValue, 'voltage', self)
-        self.current = self.Register(SensorValue, 'current', self)
-        self.engauged = self.Register(Value, 'engauged', False)
+        timestamp = server.TimeStamp('servo')
+        self.voltage = self.Register(SensorValue, 'voltage', timestamp)
+        self.current = self.Register(SensorValue, 'current', timestamp)
+        self.engauged = self.Register(BooleanValue, 'engauged', False)
         self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 10, persistent=True)
         self.slow_period = self.Register(RangeProperty, 'Slow Period', 1.5, .1, 10, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
         self.amphours = self.Register(Value, 'Amp Hours', 0)
-        self.powerconsumption = self.Register(ResettableValue, 'Power Consumption', 0, persistent=True)
+        self.powerconsumption = self.Register(ResettableValue, 'Power Consumption', 0, persistent=True, persistent_timeout=300)
 
         self.calibration = self.Register(CalibrationProperty, 'calibration', {})
         self.load_calibration()
@@ -275,8 +261,8 @@ class Servo:
         self.lastpositiontime = time.time()
         self.lastpositionamphours = 0
 
-        self.mode = self.Register(Value, 'mode', 'none')
-        self.controller = self.Register(Value, 'controller', 'none')
+        self.mode = self.Register(StringValue, 'mode', 'none')
+        self.controller = self.Register(StringValue, 'controller', 'none')
 
         self.driver = False
 
@@ -518,6 +504,7 @@ class Servo:
                     self.rev_fault = True
 
             self.timestamp = time.time()
+            self.server.TimeStamp('servo', self.timestamp)
             lasttimestamp = self.timestamp
             if 'voltage' in result:
                 self.voltage.set(result['voltage'])

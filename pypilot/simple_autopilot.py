@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from signalk.server import *
 from autopilot import *
 import servo
 
@@ -22,9 +21,10 @@ class SimpleAutopilot(AutopilotBase):
     # create simple pid filter
     self.gains = {}
     self.timestamp = time.time()
+    timestamp = self.server.TimeStamp('ap')
     def Gain(name, default, max_val):
       self.gains[name] = (self.Register(AutopilotGain, name, default, 0, max_val),
-                          self.Register(SensorValue, name+'gain', self))
+                          self.Register(SensorValue, name+'gain', timestamp))
     Gain('P', .01, .05)
     Gain('I', 0, .05)
     Gain('D', .1, .25)
@@ -64,7 +64,7 @@ class SimpleAutopilot(AutopilotBase):
                    'rP': roll,
                    'rD': rollrate}
 
-    self.timestamp = time.time()
+    self.server.TimeStamp('ap', time.time())
     for gain in self.gains:
       value = gain_values[gain]
       gains = self.gains[gain]

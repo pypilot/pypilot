@@ -37,17 +37,18 @@ class NmeaBridge:
         self.process.start()
 
     def poll(self):
+        data = False
         while self.process.gps_queue.qsize() > 0:
             data = self.process.gps_queue.get()
+
+        if data:
             # if internal gps track is more than 2 seconds old, use externally supplied gps
             if self.gps.source.value == 'external' or \
-               time.time() - self.gps.track.timestamp > 2:
-                name, value = data
+               time.time() - self.server.timestamps['gps'].timestamp > 2:
                 #print 'gps', name, 'val', value
-                if name == 'gps/track':
-                    self.gps.track.set(value)
-                elif name == 'gps/speed':
-                    self.gps.speed.set(value)
+                self.server.TimeStamp('gps', data['timestamp'])
+                self.gps.track.set(data['track'])
+                self.gps.speed.set(data['speed'])
             self.gps.source.update('external')
     
 class NmeaBridgeProcess(multiprocessing.Process):
@@ -154,14 +155,14 @@ def nmea_bridge_process(gps_queue=False):
 
             if line[:6] == '$GPRMC':
                 data = line[7:len(line)-3].split(',')
+                timestamp = float(data[0])
                 speed = float(data[6])
                 heading = float(data[7])
                 
                 #client.set('gps/heading', heading)
                 # must use internal gps_queue since normal clients cannot set these
                 if gps_queue:
-                    gps_queue.put(('gps/track', heading))
-                    gps_queue.put(('gps/speed', speed))
+                    gps_queue.put({'timestamp': timestamp, 'track': heading, 'speed': speed})
 
             elif line[0] == '$' and line[3:6] == 'APB':
                 data = line[7:len(line)-3].split(',')

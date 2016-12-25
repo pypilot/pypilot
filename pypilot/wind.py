@@ -53,7 +53,14 @@ def parse_nmea(line):
         return False
         
     data = line.split(',')
-    return {'direction': float(data[1]), 'speed': float(data[3])}
+
+    speed = float(data[3])
+    speedunit = data[4]
+    if speedunit == 'K': # km/h
+        speed *= .53995
+    elif speedunit == 'M': # m/s
+        speed *= 1.94384
+    return {'direction': float(data[1]), 'speed': speed}
 
 
 class NMEAWindSensor():
@@ -76,8 +83,9 @@ class Wind():
         self.server = server
         self.serialprobe = serialprobe
         self.timestamp = time.time()
-        self.direction = self.Register(SensorValue, 'direction', self)
-        self.speed = self.Register(SensorValue, 'speed', self)
+        timestamp = server.TimeStamp('wind')
+        self.direction = self.Register(SensorValue, 'direction', timestamp)
+        self.speed = self.Register(SensorValue, 'speed', timestamp)
 
     def Register(self, _type, name, *args):
         return self.server.Register(_type(*(['wind/' + name] + list(args))))
@@ -106,7 +114,7 @@ class Wind():
 
             if winddata:
                 self.serialprobe.probe_success('wind')
-                self.timestamp = time.time()
+                self.server.TimeStamp('wind', time.time())
                 self.direction.set(winddata['direction'])
                 self.speed.set(winddata['speed'])
                 return True

@@ -25,7 +25,7 @@ class LineBufferedNonBlockingSocket():
         self.socket = connection
         self.in_buffer = ''
         self.out_buffer = ''
-        self.no_newline = True
+        self.no_newline_pos = 0
 
     def send(self, data):
         self.out_buffer += data
@@ -51,9 +51,9 @@ class LineBufferedNonBlockingSocket():
             size = 1
             data = self.socket.read()
 
-        self.no_newline = False
         self.in_buffer += data
         l = len(data)
+
         if l == 0:
             return False
         if self.nonblocking and l == size:
@@ -61,19 +61,20 @@ class LineBufferedNonBlockingSocket():
         return l
 
     def readline(self):
-        if self.no_newline:
+        if self.no_newline_pos == len(self.in_buffer):
             return False
-        pos = 0
+        pos = self.no_newline_pos
         for c in self.in_buffer:
             if c=='\n':
                 ret = self.in_buffer[:pos]
                 self.in_buffer = self.in_buffer[pos+1:]
+                self.no_newline_pos = 0
                 return ret
             pos += 1
-        self.no_newline = True
+        self.no_newline_pos = pos
         return False
-
-class SignalKServer:
+    
+class SignalKServer(object):
     def __init__(self, port=DEFAULT_PORT):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setblocking(0)
@@ -83,6 +84,7 @@ class SignalKServer:
         self.init = False
         self.sockets = []
         self.values = {}
+        self.timestamps = {}
 
     def __del__(self):
         self.server_socket.close()
@@ -93,11 +95,73 @@ class SignalKServer:
         if value.name in self.values:
             print 'warning, registering existing value:', value.name
         self.values[value.name] = value
+
+        def make_send():
+            def send():
+                if value.need_persistent_store():
+                    value.store_persistent()
+                if value.watchers:
+                    request = value.get_signalk() + '\n'
+                    for socket in value.watchers:
+                        socket.send(request)
+            return send
+        value.send = make_send()
         return value
 
-    def SendAllClients(self, msg):
-        for socket in self.sockets:
-            socket.send(json.dumps(msg) + '\n')
+    def TimeStamp(self, name, t=False):
+        if not name in self.timestamps:
+            self.timestamps[name] = [t, name]
+        else:
+            self.timestamps[name][0] = t
+        return self.timestamps[name]
+
+    def ListValues(self, socket):
+        msg = {}
+        for value in self.values:
+            t = self.values[value].type()
+            if type(t) == type(""):
+                t = {'type' : t}
+            msg[value] = t
+
+        socket.send(json.dumps(msg) + '\n')
+
+    def HandleNamedRequest(self, socket, data):
+        method = data['method']
+        name = data['name']
+        value = self.values[name]
+
+        if method == 'get':
+            socket.send(value.get_signalk() + '\n')
+        elif method == 'set':
+            if value.client_can_set:
+                value.set(data['value'])
+            else:
+                socket.send('value: ' + name + ' is readonly\n')
+        elif method == 'watch':
+            watch = data['value'] if 'value' in data else True
+            if socket in value.watchers:
+                if not watch:
+                    value.watchers.remove(socket)
+            elif watch:
+                value.watchers.append(socket)
+        else:
+            socket.send('invalid method: ' + method + ' for ' + name + '\n')
+        
+    def HandleRequest(self, socket, request):
+        try:
+            data = json.loads(request)
+        except:
+            print 'invalid request', request
+            socket.send('invalid request: ' + request + '\n')
+            return
+        if data['method'] == 'list':
+            self.ListValues(socket)
+        else:
+            name = data['name']
+            if not name in self.values:
+                socket.send('invalid request: unknown value: ' + name + '\n')
+            else:
+                self.HandleNamedRequest(socket, data)
 
     def RemoveSocket(self, socket):
         self.sockets.remove(socket)
@@ -108,37 +172,9 @@ class SignalKServer:
 
         del self.fd_to_socket[fd]
 
-        for value in self.values:
-            if socket in self.values[value].watchers:
-                self.values[value].watchers.remove(socket)
-            
-    def ListValues(self, socket):
-        msg = {}
-        for value in self.values:
-            t = self.values[value].type()
-            if type(t) == type(""):
-                t = {'type' : t}
-            msg[value] = t
-
-        socket.send(json.dumps(msg) + '\n')
-    
-    def HandleRequest(self, socket, request):
-        data = json.loads(request)
-        method = data['method']
-        if method == 'list':
-            self.ListValues(socket)
-        else:
-            name = data['name']
-            if not name in self.values:
-                socket.send('invalid request name: ' + name + '\n')
-            else:
-                value = self.values[name]
-
-                processes = value.processes()
-                if method in processes:
-                    processes[method](socket, data)
-                else:
-                    socket.send('invalid method: ' + method + ' for ' + name + '\n')
+        for name in self.values:
+            if socket in self.values[name].watchers:
+                self.values[name].watchers.remove(socket)
     
     def HandleRequests(self, totaltime):
       READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
@@ -166,7 +202,7 @@ class SignalKServer:
 
         events = self.poller.poll(1000.0 * (totaltime - dt))
 #        events = self.poller.poll(0)
-        while t2 - t1 < totaltime and events != []:
+        while events:
             event = events.pop()
             fd, flag = event
             socket = self.fd_to_socket[fd]
@@ -191,45 +227,21 @@ class SignalKServer:
             elif flag & select.POLLOUT:
                 socket.flush()
 
-            t2 = time.time()
-
         for socket in self.sockets:
-            line = socket.readline()
-            if line:
-                if True: # true to debug
-                    self.HandleRequest(socket, line)
-                else:
-                    try:
-                        self.HandleRequest(socket, line)
-                    except:
-                        socket.send('invalid request: ' + line + '\n')
+            while True:
+                line = socket.readline()
+                if not line:
+                    break
+                self.HandleRequest(socket, line)
 
-            if t2 - t1 >= totaltime:
-                return
-            t2 = time.time()
-
-        for socket in self.sockets:
-            socket.flush()
+            socket.flush()            
 
         t2 = time.time()
-        if False:
-            t = totaltime - (t2 - t1)
-            if t > 0:
-                time.sleep(t)
-            return
 
 if __name__ == '__main__':
     server = SignalKServer()
-    timeout = 1000
-    print 'signalk demo server, try running signalk_client.py'
-    server.Register(Property('test', 0))
-    clock = Property('clock', 0)
-    server.Register(clock)
-#    try:
-    if True:
-        while True:
-            # handle requests for 1 second, then increment clock 1 second
-            server.HandleRequests(.02)
-            clock.set(clock.value + 1)
-#    except:
-#        pass
+    print 'signalk demo server, try running signalk_client'
+    clock = server.Register(Value('clock', 0))
+    while True:
+        clock.set(clock.value + 1)
+        server.HandleRequests(.02)
