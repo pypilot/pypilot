@@ -1,0 +1,99 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>pypilot control</title>
+    <link rel="stylesheet" type="text/css" href="static/index.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="static/w3.css" />
+    <script type="text/javascript" src="static/jquery.min.js"></script>
+    <script type="text/javascript" src="static/socket.io.min.js"></script>
+    <script type="text/javascript" src="static/pypilot_control.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script>
+      var pypilot_webapp_port = {{pypilot_webapp_port}};
+    </script>
+</head>
+<body>
+  <div class="w3-container font-resizable3">
+    <div class="w3-row">
+      <a href="javascript:void(0)" onclick="openTab(event, 'Control');">
+        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey w3-red font-resizable">Control</div>
+      </a>
+      <a href="javascript:void(0)" onclick="openTab(event, 'Gain');">
+        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey font-resizable">Gain</div>
+      </a>
+      <a href="javascript:void(0)" onclick="openTab(event, 'Calibration');">
+        <div class="w3-col s4 m3 l3 tablink w3-hover-light-grey font-resizable">Calibration</div>
+      </a>
+      <a href="javascript:void(0)" onclick="openTab(event, 'Configuration');">
+        <div class="w3-col s6 m3 l3 tablink w3-hover-light-grey font-resizable">Configuration</div>
+      </a>
+      <a href="javascript:void(0)" onclick="openTab(event, 'Statistics');">
+        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey font-resizable">Statistics</div>
+      </a>
+    </div>
+
+    <br>
+
+    <div id="Control" class="w3-container tab">
+      <div class="w3-row">
+        <div class="w3-col s3 m3 l3">
+          <div class="toggle-button button-resizable1" id="tb_engauged" >
+            <button id="engauged" class="font-resizable2 button-resizable2">AP</button>
+          </div>
+        </div>
+        <div class="w3-col s9 m9 l9">
+          <div class="w3-row font-resizable">
+            <div class="w3-col s6 m4 l4">Heading</div>
+            <div class="w3-col s2 m2 l2" id="heading"></div>
+            <div class="w3-col s6 m4 l4">Command</div>
+            <div class="w3-col s2 m2 l2" id="heading_command"></div>
+          </div>
+        </div>
+      </div>
+      <div class="w3-row">
+        <div class="w3-col s6 m6 l6">
+          <button id="port10" class="button font-resizable1 button-resizable">&lt;&lt;</button>
+          <button id="port1" class="button font-resizable1 button-resizable">&lt;</button>
+        </div>
+        <div class="w3-col s6 m6 l6">
+          <button id="star10" class="button font-resizable1 button-resizable" style="float:right">&gt;&gt;</button>
+          <button id="star1" class="button font-resizable1 button-resizable" style="float:right">&gt;</button>
+        </div>
+      </div>
+
+    </div>
+    
+    <div id="Gain" class="w3-container tab">
+      <div id="gain_container"></div>
+    </div>
+    
+    <div id="Calibration" class="w3-container tab">
+      Compass Calibration <span id="compass_calibration"></span>
+      <p>Press <button id="level" class="button">here</button>
+        when the boat is not heeling to align the inertial sensors.
+      </p>
+      <div class="myProgress">
+        <div class="myBar" id="progress"> </div>
+      </div>
+    </div>
+
+    <div id="Configuration" class="w3-container tab">
+      <p>Max Current
+        <input type="number" id="max_current" min="1" max="10" value="2"
+               style="width: 100px"></input> Amps
+      </p>
+    </div>
+
+    <div id="Statistics" class="w3-container tab">
+      <br>Power Consumption
+        <span id="amp_hours"></span> Amp Hours
+      <br>Runtime <span id="runtime"></span>
+      <br>Servo: <b><span id="servo_engauged"></span></b>
+        <div id="log"></div>
+    </div>
+    <div style="position:fixed;bottom:-10">
+      <br>SignalK Server Status: <b><span id="connection"></span></b>
+      <br>Web Server Latency: <b><span id="ping-pong"></span> ms</b>
+    </div>
+</body>
+</html>

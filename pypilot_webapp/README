@@ -1,0 +1,25 @@
+pip install Flask
+pip install flask-socketio
+pip install gevent
+
+python pypilot_webapp.py
+
+firefox localhost:5000
+
+For apache2:
+
+apt-get install apache2 python-pip libapache2-mod-wsgi
+
+move pypilot_webapp into /var/www, and update /etc/apache2/sites-available/000-default.conf:
+
+	WSGIDaemonProcess webtool user=www-data group-data threads=5 home=/var/www/flask/
+        # change / to a different location if desired
+	WSGIScriptAlias / /var/www/pypilot_webapp/pypilot_webapp.wsgi
+
+	<directory /var/www/pypilot_webapp>
+	  WSGIProcessGroup webtool
+	  WSGIApplicationGroup %{GLOBAL}
+	  WSGIScriptReloading On
+	  Order deny,allow
+	  Allow from all
+	</directory>
