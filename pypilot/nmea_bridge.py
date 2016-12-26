@@ -16,7 +16,7 @@
 # nmea->signalk: autopilot commands
 
 
-import sys, select, socket
+import sys, select, time, socket
 from signalk.client import SignalKClient
 from signalk.server import LineBufferedNonBlockingSocket
 
@@ -27,7 +27,8 @@ def cksum(msg):
         value ^= ord(c)
     return '%02x' % (value & 255)
 
-if __name__ == '__main__':
+def main():
+
     sockets = []
     watchlist = ['ap/mode', 'ap/heading_command', 'imu/pitch', 'imu/roll', 'imu/heading_lowpass']
 
@@ -43,7 +44,13 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         host = sys.argv[1]
 
-    client = SignalKClient(on_con, host)
+    while True:
+        try:
+            client = SignalKClient(on_con, host, autoreconnect=True)
+            break
+        except:
+            time.sleep(2)
+
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setblocking(0)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -66,43 +73,43 @@ if __name__ == '__main__':
         poller = select.poll()
         poller.register(server, READ_ONLY)
         fd_to_socket = {server.fileno() : server}
-        for socket in sockets:
+        for sock in sockets:
             flags = READ_ONLY
-            if socket.out_buffer != '':
+            if sock.out_buffer != '':
                 flags |= select.POLLOUT
-            fd = socket.socket.fileno()
+            fd = sock.socket.fileno()
             poller.register(fd, flags)
-            fd_to_socket[fd] = socket
+            fd_to_socket[fd] = sock
 
         events = poller.poll(50) # 50 milliseconds
         while events:
             event = events.pop()
             fd, flag = event
-            socket = fd_to_socket[fd]
-            if socket == server:
-                connection, address = socket.accept()
+            sock = fd_to_socket[fd]
+            if sock == server:
+                connection, address = sock.accept()
                 if len(sockets) == max_connections:
                     connection.close()
                 else:
                     if not sockets:
                         setup_watches(client)
-                    socket = LineBufferedNonBlockingSocket(connection)
-                    sockets.append(socket)
+                    sock = LineBufferedNonBlockingSocket(connection)
+                    sockets.append(sock)
                     print 'new connection: ', address
-                    addresses[socket] = address
+                    addresses[sock] = address
             elif (flag & (select.POLLHUP | select.POLLERR)) or \
-                 (flag & select.POLLIN and not socket.recv()):
-                print 'lost connection: ', addresses[socket]
-                sockets.remove(socket)
-#                addresses.remove(socket)
+                 (flag & select.POLLIN and not sock.recv()):
+                print 'lost connection: ', addresses[sock]
+                sockets.remove(sock)
+#                addresses.remove(sock)
                 if not sockets:
                     setup_watches(client, False)
-                socket.socket.close()
+                sock.socket.close()
             elif flag & select.POLLOUT:
-                socket.flush()
+                sock.flush()
 
-        for socket in sockets:
-            line = socket.readline()
+        for sock in sockets:
+            line = sock.readline()
             if not line:
                 continue
 
@@ -139,5 +146,8 @@ if __name__ == '__main__':
 
             if msg:
                 msg = '$' + msg + '*' + cksum(msg) + '\r\n'
-                for socket in sockets:
-                    socket.send(msg)
+                for sock in sockets:
+                    sock.send(msg)
+
+if __name__ == '__main__':
+    main()

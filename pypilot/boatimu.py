@@ -24,12 +24,12 @@ import quaternion
 from signalk.server import SignalKServer
 from signalk.values import *
 
+try:
+  import RTIMU
+except ImportError:
+  print "RTIMU library not detected, please install it"
+
 def imu_process(queue, cal_queue):
-  try:
-    import RTIMU
-  except ImportError:
-    print "RTIMU library not detected, please install it"
-    return
 
     SETTINGS_FILE = "RTIMULib"
     s = RTIMU.Settings(SETTINGS_FILE)

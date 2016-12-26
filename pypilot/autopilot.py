@@ -21,6 +21,7 @@ from signalk.values import *
 from boatimu import BoatIMU
 
 import gpspoller
+import nmea_bridge
 import servo
 import math
 
