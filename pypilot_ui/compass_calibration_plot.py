@@ -8,9 +8,9 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import time, sys
-from signalk_client import SignalKClient
+from signalk.client import SignalKClient
 import json, math, numpy
-import quaternion
+import pypilot.quaternion
 
 from OpenGL.GLUT import *
 from OpenGL.GLU import *

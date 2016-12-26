@@ -10,10 +10,10 @@
 import tempfile, time, math, sys, subprocess, json, socket, os
 import wx, wx.glcanvas
 import autopilot_control_ui
-import compass_calibration_plot, quaternion, boatplot
+import compass_calibration_plot, pypilot.quaternion, boatplot
 import signalk.scope
 from signalk.client import SignalKClient, ConnectionLost
-from signalk.client_gui import round3
+from signalk.client_wx import round3
 
 from OpenGL.GLUT import *
 
@@ -95,14 +95,14 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.stCompassCalAge.SetLabel(str(value))
         elif name == 'imu/alignmentQ':
             self.alignmentQ = value
-            self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(quaternion.angle(self.alignmentQ))))
+            self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(pypilot.quaternion.angle(self.alignmentQ))))
         elif name == 'imu/fusionQPose':
             if self.cCoords.GetSelection() == 1:
-                self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, self.fusionQPose)
-                self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, quaternion.conjugate(value))
+                self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, self.fusionQPose)
+                self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, pypilot.quaternion.conjugate(value))
             elif self.cCoords.GetSelection() == 2:
-                ang = quaternion.toeuler(self.fusionQPose)[2] - quaternion.toeuler(value)[2]
-                self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, quaternion.angvec2quat(ang, [0, 0, 1]))
+                ang = pypilot.quaternion.toeuler(self.fusionQPose)[2] - pypilot.quaternion.toeuler(value)[2]
+                self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, pypilot.quaternion.angvec2quat(ang, [0, 0, 1]))
 
             self.fusionQPose = value
             self.BoatPlot.Refresh()
@@ -110,16 +110,16 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             if self.alignment_count > 0 and self.alignmentQ:
                 self.gAlignment.SetValue(100 - self.alignment_count)
 
-                self.avg_pose = map(lambda x, y : return x + y, self.avg_pose, self.fusionQPose)
+                self.avg_pose = map(lambda x, y : x + y, self.avg_pose, self.fusionQPose)
                 self.alignment_count -= 1
                 if self.alignment_count == 0:
                     self.gAlignment.SetValue(0)
-                    self.avg_pose /= 100
-                    down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(self.avg_pose))
+                    self.avg_pose = pypilot.quaternion.normalize(self.avg_pose)
+                    down = pypilot.quaternion.rotvecquat([0, 0, 1], pypilot.quaternion.conjugate(self.avg_pose))
                     alignment = []
                     if self.alignment_type == 'level':
-                        alignment = quaternion.vec2vec2quat([0, 0, 1], down)
-                        alignment = quaternion.multiply(self.alignmentQ, alignment)
+                        alignment = pypilot.quaternion.vec2vec2quat([0, 0, 1], down)
+                        alignment = pypilot.quaternion.multiply(self.alignmentQ, alignment)
                     elif self.alignment_type == 'starboard':
                         self.starboard_down = list(down)
                     elif self.alignment_type == 'port':
@@ -128,11 +128,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                     if self.starboard_down and self.port_down:
                         ang = math.atan2(self.port_down[0] - self.starboard_down[0], \
                                          self.starboard_down[1] - self.port_down[1])
-                        alignment = quaternion.angvec2quat(ang, [0, 0, 1])
+                        alignment = pypilot.quaternion.angvec2quat(ang, [0, 0, 1])
                         print 'downs:', self.starboard_down, self.port_down, ang*180/math.pi, alignment
-                        alignment = quaternion.multiply(self.alignmentQ, alignment)
+                        alignment = pypilot.quaternion.multiply(self.alignmentQ, alignment)
 
-                    if alignment.any():
+                    if len(alignment):
                         self.client.set('imu/alignmentQ', list(alignment))
                         self.starboard_down = self.port_down = False
                         
@@ -274,9 +274,9 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         if event.Dragging():
             dx, dy = pos[0] - self.lastmouse[0], pos[1] - self.lastmouse[1]
-            q = quaternion.angvec2quat((dx**2 + dy**2)**.4/180*math.pi, [dy, dx, 0])
+            q = pypilot.quaternion.angvec2quat((dx**2 + dy**2)**.4/180*math.pi, [dy, dx, 0])
             
-            self.boat_plot.Q = quaternion.multiply(q, self.boat_plot.Q)
+            self.boat_plot.Q = pypilot.quaternion.multiply(q, self.boat_plot.Q)
             self.BoatPlot.Refresh()
             self.lastmouse = pos
 
@@ -306,7 +306,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onIMUScope( self, event ):
         host, port = self.client.host_port
-        args = ['python', os.path.abspath(os.path.dirname(__file__)) + '../signalk/scope.py', host + ':' + str(port),
+        args = ['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/scope_wx.py', host + ':' + str(port),
                 'imu/pitch', 'imu/roll', 'imu/heel', 'imu/heading']
         subprocess.Popen(args)
 	

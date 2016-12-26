@@ -14,7 +14,7 @@ from OpenGL.GLU import *
 from OpenGL.GL import *
 
 import objview
-import quaternion
+from pypilot import quaternion
 
 class BoatPlot():
     def __init__(self):

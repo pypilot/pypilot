@@ -424,3 +424,6 @@ def main():
     fps = 30
     glutTimerFunc(0, timeout, 1000/fps)
     glutMainLoop()
+
+if __name__ == '__main__':
+    main()

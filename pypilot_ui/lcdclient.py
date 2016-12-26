@@ -394,9 +394,9 @@ def main():
         if len(modes) >= 1:
             mode = modes[0][0]*2/3, modes[0][1]*2/3
 
-    screen = pygame.display.set_mode(mode)
+    scale = min(mode[0] / size[0], mode[1] / size[1])
+    screen = pygame.display.set_mode((scale*size[0], scale*size[1]))
 
-    scale = min(screen.get_width() / size[0], screen.get_height() / size[1])
 #    print 'got screen', screen.get_size(), scale
     while True:
         screen.fill(black)

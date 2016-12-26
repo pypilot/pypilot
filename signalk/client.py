@@ -244,3 +244,6 @@ def main():
         result = client.receive(1000)
         if result:
             print json.dumps(result)
+
+if __name__ == '__main__':
+    main()

@@ -157,3 +157,6 @@ def main():
     app = wx.App()
     SignalKScope().Show()
     app.MainLoop()
+
+if __name__ == '__main__':
+    main()
