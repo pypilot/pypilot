@@ -11,7 +11,6 @@ import gps, multiprocessing, time
 
 from signalk.values import *
 
-
 class GpsProcess(multiprocessing.Process):
     def __init__(self):
         self.queue = multiprocessing.Queue()

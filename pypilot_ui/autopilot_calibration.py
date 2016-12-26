@@ -110,7 +110,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             if self.alignment_count > 0 and self.alignmentQ:
                 self.gAlignment.SetValue(100 - self.alignment_count)
 
-                self.avg_pose = map(lambda x, y : return x + y, self.avg_pose, self.fusionQPose)
+                self.avg_pose = map(lambda x, y : x + y, self.avg_pose, self.fusionQPose)
                 self.alignment_count -= 1
                 if self.alignment_count == 0:
                     self.gAlignment.SetValue(0)
