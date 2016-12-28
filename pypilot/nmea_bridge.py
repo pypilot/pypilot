@@ -44,12 +44,14 @@ class NmeaBridge:
         if data:
             # if internal gps track is more than 2 seconds old, use externally supplied gps
             if self.gps.source.value == 'external' or \
-               time.time() - self.server.timestamps['gps'].timestamp > 2:
+               not self.server.timestamps['gps'] or \
+               time.time() - self.server.timestamps['gps'] > 2:
                 #print 'gps', name, 'val', value
                 self.server.TimeStamp('gps', data['timestamp'])
                 self.gps.track.set(data['track'])
                 self.gps.speed.set(data['speed'])
-            self.gps.source.update('external')
+                self.gps.timestamp = time.time()
+                self.gps.source.update('external')
     
 class NmeaBridgeProcess(multiprocessing.Process):
     def __init__(self):

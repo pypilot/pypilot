@@ -126,7 +126,7 @@ class LoopFreqValue(Value):
 class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
         super(AgeValue, self).__init__(name, '', **kwargs)
-        self.timestamp = os.times()[4]
+        self.time = os.times()[4]
 
         mods = {'s': 1, 'm': 60, 'h': 60, 'd': 24, 'y': 365.24}
         self.total = 0
@@ -154,14 +154,14 @@ class AgeValue(StringValue):
 
     def update(self):
       now = os.times()[4]
-      dt = now - self.timestamp
-      if dt < 1:
+      dt = now - self.time
+      if dt > 1:
         self.total += dt
-        self.set(self.readable_timespan())
-      self.timestamp = now
+        super(AgeValue, self).update(self.readable_timespan())
+        self.time = now
         
     def reset(self):
-        self.timestamp = os.times()[4]
+        self.time = os.times()[4]
         self.total = 0
 
 class QuaternionValue(ResettableValue):

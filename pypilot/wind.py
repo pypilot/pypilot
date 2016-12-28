@@ -82,7 +82,6 @@ class Wind():
         self.driver = False
         self.server = server
         self.serialprobe = serialprobe
-        self.timestamp = time.time()
         timestamp = server.TimeStamp('wind')
         self.direction = self.Register(SensorValue, 'direction', timestamp)
         self.speed = self.Register(SensorValue, 'speed', timestamp)
@@ -96,7 +95,6 @@ class Wind():
             if device:
                 try:
                     self.driver = NMEAWindSensor(device)
-                    self.direction.timestamp = time.time()
                 except serial.serialutil.SerialException:
                     print 'failed to open', device
 
@@ -119,7 +117,7 @@ class Wind():
                 self.speed.set(winddata['speed'])
                 return True
                 
-            if time.time() - self.direction.timestamp > 5:
+            if time.time() - self.server.timestamps['wind'] > 5:
                 self.driver = False
         return False
                 

@@ -13,6 +13,7 @@ persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
 class Value(object):
     def __init__(self, name, initial, **kwargs):
         self.name = name
+        self.timestamp = False
         self.set(initial)
         self.client_can_set = False
         

@@ -218,6 +218,7 @@ class SignalKClient(object):
         self.socket.send(request)
 
     def watch(self, name, value=True):
+        self.get(name)
         request = {'method' : 'watch', 'name' : name, 'value' : value}
         self.send(request)
 
