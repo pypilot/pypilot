@@ -370,7 +370,7 @@ def main():
             client.watch(arg)
 
     try:
-        client = SignalKClient(on_con, host)
+        client = SignalKClient(on_con, host, autoreconnect=True)
         print "connected to", host
     except:
         print "Failed to connect:", host
@@ -391,7 +391,10 @@ def main():
         while True:
             result = False
             if client:
-                result = client.receive_single()
+                try:
+                    result = client.receive_single()
+                except:
+                    pass
 
             if not result:
                 time.sleep(.01)

@@ -85,7 +85,9 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         name, data = msg
         value = data['value']
 
-        if self.compass_calibration_plot.read_data(msg):
+        self.compass_calibration_plot.read_data(msg)
+
+        if name == 'imu/compass':
             self.CompassCalibration.Refresh()
         
         if name == 'imu/compass_calibration':

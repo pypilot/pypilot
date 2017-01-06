@@ -10,11 +10,13 @@
 import time, sys
 from signalk.client import SignalKClient
 import json, math, numpy
-import pypilot.quaternion
+from pypilot import quaternion
 
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
+
+point_count=10000
 
 def TranslateAfter(x, y, z):
     m = glGetFloatv(GL_MODELVIEW_MATRIX)
@@ -115,10 +117,15 @@ class CompassCalibrationPlot():
         self.unit_sphere = Spherical([0, 0, 0], lambda beta, x: x, 32, 16)
         self.mag_sphere = False
         self.mag_cal_sphere = [0, 0, 0, 30]
+        
+        self.fusionQPose = False
+        self.alignmentQ = False
 
         self.userscale = .02
         self.accel = [0, 0, 0]
         self.points = []
+        self.comp_points = []
+        
         self.sigmapoints = False
         self.apoints = []
         self.vpoints = []
@@ -158,19 +165,35 @@ class CompassCalibrationPlot():
             self.accel = data['value']
         elif name == 'imu/compass':
             self.points.append(data['value'])
-            if len(self.points) > 1000:
+            if len(self.points) > point_count:
                 self.points = self.points[1:]
+            if self.fusionQPose and self.alignmentQ and self.mag_cal_sphere:
+                compass = data['value']
+                beta = numpy.array(self.mag_cal_sphere)
+
+                fusionQPose = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
+                g = quaternion.rotvecquat([0, 0, 1], fusionQPose)
+                q = quaternion.vec2vec2quat([0, 0, 1], g)
+                
+                applied_compass = (compass-beta[:3])/beta[3]
+                rotated_compass = numpy.array(quaternion.rotvecquat(applied_compass, q))
+                comp_compass = beta[3]*rotated_compass + beta[:3]
+
+#                print 'c', compass, comp_compass
+                self.comp_points.append(comp_compass)
+                if len(self.comp_points) > point_count:
+                    self.comp_points = self.comp_points[1:]
         elif name == 'imu/compass_calibration_sigmapoints':
             self.sigmapoints = data['value']
         elif name == 'imu/compass_calibration' and data['value']:
             self.mag_cal_sphere = data['value'][0]
-
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
             self.mag_sphere = Spherical(self.mag_cal_sphere, fsphere,  64, 32);
-        else:
-            return False
-        return True
+        elif name == 'imu/fusionQPose':
+            self.fusionQPose = data['value']
+        elif name == 'imu/alignmentQ':
+            self.alignmentQ = data['value']
         
     def display(self):
 #        cal = mag_cal_sphere_bias + [30]
@@ -211,8 +234,8 @@ class CompassCalibrationPlot():
             glDrawArrays(GL_LINE_STRIP, 0, len(self.vpoints)/3)
             glDisableClientState(GL_VERTEX_ARRAY);
         
-            glPointSize(2)
-            glColor3f(1,0,0)
+            glPointSize(4)
+            glColor3f(1,.3,.3)
             glBegin(GL_POINTS)
             for i in range(len(self.points)-10):
                 glVertex3fv(self.points[i])
@@ -223,6 +246,18 @@ class CompassCalibrationPlot():
             glBegin(GL_POINTS)
             for i in range(max(len(self.points)-10, 0), len(self.points)):
                 glVertex3fv(self.points[i])
+            glEnd()
+
+            glBegin(GL_LINE_STRIP)
+            for i in range(max(len(self.points)-10, 0), len(self.points)):
+                glVertex3fv(self.points[i])
+            glEnd()
+
+            glPointSize(3)
+            glColor3f(1,1,0)
+            glBegin(GL_POINTS)
+            for i in range(len(self.comp_points)-10):
+                glVertex3fv(self.comp_points[i])
             glEnd()
             
             glColor3f(0,1,1)
@@ -324,7 +359,7 @@ if __name__ == '__main__':
         host = sys.argv[1]
 
     def on_con(client):
-        watchlist = ['imu/accel', 'imu/compass', 'imu/compass_calibration', 'imu/compass_calibration_sigmapoints']
+        watchlist = ['imu/accel', 'imu/compass', 'imu/compass_calibration', 'imu/compass_calibration_sigmapoints', 'imu/fusionQpose']
         for name in watchlist:
             client.watch(name)
         

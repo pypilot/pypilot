@@ -232,7 +232,7 @@ def SignalKClientFromArgs(argv, watch, *cargs):
         if len(cargs) == 1:
             cargs[0]()
             
-    return SignalKClient(on_con, host, port)
+    return SignalKClient(on_con, host, port, autoreconnect=True)
 
 # this simple test client for an autopilot server
 # connects, enumerates the values, and then requests

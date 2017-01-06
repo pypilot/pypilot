@@ -60,7 +60,11 @@ class SignalKScope(SignalKScopeBase):
     def receive_messages(self, event):
         refresh = False
         while True:
-            result = self.client.receive_single()
+            result = False
+            try:
+                result = self.client.receive_single()
+            except:
+                pass
             if not result:
                 break
             refresh = True

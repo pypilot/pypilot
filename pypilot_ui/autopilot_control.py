@@ -28,7 +28,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             for name in watchlist:
                 client.watch(name)
 
-        self.client = SignalKClient(on_con, host)
+        self.client = SignalKClient(on_con, host, autoreconnect=True)
 
         watchlist += ['ap/mode', 'ap/heading_command',
                       'gps/track', 'ap/gps_heading_offset',
@@ -44,7 +44,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 fgGains.Add( stname, 0, wx.ALL, 5 )
                 stvalue = wx.StaticText( self.swGains, wx.ID_ANY, '   N/A   ')
                 fgGains.Add( stvalue, 0, wx.ALL, 5 )
-                slider = wx.Slider( self.swGains, wx.ID_ANY, 0, 0, 1000)
+                slider = wx.Slider( self.swGains, wx.ID_ANY, 0, 0, 4000)
                 fgGains.Add( slider, 0, wx.ALL|wx.EXPAND, 5 )
                 
                 self.gains.append((stname, stvalue, slider))
@@ -67,17 +67,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.Bind(wx.EVT_TIMER, self.gps_timeout, id=self.ID_GPS_TIMEOUT)
 
         self.SetSize(wx.Size(400, 460))
-        self.reset()
+        self.stop()
 
     def stop(self):
         self.client.set('ap/mode', 'disabled')
         self.client.set('servo/command', 0)
-        
-    def reset(self):
-        self.stop()
-        self.client.set('ap/P', .002)
-        self.client.set('ap/I', 0)
-        self.client.set('ap/D', .002)
 
     def servo_command(self, command):
         if self.lastcommand != command:
@@ -196,10 +190,10 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             self.sCommand.SetValue(val)
 
     def onScope( self, event ):
-        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '../signalk/scope.py'] + sys.argv[1:])
+        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/scope_wx.py'] + sys.argv[1:])
 	
     def onClient( self, event ):
-        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '../signalk/client_gui.py'] + sys.argv[1:])
+        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/client_wx.py'] + sys.argv[1:])
 	
     def onCalibration( self, event ):
         subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/autopilot_calibration.py'] + sys.argv[1:])
