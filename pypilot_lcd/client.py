@@ -9,9 +9,20 @@
 
 import sys, os, time, math
 
+import gettext
+import json
+#language = gettext.translation('pypilot_lcdclient',
+#                               os.path.abspath(os.path.dirname(__file__)) + '/locale',
+#                               fallback=True,
+#                               )
+#_ = language.ugettext
+_ = lambda x : x
+
+import RPi.GPIO as GPIO
+from signalk.client import SignalKClient
+
 import ugfx
 import font
-from signalk.client import SignalKClient
 
 def nr(x):
     try:
@@ -19,45 +30,104 @@ def nr(x):
     except:
         return '   '
 
-class lcd_menu():
-    def __init__(self, name, items, prev=False):
+class LCDMenu():
+    def __init__(self, lcd, name, items, prev=False):
+        self.lcd = lcd
         self.selection = 0
         self.name = name
+        if not lcd.have_select:
+            items.append((_('return'), self.lcd.menu_back))
         self.items = items
         self.prev = prev
 
-    def display(self, lcd):
-        lcd.text((0, 0), self.name, 14)
-        y = .2
+    # return oldest menu
+    def adam(self):
+        if self.prev:
+            return self.prev.adam()
+        return self
+
+    def display(self):
+        self.lcd.fittext(rectangle(0, 0, 1, .25), self.name)
+        firstitem = .25
+        y = firstitem
         for item in self.items:
-            lcd.text((0, y), item[0], 9)
+            size = self.lcd.fittext(rectangle(0, y, 1, .15), item[0])[0] + .25
+            if len(item) > 2:
+                sliderarea = rectangle(size, y+.05, (1-size), .07)
+                self.lcd.rectangle(sliderarea, .015)
+                sliderarea.width *= item[2]()
+                self.lcd.rectangle(sliderarea)
             y += .15
 
-        y = .15*self.selection + .2
-        lcd.invert(0,y,1,y+.15)
+        y = .15*self.selection + firstitem + .03
+        self.lcd.invertrectangle(rectangle(0, y, 1, .13))
 
 class RangeEdit():
-    def __init__(self, name, value, signalk_id, client, minval, maxval, step):
+    def __init__(self, name, desc, value, signalk_id, lcd, minval, maxval, step):
         self.name = name
+        self.desc = desc
         self.value = value
         self.signalk_id = signalk_id
         self.range = minval, maxval, step
-        self.client = client
+        self.lcd = lcd
+     
+    def move(self, delta):
+        v = self.value + delta*self.range[2]
+        v = min(v, self.range[1])
+        v = max(v, self.range[0])
+        self.value = v
+        self.lcd.client.set(self.signalk_id, v)
 
-    def display(self, lcd):
-        lcd.text((0, 0), self.name, 12)
-        lcd.text((0, 10), str(self.value()), 12)
-        self.lcd.get(self.signalk_id)
+    def display(self):
+        self.lcd.fittext(rectangle(0, 0, 1, .3), self.name, True)
+        self.lcd.fittext(rectangle(0, .3, 1, .3), self.desc, True)
+        v = self.value
+        try:
+            v = str(round(10000*v)/10000)
+            while len(v) < 6:
+                v+='0'
+        except:
+            pass
+        
+        self.lcd.fittext(rectangle(0, .6, 1, .2), v)
+
+        sliderarea = rectangle(0, .8, 1, .1)
+        try:
+            self.lcd.rectangle(sliderarea, .015)
+            xp = (float(v) - self.range[0]) / (self.range[1] - self.range[0])
+            sliderarea.width *= xp
+            self.lcd.rectangle(sliderarea)
+        except:
+            pass
+        self.lcd.client.get(self.signalk_id)
 
 white = ugfx.color(255, 255, 255)
 black = ugfx.color(0, 0, 0)
 
+class rectangle():
+    def __init__(self, x, y, width, height):
+        self.x, self.y, self.width, self.height = x, y, width, height
+
 class LCDClient():
     def __init__(self, screen):
+        self.longsleep = 30
         w, h = screen.width, screen.height
         mul = int(w / 48)
         self.bw = 1 if w < 256 else False
 #        w, h, self.bw = 44, 84, 1
+        w, h, self.bw = 64, 128, 1
+
+        self.config = {}
+        self.configfilename = os.getenv('HOME') + '/.pypilot/lcdclient.conf' 
+        try:
+            file = open(self.configfilename)
+            self.config = json.loads(file.readline())
+        except:
+            print 'failed to load config file:', self.configfilename
+            self.config['invert'] = False
+            self.config['language'] = 'en'
+
+        self.set_language(self.config['language'])
 
         width = min(w, 48*mul)
         self.surface = ugfx.surface(width, width*h/w, screen.bypp, None)
@@ -65,26 +135,14 @@ class LCDClient():
         self.display_page = self.display_control
         self.range_edit = False
 
-        def settings():
-            self.menu = self.settingsmenu
-            return self.display_menu
+        self.modes = {'compass': self.have_compass,
+                      'gps':     self.have_gps,
+                      'wind':    self.have_wind};        
 
-        def info():
-            self.info_offset = 0
-            return self.display_info
+        self.initial_gets = ['ap/P', 'ap/I', 'ap/D', 'servo/Max Current', 'servo/Min Speed', 'servo/Max Speed']
 
-        self.menu = lcd_menu('Menu', [('gain', lambda : self.display_gain),
-                                      ('level', lambda : self.display_level),
-                                      ('mode', lambda : self.display_mode),
-                                      ('settings', settings),
-                                      ('info', info)])
-        def max_current():
-            self.range_edit=RangeEdit('Max Current', lambda : self.last_msg['servo/Max Current'], 'servo/Max Current', self.client, 1, 10, 1)
-            return self.range_edit.display
-    
-        self.settingsmenu = lcd_menu('Settings', [('Max Current', max_current)], self.menu)
-
-        self.gain_selection = 0
+        self.have_select = False
+        self.create_mainmenu()
 
         self.mode = 'compass'
         self.last_gps_time = 0
@@ -100,32 +158,214 @@ class LCDClient():
 
         self.blink = black, white
 
+        self.pins = [5, 19, 13, 26, 6]
+        GPIO.setmode(GPIO.BCM)
+        for pin in self.pins:
+            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            GPIO.input(pin)
+
+            def cbr(channel):
+                self.longsleep = 0
+
+            GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
+
+    def set_language(self, name):
+        language = gettext.translation('pypilot_lcdclient',
+                                       os.path.abspath(os.path.dirname(__file__)) + '/locale',
+                                       languages=[name], fallback=True)
+        global _
+        _ = language.ugettext
+        self.config['language'] = name
+
+    def save_config(self):
+        try:
+            file = open(self.configfilename, 'w')
+            file.write(json.dumps(self.config) + '\n')
+        except IOError:
+            print 'failed to save config file:', self.configfilename
+            
+    def create_mainmenu(self):
+        def value_edit(name, desc, signalk_name, min, max, step, value=False):
+            def thunk():
+                self.range_edit=RangeEdit(name, desc, self.last_msg[signalk_name],
+                                          signalk_name, self, min, max, step)
+                return self.range_edit.display
+
+            if value:
+                return name, thunk, lambda : (self.last_msg[signalk_name]-min) / (max - min)
+            return name, thunk
+
+        def gain():
+            self.menu = LCDMenu(self, _('Gain'),
+                                [value_edit('P', _('position gain'), 'ap/P', 0, .01, .0002, True),
+                                 value_edit('I', _('integral gain'), 'ap/I', 0, .01, .0002, True),
+                                 value_edit('D', _('rate gain'),     'ap/D', 0, .05, .0007, True)],
+                                self.menu)
+            return self.display_menu
+
+        def settings():
+            def mode():
+                def set_mode(name):
+                    def thunk():
+                        self.client.set('ap/mode', name)
+                        self.menu = self.menu.adam()
+                        return self.display_control
+                    return thunk
+                modes = []
+                index = 0
+                selection = 0
+                for mode in self.modes:
+                    if self.modes[mode]():
+                        modes.append((mode, set_mode(mode)))
+                        if mode == self.mode:
+                            selection = index
+                        index+=1
+                self.menu = LCDMenu(self, _('Mode'), modes, self.menu)
+                self.menu.selection = selection
+            
+                return self.display_menu
+
+            def motor():
+                self.menu = LCDMenu(self, _('Motor'),
+                                    [value_edit(_('max current'), _('amps'), 'servo/Max Current', 0, 10, .25),
+                                     value_edit(_('min speed'), _('relative'), 'servo/Min Speed', 0, 1, .05),
+                                     value_edit(_('max speed'), _('relative'), 'servo/Max Speed', 0, 1, .05)],
+                                    self.menu)
+                return self.display_menu
+
+            def language():
+                def set_language(name):
+                    def thunk():
+                        self.set_language(name)
+                        self.save_config()
+                        self.create_mainmenu()
+                        return self.display_menu
+                    return thunk
+
+                languages = [(_('English'), 'en'), (_('French'), 'fr'),
+                             (_('Espanol'), 'es')]
+                index, selection = 0, 0
+                for language in languages:
+                    if language[1] == self.config['language']:
+                        selection = index
+                    index+=1
+                self.menu = LCDMenu(self, _('Language'), map(lambda language : (language[0], set_language(language[1])), languages), self.menu)
+                self.menu.selection = selection
+            
+                return self.display_menu
+
+            def invert():
+                self.config['invert'] = not self.config['invert']
+                self.save_config()
+                return self.display_menu
+
+            self.menu = LCDMenu(self, _('Settings'),
+                                [(_('mode'), mode),
+                                 (_('motor'), motor),
+                                 (_('language'), language),
+                                 (_('invert'), invert)],
+                                self.menu)
+            return self.display_menu
+
+        self.menu = LCDMenu(self, _('Menu'),
+                            [(_('gain'), gain),
+                             (_('calibrate'), lambda : self.display_calibrate),
+                             (_('settings'), settings),
+                             (_('info'), lambda : self.display_info)])
+
     def text(self, pos, text, size, crop=False):
-        pos =int(pos[0]*self.surface.width), int(pos[1]*self.surface.height)
+        pos = int(pos[0]*self.surface.width), int(pos[1]*self.surface.height)
         size = int(size*self.surface.width/48)
         font.draw(self.surface, pos, text, size, self.bw, crop)
+
+    def fittext(self, rect, text, wordwrap=False, crop=False):
+        metric_size = 16
+        if wordwrap:
+            words = text.split(' ')
+            spacewidth = font.draw(self.surface, False, ' ', metric_size, self.bw, crop)[0]
+            if len(words) < 2: # need at least 2 words to wrap
+                return self.fittext(rect, text, False, crop)
+            metrics = map(lambda word : (word, font.draw(self.surface, False, word, metric_size, self.bw, crop)), words)
+
+            widths = map(lambda metric : metric[1][0], metrics)
+            maxwordwidth = apply(max, widths)
+            totalwidth = sum(widths) + spacewidth * (len(words) - 1)
+            size = 0
+            # not very efficient... just tries each x position
+            # for wrapping to maximize final font size
+            for wrappos in range(maxwordwidth, totalwidth+1):
+                posx, posy = 0, 0
+                curtext = ''
+                lineheight = 0
+                maxw = 0
+                for metric in metrics:
+                    word, (width, height) = metric
+                    if posx > 0:
+                        width += spacewidth
+                    if posx + width > wrappos:
+                        curtext += '\n'
+                        posx = 0
+                        posy += lineheight
+                        lineheight = 0
+
+                    if posx > 0:
+                        curtext += ' '
+                    curtext += word
+                    lineheight = max(lineheight, height)
+                    posx += width
+                    maxw = max(maxw, posx)
+                maxh = posy + lineheight
+                    
+                s = maxw, maxh
+                sw = self.surface.width * float(rect.width) / s[0]
+                sh = self.surface.height * float(rect.height) / s[1]
+                cursize = int(min(sw*metric_size, sh*metric_size))
+                if cursize > size:
+                    size = cursize
+                    text = curtext
+        else:
+            s = font.draw(self.surface, False, text, metric_size, self.bw, crop)
+            sw = self.surface.width * float(rect.width) / s[0]
+            sh = self.surface.height * float(rect.height) / s[1]
+            size = int(min(sw*metric_size, sh*metric_size))
+#        size = max(size, 8)
+        pos = int(rect.x*self.surface.width), int(rect.y*self.surface.height)
+        size = font.draw(self.surface, pos, text, size, self.bw, crop)
+        return float(size[0])/self.surface.width, float(size[1])/self.surface.height
 
     def line(self, x1, y1, x2, y2):
         self.surface.line(x1, y1, x2, y2, black)
 
     def convbox(self, x1, y1, x2, y2):
-        return [int(x1*self.surface.width), int(y1*self.surface.height),
-                int(x2*self.surface.width), int(y2*self.surface.height)]
+        w, h = self.surface.width - 1, self.surface.height - 1
+        return [int(x1*w), int(y1*h), int(x2*w), int(y2*h)]
 
-    def box(self, x1, y1, x2, y2):
-        apply(self.surface.box, self.convbox(x1, y1, x2, y2).append(black))
+    def invertrectangle(self, rect):
+        apply(self.surface.invert, self.convbox(rect.x, rect.y, rect.x+rect.width, rect.y+rect.height))
+    def convrect(self, rect):
+        return self.convbox(rect.x, rect.y, rect.x+rect.width, rect.y+rect.height)
 
-    def invert(self, x1, y1, x2, y2):
-        apply(self.surface.invert, self.convbox(x1, y1, x2, y2))
-
+    def rectangle(self, rect, width = False):
+        if not width:
+            apply(self.surface.box, self.convrect(rect) + [white])
+        else:
+            box = self.convrect(rect)
+            apply(self.surface.invert, box)
+            if width:
+                w, h = self.surface.width - 1, self.surface.height - 1
+                px_width = int(max(1, min(w*width, h*width)))
+                self.surface.invert(box[0]+px_width, box[1]+px_width, box[2]-px_width, box[3]-px_width)
+        
     def connect(self):
         watchlist = ['ap/mode', 'ap/heading_command',
                      'imu/heading_lowpass', 'gps/track']
-        nalist = watchlist + ['imu/pitch', 'imu/heel', 'servo/Amp Hours',
-                              'imu/runtime', 'ap/P', 'ap/I', 'ap/D', 'servo/Max Current']
+        nalist = watchlist + ['imu/pitch', 'imu/heel', 'imu/runtime',
+                              'ap/P', 'ap/I', 'ap/D',
+                              'servo/Amp Hours', 'servo/Max Current',
+                              'servo/Min Speed', 'servo/Max Speed']
         self.last_msg = {}
         for name in nalist:
-            self.last_msg[name] = 'N/A'
+            self.last_msg[name] = _('N/A')
         self.last_msg['ap/heading_command'] = 0
         
         host = ""
@@ -139,89 +379,87 @@ class LCDClient():
         try:
             self.client = SignalKClient(on_con, host)
             self.display_page = self.display_control
-            print "connected"
+            print 'connected'
+
+            for request in self.initial_gets:
+                self.client.get(request)
         except:
             self.client = False
 
+    def round_last_msg(self, name, places):
+        n = 10**places
+        try:
+            return str(round(self.last_msg[name]*n)/n)
+        except:
+            return str(self.last_msg[name])
+            
+    def have_compass(self):
+        return True
+    def have_gps(self):
+        return time.time() - self.last_gps_time < 5
+    def have_wind(self):
+        return False
+            
     def display_control(self):
         def draw_big_number(pos, num):
             num = str(nr(num))
             while len(num) < 3:
                 num = ' ' + num
 
-            size = 30
-            self.text((pos[0]+.00, pos[1]), num[0], size, True)
-            self.text((pos[0]+.33, pos[1]), num[1], size, True)
-            self.text((pos[0]+.67, pos[1]), num[2], size, True)
+            if True:
+                size = 30
+                self.text((pos[0]+.00, pos[1]), num[0], size, True)
+                self.text((pos[0]+.33, pos[1]), num[1], size, True)
+                self.text((pos[0]+.67, pos[1]), num[2], size, True)
+            else:
+                self.fittext(rectangle(pos[0], pos[1], 1, .4), num, crop=True)
 
         draw_big_number((0,0), self.last_msg['imu/heading_lowpass'])
 
         if self.last_msg['ap/mode'] == 'disabled' or self.last_msg['ap/mode'] == 'N/A':
-            self.text((0,.4), 'standby', 12)
+            self.fittext(rectangle(0, .4, 1, .4), _('standby'))
         else: #if self.last_msg['ap/mode'] != 'N/A':
             draw_big_number((0,.4), self.last_msg['ap/heading_command'])
 
-        modepos = 0, .7
-        if self.mode == 'compass':
-            self.text(modepos, 'COMPASS', 10)
-        elif self.mode == 'gps':
-            self.text(modepos, 'GPS', 16)
-            if not self.have_gps():
-                self.line(modepos[0], modepos[1], modepos[0]+34, modepos[1]+16)
-                self.line(modepos[0], modepos[1]+16, modepos[0]+34, modepos[1])
-        elif self.mode == 'wind':
-            self.text(modepos, 'WIND', 16)
+        if self.mode == 'gps' and not self.have_gps():
+            self.fittext(rectangle(0, .65, 1, .35), _('WARNING GPS not detected'), True)
+        if self.mode == 'wind' and not self.have_wind():
+            self.fittext(rectangle(0, .65, 1, .35), _('WARNING WIND not detected'), True)
+        else:
+            modes = {'compass': ('C', self.have_compass, rectangle(.03, .74, .30, .16)),
+                     'gps':     ('G', self.have_gps,     rectangle(.34, .74, .30, .16)),
+                     'wind':    ('W', self.have_wind,     rectangle(.65, .74, .30, .16))}
+
+            for mode in modes:
+                if modes[mode][1]():
+                    self.fittext(modes[mode][2], modes[mode][0])
+                if self.mode == mode:
+                    r = modes[mode][2]
+                    marg = .02
+                    self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
+        try:
+            wlan0 = open('/sys/class/net/wlan0/operstate')
+            line = wlan0.readline().rstrip()
+            wlan0.close()
+            if line == 'up':
+                self.fittext(rectangle(.3, .9, .6, .12), 'WIFI')
+        except:
+            pass
 
     def display_menu(self):
-        self.menu.display(self)
+        self.menu.display()
 
-    gains = [('P', 'ap/P'), ('I', 'ap/I'), ('D', 'ap/D')]
-    def display_gain(self):
-        self.text((0, 0), 'Gain', 16)
-
-        y = 20
-        for gain in self.gains:
-              self.text((0, y), gain[0] + str(self.last_msg[gain[1]]), 10)
-              self.client.get(gain[1])
-              y += 10
-
-        y = 20 + self.gain_selection*10
-        self.rectangle(0,y,43,y+10)
-
-    def display_level(self):
-        self.text((0, 0), 'press\nselect\nto level', 12)
-        self.text((0, 60), 'pitch' + str(self.last_msg['imu/pitch']), 10)
-        self.text((0, 70), 'heel' + str(self.last_msg['imu/heel']), 10)
+    def display_calibrate(self):
+        self.fittext(rectangle(0, 0, 1, .67), _('press up to level'), True)
+        self.fittext(rectangle(0, .65, .5, .15), _('pitch'))
+        self.fittext(rectangle(.5, .65, .5, .15), self.round_last_msg('imu/pitch', 1))
+        self.fittext(rectangle(0, .8, .5, .15), _('heel'))
+        self.fittext(rectangle(.5, .8, .5, .15), self.round_last_msg('imu/heel', 1))
         self.client.get('imu/pitch')
         self.client.get('imu/heel')
 
-    def have_gps(self):
-        return time.time() - self.last_gps_time < 5
-
-    def display_mode(self):
-        self.text((0, 0), 'MODE', 12)
-
-        y = .2
-        modes = {'compass': y, 'gps' : .15+y, 'wind' : .3+y}
-        self.text((0, y), 'COMPASS', 10)
-        self.text((0, 12+y), '   GPS', 12)
-        self.text((0, 24+y), '  WIND', 12)
-
-        y = modes[self.mode]
-        rectangle(0,y,43,y+.15)
-
-        if self.mode == 'gps' and not self.have_gps():
-            self.text((0, .65), 'WARNING', 10)
-            self.text((0, .77), 'GPS not', 10)
-            self.text((0, .89), 'detected', 10)
-        if self.mode == 'wind':
-            self.text((0, .65), 'WARNING', 10)
-            self.text((0, .77), 'WIND not', 10)
-            self.text((0, .89), 'detected', 10)
-
     def display_connecting(self):
-        self.text((0, 0), 'connect', 12)
-        self.text((0, .2), 'to server', 10)
+        self.fittext(rectangle(0, 0, 1, .4), _('connect to server...'), True)
         dots = ''
         for i in range(self.connecting_dots):
             dots += '.'
@@ -231,30 +469,20 @@ class LCDClient():
             self.connecting_dots = 0
             
     def display_info(self):
-        self.text((0, 0), 'Info', 14)
+        #self.text((0, 0), 'Info', 12)
+        self.fittext(rectangle(0, 0, 1, .2), _('Info'))
+
+        v = self.round_last_msg('servo/Amp Hours', 1)
 
         y = .2
-        spacing = .12
-        fontsize = 10
-        
-        self.text((0, y), 'Amp Hours', fontsize)
-        y += spacing
-
-        v =self.last_msg['servo/Amp Hours']
-        try:
-            v = str(round(v*1000)/1000)
-        except:
-            pass
-            
-        self.text((0, y), v, fontsize)
-        y += spacing
-        self.text((0, y), 'runtime', fontsize)
-        y += spacing
-        self.text((0, y), self.last_msg['imu/runtime'], fontsize)
-        y += spacing
-        self.text((0, y), 'pypilot', fontsize)
-        y += spacing
-        self.text((0, y), 'ver 0.1', fontsize)
+        spacing = .11
+        runtime = self.last_msg['imu/runtime'][:7]
+        items = [_('Amp Hours'), v, _('runtime'), runtime, _('version'), '0.1']
+        even, odd = 0, .05
+        for item in items:
+            self.fittext(rectangle(0, y, 1, spacing+even), item)
+            y += spacing + even
+            even, odd = odd, even
 
         self.client.get('servo/Amp Hours')
         self.client.get('imu/runtime')
@@ -264,25 +492,25 @@ class LCDClient():
         self.surface.fill(black)
         self.display_page()
 
-        # status
-        h = self.surface.height
+        if self.config['invert']:
+            self.invertrectangle(rectangle(0, 0, 1, 1))
 
+        # status cursor
+        w, h = self.surface.width, self.surface.height
         self.blink = self.blink[1], self.blink[0]
         size = h / 20
-        self.surface.box(0, h-size-1, size, h-1, self.blink[0])
-
-        try:
-            wlan0 = open('/sys/class/net/wlan0/operstate')
-            line = wlan0.readline().rstrip()
-            if line == 'up':
-                self.text((.2, .88), 'WIFI', 9)
-        except:
-            pass
+        self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
 
     def set(self, name, value):
         if self.client:
             self.client.set(name, value)
 
+    def menu_back(self):
+        if self.menu.prev:
+            self.menu = self.menu.prev
+            return self.display_menu
+        return self.display_control
+            
     def process_keys(self):
         AUTO = 0
         MENU = 1
@@ -299,28 +527,44 @@ class LCDClient():
                 self.set('ap/mode', 'disabled')
         
             self.display_page = self.display_control
-            
+
+        # for up and down keys providing acceration
+        updownheld = self.keypad[UP] > 10 or self.keypad[DOWN] > 10
+        updownup = self.keypadup[UP] or self.keypadup[DOWN]
+        sign = 1 if self.keypad[UP] or self.keypadup[UP] else -1
+        speed = 1 if updownup else min(20, .01*max(self.keypad[UP], self.keypad[DOWN])**2)
+        updown = updownheld or updownup
+
         if self.display_page == self.display_control:
             if self.keypadup[MENU]: # MENU
                 self.display_page = self.display_menu
-            elif self.keypad[UP] or self.keypad[DOWN]: # LEFT/RIGHT
-                sign = -1 if self.keypad[UP] else 1
-                held = False
+            if self.keypadup[SELECT]:
+                index = 0
+                for mode in list(self.modes):
+                    if mode == self.mode:
+                        break
+                    index += 1
+
+                tries = 0
+                while tries < len(self.modes):
+                    index += 1
+                    if index == len(self.modes):
+                        index = 0
+
+                    if self.modes[list(self.modes)[index]]():
+                        self.client.set('ap/mode', list(self.modes)[index])
+                        break
+                    tries += 1
+            elif updown: # LEFT/RIGHT
                 if self.last_msg['ap/mode'] == 'disabled':
-                    self.set('servo/command', sign*self.speed)
-                    if self.speed < .18:
-                        self.speed += .01 # provide acceleration
-                else:
-                    cmd = self.last_msg['ap/heading_command'] + sign*(9*held + 1)
+                    self.set('servo/command', sign*(speed+8)/100)
+                else:                       
+                    cmd = self.last_msg['ap/heading_command'] + sign*speed
                     self.set('ap/heading_command', cmd)
-            else:
-                self.speed = .08
+
         elif self.display_page == self.display_menu:
-            if self.keypadup[MENU]:
-                if self.menu.prev:
-                    self.menu = self.menu.prev
-                else:
-                    self.display_page = self.display_control
+            if self.keypadup[MENU] and self.have_select:
+                self.display_page = self.menu_back()
             elif self.keypadup[UP]:
                 self.menu.selection -= 1
                 if self.menu.selection < 0:
@@ -329,65 +573,24 @@ class LCDClient():
                 self.menu.selection += 1
                 if self.menu.selection == len(self.menu.items):
                     self.menu.selection = 0
-            elif self.keypadup[SELECT]:
+            elif self.keypadup[SELECT] or (self.keypadup[MENU] and not self.have_select):
                 self.display_page = self.menu.items[self.menu.selection][1]()
 
-        elif self.display_page == self.display_gain:
-            if self.keypadup[MENU]:
-                self.display_page = self.display_menu
-            if self.keypadup[UP]:
-                self.gain_selection -= 1
-                if self.gain_selection < 0:
-                    self.gain_selection = len(self.gains) - 1
-            if self.keypadup[DOWN]:
-                self.gain_selection += 1
-                if self.gain_selection == len(self.gains):
-                    self.gain_selection = 0
-            elif self.keypadup[SELECT]:
-                gain = self.gains[self.gain_selection]
-                self.range_edit=RangeEdit(gain[0], lambda : self.last_msg[gain[1]], gain[1], self.client, 0, 1, .0005)
-                self.display_page = self.range_edit.display
-        elif self.display_page == self.display_level:
+        elif self.display_page == self.display_calibrate:
             if self.keypadup[MENU]:
                 self.display_page = self.display_menu
             elif self.keypadup[SELECT]:
-                pass #level
-        elif self.display_page == self.display_mode:
-            if self.keypadup[MENU]:
-                self.display_page = self.display_menu
-            elif self.keypadup[UP]:
-                self.mode = {'compass': 'wind', 'gps': 'compass', 'wind': 'gps'}[self.mode]
-            elif self.keypadup[DOWN]:
-                self.mode = {'compass': 'gps', 'gps': 'wind', 'wind': 'compass'}[self.mode]
-            elif self.keypadup[SELECT]:
-                self.display_page = self.display_control
+                pass #calibrate
 
         elif self.display_page == self.display_info:
-            if self.keypadup[MENU]:
-                self.display_page = self.display_menu
-            elif self.keypadup[UP]:
-                self.info_offset -= 10
-                if 0 > self.info_offset:
-                    self.info_offset = 0
-            elif self.keypadup[DOWN]:
-                self.info_offset += 10
-                if 120 - 44 < self.info_offset:
-                    self.info_offset = 120 - 44
-            elif self.keypadup[SELECT]:
+            if self.keypadup[MENU] or self.keypadup[SELECT]:
                 self.display_page = self.display_menu
 
         elif self.range_edit and self.display_page == self.range_edit.display:
-            if self.keypadup[MENU]:
+            if self.keypadup[MENU] or self.keypadup[SELECT]:
                 self.display_page = self.display_menu
-            elif self.keypadup[UP]:
-                v = min(self.range_edit.value()+self.range_edit.range[2], self.range_edit.range[1])
-                self.client.set(self.range_edit.signalk_id, v)
-            elif self.keypadup[DOWN]:
-                v = max(self.range_edit.value()-self.range_edit.range[2], self.range_edit.range[0])
-                self.client.set(self.range_edit.signalk_id, v)
-            elif self.keypadup[SELECT]:
-                self.display_page = self.display_menu
-            
+            elif updown:
+                self.range_edit.move(sign*speed*.3)
         else:
             # self.display_page = self.display_control
             pass
@@ -397,26 +600,38 @@ class LCDClient():
                 self.keypad[key] = self.keypadup[key] = False
 
     def idle(self):
-        # read from keys
-        t0 = time.time()
-        pins = [5, 6, 13, 19, 26]
-        for pini in range(len(pins)):
-            pin = pins[pini]
-            f = open('/sys/class/gpio/gpio%d/value' % pin)
-            a = f.readline()
-            #import subprocess
-            #proc = subprocess.Popen(['gpio', 'read', str(pin)], stdout=subprocess.PIPE)
-            #a, b = proc.communicate()
+        if any(self.keypadup):
+            self.longsleep = 0
 
-            value = bool(int(a))
+        if any(self.keypad):
+            self.longsleep += 1
+        else:
+            self.longsleep += 10
+        while self.longsleep > 20:
+            time.sleep(.05)
+            self.longsleep -= 1;
+
+        # read from keys
+        for pini in range(len(self.pins)):
+            pin = self.pins[pini]
+
+            if False:
+                f = open('/sys/class/gpio/gpio%d/value' % pin)
+                a = f.readline()
+                value = bool(int(a))
+            else:
+                value = GPIO.input(pin)
+
+            if not value and self.keypad[pini] > 0:
+                self.keypad[pini] += 1
+                
             if pini in self.keystate and self.keystate[pini] != value:
                 if value:
                     self.keypadup[pini] = True
                 else:
-                    self.keypad[pini] = True
+                    self.keypad[pini] = 1
                 
             self.keystate[pini] = value
-        t1 = time.time()
 
         self.process_keys()
         while True:
@@ -427,7 +642,7 @@ class LCDClient():
                 self.connect()
 
             if not result:
-                return
+                break
 
             name, data = result
             self.last_msg[name] = data['value']
@@ -453,15 +668,11 @@ def main():
     while True:
         lcdclient.display()
         s = ugfx.surface(lcdclient.surface)
+        mag = 2
         s.magnify(mag)
 
         screen.blit(s, 0, 0)
-
-        idletime = time.time()
-        while time.time() - idletime < .5:
-            lcdclient.idle()
-            time.sleep(.05)
-
+        lcdclient.idle()
 
 if __name__ == '__main__':
     main()

@@ -20,23 +20,48 @@ if not os.path.exists(fontpath):
 if not os.path.isdir(fontpath):
     raise 'ugfxfonts should be a directory'
 
+
 def draw(surface, pos, text, size, bw, crop=False):
     if not size in fonts:
         fonts[size] = {}
 
     font = fonts[size]
 
-    x, y = pos
+    if pos:
+        x, y = pos
+    else:
+        x, y = 0, 0
+    origx = x
+    width = 0
+    lineheight = 0
+    height = 0
     for c in text:
+        if c == '\n':
+            x = origx
+            y += lineheight
+            height += lineheight
+            lineheight = 0
+            continue
         if not c in font:
-            filename = fontpath + '/%03d%03d' % (size, ord(c))               
+            filename = fontpath + '/%03d%03d' % (size, ord(c))
+            if bw:
+                filename += 'b';
+            if crop:
+                filename += 'c';
+
+            #print 'ord', ord(c), filename
             font[c] = ugfx.surface(filename)
             if font[c].bypp == 0:
                 font[c] = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
                 font[c].store_grey(filename)
-            
-        surface.blit(font[c], x, y)
+
+        if pos:
+            surface.blit(font[c], x, y)
         x += font[c].width
+        width = max(width, x-origx)
+        lineheight = max(lineheight, font[c].height)
+
+    return width, height+lineheight
 
 def create_character(fontpath, size, c, bypp, crop, bpp):
     try:
@@ -74,8 +99,6 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
         image.putdata(data)
     return ugfx.surface(image.size[0], image.size[1], bypp, image.tobytes())
     
-
-
 if __name__ == '__main__':
     print 'ugfx test program'
     screen = ugfx.display("/dev/fb0")

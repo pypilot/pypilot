@@ -252,7 +252,7 @@ void surface::line(int x1, int y1, int x2, int y2, uint32_t c)
     }
 }
 
-void surface::hline(int x1, int x2, int y, uint32_t c)
+void surface::hline(int x1, int x2, int y, int h, uint32_t c)
 {
     if(bypp == 2) {
         uint16_t t = color16(c);
@@ -274,14 +274,6 @@ void surface::vline(int x, int y1, int y2, uint32_t c)
             *(uint32_t*)(p + y*line_length + x*bypp) = c;
 }
 
-void surface::rectangle(int x1, int y1, int x2, int y2, uint32_t c)
-{
-    hline(x1, x2, y1, c);
-    hline(x1, x2, y2, c);
-    vline(x1, y1, y2, c);
-    vline(x2, y1, y2, c);
-}
-
 void surface::box(int x1, int y1, int x2, int y2, uint32_t c)
 {
     if(bypp == 2) {
@@ -297,6 +289,11 @@ void surface::box(int x1, int y1, int x2, int y2, uint32_t c)
 
 void surface::invert(int x1, int y1, int x2, int y2)
 {
+    x1 = x1 > 0 ? x1 : 0;
+    x2 = x2 < width ? x2 : width-1;
+    y1 = y1 > 0 ? y1 : 0;
+    y2 = y2 < height ? y2 : height-1;
+                        
     for(int y = y1; y <= y2; y++)
         for(int x = x1; x <= x2; x++)
             for(int c = 0; c<bypp; c++) {
@@ -336,7 +333,6 @@ display::display(const char *device)
 
     printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
 
-    
     // Figure out the size of the screen in bytes
     screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel/8;
 
