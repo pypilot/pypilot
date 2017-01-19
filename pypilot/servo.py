@@ -251,28 +251,11 @@ class Servo:
         self.lastpositiontime = time.time()
         self.lastpositionamphours = 0
 
-
-        #for now create both drivers
         self.mode = self.Register(Value, 'mode', 'none')
-        devices = ['/dev/servo', '/dev/ttyUSB0', '/dev/ttyUSB1']
-        controller = 'none'
-        self.driver = False
-        for device in devices:
-            try:
-                print 'initializing servo on', device, '...'
-                self.driver = ArduinoServo(self, device) #, RaspberryHWPWMServoDriver()]
-                controller = 'arduino'
-                break
-            except:
-                print 'failed to initialize servo', device
-
-        self.Register(Value, 'controller', controller)
+        self.controller = self.Register(Value, 'controller', 'none')
         self.drive = self.Register(Value, 'drivetype', 'relative')
 
-        if self.driver:
-            self.driver.command(-.2) # flush any brake
-            self.driver.command(0)
-            time.sleep(.1);
+        self.driver = False
 
     def Register(self, _type, name, *args):
         return self.server.Register(apply(_type, ['servo/' + name] + list(args)))
@@ -459,8 +442,32 @@ class Servo:
         else:
             self.mode.set('forward')
 
+
+        if not self.driver:
+            print 'try devices'
+            devices = ['/dev/servo', '/dev/ttyUSB0', '/dev/ttyUSB1']
+            controller = 'none'
+
+            for device in devices:
+                try:
+                    print 'initializing servo on', device, '...'
+                    self.driver = ArduinoServo(self, device) #, RaspberryHWPWMServoDriver()]
+                    self.controller.set('arduino')
+
+                    self.driver.command(-.2) # flush any brake
+                    self.driver.command(0)
+                    time.sleep(.1);
+                    break
+                except:
+                    print 'failed to initialize servo', device
+
         if self.driver:
-            self.driver.command(command)
+            try:
+                self.driver.command(command)
+            except:
+                print "lost servo device"
+                self.controller.set('none')
+                self.driver = False
 
     def stop(self):
         if self.driver:
@@ -516,7 +523,7 @@ class Servo:
 
     def fault(self):
         if not self.driver:
-            return True
+            return False
         return self.driver.fault()
     
     def load_calibration(self):
