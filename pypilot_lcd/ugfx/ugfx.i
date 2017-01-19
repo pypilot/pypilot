@@ -22,7 +22,6 @@ public:
     void line(int x1, int y1, int x2, int y2, uint32_t c);
     void hline(int x1, int x2, int y, uint32_t c);
     void vline(int x, int y1, int y2, uint32_t c);
-    void rectangle(int x1, int y1, int x2, int y2, uint32_t c);
     void box(int x1, int y1, int x2, int y2, uint32_t c);
     void invert(int x1, int y1, int x2, int y2);
     void fill(uint32_t c);

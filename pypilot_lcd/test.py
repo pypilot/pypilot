@@ -15,3 +15,6 @@ while w >= 100:
     c, d = d, c
 
 screen.invert(100, 100, 200, 200)
+
+import font
+font.draw(screen, (0, 0), open('/home/tc/chars').readline().rstrip(), 80, False)

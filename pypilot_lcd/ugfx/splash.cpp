@@ -34,6 +34,10 @@ surface *load_logo(int bypp)
 int main()
 {
     display screen("/dev/fb0");
+
+#if 1
+    surface *logo = load_logo(screen.bypp);
+#else
     const char *path = "/home/tc/.pypilot/splash.surf";
     surface *logo = new surface(path);
     if(logo->bypp != screen.bypp) {
@@ -47,7 +51,7 @@ int main()
             exit(1);
         }
     }
-    
+#endif    
     int facw = screen.width / logo->width, fach = screen.height / logo->height;
     int fac = facw < fach ? facw : fach;
     logo->magnify(fac);

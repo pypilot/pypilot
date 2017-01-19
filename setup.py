@@ -11,7 +11,15 @@ try:
     from setuptools import setup, Extension
 except ImportError:
     from distutils.core import setup, Extension
-import os.path
+import os, os.path
+
+locale_files = []
+for walk in os.walk('pypilot_lcd/locale'):
+    path, dirs, files = walk
+    path = path[len('pypilot_lcd/'):]
+    for file in files:
+        if file[len(file)-3:] == '.mo':
+            locale_files.append(os.path.join(path, file))
 
 setup (name = 'pypilot',
        version = '0.1',
@@ -20,7 +28,7 @@ setup (name = 'pypilot',
        author="Sean D'Epagnier",
        url='http://pypilot.org/',
        packages=['pypilot', 'pypilot_ui', 'pypilot_lcd', 'pypilot_webapp', 'signalk'],
-       package_data={'pypilot_lcd': ['font.ttf'],
+       package_data={'pypilot_lcd': ['font.ttf'] + locale_files,
                      'pypilot_webapp': ['static/*', 'templates/*']},
 #       requires=['flask', 'gevent'], # webapp
        entry_points={

@@ -112,7 +112,7 @@ class LoopFreqValue(Value):
 class AgeValue(Value):
     def __init__(self, name):
         super(AgeValue, self).__init__(name, False)
-        self.timestamp = time.time()
+        self.timestamp = os.times()[4]
 
     @staticmethod
     def readable_timespan(time):
@@ -130,10 +130,10 @@ class AgeValue(Value):
         return loop(0, 1)
 
     def update(self):
-        self.set(AgeValue.readable_timespan(time.time() - self.timestamp))
+        self.set(AgeValue.readable_timespan(os.times()[4] - self.timestamp))
         
     def strobe(self):
-        self.timestamp = time.time()
+        self.timestamp = os.times()[4]
 
 class QuaternionProperty(Property):
     def __init__(self, name, initial):
