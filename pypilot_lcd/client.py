@@ -115,7 +115,7 @@ class LCDClient():
         mul = int(w / 48)
         self.bw = 1 if w < 256 else False
 #        w, h, self.bw = 44, 84, 1
-        w, h, self.bw = 64, 128, 1
+#        w, h, self.bw = 64, 128, 1
 
         self.config = {}
         self.configfilename = os.getenv('HOME') + '/.pypilot/lcdclient.conf' 
@@ -207,7 +207,10 @@ class LCDClient():
             def mode():
                 def set_mode(name):
                     def thunk():
-                        self.client.set('ap/mode', name)
+                        self.mode = name
+                        if self.last_msg['ap/mode'] != 'disabled':
+                            self.client.set('ap/mode', name)
+
                         self.menu = self.menu.adam()
                         return self.display_control
                     return thunk
@@ -243,7 +246,7 @@ class LCDClient():
                     return thunk
 
                 languages = [(_('English'), 'en'), (_('French'), 'fr'),
-                             (_('Espanol'), 'es')]
+                             (_('Spanish'), 'es')]
                 index, selection = 0, 0
                 for language in languages:
                     if language[1] == self.config['language']:
@@ -358,7 +361,7 @@ class LCDClient():
         
     def connect(self):
         watchlist = ['ap/mode', 'ap/heading_command',
-                     'imu/heading_lowpass', 'gps/track']
+                     'imu/heading_lowpass', 'imu/alignmentCounter', 'gps/track']
         nalist = watchlist + ['imu/pitch', 'imu/heel', 'imu/runtime',
                               'ap/P', 'ap/I', 'ap/D',
                               'servo/Amp Hours', 'servo/Max Current',
@@ -450,7 +453,12 @@ class LCDClient():
         self.menu.display()
 
     def display_calibrate(self):
-        self.fittext(rectangle(0, 0, 1, .67), _('press up to level'), True)
+        counter = self.last_msg['imu/alignmentCounter']
+        if counter == 0:
+            self.fittext(rectangle(0, 0, 1, .5), _('press up to level'), True)
+        else:
+            self.fittext(rectangle(0, 0, 1, .5), _('level') + ' %d%%' % (100-counter), True)
+            
         self.fittext(rectangle(0, .65, .5, .15), _('pitch'))
         self.fittext(rectangle(.5, .65, .5, .15), self.round_last_msg('imu/pitch', 1))
         self.fittext(rectangle(0, .8, .5, .15), _('heel'))
@@ -579,8 +587,8 @@ class LCDClient():
         elif self.display_page == self.display_calibrate:
             if self.keypadup[MENU]:
                 self.display_page = self.display_menu
-            elif self.keypadup[SELECT]:
-                pass #calibrate
+            elif self.keypadup[UP]:
+                self.client.set('imu/alignmentCounter', 100)
 
         elif self.display_page == self.display_info:
             if self.keypadup[MENU] or self.keypadup[SELECT]:
@@ -668,7 +676,7 @@ def main():
     while True:
         lcdclient.display()
         s = ugfx.surface(lcdclient.surface)
-        mag = 2
+#        mag = 2
         s.magnify(mag)
 
         screen.blit(s, 0, 0)
