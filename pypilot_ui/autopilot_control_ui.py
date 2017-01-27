@@ -272,7 +272,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel1.SetSizer( fgSizer8 )
 		self.m_panel1.Layout()
 		fgSizer8.Fit( self.m_panel1 )
-		self.m_notebook1.AddPage( self.m_panel1, u"compass", False )
+		self.m_notebook1.AddPage( self.m_panel1, u"compass", True )
 		self.m_panel3 = wx.Panel( self.m_notebook1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer12 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer12.AddGrowableCol( 0 )
@@ -374,7 +374,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		
 		fgSizer29.Add( fgSizer13, 1, wx.EXPAND, 5 )
 		
-		fgSizer27 = wx.FlexGridSizer( 0, 3, 0, 0 )
+		fgSizer27 = wx.FlexGridSizer( 0, 2, 0, 0 )
 		fgSizer27.SetFlexibleDirection( wx.BOTH )
 		fgSizer27.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
@@ -382,20 +382,12 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_staticText29.Wrap( -1 )
 		fgSizer27.Add( self.m_staticText29, 0, wx.ALL, 5 )
 		
-		self.stStarboardVector = wx.StaticText( self.m_panel5, wx.ID_ANY, u"        N/A        ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stStarboardVector.Wrap( -1 )
-		fgSizer27.Add( self.stStarboardVector, 0, wx.ALL, 5 )
-		
 		self.bHeelingStarboard = wx.Button( self.m_panel5, wx.ID_ANY, u"Heeling starboard", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer27.Add( self.bHeelingStarboard, 0, wx.ALL, 5 )
 		
 		self.m_staticText291 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Port Vector", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText291.Wrap( -1 )
 		fgSizer27.Add( self.m_staticText291, 0, wx.ALL, 5 )
-		
-		self.stPortVector = wx.StaticText( self.m_panel5, wx.ID_ANY, u"        N/A        ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stPortVector.Wrap( -1 )
-		fgSizer27.Add( self.stPortVector, 0, wx.ALL, 5 )
 		
 		self.bHeelingPort = wx.Button( self.m_panel5, wx.ID_ANY, u"Heeling port", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer27.Add( self.bHeelingPort, 0, wx.ALL, 5 )
@@ -488,7 +480,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook1.AddPage( self.m_panel3, u"imu", True )
+		self.m_notebook1.AddPage( self.m_panel3, u"imu", False )
 		self.m_panel2 = wx.Panel( self.m_notebook1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer9 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer9.AddGrowableCol( 0 )

@@ -58,7 +58,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def on_con(self, client):
         watchlist = ['imu/compass_calibration', 'imu/compass_calibration_age', \
                      'imu/compass', 'imu/compass_calibration_sigmapoints', \
-                     'imu/accel', 'imu/fusionQPose', 'imu/heading', \
+                     'imu/accel', 'imu/fusionQPose', 'imu/alignmentCounter', \
+                     'imu/heading', \
                      'imu/alignmentQ', 'imu/pitch', 'imu/roll', 'imu/heel', \
                      'imu/heading_offset', 'servo/calibration', \
                      'servo/Max Current']
@@ -108,41 +109,14 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
             self.fusionQPose = value
             self.BoatPlot.Refresh()
+        elif name=='imu/alignmentCounter':
+            self.gAlignment.SetValue(100 - value)
 
-            if self.alignment_count > 0 and self.alignmentQ:
-                self.gAlignment.SetValue(100 - self.alignment_count)
+            enable = value == 0
+            self.bLevel.Enable(enable)
+            self.bHeelingStarboard.Enable(enable)
+            self.bHeelingPort.Enable(enable)
 
-                self.avg_pose = map(lambda x, y : x + y, self.avg_pose, self.fusionQPose)
-                self.alignment_count -= 1
-                if self.alignment_count == 0:
-                    self.gAlignment.SetValue(0)
-                    self.avg_pose = pypilot.quaternion.normalize(self.avg_pose)
-                    down = pypilot.quaternion.rotvecquat([0, 0, 1], pypilot.quaternion.conjugate(self.avg_pose))
-                    alignment = []
-                    if self.alignment_type == 'level':
-                        alignment = pypilot.quaternion.vec2vec2quat([0, 0, 1], down)
-                        alignment = pypilot.quaternion.multiply(self.alignmentQ, alignment)
-                    elif self.alignment_type == 'starboard':
-                        self.starboard_down = list(down)
-                    elif self.alignment_type == 'port':
-                        self.port_down = list(down)
-
-                    if self.starboard_down and self.port_down:
-                        ang = math.atan2(self.port_down[0] - self.starboard_down[0], \
-                                         self.starboard_down[1] - self.port_down[1])
-                        alignment = pypilot.quaternion.angvec2quat(ang, [0, 0, 1])
-                        print 'downs:', self.starboard_down, self.port_down, ang*180/math.pi, alignment
-                        alignment = pypilot.quaternion.multiply(self.alignmentQ, alignment)
-
-                    if len(alignment):
-                        self.client.set('imu/alignmentQ', list(alignment))
-                        self.starboard_down = self.port_down = False
-                        
-                    self.stStarboardVector.SetLabel('ok' if self.starboard_down else 'N/A')
-                    self.stPortVector.SetLabel('ok' if self.port_down else 'N/A')
-                    self.bLevel.Enable()
-                    self.bHeelingStarboard.Enable()
-                    self.bHeelingPort.Enable()
         elif name == 'imu/pitch':
             self.stPitch.SetLabel(str(round3(value)))
         elif name == 'imu/roll':
@@ -237,13 +211,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.compass_calibration_plot.reshape(event.GetSize().x, event.GetSize().y)
 
     def StartAlignment(self, alignment_type):
-        self.bLevel.Disable()
-        self.bHeelingStarboard.Disable()
-        self.bHeelingPort.Disable()
-
-        self.avg_pose = [0, 0, 0, 0]
-        self.alignment_count = 100
-        self.alignment_type = alignment_type
+        self.client.set('imu/alignmentCounter', 100)
+        self.client.set('imu/alignmentType', alignment_type)
 
     def onResetAlignment(self, event):
         self.client.set('imu/alignmentQ', [1, 0, 0, 0])
