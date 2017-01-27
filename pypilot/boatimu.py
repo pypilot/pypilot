@@ -142,6 +142,7 @@ class QuaternionProperty(Property):
     def set(self, value):
         return super(QuaternionProperty, self).set(quaternion.normalize(value))
 
+
 class BoatIMU(object):
   def __init__(self, server, *args, **keywords):
     self.server = server
@@ -149,6 +150,11 @@ class BoatIMU(object):
 
     self.loopfreq = self.Register(LoopFreqValue, 'loopfreq', 0)
     self.alignmentQ = self.Register(QuaternionProperty, 'alignmentQ', [1, 0, 0, 0])
+    self.alignmentCounter = self.Register(Property, 'alignmentCounter', 0)
+    self.alignmentType = self.Register(EnumProperty, 'alignmentType', 'level', ['level', 'port', 'starbord'])
+    self.last_alignmentCounter = False
+    self.port_down = self.starboard_down = False
+    
     self.timestamp = 0
 
     self.runtime = self.Register(AgeValue, 'runtime')
@@ -249,6 +255,39 @@ class BoatIMU(object):
 
     # apply alignment calibration
     data['fusionQPose'] = list(quaternion.multiply(data['fusionQPose'], self.alignmentQ.value))
+
+    # count down to alignment
+    if (self.alignmentCounter.value, self.alignmentType.value) != self.last_alignmentCounter:
+      self.alignmentPose = [0, 0, 0, 0]
+
+    if self.alignmentCounter.value > 0:
+      self.alignmentPose = map(lambda x, y : x + y, self.alignmentPose, data['fusionQPose'])
+      self.alignmentCounter.set(self.alignmentCounter.value-1)
+
+      if self.alignmentCounter.value == 0:
+        self.alignmentPose = quaternion.normalize(self.alignmentPose)
+        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(self.alignmentPose))
+        alignment = []
+        if self.alignmentType.value == 'level':
+          alignment = quaternion.vec2vec2quat([0, 0, 1], down)
+          alignment = quaternion.multiply(self.alignmentQ.value, alignment)
+        elif self.alignmentType.value == 'starboard':
+          self.starboard_down = list(down)
+        elif self.alignmentType.value == 'port':
+          self.port_down = list(down)
+        
+        if self.starboard_down and self.port_down:
+          ang = math.atan2(self.port_down[0] - self.starboard_down[0], \
+                           self.starboard_down[1] - self.port_down[1])
+          alignment = quaternion.angvec2quat(ang, [0, 0, 1])
+          print 'downs:', self.starboard_down, self.port_down, ang*180/math.pi, alignment
+          alignment = quaternion.multiply(self.alignmentQ.value, alignment)
+
+        if len(alignment):
+          print 'self.alignmentQ', self.alignmentQ.value, alignment
+          self.alignmentQ.set(alignment)
+
+    self.last_alignmentCounter = self.alignmentCounter.value, self.alignmentType.value
 
     self.compass_auto_cal.AddPoint(data['compass'] + vector.normalize(data['accel']))
     if vector.norm(data['accel']) == 0:

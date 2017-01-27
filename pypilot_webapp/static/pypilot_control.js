@@ -59,6 +59,7 @@ $(document).ready(function() {
 
         // calibration
         watch('imu/alignmentQ');
+        watch('imu/alignmentCounter');
         watch('imu/compass_calibration');
 
         // configuration
@@ -151,6 +152,9 @@ $(document).ready(function() {
         }
 
         // calibration
+        if('imu/alignmentCounter' in msg.data) {
+            $('.myBar').width((100-msg.data['imu/alignmentCounter']['value'])+'%');
+        }
         if('imu/compass_calibration' in msg.data) {
             value = msg.data['imu/compass_calibration']['value'];
             $('#compass_calibration').val(value);
@@ -211,17 +215,8 @@ $(document).ready(function() {
 
     // Calibration
     $('#level').click(function(event) {
-        //        watch('imu/fusionQPose');
-        var x = 0;
-        function progress(){
-            var z = $('.myBar').width(x+'%');
-            x+=2;
-            if(x <= 100)
-                setTimeout(progress, 100);
-        }
-        progress()
-
-
+        signalk_set('imu/alignmentCounter', 100);
+        signalk_set('imu/alignmentType', 'level');
         return false;
     });
 
