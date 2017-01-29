@@ -30,7 +30,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         self.client = SignalKClient(on_con, host, autoreconnect=True)
 
-        watchlist += ['ap/mode', 'ap/heading_command',
+        self.gps_heading_offset = 0
+
+        watchlist += ['ap/enabled', 'ap/mode', 'ap/heading_command',
                       'gps/track', 'ap/gps_heading_offset',
                       'imu/heading_lowpass', 'servo/command', 'servo/flags',
                       'servo/mode', 'servo/engauged']
@@ -53,7 +55,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         self.GetSizer().Fit(self)
 
-        self.mode = 'disabled'
+        self.enabled = False
+        self.mode = 'compass'
         self.heading_command = 0
         self.heading = 0
         self.lastcommand = False
@@ -70,7 +73,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.stop()
 
     def stop(self):
-        self.client.set('ap/mode', 'disabled')
+        self.client.set('ap/enabled', False)
         self.client.set('servo/command', 0)
 
     def servo_command(self, command):
@@ -96,7 +99,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
     def receive_messages(self, event):
         command = self.sCommand.GetValue()
-        if self.mode != 'disabled':
+        if self.enabled:
             if command != 0:
                 self.heading_command += (-1 if command < 0 else 1) / 2.0
                 self.client.set('ap/heading_command', self.heading_command)
@@ -130,13 +133,17 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'servo/raw_command':
                 self.tbAP.SetValue(False)
                 self.tbAP.SetForegroundColour(wx.RED)
+            elif name == 'ap/enabled':
+                self.tbAP.SetValue(value)
+                if value:
+                    color = {'compass': wx.GREEN, 'gps': wx.BLUE, 'wind': wx.YELLOW}[self.mode]
+                else:
+                    color = wx.RED
+                self.tbAP.SetForegroundColour(color)
+                self.enabled = value
             elif name == 'ap/mode':
-                self.tbAP.SetValue(value != 'disabled')
-                color = {'disabled': wx.RED, 'compass': wx.GREEN, 'gps': wx.BLUE, 'wind': wx.YELLOW}
-                self.tbAP.SetForegroundColour(color[value])
-                rb = {'compass': self.rbMagnetic, 'gps': self.rbGPS, 'wind': self.rbWind}
-                if value != 'disabled':
-                    rb[value].SetValue(True)
+                rb = {'compass': self.rbCompass, 'gps': self.rbGPS, 'wind': self.rbWind}
+                rb[value].SetValue(True)
                 self.mode = value
             elif name == 'ap/heading_command' and not self.rbGPS.GetValue():
                 self.stHeadingCommand.SetLabel('%.1f' % value)
@@ -168,20 +175,22 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.rbGPS.Disable()
 
     def onAP( self, event ):
+        self.client.set('servo/raw_command', False)
         if self.tbAP.GetValue():
-            self.client.set('servo/raw_command', False)
             self.client.set('ap/heading_command', self.heading)
-            if self.rbGPS.GetValue():
-                mode = 'gps'
-            elif self.rbWind.GetValue():
-                mode = 'wind'
-            else:
-                mode = 'compass'
-            self.client.set('ap/mode', mode)
+            self.client.set('ap/enabled', True)
         else:
-            self.client.set('servo/raw_command', False)
             self.client.set('servo/command', 0)
-            self.client.set('ap/mode', 'disabled')
+            self.client.set('ap/enabled', False)
+
+    def onMode( self, event):
+        if self.rbGPS.GetValue():
+            mode = 'gps'
+        elif self.rbWind.GetValue():
+            mode = 'wind'
+        else:
+            mode = 'compass'
+        self.client.set('ap/mode', mode)
 
     def onCommand( self, event ):
         if wx.GetMouseState().LeftIsDown():
