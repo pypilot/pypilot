@@ -76,7 +76,8 @@ class AutopilotBase(object):
     self.gps = gpspoller.GpsPoller(self.server)
 
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
-    self.mode = self.Register(EnumProperty, 'mode', 'disabled', ['disabled', 'compass', 'gps', 'wind'])
+    self.enabled = self.Register(BooleanProperty, 'enabled', False)
+    self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind'])
     self.last_heading = False
 
     self.gps_heading_offset = self.Register(Value, 'gps_heading_offset', 0)
