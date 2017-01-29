@@ -20,10 +20,10 @@ class SimpleAutopilot(AutopilotBase):
     self.heading_error_int = self.CreateFilter('heading_error_int', 0, .02)
     
     # create simple pid filter
-    self.P = self.Register(AutopilotGain, 'P', .002, 0, .1)
-    self.I = self.Register(AutopilotGain, 'I', 0, 0, .1)
-    self.D = self.Register(AutopilotGain, 'D', .002, 0, .5)
-    self.DD = self.Register(AutopilotGain, 'DD', 0, 0, 1)
+    self.P = self.Register(AutopilotGain, 'P', .002, 0, .01)
+    self.I = self.Register(AutopilotGain, 'I', 0, 0, .01)
+    self.D = self.Register(AutopilotGain, 'D', .02, 0, .05)
+    self.DD = self.Register(AutopilotGain, 'DD', 0, 0, .25)
     self.lastheadingrate = 0
 
     self.hP = self.Register(AutopilotGain, 'hP', 0, 0, .1)

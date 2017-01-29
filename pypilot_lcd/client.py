@@ -11,12 +11,7 @@ import sys, os, time, math
 
 import gettext
 import json
-#language = gettext.translation('pypilot_lcdclient',
-#                               os.path.abspath(os.path.dirname(__file__)) + '/locale',
-#                               fallback=True,
-#                               )
-#_ = language.ugettext
-_ = lambda x : x
+_ = lambda x : x # initially no translation
 
 import RPi.GPIO as GPIO
 from signalk.client import SignalKClient
@@ -57,6 +52,7 @@ class LCDMenu():
                 self.lcd.rectangle(sliderarea, .015)
                 sliderarea.width *= item[2]()
                 self.lcd.rectangle(sliderarea)
+                self.lcd.client.get(item[3])
             y += .15
 
         y = .15*self.selection + firstitem + .03
@@ -70,6 +66,7 @@ class RangeEdit():
         self.signalk_id = signalk_id
         self.range = minval, maxval, step
         self.lcd = lcd
+        self.lastmovetime = 0
      
     def move(self, delta):
         v = self.value + delta*self.range[2]
@@ -77,10 +74,16 @@ class RangeEdit():
         v = max(v, self.range[0])
         self.value = v
         self.lcd.client.set(self.signalk_id, v)
+        self.lastmovetime = time.time()
 
     def display(self):
         self.lcd.fittext(rectangle(0, 0, 1, .3), self.name, True)
         self.lcd.fittext(rectangle(0, .3, 1, .3), self.desc, True)
+
+        # update name
+        if time.time()-self.lastmovetime > 1:
+            self.value = self.lcd.last_msg[self.signalk_id]
+        
         v = self.value
         try:
             v = str(round(10000*v)/10000)
@@ -89,7 +92,7 @@ class RangeEdit():
         except:
             pass
         
-        self.lcd.fittext(rectangle(0, .6, 1, .2), v)
+        self.lcd.fittext(rectangle(0, .6, 1, .18), v)
 
         sliderarea = rectangle(0, .8, 1, .1)
         try:
@@ -139,12 +142,11 @@ class LCDClient():
                       'gps':     self.have_gps,
                       'wind':    self.have_wind};        
 
-        self.initial_gets = ['ap/P', 'ap/I', 'ap/D', 'servo/Max Current', 'servo/Min Speed', 'servo/Max Speed']
+        self.initial_gets = ['ap/P', 'ap/I', 'ap/D', 'servo/Max Current', 'servo/Min Speed', 'servo/Max Speed', 'imu/alignmentCounter']
 
         self.have_select = False
         self.create_mainmenu()
 
-        self.mode = 'compass'
         self.last_gps_time = 0
 
         self.display_page = self.display_connecting
@@ -185,32 +187,32 @@ class LCDClient():
             print 'failed to save config file:', self.configfilename
             
     def create_mainmenu(self):
-        def value_edit(name, desc, signalk_name, min, max, step, value=False):
+        def value_edit(name, desc, signalk_name, step, value=False):
+            min = self.value_list[signalk_name]['min']
+            max = self.value_list[signalk_name]['max']
+
             def thunk():
                 self.range_edit=RangeEdit(name, desc, self.last_msg[signalk_name],
                                           signalk_name, self, min, max, step)
                 return self.range_edit.display
 
             if value:
-                return name, thunk, lambda : (self.last_msg[signalk_name]-min) / (max - min)
+                return name, thunk, lambda : (self.last_msg[signalk_name]-min) / (max - min), signalk_name
             return name, thunk
 
         def gain():
             self.menu = LCDMenu(self, _('Gain'),
-                                [value_edit('P', _('position gain'), 'ap/P', 0, .01, .0002, True),
-                                 value_edit('I', _('integral gain'), 'ap/I', 0, .01, .0002, True),
-                                 value_edit('D', _('rate gain'),     'ap/D', 0, .05, .0007, True)],
-                                self.menu)
+                                [value_edit('P', _('position gain'), 'ap/P', .0002, True),
+                                 value_edit('I', _('integral gain'), 'ap/I', .0002, True),
+                                 value_edit('D', _('rate gain'),     'ap/D', .0007, True)],
+                                self.menu) 
             return self.display_menu
 
         def settings():
             def mode():
                 def set_mode(name):
                     def thunk():
-                        self.mode = name
-                        if self.last_msg['ap/mode'] != 'disabled':
-                            self.client.set('ap/mode', name)
-
+                        self.client.set('ap/mode', name)
                         self.menu = self.menu.adam()
                         return self.display_control
                     return thunk
@@ -220,7 +222,7 @@ class LCDClient():
                 for mode in self.modes:
                     if self.modes[mode]():
                         modes.append((mode, set_mode(mode)))
-                        if mode == self.mode:
+                        if mode == self.last_msg['ap/mode']:
                             selection = index
                         index+=1
                 self.menu = LCDMenu(self, _('Mode'), modes, self.menu)
@@ -230,9 +232,9 @@ class LCDClient():
 
             def motor():
                 self.menu = LCDMenu(self, _('Motor'),
-                                    [value_edit(_('max current'), _('amps'), 'servo/Max Current', 0, 10, .25),
-                                     value_edit(_('min speed'), _('relative'), 'servo/Min Speed', 0, 1, .05),
-                                     value_edit(_('max speed'), _('relative'), 'servo/Max Speed', 0, 1, .05)],
+                                    [value_edit(_('max current'), _('amps'), 'servo/Max Current', .25),
+                                     value_edit(_('min speed'), _('relative'), 'servo/Min Speed', .05),
+                                     value_edit(_('max speed'), _('relative'), 'servo/Max Speed', .05)],
                                     self.menu)
                 return self.display_menu
 
@@ -360,10 +362,11 @@ class LCDClient():
                 self.surface.invert(box[0]+px_width, box[1]+px_width, box[2]-px_width, box[3]-px_width)
         
     def connect(self):
-        watchlist = ['ap/mode', 'ap/heading_command',
-                     'imu/heading_lowpass', 'imu/alignmentCounter', 'gps/track']
+        watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command',
+                     'imu/heading_lowpass', 'gps/track']
         nalist = watchlist + ['imu/pitch', 'imu/heel', 'imu/runtime',
                               'ap/P', 'ap/I', 'ap/D',
+                              'imu/alignmentCounter',
                               'servo/Amp Hours', 'servo/Max Current',
                               'servo/Min Speed', 'servo/Max Speed']
         self.last_msg = {}
@@ -383,6 +386,7 @@ class LCDClient():
             self.client = SignalKClient(on_con, host)
             self.display_page = self.display_control
             print 'connected'
+            self.value_list = self.client.list_values()
 
             for request in self.initial_gets:
                 self.client.get(request)
@@ -419,24 +423,25 @@ class LCDClient():
 
         draw_big_number((0,0), self.last_msg['imu/heading_lowpass'])
 
-        if self.last_msg['ap/mode'] == 'disabled' or self.last_msg['ap/mode'] == 'N/A':
+        if self.last_msg['ap/enabled'] != True:
             self.fittext(rectangle(0, .4, 1, .4), _('standby'))
         else: #if self.last_msg['ap/mode'] != 'N/A':
             draw_big_number((0,.4), self.last_msg['ap/heading_command'])
 
-        if self.mode == 'gps' and not self.have_gps():
+        if self.last_msg['ap/mode'] == 'gps' and not self.have_gps():
             self.fittext(rectangle(0, .65, 1, .35), _('WARNING GPS not detected'), True)
-        if self.mode == 'wind' and not self.have_wind():
+        if self.last_msg['ap/mode'] == 'wind' and not self.have_wind():
             self.fittext(rectangle(0, .65, 1, .35), _('WARNING WIND not detected'), True)
         else:
+            print 'mode', self.last_msg['ap/mode']
             modes = {'compass': ('C', self.have_compass, rectangle(.03, .74, .30, .16)),
                      'gps':     ('G', self.have_gps,     rectangle(.34, .74, .30, .16)),
-                     'wind':    ('W', self.have_wind,     rectangle(.65, .74, .30, .16))}
+                     'wind':    ('W', self.have_wind,    rectangle(.65, .74, .30, .16))}
 
             for mode in modes:
                 if modes[mode][1]():
                     self.fittext(modes[mode][2], modes[mode][0])
-                if self.mode == mode:
+                if self.last_msg['ap/mode'] == mode:
                     r = modes[mode][2]
                     marg = .02
                     self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
@@ -454,10 +459,13 @@ class LCDClient():
 
     def display_calibrate(self):
         counter = self.last_msg['imu/alignmentCounter']
+        self.client.get('imu/alignmentCounter')
         if counter == 0:
             self.fittext(rectangle(0, 0, 1, .5), _('press up to level'), True)
         else:
-            self.fittext(rectangle(0, 0, 1, .5), _('level') + ' %d%%' % (100-counter), True)
+            self.fittext(rectangle(0, 0, 1, .25), _('level'))
+            self.fittext(rectangle(0, .25, 1, .25), '%d%%' % (100-counter))
+            self.invertrectangle(rectangle(0, .3, 1-float(counter)/100, .2))
             
         self.fittext(rectangle(0, .65, .5, .15), _('pitch'))
         self.fittext(rectangle(.5, .65, .5, .15), self.round_last_msg('imu/pitch', 1))
@@ -527,12 +535,12 @@ class LCDClient():
         SELECT = 4
                            
         if self.keypadup[AUTO]: # AUTO
-            if self.last_msg['ap/mode'] == 'disabled' and self.display_page == self.display_control:
+            if self.last_msg['ap/enabled'] == True and self.display_page == self.display_control:
                 self.client.set('ap/heading_command', self.last_msg['imu/heading_lowpass'])
-                self.set('ap/mode', self.mode)
+                self.set('ap/enabled', True)
             else:
                 self.client.set('servo/command', 0) #stop
-                self.set('ap/mode', 'disabled')
+                self.set('ap/enabled', False)
         
             self.display_page = self.display_control
 
@@ -549,7 +557,7 @@ class LCDClient():
             if self.keypadup[SELECT]:
                 index = 0
                 for mode in list(self.modes):
-                    if mode == self.mode:
+                    if mode == self.last_msg['ap/mode']:
                         break
                     index += 1
 
@@ -564,11 +572,11 @@ class LCDClient():
                         break
                     tries += 1
             elif updown: # LEFT/RIGHT
-                if self.last_msg['ap/mode'] == 'disabled':
-                    self.set('servo/command', sign*(speed+8)/100)
-                else:                       
+                if self.last_msg['ap/enabled']:
                     cmd = self.last_msg['ap/heading_command'] + sign*speed
                     self.set('ap/heading_command', cmd)
+                else:                       
+                    self.set('servo/command', sign*(speed+8)/100)
 
         elif self.display_page == self.display_menu:
             if self.keypadup[MENU] and self.have_select:
@@ -653,11 +661,9 @@ class LCDClient():
                 break
 
             name, data = result
+            print name, ' = ', data
             self.last_msg[name] = data['value']
-            if name == 'ap/mode':
-                if data['value'] != 'disabled':
-                    self.mode = data['value']
-            elif name == 'gps/track':
+            if name == 'gps/track':
                 self.last_gps_time = time.time()
 
 

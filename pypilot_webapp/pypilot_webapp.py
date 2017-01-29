@@ -94,6 +94,8 @@ class Connection():
         socketio.emit('signalk_connect')
 
         self.client = LineBufferedNonBlockingSocket(connection)
+#        self.client.send(json.dumps({'method': 'list'}) + '\n')
+        
         while True:
             line = self.client.readline()
             if line:
