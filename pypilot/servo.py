@@ -124,7 +124,7 @@ class ArduinoServo:
 
     def send_value(self, value):
         value = int(value)
-        code = [ArduinoServo.sync_bytes[self.out_sync], value&0xff, value>>8]
+        code = [ArduinoServo.sync_bytes[self.out_sync], value&0xff, (value>>8)&0xff]
         b = '%c%c%c' % (code[1], code[2], crc8(code))
         self.device.write(b)
         #self.device.flush()
@@ -235,7 +235,7 @@ class Servo:
         self.voltage = self.Register(SensorValue, 'voltage', self)
         self.current = self.Register(SensorValue, 'current', self)
         self.engauged = self.Register(Value, 'engauged', False)
-        self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 20)
+        self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 10)
         self.slow_period = self.Register(RangeProperty, 'Slow Period', 4, .1, 10)
         self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False)
         self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False)

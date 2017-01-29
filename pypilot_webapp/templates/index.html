@@ -52,6 +52,15 @@
       </div>
       <div class="w3-row">
         <div class="w3-col s6 m6 l6">
+          <select id="mode">
+            <option value="compass">compass</input>
+            <option value="gps">gps</input>
+            <option value="wind">wind</input>
+          </select>
+        </div>
+      </div>
+      <div class="w3-row">
+        <div class="w3-col s6 m6 l6">
           <button id="port10" class="button font-resizable1 button-resizable">&lt;&lt;</button>
           <button id="port1" class="button font-resizable1 button-resizable">&lt;</button>
         </div>
@@ -70,7 +79,7 @@
     <div id="Calibration" class="w3-container tab">
       Compass Calibration <span id="compass_calibration"></span>
       <p>Press <button id="level" class="button">here</button>
-        when the boat is not heeling to align the inertial sensors.
+        when the boat is level to align the inertial sensors.
       </p>
       <div class="myProgress">
         <div class="myBar" id="progress"> </div>
@@ -79,7 +88,7 @@
 
     <div id="Configuration" class="w3-container tab">
       <p>Max Current
-        <input type="number" id="max_current" min="1" max="10" value="2"
+        <input type="number" id="max_current" min="0" max="10" step=".1" value="2"
                style="width: 100px"></input> Amps
       </p>
     </div>
