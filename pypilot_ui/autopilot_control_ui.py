@@ -89,8 +89,8 @@ class AutopilotControlBase ( wx.Frame ):
 		fgSizer26.SetFlexibleDirection( wx.BOTH )
 		fgSizer26.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
-		self.rbMagnetic = wx.RadioButton( self, wx.ID_ANY, u"Magnetic", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer26.Add( self.rbMagnetic, 0, wx.ALL, 5 )
+		self.rbCompass = wx.RadioButton( self, wx.ID_ANY, u"Compass", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer26.Add( self.rbCompass, 0, wx.ALL, 5 )
 		
 		self.rbGPS = wx.RadioButton( self, wx.ID_ANY, u"GPS", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.rbGPS.Enable( False )
@@ -155,9 +155,9 @@ class AutopilotControlBase ( wx.Frame ):
 		
 		# Connect Events
 		self.tbAP.Bind( wx.EVT_TOGGLEBUTTON, self.onAP )
-		self.rbMagnetic.Bind( wx.EVT_RADIOBUTTON, self.OnAP )
-		self.rbGPS.Bind( wx.EVT_RADIOBUTTON, self.OnAP )
-		self.rbWind.Bind( wx.EVT_RADIOBUTTON, self.OnAP )
+		self.rbCompass.Bind( wx.EVT_RADIOBUTTON, self.onMode )
+		self.rbGPS.Bind( wx.EVT_RADIOBUTTON, self.onMode )
+		self.rbWind.Bind( wx.EVT_RADIOBUTTON, self.onMode )
 		self.sCommand.Bind( wx.EVT_SCROLL, self.onCommand )
 		self.bScope.Bind( wx.EVT_BUTTON, self.onScope )
 		self.bClient.Bind( wx.EVT_BUTTON, self.onClient )
@@ -172,7 +172,7 @@ class AutopilotControlBase ( wx.Frame ):
 	def onAP( self, event ):
 		event.Skip()
 	
-	def OnAP( self, event ):
+	def onMode( self, event ):
 		event.Skip()
 	
 	
