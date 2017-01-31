@@ -15,7 +15,7 @@ import gps
 while True:
     while True:
         try:
-            gpsd = gps.gps(mode=gps.WATCH_ENABLE) #starting the stream of info
+            gpsd = gps.gps(host='piCore', mode=gps.WATCH_ENABLE) #starting the stream of info
             break
         except:
             time.sleep(3)

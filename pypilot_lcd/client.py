@@ -13,11 +13,18 @@ import gettext
 import json
 _ = lambda x : x # initially no translation
 
-import RPi.GPIO as GPIO
+try:
+    import RPi.GPIO as GPIO
+except ImportError:
+    print 'No gpio available'
+    GPIO = False
+    
 from signalk.client import SignalKClient
 
 import ugfx
 import font
+
+import glut
 
 def nr(x):
     try:
@@ -115,7 +122,8 @@ class LCDClient():
     def __init__(self, screen):
         self.longsleep = 30
         w, h = screen.width, screen.height
-        mul = int(w / 48)
+        mul = int(math.ceil(w / 48.0))
+
         self.bw = 1 if w < 256 else False
 #        w, h, self.bw = 44, 84, 1
 #        w, h, self.bw = 64, 128, 1
@@ -162,15 +170,16 @@ class LCDClient():
         self.blink = black, white
 
         self.pins = [5, 19, 13, 26, 6]
-        GPIO.setmode(GPIO.BCM)
-        for pin in self.pins:
-            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            GPIO.input(pin)
+        if GPIO:
+            GPIO.setmode(GPIO.BCM)
+            for pin in self.pins:
+                GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                GPIO.input(pin)
 
-            def cbr(channel):
-                self.longsleep = 0
+                def cbr(channel):
+                    self.longsleep = 0
 
-            GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
+                    GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
 
     def set_language(self, name):
         language = gettext.translation('pypilot_lcdclient',
@@ -520,6 +529,10 @@ class LCDClient():
         size = h / 20
         self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
 
+        if glut.glutopen:
+            from OpenGL.GLUT import glutPostRedisplay
+            glutPostRedisplay()
+
     def set(self, name, value):
         if self.client:
             self.client.set(name, value)
@@ -618,6 +631,24 @@ class LCDClient():
             if self.keypadup[key]:
                 self.keypad[key] = self.keypadup[key] = False
 
+    def glutkeydown(self, k, x, y):
+        if k == 'q' or k == 27:
+            exit(0)
+        self.glutkey(k);
+        
+    def glutkeyup(self, k, x, y):
+        self.glutkey(k, False)
+
+    def glutkey(self, k, down=True):
+        key = ord(k) - ord('1')
+        if key >= 0 and key < len(self.pins):
+            if down:
+                self.keypad[key] = True
+            else:
+                self.keypadup[key] = True
+            from OpenGL.GLUT import glutPostRedisplay
+            glutPostRedisplay()
+
     def idle(self):
         if any(self.keypadup):
             self.longsleep = 0
@@ -633,13 +664,15 @@ class LCDClient():
         # read from keys
         for pini in range(len(self.pins)):
             pin = self.pins[pini]
+            value = True
 
             if False:
                 f = open('/sys/class/gpio/gpio%d/value' % pin)
                 a = f.readline()
                 value = bool(int(a))
             else:
-                value = GPIO.input(pin)
+                if GPIO:
+                    value = GPIO.input(pin)
 
             if not value and self.keypad[pini] > 0:
                 self.keypad[pini] += 1
@@ -682,8 +715,10 @@ class LCDClient():
 def main():
     print 'init...'
 
-    screen = ugfx.display("/dev/fb0")
-    #screen.fill(white)
+    if 'DISPLAY' in os.environ:
+        screen = glut.screen((480, 640))
+    else:
+        screen = ugfx.screen("/dev/fb0")
 
     lcdclient = LCDClient(screen)
     print 'complete'
@@ -691,7 +726,7 @@ def main():
     # magnify to fill screen
     mag = min(screen.width / lcdclient.surface.width, screen.height / lcdclient.surface.height)
 
-    while True:
+    def idle():
         lcdclient.display()
         s = ugfx.surface(lcdclient.surface)
 #        mag = 2
@@ -699,6 +734,20 @@ def main():
 
         screen.blit(s, 0, 0)
         lcdclient.idle()
+
+    if glut.glutopen:
+        from OpenGL.GLUT import glutMainLoop
+        from OpenGL.GLUT import glutIdleFunc
+        from OpenGL.GLUT import glutKeyboardFunc
+        from OpenGL.GLUT import glutKeyboardUpFunc
+
+        glutKeyboardFunc(lcdclient.glutkeydown)
+        glutKeyboardUpFunc(lcdclient.glutkeyup)
+        glutIdleFunc(idle)
+        glutMainLoop()
+    else:
+        while True:
+            idle()
 
 if __name__ == '__main__':
     main()

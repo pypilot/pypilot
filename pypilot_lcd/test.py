@@ -1,10 +1,23 @@
+#!/usr/bin/env python
+#
+#   Copyright (C) 2016 Sean D'Epagnier
+#
+# This Program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.  
+
+import os
 import ugfx
+import glut
 
 white = ugfx.color(255, 255, 255)
 black = ugfx.color(0, 0, 0)
 
-
-screen = ugfx.display("/dev/fb0")
+if 'DISPLAY' in os.environ:
+    screen = glut.screen()
+else:
+    screen = ugfx.screen("/dev/fb0")
 
 c, d = black, white
 x, w = 0, 400
@@ -17,4 +30,9 @@ while w >= 100:
 screen.invert(100, 100, 200, 200)
 
 import font
-font.draw(screen, (0, 0), open('/home/tc/chars').readline().rstrip(), 80, False)
+font.draw(screen, (0, 0), "Hello!", 80, False)
+
+print 'type', str(type(screen))
+if glut.glutopen:
+    from OpenGL.GLUT import glutMainLoop
+    glutMainLoop()

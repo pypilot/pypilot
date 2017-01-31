@@ -252,7 +252,7 @@ void surface::line(int x1, int y1, int x2, int y2, uint32_t c)
     }
 }
 
-void surface::hline(int x1, int x2, int y, int h, uint32_t c)
+void surface::hline(int x1, int x2, int y, uint32_t c)
 {
     if(bypp == 2) {
         uint16_t t = color16(c);
@@ -307,7 +307,17 @@ void surface::fill(uint32_t c)
     box(0, 0, width-1, height-1, c);
 }
 
-display::display(const char *device)
+int surface::getpixel(int x, int y)
+{
+    if(bypp != 4) {
+        fprintf(stderr, "bypp incompatible with getpixel\n");
+        exit(1);
+    }
+    return *(uint32_t*)(p + y*line_length + x*bypp);
+}
+
+
+screen::screen(const char *device)
 {
     int x = 0, y = 0;
     
@@ -337,8 +347,8 @@ display::display(const char *device)
     screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel/8;
 
     // Map the device to memory
-    fbp = (char *)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
-    if ((int)fbp == -1) {
+    fbp = (char*)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
+    if (fbp == (void*)-1) {
         perror("Error: failed to map framebuffer device to memory");
         exit(4);
     }
@@ -353,7 +363,7 @@ display::display(const char *device)
     line_length = finfo.line_length;
 }
 
-display::~display()
+screen::~screen()
 {
     munmap(fbp, screensize);
     p = 0;

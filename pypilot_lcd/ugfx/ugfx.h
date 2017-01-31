@@ -8,7 +8,7 @@
 
 #include <linux/fb.h>
 
-uint32_t color(int r, int g, int b);
+unsigned int color(int r, int g, int b);
 
 class surface
 {
@@ -21,16 +21,19 @@ public:
     void store_grey(const char *filename);
     void blit(surface *src, int xoff, int yoff);
     void magnify(int factor);
-    void putpixel(int x, int y, uint32_t c);
-    void line(int x1, int y1, int x2, int y2, uint32_t c);
-    void hline(int x1, int x2, int y, uint32_t c);
-    void vline(int x, int y1, int y2, uint32_t c);
-    void box(int x1, int y1, int x2, int y2, uint32_t c);
+    void putpixel(int x, int y, unsigned int c);
+    void line(int x1, int y1, int x2, int y2, unsigned int c);
+    void hline(int x1, int x2, int y, unsigned int c);
+    void vline(int x, int y1, int y2, unsigned int c);
+    void box(int x1, int y1, int x2, int y2, unsigned int c);
     void invert(int x1, int y1, int x2, int y2);
-    void fill(uint32_t c);
+    void fill(unsigned int c);
 
-    int16_t width, height, bypp;
+    int width, height, bypp;
     char *p;
+    int getpixel(int x, int y);
+    unsigned char *ptr() { return (unsigned char*)p; }
+
     int xoffset, yoffset, line_length;
 
 protected:
@@ -38,18 +41,18 @@ protected:
 };
 
 
-class display : public surface
+class screen : public surface
 {
 public:
-    display(const char *device);
-    virtual ~display();
+    screen(const char *device);
+    virtual ~screen();
 
     struct fb_fix_screeninfo finfo;
     struct fb_var_screeninfo vinfo;
 
-    char *fbp = 0;
-    int fbfd = 0;
-    long int screensize = 0;
+    char *fbp;
+    int fbfd;
+    long int screensize;
 };
 
 

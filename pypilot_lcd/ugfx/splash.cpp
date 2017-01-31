@@ -33,31 +33,31 @@ surface *load_logo(int bypp)
 
 int main()
 {
-    display screen("/dev/fb0");
+    screen framebuffer("/dev/fb0");
 
 #if 1
-    surface *logo = load_logo(screen.bypp);
+    surface *logo = load_logo(framebuffer.bypp);
 #else
     const char *path = "/home/tc/.pypilot/splash.surf";
     surface *logo = new surface(path);
-    if(logo->bypp != screen.bypp) {
-        logo = load_logo(screen.bypp);
+    if(logo->bypp != framebuffer.bypp) {
+        logo = load_logo(framebuffer.bypp);
         logo->store_grey(path);
         delete logo;
 
         logo = new surface(path);
-        if(logo->bypp != screen.bypp) {
+        if(logo->bypp != framebuffer.bypp) {
             printf("failed to load %s\n", path);
             exit(1);
         }
     }
 #endif    
-    int facw = screen.width / logo->width, fach = screen.height / logo->height;
+    int facw = framebuffer.width / logo->width, fach = framebuffer.height / logo->height;
     int fac = facw < fach ? facw : fach;
     logo->magnify(fac);
 
     for(;;) {
-        screen.blit(logo, 0, 0);
+        framebuffer.blit(logo, 0, 0);
         usleep(100000);
     }
 }
