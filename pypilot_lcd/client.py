@@ -717,7 +717,8 @@ class LCDClient():
 def main():
     print 'init...'
     if use_glut:
-        screen = glut.screen((480, 640))
+        #screen = glut.screen((480, 640))
+        screen = glut.screen((64, 128))
     else:
         screen = ugfx.screen("/dev/fb0")
 
@@ -745,6 +746,7 @@ def main():
         glutKeyboardFunc(lcdclient.glutkeydown)
         glutKeyboardUpFunc(lcdclient.glutkeyup)
         glutIdleFunc(idle)
+#        glutIgnoreKeyRepeat(True)
         glutMainLoop()
     else:
         while True:
