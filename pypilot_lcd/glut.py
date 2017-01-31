@@ -14,16 +14,10 @@ import numpy
 
 import ugfx
 
-glutopen = False
-
 class screen(ugfx.surface):
     def __init__(self, size):
-        
-#        print 'p1', self.p, len(self.p)
         super(screen, self).__init__(size[0], size[1], 4, None)
 
-        global glutopen
-        glutopen = True
         glutInit(sys.argv)
         glutInitWindowPosition(250, 0)
         glutInitWindowSize(800*size[0]/size[1], 800)

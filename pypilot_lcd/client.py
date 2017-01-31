@@ -9,6 +9,8 @@
 
 import sys, os, time, math
 
+use_glut = 'DISPLAY' in os.environ
+
 import gettext
 import json
 _ = lambda x : x # initially no translation
@@ -24,7 +26,7 @@ from signalk.client import SignalKClient
 import ugfx
 import font
 
-import glut
+#import glut
 
 def nr(x):
     try:
@@ -529,7 +531,7 @@ class LCDClient():
         size = h / 20
         self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
 
-        if glut.glutopen:
+        if use_glut:
             from OpenGL.GLUT import glutPostRedisplay
             glutPostRedisplay()
 
@@ -714,8 +716,7 @@ class LCDClient():
 
 def main():
     print 'init...'
-
-    if 'DISPLAY' in os.environ:
+    if use_glut:
         screen = glut.screen((480, 640))
     else:
         screen = ugfx.screen("/dev/fb0")
@@ -735,7 +736,7 @@ def main():
         screen.blit(s, 0, 0)
         lcdclient.idle()
 
-    if glut.glutopen:
+    if use_glut:
         from OpenGL.GLUT import glutMainLoop
         from OpenGL.GLUT import glutIdleFunc
         from OpenGL.GLUT import glutKeyboardFunc

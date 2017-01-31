@@ -14,7 +14,9 @@ import glut
 white = ugfx.color(255, 255, 255)
 black = ugfx.color(0, 0, 0)
 
-if 'DISPLAY' in os.environ:
+use_glut = 'DISPLAY' in os.environ
+
+if use_glut:
     screen = glut.screen()
 else:
     screen = ugfx.screen("/dev/fb0")
@@ -33,6 +35,6 @@ import font
 font.draw(screen, (0, 0), "Hello!", 80, False)
 
 print 'type', str(type(screen))
-if glut.glutopen:
+if use_glut:
     from OpenGL.GLUT import glutMainLoop
     glutMainLoop()
