@@ -153,14 +153,17 @@ class SignalKServer:
             poller = select.poll()
             poller.register(self.server_socket, READ_ONLY)
             fd_to_socket = {self.server_socket.fileno() : self.server_socket}
-            for socket in self.sockets:
+            for socket in list(self.sockets):
                 flags = READ_ONLY
                 if socket.out_buffer != '':
                     flags |= select.POLLOUT
-                fd = socket.socket.fileno()
-                poller.register(fd, flags)
-                fd_to_socket[fd] = socket
-            
+                try:
+                    fd = socket.socket.fileno()
+                    poller.register(fd, flags)
+                    fd_to_socket[fd] = socket
+                except:
+                    self.RemoveSocket(socket)
+                    
             events = poller.poll(1000.0 * (totaltime - (t2 - t1)))
             while t2 - t1 < totaltime and events != []:
                 event = events.pop()
