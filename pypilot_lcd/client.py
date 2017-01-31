@@ -553,11 +553,11 @@ class LCDClient():
         SELECT = 4
                            
         if self.keypadup[AUTO]: # AUTO
-            if self.last_msg['ap/enabled'] == True and self.display_page == self.display_control:
-                self.client.set('ap/heading_command', self.last_msg['imu/heading_lowpass'])
+            if self.last_msg['ap/enabled'] == False and self.display_page == self.display_control:
+                self.set('ap/heading_command', self.last_msg['imu/heading_lowpass'])
                 self.set('ap/enabled', True)
             else:
-                self.client.set('servo/command', 0) #stop
+                self.set('servo/command', 0) #stop
                 self.set('ap/enabled', False)
         
             self.display_page = self.display_control
