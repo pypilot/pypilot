@@ -16,11 +16,33 @@ class GpsProcess(multiprocessing.Process):
         self.queue = multiprocessing.Queue()
         super(GpsProcess, self).__init__(target=self.gps_process, args=(self.queue, ))
         self.show_gps_fail = True
-        
+
+    def probe(self):
+        print 'GPS probe'
+        import os
+        if not os.system('timeout -s KILL -t 5 gpsctl'):
+            return True
+
+        # try to probe all possible usb devices
+        devices = ['/dev/gps', '/dev/ttyUSB', '/dev/ttyAMA', '/dev/ttyS']
+        for device in devices:
+            for i in range(4):
+                name = device + '%d' % i
+                if not os.path.exists(name):
+                    continue
+                print 'GPS probing:', name
+                if not os.system('timeout -s KILL -t 5 gpsctl -f ' + name):
+                    os.environ['GPSD_SOCKET'] = '/tmp/gpsd.sock'
+                    os.system('gpsdctl add ' + name)
+                    print 'GPS found: ' + name
+                    return True
+        return False
+
     def gps_process(self, queue):
         while True:
             try:
                 gpsd = gps.gps(mode=gps.WATCH_ENABLE) #starting the stream of info
+                gpsd.activated = False
                 break
             except:
                 if self.show_gps_fail:
@@ -33,15 +55,21 @@ class GpsProcess(multiprocessing.Process):
         self.show_gps_fail = True
             
         while True:
+            while not gpsd.activated:
+                if self.probe():
+                    gpsd.activated = True
+                else:
+                    time.sleep(5)
+
             try:
                 gpsd.next() #this will continue to loop and grab EACH set of gpsd info to clear the buffer
+                queue.put(gpsd.fix)
             except KeyboardInterrupt:
                 print 'Keyboard interrupt, gps process exit'
                 break
             except:
                 print 'GPS Process lost gpsd'
                 break
-            queue.put(gpsd.fix)
 
             
 class GpsPoller():
@@ -74,3 +102,15 @@ class GpsPoller():
             self.speed.set(self.fix.speed)
             #self.timestamp = self.fix.time
             self.timestamp = time.time()
+
+            return self.fix
+
+if __name__ == "__main__":
+    from signalk.server import SignalKServer
+    server = SignalKServer()
+    gpsp = GpsPoller(server)
+    count = 0;
+    while True:
+        print gpsp.poll(), count
+        count += 1
+        time.sleep(1)

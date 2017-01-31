@@ -444,7 +444,7 @@ class Servo:
 
 
         if not self.driver:
-            print 'try devices'
+            print 'Servo probe'
             devices = ['/dev/servo', '/dev/ttyUSB0', '/dev/ttyUSB1']
             controller = 'none'
 
