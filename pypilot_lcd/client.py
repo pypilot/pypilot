@@ -10,6 +10,8 @@
 import sys, os, time, math
 
 use_glut = 'DISPLAY' in os.environ
+if use_glut:
+    import glut
 
 import gettext
 import json
@@ -25,8 +27,6 @@ from signalk.client import SignalKClient
 
 import ugfx
 import font
-
-#import glut
 
 def nr(x):
     try:
