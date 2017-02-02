@@ -11,9 +11,27 @@
 
 import json
 
+import os
+persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
+
 class Value(object):
-    def __init__(self, name, initial):
+    def __init__(self, name, initial, **kwargs):
         self.name = name
+
+        # load from persistent data...
+        self.persistent = 'persistent' in kwargs and kwargs['persistent']
+        if self.persistent:
+            data = {}
+            try:
+                file = open(persistent_path)
+                data = json.loads(file.readline())
+                file.close()
+            except:
+                print 'failed to load', persistent_path
+
+            if name in data:
+                initial = data[name]
+        
         self.value = initial
         self.watchers = []
 
@@ -36,6 +54,25 @@ class Value(object):
 
     def set(self, value):
         self.value = value
+
+        if self.persistent:
+            data = {}
+            try:
+                file = open(persistent_path, 'r')
+                data = json.loads(file.readline())
+                file.close()
+            except:
+                print 'failed to open', persistent_path
+
+            data[self.name] = self.value
+            
+            try:
+                file = open(persistent_path, 'w')
+                file.write(json.dumps(data))
+                file.close()
+            except:
+                print 'failed to write', persistent_path
+        
         if not self.watchers:
             return
         request = self.get_request()
@@ -95,8 +132,8 @@ class SensorValue(Value): # same as a Value with added timestamp
 
 # a value that may be modified by external clients
 class Property(Value):
-    def __init__(self, name, initial):
-        super(Property, self).__init__(name, initial)
+    def __init__(self, name, initial, **kwargs):
+        super(Property, self).__init__(name, initial, **kwargs)
 
     def processes(self):
         p = super(Property, self).processes()
@@ -107,8 +144,8 @@ class Property(Value):
         return 'Property'
             
 class RangeProperty(Property):
-    def __init__(self, name, initial, min_value, max_value):
-        super(RangeProperty, self).__init__(name, initial)
+    def __init__(self, name, initial, min_value, max_value, **kwargs):
+        super(RangeProperty, self).__init__(name, initial, **kwargs)
         self.min_value = min_value
         self.max_value = max_value
 
@@ -137,8 +174,8 @@ class HeadingProperty(RangeProperty):
         super(HeadingProperty, self).set(value)
 
 class EnumProperty(Property):
-    def __init__(self, name, initial, choices):
-        super(EnumProperty, self).__init__(name, initial)
+    def __init__(self, name, initial, choices, **kwargs):
+        super(EnumProperty, self).__init__(name, initial, **kwargs)
         self.choices = choices
 
     def set(self, value):
@@ -152,8 +189,8 @@ class EnumProperty(Property):
         return {'type' : 'EnumProperty', 'choices' : self.choices}
 
 class BooleanProperty(Property):
-    def __init__(self, name, initial):
-        super(BooleanProperty, self).__init__(name, initial)
+    def __init__(self, name, initial, **kwargs):
+        super(BooleanProperty, self).__init__(name, initial, **kwargs)
 
     def set(self, value):
         super(BooleanProperty, self).set(not not value)

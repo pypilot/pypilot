@@ -59,7 +59,7 @@ class FilterHeading():
 
 class AutopilotGain(RangeProperty):
   def __init__(self, *cargs):
-      super(AutopilotGain, self).__init__(*cargs)
+      super(AutopilotGain, self).__init__(*cargs, persistent=True)
 
   def type(self):
       d = super(AutopilotGain, self).type()
@@ -77,7 +77,7 @@ class AutopilotBase(object):
 
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
-    self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind'])
+    self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind'], persistent=True)
     self.last_heading = False
 
     self.gps_heading_offset = self.Register(Value, 'gps_heading_offset', 0)
@@ -90,8 +90,8 @@ class AutopilotBase(object):
       self.gps.process.terminate()
       self.boatimu.__del__()
 
-  def Register(self, _type, name, *args):
-    return self.server.Register(apply(_type, ['ap/' + name] + list(args)))
+  def Register(self, _type, name, *args, **kwargs):
+    return self.server.Register(_type(*(['ap/' + name] + list(args)), **kwargs))
 
   def CreateFilter(self, name, initial, initial_constant):
     return Filter(self.Register(SensorValue, name+'_filtered', self.boatimu, initial),
@@ -135,15 +135,15 @@ class AutopilotBase(object):
       dt3 = time.time() - t0
       magnetic_heading_command = self.heading_command.value
       self.gps.poll()
-      if self.gps.fix and self.gps.fix.speed > 1:
-          track = self.gps.fix.track
+      if self.gps.speed.value > 1:
+          track = self.gps.track.value
           heading = self.boatimu.SensorValues['heading_lowpass'].value
           d = .01
           self.gps_heading_offset.set((1-d)*self.gps_heading_offset.value + d*(track - heading))
           if self.mode.value == 'gps':
               magnetic_heading_command += self.gps_heading_offset.value
 
-      if self.mode.value != 'disabled':
+      if self.enabled.value:
           self.process_imu_data(self.boatimu, magnetic_heading_command)
 
       t1 = time.time()

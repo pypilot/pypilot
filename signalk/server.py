@@ -171,6 +171,7 @@ class SignalKServer:
                 socket = fd_to_socket[fd]
                 if socket == self.server_socket:
                     connection, address = socket.accept()
+                    #print 'new client', address
                     if len(self.sockets) == max_connections:
                         print 'max connections reached!!!', len(self.sockets)
                         if True:

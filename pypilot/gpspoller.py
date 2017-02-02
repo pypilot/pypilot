@@ -30,7 +30,13 @@ class GpsProcess(multiprocessing.Process):
         while True:
             try:
                 self.gpsd.next()
-                queue.put(self.gpsd.fix)
+                if self.gpsd.fix.mode == 3:
+                    fix = {}
+                    fix['time'] = self.gpsd.fix.time
+                    fix['track'] = self.gpsd.fix.track
+                    fix['speed'] = self.gpsd.fix.speed
+                    queue.put(fix)
+                    
             except StopIteration:
                 print 'GPS lost gpsd'
                 break
@@ -47,6 +53,7 @@ class GpsProcess(multiprocessing.Process):
 class GpsPoller():
     def __init__(self, server):
         self.server = server
+        self.time = self.Register(Value, 'time', False)
         self.track = self.Register(SensorValue, 'track', self)
         self.speed = self.Register(SensorValue, 'speed', self)
         self.fix = False
@@ -64,18 +71,17 @@ class GpsPoller():
         
         if self.process.queue.qsize() > 0:
             # flush queue entries
-            while self.process.queue.qsize() > 1:
-                self.process.queue.get()
+            while self.process.queue.qsize() > 0:
+                self.fix = self.process.queue.get()
 
-            # last entree
-            self.fix = self.process.queue.get()
-            if self.fix and self.fix.mode == 3:
-                self.track.set(self.fix.track)
-                self.speed.set(self.fix.speed)
-                #self.timestamp = self.fix.time
-                self.timestamp = time.time()
-            else:
-                self.fix = False
+            def fval(name):
+                return self.fix[name] if name in self.fix else False
+            
+            self.time.set(fval('time'))
+            self.track.set(fval('track'))
+            self.speed.set(fval('speed'))
+            #self.timestamp = self.fix.time
+            self.timestamp = time.time()
 
         if time.time() - self.timestamp > 3:
             self.fix = False

@@ -21,7 +21,7 @@ $(document).ready(function() {
     $('#ping-pong').text("N/A");
     $('#connection').text('Not Connected');
     $('#compass_calibration').text("N/A");
-    $('#amp_hours').text("N/A");
+    $('#power_consumption').text("N/A");
     $('#runtime').text("N/A");
 
     var gains = ['P', 'I', 'D'];
@@ -56,6 +56,7 @@ $(document).ready(function() {
     // Event handler for new connections.
     socket.on('signalk_connect', function() {
         $('#connection').text('Connected')
+        $('#aperrors').text("");
 
         // control
         watch('ap/enabled')
@@ -68,6 +69,9 @@ $(document).ready(function() {
         watch('imu/compass_calibration');
 
         // configuration
+
+        watch('servo/controller')
+
 
         poll_signalk()
         block_polling = 0;
@@ -100,7 +104,7 @@ $(document).ready(function() {
         } else if(tab == 'Configuration') {
             get('servo/Max Current');
         } else if(tab == 'Statistics') {
-            get('servo/Amp Hours');
+            get('servo/Power Consumption');
             get('imu/runtime');
             get('servo/engauged');
         }
@@ -199,15 +203,22 @@ $(document).ready(function() {
         }
 
         // statistics
-        if('servo/Amp Hours' in msg.data) {
-            value = msg.data['servo/Amp Hours']['value'];
-            $('#amp_hours').text(Math.round(1e4*value)/1e4);
+        if('servo/Power Consumption' in msg.data) {
+            value = msg.data['servo/Power Consumption']['value'];
+            $('#power_consumption').text(Math.round(1e4*value)/1e4);
         }
         
         if('imu/runtime' in msg.data) {
             value = msg.data['imu/runtime']['value'];
             $('#runtime').text(value);
         }
+
+        if('servo/controller' in msg.data) {
+            value = msg.data['servo/controller']['value'];
+            if(value == 'none')
+                $('#aperrors').text("No Motor Controller!!");
+        }
+            
     });
     
     signalk_set = function(name, value) {
@@ -261,6 +272,12 @@ $(document).ready(function() {
         block_polling = 2;
     });
 
+    // Statistics
+    $('#reset_power_consumption').click(function(event) {
+        signalk_set('servo/Power Consumption', 0);
+        return false;
+    });
+    
     openTab("Control");
 
     function openTab(name) {

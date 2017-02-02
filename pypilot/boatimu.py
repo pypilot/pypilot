@@ -30,7 +30,6 @@ except ImportError:
   print "RTIMU library not detected, please install it"
 
 def imu_process(queue, cal_queue):
-
     SETTINGS_FILE = "RTIMULib"
     s = RTIMU.Settings(SETTINGS_FILE)
     s.FusionType = 1
@@ -136,8 +135,8 @@ class AgeValue(Value):
         self.timestamp = os.times()[4]
 
 class QuaternionProperty(Property):
-    def __init__(self, name, initial):
-        super(QuaternionProperty, self).__init__(name, initial)
+    def __init__(self, name, initial, **kwargs):
+        super(QuaternionProperty, self).__init__(name, initial, **kwargs)
 
     def set(self, value):
         return super(QuaternionProperty, self).set(quaternion.normalize(value))
@@ -146,10 +145,10 @@ class QuaternionProperty(Property):
 class BoatIMU(object):
   def __init__(self, server, *args, **keywords):
     self.server = server
-    self.heading_off = self.Register(RangeProperty, 'heading_offset', 0, 0, 360)
+    self.heading_off = self.Register(RangeProperty, 'heading_offset', 0, 0, 360, persistent=True)
 
     self.loopfreq = self.Register(LoopFreqValue, 'loopfreq', 0)
-    self.alignmentQ = self.Register(QuaternionProperty, 'alignmentQ', [1, 0, 0, 0])
+    self.alignmentQ = self.Register(QuaternionProperty, 'alignmentQ', [1, 0, 0, 0], persistent=True)
     self.alignmentCounter = self.Register(Property, 'alignmentCounter', 0)
     self.alignmentType = self.Register(EnumProperty, 'alignmentType', 'level', ['level', 'port', 'starbord'])
     self.last_alignmentCounter = False
@@ -161,15 +160,14 @@ class BoatIMU(object):
     self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age')
     self.SensorValues = {}
 
-    self.compass_calibration = self.Register(Value, 'compass_calibration', [[0, 0, 0, 30], 0])
-
+    self.compass_calibration = self.Register(Value, 'compass_calibration', [[0, 0, 0, 30], 0], persistent=True)
     self.compass_calibration_sigmapoints = self.Register(Value, 'compass_calibration_sigmapoints', False)
 
     self.imu_queue = multiprocessing.Queue()
     imu_cal_queue = multiprocessing.Queue()
 
-    if self.load_calibration():
-      imu_cal_queue.put(tuple(self.compass_calibration.value[0][:3]))
+#    if self.load_calibration():
+#      imu_cal_queue.put(tuple(self.compass_calibration.value[0][:3]))
     
     self.imu_process = multiprocessing.Process(target=except_imu_process, args=(self.imu_queue,imu_cal_queue))
     self.imu_process.start()
@@ -195,10 +193,9 @@ class BoatIMU(object):
   def __del__(self):
     self.imu_process.terminate()
     self.compass_auto_cal.process.terminate()
-    self.save_calibration()
 
-  def Register(self, _type, name, *args):
-    return self.server.Register(apply(_type, ['imu/' + name] + list(args)))
+  def Register(self, _type, name, *args, **kwargs):
+    return self.server.Register(_type(*(['imu/' + name] + list(args)), **kwargs))
       
   def IMURead(self):
     if self.imu_queue.qsize() == 0:
@@ -352,30 +349,10 @@ class BoatIMU(object):
       if result[0]:
         self.compass_calibration_age.strobe()
         self.compass_calibration.set(result[0])
-        self.save_calibration()
+
     self.compass_calibration_age.update()
 
     return data
-
-  def load_calibration(self):
-    try:
-      f = open(autopilot.pypilot_dir + 'boatimu_calibration.json', 'r')
-    except:
-      print 'boatimu_calibration.json doesn\'t exist, no calibration'
-      return False
-    cal = json.loads(f.readline())
-    self.compass_calibration.set(cal['compass_calibration'])
-    self.alignmentQ.set(cal['alignmentQ'])
-    self.heading_off.set(cal['heading_off'])
-    return True
-
-  def save_calibration(self):
-    cal = {'compass_calibration' : self.compass_calibration.value, \
-           'alignmentQ' : self.alignmentQ.value, \
-           'heading_off' : self.heading_off.value}
-#    print 'saving calibration:', cal
-    f = open(autopilot.pypilot_dir + 'boatimu_calibration.json', 'w')
-    f.write(json.dumps(cal))
 
 if __name__ == "__main__":
   server = SignalKServer()

@@ -5,7 +5,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import os, math
+import sys, os, math
 import time, json
 
 from signalk.server import SignalKServer
@@ -108,7 +108,7 @@ class ArduinoServo:
         self.lasttime = time.time()
 
         self.flags = ArduinoServoFlags('servo/flags')
-        
+
         cnt = 0
         while self.flags.value & ArduinoServoFlags.OVERCURRENT or \
           not self.flags.value & ArduinoServoFlags.SYNC:
@@ -117,7 +117,7 @@ class ArduinoServo:
                 pass
             time.sleep(.001)
             cnt+=1
-            if cnt == 1000:
+            if cnt == 500:
                 raise 'failed to initialize servo', device
 
         servo.server.Register(self.flags)
@@ -199,13 +199,6 @@ class CalibrationProperty(Property):
         if not 0 in nvalue: #remove?
             nvalue[0] = 0, 0, 0, 12, 0
 
-        # cache min and max speed
-        self.max_forward_speed = self.max_reverse_speed = 0
-        for cal in nvalue: 
-            calspeed = nvalue[cal][0]
-            self.max_forward_speed = max(self.max_forward_speed, calspeed)
-            self.max_reverse_speed = min(self.max_reverse_speed, calspeed)
-
         return super(CalibrationProperty, self).set(nvalue)
 
 # a property which records the time when it is updated
@@ -218,15 +211,34 @@ class TimestampProperty(Property):
         self.timestamp = time.time()
         return super(TimestampProperty, self).set(value)
 
+class ResettableValue(Property):
+    def __init__(self, name, initial, **kwargs):
+        super(ResettableValue, self).__init__(name, initial, **kwargs)
+        self.initial = initial
+
+    def processes(self):
+        p = super(Property, self).processes()
+        p['set'] = self.setdata
+        return p
+
+    def setdata(self, socket, data):
+        if data['value'] != self.initial:
+            print 'resettable value', self.name, 'invalid set'
+        else:
+            self.set(data['value'])
+
+    def type(self):
+        return 'ResettableValue'
+    
 class Servo:
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
 
     def __init__(self, server):
         self.server = server
         self.fwd_fault = self.rev_fault = False
-        self.min_speed = self.Register(RangeProperty, 'Min Speed', .3, 0, 1)
-        self.max_speed = self.Register(RangeProperty, 'Max Speed', 1, 0, 1)
-        self.brake_hack = self.Register(BooleanProperty, 'Brake Hack', True)
+        self.min_speed = self.Register(RangeProperty, 'Min Speed', .3, 0, 1, persistent=True)
+        self.max_speed = self.Register(RangeProperty, 'Max Speed', 1, 0, 1, persistent=True)
+        self.brake_hack = self.Register(BooleanProperty, 'Brake Hack', True, persistent=True)
         self.brake_hack_state = 0
 
         # power usage
@@ -235,12 +247,12 @@ class Servo:
         self.voltage = self.Register(SensorValue, 'voltage', self)
         self.current = self.Register(SensorValue, 'current', self)
         self.engauged = self.Register(Value, 'engauged', False)
-        self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 10)
-        self.slow_period = self.Register(RangeProperty, 'Slow Period', 4, .1, 10)
-        self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False)
-        self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False)
+        self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 10, persistent=True)
+        self.slow_period = self.Register(RangeProperty, 'Slow Period', 4, .1, 10, persistent=True)
+        self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False, persistent=True)
+        self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
         self.amphours = self.Register(Value, 'Amp Hours', 0)
-        self.powerconsumption = self.Register(Value, 'Power Consumption', 0)
+        self.powerconsumption = self.Register(ResettableValue, 'Power Consumption', 0, persistent=True)
         self.timestamp = time.time()
 
         self.calibration = self.Register(CalibrationProperty, 'calibration', {})
@@ -256,9 +268,10 @@ class Servo:
         self.drive = self.Register(Value, 'drivetype', 'relative')
 
         self.driver = False
+        self.lastprobe = False
 
-    def Register(self, _type, name, *args):
-        return self.server.Register(apply(_type, ['servo/' + name] + list(args)))
+    def Register(self, _type, name, *args, **kwargs):
+        return self.server.Register(_type(*(['servo/' + name] + list(args)), **kwargs))
 
     def send_command(self):
         timeout = 1 # command will expire after 1 second
@@ -289,7 +302,7 @@ class Servo:
             self.position = position
             return
 
-        # use PD filter to command speed
+        # use PD filter to command speed?
         P, D = 2, 0
 
         self.velocity_command(P*(position - self.position) - D*self.speed)
@@ -320,18 +333,12 @@ class Servo:
         current = ampseconds / dt
         self.lastpositionamphours = self.amphours.value
 
-        speed = min(max(speed, self.calibration.max_reverse_speed*self.max_speed.value),\
-                    self.calibration.max_forward_speed*self.max_speed.value)
+        speed = min(max(speed, self.max_speed.value),-self.max_speed.value)
 
         # apply calibration
         cal0 = cal1 = False
         for calspeed in sorted(self.calibration.value):
-            if calspeed < 0:
-                rawspeed = calspeed/self.calibration.max_reverse_speed
-            else:
-                rawspeed = calspeed/self.calibration.max_forward_speed
-
-            if rawspeed > 0 and rawspeed < self.min_speed.value:
+            if calspeed > 0 and abs(calspeed) < self.min_speed.value:
                 continue
             
             cal = self.calibration.value[calspeed]
@@ -443,23 +450,67 @@ class Servo:
             self.mode.set('forward')
 
 
-        if not self.driver:
-            print 'Servo probe'
-            devices = ['/dev/servo', '/dev/ttyUSB0', '/dev/ttyUSB1']
-            controller = 'none'
+        def lastworkingdevice(device):
+            filename = autopilot.pypilot_dir + 'servodevice'
+            try:
+                file = open(filename, 'r')
+                lastdevice = file.readline().rstrip()
+                file.close()
+            except:
+                lastdevice = False
+                
+            if device:
+                try:
+                    file = open(filename, 'w')
+                    file.write(device + '\n')
+                    file.close()
 
+                except:
+                    print 'servo failed to record device', device
+            else:
+                if os.path.exists(filename):
+                    os.unlink(filename)
+
+                
+            return lastdevice
+
+        if not self.driver:
+            if time.time() - self.lastprobe < 5:
+                return
+                
+            devices = [] # last working device
+            lastdevice = lastworkingdevice(False)
+            if lastdevice:
+                devices.append(lastdevice)
+
+            devices.append('/dev/servo')
+                
+            devicesp = ['/dev/ttyUSB', '/dev/ttyAMA', '/dev/ttyS']
+            for devicep in devicesp:
+                for i in range(4):
+                    devices.append(devicep + '%d' % i)
+
+            sys.stdout.write('servo probe... ')
             for device in devices:
                 try:
-                    print 'initializing servo on', device, '...'
                     self.driver = ArduinoServo(self, device) #, RaspberryHWPWMServoDriver()]
+                    sys.stdout.write(device + ' ')
+                    sys.stdout.flush()
                     self.controller.set('arduino')
-
+                    print 'ok'
                     self.driver.command(-.2) # flush any brake
                     self.driver.command(0)
+                    lastworkingdevice(device)
                     time.sleep(.1);
                     break
                 except:
-                    print 'failed to initialize servo', device
+                    pass
+                t1 = time.time()
+
+            sys.stdout.flush()
+            if not self.driver:
+                print 'failed'
+                self.lastprobe = time.time()
 
         if self.driver:
             try:
@@ -482,16 +533,12 @@ class Servo:
         self.speed = 0
 
     def poll(self):
-        if not self.driver:
-            try:
-                self.driver = ArduinoServo(self) #, RaspberryHWPWMServoDriver()]
-            except:
-                return
-                
-        while True:
+        while self.driver:
             try:
                 result = self.driver.poll()
             except:
+                print "lost servo device reading"
+                self.controller.set('none')
                 self.driver = False
                 break
 
@@ -519,7 +566,7 @@ class Servo:
                 dt = (self.timestamp-lasttimestamp)
                 self.amphours.set(self.amphours.value + self.current.value*dt/3600)
                 power = self.voltage.value*self.current.value
-                self.powerconsumption.set(self.powerconsumption.value + dt*power)
+                self.powerconsumption.set(self.powerconsumption.value + dt*power/3600)
 
     def fault(self):
         if not self.driver:

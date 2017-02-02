@@ -375,7 +375,8 @@ class LCDClient():
         
     def connect(self):
         watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command',
-                     'imu/heading_lowpass', 'gps/track']
+                     'gps/time',
+                     'imu/heading_lowpass', 'servo/controller']
         nalist = watchlist + ['imu/pitch', 'imu/heel', 'imu/runtime',
                               'ap/P', 'ap/I', 'ap/D',
                               'imu/alignmentCounter',
@@ -418,6 +419,7 @@ class LCDClient():
         return True
     def have_gps(self):
         return time.time() - self.last_gps_time < 5
+
     def have_wind(self):
         return False
             
@@ -442,10 +444,13 @@ class LCDClient():
         else: #if self.last_msg['ap/mode'] != 'N/A':
             draw_big_number((0,.4), self.last_msg['ap/heading_command'])
 
-        if self.last_msg['ap/mode'] == 'gps' and not self.have_gps():
-            self.fittext(rectangle(0, .65, 1, .35), _('WARNING GPS not detected'), True)
-        if self.last_msg['ap/mode'] == 'wind' and not self.have_wind():
-            self.fittext(rectangle(0, .65, 1, .35), _('WARNING WIND not detected'), True)
+        if self.last_msg['servo/controller'] == 'none':
+            self.fittext(rectangle(0, .5, 1, .4), _('WARNING no motor controller'), True)
+            
+        elif self.last_msg['ap/mode'] == 'gps' and not self.have_gps():
+            self.fittext(rectangle(0, .55, 1, .3), _('WARNING GPS not detected'), True)
+        elif self.last_msg['ap/mode'] == 'wind' and not self.have_wind():
+            self.fittext(rectangle(0, .55, 1, .3), _('WARNING WIND not detected'), True)
         else:
             #print 'mode', self.last_msg['ap/mode']
             modes = {'compass': ('C', self.have_compass, rectangle(.03, .74, .30, .16)),
@@ -562,17 +567,8 @@ class LCDClient():
         
             self.display_page = self.display_control
 
-        # for up and down keys providing acceration
-        updownheld = self.keypad[UP] > 10 or self.keypad[DOWN] > 10
-        updownup = self.keypadup[UP] or self.keypadup[DOWN]
-        sign = 1 if self.keypad[UP] or self.keypadup[UP] else -1
-        speed = 1 if updownup else min(20, .01*max(self.keypad[UP], self.keypad[DOWN])**2)
-        updown = updownheld or updownup
-
-        if self.display_page == self.display_control:
-            if self.keypadup[MENU]: # MENU
-                self.display_page = self.display_menu
-            if self.keypadup[SELECT]:
+        if self.keypadup[SELECT]:
+            if self.display_page == self.display_control:
                 index = 0
                 for mode in list(self.modes):
                     if mode == self.last_msg['ap/mode']:
@@ -589,11 +585,24 @@ class LCDClient():
                         self.client.set('ap/mode', list(self.modes)[index])
                         break
                     tries += 1
+            else:
+                self.display_page == self.display_control
+            
+        # for up and down keys providing acceration
+        updownheld = self.keypad[UP] > 10 or self.keypad[DOWN] > 10
+        updownup = self.keypadup[UP] or self.keypadup[DOWN]
+        sign = 1 if self.keypad[UP] or self.keypadup[UP] else -1
+        speed = float(1 if updownup else min(20, .001*max(self.keypad[UP], self.keypad[DOWN])**3))
+        updown = updownheld or updownup
+
+        if self.display_page == self.display_control:
+            if self.keypadup[MENU]: # MENU
+                self.display_page = self.display_menu
             elif updown: # LEFT/RIGHT
                 if self.last_msg['ap/enabled']:
                     cmd = self.last_msg['ap/heading_command'] + sign*speed
                     self.set('ap/heading_command', cmd)
-                else:                       
+                else:
                     self.set('servo/command', sign*(speed+8)/100)
 
         elif self.display_page == self.display_menu:
@@ -607,7 +616,7 @@ class LCDClient():
                 self.menu.selection += 1
                 if self.menu.selection == len(self.menu.items):
                     self.menu.selection = 0
-            elif self.keypadup[SELECT] or (self.keypadup[MENU] and not self.have_select):
+            elif self.keypadup[MENU]:
                 self.display_page = self.menu.items[self.menu.selection][1]()
 
         elif self.display_page == self.display_calibrate:
@@ -710,7 +719,7 @@ class LCDClient():
                         self.value_list[name] = {}
                     self.value_list[name][token] = data[token]
 
-            if name == 'gps/track' and 'value' in data and data['value']:
+            if name == 'gps/time' and 'value' in data and data['value']:
                 self.last_gps_time = time.time()
 
 

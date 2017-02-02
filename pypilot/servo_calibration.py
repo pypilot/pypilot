@@ -165,7 +165,7 @@ class ServoClient(SignalKClient):
         print 'timeout calibrating speed', speed
         return False
 
-    def Calibrate(self):
+    def calibrate(self):
         self.set('ap/enabled', False)
         self.set('servo/Brake Hack', True)
 
@@ -203,7 +203,7 @@ class ServoClient(SignalKClient):
         console('found start')
         calibration = {} # clear old cal
         
-        steps = 40 # calibrate 20 speeds
+        steps = 40 # speeds 20 speeds
         complete = [False, False]
         lastspeed = [0, 0]
         for abs_speed in range(120, 230, 200/steps):
@@ -219,15 +219,15 @@ class ServoClient(SignalKClient):
                     command, idle_current, stall_current, cal_voltage, dt = cal
                     truespeed = 1/dt
                     console('speed', speed, 'truespeed', truespeed, 'cal', cal, 'dt', dt)
-                    if truespeed - lastspeed[signi] < .1/steps:
+                    if sign*(truespeed - lastspeed[signi]) < .1/steps:
                         complete[signi] += 1
                     else:
                         complete[signi] = 0
 
-                    c = map(lambda x : sign*x, calibration)
-                    if len(c) == 0 or truespeed > sorted(c)[len(c)-1]:
-                        print 'update cal', cal
-                        calibration[sign*truespeed] = cal
+#                    c = map(lambda x : sign*x, calibration)
+#                    if len(c) == 0 or truespeed > sorted(c)[len(c)-1]:
+#                        print 'update cal', cal
+                    calibration[sign*truespeed] = cal
                     lastspeed[signi] = truespeed
                 else:
                     console('speed', speed, ' failed')
@@ -244,11 +244,24 @@ class ServoClient(SignalKClient):
 
         self.stop()
         self.set('servo/raw_command', False)
-        calibration[0] = 0, 0, 0, 12, 0
-        return calibration
+
+        # normalize calibration speed from 0 to 1
+        max_speed = apply(max, calibration)
+        min_speed = apply(min, calibration)
+
+        for truespeed in calibration:
+            if truespeed > 0:
+                speed = max_speed
+            else:
+                speed = min_speed
+            norm_calibration[truespeed / speed] = calibration[truespeed]
+
+        # add zero point
+        norm_calibration[0] = 0, 0, 0, 12, 0
+        return norm_calibration
 
 if __name__ == '__main__':
-    cal = ServoClient().Calibrate()
+    cal = ServoClient().calibrate()
 #    file = open('cal_raspberry')
 #    cal = json.loads(file.readline())
 
