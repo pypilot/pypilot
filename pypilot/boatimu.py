@@ -50,42 +50,48 @@ def imu_process(queue, cal_queue):
         print("Settings file does not exist, will be created")
 
     print("IMU Name: " + rtimu.IMUName())
-      
-    if not rtimu.IMUInit():
-        print("IMU Init Failed")
-        exit(1)
 
-    # this is a good time to set any fusion parameters
-    rtimu.setSlerpPower(.01)
-    rtimu.setGyroEnable(True)
-    rtimu.setAccelEnable(True)
-    rtimu.setCompassEnable(True)
-
-    poll_interval = rtimu.IMUGetPollInterval()
-
-    c = 0
-    calupdates = 0
     while True:
-      t0 = time.time()
-      if rtimu.IMURead():
-        data = rtimu.getIMUData()
+      if not rtimu.IMUInit():
+        print("ERROR: IMU Init Failed, no inertial data available")
+        time.sleep(3)
 
-        if cal_queue.qsize() > 0:
-          new_cal = cal_queue.get()
-          s.CompassCalEllipsoidValid = True
-          s.CompassCalEllipsoidOffset = new_cal
-          #rtimu.resetFusion()
-          calupdates+=1
+      # this is a good time to set any fusion parameters
+      rtimu.setSlerpPower(.01)
+      rtimu.setGyroEnable(True)
+      rtimu.setAccelEnable(True)
+      rtimu.setCompassEnable(True)
 
-        data['gyrobias'] = s.GyroBias
-        data['calupdates'] = calupdates
-        queue.put(data)
+      poll_interval = rtimu.IMUGetPollInterval()
+
+      c = 0
+      calupdates = 0
+      t1 = time.time()
+      while True:
+        t0 = time.time()
+        if t0 - t1 > 2:
+          break;
         
-      dt = time.time() - t0
-      t = poll_interval/1000.0 - dt
+        if rtimu.IMURead():
+          t1 = t0
+          data = rtimu.getIMUData()
 
-      if t > 0:
-        time.sleep(t)
+          if cal_queue.qsize() > 0:
+            new_cal = cal_queue.get()
+            s.CompassCalEllipsoidValid = True
+            s.CompassCalEllipsoidOffset = new_cal
+            #rtimu.resetFusion()
+            calupdates+=1
+
+          data['gyrobias'] = s.GyroBias
+          data['calupdates'] = calupdates
+          queue.put(data)
+        
+        dt = time.time() - t0
+        t = poll_interval/1000.0 - dt
+
+        if t > 0:
+          time.sleep(t)
 
 def except_imu_process(queue, cal_queue):
   try:
@@ -107,6 +113,7 @@ class LoopFreqValue(Value):
             self.set(self.loopc/(t1-self.t0))
             self.t0 = t1
             self.loopc = 0
+
 
 class AgeValue(Value):
     def __init__(self, name):
@@ -177,18 +184,18 @@ class BoatIMU(object):
     self.lastqpose = False
 
     self.FirstTimeStamp = False
-    self.LastDataTimestamp = 0
 
-    # average sensor data down to 20hz
-    # this reduces bandwidth processing load.
-    # we don't need higher frequency for boat motion do we??
-    self.Period = .05 # 10hz
     self.DataBank = []
     self.heel = 0
 
     self.calupdates = 0
 
     self.heading_lowpass3 = self.heading_lowpass3a = self.heading_lowpass3b = False
+
+    for name in ['timestamp', 'fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'heading_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'heel', 'calupdate']:
+        if not name in self.SensorValues:
+            self.SensorValues[name] = self.Register(SensorValue, name, self)
+
     
   def __del__(self):
     self.imu_process.terminate()
@@ -199,6 +206,10 @@ class BoatIMU(object):
       
   def IMURead(self):
     if self.imu_queue.qsize() == 0:
+      if time.time() - self.loopfreq.t0 > 1 and self.loopfreq.value:
+        self.loopfreq.set(0)
+        for name in self.SensorValues:
+          self.SensorValues[name].set(False)
       return False
 
     # flush queue
@@ -217,11 +228,6 @@ class BoatIMU(object):
       data['timestamp'] /= 1000000.0
 
     self.DataBank.append(data)
-    if data['timestamp'] - self.LastDataTimestamp < self.Period:
-      return False
-    
-#    self.LastDataTimestamp += self.Period
-    self.LastDataTimestamp = data['timestamp']
 
     self.loopfreq.strobe()
     
@@ -336,8 +342,6 @@ class BoatIMU(object):
     self.timestamp = data['timestamp']
 
     for name in data:
-      if not name in self.SensorValues:
-        self.SensorValues[name] = self.Register(SensorValue, name, self)
       self.SensorValues[name].set(data[name])
 
     self.runtime.update()

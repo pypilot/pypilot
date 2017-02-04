@@ -197,7 +197,7 @@ class SignalKServer:
                 if not line:
                     continue
 
-                if False: # true to debug
+                if True: # true to debug
                     self.HandleRequest(socket, line)
                 else:
                     try:

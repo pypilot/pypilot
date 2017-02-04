@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2017 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -158,7 +158,7 @@ class LCDClient():
         self.have_select = False
         self.create_mainmenu()
 
-        self.last_gps_time = 0
+        self.last_gps_time = self.last_wind_time = 0
 
         self.display_page = self.display_connecting
         self.connecting_dots = 0
@@ -181,7 +181,7 @@ class LCDClient():
                 def cbr(channel):
                     self.longsleep = 0
 
-                    GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
+                GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
 
     def set_language(self, name):
         language = gettext.translation('pypilot_lcdclient',
@@ -375,8 +375,8 @@ class LCDClient():
         
     def connect(self):
         watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command',
-                     'gps/time',
-                     'imu/heading_lowpass', 'servo/controller']
+                     'gps/time', 'wind/direction',
+                     'ap/heading', 'servo/controller']
         nalist = watchlist + ['imu/pitch', 'imu/heel', 'imu/runtime',
                               'ap/P', 'ap/I', 'ap/D',
                               'imu/alignmentCounter',
@@ -419,9 +419,8 @@ class LCDClient():
         return True
     def have_gps(self):
         return time.time() - self.last_gps_time < 5
-
     def have_wind(self):
-        return False
+        return time.time() - self.last_wind_time < 5
             
     def display_control(self):
         def draw_big_number(pos, num):
@@ -437,12 +436,15 @@ class LCDClient():
             else:
                 self.fittext(rectangle(pos[0], pos[1], 1, .4), num, crop=True)
 
-        draw_big_number((0,0), self.last_msg['imu/heading_lowpass'])
+        if type(self.last_msg['ap/heading']) == type(False):
+            self.fittext(rectangle(0, 0, 1, .8), _('ERROR\ncompass or gyro failure!'), True)
+        else:
+            draw_big_number((0,0), self.last_msg['ap/heading'])
 
-        if self.last_msg['ap/enabled'] != True:
-            self.fittext(rectangle(0, .4, 1, .4), _('standby'))
-        else: #if self.last_msg['ap/mode'] != 'N/A':
-            draw_big_number((0,.4), self.last_msg['ap/heading_command'])
+            if self.last_msg['ap/enabled'] != True:
+                self.fittext(rectangle(0, .4, 1, .4), _('standby'))
+            else: #if self.last_msg['ap/mode'] != 'N/A':
+                draw_big_number((0,.4), self.last_msg['ap/heading_command'])
 
         if self.last_msg['servo/controller'] == 'none':
             self.fittext(rectangle(0, .5, 1, .4), _('WARNING no motor controller'), True)
@@ -559,7 +561,7 @@ class LCDClient():
                            
         if self.keypadup[AUTO]: # AUTO
             if self.last_msg['ap/enabled'] == False and self.display_page == self.display_control:
-                self.set('ap/heading_command', self.last_msg['imu/heading_lowpass'])
+                self.set('ap/heading_command', self.last_msg['ap/heading'])
                 self.set('ap/enabled', True)
             else:
                 self.set('servo/command', 0) #stop
@@ -586,7 +588,7 @@ class LCDClient():
                         break
                     tries += 1
             else:
-                self.display_page == self.display_control
+                self.display_page = self.display_control
             
         # for up and down keys providing acceration
         updownheld = self.keypad[UP] > 10 or self.keypad[DOWN] > 10
@@ -603,7 +605,7 @@ class LCDClient():
                     cmd = self.last_msg['ap/heading_command'] + sign*speed
                     self.set('ap/heading_command', cmd)
                 else:
-                    self.set('servo/command', sign*(speed+8)/100)
+                    self.set('servo/command', sign*(speed+8)/40)
 
         elif self.display_page == self.display_menu:
             if self.keypadup[MENU] and self.have_select:
@@ -721,6 +723,8 @@ class LCDClient():
 
             if name == 'gps/time' and 'value' in data and data['value']:
                 self.last_gps_time = time.time()
+            if name == 'wind/direction' and 'value' in data and data['value']:
+                self.last_wind_time = time.time()
 
 
 def main():

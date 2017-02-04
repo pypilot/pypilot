@@ -5,12 +5,12 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import sys, os, math
+import os, math
 import time, json
 
 from signalk.server import SignalKServer
 from signalk.values import *
-import autopilot
+import autopilot, serialprobe
 
 from crc import crc8
 
@@ -96,20 +96,21 @@ class ArduinoServoFlags(Value):
         
 class ArduinoServo:
     sync_bytes = [0xe7, 0xf9, 0xc7, 0x1e, 0xa7, 0x19, 0x1c, 0xb3]
-    def __init__(self, servo, device):
+    def __init__(self, device):
         self.in_sync = self.out_sync = 0
         self.in_sync_count = 0        
         self.in_buf = []
-        self.device = serial.Serial(device, 115200)
+        self.device = serial.Serial(*device)
         #self.device.setTimeout(0)
         self.device.timeout=0
-        self.servo = servo
         self.lastcommand = False
         self.lasttime = time.time()
+        self.servo = False
 
         self.flags = ArduinoServoFlags('servo/flags')
 
         cnt = 0
+
         while self.flags.value & ArduinoServoFlags.OVERCURRENT or \
           not self.flags.value & ArduinoServoFlags.SYNC:
             self.stop()
@@ -119,8 +120,6 @@ class ArduinoServo:
             cnt+=1
             if cnt == 500:
                 raise 'failed to initialize servo', device
-
-        servo.server.Register(self.flags)
 
     def send_value(self, value):
         value = int(value)
@@ -132,7 +131,11 @@ class ArduinoServo:
 
     def raw_command(self, command):
         if self.out_sync == 0:
-            self.send_value(self.servo.max_current.value*65536.0/11)
+            if self.servo:
+                max_current = self.servo.max_current.value
+            else:
+                max_current = 0
+                self.send_value(max_current*65536.0/11)
         self.send_value(command)
         if self.out_sync == len(ArduinoServo.sync_bytes):
             self.out_sync = 0;
@@ -268,7 +271,6 @@ class Servo:
         self.drive = self.Register(Value, 'drivetype', 'relative')
 
         self.driver = False
-        self.lastprobe = False
 
     def Register(self, _type, name, *args, **kwargs):
         return self.server.Register(_type(*(['servo/' + name] + list(args)), **kwargs))
@@ -328,17 +330,16 @@ class Servo:
         self.position = min(max(self.position, 0), 1)
 
         # get current
-        
         ampseconds = 3600*(self.amphours.value - self.lastpositionamphours)
         current = ampseconds / dt
         self.lastpositionamphours = self.amphours.value
 
-        speed = min(max(speed, self.max_speed.value),-self.max_speed.value)
+        speed = max(min(speed, self.max_speed.value),-self.max_speed.value)
 
         # apply calibration
         cal0 = cal1 = False
         for calspeed in sorted(self.calibration.value):
-            if calspeed > 0 and abs(calspeed) < self.min_speed.value:
+            if calspeed != 0 and abs(calspeed) < self.min_speed.value:
                 continue
             
             cal = self.calibration.value[calspeed]
@@ -358,7 +359,8 @@ class Servo:
 
             if self.compensate_voltage.value:
                 calspeed *= cal_voltage / self.voltage.value
-        
+
+#            print 'speed', speed, calspeed
             if speed < calspeed:
                 calspeed1 = calspeed
                 cal1 = cal
@@ -449,68 +451,17 @@ class Servo:
         else:
             self.mode.set('forward')
 
-
-        def lastworkingdevice(device):
-            filename = autopilot.pypilot_dir + 'servodevice'
-            try:
-                file = open(filename, 'r')
-                lastdevice = file.readline().rstrip()
-                file.close()
-            except:
-                lastdevice = False
-                
-            if device:
-                try:
-                    file = open(filename, 'w')
-                    file.write(device + '\n')
-                    file.close()
-
-                except:
-                    print 'servo failed to record device', device
-            else:
-                if os.path.exists(filename):
-                    os.unlink(filename)
-
-                
-            return lastdevice
-
         if not self.driver:
-            if time.time() - self.lastprobe < 5:
-                return
-                
-            devices = [] # last working device
-            lastdevice = lastworkingdevice(False)
-            if lastdevice:
-                devices.append(lastdevice)
+            self.driver = serialprobe.probe('servo', ArduinoServo, [115200])
 
-            devices.append('/dev/servo')
-                
-            devicesp = ['/dev/ttyUSB', '/dev/ttyAMA', '/dev/ttyS']
-            for devicep in devicesp:
-                for i in range(4):
-                    devices.append(devicep + '%d' % i)
+            if self.driver:
+                self.driver.servo = self
+                self.controller.set('arduino')
+                self.server.Register(self.driver.flags)
 
-            sys.stdout.write('servo probe... ')
-            for device in devices:
-                try:
-                    self.driver = ArduinoServo(self, device) #, RaspberryHWPWMServoDriver()]
-                    sys.stdout.write(device + ' ')
-                    sys.stdout.flush()
-                    self.controller.set('arduino')
-                    print 'ok'
+                if self.brake_hack.value:
                     self.driver.command(-.2) # flush any brake
-                    self.driver.command(0)
-                    lastworkingdevice(device)
-                    time.sleep(.1);
-                    break
-                except:
-                    pass
-                t1 = time.time()
-
-            sys.stdout.flush()
-            if not self.driver:
-                print 'failed'
-                self.lastprobe = time.time()
+                self.driver.command(0)
 
         if self.driver:
             try:

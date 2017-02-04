@@ -56,7 +56,8 @@ $(document).ready(function() {
     // Event handler for new connections.
     socket.on('signalk_connect', function() {
         $('#connection').text('Connected')
-        $('#aperrors').text("");
+        $('#aperrors0').text("");
+        $('#aperrors1').text("");
 
         // control
         watch('ap/enabled')
@@ -92,8 +93,8 @@ $(document).ready(function() {
 
         //var tab = $('input:radio[name=tabbed]:checked').val();
         var tab = currentTab
+        get('imu/heading_lowpass');
         if(tab == 'Control') {
-            get('imu/heading_lowpass');
         } else if(tab == 'Gain') {
             var gains = ['P', 'I', 'D'];
             for (var i = 0; i<gains.length; i++)
@@ -149,6 +150,11 @@ $(document).ready(function() {
         
         if('imu/heading_lowpass' in msg.data) {
             heading = msg.data['imu/heading_lowpass']['value'];
+            if(heading.toString()=="false")
+                $('#aperrors0').text('compass or gyro failure!');
+            else
+                $('#aperrors0').text('');
+
             $('#heading').text(Math.round(10*heading)/10);                    
         }
         if('ap/enabled' in msg.data) {
@@ -216,7 +222,9 @@ $(document).ready(function() {
         if('servo/controller' in msg.data) {
             value = msg.data['servo/controller']['value'];
             if(value == 'none')
-                $('#aperrors').text("No Motor Controller!!");
+                $('#aperrors1').text('no motor controller!');
+            else
+                $('#aperrors1').text('');
         }
             
     });
