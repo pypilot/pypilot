@@ -14,6 +14,7 @@ from signalk.client import SignalKClient
 class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     ID_MESSAGES = 1000
     ID_GPS_TIMEOUT = 1001
+    ID_WIND_TIMEOUT = 1002
 
     def __init__(self):
         super(AutopilotControl, self).__init__(None)
@@ -33,7 +34,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.gps_heading_offset = 0
 
         watchlist += ['ap/enabled', 'ap/mode', 'ap/heading_command',
-                      'gps/track',
+                      'gps/track', 'wind/direction',
                       'ap/heading', 'servo/command', 'servo/flags',
                       'servo/mode', 'servo/engauged']
 
@@ -68,6 +69,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         self.gps_timer = wx.Timer(self, self.ID_GPS_TIMEOUT)
         self.Bind(wx.EVT_TIMER, self.gps_timeout, id=self.ID_GPS_TIMEOUT)
+
+        self.wind_timer = wx.Timer(self, self.ID_WIND_TIMEOUT)
+        self.Bind(wx.EVT_TIMER, self.wind_timeout, id=self.ID_WIND_TIMEOUT)
 
         self.SetSize(wx.Size(400, 460))
         self.stop()
@@ -152,6 +156,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'gps/track':
                 self.rbGPS.Enable()
                 self.gps_timer.Start(5000)
+            elif name == 'wind/direction':
+                self.rbWind.Enable()
+                self.wind_timer.Start(5000)
             elif name == 'ap/heading':
                 self.stHeading.SetLabel('%.1f' % value)
                 self.heading = value
@@ -170,6 +177,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def gps_timeout(self, event):
         self.rbGPS.Disable()
 
+    def wind_timeout(self, event):
+        self.rbWind.Disable()
+
     def onAP( self, event ):
         self.client.set('servo/raw_command', False)
         if self.tbAP.GetValue():
@@ -187,6 +197,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         else:
             mode = 'compass'
         self.client.set('ap/mode', mode)
+        self.client.set('ap/heading_command', self.heading)
 
     def onCommand( self, event ):
         if wx.GetMouseState().LeftIsDown():
