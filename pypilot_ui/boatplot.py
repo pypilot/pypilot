@@ -25,21 +25,22 @@ class BoatPlot():
         self.texture_compass = True
 
     def display(self, fusionQPose):
+        fusionQPose = [1, 0, 0, 0]
         if not self.objinit:
             objview.init('sailboat.obj')
             self.objinit = True
 
-        glClearColor(0, .2, .6, 0)
+        glClearColor(0, .2, .7, 0)
+        glClearDepth(100)
+        
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
 
         glPushMatrix()
 
         def glRotateQ(q):
             glRotatef(quaternion.angle(q)*180/math.pi, q[1], q[2], q[3])
 
-        dist = 12
-
+        dist = 16
         glTranslatef(0, 0, -dist)
         glScalef(self.Scale, self.Scale, self.Scale)
         glRotateQ(self.Q)
@@ -130,7 +131,7 @@ class BoatPlot():
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         ar = 0.5 * width / height
-        glFrustum(-ar, ar, -0.5, 0.5, 1.0, 300.0)
+        glFrustum(-ar, ar, -0.5, 0.5, 2.0, 300.0)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
@@ -138,7 +139,6 @@ if __name__ == '__main__':
     plot = BoatPlot()
 
     def display():
-        
         plot.display([1, 0, 0, 0])
         glutSwapBuffers()
 

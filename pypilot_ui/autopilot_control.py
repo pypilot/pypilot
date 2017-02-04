@@ -33,8 +33,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.gps_heading_offset = 0
 
         watchlist += ['ap/enabled', 'ap/mode', 'ap/heading_command',
-                      'gps/track', 'ap/gps_heading_offset',
-                      'imu/heading_lowpass', 'servo/command', 'servo/flags',
+                      'gps/track',
+                      'ap/heading', 'servo/command', 'servo/flags',
                       'servo/mode', 'servo/engauged']
 
         value_list = self.client.list_values()
@@ -104,7 +104,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.heading_command += (-1 if command < 0 else 1) / 2.0
                 self.client.set('ap/heading_command', self.heading_command)
         else:
-            self.servo_command(command / 250.0)
+            self.servo_command(command / 50.0)
 
         if command > 0:
             self.sCommand.SetValue(command - 1)
@@ -152,11 +152,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'gps/track':
                 self.rbGPS.Enable()
                 self.gps_timer.Start(5000)
-            elif name == 'ap/gps_heading_offset':
-                self.gps_heading_offset = value
-            elif name == 'imu/heading_lowpass':
-                if self.rbGPS.GetValue():
-                    value += self.gps_heading_offset
+            elif name == 'ap/heading':
                 self.stHeading.SetLabel('%.1f' % value)
                 self.heading = value
             elif name == 'servo/command':

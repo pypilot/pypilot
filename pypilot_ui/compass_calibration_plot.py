@@ -164,7 +164,10 @@ class CompassCalibrationPlot():
         if name == 'imu/accel':
             self.accel = data['value']
         elif name == 'imu/compass':
-            self.points.append(data['value'])
+            if data['value']:
+                self.points.append(data['value'])
+            else:
+                print "ERROR, compass:", data
             if len(self.points) > point_count:
                 self.points = self.points[1:]
             if self.fusionQPose and self.alignmentQ and self.mag_cal_sphere:

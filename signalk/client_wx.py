@@ -112,6 +112,15 @@ class MainFrame(wx.Frame):
                         self.client.set(cname, c.GetStringSelection() )
                     c.Bind( wx.EVT_CHOICE, onchoice )
                 proc()
+            elif t == 'ResettableValue':
+                def proc():
+                    b = wx.Button(self.scrolledWindow, wx.ID_ANY, 'Reset')
+                    sizer.Add( b, 0, wx.EXPAND)
+                    bname = name
+                    def onclick(event):
+                        self.client.set(bname, 0)
+                    b.Bind( wx.EVT_BUTTON, onclick)
+                proc()
             else:
                 sizer.Add( wx.StaticText(self.scrolledWindow, wx.ID_ANY, ''))
 

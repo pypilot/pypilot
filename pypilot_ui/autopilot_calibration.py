@@ -15,6 +15,8 @@ import signalk.scope
 from signalk.client import SignalKClient, ConnectionLost
 from signalk.client_wx import round3
 
+from OpenGL.GL import *
+from OpenGL.GLU import *
 from OpenGL.GLUT import *
 
 
@@ -264,6 +266,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def onPaintGLBoatPlot( self, event ):
         wx.PaintDC( self.CompassCalibration )
         self.BoatPlot.SetCurrent(self.boat_plot_glContext)
+
+        # stupid hack
+        self.boat_plot.reshape(self.BoatPlot.GetSize().x, self.BoatPlot.GetSize().y)
+        
         self.boat_plot.display(self.fusionQPose)
         self.BoatPlot.SwapBuffers()
 
