@@ -53,13 +53,11 @@ class GpsProcess(multiprocessing.Process):
 class GpsPoller():
     def __init__(self, server):
         self.server = server
-        self.time = self.Register(Value, 'time', False)
-        self.track = self.Register(SensorValue, 'track', self)
-        self.speed = self.Register(SensorValue, 'speed', self)
+        self.track = self.Register(SensorValue, 'track')
+        self.speed = self.Register(SensorValue, 'speed')
         self.fix = False
         self.lastfix = False
         self.process = False
-        self.timestamp = time.time()
 
     def Register(self, _type, name, *args):
         return self.server.Register(apply(_type, ['gps/' + name] + list(args)))
@@ -77,13 +75,11 @@ class GpsPoller():
             def fval(name):
                 return self.fix[name] if name in self.fix else False
             
-            self.time.set(fval('time'))
             self.track.set(fval('track'))
             self.speed.set(fval('speed'))
             #self.timestamp = self.fix.time
-            self.timestamp = time.time()
 
-        if time.time() - self.timestamp > 3:
+        if time.time() - self.track.timestamp > 3:
             self.fix = False
 
         if (not self.fix) != (not self.lastfix):

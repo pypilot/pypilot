@@ -84,7 +84,8 @@ class AutopilotBase(object):
     self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind'], persistent=True)
     self.last_heading = False
 
-    self.heading = self.Register(Value, 'heading', 0)
+    self.heading = self.Register(SensorValue, 'heading')
+
     self.gps_heading_offset = self.Register(Value, 'gps_heading_offset', 0)
     self.wind_heading_offset = self.Register(Value, 'wind_heading_offset', 0)
 
@@ -101,7 +102,7 @@ class AutopilotBase(object):
     return self.server.Register(_type(*(['ap/' + name] + list(args)), **kwargs))
 
   def CreateFilter(self, name, initial, initial_constant):
-    return Filter(self.Register(SensorValue, name+'_filtered', self.boatimu, initial),
+    return Filter(self.Register(SensorValue, name+'_filtered', initial),
                   self.Register(RangeProperty, name+'_lp_constant', initial_constant, 0, 1))
       
   def run(self):
@@ -163,8 +164,11 @@ class AutopilotBase(object):
         offset = self.wind_heading_offset.value
         diff = resolv(compass_heading - self.wind.direction.value, offset)
         d = .1
+#        d = 1 # for now, don't even use compass
         self.wind_heading_offset.set(resolv((1-d)*offset + d*diff))
         self.heading.set(resolv(compass_heading - self.wind_heading_offset.value, 180))
+
+#        self.heading.set(self.wind.direction.value)
 
       if self.enabled.value:
           self.process_imu_data(self.boatimu)

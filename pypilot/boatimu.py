@@ -194,8 +194,7 @@ class BoatIMU(object):
 
     for name in ['timestamp', 'fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'heading_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'heel', 'calupdate']:
         if not name in self.SensorValues:
-            self.SensorValues[name] = self.Register(SensorValue, name, self)
-
+            self.SensorValues[name] = self.Register(SensorValue, name)
     
   def __del__(self):
     self.imu_process.terminate()

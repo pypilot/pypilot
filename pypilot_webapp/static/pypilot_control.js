@@ -93,7 +93,7 @@ $(document).ready(function() {
 
         //var tab = $('input:radio[name=tabbed]:checked').val();
         var tab = currentTab
-        get('imu/heading_lowpass');
+        get('ap/heading');
         if(tab == 'Control') {
         } else if(tab == 'Gain') {
             var gains = ['P', 'I', 'D'];
@@ -148,8 +148,8 @@ $(document).ready(function() {
             return;
         }
         
-        if('imu/heading_lowpass' in msg.data) {
-            heading = msg.data['imu/heading_lowpass']['value'];
+        if('ap/heading' in msg.data) {
+            heading = msg.data['ap/heading']['value'];
             if(heading.toString()=="false")
                 $('#aperrors0').text('compass or gyro failure!');
             else

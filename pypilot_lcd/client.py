@@ -158,7 +158,7 @@ class LCDClient():
         self.have_select = False
         self.create_mainmenu()
 
-        self.last_gps_time = self.last_wind_time = 0
+        self.last_gps_time = self.last_wind_time = time.time()
 
         self.display_page = self.display_connecting
         self.connecting_dots = 0
@@ -375,7 +375,7 @@ class LCDClient():
         
     def connect(self):
         watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command',
-                     'gps/time', 'wind/direction',
+                     'gps/track', 'wind/direction',
                      'ap/heading', 'servo/controller']
         nalist = watchlist + ['imu/pitch', 'imu/heel', 'imu/runtime',
                               'ap/P', 'ap/I', 'ap/D',
@@ -721,9 +721,9 @@ class LCDClient():
                         self.value_list[name] = {}
                     self.value_list[name][token] = data[token]
 
-            if name == 'gps/time' and 'value' in data and data['value']:
+            if name == 'gps/track' and 'value' in data:
                 self.last_gps_time = time.time()
-            if name == 'wind/direction' and 'value' in data and data['value']:
+            if name == 'wind/direction' and 'value' in data:
                 self.last_wind_time = time.time()
 
 

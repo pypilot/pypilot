@@ -134,8 +134,8 @@ class ArduinoServo:
             if self.servo:
                 max_current = self.servo.max_current.value
             else:
-                max_current = 0
-                self.send_value(max_current*65536.0/11)
+                max_current = 10
+            self.send_value(max_current*65536.0/11)
         self.send_value(command)
         if self.out_sync == len(ArduinoServo.sync_bytes):
             self.out_sync = 0;
@@ -247,8 +247,8 @@ class Servo:
         # power usage
         self.command = self.Register(TimestampProperty, 'command', 0)
         self.rawcommand = self.Register(TimestampProperty, 'raw_command', False)
-        self.voltage = self.Register(SensorValue, 'voltage', self)
-        self.current = self.Register(SensorValue, 'current', self)
+        self.voltage = self.Register(SensorValue, 'voltage')
+        self.current = self.Register(SensorValue, 'current')
         self.engauged = self.Register(Value, 'engauged', False)
         self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 10, persistent=True)
         self.slow_period = self.Register(RangeProperty, 'Slow Period', 4, .1, 10, persistent=True)
@@ -256,7 +256,6 @@ class Servo:
         self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
         self.amphours = self.Register(Value, 'Amp Hours', 0)
         self.powerconsumption = self.Register(ResettableValue, 'Power Consumption', 0, persistent=True)
-        self.timestamp = time.time()
 
         self.calibration = self.Register(CalibrationProperty, 'calibration', {})
         self.load_calibration()
@@ -462,14 +461,13 @@ class Servo:
                 if self.brake_hack.value:
                     self.driver.command(-.2) # flush any brake
                 self.driver.command(0)
+                self.lastpolltime = time.time()
 
         if self.driver:
             try:
                 self.driver.command(command)
             except:
-                print "lost servo device"
-                self.controller.set('none')
-                self.driver = False
+                self.close_driver()
 
     def stop(self):
         if self.driver:
@@ -483,20 +481,30 @@ class Servo:
         self.mode.set('stop')
         self.speed = 0
 
+    def close_driver(self):
+        print 'servo lost connection'
+        self.controller.set('none')
+        self.driver = False
+
+
     def poll(self):
         while self.driver:
             try:
                 result = self.driver.poll()
             except:
-                print "lost servo device reading"
-                self.controller.set('none')
-                self.driver = False
+                self.close_driver()
                 break
 
-            if result == False:
+            if not result:
+                d = time.time() - self.lastpolltime
+                if d > 10: # correct for clock skew
+                    self.lastpolltime = time.time()
+                elif d > 3:
+                    print 'd', d
+                    self.close_driver()
+                    pass
                 break
-            if not result: # not a sync byte
-                continue
+            self.lastpolltime = time.time()
 
             self.engauged.set(not not self.driver.flags.value & ArduinoServoFlags.ENGAUGED)
             if self.fault():
@@ -505,16 +513,14 @@ class Servo:
                 elif self.speed < 0:
                     self.rev_fault = True
 
-            lasttimestamp = self.timestamp
-            self.timestamp = time.time()
-
             if 'voltage' in result:
                 self.voltage.set(result['voltage'])
             if 'current' in result:
+                lasttimestamp = self.current.timestamp
                 self.current.set(result['current'])
 
                 # integrate power consumption
-                dt = (self.timestamp-lasttimestamp)
+                dt = (self.current.timestamp-lasttimestamp)
                 self.amphours.set(self.amphours.value + self.current.value*dt/3600)
                 power = self.voltage.value*self.current.value
                 self.powerconsumption.set(self.powerconsumption.value + dt*power/3600)

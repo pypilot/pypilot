@@ -58,10 +58,11 @@ def probe(name, probe_device, bauds):
         probe = {'devices': devices, 'time': 0}
         probes[name] = probe
 
-    if time.time() - probes[name]['time'] < 1:
+    if time.time() - probes[name]['time'] < 3:
         return
 
     probes[name]['time'] = time.time()
+    probes[name]['device_path'] = ''
 
     devices = probes[name]['devices']
     if len(devices) == 1:
@@ -70,6 +71,10 @@ def probe(name, probe_device, bauds):
         probes[name]['devices'] = devices[1:]
 
     device_path = devices[0]
+
+    for n in probes:
+        if probes[n]['device_path'] == device_path[0]:
+            return False
 
     sys.stdout.write(name + 'probe... ' + str(device_path))
 
@@ -80,6 +85,7 @@ def probe(name, probe_device, bauds):
         #del probes[name]
         lastworkingdevice(device_path, name)
         time.sleep(.1);
+        probes[name]['device_path'] = device_path[0]
         return device
     except:
         print ' failed'

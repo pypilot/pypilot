@@ -101,10 +101,17 @@ class Value(object):
         request = {self.name : {'ops', list(self.processes())}}
         socket.send(json.dumps(request) + '\n')
 
+import time
 class SensorValue(Value): # same as a Value with added timestamp
-    def __init__(self, name, timestampholder, initial=False):
+    def __init__(self, name, initial=False):
         super(SensorValue, self).__init__(name, initial)
-        self.timestampholder = timestampholder
+        self.timestampholder = self ## it's possible to share timestamp with another value
+        self.timestamp = time.time()
+
+    def set(self, value):
+        if self.timestampholder == self:
+            self.timestamp = time.time()
+        super(SensorValue, self).set(value)
 
     def get_request(self):
         try: # round to places, plus it's faster than json dumping

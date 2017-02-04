@@ -59,6 +59,8 @@ def parse_nmea(line):
 
 class NMEAWindSensor():
     def __init__(self, device):
+#        if device[0] == '/dev/ttyUSB1':
+#            raise 'die'
         self.device = serial.Serial(*device)
         self.device.timeout = 0 # nonblocking
 
@@ -73,9 +75,8 @@ class Wind():
     def __init__(self, server):
         self.driver = False
         self.server = server
-        self.direction = self.Register(SensorValue, 'direction', self)
-        self.speed = self.Register(SensorValue, 'speed', self)
-        self.timestamp = 0
+        self.direction = self.Register(SensorValue, 'direction')
+        self.speed = self.Register(SensorValue, 'speed')
 
     def Register(self, _type, name, *args):
         return self.server.Register(_type(*(['wind/' + name] + list(args))))
@@ -83,7 +84,7 @@ class Wind():
     def poll(self):
         if not self.driver:
             self.driver = serialprobe.probe('wind', NMEAWindSensor, [38400, 4800])
-            self.timestamp = time.time()
+            self.direction.timestamp = time.time()
 
         if self.driver:
             winddata = False
@@ -98,12 +99,11 @@ class Wind():
                 winddata = val
 
             if winddata:
-                self.timestamp = time.time()
                 self.direction.set(winddata['direction'])
                 self.speed.set(winddata['speed'])
                 return True
                 
-            if time.time() - self.timestamp > 5:
+            if time.time() - self.direction.timestamp > 5:
                 self.driver = False
         return False
                 
