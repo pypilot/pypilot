@@ -30,7 +30,13 @@ class GpsProcess(multiprocessing.Process):
         while True:
             try:
                 self.gpsd.next()
-                queue.put(self.gpsd.fix)
+                if self.gpsd.fix.mode == 3:
+                    fix = {}
+                    fix['time'] = self.gpsd.fix.time
+                    fix['track'] = self.gpsd.fix.track
+                    fix['speed'] = self.gpsd.fix.speed
+                    queue.put(fix)
+                    
             except StopIteration:
                 print 'GPS lost gpsd'
                 break
@@ -47,12 +53,11 @@ class GpsProcess(multiprocessing.Process):
 class GpsPoller():
     def __init__(self, server):
         self.server = server
-        self.track = self.Register(SensorValue, 'track', self)
-        self.speed = self.Register(SensorValue, 'speed', self)
+        self.track = self.Register(SensorValue, 'track')
+        self.speed = self.Register(SensorValue, 'speed')
         self.fix = False
         self.lastfix = False
         self.process = False
-        self.timestamp = time.time()
 
     def Register(self, _type, name, *args):
         return self.server.Register(apply(_type, ['gps/' + name] + list(args)))
@@ -64,20 +69,17 @@ class GpsPoller():
         
         if self.process.queue.qsize() > 0:
             # flush queue entries
-            while self.process.queue.qsize() > 1:
-                self.process.queue.get()
+            while self.process.queue.qsize() > 0:
+                self.fix = self.process.queue.get()
 
-            # last entree
-            self.fix = self.process.queue.get()
-            if self.fix and self.fix.mode == 3:
-                self.track.set(self.fix.track)
-                self.speed.set(self.fix.speed)
-                #self.timestamp = self.fix.time
-                self.timestamp = time.time()
-            else:
-                self.fix = False
+            def fval(name):
+                return self.fix[name] if name in self.fix else False
+            
+            self.track.set(fval('track'))
+            self.speed.set(fval('speed'))
+            #self.timestamp = self.fix.time
 
-        if time.time() - self.timestamp > 3:
+        if time.time() - self.track.timestamp > 3:
             self.fix = False
 
         if (not self.fix) != (not self.lastfix):

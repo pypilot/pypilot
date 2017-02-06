@@ -20,7 +20,7 @@ public:
 
     void store_grey(const char *filename);
     void blit(surface *src, int xoff, int yoff);
-    void magnify(int factor);
+    void magnify(surface *src, int factor);
     void putpixel(int x, int y, unsigned int c);
     void line(int x1, int y1, int x2, int y2, unsigned int c);
     void hline(int x1, int x2, int y, unsigned int c);

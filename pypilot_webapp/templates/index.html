@@ -95,13 +95,15 @@
 
     <div id="Statistics" class="w3-container tab">
       <br>Power Consumption
-        <span id="amp_hours"></span> Amp Hours
+      <span id="power_consumption"></span> Watt Hours
+      <button id="reset_power_consumption" class="button">reset</button>
       <br>Runtime <span id="runtime"></span>
       <br>Servo: <b><span id="servo_engauged"></span></b>
         <div id="log"></div>
     </div>
     <div style="position:fixed;bottom:-10">
-      <br>SignalK Server Status: <b><span id="connection"></span></b>
+      <br>SignalK Server: <b><span id="connection"></span></b>
+      <br>Autopilot Errors: <b><span id="aperrors0"></span> <span id="aperrors1"></span></b>
       <br>Web Server Latency: <b><span id="ping-pong"></span> ms</b>
     </div>
 </body>

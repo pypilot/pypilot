@@ -21,7 +21,7 @@ $(document).ready(function() {
     $('#ping-pong').text("N/A");
     $('#connection').text('Not Connected');
     $('#compass_calibration').text("N/A");
-    $('#amp_hours').text("N/A");
+    $('#power_consumption').text("N/A");
     $('#runtime').text("N/A");
 
     var gains = ['P', 'I', 'D'];
@@ -56,6 +56,8 @@ $(document).ready(function() {
     // Event handler for new connections.
     socket.on('signalk_connect', function() {
         $('#connection').text('Connected')
+        $('#aperrors0').text("");
+        $('#aperrors1').text("");
 
         // control
         watch('ap/enabled')
@@ -68,6 +70,9 @@ $(document).ready(function() {
         watch('imu/compass_calibration');
 
         // configuration
+
+        watch('servo/controller')
+
 
         poll_signalk()
         block_polling = 0;
@@ -88,8 +93,8 @@ $(document).ready(function() {
 
         //var tab = $('input:radio[name=tabbed]:checked').val();
         var tab = currentTab
+        get('ap/heading');
         if(tab == 'Control') {
-            get('imu/heading_lowpass');
         } else if(tab == 'Gain') {
             var gains = ['P', 'I', 'D'];
             for (var i = 0; i<gains.length; i++)
@@ -100,7 +105,7 @@ $(document).ready(function() {
         } else if(tab == 'Configuration') {
             get('servo/Max Current');
         } else if(tab == 'Statistics') {
-            get('servo/Amp Hours');
+            get('servo/Power Consumption');
             get('imu/runtime');
             get('servo/engauged');
         }
@@ -143,8 +148,13 @@ $(document).ready(function() {
             return;
         }
         
-        if('imu/heading_lowpass' in msg.data) {
-            heading = msg.data['imu/heading_lowpass']['value'];
+        if('ap/heading' in msg.data) {
+            heading = msg.data['ap/heading']['value'];
+            if(heading.toString()=="false")
+                $('#aperrors0').text('compass or gyro failure!');
+            else
+                $('#aperrors0').text('');
+
             $('#heading').text(Math.round(10*heading)/10);                    
         }
         if('ap/enabled' in msg.data) {
@@ -199,15 +209,24 @@ $(document).ready(function() {
         }
 
         // statistics
-        if('servo/Amp Hours' in msg.data) {
-            value = msg.data['servo/Amp Hours']['value'];
-            $('#amp_hours').text(Math.round(1e4*value)/1e4);
+        if('servo/Power Consumption' in msg.data) {
+            value = msg.data['servo/Power Consumption']['value'];
+            $('#power_consumption').text(Math.round(1e4*value)/1e4);
         }
         
         if('imu/runtime' in msg.data) {
             value = msg.data['imu/runtime']['value'];
             $('#runtime').text(value);
         }
+
+        if('servo/controller' in msg.data) {
+            value = msg.data['servo/controller']['value'];
+            if(value == 'none')
+                $('#aperrors1').text('no motor controller!');
+            else
+                $('#aperrors1').text('');
+        }
+            
     });
     
     signalk_set = function(name, value) {
@@ -238,7 +257,9 @@ $(document).ready(function() {
         }
     }
 
-    $('#mode').change(function(event) { signalk_set('ap/mode', $('#mode').val()); });
+    $('#mode').change(function(event) {
+        signalk_set('ap/mode', $('#mode').val());
+    });
 
     
     $('#port10').click(function(event) { move(-10); });
@@ -261,6 +282,12 @@ $(document).ready(function() {
         block_polling = 2;
     });
 
+    // Statistics
+    $('#reset_power_consumption').click(function(event) {
+        signalk_set('servo/Power Consumption', 0);
+        return false;
+    });
+    
     openTab("Control");
 
     function openTab(name) {

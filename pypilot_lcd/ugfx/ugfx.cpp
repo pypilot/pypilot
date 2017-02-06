@@ -1,4 +1,4 @@
-/* Copyright (C) 2016 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2017 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -197,28 +197,40 @@ void surface::blit(surface *src, int xoff, int yoff)
     }
 }
 
-void surface::magnify(int factor)
+void surface::magnify(surface *src, int factor)
 {
-    char *q = new char [factor*factor*width*height*bypp];
+    if(factor == 1) {
+        blit(src, 0, 0);
+        return;
+    }
 
-    long sl = 0;
-    for(int y = 0; y<height; y++)
-        for(int x = 0; x<width; x++) {
-            long dl = factor * (x*bypp + y*factor*line_length);
-            for(int i = 0; i < factor; i++) {
-                for(int j = 0; j < factor; j++) {
-                    memcpy(q + dl, p + sl, bypp);
-                    dl += bypp;
-                }
-                dl += factor*(line_length - bypp);
-            }
-            sl+=bypp;
+    if(width < src->width*factor ||
+       height < src->height*factor) {
+        printf("magnify surface not large enough\n");
+        return;
+    }
+
+#define MAG(BYPP) \
+    long sl = 0; \
+    for(int y = 0; y<src->height; y++) \
+        for(int x = 0; x<src->width; x++) { \
+            long dl = factor * (x*BYPP + y*line_length); \
+            for(int i = 0; i < factor; i++) { \
+                for(int j = 0; j < factor; j++) { \
+                    memcpy(p + dl, src->p + sl, BYPP); \
+                    dl += BYPP; \
+                } \
+                dl += line_length - factor*BYPP; \
+            } \
+            sl+=BYPP; \
         }
 
-    delete [] p;
-
-    width *= factor, height *= factor, line_length *= factor;
-    p = q;
+    // compiler generates much better code if bypp is constant
+    if(bypp == 2) {
+        MAG(2);
+    } else if(bypp == 4) {
+        MAG(4);
+    }
 }
 
 void surface::putpixel(int x, int y, uint32_t c)
@@ -293,13 +305,32 @@ void surface::invert(int x1, int y1, int x2, int y2)
     x2 = x2 < width ? x2 : width-1;
     y1 = y1 > 0 ? y1 : 0;
     y2 = y2 < height ? y2 : height-1;
-                        
-    for(int y = y1; y <= y2; y++)
-        for(int x = x1; x <= x2; x++)
-            for(int c = 0; c<bypp; c++) {
-                int i = y*line_length + x*bypp + c;
-                p[i] = ~p[i];
-            }
+
+    int len = (x2-x1+1)*bypp;
+    
+    for(int y = y1; y <= y2; y++) {
+        int i1 = y*line_length + x1*bypp;
+        int i2 = i1 + len;
+        int i = i1;
+#if 1 // optimization
+        /* align to 8 byte boundary */
+        while(i&7 && i<i2) {
+            p[i] = ~p[i];
+            i++;
+        }
+
+        /* invert 8 bytes at a time */
+        while(i+7 < i2) {
+            *(uint64_t*)(p+i) = ~*(uint64_t*)(p+i);
+            i += 8;
+        }
+#endif
+        /* remainder bytes */
+        while(i<i2) {
+            p[i] = ~p[i];
+            i++;
+        }
+    }
 }
 
 void surface::fill(uint32_t c)

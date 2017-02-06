@@ -29,7 +29,7 @@ class SignalKClient(object):
     def __init__(self, f_on_connected, host=False, port=False, autoreconnect=False):
         self.autoreconnect = autoreconnect
         config = {}
-        configfilename = '/home/sean/.pypilot/pypilot.conf' 
+        configfilename = '/home/sean/.pypilot/signalk.conf' 
         try:
             file = open(configfilename)
             config = json.loads(file.readline())

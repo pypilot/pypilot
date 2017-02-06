@@ -20,22 +20,24 @@ class SimpleAutopilot(AutopilotBase):
     self.heading_error_int = self.CreateFilter('heading_error_int', 0, .02)
     
     # create simple pid filter
-    self.P = self.Register(AutopilotGain, 'P', .002, 0, .01)
-    self.I = self.Register(AutopilotGain, 'I', 0, 0, .01)
-    self.D = self.Register(AutopilotGain, 'D', .02, 0, .05)
-    self.DD = self.Register(AutopilotGain, 'DD', 0, 0, .25)
+    self.P = self.Register(AutopilotGain, 'P', .01, 0, .05)
+    self.I = self.Register(AutopilotGain, 'I', 0, 0, .05)
+    self.D = self.Register(AutopilotGain, 'D', .1, 0, .25)
+    self.DD = self.Register(AutopilotGain, 'DD', 0, 0, 1)
     self.lastheadingrate = 0
 
     self.hP = self.Register(AutopilotGain, 'hP', 0, 0, .1)
     self.hD = self.Register(AutopilotGain, 'hD', 0, 0, .1)
 
-  def process_imu_data(self, boatimu, heading_command):
-    heading = boatimu.SensorValues['heading_lowpass'].value
+  def process_imu_data(self, boatimu):
+    heading = self.heading.value
     headingrate = boatimu.SensorValues['headingrate'].value
     headingraterate = boatimu.SensorValues['headingrate'].value - self.lastheadingrate
     self.lastheadingrate = headingrate
     heel = boatimu.SensorValues['heel'].value
     rollrate = boatimu.SensorValues['rollrate'].value
+
+    heading_command = self.heading_command.value
 
     # filter the incoming heading and gyro heading
     err = heading - heading_command
@@ -51,7 +53,7 @@ class SimpleAutopilot(AutopilotBase):
               self.D.value*headingrate + \
               self.DD.value*headingraterate*10 + \
               self.hP.value*heel + self.hD.value*rollrate
-       
+
     self.servo.command.set(command)
 
 def main():

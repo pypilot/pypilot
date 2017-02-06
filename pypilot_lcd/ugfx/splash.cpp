@@ -54,10 +54,12 @@ int main()
 #endif    
     int facw = framebuffer.width / logo->width, fach = framebuffer.height / logo->height;
     int fac = facw < fach ? facw : fach;
-    logo->magnify(fac);
+    surface *logom = new surface(framebuffer);
+
+    logom->magnify(logo, fac);
 
     for(;;) {
-        framebuffer.blit(logo, 0, 0);
+        framebuffer.blit(logom, 0, 0);
         usleep(100000);
     }
 }
