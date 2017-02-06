@@ -257,7 +257,9 @@ $(document).ready(function() {
         }
     }
 
-    $('#mode').change(function(event) { signalk_set('ap/mode', $('#mode').val()); });
+    $('#mode').change(function(event) {
+        signalk_set('ap/mode', $('#mode').val());
+    });
 
     
     $('#port10').click(function(event) { move(-10); });

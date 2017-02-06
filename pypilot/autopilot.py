@@ -82,12 +82,14 @@ class AutopilotBase(object):
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
     self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind'], persistent=True)
+    self.lastmode = False
     self.last_heading = False
 
     self.heading = self.Register(SensorValue, 'heading')
 
     self.gps_heading_offset = self.Register(Value, 'gps_heading_offset', 0)
     self.wind_heading_offset = self.Register(Value, 'wind_heading_offset', 0)
+
 
     # read initial value from imu as this takes time
 #    while not self.boatimu.IMURead():
@@ -164,14 +166,19 @@ class AutopilotBase(object):
         offset = self.wind_heading_offset.value
         diff = resolv(compass_heading - self.wind.direction.value, offset)
         d = .1
-#        d = 1 # for now, don't even use compass
+        d = 1 # for now, don't even use compass (raw wind)
         self.wind_heading_offset.set(resolv((1-d)*offset + d*diff))
         self.heading.set(resolv(compass_heading - self.wind_heading_offset.value, 180))
 
 #        self.heading.set(self.wind.direction.value)
 
       if self.enabled.value:
+          if self.mode.value != self.lastmode:
+              self.heading_command.set(self.heading.value)
           self.process_imu_data(self.boatimu)
+
+      self.lastmode = self.mode.value
+
 
       t1 = time.time()
       if t1-t0 > period/2:

@@ -53,7 +53,7 @@ class SimpleAutopilot(AutopilotBase):
               self.D.value*headingrate + \
               self.DD.value*headingraterate*10 + \
               self.hP.value*heel + self.hD.value*rollrate
-       
+
     self.servo.command.set(command)
 
 def main():

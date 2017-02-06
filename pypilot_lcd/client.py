@@ -86,6 +86,7 @@ class RangeEdit():
         self.lastmovetime = time.time()
 
     def display(self):
+        self.lcd.surface.fill(black)
         self.lcd.fittext(rectangle(0, 0, 1, .3), self.name, True)
         self.lcd.fittext(rectangle(0, .3, 1, .3), self.desc, True)
 
@@ -170,12 +171,18 @@ class LCDClient():
         self.keypadup = list(self.keypad)
 
         self.blink = black, white
+        self.control = False
 
         self.pins = [5, 19, 13, 26, 6]
         if GPIO:
             GPIO.setmode(GPIO.BCM)
             for pin in self.pins:
-                GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                try:
+                    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                except RuntimeError:
+                    os.system("sudo chown tc /dev/gpiomem")
+                    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                    
                 GPIO.input(pin)
 
                 def cbr(channel):
@@ -423,62 +430,117 @@ class LCDClient():
         return time.time() - self.last_wind_time < 5
             
     def display_control(self):
-        def draw_big_number(pos, num):
+        if not self.control:
+            self.surface.fill(black)
+            self.control = {'heading': False, 'heading_command': True, 'mode': False, 'wifi': False}
+        self.frameperiod = .2 # 5 frames a second possible
+        
+        def draw_big_number(pos, num, lastnum):
             num = str(nr(num))
             while len(num) < 3:
                 num = ' ' + num
 
-            if True:
-                size = 30
-                self.text((pos[0]+.00, pos[1]), num[0], size, True)
-                self.text((pos[0]+.33, pos[1]), num[1], size, True)
-                self.text((pos[0]+.67, pos[1]), num[2], size, True)
+            if lastnum:
+                lastnum = str(nr(lastnum))
+                while len(lastnum) < 3:
+                    lastnum = ' ' + lastnum
+
+            if self.surface.width < 256:
+                size = 34
             else:
-                self.fittext(rectangle(pos[0], pos[1], 1, .4), num, crop=True)
+                size = 30
+
+            def drawnum(ind, c):
+                x = pos[0]+float(ind)/3
+                self.surface.box(*(self.convrect(rectangle(x, pos[1], .34, .4)) + [black]))
+                self.text((x, pos[1]), c, size, True)
+
+            for i in range(3):
+                try:
+                    if num[i] == lastnum[i]:
+                        continue
+                except:
+                    pass
+
+                drawnum(i, num[i])
+
+        warning = True
+        mode = self.last_msg['ap/mode']
+        if self.last_msg['servo/controller'] == 'none' and self.control['mode'] != 'no controller':
+            self.fittext(rectangle(0, .5, 1, .4), _('WARNING no motor controller'), True)
+        elif mode == 'gps' and not self.have_gps() and self.control['mode'] != 'no gps':
+            self.fittext(rectangle(0, .55, 1, .3), _('WARNING GPS not detected'), True)
+            self.control['mode'] = 'no gps'
+        elif mode == 'wind' and not self.have_wind() and self.control['mode'] != 'no wind':
+            self.fittext(rectangle(0, .55, 1, .3), _('WARNING WIND not detected'), True)
+            self.control['mode'] = 'no wind'
+        else:
+            warning = False
 
         if type(self.last_msg['ap/heading']) == type(False):
-            self.fittext(rectangle(0, 0, 1, .8), _('ERROR\ncompass or gyro failure!'), True)
+            r = rectangle(0, 0, 1, .8)
+            self.surface.box(*(self.convrect(r) + [black]))
+            self.fittext(r, _('ERROR\ncompass or gyro failure!'), True)
+            self.control['heading'] = False
+            self.control['heading_command'] = False
         else:
-            draw_big_number((0,0), self.last_msg['ap/heading'])
+            draw_big_number((0,0), self.last_msg['ap/heading'], self.control['heading'])
+            self.control['heading'] = self.last_msg['ap/heading']
 
-            if self.last_msg['ap/enabled'] != True:
-                self.fittext(rectangle(0, .4, 1, .4), _('standby'))
-            else: #if self.last_msg['ap/mode'] != 'N/A':
-                draw_big_number((0,.4), self.last_msg['ap/heading_command'])
+            if warning: #if self.last_msg['ap/mode'] != 'N/A':
+                self.control['heading_command'] = False
+            elif self.last_msg['ap/enabled'] != True:
+                if self.control['heading_command']:
+                    r = rectangle(0, .4, 1, .4)
+                    self.surface.box(*(self.convrect(r) + [black]))
+                    self.fittext(r, _('standby'))
+                    self.control['heading_command'] = False
+                    self.control['mode'] = False
+            else:
+                if self.control['heading_command'] != self.last_msg['ap/heading_command']:
+                    draw_big_number((0,.4), self.last_msg['ap/heading_command'], self.control['heading_command'])
+                    self.control['mode'] = False
+                    self.control['heading_command'] = self.last_msg['ap/heading_command']
 
-        if self.last_msg['servo/controller'] == 'none':
-            self.fittext(rectangle(0, .5, 1, .4), _('WARNING no motor controller'), True)
-            
-        elif self.last_msg['ap/mode'] == 'gps' and not self.have_gps():
-            self.fittext(rectangle(0, .55, 1, .3), _('WARNING GPS not detected'), True)
-        elif self.last_msg['ap/mode'] == 'wind' and not self.have_wind():
-            self.fittext(rectangle(0, .55, 1, .3), _('WARNING WIND not detected'), True)
-        else:
+        if warning:
+            self.control['mode'] = False
+        elif self.control['mode'] != mode: # mode ok
+            self.control['mode'] = mode
             #print 'mode', self.last_msg['ap/mode']
             modes = {'compass': ('C', self.have_compass, rectangle(.03, .74, .30, .16)),
                      'gps':     ('G', self.have_gps,     rectangle(.34, .74, .30, .16)),
                      'wind':    ('W', self.have_wind,    rectangle(.65, .74, .30, .16))}
 
+            self.surface.box(*(self.convrect(rectangle(0, .74, 1, .18)) + [black]))
             for mode in modes:
+
                 if modes[mode][1]():
                     self.fittext(modes[mode][2], modes[mode][0])
                 if self.last_msg['ap/mode'] == mode:
                     r = modes[mode][2]
                     marg = .02
                     self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
+
+        wifi = False
         try:
             wlan0 = open('/sys/class/net/wlan0/operstate')
             line = wlan0.readline().rstrip()
             wlan0.close()
             if line == 'up':
-                self.fittext(rectangle(.3, .9, .6, .12), 'WIFI')
+                wifi = True
         except:
             pass
 
+        if self.control['wifi'] != wifi:
+            self.fittext(rectangle(.3, .9, .6, .12), 'WIFI')
+            self.control['wifi'] = wifi
+
     def display_menu(self):
+        self.surface.fill(black)
         self.menu.display()
 
     def display_calibrate(self):
+        self.surface.fill(black)
         counter = self.last_msg['imu/alignmentCounter']
         self.client.get('imu/alignmentCounter')
         if counter == 0:
@@ -496,6 +558,7 @@ class LCDClient():
         self.client.get('imu/heel')
 
     def display_connecting(self):
+        self.surface.fill(black)
         self.fittext(rectangle(0, 0, 1, .4), _('connect to server...'), True)
         dots = ''
         for i in range(self.connecting_dots):
@@ -506,10 +569,10 @@ class LCDClient():
             self.connecting_dots = 0
             
     def display_info(self):
-        #self.text((0, 0), 'Info', 12)
+        self.surface.fill(black)
         self.fittext(rectangle(0, 0, 1, .2), _('Info'))
 
-        v = self.round_last_msg('servo/Amp Hours', 1)
+        v = self.round_last_msg('servo/Amp Hours', 3)
 
         y = .2
         spacing = .11
@@ -523,14 +586,13 @@ class LCDClient():
 
         self.client.get('servo/Amp Hours')
         self.client.get('imu/runtime')
-        
 
     def display(self):
-        self.surface.fill(black)
+        self.frameperiod = .25
         self.display_page()
 
-        if self.config['invert']:
-            self.invertrectangle(rectangle(0, 0, 1, 1))
+        if self.display_page != self.display_control:
+            self.control = False
 
         # status cursor
         w, h = self.surface.width, self.surface.height
@@ -671,7 +733,8 @@ class LCDClient():
         else:
             self.longsleep += 10
         while self.longsleep > 20:
-            time.sleep(.05)
+            dt = self.frameperiod / 10
+            time.sleep(dt)
             self.longsleep -= 1;
 
         # read from keys
@@ -739,14 +802,29 @@ def main():
 
     # magnify to fill screen
     mag = min(screen.width / lcdclient.surface.width, screen.height / lcdclient.surface.height)
+    if mag != 1:
+        print "magnifying lcd surface to fit screen"
+        magsurface = ugfx.surface(screen)
 
+    invsurface = ugfx.surface(lcdclient.surface)
+        
     def idle():
         lcdclient.display()
-        s = ugfx.surface(lcdclient.surface)
-#        mag = 2
-        s.magnify(mag)
 
-        screen.blit(s, 0, 0)
+        surface = lcdclient.surface
+        if lcdclient.config['invert']:
+            invsurface.blit(surface, 0, 0)
+            surface = invsurface
+            surface.invert(0, 0, surface.width, surface.height)
+
+        if mag != 1:
+            magsurface.magnify(surface, mag)
+            surface = magsurface
+            #        mag = 2
+            #surface.magnify(mag)
+
+        screen.blit(surface, 0, 0)
+
         lcdclient.idle()
 
     if use_glut:

@@ -101,6 +101,7 @@ class ArduinoServo:
         self.in_sync_count = 0        
         self.in_buf = []
         self.device = serial.Serial(*device)
+
         #self.device.setTimeout(0)
         self.device.timeout=0
         self.lastcommand = False
@@ -125,6 +126,7 @@ class ArduinoServo:
         value = int(value)
         code = [ArduinoServo.sync_bytes[self.out_sync], value&0xff, (value>>8)&0xff]
         b = '%c%c%c' % (code[1], code[2], crc8(code))
+
         self.device.write(b)
         #self.device.flush()
         self.out_sync += 1
@@ -141,13 +143,16 @@ class ArduinoServo:
             self.out_sync = 0;
         
     def command(self, command):
-        # onlyupdate at .5 seconds when command isn't changing to avoid 1 second data timeout
-        if command == self.lastcommand and time.time() - self.lasttime < .5:
-            return
+        if command == self.lastcommand:
+            dt = time.time() - self.lasttime
+            # onlyupdate at .5 seconds when command is zero
+            if command == 0 and dt < .5:
+                return
         self.lastcommand = command
         self.lasttime = time.time()
 
         command = min(max(command, -1), 1)
+
         self.raw_command((command+1)*1000)
 
     def stop(self):
@@ -155,11 +160,12 @@ class ArduinoServo:
 
     def poll(self):
         c = self.device.read(1)
+        self.device.flush()
         if len(c) == 0:
             return False
 
         self.in_buf.append(ord(c))
-        ret = {}
+        ret = {'result': True}
         if len(self.in_buf) == 3:
             code = [ArduinoServo.sync_bytes[self.in_sync]] + self.in_buf[:2]
             crc = crc8(code)
@@ -251,7 +257,7 @@ class Servo:
         self.current = self.Register(SensorValue, 'current')
         self.engauged = self.Register(Value, 'engauged', False)
         self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 10, persistent=True)
-        self.slow_period = self.Register(RangeProperty, 'Slow Period', 4, .1, 10, persistent=True)
+        self.slow_period = self.Register(RangeProperty, 'Slow Period', 1.5, .1, 10, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
         self.amphours = self.Register(Value, 'Amp Hours', 0)
@@ -499,7 +505,7 @@ class Servo:
                 d = time.time() - self.lastpolltime
                 if d > 10: # correct for clock skew
                     self.lastpolltime = time.time()
-                elif d > 3:
+                elif d > 8:
                     print 'd', d
                     self.close_driver()
                     pass
@@ -552,4 +558,5 @@ if __name__ == '__main__':
     while True:
         servo.send_command()
         servo.poll()
+        print servo.voltage.value
         server.HandleRequests(.05)
