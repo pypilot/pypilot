@@ -44,16 +44,19 @@ def probe(name, probe_device, bauds):
         if lastdevice:
             devices.append(lastdevice)
 
-        for baud in bauds:
-            devices.append(('/dev/' + name, baud))
-            
-        devicesp = ['/dev/ttyUSB', '/dev/ttyAMA', '/dev/ttyS']
-        for devicep in devicesp:
-            for i in range(4):
-                device_path = devicep + '%d' % i
-                if os.path.exists(device_path):
-                    for baud in bauds:
-                        devices.append((device_path, baud))
+        by_id = '/dev/serial/by-id'
+        if os.path.exists(by_id):
+            for device_path in os.listdir(by_id):
+                for baud in bauds:
+                    devices.append((os.path.join(by_id, device_path), baud))
+        else:
+            devicesp = ['/dev/ttyUSB', '/dev/ttyAMA', '/dev/ttyS']
+            for devicep in devicesp:
+                for i in range(4):
+                    device_path = devicep + '%d' % i
+                    if os.path.exists(device_path):
+                        for baud in bauds:
+                            devices.append((device_path, baud))
 
         probe = {'devices': devices, 'time': 0}
         probes[name] = probe
