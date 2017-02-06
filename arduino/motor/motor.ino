@@ -306,7 +306,7 @@ uint16_t TakeVolts()
 void debug_amps()
 {
   uint32_t amps = TakeAmps();
-  uint32_t ampsout =  amps * 11000 / 1024;
+  uint32_t ampsout =  amps * 11000 / 1024 / 64
   
   debug("%lu.%03lu  ", ampsout/1000, ampsout%1000);
 }
@@ -325,12 +325,14 @@ void loop()
 {
     // wait for characters
     // boot powered down, wake on data
-    set_sleep_mode(SLEEP_MODE_IDLE);
+    if(!Serial.available())
+      set_sleep_mode(SLEEP_MODE_IDLE);
 
     // serial input
     while(Serial.available()) {
       uint8_t c = Serial.read();
-      serialin+=3; // output at 3x input rate
+      if(serialin < 12)
+        serialin+=3; // output at 3x input rate
       
       switch(sync_b) {
       case 0:
@@ -402,7 +404,12 @@ void loop()
 
     delay(1); // small dead time to be safe
 #if 0 // enable to debug directly from serial port
+//engauge();
+//position(550);
+
     debug_volts();
+    debug("\n");
+    debug_amps();
     debug("\n");
     debug("flags %d\n", flags);
     delay(100);

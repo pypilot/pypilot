@@ -197,7 +197,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         else:
             mode = 'compass'
         self.client.set('ap/mode', mode)
-        self.client.set('ap/heading_command', self.heading)
 
     def onCommand( self, event ):
         if wx.GetMouseState().LeftIsDown():
