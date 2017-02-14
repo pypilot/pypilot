@@ -42,15 +42,33 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.gains = []
         for name in value_list:
             if 'AutopilotGain' in value_list[name]:
+                sizer = wx.FlexGridSizer( 0, 1, 0, 0 )
+		sizer.AddGrowableRow( 2 )
+		sizer.SetFlexibleDirection( wx.VERTICAL )
+
                 watchlist.append(name)
+                watchlist.append(name+'gain')
                 stname = wx.StaticText( self.swGains, wx.ID_ANY, name)
-                fgGains.Add( stname, 0, wx.ALL, 5 )
+                sizer.Add( stname, 0, wx.ALL, 5 )
                 stvalue = wx.StaticText( self.swGains, wx.ID_ANY, '   N/A   ')
-                fgGains.Add( stvalue, 0, wx.ALL, 5 )
-                slider = wx.Slider( self.swGains, wx.ID_ANY, 0, 0, 4000)
-                fgGains.Add( slider, 0, wx.ALL|wx.EXPAND, 5 )
+                sizer.Add( stvalue, 0, wx.ALL, 5 )
+
+                hsizer = wx.FlexGridSizer( 1, 0, 0, 0 )
+		hsizer.AddGrowableRow( 0 )
+		hsizer.SetFlexibleDirection( wx.VERTICAL )
                 
-                self.gains.append((stname, stvalue, slider))
+                gauge = wx.Gauge( self.swGains, wx.ID_ANY, 1000, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_VERTICAL )
+                hsizer.Add( gauge, 0, wx.ALL|wx.EXPAND, 5 )
+                slider = wx.Slider( self.swGains, wx.ID_ANY, 0, 0, 1000, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_VERTICAL| wx.SL_INVERSE)
+                hsizer.Add( slider, 0, wx.ALL|wx.EXPAND, 5 )
+
+                sizer.Add( hsizer, 1, wx.EXPAND, 5 )
+                
+                min_val, max_val = value_list[name]['min'], value_list[name]['max']
+                self.gains.append((stname, stvalue, gauge, slider, min_val, max_val))
+
+                fgGains.Add( sizer, 1, wx.EXPAND, 5 )
+
 
         on_con(self.client)
 
@@ -73,7 +91,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.wind_timer = wx.Timer(self, self.ID_WIND_TIMEOUT)
         self.Bind(wx.EVT_TIMER, self.wind_timeout, id=self.ID_WIND_TIMEOUT)
 
-        self.SetSize(wx.Size(400, 460))
+        self.SetSize(wx.Size(500, 580))
         self.stop()
 
     def stop(self):
@@ -87,7 +105,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             self.client.set('servo/command', command)
 
     def send_gain(self, gain):
-        stname, stvalue, slider = gain
+        stname, stvalue, gauge, slider, min_val, max_val = gain
         name = stname.GetLabel()
 
         if not name in self.recv:
@@ -96,7 +114,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             statvalue = float(stvalue.GetLabel())
         except:
             statvalue = -1 # force update
-        slidervalue = slider.GetValue() / 1000.0 / 100.0
+        slidervalue = slider.GetValue() / 1000.0 * (max_val - min_val) + min_val
 
         if abs(statvalue - slidervalue) >= .001 / 100.0:
             self.client.set(name, slidervalue)
@@ -126,10 +144,23 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
             found = False
             for gain in self.gains:
-                stname, stvalue, slider = gain
+                stname, stvalue, gauge, slider, min_val, max_val = gain
                 if name == stname.GetLabel():
                     stvalue.SetLabel('%.5f' % value)
-                    slider.SetValue(value*1000*100)
+                    slider.SetValue((value-min_val)*1000/(max_val - min_val))
+                    found = True
+                elif name == stname.GetLabel() + 'gain':
+                    v = abs(value) * 1000.0 * 5
+                    if v < gauge.GetRange():
+                        gauge.SetValue(v)
+                        if value > 0:
+                            gauge.SetBackgroundColour(wx.RED)
+                        else:
+                            gauge.SetBackgroundColour(wx.GREEN)
+                    else:
+                        gauge.SetValue(0)
+                        gauge.SetBackgroundColour(wx.BLUE)
+
                     found = True
 
             if found:
@@ -172,7 +203,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'servo/mode':
                 self.stMode.SetLabel(value)
             else:
-                print 'unhandled message: "%s"' % name
+                print 'warning: unhandled message "%s"' % name
 
     def gps_timeout(self, event):
         self.rbGPS.Disable()

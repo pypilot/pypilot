@@ -16,7 +16,7 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
-point_count=10000
+point_count=3000
 
 def TranslateAfter(x, y, z):
     m = glGetFloatv(GL_MODELVIEW_MATRIX)
@@ -124,11 +124,10 @@ class CompassCalibrationPlot():
         self.userscale = .02
         self.accel = [0, 0, 0]
         self.points = []
-        self.comp_points = []
         
         self.sigmapoints = False
         self.apoints = []
-        self.vpoints = []
+
         self.avg = [0, 0, 0]
         self.mode = GL_LINE
         self.uncalibrated_view = True
@@ -170,22 +169,6 @@ class CompassCalibrationPlot():
                 print "ERROR, compass:", data
             if len(self.points) > point_count:
                 self.points = self.points[1:]
-            if self.fusionQPose and self.alignmentQ and self.mag_cal_sphere:
-                compass = data['value']
-                beta = numpy.array(self.mag_cal_sphere)
-
-                fusionQPose = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
-                g = quaternion.rotvecquat([0, 0, 1], fusionQPose)
-                q = quaternion.vec2vec2quat([0, 0, 1], g)
-                
-                applied_compass = (compass-beta[:3])/beta[3]
-                rotated_compass = numpy.array(quaternion.rotvecquat(applied_compass, q))
-                comp_compass = beta[3]*rotated_compass + beta[:3]
-
-#                print 'c', compass, comp_compass
-                self.comp_points.append(comp_compass)
-                if len(self.comp_points) > point_count:
-                    self.comp_points = self.comp_points[1:]
         elif name == 'imu/compass_calibration_sigmapoints':
             self.sigmapoints = data['value']
         elif name == 'imu/compass_calibration' and data['value']:
@@ -230,12 +213,6 @@ class CompassCalibrationPlot():
                 glColor3f(0, 0, 1)
                 self.mag_sphere.draw()
 
-            glColor3f(1,0,0)
-
-            glEnableClientState(GL_VERTEX_ARRAY);
-            glVertexPointer(3, GL_FLOAT, 0, self.vpoints)
-            glDrawArrays(GL_LINE_STRIP, 0, len(self.vpoints)/3)
-            glDisableClientState(GL_VERTEX_ARRAY);
         
             glPointSize(4)
             glColor3f(1,.3,.3)
@@ -256,13 +233,6 @@ class CompassCalibrationPlot():
                 glVertex3fv(self.points[i])
             glEnd()
 
-            glPointSize(3)
-            glColor3f(1,1,0)
-            glBegin(GL_POINTS)
-            for i in range(len(self.comp_points)-10):
-                glVertex3fv(self.comp_points[i])
-            glEnd()
-            
             glColor3f(0,1,1)
             glPointSize(6)
             glBegin(GL_POINTS)
@@ -271,11 +241,15 @@ class CompassCalibrationPlot():
                     glVertex3fv(p[:3])
             glEnd()
 
-            glColor3f(1,9,1)
+            glColor3f(1,1,1)
             glBegin(GL_LINES)
 #            glVertex3fv(cal[:3])
-            glVertex3fv(map(lambda x,y :-x*cal[3]+y, self.accel, cal[:3]))
-            glVertex3fv(map(lambda x,y : x*cal[3]+y, self.accel, cal[:3]))
+
+            try:
+                glVertex3fv(map(lambda x,y :-x*cal[3]+y, self.accel, cal[:3]))
+                glVertex3fv(map(lambda x,y : x*cal[3]+y, self.accel, cal[:3]))
+            except:
+                print 'ERROR!!!!!!!!!!!!!!', self.accel, cal
             glEnd()
 
             glPopMatrix()
@@ -290,12 +264,6 @@ class CompassCalibrationPlot():
             def f_apply_sphere(beta, x):
                 return (x-beta[:3])/beta[3]
             cpoints = map(lambda p : f_apply_sphere(numpy.array(cal), numpy.array(p)), self.points)
-            glColor3f(1,0,0)
-            if cvpoints:
-                glEnableClientState(GL_VERTEX_ARRAY);
-                glVertexPointer(3, GL_FLOAT, 0, cvpoints)
-                glDrawArrays(GL_LINE_STRIP, 0, len(cvpoints)/3)
-                glDisableClientState(GL_VERTEX_ARRAY);
 
             glBegin(GL_LINE_STRIP)
             for i in range(len(cpoints)-10):

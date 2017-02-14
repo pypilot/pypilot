@@ -44,7 +44,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.lastmouse = False
         self.alignment_count = 0
-        self.starboard_down = self.port_down = False
 
         self.timer = wx.Timer(self, self.ID_MESSAGES)
         self.timer.Start(50)
@@ -116,8 +115,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
             enable = value == 0
             self.bLevel.Enable(enable)
-            self.bHeelingStarboard.Enable(enable)
-            self.bHeelingPort.Enable(enable)
 
         elif name == 'imu/pitch':
             self.stPitch.SetLabel(str(round3(value)))
@@ -222,12 +219,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def onLevel( self, event ):
         self.StartAlignment('level')
 	
-    def onHeelingStarboard( self, event ):
-        self.StartAlignment('starboard')
-
-    def onHeelingPort( self, event ):
-        self.StartAlignment('port')
-
     def onIMUHeadingOffset( self, event ):
         self.client.set('imu/heading_offset', self.sHeadingOffset.GetValue())
 

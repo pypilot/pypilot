@@ -25,7 +25,7 @@ class BoatPlot():
         self.texture_compass = True
 
     def display(self, fusionQPose):
-        fusionQPose = [1, 0, 0, 0]
+        #fusionQPose = [1, 0, 0, 0]
         if not self.objinit:
             objview.init('sailboat.obj')
             self.objinit = True
@@ -38,7 +38,10 @@ class BoatPlot():
         glPushMatrix()
 
         def glRotateQ(q):
-            glRotatef(quaternion.angle(q)*180/math.pi, q[1], q[2], q[3])
+            try:
+                glRotatef(quaternion.angle(q)*180/math.pi, q[1], q[2], q[3])
+            except:
+                pass
 
         dist = 16
         glTranslatef(0, 0, -dist)
