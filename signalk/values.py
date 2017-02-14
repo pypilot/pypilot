@@ -9,9 +9,7 @@
 
 # a value visible to external clients
 
-import json
-
-import os
+import os, time, json
 persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
 
 class Value(object):
@@ -54,12 +52,11 @@ class Value(object):
 
     def set(self, value):
         self.value = value
-
         if self.persistent:
             data = {}
             try:
                 file = open(persistent_path, 'r')
-                data = json.loads(file.readline())
+                data = json.loads(file.readline().rstrip())
                 file.close()
             except:
                 print 'failed to open', persistent_path
@@ -68,7 +65,7 @@ class Value(object):
             
             try:
                 file = open(persistent_path, 'w')
-                file.write(json.dumps(data))
+                file.write(json.dumps(data)+'\n')
                 file.close()
             except:
                 print 'failed to write', persistent_path
@@ -101,7 +98,6 @@ class Value(object):
         request = {self.name : {'ops', list(self.processes())}}
         socket.send(json.dumps(request) + '\n')
 
-import time
 class SensorValue(Value): # same as a Value with added timestamp
     def __init__(self, name, initial=False):
         super(SensorValue, self).__init__(name, initial)
@@ -149,7 +145,27 @@ class Property(Value):
 
     def type(self):
         return 'Property'
-            
+
+class ResettableValue(Property):
+    def __init__(self, name, initial, **kwargs):
+        super(ResettableValue, self).__init__(name, initial, **kwargs)
+        self.initial = initial
+
+    def processes(self):
+        p = super(Property, self).processes()
+        p['set'] = self.setdata
+        return p
+
+    def setdata(self, socket, data):
+        if data['value'] != self.initial:
+            print 'resettable value', self.name, 'invalid set'
+        else:
+            self.set(data['value'])
+
+    def type(self):
+        return 'ResettableValue'
+    
+
 class RangeProperty(Property):
     def __init__(self, name, initial, min_value, max_value, **kwargs):
         super(RangeProperty, self).__init__(name, initial, **kwargs)

@@ -19,7 +19,7 @@ sys.path.append('.')
 import os.path
 from signalk.server import *
 from signalk.values import *
-from boatimu import BoatIMU
+from boatimu import *
 
 import gpspoller, wind, servo
 
@@ -90,6 +90,7 @@ class AutopilotBase(object):
     self.gps_heading_offset = self.Register(Value, 'gps_heading_offset', 0)
     self.wind_heading_offset = self.Register(Value, 'wind_heading_offset', 0)
 
+    self.runtime = self.Register(AgeValue, 'runtime') #, persistent=True)
 
     # read initial value from imu as this takes time
 #    while not self.boatimu.IMURead():
@@ -152,7 +153,7 @@ class AutopilotBase(object):
       self.gps.poll()
       self.wind.poll()
       
-      compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
+      compass_heading = self.boatimu.SensorValues['heading'].value
       if self.mode.value == 'compass':
           self.heading.set(compass_heading)
       elif self.mode.value == 'gps':
@@ -176,6 +177,8 @@ class AutopilotBase(object):
           if self.mode.value != self.lastmode:
               self.heading_command.set(self.heading.value)
           self.process_imu_data(self.boatimu)
+
+          self.runtime.update()
 
       self.lastmode = self.mode.value
 

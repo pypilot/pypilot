@@ -119,8 +119,9 @@ class ArduinoServo:
                 pass
             time.sleep(.001)
             cnt+=1
-            if cnt == 500:
-                raise 'failed to initialize servo', device
+            if cnt == 600:
+                print 'failed to initialize servo', device
+                raise Exception
 
     def send_value(self, value):
         value = int(value)

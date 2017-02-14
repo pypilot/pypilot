@@ -32,11 +32,10 @@ def CalcError(beta, f, points):
         mean += R
     return math.sqrt(mean)
 
-def FitPoints(points):
+def FitPoints(points, sphere_fit):
     if len(points) < 7:
         return False
 
-    sphere_fit = [0, 0, 0, 30]
     zpoints = [[], [], [], [], [], []]
     for i in range(6):
         zpoints[i] = map(lambda x : x[i], points)
@@ -44,17 +43,19 @@ def FitPoints(points):
     def f_sphere3(beta, x):
         return (x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2 - beta[3]**2
 
+    print 'fit points with', sphere_fit
+    
     # with few sigma points, adjust only bias
     if len(points) < 10: # useful only if geographic location is the same?
         def f_sphere_bias3(beta, x, r):
             return (x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2 - r**2
 
-        sphere_bias_fit = FitLeastSq([0, 0, 0], f_sphere_bias3, (zpoints, sphere_fit[3]))
+        sphere_bias_fit = FitLeastSq(sphere_fit[:3], f_sphere_bias3, (zpoints, sphere_fit[3]))
         if not sphere_bias_fit:
             return False
 
         sphere_fit = sphere_bias_fit + [sphere_fit[3]]
-        print 'bias fit', sphere_bias_fit
+        print 'sphere bias fit', sphere_bias_fit
 
         def f_new_bias3(beta, x):
 #            print 'beta', beta
@@ -81,13 +82,13 @@ def FitPoints(points):
             print 'FitLeastSq failed!!!! ', len(points), points
             return False
         sphere_fit[3] = abs(sphere_fit[3])
-#        print 'sphere fit', sphere_fit
+        print 'sphere fit', sphere_fit
 
     return [sphere_fit, CalcError(sphere_fit, f_sphere3, points)]
 
 class SigmaPoints():
-    sigma = 5 # distance between sigma points
-    max_sigma_points = 12
+    sigma = 4.5 # distance between sigma points
+    max_sigma_points = 16
 
     def __init__(self):
         self.sigma_points = []
@@ -129,44 +130,63 @@ class SigmaPoints():
             self.sigma_points.append(p)
 
 
-def CalibrationProcess(points, fit_output):
-    last_bias = [0, 0, 0]
+def CalibrationProcess(points, fit_output, initial):
     cal = SigmaPoints()
 
     while True:
         for i in range(points.qsize()):
             cal.AddPoint(points.get())
 
-#        print "sigma", len(cal.sigma_points), cal.sigma_points
+        p = []
+        for sigma in cal.sigma_points:
+            print sigma
 
-        output = False
-        if len(cal.sigma_points) > 4:
-            output = FitPoints(cal.sigma_points)
+            if sigma[6] > 20:
+                p.append(sigma)
 
-            if output:
-                bias = output[0][:3]
-                n = map(lambda a, b: (a-b)**2, bias, last_bias)
-#                if n[0]+n[1]+n[2] > .1:
-#                    fit_output.put((output, cal.sigma_points))
-#                    last_bias = bias
-        fit_output.put((output, cal.sigma_points))
+        print 'sigma:', len(p)
 
-        time.sleep(15) # wait 15 seconds then run fit algorithm again
+        fit = FitPoints(p, initial)
 
-def CalibrationProcessExceptions(points, fit_output):
+        if fit:
+            mag = fit[0][3]
+            dev = fit[1]
+            if mag < 15 or mag > 70:
+                print 'fit found field outside of normal earth field strength', fit
+            elif dev > 500:
+                print 'deviation too high', dev
+            else:
+                print 'deviation', dev
+                bias = fit[0][:3]
+                n = map(lambda a, b: (a-b)**2, bias, initial[:3])
+                d = n[0]+n[1]+n[2]
+                initial = fit[0]
+                print 'd', d
+                if True:
+                    if d > .1:
+                        fit_output.put((fit, cal.sigma_points))
+                        last_bias = bias
+                else:
+                    fit_output.put((fit, cal.sigma_points))
+
+            time.sleep(120) # wait 2 minutes then run fit algorithm again
+        else:
+            time.sleep(15) # wait 15 seconds then run fit algorithm again
+
+def CalibrationProcessExceptions(*args):
   try:
-    CalibrationProcess(points, fit_output)
+    CalibrationProcess(*args)
   except KeyboardInterrupt:
     print 'Keyboard interrupt, calibration fit process exit'
     pass
 
 class MagnetometerAutomaticCalibration():
-    def __init__(self, cal_queue):
+    def __init__(self, cal_queue, initial):
         self.cal_queue = cal_queue
-        self.sphere_fit = [0, 0, 0, 30]
+        self.sphere_fit = initial
         self.points = multiprocessing.Queue()
         self.fit_output = multiprocessing.Queue()
-        self.process = multiprocessing.Process(target=CalibrationProcessExceptions, args=(self.points, self.fit_output))
+        self.process = multiprocessing.Process(target=CalibrationProcessExceptions, args=(self.points, self.fit_output, self.sphere_fit))
         self.process.start()
 
     def AddPoint(self, point):
