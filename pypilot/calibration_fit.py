@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2017 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -33,7 +33,7 @@ def CalcError(beta, f, points):
     return math.sqrt(mean)
 
 def FitPoints(points, sphere_fit):
-    if len(points) < 7:
+    if len(points) < 5:
         return False
 
     zpoints = [[], [], [], [], [], []]
@@ -46,7 +46,7 @@ def FitPoints(points, sphere_fit):
     print 'fit points with', sphere_fit
     
     # with few sigma points, adjust only bias
-    if len(points) < 10: # useful only if geographic location is the same?
+    if len(points) < 7: # useful only if geographic location is the same?
         def f_sphere_bias3(beta, x, r):
             return (x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2 - r**2
 
@@ -56,26 +56,6 @@ def FitPoints(points, sphere_fit):
 
         sphere_fit = sphere_bias_fit + [sphere_fit[3]]
         print 'sphere bias fit', sphere_bias_fit
-
-        def f_new_bias3(beta, x):
-#            print 'beta', beta
-#            print 'x', x
-            n = [x[0]-beta[0], x[1]-beta[1], x[2]-beta[2]]
-            d = n[0]*x[3] + n[1]*x[4] + n[2]*x[5]
-            m = map(vector.norm, zip(n[0], n[1], n[2]))
-            
-            d = d / m
-            return d  - beta[3]
-        new_bias_fit = FitLeastSq([0, 0, 0, 0], f_new_bias3, zpoints)
-        print 'new bias fit', new_bias_fit
-
-        def f_new_combined_bias3(beta, x, r):
-            return [f_sphere_bias3(beta, x, r), f_new_bias3(beta, x)]
-
-#        new_combined_bias_fit = FitLeastSq([0, 0, 0, 0], f_new_combined_bias3, (zpoints, 30))
- #       print 'new combined bias fit', new_combined_bias_fit
-
-        
     else:
         sphere_fit = FitLeastSq([0, 0, 0, 30], f_sphere3, zpoints)
         if not sphere_fit:
@@ -84,11 +64,65 @@ def FitPoints(points, sphere_fit):
         sphere_fit[3] = abs(sphere_fit[3])
         print 'sphere fit', sphere_fit
 
-    return [sphere_fit, CalcError(sphere_fit, f_sphere3, points)]
+
+    def f_new_bias3(beta, x, r):
+        #print 'beta', beta
+        n = [x[0]-beta[0], x[1]-beta[1], x[2]-beta[2]]
+        m = map(vector.norm, zip(n[0], n[1], n[2]))
+        n = map(lambda nx : nx / m, n)
+        d = n[0]*x[3] + n[1]*x[4] + n[2]*x[5]
+            
+        z1 = ((x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2 - 1) / r**2
+        z0 = d-beta[3]
+
+        return z0 + z1
+
+        
+    new_bias_fit = FitLeastSq(sphere_fit[:3] + [0], f_new_bias3, (zpoints, sphere_fit[3]))
+    print 'new bias fit', new_bias_fit
+    new_bias_fit = new_bias_fit[:3] + [sphere_fit[3]]
+
+    import numpy
+    def f_quat(beta, x, sphere_fit):
+        n = [x[0]-sphere_fit[0], x[1]-sphere_fit[1], x[2]-sphere_fit[2]]
+        q = [1 - vector.norm(beta[:3])] + list(beta[:3])
+        m = map(lambda v : quaternion.rotvecquat(vector.normalize(v), q), zip(n[0], n[1], n[2]))
+        m = numpy.array(zip(*m))
+        d = m[0]*x[3] + m[1]*x[4] + m[2]*x[5]
+        return d - beta[3]
+
+    quat_fit = FitLeastSq([0, 0, 0, 0], f_quat, (zpoints, sphere_fit))
+    q = [1 - vector.norm(quat_fit[:3])] + list(quat_fit[:3])
+    print 'quat fit', q, quat_fit, math.degrees(quaternion.angle(q)), math.degrees(math.asin(quat_fit[3]))
+
+
+    def f_rot(beta, x, sphere_fit):
+        n = [x[0]-sphere_fit[0], x[1]-sphere_fit[1], x[2]-sphere_fit[2]]
+        def rot(v, beta):
+            v = vector.normalize(v)
+            #m = [cos(beta[0])*v[0] + sin(beta[0])*v[2], v[1], cos(beta[0])*v[2] - sin(beta[0])*v[0]]
+            #n = [m[0], cos(beta[1])*m[1] + sin(beta[1])*m[2], cos(beta[1])*m[2] - sin(beta[1])*m[1]]
+            sin, cos = math.sin, math.cos
+            return [cos(beta[0])*v[0] + sin(beta[0])*v[2],
+                    cos(beta[1])*v[1] + sin(beta[1])*(cos(beta[0])*v[2] - sin(beta[0])*v[0]),
+                    cos(beta[1])*(cos(beta[0])*v[2] - sin(beta[0])*v[0]) - sin(beta[1])*v[1]]
+
+        m = map(lambda v : rot(v, beta), zip(n[0], n[1], n[2]))
+        m = numpy.array(zip(*m))
+        d = m[0]*x[3] + m[1]*x[4] + m[2]*x[5]
+        return d - beta[2]
+
+    rot_fit = FitLeastSq([0, 0, 0], f_rot, (zpoints, sphere_fit))
+    print 'rot fit', rot_fit, math.degrees(rot_fit[0]), math.degrees(rot_fit[1]), math.degrees(math.asin(rot_fit[2]))
+    new_bias_fit = new_bias_fit[:3] + [sphere_fit[3]]
+        
+
+#    return [sphere_fit, CalcError(sphere_fit, f_sphere3, points)]
+    return [sphere_fit, 1, sphere_fit]
 
 class SigmaPoints():
-    sigma = 4.5 # distance between sigma points
-    max_sigma_points = 16
+    sigma = 3 # distance between sigma points
+    max_sigma_points = 64
 
     def __init__(self):
         self.sigma_points = []
@@ -106,7 +140,7 @@ class SigmaPoints():
         index = len(self.sigma_points)
         p = list(point) + [1]
         if index == SigmaPoints.max_sigma_points:
-            if True:
+            if False:
                 self.lastmindisti += 1
                 if self.lastmindisti == SigmaPoints.max_sigma_points:
                     self.lastmindisti = 0
@@ -116,15 +150,12 @@ class SigmaPoints():
                 mindisti = 0
                 mindist = 1e20
                 for i in range(len(self.sigma_points)):
-                    dist = 0
-                    for p in self.sigma_points:
-                        dist += vector.norm(map(lambda x, y : x - y, p[:3], self.sigma_points[i][:3]))
+                    for q in self.sigma_points:
+                        dist = vector.norm(map(lambda x, y : x - y, q[:3], self.sigma_points[i][:3]))
+                        if dist > 0 and dist < mindist:
+                            mindisti = i
+                            mindist = dist
 
-                    if dist < mindist:
-                        mindisti = i
-                        mindist = dist
-
-                        #            print "mindist", mindisti
             self.sigma_points[mindisti] = p
         else:
             self.sigma_points.append(p)
@@ -139,19 +170,19 @@ def CalibrationProcess(points, fit_output, initial):
 
         p = []
         for sigma in cal.sigma_points:
-            print sigma
+            #print sigma
 
-            if sigma[6] > 20:
+            if sigma[6] >= 5:
                 p.append(sigma)
+        cal.sigma_points = p
 
         print 'sigma:', len(p)
 
         fit = FitPoints(p, initial)
-
         if fit:
             mag = fit[0][3]
             dev = fit[1]
-            if mag < 15 or mag > 70:
+            if mag < 9 or mag > 70:
                 print 'fit found field outside of normal earth field strength', fit
             elif dev > 500:
                 print 'deviation too high', dev
@@ -169,7 +200,8 @@ def CalibrationProcess(points, fit_output, initial):
                 else:
                     fit_output.put((fit, cal.sigma_points))
 
-            time.sleep(120) # wait 2 minutes then run fit algorithm again
+#            time.sleep(120) # wait 2 minutes then run fit algorithm again
+            time.sleep(12)
         else:
             time.sleep(15) # wait 15 seconds then run fit algorithm again
 
