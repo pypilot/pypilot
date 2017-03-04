@@ -21,7 +21,9 @@ from signalk.server import *
 from signalk.values import *
 from boatimu import *
 
-import gpspoller, wind, servo
+from gpspoller import GpsPoller
+from nmea_bridge import NmeaBridge
+import wind, servo
 
 def resolv(angle, offset=0):
     while offset - angle > 180:
@@ -76,7 +78,8 @@ class AutopilotBase(object):
     self.server = SignalKServer()
     self.boatimu = BoatIMU(self.server)
     self.servo = servo.Servo(self.server)
-    self.gps = gpspoller.GpsPoller(self.server)
+    self.gps = GpsPoller(self.server)
+    self.nmea_bridge = NmeaBridge(self.server, self.gps)
     self.wind = wind.Wind(self.server)
 
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
@@ -99,6 +102,7 @@ class AutopilotBase(object):
   def __del__(self):
       if self.gps.process:
           self.gps.process.terminate()
+      self.nmea_bridge.terminate()
       self.boatimu.__del__()
 
   def Register(self, _type, name, *args, **kwargs):
@@ -115,6 +119,7 @@ class AutopilotBase(object):
   def ap_iteration(self):
       period = .1
       data = False
+      # try 7 times to read data within the period
       for i in range(7):
           t0 = time.time()
           data = self.boatimu.IMURead()
@@ -141,17 +146,14 @@ class AutopilotBase(object):
       dt2 = time.time() - t0
 
       # calibration or other mode, disable autopilot
-      if not data:
-          #print 'no data!!!!!!!!!!!'
+      if not data or self.servo.drive.value == 'raw':
           self.enabled.set(False)
-      
-      if self.servo.drive.value == 'raw':
-          self.mode.set('disabled')
 
       dt3 = time.time() - t0
 
       self.gps.poll()
       self.wind.poll()
+      self.nmea_bridge.poll()
       
       compass_heading = self.boatimu.SensorValues['heading'].value
       if self.mode.value == 'compass':

@@ -83,6 +83,7 @@ class Wind():
 
     def poll(self):
         if not self.driver:
+            return False
             self.driver = serialprobe.probe('wind', NMEAWindSensor, [38400, 4800])
             self.direction.timestamp = time.time()
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2017 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -17,6 +17,7 @@
 
 
 import sys, select, time, socket
+import multiprocessing
 from signalk.client import SignalKClient
 from signalk.server import LineBufferedNonBlockingSocket
 
@@ -27,10 +28,34 @@ def cksum(msg):
         value ^= ord(c)
     return '%02x' % (value & 255)
 
-def main():
+class NmeaBridge:
+    def __init__(self, server, gps):
+        self.process = False
+        self.server = server
+        self.gps = gps
+        self.process = NmeaBridgeProcess()
+        self.process.start()
 
+    def poll(self):
+        while self.process.gps_queue.qsize() > 0:
+            data = self.process.gps_queue.get()
+            # if internal gps track is more than 2 seconds old, use externally supplied gps
+            if gps.track.timestamp - time.time() > 2:
+                name, value = data
+                if name == 'gps/track':
+                    self.gps.track.set(value)
+                elif name == 'gps/speed':
+                    self.gps.speed.set(value)
+            self.gps.source.update('external')
+    
+class NmeaBridgeProcess(multiprocessing.Process):
+    def __init__(self):
+        self.gps_queue = multiprocessing.Queue()
+        super(NmeaBridgeProcess, self).__init__(target=nmea_bridge_process, args=(self.gps_queue, ))
+
+def nmea_bridge_process(gps_queue=False):
     sockets = []
-    watchlist = ['ap/mode', 'ap/heading_command', 'imu/pitch', 'imu/roll', 'imu/heading_lowpass']
+    watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command', 'imu/pitch', 'imu/roll', 'imu/heading_lowpass']
 
     def setup_watches(client, watch=True):
         for name in watchlist:
@@ -40,13 +65,10 @@ def main():
         if sockets:
             watch(client)
 
-    host = False
-    if len(sys.argv) > 1:
-        host = sys.argv[1]
-
+    # we actually use a local connection to the server to simplify logic
     while True:
         try:
-            client = SignalKClient(on_con, host, autoreconnect=True)
+            client = SignalKClient(on_con, 'localhost', autoreconnect=True)
             break
         except:
             time.sleep(2)
@@ -55,17 +77,20 @@ def main():
     server.setblocking(0)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
+    port = 10110
     try:
-        server.bind(('0.0.0.0', 10110))
+        server.bind(('0.0.0.0', port))
     except:
         print 'nmea_bridge: bind failed.'
         exit(1)
+    print 'listening on port', port, 'for nmea connections'
 
     server.listen(5)
     max_connections = 10
     READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
 
-    ap_mode = 'disabled'
+    ap_enabled = 'N/A'
+    ap_mode = 'N/A'
     ap_heading_command = 180
     addresses = {}
 
@@ -117,9 +142,17 @@ def main():
                 data = line[7:len(line)-3].split(',')
                 speed = float(data[6])
                 heading = float(data[7])
+                
                 #client.set('gps/heading', heading)
-            elif line[3:6] == 'APB':
+                # must use internal gps_queue since normal clients cannot set these
+                if gps_queue:
+                    gps_queue.put(('gps/track', heading))
+                    gps_queue.put(('gps/speed', speed))
+
+            elif line[0] == '$' and line[3:6] == 'APB':
                 data = line[7:len(line)-3].split(',')
+                if not ap_enabled:
+                    client.set('ap/enabled', True)
 
                 if ap_mode != 'gps':
                     client.set('ap/mode', 'gps')
@@ -133,7 +166,9 @@ def main():
             value = data['value']
 
             msg = False
-            if name == 'ap/mode':
+            if name == 'ap/enabled':
+                ap_enabled = value
+            elif name == 'ap/mode':
                 ap_mode = value
             elif name == 'ap/heading_command':
                 ap_heading_command = value
@@ -150,4 +185,4 @@ def main():
                     sock.send(msg)
 
 if __name__ == '__main__':
-    main()
+    nmea_bridge_process()

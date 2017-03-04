@@ -231,7 +231,7 @@ class BoatIMU(object):
     self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age')
     self.SensorValues = {}
 
-    self.compass_calibration = self.Register(Value, 'compass_calibration', [[0, 0, 0, 30], 0], persistent=True)
+    self.compass_calibration = self.Register(Value, 'compass_calibration', [[0, 0, 0, 30], 0, False], persistent=True)
 
     self.compass_calibration_sigmapoints = self.Register(Value, 'compass_calibration_sigmapoints', False)
     self.imu_queue = multiprocessing.Queue()
@@ -361,7 +361,8 @@ class BoatIMU(object):
     self.last_alignmentCounter = self.alignmentCounter.value, self.alignmentType.value
     self.heading_off.update()
 
-    self.compass_auto_cal.AddPoint(data['compass'] + vector.normalize(data['accel']))
+    down = quaternion.rotvecquat([0, 0, 1], data['fusionQPose'])
+    self.compass_auto_cal.AddPoint(data['compass'] + down)
     if vector.norm(data['accel']) == 0:
       print 'vector n', data['accel']
 
