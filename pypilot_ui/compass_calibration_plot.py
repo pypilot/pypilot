@@ -16,7 +16,7 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
-point_count=3000
+point_count=4000
 
 def TranslateAfter(x, y, z):
     m = glGetFloatv(GL_MODELVIEW_MATRIX)
@@ -115,8 +115,8 @@ class CompassCalibrationPlot():
     default_radius = 30
     def __init__(self):
         self.unit_sphere = Spherical([0, 0, 0], lambda beta, x: x, 32, 16)
-        self.mag_sphere = False
-        self.mag_cal_sphere = [0, 0, 0, 30]
+        self.mag_fit = self.mag_fit_sphere = False
+        self.mag_cal = self.mag_cal_sphere = [0, 0, 0, 30]
         
         self.fusionQPose = False
         self.alignmentQ = False
@@ -172,10 +172,14 @@ class CompassCalibrationPlot():
         elif name == 'imu/compass_calibration_sigmapoints':
             self.sigmapoints = data['value']
         elif name == 'imu/compass_calibration' and data['value']:
-            self.mag_cal_sphere = data['value'][0]
+            self.mag_cal = data['value'][0]
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
-            self.mag_sphere = Spherical(self.mag_cal_sphere, fsphere,  64, 32);
+            self.mag_fit = Spherical(self.mag_cal, fsphere,  64, 32);
+
+            self.mag_cal_sphere = data['value'][2]
+            self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  32, 16);
+
         elif name == 'imu/fusionQPose':
             self.fusionQPose = data['value']
         elif name == 'imu/alignmentQ':
@@ -192,7 +196,8 @@ class CompassCalibrationPlot():
         glFrustum( -.1*ar, .1*ar, -.1, .1, .1, 15 )
         glMatrixMode(GL_MODELVIEW)
 
-        cal = self.mag_cal_sphere
+        cal = self.mag_cal
+        cal_sphere = self.mag_cal_sphere
 
         glClearColor(0, 0, 0, 0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -208,11 +213,15 @@ class CompassCalibrationPlot():
         if self.uncalibrated_view:
             glPushMatrix()
             glTranslatef(-cal[0], -cal[1], -cal[2])
+            glLineWidth(1)
 
-            if self.mag_sphere:
+            if self.mag_fit:
                 glColor3f(0, 0, 1)
-                self.mag_sphere.draw()
+                self.mag_fit.draw()
 
+            if self.mag_fit_sphere:
+                glColor3f(0, 1, 1)
+                self.mag_fit_sphere.draw()
         
             glPointSize(4)
             glColor3f(1,.3,.3)
@@ -242,12 +251,24 @@ class CompassCalibrationPlot():
             glEnd()
 
             glColor3f(1,1,1)
+            glLineWidth(1.8)
             glBegin(GL_LINES)
 #            glVertex3fv(cal[:3])
 
+            down = [0, 0, 1]
+            if self.fusionQPose:
+                down = quaternion.rotvecquat(down, quaternion.conjugate(self.fusionQPose))
+                down =             self.accel
+
             try:
-                glVertex3fv(map(lambda x,y :-x*cal[3]+y, self.accel, cal[:3]))
-                glVertex3fv(map(lambda x,y : x*cal[3]+y, self.accel, cal[:3]))
+                glColor3f(1, 1, 1)
+                glVertex3fv(map(lambda x,y :-x*cal[3]+y, down, cal[:3]))
+                glVertex3fv(map(lambda x,y : x*cal[3]+y, down, cal[:3]))
+
+                glColor3f(0, 1, 0)
+
+                glVertex3fv(map(lambda x,y :-x*cal_sphere[3]+y, down, cal_sphere[:3]))
+                glVertex3fv(map(lambda x,y : x*cal_sphere[3]+y, down, cal_sphere[:3]))
             except:
                 print 'ERROR!!!!!!!!!!!!!!', self.accel, cal
             glEnd()
@@ -330,7 +351,7 @@ if __name__ == '__main__':
         host = sys.argv[1]
 
     def on_con(client):
-        watchlist = ['imu/accel', 'imu/compass', 'imu/compass_calibration', 'imu/compass_calibration_sigmapoints', 'imu/fusionQpose']
+        watchlist = ['imu/accel', 'imu/compass', 'imu/compass_calibration', 'imu/compass_calibration_sphere', 'imu/compass_calibration_sigmapoints', 'imu/fusionQpose']
         for name in watchlist:
             client.watch(name)
         
