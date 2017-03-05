@@ -389,7 +389,20 @@ class Servo:
                           interpolate(speed, calspeed0, calspeed1, x, y), cal0, cal1)
             else:
                 duty = (speed - calspeed0)/(calspeed1 - calspeed0)
-                if (time.time() % self.slow_period.value) / self.slow_period.value > duty:
+                slow_period = self.slow_period.value
+
+                # move at least 1/2th of a second
+                minduty = .35 / slow_period
+
+                # double slow period until we get a duty so the motor will run
+                # at least 1/3rd of a second
+                if duty > 0 and duty < 1:
+                    while duty < minduty or duty > 1-minduty:
+                        slow_period *= 2
+                        minduty /= 2
+                #print 'duty', minduty, duty, slow_period, calspeed0, calspeed1
+
+                if (time.time() % slow_period) / slow_period > duty:
                     speed = calspeed0
                     cal = cal0
                 else:
@@ -458,6 +471,7 @@ class Servo:
             self.mode.set('forward')
 
         if not self.driver:
+            return
             self.driver = serialprobe.probe('servo', ArduinoServo, [115200])
 
             if self.driver:

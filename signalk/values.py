@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2017 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -72,9 +72,14 @@ class Value(object):
         
         if not self.watchers:
             return
+
         request = self.get_request()
         for socket in self.watchers:
             socket.send(request + '\n')
+
+    def update(self, value):
+        if self.value != value:
+            self.set(value)
 
     def watch(self, socket, data):
         value = True
@@ -83,7 +88,7 @@ class Value(object):
             if value == 'False':
                 value = False
             elif value != 'True':
-                print "watch value invalid", value
+                print 'watch value invalid', value
                 raise
 
         if socket in self.watchers:

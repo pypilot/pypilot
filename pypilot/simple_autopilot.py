@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2017 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -24,7 +24,6 @@ class SimpleAutopilot(AutopilotBase):
     def Gain(name, default, max_val):
       self.gains[name] = (self.Register(AutopilotGain, name, default, 0, max_val),
                           self.Register(SensorValue, name+'gain'))
-
     Gain('P', .01, .05)
     Gain('I', 0, .05)
     Gain('D', .1, .25)
@@ -73,21 +72,7 @@ class SimpleAutopilot(AutopilotBase):
 
 def main():
   ap = SimpleAutopilot()
-
-  def cleanup(signal_number, frame):
-    exit(1)
-
-  import signal
-  for s in range(1, 16):
-    if s != 9:
-      signal.signal(s, cleanup)
-  
-  try:
-    ap.run()
-  except KeyboardInterrupt:
-    print 'Keyboard interrupt, autopilot process exit'
-#  except:
-#    print 'exception'
+  ap.run()
 
 if __name__ == '__main__':
   main()

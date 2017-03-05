@@ -33,7 +33,7 @@ def nr(x):
         s = str(int(x))
         while len(s) < 3:
             s = ' ' + s
-            return s
+        return s
     except:
         return x
 
@@ -471,6 +471,8 @@ class LCDClient():
         
         def draw_big_number(pos, num, lastnum):
             num = nr(num)
+            if len(num) < 3:
+                print 'i', '"'+num+'"'
 
             if lastnum:
                 lastnum = nr(lastnum)

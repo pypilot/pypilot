@@ -34,7 +34,6 @@ setup (name = 'pypilot',
        entry_points={
            'console_scripts': [
                'pypilot=pypilot.simple_autopilot:main',
-               'pypilot_nmea_bridge=pypilot.nmea_bridge:main',
                'pypilot_webapp=pypilot_webapp.pypilot_webapp:main',
                'pypilot_lcdclient=pypilot_lcd.client:main',
                'pypilot_control=pypilot_ui.autopilot_control:main',

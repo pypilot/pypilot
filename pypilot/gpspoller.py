@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2017 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -42,21 +42,17 @@ class GpsProcess(multiprocessing.Process):
                 break
 
     def gps_process(self, queue):
-        try:
-            while True:
-                self.connect()
-                self.read(queue)
-        except KeyboardInterrupt:
-            print 'Keyboard interrupt, gps process exit'
-            
+        while True:
+            self.connect()
+            self.read(queue)
             
 class GpsPoller():
     def __init__(self, server):
         self.server = server
         self.track = self.Register(SensorValue, 'track')
         self.speed = self.Register(SensorValue, 'speed')
-        self.fix = False
-        self.lastfix = False
+        self.source = self.Register(Value, 'source', 'none')
+        self.lastsource = self.source.value
         self.process = False
 
     def Register(self, _type, name, *args):
@@ -65,26 +61,30 @@ class GpsPoller():
     def poll(self):
         if not self.process or not self.process.is_alive():
             self.process = GpsProcess()
+            print 'start gps'
             self.process.start()
         
         if self.process.queue.qsize() > 0:
+            fix = False
             # flush queue entries
             while self.process.queue.qsize() > 0:
-                self.fix = self.process.queue.get()
+                fix = self.process.queue.get()
 
-            def fval(name):
-                return self.fix[name] if name in self.fix else False
+            if fix:
+                def fval(name):
+                    return self.fix[name] if name in self.fix else False
             
-            self.track.set(fval('track'))
-            self.speed.set(fval('speed'))
-            #self.timestamp = self.fix.time
+                self.track.set(fval('track'))
+                self.speed.set(fval('speed'))
+                self.source.update('internal')
 
         if time.time() - self.track.timestamp > 3:
-            self.fix = False
+            self.source.update('none')
 
-        if (not self.fix) != (not self.lastfix):
-            print 'GPS ' + ('got' if self.fix else 'lost') + ' fix'
-            self.lastfix = self.fix
+        source = self.source.value
+        if (not source) != (not self.lastsource):
+            print 'GPS Source changed to:', source
+            self.lastsource = source
 
 if __name__ == "__main__":
     from signalk.server import SignalKServer
