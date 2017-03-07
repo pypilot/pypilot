@@ -65,7 +65,7 @@ def nmea_bridge_process(gps_queue=False):
     def on_con(client):
         print 'nmea client connected'
         if sockets:
-            watch(client)
+            setup_watches(client)
 
     # we actually use a local connection to the server to simplify logic
     print 'nmea try connections'
