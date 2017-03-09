@@ -5,3 +5,38 @@ python setup.py install
 
 pypilot.build is a build script to build tinycore linux packages
 it can be run to update the packages in tinypilot
+
+
+
+
+This collection of scripts are the building blocks of a simple autopilot
+
+install:
+
+pip install PyOpenGL
+sudo apt-get install python-numpy python-scipy
+
+most of the scripts can be run individually as standalone
+or test programs, some function as clients, other as servers
+
+
+servers:
+
+simple_autopilot.py -- classic PID based autopilot implementation
+
+boatimu.py -- specialized imu specific to boat motions
+               includes automatic 2d/3d calibration and alignment of magnetic sensors
+
+servo.py -- controls servo via RC pwm signal, and gpio feedback for fault
+
+signalk_server.py -- implements poll based server allowing external manipulation
+
+
+clients:
+
+autopilot_control.py -- simple interface to command autopilot
+autopilot_calibration.py -- interactive gui for all autopilot calibrations
+
+signalk_client.py -- console client
+signalk_client_gui.py -- graphical user version
+signalk_scope.py -- gui client for plot client
