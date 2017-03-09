@@ -240,7 +240,7 @@ class BoatIMU(object):
     self.calupdates = 0
     self.heading_lowpass3 = self.heading_lowpass3a = self.heading_lowpass3b = False
 
-    for name in ['timestamp', 'fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'heading_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel', 'calupdate']:
+    for name in ['timestamp', 'fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'accel_comp', 'heading_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel', 'calupdate']:
         if not name in self.SensorValues:
             self.SensorValues[name] = self.Register(SensorValue, name)
     self.last_imuread = time.time()
@@ -314,8 +314,14 @@ class BoatIMU(object):
     else:
       avgsensor('fusionQPose', 4)
 
+    down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(data['fusionQPose']))
     # apply alignment calibration
     data['fusionQPose'] = list(quaternion.multiply(data['fusionQPose'], self.alignmentQ.value))
+
+    accel = data['accel']
+    def ner(z):
+      return map(lambda x : int(100*x), z)
+    data['accel_comp'] = quaternion.rotvecquat(vector.sub(accel, down), self.alignmentQ.value)
 
     # count down to alignment
     if (self.alignmentCounter.value, self.alignmentType.value) != self.last_alignmentCounter:
@@ -398,7 +404,7 @@ class BoatIMU(object):
       return result
 
     # third order lowpass
-    llp = .18
+    llp = .2
     self.heading_lowpass3a = heading_filter(llp, data[filtername], self.heading_lowpass3a)
     self.heading_lowpass3b = heading_filter(llp, self.heading_lowpass3a, self.heading_lowpass3b)
     self.heading_lowpass3 = heading_filter(llp, self.heading_lowpass3b, self.heading_lowpass3)

@@ -181,6 +181,7 @@ class LCDClient():
 
         self.blink = black, white
         self.control = False
+        self.wifi = False
 
         self.pins = [5, 19, 13, 26, 6]
         if GPIO:
@@ -462,11 +463,30 @@ class LCDClient():
 
     def have_wind(self):
         return time.time() - self.last_wind_time < 5
-            
+
+    def display_wifi(self):
+        wifi = False
+        try:
+            wlan0 = open('/sys/class/net/wlan0/operstate')
+            line = wlan0.readline().rstrip()
+            wlan0.close()
+            if line == 'up':
+                wifi = True
+        except:
+            pass
+
+        if self.wifi != wifi:
+            wifirect = rectangle(.3, .9, .6, .12)
+            if wifi:           
+                self.fittext(wifirect, 'WIFI')
+            else:
+                self.surface.box(*(self.convrect(wifirect) + [black]))
+            self.wifi = wifi
+    
     def display_control(self):
         if not self.control:
             self.surface.fill(black)
-            self.control = {'heading': False, 'heading_command': True, 'mode': False, 'wifi': False}
+            self.control = {'heading': False, 'heading_command': True, 'mode': False}
         self.frameperiod = .2 # 5 frames a second possible
         
         def draw_big_number(pos, num, lastnum):
@@ -557,19 +577,7 @@ class LCDClient():
                     marg = .02
                     self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
 
-        wifi = False
-        try:
-            wlan0 = open('/sys/class/net/wlan0/operstate')
-            line = wlan0.readline().rstrip()
-            wlan0.close()
-            if line == 'up':
-                wifi = True
-        except:
-            pass
-
-        if self.control['wifi'] != wifi:
-            self.fittext(rectangle(.3, .9, .6, .12), 'WIFI')
-            self.control['wifi'] = wifi
+        self.display_wifi()
 
     def display_menu(self):
         self.surface.fill(black)
@@ -604,6 +612,8 @@ class LCDClient():
         self.connecting_dots += 1
         if self.connecting_dots > 16:
             self.connecting_dots = 0
+
+        self.display_wifi()
             
     def display_info(self):
         self.surface.fill(black)
@@ -653,6 +663,7 @@ class LCDClient():
 
         if self.display_page != self.display_control:
             self.control = False
+            self.wifi = False
 
         # status cursor
         w, h = self.surface.width, self.surface.height

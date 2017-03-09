@@ -25,3 +25,6 @@ def cross(a, b):
 
 def dot(a, b):
     return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]
+
+def sub(a, b):
+    return map(lambda x, y : x - y, a, b)

@@ -83,9 +83,13 @@ class Wind():
 
     def poll(self):
         if not self.driver:
-            return False
-            self.driver = serialprobe.probe('wind', NMEAWindSensor, [38400, 4800])
-            self.direction.timestamp = time.time()
+            device = serialprobe.probe('wind', [38400, 4800])
+            if device:
+                try:
+                    self.driver = NMEAWindSensor(device)
+                    self.direction.timestamp = time.time()
+                except serial.serialutil.SerialException:
+                    print 'failed to open', device
 
         if self.driver:
             winddata = False
@@ -100,6 +104,7 @@ class Wind():
                 winddata = val
 
             if winddata:
+                serialprobe.probe_success('wind')
                 self.direction.set(winddata['direction'])
                 self.speed.set(winddata['speed'])
                 return True
