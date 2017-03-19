@@ -29,7 +29,7 @@ try:
 except ImportError:
   print "RTIMU library not detected, please install it"
 
-def imu_process(queue, cal_queue, compass_cal):
+def imu_process(queue, cal_queue, compass_cal, gyrobias):
     SETTINGS_FILE = "RTIMULib"
     s = RTIMU.Settings(SETTINGS_FILE)
     s.FusionType = 1
@@ -40,11 +40,18 @@ def imu_process(queue, cal_queue, compass_cal):
     s.CompassCalEllipsoidValid = True
     s.MPU9255AccelFsr = 0 # +- 2g
     s.MPU9255GyroFsr = 0 # +- 250 deg/s
-    s.MPU9255GyroAccelSampleRate = 10
-    s.MPU9255CompassSampleRate = 10
+    # compass noise by rate 10=.043, 20=.033, 40=.024, 80=.017, 100=.015
+    s.MPU9255GyroAccelSampleRate = 100
+    s.MPU9255CompassSampleRate = 100
 
     s.GyroBiasValid = True
-    s.GyroBias = (-.003, 0.021000, -.01)
+    if gyrobias:
+      s.GyroBias = tuple(map(math.radians, gyrobias))
+    else:
+      s.GyroBias = (0, 0, 0)
+
+    s.KalmanRk, s.KalmanQ = .002, .001
+#    s.KalmanRk, s.KalmanQ = .0005, .001
 
     rtimu = RTIMU.RTIMU(s)    
 
@@ -86,6 +93,8 @@ def imu_process(queue, cal_queue, compass_cal):
             #rtimu.resetFusion()
             calupdates+=1
 
+          data['accelresiduals'] = list(rtimu.getAccelResiduals())
+            
           data['gyrobias'] = s.GyroBias
           data['calupdates'] = calupdates
           queue.put(data)
@@ -229,8 +238,6 @@ class BoatIMU(object):
 
 #    if self.load_calibration():
 #      imu_cal_queue.put(tuple(self.compass_calibration.value[0][:3]))
-    
-    self.imu_process = multiprocessing.Process(target=imu_process, args=(self.imu_queue,imu_cal_queue, self.compass_calibration.value[0]))
 
     self.compass_auto_cal = MagnetometerAutomaticCalibration(imu_cal_queue, self.compass_calibration.value[0])
     self.lastqpose = False
@@ -240,9 +247,13 @@ class BoatIMU(object):
     self.calupdates = 0
     self.heading_lowpass3 = self.heading_lowpass3a = self.heading_lowpass3b = False
 
-    for name in ['timestamp', 'fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'accel_comp', 'heading_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel', 'calupdate']:
+    for name in ['timestamp', 'fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'accelresiduals', 'accel_comp', 'heading_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel', 'calupdate']:
         if not name in self.SensorValues:
             self.SensorValues[name] = self.Register(SensorValue, name)
+
+    self.SensorValues['gyrobias'].make_persistent(120) # write gyrobias every 2 minutes
+
+    self.imu_process = multiprocessing.Process(target=imu_process, args=(self.imu_queue,imu_cal_queue, self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
     self.last_imuread = time.time()
     
   def __del__(self):
@@ -273,6 +284,7 @@ class BoatIMU(object):
     # flush queue
     while self.imu_queue.qsize() > 0:
       data = self.imu_queue.get()
+      self.DataBank.append(data)
 
     fixtime = True
     if fixtime: # override buggy imu library timestamp with current time here
@@ -284,8 +296,6 @@ class BoatIMU(object):
     data['timestamp'] -= self.FirstTimeStamp
     if not fixtime:
       data['timestamp'] /= 1000000.0
-
-    self.DataBank.append(data)
 
     self.loopfreq.strobe()
     
@@ -302,6 +312,7 @@ class BoatIMU(object):
     avgsensor('gyro')
     avgsensor('compass')
 
+    avgsensor('accelresiduals')
     avgsensor('gyrobias')
     
     # when the calibration updates, we cannot average fusion pose
@@ -319,8 +330,6 @@ class BoatIMU(object):
     data['fusionQPose'] = list(quaternion.multiply(data['fusionQPose'], self.alignmentQ.value))
 
     accel = data['accel']
-    def ner(z):
-      return map(lambda x : int(100*x), z)
     data['accel_comp'] = quaternion.rotvecquat(vector.sub(accel, down), self.alignmentQ.value)
 
     # count down to alignment
@@ -333,15 +342,15 @@ class BoatIMU(object):
 
       if self.alignmentCounter.value == 0:
         self.alignmentPose = quaternion.normalize(self.alignmentPose)
-        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(self.alignmentPose))
+        adown = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(self.alignmentPose))
         alignment = []
         if self.alignmentType.value == 'level':
-          alignment = quaternion.vec2vec2quat([0, 0, 1], down)
+          alignment = quaternion.vec2vec2quat([0, 0, 1], adown)
           alignment = quaternion.multiply(self.alignmentQ.value, alignment)
         elif self.alignmentType.value == 'starboard':
-          self.starboard_down = list(down)
+          self.starboard_down = list(adown)
         elif self.alignmentType.value == 'port':
-          self.port_down = list(down)
+          self.port_down = list(adown)
         
         if self.starboard_down and self.port_down:
           ang = math.atan2(self.port_down[0] - self.starboard_down[0], \
@@ -357,7 +366,8 @@ class BoatIMU(object):
     self.last_alignmentCounter = self.alignmentCounter.value, self.alignmentType.value
     self.heading_off.update()
 
-    down = quaternion.rotvecquat([0, 0, 1], data['fusionQPose'])
+    #q = quaternion.multiply(data['fusionQPose'], quaternion.conjugate(self.alignmentQ.value))
+    #down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(q))
     self.compass_auto_cal.AddPoint(data['compass'] + down)
     if vector.norm(data['accel']) == 0:
       print 'vector n', data['accel']

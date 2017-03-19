@@ -123,6 +123,7 @@ class AutopilotBase(object):
       self.nmea_bridge.process.terminate()
       if self.watchdog_device:
           print 'close watchdog'
+          self.watchdog_device.write('V')
           self.watchdog_device.close()
 
   def Register(self, _type, name, *args, **kwargs):
@@ -171,7 +172,8 @@ class AutopilotBase(object):
 
       dt3 = time.time() - t0
       
-      compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
+      #compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
+      compass_heading = self.boatimu.SensorValues['heading'].value
       if self.mode.value == 'compass':
           self.heading.set(compass_heading)
       elif self.mode.value == 'gps':
@@ -199,7 +201,6 @@ class AutopilotBase(object):
           self.runtime.update()
 
       self.lastmode = self.mode.value
-
 
       t1 = time.time()
       if t1-t0 > period/2:

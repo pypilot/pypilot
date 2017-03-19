@@ -26,21 +26,29 @@ class ConnectionLost(Exception):
     pass
 
 class SignalKClient(object):
-    def __init__(self, f_on_connected, host=False, port=False, autoreconnect=False):
+    def __init__(self, f_on_connected, host=False, port=False, autoreconnect=False, have_watches=False):
         self.autoreconnect = autoreconnect
+
+        orighost = host
+        if not host:
+            host = 'pypilot'
+
         config = {}
-        configfilename = '/home/sean/.pypilot/signalk.conf' 
+        configfilename = os.getenv('HOME') + '/.pypilot/signalk.conf'
         try:
             file = open(configfilename)
             config = json.loads(file.readline())
-        except IOError:
-            print 'failed to load config file:', configfilename
 
-        if not host:
-            if 'host' in config:
+            if 'host' in config and not orighost:
                 host = config['host']
-            else:
-                host = 'localhost'
+
+        except IOError:
+            try:
+                config['host'] = host
+                file = open(configfilename, 'w')
+                file.write(json.dumps(config) + '\n')
+            except IOError:
+                print 'failed to write config file:', configfilename
 
         if '/dev' in host: # serial port
             device, baud = host, port
@@ -66,6 +74,7 @@ class SignalKClient(object):
 
             self.host_port = host, port
         self.f_on_connected = f_on_connected
+        self.have_watches = have_watches
         self.onconnected(connection)
 
     def onconnected(self, connection):
@@ -215,16 +224,19 @@ class SignalKClient(object):
 def SignalKClientFromArgs(argv, watch, *cargs):
     host = False
     port = False
+    watches = argv[1:]
     if len(argv) > 1:
         if ':' in argv[1]:
             i = argv[1].index(':')
             host = argv[1][:i]
             port = int(argv[1][i+1:])
-        else:
+            watches = watches[1:]
+        elif not '/' in argv[1]:
             host = argv[1]
+            watches = watches[1:]
 
     def on_con(client):
-        for arg in argv[2:]:
+        for arg in watches:
             if watch:
                 client.watch(arg)
             else:
@@ -232,7 +244,7 @@ def SignalKClientFromArgs(argv, watch, *cargs):
         if len(cargs) == 1:
             cargs[0]()
             
-    return SignalKClient(on_con, host, port, autoreconnect=True)
+    return SignalKClient(on_con, host, port, autoreconnect=True, have_watches=watches)
 
 # this simple test client for an autopilot server
 # connects, enumerates the values, and then requests
@@ -243,7 +255,7 @@ def main():
         sys.argv.remove('-c')
 
     client = SignalKClientFromArgs(sys.argv, continuous)
-    if len(sys.argv) <= 2:
+    if not client.have_watches:
         client.print_values()
         exit()
 

@@ -40,7 +40,8 @@ class ServoClient(SignalKClient):
             if name == 'servo/command':
                 if self.first_command:
                     console('servo command received, aborting')
-                    console('ensure no other client is commanding the servo during calibration!!')
+                    console('ensure the autopilot is not active and')
+                    console('no manual servo commands during calibration!')
                     exit(1)
                 self.first_command = True
             elif name == 'servo/raw_command':

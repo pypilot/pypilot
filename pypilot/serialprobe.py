@@ -48,8 +48,6 @@ def probe(name, bauds):
             for baud in bauds:
                 devices.append({'path': os.path.join(by_id, device_path), 'baud': baud})
     else:
-        print 'warning: /dev/serial/by-id not found'
-        print ' this may delay initialization'
         devicesp = ['/dev/ttyUSB'] + devicesp
 
     for devicep in devicesp:

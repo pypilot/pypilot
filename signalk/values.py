@@ -17,21 +17,29 @@ class Value(object):
         self.name = name
 
         # load from persistent data...
-        self.persistent = 'persistent' in kwargs and kwargs['persistent']
-        if self.persistent:
-            data = {}
-            try:
-                file = open(persistent_path)
-                data = json.loads(file.readline())
-                file.close()
-            except:
-                print 'failed to load', persistent_path
-
-            if name in data:
-                initial = data[name]
-        
         self.value = initial
         self.watchers = []
+        self.persistent = False # value is stored to config file
+        if 'persistent' in kwargs and kwargs['persistent']:
+            timeout = 0
+            if 'persistent_timeout' in kwargs:
+                timeout = kwargs['persistent_timeout']
+            self.make_persistent(timeout)
+
+    def make_persistent(self, timeout=0):
+        self.persistent = True
+        self.persistent_timeout = timeout
+        self.persistent_time = 0
+        data = {}
+        try:
+            file = open(persistent_path)
+            data = json.loads(file.readline())
+            file.close()
+        except:
+            print 'failed to load', persistent_path
+
+        if self.name in data:
+            self.value = data[self.name]
 
     def processes(self):
         return {'ops'   : self.ops,
@@ -50,25 +58,35 @@ class Value(object):
     def type(self):
         return 'Value'
 
+    def store_persistent(self):
+        t = time.time()
+        if t-self.persistent_time < self.persistent_timeout:
+            return
+
+        self.persistent_time = t
+        
+        data = {}
+        try:
+            file = open(persistent_path, 'r')
+            data = json.loads(file.readline().rstrip())
+            file.close()
+        except:
+            print 'failed to open', persistent_path
+
+        data[self.name] = self.value
+            
+        try:
+            file = open(persistent_path, 'w')
+            file.write(json.dumps(data)+'\n')
+            file.close()
+        except:
+            print 'failed to write', persistent_path
+
+
     def set(self, value):
         self.value = value
         if self.persistent:
-            data = {}
-            try:
-                file = open(persistent_path, 'r')
-                data = json.loads(file.readline().rstrip())
-                file.close()
-            except:
-                print 'failed to open', persistent_path
-
-            data[self.name] = self.value
-            
-            try:
-                file = open(persistent_path, 'w')
-                file.write(json.dumps(data)+'\n')
-                file.close()
-            except:
-                print 'failed to write', persistent_path
+            self.store_persistent()    
         
         if not self.watchers:
             return

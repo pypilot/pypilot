@@ -112,13 +112,17 @@ class ArduinoServo:
 
         cnt = 0
 
+        data = False
         while self.flags.value & ArduinoServoFlags.OVERCURRENT or \
           not self.flags.value & ArduinoServoFlags.SYNC:
             self.stop()
             while self.poll():
+                data = True
                 pass
             time.sleep(.001)
             cnt+=1
+            if cnt == 100 and not data:
+                raise Exception
             if cnt == 1000:
                 raise Exception
 
@@ -470,6 +474,7 @@ class Servo:
             self.mode.set('forward')
 
         if not self.driver:
+            t0 = time.time()
             device = serialprobe.probe('servo', [115200])
             if device:
                 try:
