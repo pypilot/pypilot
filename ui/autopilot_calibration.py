@@ -11,7 +11,7 @@ import tempfile, time, math, sys, subprocess, json, socket, os
 import wx, wx.glcanvas
 import autopilot_control_ui
 import compass_calibration_plot, pypilot.quaternion, boatplot
-import signalk.scope
+import signalk.scope_wx
 from signalk.client import SignalKClient, ConnectionLost
 from signalk.client_wx import round3
 
@@ -70,7 +70,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def receive_messages(self, event):
         if not self.client:
             try:
-                self.client = SignalKClient(self.on_con, self.host, autoreconnect=False)
+                self.client = SignalKClient(self.on_con, self.host, autoreconnect=True)
             except socket.error:
                 self.timer.Start(5000)
                 return
@@ -174,8 +174,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.servoprocess = False
 
     def onKeyPressCompass( self, event ):
-        signalk.scope.wxglutkeypress(event, self.compass_calibration_plot.special, \
+        signalk.scope_wx.wxglutkeypress(event, self.compass_calibration_plot.special, \
                                      self.compass_calibration_plot.key)
+
+    def onClearCompass( self, event ):
+        self.compass_calibration_plot.points = []
 
     def onMouseEventsCompass( self, event ):
         self.CompassCalibration.SetFocus()

@@ -11,6 +11,7 @@ import time, sys
 from signalk.client import SignalKClient
 import json, math, numpy
 from pypilot import quaternion
+from pypilot import vector
 
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
@@ -115,14 +116,22 @@ class CompassCalibrationPlot():
     default_radius = 30
     def __init__(self):
         self.unit_sphere = Spherical([0, 0, 0], lambda beta, x: x, 32, 16)
-        self.mag_fit = self.mag_fit_sphere = False
-        self.mag_cal = self.mag_cal_sphere = [0, 0, 0, 30]
+        self.mag_fit_sphere = self.mag_fit_ellipsoid = self.mag_fit_new_bias = False
+        self.mag_cal_q = [1,0,0,0]
+
+        self.mag_cal_sphere = [0, 0, 0, 30]
+        self.mag_cal_ellipsoid = [0, 0, 0, 30, 1, 1]
+        self.mag_cal_new_bias = [0, 0, 0, 30, 0]
+
+        self.out = [0,0,0,0,0,0]
+        self.outcount = 0
         
         self.fusionQPose = False
         self.alignmentQ = False
 
         self.userscale = .02
         self.accel = [0, 0, 0]
+        self.heading = 0
         self.points = []
         
         self.sigmapoints = False
@@ -162,23 +171,79 @@ class CompassCalibrationPlot():
 
         if name == 'imu/accel':
             self.accel = data['value']
+        elif name == 'imu/heading':
+            self.heading = data['value']
         elif name == 'imu/compass':
-            if data['value']:
-                self.points.append(data['value'])
-            else:
-                print "ERROR, compass:", data
+            value = data['value']
+            if value:
+                self.points.append(value)
+
+            ccompass = vector.normalize(vector.sub(value, self.mag_cal_sphere[:3]))
+            cecompass = vector.sub(value, self.mag_cal_ellipsoid[:3])
+            cecompass = vector.normalize(cecompass)
+            cecompass = vector.normalize([cecompass[0],
+                                          cecompass[1] * self.mag_cal_ellipsoid[4],
+                                          cecompass[2] * self.mag_cal_ellipsoid[5]])
+
+            cncompass = vector.normalize(vector.sub(value, self.mag_cal_new_bias[:3]))
+            
+            down = [0, 0, 1]
+            if self.fusionQPose:
+                #down = quaternion.rotvecquat(down, quaternion.conjugate(self.fusionQPose))
+
+                q = self.fusionQPose
+                if self.alignmentQ:
+                    q = quaternion.multiply(q, quaternion.conjugate(self.alignmentQ))
+                down = quaternion.rotvecquat(down, quaternion.conjugate(q))
+
+                d = vector.dot(down, ccompass)
+                #print 'd', d, 'down', down
+
+                c = quaternion.rotvecquat(ccompass, q)
+                cr = quaternion.rotvecquat(ccompass, quaternion.multiply(self.mag_cal_q, q))
+                ce = quaternion.rotvecquat(cecompass, q)
+                cer = quaternion.rotvecquat(cecompass, quaternion.multiply(self.mag_cal_q, q))
+                cn = quaternion.rotvecquat(cncompass, q)
+                cnr = quaternion.rotvecquat(cncompass, quaternion.multiply(self.mag_cal_q, q))
+
+                a = math.atan2(c[1], c[0])
+                ae = math.atan2(ce[1], ce[0])
+                an = math.atan2(cn[1], cn[0])
+                out = a, math.atan2(cr[1], cr[0]), \
+                      ae, math.atan2(cer[1], cer[0]), \
+                      an, math.atan2(cnr[1], cnr[0])
+
+                self.out = map(lambda x, y : x/10 + y, out, self.out)
+                self.outcount += 1
+                
+                if self.outcount == 10:
+                    print math.degrees(math.asin(d)), map(lambda x : '%3.1f' % (math.degrees(x) + self.heading), self.out)
+                    self.out = [0,0,0,0,0,0]
+                    self.outcount = 0
+                
+
             if len(self.points) > point_count:
                 self.points = self.points[1:]
+
+
         elif name == 'imu/compass_calibration_sigmapoints':
             self.sigmapoints = data['value']
         elif name == 'imu/compass_calibration' and data['value']:
-            self.mag_cal = data['value'][0]
+            self.mag_cal_sphere = data['value'][0]
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
-            self.mag_fit = Spherical(self.mag_cal, fsphere,  64, 32);
+            self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  64, 32);
 
-            self.mag_cal_sphere = data['value'][2]
-            self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  32, 16);
+            self.mag_cal_ellipsoid = data['value'][2]
+            def fellipsoid(beta, x):
+                return numpy.array([beta[3]*x[0] + beta[0], \
+                                    x[1]*beta[3]/beta[4] + beta[1], \
+                                    x[2]*beta[3]/beta[5] + beta[2]])
+            self.mag_fit_ellipsoid = Spherical(self.mag_cal_ellipsoid, fellipsoid,  64, 32);
+            self.mag_cal_new_bias = data['value'][3]
+            self.mag_fit_new_bias = Spherical(self.mag_cal_new_bias, fsphere,  64, 32);
+
+            self.mag_cal_q = data['value'][4]
 
         elif name == 'imu/fusionQPose':
             self.fusionQPose = data['value']
@@ -196,8 +261,9 @@ class CompassCalibrationPlot():
         glFrustum( -.1*ar, .1*ar, -.1, .1, .1, 15 )
         glMatrixMode(GL_MODELVIEW)
 
-        cal = self.mag_cal
         cal_sphere = self.mag_cal_sphere
+        cal_ellipsoid = self.mag_cal_ellipsoid
+        cal_new_bias = self.mag_cal_new_bias
 
         glClearColor(0, 0, 0, 0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -212,16 +278,20 @@ class CompassCalibrationPlot():
 
         if self.uncalibrated_view:
             glPushMatrix()
-            glTranslatef(-cal[0], -cal[1], -cal[2])
+            glTranslatef(-cal_sphere[0], -cal_sphere[1], -cal_sphere[2])
             glLineWidth(1)
 
-            if self.mag_fit:
-                glColor3f(0, 0, 1)
-                self.mag_fit.draw()
-
             if self.mag_fit_sphere:
-                glColor3f(0, 1, 1)
+                glColor3f(0, 0, 1)
                 self.mag_fit_sphere.draw()
+
+            if self.mag_fit_ellipsoid:
+                glColor3f(0, 1, 1)
+                self.mag_fit_ellipsoid.draw()
+                
+            if self.mag_fit_new_bias:
+                glColor3f(1, 0, 0)
+                self.mag_fit_new_bias.draw()
         
             glPointSize(4)
             glColor3f(1,.3,.3)
@@ -242,7 +312,7 @@ class CompassCalibrationPlot():
                 glVertex3fv(self.points[i])
             glEnd()
 
-            glColor3f(0,1,1)
+            glColor3f(1, 1, 0)
             glPointSize(6)
             glBegin(GL_POINTS)
             if self.sigmapoints:
@@ -257,20 +327,28 @@ class CompassCalibrationPlot():
 
             down = [0, 0, 1]
             if self.fusionQPose:
-                down = quaternion.rotvecquat(down, quaternion.conjugate(self.fusionQPose))
-                down =             self.accel
+                if self.alignmentQ:
+                    q = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
+                down = quaternion.rotvecquat(down, quaternion.conjugate(q))
+                #down =             self.accel
 
             try:
                 glColor3f(1, 1, 1)
-                glVertex3fv(map(lambda x,y :-x*cal[3]+y, down, cal[:3]))
-                glVertex3fv(map(lambda x,y : x*cal[3]+y, down, cal[:3]))
-
-                glColor3f(0, 1, 0)
-
                 glVertex3fv(map(lambda x,y :-x*cal_sphere[3]+y, down, cal_sphere[:3]))
                 glVertex3fv(map(lambda x,y : x*cal_sphere[3]+y, down, cal_sphere[:3]))
+
+                glColor3f(0, 1, 0)
+                
+                glVertex3fv(map(lambda x,y :-x*cal_ellipsoid[3]+y, down, cal_ellipsoid[:3]))
+                glVertex3fv(map(lambda x,y : x*cal_ellipsoid[3]+y, down, cal_ellipsoid[:3]))
+
+                glColor3f(1, 0, 1)
+                
+                glVertex3fv(map(lambda x,y :-x*cal_new_bias[3]+y, down, cal_new_bias[:3]))
+                glVertex3fv(map(lambda x,y : x*cal_new_bias[3]+y, down, cal_new_bias[:3]))
+
             except:
-                print 'ERROR!!!!!!!!!!!!!!', self.accel, cal
+                print 'ERROR!!!!!!!!!!!!!!', self.accel, cal_sphere
             glEnd()
 
             glPopMatrix()
@@ -355,7 +433,7 @@ if __name__ == '__main__':
         for name in watchlist:
             client.watch(name)
         
-    client = SignalKClient(on_con, host)
+    client = SignalKClient(on_con, host, autoreconnect=True)
     plot = CompassCalibrationPlot()
 
     def display():

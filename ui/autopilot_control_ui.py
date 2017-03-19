@@ -221,7 +221,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.CompassCalibration = wx.glcanvas.GLCanvas(self.m_panel1, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])
 		fgSizer8.Add( self.CompassCalibration, 0, wx.ALL|wx.EXPAND, 5 )
 		
-		fgSizer191 = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgSizer191 = wx.FlexGridSizer( 0, 3, 0, 0 )
 		fgSizer191.AddGrowableCol( 0 )
 		fgSizer191.SetFlexibleDirection( wx.BOTH )
 		fgSizer191.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
@@ -258,6 +258,9 @@ class CalibrationDialogBase ( wx.Dialog ):
 		
 		fgSizer191.Add( fgSizer10, 1, wx.EXPAND, 5 )
 		
+		self.m_button10 = wx.Button( self.m_panel1, wx.ID_ANY, u"Clear", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer191.Add( self.m_button10, 0, wx.ALL, 5 )
+		
 		m_sdbSizer1 = wx.StdDialogButtonSizer()
 		self.m_sdbSizer1OK = wx.Button( self.m_panel1, wx.ID_OK )
 		m_sdbSizer1.AddButton( self.m_sdbSizer1OK )
@@ -272,7 +275,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel1.SetSizer( fgSizer8 )
 		self.m_panel1.Layout()
 		fgSizer8.Fit( self.m_panel1 )
-		self.m_notebook1.AddPage( self.m_panel1, u"compass", False )
+		self.m_notebook1.AddPage( self.m_panel1, u"compass", True )
 		self.m_panel3 = wx.Panel( self.m_notebook1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer12 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer12.AddGrowableCol( 0 )
@@ -459,7 +462,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook1.AddPage( self.m_panel3, u"imu", True )
+		self.m_notebook1.AddPage( self.m_panel3, u"imu", False )
 		self.m_panel2 = wx.Panel( self.m_notebook1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer9 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer9.AddGrowableCol( 0 )
@@ -587,6 +590,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.CompassCalibration.Bind( wx.EVT_MOUSEWHEEL, self.onMouseEventsCompass )
 		self.CompassCalibration.Bind( wx.EVT_PAINT, self.onPaintGLCompass )
 		self.CompassCalibration.Bind( wx.EVT_SIZE, self.onSizeGLCompass )
+		self.m_button10.Bind( wx.EVT_BUTTON, self.onClearCompass )
 		self.BoatPlot.Bind( wx.EVT_KEY_DOWN, self.onKeyPressBoatPlot )
 		self.BoatPlot.Bind( wx.EVT_LEFT_DOWN, self.onMouseEventsBoatPlot )
 		self.BoatPlot.Bind( wx.EVT_LEFT_UP, self.onMouseEventsBoatPlot )
@@ -626,6 +630,9 @@ class CalibrationDialogBase ( wx.Dialog ):
 		event.Skip()
 	
 	def onSizeGLCompass( self, event ):
+		event.Skip()
+	
+	def onClearCompass( self, event ):
 		event.Skip()
 	
 	def onKeyPressBoatPlot( self, event ):
