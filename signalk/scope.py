@@ -42,7 +42,11 @@ class trace():
             self.offset = self.points[0][1]
 
     def noise(self):
-        return 0
+        if not len(self.points):
+            return 0
+        
+        avg = sum(map(lambda x : x[1], self.points)) / len(self.points)
+        return math.sqrt(sum(map(lambda x : (avg-x[1])**2, self.points))) / len(self.points)
 
     def tracevertexes(self, time, plot):
         # remove datapoints after the first one that is off the screen
