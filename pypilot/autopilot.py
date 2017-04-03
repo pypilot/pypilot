@@ -207,11 +207,12 @@ class AutopilotBase(object):
           print 'Autopilot routine is running too _slowly_', t1-t0, period/2
 
       self.servo.poll()
+      t12 = time.time()
       self.servo.send_command()
 
       t2 = time.time()
       if t2-t1 > period/2:
-          print 'servo is running too _slowly_', t2-t1
+          print 'servo is running too _slowly_', t2-t1, t12-t1
 
       self.gps.poll()
       self.wind.poll()

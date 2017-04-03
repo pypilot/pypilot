@@ -150,6 +150,6 @@ def probe_success(name):
     except:
         print 'serialprobe failed to record device', name
 
-def gpsdevices(devices):
+def setgpsdevices(devices):
     global gpsdevices
     gpsdevices = devices

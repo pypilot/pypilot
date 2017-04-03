@@ -53,9 +53,6 @@ def FitPoints(points, sphere_fit):
     for i in range(6):
         zpoints[i] = map(lambda x : x[i], points)
 
-    print 'fit points with', sphere_fit
-
-
     def f_3dfit(beta, x, sphere_fit, down):
         return \
             (x[0] - beta[0]*down[0] - sphere_fit[0])**2 + \
@@ -116,8 +113,63 @@ def FitPoints(points, sphere_fit):
 
         cpoints = map(lambda a, b : a - b, zpoints[:3], ellipsoid_fit2[:3])
         rotellipsoid_fit2 = FitLeastSq(ellipsoid_fit[3:] + [0, 0, 0], f_rotellipsoid3, cpoints)
-        #print 'rotellipsoid_fit2', rotellipsoid_fit2
+        print 'rotellipsoid_fit2', rotellipsoid_fit2
 
+        def f_uppermatrixfit(beta, x):
+            b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
+            r = numpy.matrix([beta[3:6], [0]+list(beta[6:8]), [0, 0]+[beta[8]]])
+            print 'b', beta
+
+            m = r * b
+            m = list(numpy.array(m.transpose()))
+            r0 = map(lambda y : 1 - vector.dot(y, y), m)
+
+            return r0
+
+        def f_matrixfit(beta, x, efit):
+            b = numpy.matrix(map(lambda a, b : a - b, x[:3], efit[:3]))
+            r = numpy.matrix([[1,       beta[0], beta[1]],
+                              [beta[2], efit[4], beta[3]],
+                              [beta[4], beta[5], efit[5]]])
+
+            m = r * b
+            m = list(numpy.array(m.transpose()))
+            r0 = map(lambda y : efit[3]**2 - vector.dot(y, y), m)
+            #return r0
+
+            g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
+            r1 = map(lambda y, z : beta[6] - vector.dot(y, z), m, g)
+
+            return r0+r1
+
+        def f_matrix2fit(beta, x, efit):
+            b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
+            r = numpy.matrix([[1,       efit[0], efit[1]],
+                              [efit[2], beta[4], efit[3]],
+                              [efit[4], efit[5], beta[5]]])
+
+            m = r * b
+            m = list(numpy.array(m.transpose()))
+            r0 = map(lambda y : beta[3]**2 - vector.dot(y, y), m)
+            #return r0
+
+            g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
+            r1 = map(lambda y, z : beta[6] - vector.dot(y, z), m, g)
+
+            return r0+r1
+
+        if False:
+         matrix_fit = FitLeastSq([0, 0, 0, 0, 0, 0, 0], f_matrixfit, (zpoints, ellipsoid_fit))
+         #print 'matrix_fit', matrix_fit
+
+         matrix2_fit = FitLeastSq(ellipsoid_fit + [matrix_fit[6]], f_matrix2fit, (zpoints, matrix_fit))
+         #print 'matrix2_fit', matrix2_fit
+
+         matrix_fit2 = FitLeastSq(matrix_fit, f_matrixfit, (zpoints, matrix2_fit))
+         print 'matrix_fit2', matrix_fit2
+
+         matrix2_fit2 = FitLeastSq(matrix2_fit[:6] + [matrix_fit2[6]], f_matrix2fit, (zpoints, matrix_fit2))
+         print 'matrix2_fit2', matrix2_fit2
 
 
     def rot(v, beta):
@@ -182,7 +234,7 @@ def FitPoints(points, sphere_fit):
         return beta[3] - d
 
     rot_fit = FitLeastSq([0, 0, 0, 0], f_rot, (zpoints, sphere_fit))
-    print 'rot fit', rot_fit, math.degrees(rot_fit[0]), math.degrees(rot_fit[1]), math.degrees(rot_fit[2]), math.degrees(math.asin(rot_fit[3]))
+    print 'rot fit', rot_fit, math.degrees(rot_fit[0]), math.degrees(rot_fit[1]), math.degrees(rot_fit[2]), math.degrees(math.asin(min(1, max(-1, rot_fit[3]))))
     new_bias_fit = new_bias_fit[:3] + [sphere_fit[3]]
 
     def dip_error(label, cal):
@@ -202,7 +254,7 @@ def FitPoints(points, sphere_fit):
 
         ddev = math.sqrt(ddev / len(ds))
 
-        print 'dip', label, math.degrees(math.asin(dtotal)), math.degrees(math.asin(ddev))
+        #print 'dip', label, math.degrees(math.asin(dtotal)), math.degrees(math.asin(ddev))
 
 
     def apply_sphere(p):
@@ -276,7 +328,7 @@ class SigmaPoint():
 class SigmaPoints():
     sigma = 1.6 # distance between sigma points
     down_sigma = .05 # distance between down vectors
-    max_sigma_points = 24
+    max_sigma_points = 64
 
     def __init__(self):
         self.sigma_points = []
@@ -298,7 +350,7 @@ class SigmaPoints():
             mindist = 1e20
             for i in range(len(self.sigma_points)):
                 for j in range(i):
-                    dist = vector.dist(self.sigma_points[i].compass, self.sigma_points[i].compass)
+                    dist = vector.dist(self.sigma_points[i].compass, self.sigma_points[j].compass)
                     if dist < mindist:
                         mindisti = i
                         mindist = dist
@@ -310,9 +362,17 @@ class SigmaPoints():
 
 
 def CalibrationProcess(points, fit_output, initial):
+    try:
+        import os
+        os.system("renice 20 %d" % os.getpid())
+    except:
+        print "warning, failed to renice calibration process"
+
     cal = SigmaPoints()
 
     while True:
+        time.sleep(120) # wait 2 minutes then run fit algorithm again
+
         for i in range(points.qsize()):
             p = points.get()
             cal.AddPoint(p[:3], p[3:6])
@@ -321,7 +381,7 @@ def CalibrationProcess(points, fit_output, initial):
         p = []
         hour_ago = time.time() - 3600
         for sigma in cal.sigma_points:
-            if sigma.count >= 5 and sigma.time > hour_ago:
+            if sigma.count >= 2 and sigma.time > hour_ago:
                 p.append(sigma)
         cal.sigma_points = p
 
@@ -331,56 +391,54 @@ def CalibrationProcess(points, fit_output, initial):
             p.append(sigma.compass + sigma.down)
         print 'sigma:', len(p)
         fit = FitPoints(p, initial)
-        if fit:
-            mag = fit[0][3]
-            dev = fit[1]
-            if mag < 9 or mag > 70:
-                print 'fit found field outside of normal earth field strength', fit
-            elif dev > 500:
-                print 'deviation too high', dev
-            else:
-                print 'deviation', dev
-                bias = fit[0][:3]
-                n = map(lambda a, b: (a-b)**2, bias, initial[:3])
-                d = n[0]+n[1]+n[2]
-                initial = fit[0]
-                print 'd', d
-
-                # if the bias has sufficiently changed
-                if d > .1 or True:
-                    def ang(p):
-                        v = rotvecquat(vector.sub(p.compass, bias), vec2vec2quat(p.down, [0, 0, 1]))
-                        return math.atan2(v[1], v[0])
-
-                    angles = sorted(map(ang, cal.sigma_points))
-                    print 'angles', angles
-                    
-                    max_diff = 0
-                    for i in range(len(angles)):
-                        diff = -angles[i]
-                        j = i+1
-                        if j == len(angles):
-                            diff += 2*math.pi
-                            j = 0
-                        diff += angles[j]
-                        max_diff = max(max_diff, diff)
-
-                    print 'max diff', max_diff
-
-                    if max_diff < 2*math.pi*(1 - 1/3.):  # require 1/3 of circle coverage
-                        print 'have 1/3'
-                        fit_output.put((fit, map(lambda p : p.compass + p.down, cal.sigma_points)))
-                    else:
-                        sphere_fit, d, ellipsoid_fit, new_bias_fit, q, new_sphere_fit = fit
-                        fit = new_sphere_fit, d, ellipsoid_fit, new_bias_fit, q, new_sphere_fit
-                        print 'use new sphere fit', new_sphere_fit
-
-                        fit_output.put((fit, map(lambda p : p.compass + p.down, cal.sigma_points)))
-
-#            time.sleep(120) # wait 2 minutes then run fit algorithm again
-            time.sleep(12)
+        if not fit:
+            continue
+        
+        mag = fit[0][3]
+        dev = fit[1]
+        if mag < 9 or mag > 70:
+            print 'fit found field outside of normal earth field strength', fit
+        elif dev > 500:
+            print 'deviation too high', dev
         else:
-            time.sleep(15) # wait 15 seconds then run fit algorithm again
+            print 'deviation', dev
+            bias = fit[0][:3]
+            n = map(lambda a, b: (a-b)**2, bias, initial[:3])
+            d = n[0]+n[1]+n[2]
+            initial = fit[0]
+            print 'd', d
+
+            # if the bias has sufficiently changed
+            if d > .1 or True:
+                def ang(p):
+                    v = rotvecquat(vector.sub(p.compass, bias), vec2vec2quat(p.down, [0, 0, 1]))
+                    return math.atan2(v[1], v[0])
+
+                angles = sorted(map(ang, cal.sigma_points))
+                #print 'angles', angles
+                    
+                max_diff = 0
+                for i in range(len(angles)):
+                    diff = -angles[i]
+                    j = i+1
+                    if j == len(angles):
+                        diff += 2*math.pi
+                        j = 0
+                    diff += angles[j]
+                    max_diff = max(max_diff, diff)
+
+                    #print 'max diff', max_diff
+
+                if max_diff < 2*math.pi*(1 - 1/3.):  # require 1/3 of circle coverage
+                    print 'have 1/3'
+                    fit_output.put((fit, map(lambda p : p.compass + p.down, cal.sigma_points)))
+                else:
+                    sphere_fit, d, ellipsoid_fit, new_bias_fit, q, new_sphere_fit = fit
+                    fit = new_sphere_fit, d, ellipsoid_fit, new_bias_fit, q, new_sphere_fit
+                    print 'use new sphere fit', new_sphere_fit
+
+                    fit_output.put((fit, map(lambda p : p.compass + p.down, cal.sigma_points)))
+
 
 class MagnetometerAutomaticCalibration():
     def __init__(self, cal_queue, initial):
@@ -464,58 +522,4 @@ if __name__ == '__main__':
 
 
 def unused():
-        def f_uppermatrixfit(beta, x):
-            b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
-            r = numpy.matrix([beta[3:6], [0]+list(beta[6:8]), [0, 0]+[beta[8]]])
-            print 'b', beta
-
-            m = r * b
-            m = list(numpy.array(m.transpose()))
-            r0 = map(lambda y : 1 - vector.dot(y, y), m)
-
-            return r0
-
-        def f_matrixfit(beta, x, efit):
-            b = numpy.matrix(map(lambda a, b : a - b, x[:3], efit[:3]))
-            r = numpy.matrix([[1,       beta[0], beta[1]],
-                              [beta[2], efit[4], beta[3]],
-                              [beta[4], beta[5], efit[5]]])
-
-            m = r * b
-            m = list(numpy.array(m.transpose()))
-            r0 = map(lambda y : efit[3]**2 - vector.dot(y, y), m)
-            #return r0
-
-            g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
-            r1 = map(lambda y, z : beta[6] - vector.dot(y, z), m, g)
-
-            return r0+r1
-
-        def f_matrix2fit(beta, x, efit):
-            b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
-            r = numpy.matrix([[1,       efit[0], efit[1]],
-                              [efit[2], beta[4], efit[3]],
-                              [efit[4], efit[5], beta[5]]])
-
-            m = r * b
-            m = list(numpy.array(m.transpose()))
-            r0 = map(lambda y : beta[3]**2 - vector.dot(y, y), m)
-            #return r0
-
-            g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
-            r1 = map(lambda y, z : beta[6] - vector.dot(y, z), m, g)
-
-            return r0+r1
-
-        if False:
-         matrix_fit = FitLeastSq([0, 0, 0, 0, 0, 0, 0], f_matrixfit, (zpoints, ellipsoid_fit))
-         #print 'matrix_fit', matrix_fit
-
-         matrix2_fit = FitLeastSq(ellipsoid_fit + [matrix_fit[6]], f_matrix2fit, (zpoints, matrix_fit))
-         #print 'matrix2_fit', matrix2_fit
-
-         matrix_fit2 = FitLeastSq(matrix_fit, f_matrixfit, (zpoints, matrix2_fit))
-         #print 'matrix_fit2', matrix_fit2
-
-         matrix2_fit2 = FitLeastSq(matrix2_fit[:6] + [matrix_fit2[6]], f_matrix2fit, (zpoints, matrix_fit2))
-         print 'matrix2_fit2', matrix2_fit2
+    pass
