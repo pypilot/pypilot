@@ -212,15 +212,14 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def onSizeGLCompass( self, event ):
         self.compass_calibration_plot.reshape(event.GetSize().x, event.GetSize().y)
 
-    def StartAlignment(self, alignment_type):
+    def StartAlignment(self):
         self.client.set('imu/alignmentCounter', 100)
-        self.client.set('imu/alignmentType', alignment_type)
 
     def onResetAlignment(self, event):
         self.client.set('imu/alignmentQ', [1, 0, 0, 0])
 
     def onLevel( self, event ):
-        self.StartAlignment('level')
+        self.StartAlignment()
 	
     def onIMUHeadingOffset( self, event ):
         self.client.set('imu/heading_offset', self.sHeadingOffset.GetValue())
