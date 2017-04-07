@@ -70,7 +70,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def receive_messages(self, event):
         if not self.client:
             try:
-                self.client = SignalKClient(self.on_con, self.host, autoreconnect=True)
+                self.client = SignalKClient(self.on_con, self.host, autoreconnect=False)
             except socket.error:
                 self.timer.Start(5000)
                 return

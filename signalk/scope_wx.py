@@ -7,10 +7,10 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import wx, wx.glcanvas, sys
+import wx, wx.glcanvas, sys, socket
 from OpenGL.GL import *
 from scope_ui import SignalKScopeBase
-from client import SignalKClientFromArgs
+from client import SignalKClient, SignalKClientFromArgs, ConnectionLost
 from scope import SignalKPlot
 
 def wxglutkeypress(event, special, key):
@@ -33,22 +33,20 @@ class SignalKScope(SignalKScopeBase):
         self.glContext =  wx.glcanvas.GLContext(self.glArea)
         self.plot.init()
 
-        def on_con():
-            for i in range(self.clValues.GetCount()):
-                if self.clValues.IsChecked(i):
-                    self.client.watch(self.clValues.GetString(i))
-            self.plot.reset()
-
-        self.client = SignalKClientFromArgs(sys.argv[:2], True, on_con)
+        self.client = SignalKClientFromArgs(sys.argv[:2], True, self.on_con)
+        self.host_port = self.client.host_port
+        self.client.autoreconnect = False
         self.value_list = self.client.list_values()
 
         for name in sorted(self.value_list):
+            if self.value_list[name]['type'] != 'SensorValue':
+                continue
             i = self.clValues.Append(name)
             for arg in sys.argv[2:]:
                 if arg == name:
                     self.clValues.Check(i, True)
 
-        on_con()
+        self.on_con(self.client)
 
         self.timer = wx.Timer(self, wx.ID_ANY)
         self.timer.Start(50)
@@ -56,13 +54,31 @@ class SignalKScope(SignalKScopeBase):
 
         self.sTime.SetValue(self.plot.disptime)
         self.plot_reshape = False
+        
+    def on_con(self, client):
+        self.plot.add_blank()
+        for i in range(self.clValues.GetCount()):
+            if self.clValues.IsChecked(i):
+                client.watch(self.clValues.GetString(i))
 
     def receive_messages(self, event):
+        if not self.client:
+            try:
+                host, port = self.host_port
+                self.client = SignalKClient(self.on_con, host, port, autoreconnect=False)
+                self.timer.Start(50)
+            except socket.error:
+                self.timer.Start(1000)
+                return
+
         refresh = False
         while True:
             result = False
             try:
                 result = self.client.receive_single()
+            except ConnectionLost:
+                self.client = False
+                return
             except:
                 pass
             if not result:
@@ -71,6 +87,7 @@ class SignalKScope(SignalKScopeBase):
 
             self.plot.read_data(result)
 
+        refresh = True
         if refresh:
             self.Refresh()
 

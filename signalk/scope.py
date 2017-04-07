@@ -16,7 +16,7 @@ import time
 import sys
 import json
 
-from client import SignalKClient
+from client import SignalKClientFromArgs
 
 class trace():
     colors = [[1, 0, 0], [0, 1, 0], [1, 1, 0],
@@ -37,28 +37,36 @@ class trace():
             self.timeoff = time.time() - t
         self.points.insert(0, (t, data))
 
+    def add_blank(self):
+        if self.points:
+            self.points.insert(0, (self.points[0][0], float('nan')))
+
     def center(self):
         if len(self.points) > 0:
             self.offset = self.points[0][1]
 
     def noise(self):
-        if not len(self.points):
+        try:
+            avg = sum(map(lambda x : x[1], self.points)) / len(self.points)
+            return math.sqrt(sum(map(lambda x : (avg-x[1])**2, self.points))) / len(self.points)
+        except:
             return 0
-        
-        avg = sum(map(lambda x : x[1], self.points)) / len(self.points)
-        return math.sqrt(sum(map(lambda x : (avg-x[1])**2, self.points))) / len(self.points)
 
-    def tracevertexes(self, time, plot):
+    def tracevertexes(self, time, plot, gldrawtype):
         # remove datapoints after the first one that is off the screen
-        i = 0
-        for point in self.points:
-            if point[0] < time - plot.disptime:
+        for i in range(len(self.points)):
+            if self.points[i][0] < time - plot.disptime:
                 self.points = self.points[:i+1]
                 break
-            i+=1
 
+        glBegin(gldrawtype)
         for point in self.points:
-            glVertex2d(point[0]-time, point[1])
+            if math.isnan(point[1]):
+                glEnd()
+                glBegin(gldrawtype)
+            else:
+                glVertex2d(point[0]-time, point[1])
+        glEnd()
 
     def draw(self, plot):
         if not self.visible or not self.timeoff:
@@ -67,18 +75,14 @@ class trace():
         t = time.time() - self.timeoff
         
         glPushMatrix()
-
         glTranslated(0, -self.offset, 0)
 
         glColor3dv(self.color)
-        glBegin(GL_LINE_STRIP)
-        self.tracevertexes(t, plot)
-        glEnd()
+        self.tracevertexes(t, plot, GL_LINE_STRIP)
+
         if plot.drawpoints:
             glPointSize(8)
-            glBegin(GL_POINTS)
-            self.tracevertexes(t, plot)
-            glEnd()
+            self.tracevertexes(t, plot, GL_POINTS)
 
         glPopMatrix()
 
@@ -151,6 +155,9 @@ class SignalKPlot():
         
         t.add(timestamp, value)
 
+    def add_blank(self):
+        for t in self.traces:
+            t.add_blank()
 
     def read_data(self, msg):
         name, data = msg
@@ -361,50 +368,32 @@ class SignalKPlot():
                 break
 
 def main():
+    def usage():
+        print 'usage: ' + sys.argv[0] + ' [host] [VAR1] [VAR2] .. [VARN]'
+        exit(1)
+
+    if len(sys.argv) < 2:
+        usage()
+
     plot = SignalKPlot()
-
-    host = ""
-    if len(sys.argv) > 1:
-        host = sys.argv[1]
-
-    def on_con(client):
-        time.sleep(1)
-        plot.reset()
-        for arg in sys.argv[2:]:
-            client.watch(arg)
-
-    try:
-        client = SignalKClient(on_con, host, autoreconnect=True)
-        print "connected to", host
-    except:
-        print "Failed to connect:", host
-        client = False
-
-
-    if False:
-        points = []
-        for line in sys.stdin.readlines():
-            try:
-                data = json.loads(line.rstrip())
-                for msg in client.flatten_line(line):
-                    plot.read_data(msg)
-            except:
-                print "invalid input line", line
-
+    def on_con():
+        plot.add_blank()
+    client = SignalKClientFromArgs(sys.argv, True, on_con)
+    if not client.have_watches:
+        usage()
+    
+    print 'connected'
     def idle():
         while True:
-            result = False
-            if client:
-                try:
-                    result = client.receive_single()
-                except:
-                    pass
-
-            if not result:
-                time.sleep(.01)
-                return
-
-            plot.read_data(result)
+            try:
+                result = client.receive_single()
+                if result:
+                    plot.read_data(result)
+                else:
+                    time.sleep(.01)
+                    break
+            except:
+                pass
 
     glutInit(sys.argv)
     glutInitWindowPosition(250, 0)

@@ -252,7 +252,7 @@ def SignalKClientFromArgs(argv, watch, *cargs):
             else:
                 client.get(arg)
         if len(cargs) == 1:
-            cargs[0]()
+            cargs[0](client)
             
     return SignalKClient(on_con, host, port, autoreconnect=True, have_watches=watches)
 
