@@ -25,7 +25,7 @@ from kivy.animation import Animation
 #from kivy.lang import Builder
 from kivy.clock import Clock
 
-from signalk.client import SignalKClient
+#from signalk.client import SignalKClient
 
 class AutopilotControl(TabbedPanel):
     pass
@@ -57,8 +57,10 @@ class AutopilotControlApp(App):
             for name in watchlist:
                 client.watch(name)
 
+        return
         try:
-            self.client = SignalKClient(on_con, 'pypilot', autoreconnect=True)
+            #self.client = SignalKClient(on_con, 'pypilot', autoreconnect=True)
+            pass
         except:
             return
 
