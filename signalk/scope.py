@@ -24,15 +24,24 @@ class trace():
               [1, 1, 1], [1, .5, 0], [.5, 1, 0],
               [.5, .5, .5], [0, .5, .5], [.5, 0, 1]]
 
-    def __init__(self, name, colorindex):
+    def __init__(self, name, group, colorindex):
         self.points = []
         self.offset = 0
         self.visible = True
         self.timeoff = False
         self.name = name
+        self.group = group
         self.color = self.colors[colorindex%len(self.colors)]
 
     def add(self, t, data):
+        # update previous timestamps based on downtime
+        if len(self.points) and math.isnan(self.points[0][1]):
+            dt = time.time() - t - self.timeoff
+            self.timeoff = False
+            for i in range(len(self.points)):
+                point = self.points[i]
+                self.points[i] = point[0]-dt, point[1]
+
         if not self.timeoff:
             self.timeoff = time.time() - t
         self.points.insert(0, (t, data))
@@ -140,7 +149,7 @@ class SignalKPlot():
     def reset(self):
         self.traces = []
 
-    def add_data(self, name, timestamp, value):
+    def add_data(self, name, group, timestamp, value):
         t = False
         for tn in self.traces:
             if tn.name == name:
@@ -148,16 +157,20 @@ class SignalKPlot():
                 break
 
         if not t:
-            t = trace(name, len(self.traces))
+            for tn in self.traces:
+                if name == group and tn.group == group:
+                    return
+            t = trace(name, group, len(self.traces))
             self.traces.append(t)
 #            if not self.curtrace:
             self.curtrace = t
         
         t.add(timestamp, value)
 
-    def add_blank(self):
+    def add_blank(self, group=False):
         for t in self.traces:
-            t.add_blank()
+            if not group or group == t.group:
+                t.add_blank()
 
     def read_data(self, msg):
         name, data = msg
@@ -170,14 +183,14 @@ class SignalKPlot():
         if type(value) == type([]):
             for i in range(len(value)):
                 namei = name+str(i)
-                self.add_data(namei, timestamp, float(value[i]))
+                self.add_data(namei, name, timestamp, float(value[i]))
         else:
             if type(value) == type(True):
                 if value:
                     value = 1
                 else:
                     value = 0
-            self.add_data(name, timestamp, float(value))
+            self.add_data(name, name, timestamp, float(value))
 
     @staticmethod
     def drawputs(str):

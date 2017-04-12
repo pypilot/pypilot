@@ -37,14 +37,17 @@ class SignalKScope(SignalKScopeBase):
         self.host_port = self.client.host_port
         self.client.autoreconnect = False
         self.value_list = self.client.list_values()
+        self.watches = {}
 
         for name in sorted(self.value_list):
             if self.value_list[name]['type'] != 'SensorValue':
                 continue
             i = self.clValues.Append(name)
+            self.watches[name] = False
             for arg in sys.argv[2:]:
                 if arg == name:
                     self.clValues.Check(i, True)
+                    self.watches[name] = True
 
         self.on_con(self.client)
 
@@ -54,12 +57,13 @@ class SignalKScope(SignalKScopeBase):
 
         self.sTime.SetValue(self.plot.disptime)
         self.plot_reshape = False
-        
+
     def on_con(self, client):
         self.plot.add_blank()
         for i in range(self.clValues.GetCount()):
             if self.clValues.IsChecked(i):
                 client.watch(self.clValues.GetString(i))
+                self.watches[self.clValues.GetString(i)] = True
 
     def receive_messages(self, event):
         if not self.client:
@@ -85,7 +89,8 @@ class SignalKScope(SignalKScopeBase):
                 break
             refresh = True
 
-            self.plot.read_data(result)
+            if self.watches[result[0]]:
+                self.plot.read_data(result)
 
         refresh = True
         if refresh:
@@ -96,7 +101,9 @@ class SignalKScope(SignalKScopeBase):
 
     def onValueToggled( self, event ):
         value = self.clValues.IsChecked(event.GetInt())
+        self.watches[event.GetString()] = value
         self.client.watch(event.GetString(), value)
+        self.plot.add_blank(event.GetString())
 
     def onPaintGL( self, event ):
         dc = wx.PaintDC( self.glArea )
