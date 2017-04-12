@@ -18,9 +18,11 @@ sys.path.append('.')
 
 import os.path
 from signalk.server import *
+from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 from boatimu import *
 
+import serialprobe
 from gpspoller import GpsPoller
 from nmea_bridge import NmeaBridge
 import wind, servo
@@ -85,12 +87,14 @@ class AutopilotBase(object):
         if s != 9:
             signal.signal(s, cleanup)
 
-    self.server = SignalKServer()
+    serial_probe = serialprobe.serialprobe()
+    #self.server = SignalKServer()
+    self.server = SignalKPipeServer()
     self.boatimu = BoatIMU(self.server)
-    self.servo = servo.Servo(self.server)
-    self.gps = GpsPoller(self.server)
+    self.servo = servo.Servo(self.server, serial_probe)
+    self.gps = GpsPoller(self.server, serial_probe)
     self.nmea_bridge = NmeaBridge(self.server, self.gps)
-    self.wind = wind.Wind(self.server)
+    self.wind = wind.Wind(self.server, serial_probe)
 
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
@@ -98,7 +102,7 @@ class AutopilotBase(object):
     self.lastmode = False
     self.last_heading = False
 
-    self.heading = self.Register(SensorValue, 'heading')
+    self.heading = self.Register(Value, 'heading', 0)
 
     self.gps_heading_offset = self.Register(Value, 'gps_heading_offset', 0)
     self.wind_heading_offset = self.Register(Value, 'wind_heading_offset', 0)
@@ -112,6 +116,11 @@ class AutopilotBase(object):
     except:
         print 'failed to open special file', device, 'for writing:'
         print 'autopilot cannot strobe the watchdog'
+
+
+    if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
+      print 'warning, failed to make autopilot process realtime'
+
         
     # read initial value from imu as this takes time
 #    while not self.boatimu.IMURead():
@@ -129,10 +138,6 @@ class AutopilotBase(object):
   def Register(self, _type, name, *args, **kwargs):
     return self.server.Register(_type(*(['ap/' + name] + list(args)), **kwargs))
 
-  def CreateFilter(self, name, initial, initial_constant):
-    return Filter(self.Register(SensorValue, name+'_filtered', initial),
-                  self.Register(RangeProperty, name+'_lp_constant', initial_constant, 0, 1))
-      
   def run(self):
       while True:
           self.ap_iteration()
@@ -140,14 +145,15 @@ class AutopilotBase(object):
   def ap_iteration(self):
       period = .1 # 10hz
       data = False
-      # try 7 times to read data within the period
-      for i in range(7):
+      # try 3 times to read data within the period
+      for i in range(3):
           t0 = time.time()
           data = self.boatimu.IMURead()
           if data:
               break
-          time.sleep(period/7)
-              
+          time.sleep(period/3)
+          #self.server.HandleRequests(period/3)
+
       dt1 = time.time() - t0
 
       if data and 'calupdate' in data and self.last_heading:
@@ -163,12 +169,12 @@ class AutopilotBase(object):
           self.heading_command.set(new_command)
       if data:
           self.last_heading = data['heading']
-
+              
       dt2 = time.time() - t0
 
       # calibration or other mode, disable autopilot
-      if not data or self.servo.drive.value == 'raw':
-          self.enabled.set(False)
+      if not data or self.servo.rawcommand.value:
+          self.enabled.update(False)
 
       dt3 = time.time() - t0
       
@@ -215,14 +221,24 @@ class AutopilotBase(object):
           print 'servo is running too _slowly_', t2-t1, t12-t1
 
       self.gps.poll()
-      self.wind.poll()
-      self.nmea_bridge.poll()
 
       t3 = time.time()
       if t3 - t2 > period/2:
           print 'gps is running too _slowly_', t3-t2
 
-      t = max(period - (t3 - t0), .025)
+      self.wind.poll()
+
+      t4 = time.time()
+      if t4 - t3 > period/2:
+          print 'wind is running too _slowly_', t4-t3
+
+      self.nmea_bridge.poll()
+
+      t5 = time.time()
+      if t5 - t4 > period/2:
+          print 'nmea is running too _slowly_', t5-t4
+          
+      t = max(period - (t5 - t0), .02)
       self.server.HandleRequests(t)
 
       if self.watchdog_device:

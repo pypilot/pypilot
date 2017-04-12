@@ -10,7 +10,7 @@ import time, json
 
 from signalk.server import SignalKServer
 from signalk.values import *
-import autopilot, serialprobe
+import autopilot
 
 from crc import crc8
 
@@ -163,17 +163,13 @@ class ArduinoServo:
         self.raw_command(0x5342)
 
     def poll(self):
-        #t0 = time.time()
-        c = self.device.read(1)
-        #print 'dt', time.time() - t0
-        #self.device.flush()
-        #print 'poll', len(c), c
+        c = self.device.readall()
         if len(c) == 0:
             return False
 
-        self.in_buf.append(ord(c))
+        self.in_buf +=  map(ord, c)
         ret = {'result': True}
-        if len(self.in_buf) == 3:
+        if len(self.in_buf) >= 3:
             code = [ArduinoServo.sync_bytes[self.in_sync]] + self.in_buf[:2]
             crc = crc8(code)
 	    #print 'got code', code, self.in_buf
@@ -192,7 +188,7 @@ class ArduinoServo:
                     if self.in_sync_count < 2:
                         self.in_sync_count+=1
 
-                self.in_buf = []
+                self.in_buf = self.in_buf[3:]
             else:
                 self.in_sync = self.in_sync_count = 0
                 self.in_buf = self.in_buf[1:]
@@ -206,7 +202,7 @@ class ArduinoServo:
 class CalibrationProperty(Property):
     def __init__(self, name, initial):
         super(CalibrationProperty, self).__init__(name, initial)
-        self.set(initial)
+
     def set(self, value):
         nvalue = {}
         for cal in value:
@@ -216,40 +212,26 @@ class CalibrationProperty(Property):
 
         return super(CalibrationProperty, self).set(nvalue)
 
+    def get_signalk(self):
+        return '{"' + self.name + '": {"value": ' + '"calibration"' + '}}'
+
+
 # a property which records the time when it is updated
 class TimestampProperty(Property):
     def __init__(self, name, initial):
         super(TimestampProperty, self).__init__(name, initial)
-        self.set(initial)
+        self.timestamp = 0
 
     def set(self, value):
         self.timestamp = time.time()
         return super(TimestampProperty, self).set(value)
-
-class ResettableValue(Property):
-    def __init__(self, name, initial, **kwargs):
-        super(ResettableValue, self).__init__(name, initial, **kwargs)
-        self.initial = initial
-
-    def processes(self):
-        p = super(Property, self).processes()
-        p['set'] = self.setdata
-        return p
-
-    def setdata(self, socket, data):
-        if data['value'] != self.initial:
-            print 'resettable value', self.name, 'invalid set'
-        else:
-            self.set(data['value'])
-
-    def type(self):
-        return 'ResettableValue'
     
 class Servo:
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
 
-    def __init__(self, server):
+    def __init__(self, server, serialprobe):
         self.server = server
+        self.serialprobe = serialprobe
         self.fwd_fault = self.rev_fault = False
         self.min_speed = self.Register(RangeProperty, 'Min Speed', .3, 0, 1, persistent=True)
         self.max_speed = self.Register(RangeProperty, 'Max Speed', 1, 0, 1, persistent=True)
@@ -258,16 +240,18 @@ class Servo:
 
         # power usage
         self.command = self.Register(TimestampProperty, 'command', 0)
-        self.rawcommand = self.Register(TimestampProperty, 'raw_command', False)
-        self.voltage = self.Register(SensorValue, 'voltage')
-        self.current = self.Register(SensorValue, 'current')
-        self.engauged = self.Register(Value, 'engauged', False)
+        self.rawcommand = self.Register(TimestampProperty, 'raw_command', 0)
+        self.timestamp = time.time()
+        timestamp = server.TimeStamp('servo')
+        self.voltage = self.Register(SensorValue, 'voltage', timestamp)
+        self.current = self.Register(SensorValue, 'current', timestamp)
+        self.engauged = self.Register(BooleanValue, 'engauged', False)
         self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 10, persistent=True)
         self.slow_period = self.Register(RangeProperty, 'Slow Period', 1.5, .1, 10, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
         self.amphours = self.Register(Value, 'Amp Hours', 0)
-        self.powerconsumption = self.Register(ResettableValue, 'Power Consumption', 0, persistent=True)
+        self.powerconsumption = self.Register(ResettableValue, 'Power Consumption', 0, persistent=True, persistent_timeout=300)
 
         self.calibration = self.Register(CalibrationProperty, 'calibration', {})
         self.load_calibration()
@@ -277,9 +261,8 @@ class Servo:
         self.lastpositiontime = time.time()
         self.lastpositionamphours = 0
 
-        self.mode = self.Register(Value, 'mode', 'none')
-        self.controller = self.Register(Value, 'controller', 'none')
-        self.drive = self.Register(Value, 'drivetype', 'relative')
+        self.mode = self.Register(StringValue, 'mode', 'none')
+        self.controller = self.Register(StringValue, 'controller', 'none')
 
         self.driver = False
 
@@ -298,37 +281,11 @@ class Servo:
                 command = 0
             else:
                 command = self.command.value
-            if self.drive.value == 'absolute':
-                self.position_command(command)
-            elif self.drive.value == 'relative':
-                self.velocity_command(command)
-            else:
-                print 'unknown servo drive type'
-
-    # estimate position from integrating speed commands
-    def position_command(self, position):
-
-        # absolute mode have advantage here
-        if self.drive.value == 'absolute':
-            if self.driver:
-                self.driver.command(2*position - 1)
-            self.position = position
-            return
-
-        # use PD filter to command speed?
-        P, D = 2, 0
-
-        self.velocity_command(P*(position - self.position) - D*self.speed)
+            self.velocity_command(command)
 
     def velocity_command(self, speed):
-        if self.drive.value == 'absolute':
-            # integrate to determin actual position
-            t0 = time.time()
-            dt = t0 - self.last_position_time
-            self.last_position_time = t0
-            self.position += command * dt
-            self.position = min(max(self.position, -1), 1)
-            self.position_command(self.position)
+        if speed == 0: # optimization
+            self.raw_command(0)
             return
 
         # complete integration from previous step
@@ -453,7 +410,7 @@ class Servo:
 
             if self.driver:
                 self.driver.command(0)
-            self.mode.set('brake')
+            self.mode.update('brake')
             self.brake_hack_state = 0
             return
 
@@ -467,17 +424,17 @@ class Servo:
                 return
             if command < 0:
                 if self.mode != 'reverse':
-                    self.mode.set('reverse')
+                    self.mode.update('reverse')
             else:
 #                if self.mode.value == 'idle':
 #                    return
-                self.mode.set('idle')
+                self.mode.update('idle')
         else:
-            self.mode.set('forward')
+            self.mode.update('forward')
 
         if not self.driver:
             t0 = time.time()
-            device = serialprobe.probe('servo', [115200])
+            device = self.serialprobe.probe('servo', [115200])
             if device:
                 try:
                     self.driver = ArduinoServo(device)
@@ -485,7 +442,7 @@ class Servo:
                     print 'failed to initialize servo on', device
 
             if self.driver:
-                serialprobe.probe_success('servo')
+                self.serialprobe.probe_success('servo')
                 self.driver.servo = self
                 self.controller.set('arduino')
                 self.server.Register(self.driver.flags)
@@ -546,14 +503,16 @@ class Servo:
                 elif self.speed < 0:
                     self.rev_fault = True
 
+            self.timestamp = time.time()
+            self.server.TimeStamp('servo', self.timestamp)
+            lasttimestamp = self.timestamp
             if 'voltage' in result:
                 self.voltage.set(result['voltage'])
             if 'current' in result:
-                lasttimestamp = self.current.timestamp
                 self.current.set(result['current'])
 
                 # integrate power consumption
-                dt = (self.current.timestamp-lasttimestamp)
+                dt = (self.timestamp-lasttimestamp)
                 amphours = self.current.value*dt/3600
                 self.amphours.set(self.amphours.value + amphours)
                 self.powerconsumption.set(self.powerconsumption.value + self.voltage.value*amphours)

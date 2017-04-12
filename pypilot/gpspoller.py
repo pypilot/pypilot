@@ -9,8 +9,6 @@
 
 import gps, multiprocessing, time, socket
 
-import serialprobe
-
 from signalk.values import *
 
 class GpsProcess(multiprocessing.Process):
@@ -57,26 +55,25 @@ class GpsProcess(multiprocessing.Process):
             self.read(queue)
             
 class GpsPoller():
-    def __init__(self, server):
+    def __init__(self, server, serialprobe):
         self.server = server
-        self.track = self.Register(SensorValue, 'track')
-        self.speed = self.Register(SensorValue, 'speed')
-        self.source = self.Register(Value, 'source', 'none')
+        timestamp = server.TimeStamp('gps')
+        self.track = self.Register(SensorValue, 'track', timestamp)
+        self.speed = self.Register(SensorValue, 'speed', timestamp)
+        self.timestamp = 0
+        self.source = self.Register(StringValue, 'source', 'none')
         self.lastsource = self.source.value
         self.process = False
         self.devices = []
-        serialprobe.setgpsdevices(self.devices)
+        serialprobe.gpsdevices = self.devices
 
+        self.process = GpsProcess()
+        self.process.start()
 
     def Register(self, _type, name, *args):
         return self.server.Register(apply(_type, ['gps/' + name] + list(args)))
 
-    def poll(self):
-        if not self.process or not self.process.is_alive():
-            self.process = GpsProcess()
-            print 'start gps'
-            self.process.start()
-        
+    def poll(self):        
         if self.process.queue.qsize() > 0:
             fix = False
             # flush queue entries
@@ -90,11 +87,12 @@ class GpsPoller():
                 def fval(name):
                     return self.fix[name] if name in self.fix else False
             
+                self.server.TimeStamp('gps', self.fix['timestamp'])
                 self.track.set(fval('track'))
                 self.speed.set(fval('speed'))
                 self.source.update('internal')
 
-        if time.time() - self.track.timestamp > 3:
+        if time.time() - self.timestamp > 3:
             self.source.update('none')
 
         source = self.source.value

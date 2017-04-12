@@ -10,7 +10,6 @@
 import time, serial
 
 from signalk.values import *
-import serialprobe
 
 '''
    ** MWV - Wind Speed and Angle
@@ -54,7 +53,14 @@ def parse_nmea(line):
         return False
         
     data = line.split(',')
-    return {'direction': float(data[1]), 'speed': float(data[3])}
+
+    speed = float(data[3])
+    speedunit = data[4]
+    if speedunit == 'K': # km/h
+        speed *= .53995
+    elif speedunit == 'M': # m/s
+        speed *= 1.94384
+    return {'direction': float(data[1]), 'speed': speed}
 
 
 class NMEAWindSensor():
@@ -72,18 +78,21 @@ class NMEAWindSensor():
             return parse_nmea(line.rstrip())
 
 class Wind():
-    def __init__(self, server):
+    def __init__(self, server, serialprobe):
         self.driver = False
         self.server = server
-        self.direction = self.Register(SensorValue, 'direction')
-        self.speed = self.Register(SensorValue, 'speed')
+        self.serialprobe = serialprobe
+        self.timestamp = time.time()
+        timestamp = server.TimeStamp('wind')
+        self.direction = self.Register(SensorValue, 'direction', timestamp)
+        self.speed = self.Register(SensorValue, 'speed', timestamp)
 
     def Register(self, _type, name, *args):
         return self.server.Register(_type(*(['wind/' + name] + list(args))))
 
     def poll(self):
         if not self.driver:
-            device = serialprobe.probe('wind', [38400, 4800])
+            device = self.serialprobe.probe('wind', [38400, 4800])
             if device:
                 try:
                     self.driver = NMEAWindSensor(device)
@@ -104,7 +113,8 @@ class Wind():
                 winddata = val
 
             if winddata:
-                serialprobe.probe_success('wind')
+                self.serialprobe.probe_success('wind')
+                self.server.TimeStamp('wind', time.time())
                 self.direction.set(winddata['direction'])
                 self.speed.set(winddata['speed'])
                 return True
