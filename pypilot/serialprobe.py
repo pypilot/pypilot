@@ -77,6 +77,7 @@ class serialprobe:
         probe['device'] = False # successful
 
         probe_device = False
+
         for device in devices:
             exists = os.path.exists(device['path'])
             if not exists:
@@ -117,7 +118,6 @@ class serialprobe:
             if not ok:
                 continue
 
-
             import serial
             serial_device = (device['path'], device['baud'])
             failed = False
@@ -140,7 +140,7 @@ class serialprobe:
                 print 'io error', serial_device
 
         if not probe_device:
-            #print 'no device for', name
+            print 'no device for', name
             return False
     
         probe['probed'].append(probe_device)

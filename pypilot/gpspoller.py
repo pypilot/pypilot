@@ -60,8 +60,8 @@ class GpsPoller():
         timestamp = server.TimeStamp('gps')
         self.track = self.Register(SensorValue, 'track', timestamp)
         self.speed = self.Register(SensorValue, 'speed', timestamp)
-        self.timestamp = 0
         self.source = self.Register(StringValue, 'source', 'none')
+        self.last_update = 0
         self.lastsource = self.source.value
         self.process = False
         self.devices = []
@@ -91,8 +91,9 @@ class GpsPoller():
                 self.track.set(fval('track'))
                 self.speed.set(fval('speed'))
                 self.source.update('internal')
+                self.last_update = time.time()
 
-        if time.time() - self.timestamp > 3:
+        if time.time() - self.last_update > 3:
             self.source.update('none')
 
         source = self.source.value

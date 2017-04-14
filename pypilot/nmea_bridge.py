@@ -19,7 +19,7 @@
 import sys, select, time, socket
 import multiprocessing
 from signalk.client import SignalKClient
-from signalk.server import LineBufferedNonBlockingSocket
+from signalk.server import LineBufferedNonBlockingSocket, nonblockingpipe
 
 # nmea uses a simple xor checksum
 def cksum(msg):
@@ -29,38 +29,51 @@ def cksum(msg):
     return '%02x' % (value & 255)
 
 class NmeaBridge:
-    def __init__(self, server, gps):
+    def __init__(self, server, gps, wind):
         self.process = False
         self.server = server
         self.gps = gps
+        self.wind = wind
         self.process = NmeaBridgeProcess()
         self.process.start()
 
     def poll(self):
         data = False
-        while self.process.gps_queue.qsize() > 0:
-            data = self.process.gps_queue.get()
+        try:
+            while True:
+                data = self.pipe.recv()
+        except IOError:
+            return False
 
-        if data:
+        if 'gps' in data:
+            data = data['gps'] 
             # if internal gps track is more than 2 seconds old, use externally supplied gps
             if self.gps.source.value == 'external' or \
-               time.time() - self.server.timestamps['gps'].timestamp > 2:
+               time.time() - self.gps.last_update > 2:
                 #print 'gps', name, 'val', value
                 self.server.TimeStamp('gps', data['timestamp'])
                 self.gps.track.set(data['track'])
                 self.gps.speed.set(data['speed'])
             self.gps.source.update('external')
+        elif 'wind' in data:
+            data = data['wind']
+            if self.wind.source.value != 'internal':
+                self.server.TimeStamp('wind', time.time());
+                self.wind.direction.set(data['direction'])
+                self.wind.speed.set(data['speed'])
+                self.wind.last_update = time.time()
+                self.wind.source.update('external')
     
 class NmeaBridgeProcess(multiprocessing.Process):
     def __init__(self):
-        self.gps_queue = multiprocessing.Queue()
-        super(NmeaBridgeProcess, self).__init__(target=nmea_bridge_process, args=(self.gps_queue, ))
+        self.pipe, pipe = nonblockingpipe()
+        super(NmeaBridgeProcess, self).__init__(target=nmea_bridge_process, args=(pipe,))
 
 
-def nmea_bridge_process(gps_queue=False):
+def nmea_bridge_process(pipe=False):
     import os
     sockets = []
-    watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command', 'imu/pitch', 'imu/roll', 'imu/heading_lowpass']
+    watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command', 'imu/pitch', 'imu/roll', 'imu/heading_lowpass', 'gps/source', 'wind/speed', 'wind/direction', 'wind/source']]
 
     def setup_watches(client, watch=True):
         for name in watchlist:
@@ -106,6 +119,9 @@ def nmea_bridge_process(gps_queue=False):
     poller = select.poll()
     poller.register(server, READ_ONLY)
     fd_to_socket = {server.fileno() : server}
+    windspeed = 0
+
+    gps_source = wind_source = False
     while True:
         if sockets:
             timeout = 100
@@ -154,15 +170,19 @@ def nmea_bridge_process(gps_queue=False):
                 continue
 
             if line[:6] == '$GPRMC':
-                data = line[7:len(line)-3].split(',')
-                timestamp = float(data[0])
-                speed = float(data[6])
-                heading = float(data[7])
+                if pipe and gps_source != 'internal':
+                    data = line[7:len(line)-3].split(',')
+                    timestamp = float(data[0])
+                    speed = float(data[6])
+                    heading = float(data[7])
                 
-                #client.set('gps/heading', heading)
-                # must use internal gps_queue since normal clients cannot set these
-                if gps_queue:
-                    gps_queue.put({'timestamp': timestamp, 'track': heading, 'speed': speed})
+                    pipe.send({'gps' : {'timestamp': timestamp, 'track': heading, 'speed': speed}})
+
+            elif line[0] == '$' and line[3:6] == 'MVW':
+                if pipe and wind_source != 'internal':
+                    winddata = wind.parse_nmea(line)
+                    if winddata:
+                        pipe.send({'wind' : winddata})
 
             elif line[0] == '$' and line[3:6] == 'APB':
                 data = line[7:len(line)-3].split(',')
@@ -175,17 +195,6 @@ def nmea_bridge_process(gps_queue=False):
                 if abs(ap_heading_command - float(data[7])) > .1:
                     client.set('ap/heading_command', float(data[7]))
 
-#        while True:
-#            client.poll()
-#            #line = client.socket.readline()
-#            line = client.socket.in_buffer
-#            client.socket.in_buffer = ''
-#
-#            if not line:
-#                break
-#            print 'line', line
-#        continue
-                    
         msgs = client.receive()
         for name in msgs:
             data = msgs[name]
@@ -204,12 +213,18 @@ def nmea_bridge_process(gps_queue=False):
                 msg = 'APXDR,A,%.3f,D,ROLL' % value
             elif name == 'imu/heading_lowpass':
                 msg = 'APHDM,%.3f,M' % value
+            elif name == 'gps/source':
+                gps_source = value
+            elif name == 'wind/speed':
+                windspeed = value
+            elif name == 'wind/direction':
+                msg = 'APMWV,%.1f,R,%.1f,K,A' % (value, windspeed)
+            elif name == 'wind/source':
+                wind_source = value
 
             if msg:
                 msg = '$' + msg + '*' + cksum(msg) + '\r\n'
                 for sock in sockets:
-                    #if not sock.out_buffer:
-                    #poller.register(sock.socket, READ_ONLY | select.POLLOUT)
                     sock.send(msg)
                     sock.flush()
 

@@ -14,6 +14,14 @@ from values import *
 DEFAULT_PORT = 21311
 max_connections = 20
 
+def nonblockingpipe():
+  import _multiprocessing, socket
+  s = socket.socketpair()
+  map(lambda t : t.setblocking(False), s)
+  p = map(lambda t : _multiprocessing.Connection(os.dup(t.fileno())), s)
+  s[0].close(), s[1].close()
+  return p
+
 class LineBufferedNonBlockingSocket():
     def __init__(self, connection):
         if type(connection) == type(socket.socket()):

@@ -10,6 +10,7 @@
 import time, serial
 
 from signalk.values import *
+import serialprobe
 
 '''
    ** MWV - Wind Speed and Angle
@@ -82,10 +83,12 @@ class Wind():
         self.driver = False
         self.server = server
         self.serialprobe = serialprobe
-        self.timestamp = time.time()
+        self.last_update = 0
         timestamp = server.TimeStamp('wind')
         self.direction = self.Register(SensorValue, 'direction', timestamp)
         self.speed = self.Register(SensorValue, 'speed', timestamp)
+        self.source = self.Register(StringValue, 'source', 'none')
+        self.initial_time = 0
 
     def Register(self, _type, name, *args):
         return self.server.Register(_type(*(['wind/' + name] + list(args))))
@@ -96,7 +99,7 @@ class Wind():
             if device:
                 try:
                     self.driver = NMEAWindSensor(device)
-                    self.direction.timestamp = time.time()
+                    self.initial_time = time.time()
                 except serial.serialutil.SerialException:
                     print 'failed to open', device
 
@@ -114,24 +117,27 @@ class Wind():
 
             if winddata:
                 self.serialprobe.probe_success('wind')
-                self.server.TimeStamp('wind', time.time())
+                self.server.TimeStamp('wind', time.time() - self.initial_time)
                 self.direction.set(winddata['direction'])
                 self.speed.set(winddata['speed'])
+                self.source.update('internal')
+                self.last_update = time.time()
                 return True
                 
-            if time.time() - self.direction.timestamp > 5:
+            if time.time() - self.last_update > 5:
+                self.source.update('none')
                 self.driver = False
         return False
                 
 
 if __name__ == "__main__":
+    print 'Wind demo'
     from signalk.server import SignalKServer
+    
     server = SignalKServer()
-    wind = Wind(server)
-    count = 0;
+    serial_probe = serialprobe.serialprobe()
+    wind = Wind(server, serial_probe)
     while True:
         if wind.poll():
-            print 'Wind demo', count, wind.direction.value
-        count += 1
+            print 'speed =',wind.speed.value, 'direction =', wind.direction.value
         server.HandleRequests(.1)
-

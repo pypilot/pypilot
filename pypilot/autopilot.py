@@ -93,8 +93,8 @@ class AutopilotBase(object):
     self.boatimu = BoatIMU(self.server)
     self.servo = servo.Servo(self.server, serial_probe)
     self.gps = GpsPoller(self.server, serial_probe)
-    self.nmea_bridge = NmeaBridge(self.server, self.gps)
     self.wind = wind.Wind(self.server, serial_probe)
+    self.nmea_bridge = NmeaBridge(self.server, self.gps, self.wind)
 
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
