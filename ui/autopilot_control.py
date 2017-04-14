@@ -147,7 +147,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 stname, stvalue, gauge, slider, min_val, max_val = gain
                 if name == stname.GetLabel():
                     stvalue.SetLabel('%.5f' % value)
-                    slider.SetValue((value-min_val)*1000/(max_val - min_val))
+                    val = (value-min_val)*1000/(max_val - min_val)
+                    if slider.GetValue() != val:
+                        slider.SetValue(val)
                     found = True
                 elif name == stname.GetLabel() + 'gain':
                     v = abs(value) * 1000.0 * 5
@@ -212,7 +214,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.rbWind.Disable()
 
     def onAP( self, event ):
-        self.client.set('servo/raw_command', False)
+        self.client.set('servo/raw_command', 0)
         if self.tbAP.GetValue():
             self.client.set('ap/heading_command', self.heading)
             self.client.set('ap/enabled', True)
