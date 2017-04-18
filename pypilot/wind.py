@@ -74,8 +74,8 @@ class NMEAWindSensor():
     def poll(self):
         while True:
             line = self.device.readline()
-            if not line:
-                break
+            if line == '':
+                continue
             return parse_nmea(line.rstrip())
 
 class Wind():
@@ -105,14 +105,15 @@ class Wind():
 
         if self.driver:
             winddata = False
-            while True:
+            lines = 0
+            while lines < 20 and not winddata:
                 try:
                     val = self.driver.poll()
-                except:
+                except serial.serialutil.SerialException:
                     self.driver = False
                     break
                 if not val:
-                    break
+                    lines+=1
                 winddata = val
 
             if winddata:
@@ -125,8 +126,12 @@ class Wind():
                 return True
                 
             if time.time() - self.last_update > 5:
-                self.source.update('none')
                 self.driver = False
+
+
+        if time.time() - self.server.timestamps['wind'][0] > 5:
+            self.source.update('none')
+
         return False
                 
 

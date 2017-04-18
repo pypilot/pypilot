@@ -88,7 +88,7 @@ class AutopilotBase(object):
             signal.signal(s, cleanup)
 
     serial_probe = serialprobe.serialprobe()
-    #self.server = SignalKServer()
+#    self.server = SignalKServer()
     self.server = SignalKPipeServer()
     self.boatimu = BoatIMU(self.server)
     self.servo = servo.Servo(self.server, serial_probe)

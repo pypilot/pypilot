@@ -6,7 +6,7 @@
 # serial monitor: make serial
 
 SKETCHNAME = weathersensors
-DEVICE = /dev/ttyUSB0
+DEVICE = /dev/ttyUSB1
 
 MCU = atmega328p
 
@@ -70,7 +70,7 @@ upload: $(SKETCHNAME).cpp.hex
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:w:$(SKETCHNAME).cpp.hex -b $(BAUDRATE)
 
 serial:
-	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5
+	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5 38400
 	cat $(DEVICE)
 
 %.o : %.cpp

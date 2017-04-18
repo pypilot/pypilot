@@ -89,19 +89,35 @@ void isr_anenometer_count()
 {
   unsigned long t  = millis();
   if(t - lastt > 15){
+    if(rotation_count == 0)
+        lastperiod = 0;
+    lastperiod += t - lastt;
     rotation_count++;
-    lastperiod = t - lastt;
     lastt = t;
   }
 }
 
-void setup()
+ void setup()
 {
   Serial.begin(38400);  // start serial for output
   bmp280_setup();
 
   attachInterrupt(0, isr_anenometer_count, FALLING);
+  pinMode(analogInPin, INPUT);
   pinMode(2, INPUT_PULLUP);
+
+  analogRead(analogInPin);
+//  ADCSRA |= _BV(ADIE);
+  ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
+}
+
+static volatile uint32_t adcval;
+static volatile uint16_t adccount;
+ISR(ADC_vect)
+{
+    adcval += (int16_t)ADCW;
+    ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
+    adccount++;
 }
 
 int32_t t_fine;
@@ -153,14 +169,41 @@ void send_nmea(const char *buf)
   Serial.print(buf2);
 }
 
+
+
 void read_anenometer() {
   static float lpdir, lp = .05;
   
   // read the analog in value:
-  int  sensorValue = analogRead(analogInPin);            
+  int sensorValue = 0;
+#if 1
+  if (!(ADCSRA & _BV(ADSC)))
+      sensorValue = ADCW;
+
+  ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
+
+//  sensorValue = analogRead(analogInPin);
+#else
+  cli();
+  uint32_t adcval = adcval;
+  uint16_t count = adccount;
+  sei();
+  sensorValue = adcval / count;
+#endif
 
   float dir = sensorValue / 1024.0 * 360;
+
+  if(lpdir - dir > 180)
+      dir += 360;
+  else if(dir - lpdir > 180)
+      dir -= 360;
+  
   lpdir = lp*dir + (1-lp)*lpdir;
+
+  if(lpdir >= 360)
+      lpdir -= 360;
+  else if(lpdir < 0)
+      lpdir += 360;
 
   // print the results to the serial monitor:
   static float knots;
@@ -169,21 +212,26 @@ void read_anenometer() {
   unsigned long time = millis();
   unsigned long dt = time - last_time;
   
-  if(dt >= 250) { // output every 250ms
-      last_time = time;
-    if(rotation_count > 0) {
+  if(dt >= 100) { // output every 100ms
+    last_time = time;
+    int count;
+    cli();
+    count = rotation_count;
+    long period = lastperiod;
+    sei();
+    if(count > 0) {
         rotation_count = 0;
         nowind = 0;
+        knots = .868976 * 2.25 * 1000 * count / period;
     } else
         nowind++;
 
-    if(nowind == 20)
-      knots = 0, nowind--;
-    else
-      knots = .868976 * 2.25 * 1000 / lastperiod;
+    if(nowind == 10)
+      knots /= 2, nowind = 0;
 
     char buf[128];
-    snprintf(buf, sizeof buf, "APMWV,%d.%d,R,%d.%d,N,A", (int)lpdir, (int)(lpdir*10)%10, (int)knots, (int)(knots*10)%10);
+    snprintf(buf, sizeof buf, "ARMWV,%d.%d,R,%d.%d,N,A", (int)lpdir, (int)(lpdir*10)%10, \
+             (int)knots, (int)(knots*10)%10);
     send_nmea(buf);
   }
 }
@@ -230,22 +278,17 @@ void read_pressure_temperature()
         temperature >>= 12;
     
         int32_t temperature_comp = bmp280_compensate_T_int32(temperature);
-        int32_t pressure_comp = bmp280_compensate_P_int64(pressure);
+        int32_t pressure_comp = bmp280_compensate_P_int64(pressure) >> 8;
   
         char buf[128];
-        int a, b, c, r;
-        a = pressure_comp/25600;
-        r = pressure_comp%25600;
-        b = r / 2560;
-        c = (r - b*2560) / 256;
-        snprintf(buf, sizeof buf, "PYMDA,%d.%d%d,B,,,,,,,,,,,,,,,,,,", a, b, c);
+        int ap = pressure_comp/100000;
+        uint32_t rp = pressure_comp - ap*100000UL;
+        snprintf(buf, sizeof buf, "ARMDA,,,%d.%05ld,B,,,,,,,,,,,,,,,,", ap, rp);
         send_nmea(buf);
 
-        a = temperature_comp / 100;
-        r = temperature_comp % 100;
-        b = r/10;
-        c = r-b*10;
-        snprintf(buf, sizeof buf, "PYMTA,%d.%d%d,C", a, b, c);
+        int a = temperature_comp / 100;
+        int r = temperature_comp - a*100;
+        snprintf(buf, sizeof buf, "ARMTA,%d.%02d,C", a, r);
         send_nmea(buf);
 
         pressure = temperature = 0;

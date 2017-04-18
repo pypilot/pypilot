@@ -144,8 +144,8 @@ class SignalKPipeServer:
 
       if method == 'get':
         value = self.values[name]
-        #if value.name.timestamp:
-        #self.sets[value.timestamp] = self.timestamps[value.timestamp]
+        if value.timestamp:
+          self.sets[value.timestamp] = self.timestamps[value.timestamp]
         self.sets[name] = value.value
       elif method == 'set':
         self.values[name].set(request['value'])

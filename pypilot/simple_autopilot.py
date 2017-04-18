@@ -58,7 +58,7 @@ class SimpleAutopilot(AutopilotBase):
 
     command = 0
     gain_values = {'P': self.heading_error.value,
-                   'I': self.heading_error_int.filtered.value,
+                   'I': self.heading_error_int.value,
                    'D': headingrate,
                    'DD': headingraterate,
                    'rP': roll,

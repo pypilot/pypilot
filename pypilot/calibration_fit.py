@@ -364,7 +364,7 @@ def CalibrationProcess(points, fit_output, initial):
     cal = SigmaPoints()
 
     while True:
-        time.sleep(60) # wait 1 minutes then run fit algorithm again
+        time.sleep(120) # wait 2 minutes then run fit algorithm again
 
         for i in range(points.qsize()):
             p = points.get()

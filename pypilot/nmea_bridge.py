@@ -54,7 +54,7 @@ class NmeaBridge:
                 self.server.TimeStamp('gps', data['timestamp'])
                 self.gps.track.set(data['track'])
                 self.gps.speed.set(data['speed'])
-            self.gps.source.update('external')
+                self.gps.source.update('external')
         elif 'wind' in data:
             data = data['wind']
             if self.wind.source.value != 'internal':
@@ -73,7 +73,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
 def nmea_bridge_process(pipe=False):
     import os
     sockets = []
-    watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command', 'imu/pitch', 'imu/roll', 'imu/heading_lowpass', 'gps/source', 'wind/speed', 'wind/direction', 'wind/source']]
+    watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command', 'imu/pitch', 'imu/roll', 'imu/heading_lowpass', 'gps/source', 'wind/speed', 'wind/direction', 'wind/source']
 
     def setup_watches(client, watch=True):
         for name in watchlist:

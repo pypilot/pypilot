@@ -70,17 +70,14 @@ class LineBufferedNonBlockingSocket():
         return l
 
     def readline(self):
-        if self.no_newline_pos == len(self.in_buffer):
-            return False
-        pos = self.no_newline_pos
-        for c in self.in_buffer:
+        while self.no_newline_pos < len(self.in_buffer):
+            c = self.in_buffer[self.no_newline_pos]
             if c=='\n':
-                ret = self.in_buffer[:pos]
-                self.in_buffer = self.in_buffer[pos+1:]
+                ret = self.in_buffer[:self.no_newline_pos]
+                self.in_buffer = self.in_buffer[self.no_newline_pos+1:]
                 self.no_newline_pos = 0
                 return ret
-            pos += 1
-        self.no_newline_pos = pos
+            self.no_newline_pos += 1
         return False
     
 class SignalKServer(object):
@@ -160,7 +157,8 @@ class SignalKServer(object):
         try:
             data = json.loads(request)
         except:
-            print 'invalid request', request
+            print 'invalid request from socket', request
+            print 'end'
             socket.send('invalid request: ' + request + '\n')
             return
         if data['method'] == 'list':

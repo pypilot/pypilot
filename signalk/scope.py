@@ -129,7 +129,8 @@ class SignalKPlot():
     NUM_X_DIV = 5
     NUM_Y_DIV = 6
 
-    FONT = GLUT_BITMAP_9_BY_15
+    #FONT = GLUT_BITMAP_9_BY_15
+    FONT = GLUT_BITMAP_TIMES_ROMAN_24
 
     def __init__(self):
         self.freeze = False
@@ -233,7 +234,7 @@ class SignalKPlot():
 
         # For each datapoint display its scale
         glColor3d(1, 1, 1)
-        glRasterPos2d(0, 0)
+        glRasterPos2d(0, .01)
         i=1
         for t in self.traces:
             glColor3dv(t.color)
@@ -248,12 +249,16 @@ class SignalKPlot():
         if len(self.curtrace.points):
             val = self.curtrace.points[0][1]
 
-        SignalKPlot.drawputs("name: %s offset: %g  value: %g  visible: %s  noise: %g  " % \
-                 (self.curtrace.name, self.curtrace.offset, val, str(self.curtrace.visible), self.curtrace.noise()))
-   
+        SignalKPlot.drawputs("name: %s offset: %g  value: %g  visible: %s  " % \
+                 (self.curtrace.name, self.curtrace.offset, val, 'T' if self.curtrace.visible else 'F'))
         glColor3d(1, 1, 1)
         SignalKPlot.synccolor()
-        SignalKPlot.drawputs("scale: %g  time: %g" % (self.scale, self.disptime))
+        SignalKPlot.drawputs("scale: %g  time: %g  " % (self.scale, self.disptime))
+        
+        glColor3dv(self.curtrace.color)
+        SignalKPlot.synccolor()
+        
+        SignalKPlot.drawputs("noise: %g" % self.curtrace.noise());
 
     def init(self):
         glClearColor (0.0, 0.0, 0.0, 0.0)
@@ -273,8 +278,6 @@ class SignalKPlot():
         glClear (GL_COLOR_BUFFER_BIT)
 
         self.drawticks()
-        self.drawtext()
-
         if self.fft_on:
             self.curtrace.draw_fft()
 
@@ -286,14 +289,13 @@ class SignalKPlot():
         glTranslated(0, .5, 0) # center on 0 ??
         glScaled(1, 2/(self.scale * SignalKPlot.NUM_Y_DIV), 1)
 
-
         glLineWidth(1)
 
         for t in self.traces:
             t.draw(self)
 
         glPopMatrix()
-
+        self.drawtext()
 
     def reshape (self, w, h):
         glViewport (0, 0, w, h)

@@ -91,8 +91,8 @@ class ArduinoServoFlags(Value):
             ret += 'ENGAUGED '
         return ret
         
-    def get_request(self):
-        return json.dumps({self.name : {"value" : self.strvalue()}})
+    def get_signalk(self):
+        return '{"' + self.name + '": {"value": "' + self.strvalue() + '"}}'
         
 class ArduinoServo:
     sync_bytes = [0xe7, 0xf9, 0xc7, 0x1e, 0xa7, 0x19, 0x1c, 0xb3]
@@ -213,18 +213,21 @@ class CalibrationProperty(Property):
         return super(CalibrationProperty, self).set(nvalue)
 
     def get_signalk(self):
-        return '{"' + self.name + '": {"value": ' + '"calibration"' + '}}'
+        strkey = {}
+        for key in self.value:
+            strkey[str(key)] = self.value[key]
+        return '{"' + self.name + '": {"value": ' + json.dumps(strkey) + '}}'
 
 
 # a property which records the time when it is updated
-class TimestampProperty(Property):
+class TimedProperty(Property):
     def __init__(self, name, initial):
-        super(TimestampProperty, self).__init__(name, initial)
-        self.timestamp = 0
+        super(TimedProperty, self).__init__(name, initial)
+        self.time = 0
 
     def set(self, value):
-        self.timestamp = time.time()
-        return super(TimestampProperty, self).set(value)
+        self.time = time.time()
+        return super(TimedProperty, self).set(value)
     
 class Servo:
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
@@ -239,8 +242,8 @@ class Servo:
         self.brake_hack_state = 0
 
         # power usage
-        self.command = self.Register(TimestampProperty, 'command', 0)
-        self.rawcommand = self.Register(TimestampProperty, 'raw_command', 0)
+        self.command = self.Register(TimedProperty, 'command', 0)
+        self.rawcommand = self.Register(TimedProperty, 'raw_command', 0)
         self.timestamp = time.time()
         timestamp = server.TimeStamp('servo')
         self.voltage = self.Register(SensorValue, 'voltage', timestamp)
@@ -272,12 +275,12 @@ class Servo:
     def send_command(self):
         timeout = 1 # command will expire after 1 second
         if self.rawcommand.value:
-            if time.time() - self.rawcommand.timestamp > timeout:
-                self.rawcommand.set(False)
+            if time.time() - self.rawcommand.time > timeout:
+                self.rawcommand.set(0)
             else:
                 self.raw_command(self.rawcommand.value)
         else:
-            if time.time() - self.command.timestamp > timeout:
+            if time.time() - self.command.time > timeout:
                 command = 0
             else:
                 command = self.command.value
@@ -518,7 +521,7 @@ class Servo:
                 self.powerconsumption.set(self.powerconsumption.value + self.voltage.value*amphours)
 
         if self.driver:
-            self.engauged.set(not not self.driver.flags.value & ArduinoServoFlags.ENGAUGED)
+            self.engauged.update(not not self.driver.flags.value & ArduinoServoFlags.ENGAUGED)
 
     def fault(self):
         if not self.driver:
