@@ -122,9 +122,6 @@ class CompassCalibrationPlot():
         self.mag_cal_sphere = [0, 0, 0, 30]
         self.mag_cal_ellipsoid = [0, 0, 0, 30, 1, 1]
         self.mag_cal_new_bias = [0, 0, 0, 30, 0]
-
-        self.out = [0,0,0,0,0,0]
-        self.outcount = 0
         
         self.fusionQPose = False
         self.alignmentQ = False
@@ -177,59 +174,13 @@ class CompassCalibrationPlot():
             value = data['value']
             if value:
                 self.points.append(value)
+                if len(self.points) > point_count:
+                    self.points = self.points[1:]
 
-            ccompass = vector.normalize(vector.sub(value, self.mag_cal_sphere[:3]))
-            cecompass = vector.sub(value, self.mag_cal_ellipsoid[:3])
-            cecompass = vector.normalize(cecompass)
-            cecompass = vector.normalize([cecompass[0],
-                                          cecompass[1] * self.mag_cal_ellipsoid[4],
-                                          cecompass[2] * self.mag_cal_ellipsoid[5]])
-
-            cncompass = vector.normalize(vector.sub(value, self.mag_cal_new_bias[:3]))
-            
-            down = [0, 0, 1]
-            if self.fusionQPose:
-                #down = quaternion.rotvecquat(down, quaternion.conjugate(self.fusionQPose))
-
-                q = self.fusionQPose
-                if self.alignmentQ:
-                    q = quaternion.multiply(q, quaternion.conjugate(self.alignmentQ))
-                down = quaternion.rotvecquat(down, quaternion.conjugate(q))
-
-                d = vector.dot(down, ccompass)
-                #print 'd', d, 'down', down
-
-                c = quaternion.rotvecquat(ccompass, q)
-                cr = quaternion.rotvecquat(ccompass, quaternion.multiply(self.mag_cal_q, q))
-                ce = quaternion.rotvecquat(cecompass, q)
-                cer = quaternion.rotvecquat(cecompass, quaternion.multiply(self.mag_cal_q, q))
-                cn = quaternion.rotvecquat(cncompass, q)
-                cnr = quaternion.rotvecquat(cncompass, quaternion.multiply(self.mag_cal_q, q))
-
-                a = math.atan2(c[1], c[0])
-                ae = math.atan2(ce[1], ce[0])
-                an = math.atan2(cn[1], cn[0])
-                out = a, math.atan2(cr[1], cr[0]), \
-                      ae, math.atan2(cer[1], cer[0]), \
-                      an, math.atan2(cnr[1], cnr[0])
-
-                self.out = map(lambda x, y : x/10 + y, out, self.out)
-                self.outcount += 1
-                
-                if self.outcount == 10:
-                    print math.degrees(math.asin(d)), map(lambda x : '%3.1f' % (math.degrees(x) + self.heading), self.out)
-                    self.out = [0,0,0,0,0,0]
-                    self.outcount = 0
-                
-
-            if len(self.points) > point_count:
-                self.points = self.points[1:]
-
-
+                    
         elif name == 'imu/compass_calibration_sigmapoints':
             self.sigmapoints = data['value']
         elif name == 'imu/compass_calibration' and data['value']:
-            print 'data', data['value']
             self.mag_cal_sphere = data['value'][0]
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
