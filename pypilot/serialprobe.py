@@ -8,7 +8,7 @@
 import sys, os, time
 import json
 
-import autopilot
+pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 
 def enumerate_devices(name, bauds):
     devices = []
@@ -28,7 +28,7 @@ def enumerate_devices(name, bauds):
                 devices.append({'path': device_path, 'baud' : baud})
     return devices
 
-class serialprobe:
+class SerialProbe:
     def __init__(self):
         self.gpsdevices = []
         self.lastworkingdevices = {}
@@ -38,7 +38,7 @@ class serialprobe:
         if name in self.lastworkingdevices:
             return self.lastworkingdevices[name]
 
-        filename = autopilot.pypilot_dir + name + 'device'
+        filename = pypilot_dir + name + 'device'
         try:
             file = open(filename, 'r')
             lastdevice = json.loads(file.readline().rstrip())
@@ -65,13 +65,13 @@ class serialprobe:
             return False
 
         probe = self.probes[name]
-        devices = probe['devices']
-        if not devices:
-            devices = enumerate_devices(name, bauds)
+        if not probe['devices']:
+            probe['devices'] = enumerate_devices(name, bauds)
             lastdevice = self.lastworkingdevice(name)
             if lastdevice:
-                devices.insert(0, lastdevice)
+                probe['devices'].insert(0, lastdevice)
 
+        devices = probe['devices']
         probe['time'] = time.time()
         probe['device_probe'] = False # currently probing
         probe['device'] = False # successful
@@ -81,9 +81,10 @@ class serialprobe:
         for device in devices:
             exists = os.path.exists(device['path'])
             if not exists:
-                for device in devices:
-                    if device['path'] == device['path']:
-                        devices.remove(device)
+                for device2 in list(devices):
+                    if device2['path'] == device['path']:
+                        devices.remove(device2)
+
                 return False
 
             ok = True
@@ -111,10 +112,14 @@ class serialprobe:
 
             for gpsdevice in self.gpsdevices:
                 # device used by gpsd
-                if os.path.samefile(gpsdevice, device['path']):
-                    ok = False
-                    break
-            
+                try:
+                    if not os.path.samefile(gpsdevice, device['path']):
+                        continue
+                except:
+                    pass
+                ok = False
+                break
+                    
             if not ok:
                 continue
 
@@ -152,7 +157,7 @@ class serialprobe:
     def probe_success(self, name):
         if self.probes[name]['device']:
             return # already success
-        filename = autopilot.pypilot_dir + name + 'device'
+        filename = pypilot_dir + name + 'device'
         probe = self.probes[name]
         self.probes[name]['device'] = probe['device_probe']
         probe['device_probe'] = False

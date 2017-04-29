@@ -30,6 +30,7 @@ except ImportError:
   print "RTIMU library not detected, please install it"
 
 def imu_process(pipe, cal_queue, compass_cal, gyrobias):
+    print 'imu on', os.getpid()
     if os.system('sudo chrt -pf 2 %d 2>&1 > /dev/null' % os.getpid()):
       print 'warning, failed to make imu process realtime'
 
@@ -87,26 +88,28 @@ def imu_process(pipe, cal_queue, compass_cal, gyrobias):
         
         if rtimu.IMURead():
           data = rtimu.getIMUData()
+          data['accelresiduals'] = list(rtimu.getAccelResiduals())
+          data['gyrobias'] = s.GyroBias
+          data['timestamp'] = t0 # imu timestamp is perfectly accurate
+          pipe.send(data)
+        else:
+          print 'failed to read IMU!!!!!!!!!!!!!!'
+          break # reinitialize imu
 
-          if cal_queue.qsize() > 0:
+        if cal_queue.qsize() > 0:
             new_cal = cal_queue.get()
             s.CompassCalEllipsoidValid = True
             s.CompassCalEllipsoidOffset = new_cal
             #rtimu.resetFusion()
 
-          data['accelresiduals'] = list(rtimu.getAccelResiduals())
-            
-          data['gyrobias'] = s.GyroBias
-          pipe.send(data)
-        else:
-          print 'failed to read IMU!!!!!!!!!!!!!!'
-          break # reinitialize imu
         
         dt = time.time() - t0
         t = .1 - dt # 10hz
 
         if t > 0:
           time.sleep(t)
+        else:
+          print 'imu process failed to keep time'
 
 class LoopFreqValue(Value):
     def __init__(self, name, initial):
@@ -269,7 +272,6 @@ class BoatIMU(object):
       self.FirstTimeStamp = data['timestamp']
 
     data['timestamp'] -= self.FirstTimeStamp
-    data['timestamp'] /= 1e6
 
     #data['accel_comp'] = quaternion.rotvecquat(vector.sub(data['accel'], down), self.alignmentQ.value)
 

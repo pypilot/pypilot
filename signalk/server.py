@@ -59,12 +59,11 @@ class LineBufferedNonBlockingSocket():
             size = 1
             data = self.socket.read()
 
-        self.in_buffer += data
-
         l = len(data)
-
         if l == 0:
             return False
+
+        self.in_buffer += data
         if self.nonblocking and l == size:
             return l+self.recv()
         return l
@@ -78,7 +77,7 @@ class LineBufferedNonBlockingSocket():
                 self.no_newline_pos = 0
                 return ret
             self.no_newline_pos += 1
-        return False
+        return ''
     
 class SignalKServer(object):
     def __init__(self, port=DEFAULT_PORT):

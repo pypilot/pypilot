@@ -15,7 +15,7 @@ import gps
 while True:
     while True:
         try:
-            gpsd = gps.gps(host='piCore', mode=gps.WATCH_ENABLE) #starting the stream of info
+            gpsd = gps.gps(mode=gps.WATCH_ENABLE) #starting the stream of info
             break
         except:
             time.sleep(3)
@@ -33,4 +33,6 @@ while True:
             print 'Setting date to gps time', date, t
             sys.stdout.flush()
             os.system('date -u -s "' + date + ' ' + t + '"')
+            del gpsd
             time.sleep(3*24*60*60) # sync again in 3 days
+            break

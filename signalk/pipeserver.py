@@ -92,6 +92,7 @@ class SignalKPipeServerClient(SignalKServer):
         return True
 
 def pipe_server_process(pipe, port):
+    print 'pipe server on', os.getpid()
     server = SignalKPipeServerClient(pipe, port)
     # handle only pipe messages (to get all registrations) for first second
     t0 = time.time()

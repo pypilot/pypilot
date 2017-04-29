@@ -174,8 +174,6 @@ class LCDClient():
         self.have_select = False
         self.create_mainmenu()
 
-        self.last_gps_time = self.last_wind_time = 0
-
         self.longsleep = 30
         self.display_page = self.display_connecting
         self.connecting_dots = 0
@@ -419,17 +417,19 @@ class LCDClient():
         
     def connect(self):
         watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command',
-                     'gps/track', 'wind/direction',
                      'servo/controller']
-        nalist = watchlist + ['imu/pitch', 'imu/heel', 'imu/runtime',
-                              'ap/P', 'ap/I', 'ap/D',
-                              'imu/heading',
-                              'imu/heading_offset',
-                              'imu/alignmentCounter',
-                              'imu/compass_calibration',
-                              'imu/compass_calibration_age',
-                              'servo/Amp Hours', 'servo/Max Current',
-                              'servo/Min Speed', 'servo/Max Speed']
+        poll_list = ['ap/heading']
+        nalist = watchlist + poll_list + \
+        ['imu/pitch', 'imu/heel', 'imu/runtime',
+         'ap/P', 'ap/I', 'ap/D',
+         'gps/source', 'wind/source',
+         'imu/heading',
+         'imu/heading_offset',
+         'imu/alignmentCounter',
+         'imu/compass_calibration',
+         'imu/compass_calibration_age',
+         'servo/Amp Hours', 'servo/Max Current',
+         'servo/Min Speed', 'servo/Max Speed']
         self.last_msg = {}
         for name in nalist:
             self.last_msg[name] = _('N/A')
@@ -466,11 +466,12 @@ class LCDClient():
             
     def have_compass(self):
         return True
+
     def have_gps(self):
-        return time.time() - self.last_gps_time < 5
+        return self.last_msg['gps/source'] != 'none'
 
     def have_wind(self):
-        return time.time() - self.last_wind_time < 5
+        return self.last_msg['wind/source'] != 'none'
 
     def display_wifi(self):
         wifi = False
@@ -845,12 +846,6 @@ class LCDClient():
 
             name, data = result
             #print name, ' = ', data
-
-            if name in self.last_msg and self.last_msg[name] != 'N/A': # ignore initial message
-                if name == 'gps/track' and 'value' in data:
-                    self.last_gps_time = time.time()
-                if name == 'wind/direction' and 'value' in data:
-                    self.last_wind_time = time.time()
 
             if 'value' in data:
                 self.last_msg[name] = data['value']

@@ -15,7 +15,7 @@ class GpsProbe():
     def __init__(self):
         # probe last known gps device first,
         # this could be saved between sessions
-        self.lastgpsdevice = '/dev/null'
+        self.lastgpsdevice = ''
 
     def connect(self):
         while True: # connection to gpsd loop
@@ -54,7 +54,6 @@ class GpsProbe():
                 return True
             sys.stdout.flush()
 
-        time.sleep(5) # after probe failure, wait 5 seconds, then disable logging
         return False
 
     def verify(self):
@@ -66,17 +65,28 @@ class GpsProbe():
                     if activated != self.gpsd.activated:
                         print 'GPS ' + ('' if activated else 'de') + 'activated'
                     self.gpsd.activated = activated
+                    break
                     
             except StopIteration:
                 print 'GPS lost gpsd'
                 return
 
-            if not self.gpsd.activated:
-                if not self.probe():
-                    print 'GPS probe failed'
-                    return # reconnect to gpsd since there is no way to timeout on gpsd.next
+        if not self.gpsd.activated:
+            if self.probe():
                 self.gpsd.activated = True
-            sys.stdout.flush()
+                print 'GPS probe success'
+            else:
+                print 'GPS probe failed'
+
+        activated = self.gpsd.activated
+        del self.gpsd
+        if activated:
+            # once activated gpsd normally can find the device
+            # if it comes and goes.. but keep trying in case gpsd restarts
+            time.sleep(60)
+        else:
+            time.sleep(15)
+
 
 def main():
     gpsprobe = GpsProbe()
@@ -84,10 +94,9 @@ def main():
         while True:
             gpsprobe.connect()
             gpsprobe.verify()
-            sys.stdout.flush()
 
     except KeyboardInterrupt:
-        print 'Keyboard interrupt, gps process exit'
+        print 'Keyboard interrupt, gpsprobe exit'
 
 
 if __name__ == "__main__":
