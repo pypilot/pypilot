@@ -6,7 +6,7 @@
 # serial monitor: make serial
 
 SKETCHNAME = weathersensors
-DEVICE = /dev/ttyUSB1
+DEVICE = /dev/ttyUSB0
 
 MCU = atmega328p
 

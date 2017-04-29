@@ -170,7 +170,6 @@ void send_nmea(const char *buf)
 }
 
 
-
 void read_anenometer() {
   static float lpdir, lp = .05;
   
@@ -190,8 +189,10 @@ void read_anenometer() {
   sei();
   sensorValue = adcval / count;
 #endif
+//  Serial.println(sensorValue);
 
-  float dir = sensorValue / 1024.0 * 360;
+//  float dir = sensorValue / 1024.0 * 360;
+  float dir = (sensorValue + 13) * .34;
 
   if(lpdir - dir > 180)
       dir += 360;
