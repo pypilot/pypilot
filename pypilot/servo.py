@@ -104,8 +104,7 @@ class ArduinoServo:
 
         #self.device.setTimeout(0)
         self.device.timeout=0
-        self.lastcommand = False
-        self.lasttime = time.time()
+        self.lasttime = self.timeout = time.time()
         self.servo = False
 
         self.flags = ArduinoServoFlags('servo/flags')
@@ -132,7 +131,6 @@ class ArduinoServo:
         b = '%c%c%c' % (code[1], code[2], crc8(code))
 
         self.device.write(b)
-        #self.device.flush()
         self.out_sync += 1
 
     def raw_command(self, command):
@@ -147,51 +145,50 @@ class ArduinoServo:
             self.out_sync = 0;
 
     def command(self, command):
-        if command == self.lastcommand:
-            dt = time.time() - self.lasttime
-            # onlyupdate at .5 seconds when command is zero
-            if command == 0 and dt < .5:
+        # onlyupdate at .5 seconds when command is zero
+        if command == 0:
+            if time.time() > self.timeout and time.time() - self.lasttime < .5:
                 return
-        self.lastcommand = command
-        self.lasttime = time.time()
+            self.lasttime = time.time()
+        else:
+            self.timeout = time.time()+1
 
         command = min(max(command, -1), 1)
-
-        self.raw_command((command+1)*1000)
+        self.raw_command((3*command+1)*1000)
 
     def stop(self):
         self.raw_command(0x5342)
 
     def poll(self):
-        c = self.device.readall()
-        if len(c) == 0:
-            return False
+        if len(self.in_buf) < 3:
+            c = self.device.read(12)
+            self.in_buf += map(ord, c)
+            if len(self.in_buf) < 3:
+                return False
 
-        self.in_buf +=  map(ord, c)
         ret = {'result': True}
-        if len(self.in_buf) >= 3:
-            code = [ArduinoServo.sync_bytes[self.in_sync]] + self.in_buf[:2]
-            crc = crc8(code)
-	    #print 'got code', code, self.in_buf
-            if crc == self.in_buf[2]:
-                if self.in_sync_count == 2:
-                    value = self.in_buf[0] + (self.in_buf[1]<<8)
-                    if self.in_sync > 0:
-                        ret['current'] = value * 1.1 / .05 / 65536
-                    else:
-                        ret['voltage'] = (value >> 4) * 1.1 * 10560 / 560 / 4096
-                        self.flags.set(value & 0xf)
+        code = [ArduinoServo.sync_bytes[self.in_sync]] + self.in_buf[:2]
+        crc = crc8(code)
+	#print 'got code', code, self.in_buf
+        if crc == self.in_buf[2]:
+            if self.in_sync_count == 2:
+                value = self.in_buf[0] + (self.in_buf[1]<<8)
+                if self.in_sync > 0:
+                    ret['current'] = value * 1.1 / .05 / 65536
+                else:
+                    ret['voltage'] = (value >> 4) * 1.1 * 10560 / 560 / 4096
+                    self.flags.set(value & 0xf)
 
-                self.in_sync+=1
-                if self.in_sync == len(ArduinoServo.sync_bytes):
-                    self.in_sync = 0;
-                    if self.in_sync_count < 2:
-                        self.in_sync_count+=1
+            self.in_sync+=1
+            if self.in_sync == len(ArduinoServo.sync_bytes):
+                self.in_sync = 0;
+                if self.in_sync_count < 2:
+                    self.in_sync_count+=1
 
-                self.in_buf = self.in_buf[3:]
-            else:
-                self.in_sync = self.in_sync_count = 0
-                self.in_buf = self.in_buf[1:]
+            self.in_buf = self.in_buf[3:]
+        else:
+            self.in_sync = self.in_sync_count = 0
+            self.in_buf = self.in_buf[1:]
 
         return ret
 

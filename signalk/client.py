@@ -130,18 +130,12 @@ class SignalKClient(object):
                     try:
                         msg = json.loads(line.rstrip())
                     except:
-                        # ignore garbage
-                        print 'invalid message from server:', line
-                        sys.exit(-2)
+                        raise Exception('invalid message from server:', line)
 
                     return msg
                 else:
                     self.poll(timeout - (t1 - t0) > 0)
 
-                #dt = time.time() - t1
-                # maybe sleep for up to 10 ms
-                #if dt < .01:
-                #    time.sleep(.01 - dt)
                 t1 = time.time()
 
         except ConnectionLost:
