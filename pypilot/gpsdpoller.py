@@ -29,6 +29,7 @@ class GpsProcess(multiprocessing.Process):
                 time.sleep(3)
 
     def read(self, pipe):
+        lasttime = time.time()
         while True:
             try:
                 gpsdata = self.gpsd.next()
@@ -39,13 +40,15 @@ class GpsProcess(multiprocessing.Process):
                         pipe.send({'device': device})
                         self.devices.append(device)
 
-                if self.gpsd.fix.mode == 3:
+                if self.gpsd.fix.mode == 3 and \
+                   time.time() - lasttime > .25:
                     fix = {}
-                    fix['time'] = self.gpsd.fix.time
+                    #fix['time'] = self.gpsd.fix.time
                     fix['track'] = self.gpsd.fix.track
                     fix['speed'] = self.gpsd.fix.speed
                     pipe.send(fix)
-                    
+                    lasttime = time.time()
+
             except StopIteration:
                 print 'lost connection to gpsd'
                 break
@@ -68,20 +71,15 @@ class GpsdPoller():
         self.process = GpsProcess()
         self.process.start()
 
-    def poll(self):        
-        fix = False
+    def poll(self):
         # flush queue entries
-        while True:
-            try:
-                fix = self.process.pipe.recv()
-            except IOError:
-                break
+        try:
+            fix = self.process.pipe.recv()
+        except IOError:
+            return
 
-            if 'device' in fix:
-                self.devices.append(fix['device'])
-                fix = False
-
-        if not fix:
+        if 'device' in fix:
+            self.devices.append(fix['device'])
             return
 
         def fval(name):

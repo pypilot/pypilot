@@ -433,8 +433,8 @@ def CalibrationProcess(points, fit_output, initial):
 
 
 class MagnetometerAutomaticCalibration():
-    def __init__(self, cal_queue, initial):
-        self.cal_queue = cal_queue
+    def __init__(self, cal_pipe, initial):
+        self.cal_pipe = cal_pipe
         self.sphere_fit = initial
         self.points = multiprocessing.Queue()
         self.fit_output = multiprocessing.Queue()
@@ -452,7 +452,7 @@ class MagnetometerAutomaticCalibration():
             cal, sigma_points = self.fit_output.get()
 
         if cal:
-            self.cal_queue.put(tuple(cal[0][:3]))
+            self.cal_pipe.send(tuple(cal[0][:3]))
             sphere_fit = cal[0]
 
         return cal, sigma_points

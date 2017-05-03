@@ -13,7 +13,10 @@ pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 def enumerate_devices(name, bauds):
     devices = []
     by_id = '/dev/serial/by-id'
-    devicesp = ['/dev/ttyAMA', '/dev/ttyS']
+    if False: #rpi3
+        devicesp = ['/dev/ttyS']
+    else:
+        devicesp = ['/dev/ttyAMA']
     if os.path.exists(by_id):
         for device_path in os.listdir(by_id):
             for baud in bauds:
@@ -136,7 +139,10 @@ class SerialProbe:
                     #print 'busy, try again later', device, name
                     pass
                 elif err.args[0] == 6: # No such device or address, don't try again
-                    probe['probed'].append(device)
+                    for device2 in list(devices):
+                        if device2['path'] == device['path']:
+                            devices.remove(device2)
+                    return False
                 else:
                     print 'serial exception', device, name, err
                     # don't try again if ttyS port?

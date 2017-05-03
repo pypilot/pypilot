@@ -29,7 +29,7 @@ try:
 except ImportError:
   print "RTIMU library not detected, please install it"
 
-def imu_process(pipe, cal_queue, compass_cal, gyrobias):
+def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
     print 'imu on', os.getpid()
     if os.system('sudo chrt -pf 2 %d 2>&1 > /dev/null' % os.getpid()):
       print 'warning, failed to make imu process realtime'
@@ -96,11 +96,13 @@ def imu_process(pipe, cal_queue, compass_cal, gyrobias):
           print 'failed to read IMU!!!!!!!!!!!!!!'
           break # reinitialize imu
 
-        if cal_queue.qsize() > 0:
-            new_cal = cal_queue.get()
-            s.CompassCalEllipsoidValid = True
-            s.CompassCalEllipsoidOffset = new_cal
-            #rtimu.resetFusion()
+        try:
+          new_cal = cal_pipe.recv()
+          s.CompassCalEllipsoidValid = True
+          s.CompassCalEllipsoidOffset = new_cal
+          #rtimu.resetFusion()
+        except IOError:
+          pass
 
         
         dt = time.time() - t0
@@ -201,12 +203,12 @@ class BoatIMU(object):
 
     self.compass_calibration_sigmapoints = self.Register(RoundedValue, 'compass_calibration_sigmapoints', False)
     self.imu_pipe = nonblockingpipe()
-    imu_cal_queue = multiprocessing.Queue()
+    imu_cal_pipe = nonblockingpipe()
 
     #if self.load_calibration():
-    #  imu_cal_queue.put(tuple(self.compass_calibration.value[0][:3]))
+    #  imu_cal_pipe.put(tuple(self.compass_calibration.value[0][:3]))
 
-    self.compass_auto_cal = MagnetometerAutomaticCalibration(imu_cal_queue, self.compass_calibration.value[0])
+    self.compass_auto_cal = MagnetometerAutomaticCalibration(imu_cal_pipe[0], self.compass_calibration.value[0])
 
     self.lastqpose = False
     self.FirstTimeStamp = False
@@ -221,7 +223,7 @@ class BoatIMU(object):
 
     self.SensorValues['gyrobias'].make_persistent(120) # write gyrobias every 2 minutes
 
-    self.imu_process = multiprocessing.Process(target=imu_process, args=(self.imu_pipe[1],imu_cal_queue, self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
+    self.imu_process = multiprocessing.Process(target=imu_process, args=(self.imu_pipe[1],imu_cal_pipe[1], self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
     self.last_imuread = time.time()
     self.lasttimestamp = 0
     self.last_heading_off = 0
@@ -247,7 +249,6 @@ class BoatIMU(object):
       self.imu_process.start()
       return False
     
-    # flush queue
     data = False
 
     while True: # read all the data from the non-blocking pipe

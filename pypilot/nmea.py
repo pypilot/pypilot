@@ -244,7 +244,8 @@ class Nmea:
 
         self.gpsdpoller.poll()
 
-        if self.process.sockets and time.time() - self.last_imu_time > .5:
+        if self.process.sockets and time.time() - self.last_imu_time > .5 and \
+           'imu/pitch' in self.server.values:
             self.send_nmea('APXDR,A,%.3f,D,PTCH' % self.server.values['imu/pitch'].value)
             self.send_nmea('APXDR,A,%.3f,D,ROLL' % self.server.values['imu/heel'].value)
             self.send_nmea('APHDM,%.3f,M' % self.server.values['imu/heading_lowpass'].value)
