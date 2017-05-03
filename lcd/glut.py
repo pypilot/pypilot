@@ -17,6 +17,7 @@ import ugfx
 class screen(ugfx.surface):
     def __init__(self, size):
         super(screen, self).__init__(size[0], size[1], 4, None)
+        self.fill(0)
 
         glutInit(sys.argv)
         glutInitWindowPosition(250, 0)
@@ -74,6 +75,9 @@ class screen(ugfx.surface):
         glutReshapeFunc(reshape)
         glutKeyboardFunc(key)
         #        glutSpecialFunc(plot.special)
+
+    def refresh(self):
+        OpenGL.GLUT.glutPostRedisplay()
 
 if __name__ == '__main__':
    s = screen((128, 160))

@@ -63,8 +63,10 @@ surface::surface(int w, int h, int internal_bypp, const char *data32)
                 *((uint16_t*)(p + location)) = t;
                 i++;
             }
-    } else
+    } else if(bypp == 4)
         memcpy(p, data32, 4*width*height);
+    else
+        fprintf(stderr, "bypp incompatible with input data\n");
 }
 
 
@@ -170,7 +172,7 @@ void surface::blit(surface *src, int xoff, int yoff)
         return;
     }
 
-    int w = src->width, h = src->height, xsoff = 0, ysoff = 0;
+    int w = src->width, h = src->height;
 
     long src_location = 0;
     if (xoff < 0) {
@@ -230,17 +232,20 @@ void surface::magnify(surface *src, int factor)
         MAG(2);
     } else if(bypp == 4) {
         MAG(4);
-    }
+    } else
+        fprintf(stderr, "bypp incompatible with magnify\n");
 }
 
 void surface::putpixel(int x, int y, uint32_t c)
 {
     long dl = x * bypp + y * line_length;
-    if(bypp == 2) {
-        uint16_t t = color16(t);
-        *(uint16_t*)(p + dl) = c;
-    } else
-        *(uint32_t*)(p + dl) = c;
+    switch(bypp) {
+    case 1: *(uint8_t*)(p + dl) = c&0xff;      break;
+    case 2: *(uint16_t*)(p + dl) = color16(c); break;
+    case 4: *(uint32_t*)(p + dl) = c;          break;
+    default:
+        fprintf(stderr, "bypp incompatible with putpixel\n");
+    }
 }
 
 void surface::line(int x1, int y1, int x2, int y2, uint32_t c)
@@ -266,37 +271,73 @@ void surface::line(int x1, int y1, int x2, int y2, uint32_t c)
 
 void surface::hline(int x1, int x2, int y, uint32_t c)
 {
-    if(bypp == 2) {
+    switch(bypp) {
+    case 1:
+        memset(p + y*line_length, c&0xff, x2-x1);
+        break;
+    case 2:
+    {
         uint16_t t = color16(c);
         for(int x = x1; x <= x2; x++)
             *(uint16_t*)(p + y*line_length + x*bypp) = t;
-    } else
+    } break;
+    case 4:
         for(int x = x1; x <= x2; x++)
             *(uint32_t*)(p + y*line_length + x*bypp) = c;
+        break;
+    default:
+        fprintf(stderr, "bypp incompatible with hline\n");
+    }
 }
 
 void surface::vline(int x, int y1, int y2, uint32_t c)
 {
-    if(bypp == 2) {
-        uint16_t t = color16(t);
+    switch(bypp) {
+    case 1:
+    {
+        uint8_t t = c&0xff;
+        for(int y = y1; y <= y2; y++)
+            *(uint8_t*)(p + y*line_length + x) = t;
+    } break;
+    case 2:
+    {
+        uint16_t t = color16(c);
         for(int y = y1; y <= y2; y++)
             *(uint16_t*)(p + y*line_length + x*bypp) = t;
-    } else
+    } break;
+    case 4:
         for(int y = y1; y <= y2; y++)
             *(uint32_t*)(p + y*line_length + x*bypp) = c;
+        break;
+    default:
+        fprintf(stderr, "bypp incompatible with vline\n");
+    }
 }
 
 void surface::box(int x1, int y1, int x2, int y2, uint32_t c)
 {
-    if(bypp == 2) {
-        uint16_t t = color16(t);
+    switch(bypp) {
+    case 1:
+    {
+        uint16_t t = c&0xff;
+        for(int y = y1; y <= y2; y++)
+            memset(p + y*line_length, t, x2-x1);
+    } break;
+    case 2:
+    {
+        uint16_t t = color16(c);
         for(int y = y1; y <= y2; y++)
             for(int x = x1; x <= x2; x++)
                 *(uint16_t*)(p + y*line_length + x*bypp) = t;
-    } else
+    } break;
+    case 4:
         for(int y = y1; y <= y2; y++)
             for(int x = x1; x <= x2; x++)
                 *(uint32_t*)(p + y*line_length + x*bypp) = c;
+        break;
+    default:
+        fprintf(stderr, "bypp incompatible with box\n");
+    }
 }
 
 void surface::invert(int x1, int y1, int x2, int y2)
@@ -340,18 +381,20 @@ void surface::fill(uint32_t c)
 
 int surface::getpixel(int x, int y)
 {
-    if(bypp != 4) {
-        fprintf(stderr, "bypp incompatible with getpixel\n");
-        exit(1);
-    }
-    return *(uint32_t*)(p + y*line_length + x*bypp);
+    if(bypp == 1)
+        return *(uint8_t*)(p + y*line_length + x*bypp);
+    else if(bypp == 2)
+        return *(uint16_t*)(p + y*line_length + x*bypp);
+    else if(bypp == 4)
+        return *(uint32_t*)(p + y*line_length + x*bypp);
+
+    fprintf(stderr, "bypp incompatible with getpixel\n");
+    exit(1);
 }
 
 
 screen::screen(const char *device)
 {
-    int x = 0, y = 0;
-    
     // Open the file for reading and writing
     fbfd = open(device, O_RDWR);
     if (fbfd == -1) {

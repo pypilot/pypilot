@@ -25,6 +25,7 @@ public:
     void box(int x1, int y1, int x2, int y2, unsigned int c);
     void invert(int x1, int y1, int x2, int y2);
     void fill(unsigned int c);
+    virtual void refresh() {}
 
     int width, height, bypp;
     char *p;

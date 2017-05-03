@@ -16,12 +16,12 @@ if use_glut:
 import gettext
 import json
 _ = lambda x : x # initially no translation
-
+    
 try:
     import RPi.GPIO as GPIO
 except ImportError:
     print 'No gpio available'
-    GPIO = False
+    GPIO = None
 
 from signalk.client import SignalKClient
 
@@ -76,7 +76,7 @@ class LCDMenu():
 class RangeEdit():
     def __init__(self, name, desc, value, signalk_id, lcd, minval, maxval, step):
         self.name = name
-        if type(desc) == type(''):
+        if type(desc) == type(u''):
             self.desc = lambda : desc
         else:
             self.desc = desc
@@ -420,7 +420,7 @@ class LCDClient():
                      'servo/controller']
         poll_list = ['ap/heading']
         nalist = watchlist + poll_list + \
-        ['imu/pitch', 'imu/heel', 'imu/runtime',
+        ['imu/pitch', 'imu/heel', 'ap/runtime',
          'ap/P', 'ap/I', 'ap/D',
          'gps/source', 'wind/source',
          'imu/heading',
@@ -631,7 +631,7 @@ class LCDClient():
 
         y = .2
         spacing = .11
-        runtime = self.last_msg['imu/runtime'][:7]
+        runtime = self.last_msg['ap/runtime'][:7]
         items = [_('Amp Hours'), v, _('runtime'), runtime, _('version'), '0.1']
         even, odd = 0, .05
         for item in items:
@@ -640,7 +640,7 @@ class LCDClient():
             even, odd = odd, even
 
         self.client.get('servo/Amp Hours')
-        self.client.get('imu/runtime')
+        self.client.get('ap/runtime')
 
     def display_calibrate_info(self):
         self.surface.fill(black)
@@ -658,9 +658,9 @@ class LCDClient():
             pass
         
         self.fittext(rectangle(0, .3, 1, .15), _('compass'))
-        self.fittext(rectangle(.2, .45, .8, .2), deviation)
-        self.fittext(rectangle(0, .65, .5, .15), _('age'))
-        self.fittext(rectangle(.5, .65, .5, .15), self.last_msg['imu/compass_calibration_age'][:7])
+        self.fittext(rectangle(0, .42, 1, .23), deviation)
+        self.fittext(rectangle(0, .65, .4, .15), _('age'))
+        self.fittext(rectangle(0, .8, 1, .2), self.last_msg['imu/compass_calibration_age'][:7])
             
         self.client.get('imu/compass_calibration')
         self.client.get('imu/compass_calibration_age')
@@ -677,10 +677,6 @@ class LCDClient():
         self.blink = self.blink[1], self.blink[0]
         size = h / 20
         self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
-
-        if use_glut:
-            from OpenGL.GLUT import glutPostRedisplay
-            glutPostRedisplay()
 
     def set(self, name, value):
         if self.client:
@@ -786,8 +782,6 @@ class LCDClient():
                 self.keypad[key] = True
             else:
                 self.keypadup[key] = True
-            from OpenGL.GLUT import glutPostRedisplay
-            glutPostRedisplay()
 
     def idle(self):
         if self.client:
@@ -860,9 +854,13 @@ class LCDClient():
 
 def main():
     print 'init...'
-    if use_glut:
+    if 'nokia5110' in sys.argv[1:]:
+        import nokia5110lcd
+        screen = nokia5110lcd.screen()
+    elif use_glut:
         #screen = glut.screen((480, 640))
-        screen = glut.screen((64, 128))
+        #screen = glut.screen((64, 128))
+        screen = glut.screen((44, 84))
     else:
         screen = ugfx.screen("/dev/fb0")
         if screen.width == 416 and screen.height == 656:
@@ -899,6 +897,7 @@ def main():
                 #surface.magnify(mag)
 
             screen.blit(surface, 0, 0)
+            screen.refresh()
 
         lcdclient.idle()
 
