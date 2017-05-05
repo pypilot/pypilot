@@ -356,13 +356,13 @@ class Servo:
                 device.timeout=0 #nonblocking
                 fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
                 self.driver = ArduinoServo(device.fileno())
+                self.driver.max_current(self.max_current.value)
 
                 t0 = time.time()
                 if self.driver.initialize():
                     self.device = device
                     print 'arduino servo found on', device_path
                     self.serialprobe.probe_success('servo')
-                    self.driver.max_current(self.max_current.value)
                     self.controller.set('arduino')
 
                     if self.brake_hack.value:

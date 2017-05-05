@@ -14,19 +14,25 @@ from values import *
 DEFAULT_PORT = 21311
 max_connections = 20
 
-'''
+
 from signalk.linebuffer import linebuffer
-class LineBufferedNonBlockingSocket(linebuffer.LineBuffer):
+#class LineBufferedNonBlockingSocket(linebuffer.LineBuffer):
+class LineBufferedNonBlockingSocket(object):
     def __init__(self, connection):
         connection.setblocking(0)
-        super(LineBufferedNonBlockingSocket, self).__init__(connection.fileno())
+        # somehow it's much slower to baseclass ?!?
+        #super(LineBufferedNonBlockingSocket, self).__init__(connection.fileno())
+        self.b = linebuffer.LineBuffer(connection.fileno())
 
         self.socket = connection
         self.out_buffer = ''
 
+    def recv(self):
+        return True
+        
     def readline(self):
-        if self.next():
-            return self.line()
+        if self.b.next():
+            return self.b.line()
         return False
 
     def send(self, data):
@@ -41,15 +47,13 @@ class LineBufferedNonBlockingSocket(linebuffer.LineBuffer):
         except:
             self.socket.close()
 
-'''
-class LineBufferedNonBlockingSocket():
+class LineBufferedNonBlockingSocketPython(object):
     def __init__(self, connection):
         connection.setblocking(0)
-
         self.socket = connection
         self.in_buffer = ''
-        self.out_buffer = ''
         self.no_newline_pos = 0
+        self.out_buffer = ''
 
     def send(self, data):
         self.out_buffer += data
@@ -87,13 +91,8 @@ class LineBufferedNonBlockingSocket():
             self.no_newline_pos += 1
         return ''
 
-'''
-    def send(self, data):
-        self.socket.send(data)
 
-    def flush(self):
-        pass
-'''
+   
 
 class SignalKServer(object):
     def __init__(self, port=DEFAULT_PORT):
@@ -231,17 +230,16 @@ class SignalKServer(object):
                 self.RemoveSocket(socket)
                 continue
             elif flag & select.POLLIN:
-                if not socket.recv():
-                    self.RemoveSocket(socket)
+                socket.recv()
+#                if not socket.recv():
+ #                   self.RemoveSocket(socket)
+                while True:
+                    line = socket.readline()
+                    if not line:
+                        break
+                    self.HandleRequest(socket, line)
 
         for socket in self.sockets:
-#        for socket in insockets:
-            while True:
-                line = socket.readline()
-                if not line:
-                    break
-                self.HandleRequest(socket, line)
-
             socket.flush()            
 
         t2 = time.time()

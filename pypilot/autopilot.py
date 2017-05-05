@@ -120,6 +120,7 @@ class AutopilotBase(object):
       print 'warning, failed to make autopilot process realtime'
 
     self.starttime = time.time()
+    self.times = 4*[0]
     # read initial value from imu as this takes time
 #    while not self.boatimu.IMURead():
 #        time.sleep(.1)
@@ -232,14 +233,14 @@ class AutopilotBase(object):
       t4 = time.time()
       if t4 - t3 > period/2:
           print 'nmea is running too _slowly_', t4-t3
-          
+
       t = max(period - (t4 - t0), .02)
       self.server.HandleRequests(t)
 
-      def show(t):
-          return '%.2f' % (t*1000)
-      #print 'times', show(t1-t0), show(t2-t1), show(t3-t2), show(t4-t3)
-
+      times = t1-t0, t2-t1, t3-t2, t4-t3
+      self.times = map(lambda x, y : .975*x + .025*y, self.times, times)
+      #print 'times', map(lambda t : '%.2f' % (t*1000), self.times)
+      
       if self.watchdog_device:
           self.watchdog_device.write('c')
 
