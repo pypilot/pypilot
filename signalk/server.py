@@ -14,26 +14,26 @@ from values import *
 DEFAULT_PORT = 21311
 max_connections = 20
 
-def nonblockingpipe():
-  import _multiprocessing, socket
-  s = socket.socketpair()
-  map(lambda t : t.setblocking(False), s)
-  p = map(lambda t : _multiprocessing.Connection(os.dup(t.fileno())), s)
-  s[0].close(), s[1].close()
-  return p
 
-class LineBufferedNonBlockingSocket():
+from signalk.linebuffer import linebuffer
+#class LineBufferedNonBlockingSocket(linebuffer.LineBuffer):
+class LineBufferedNonBlockingSocket(object):
     def __init__(self, connection):
-        if type(connection) == type(socket.socket()):
-            connection.setblocking(0)
-            self.nonblocking = True
-        else:           
-            self.nonblocking = False
+        connection.setblocking(0)
+        # somehow it's much slower to baseclass ?!?
+        #super(LineBufferedNonBlockingSocket, self).__init__(connection.fileno())
+        self.b = linebuffer.LineBuffer(connection.fileno())
 
         self.socket = connection
-        self.in_buffer = ''
         self.out_buffer = ''
-        self.no_newline_pos = 0
+
+    def recv(self):
+        return True
+        
+    def readline(self):
+        if self.b.next():
+            return self.b.line()
+        return False
 
     def send(self, data):
         self.out_buffer += data
@@ -42,29 +42,41 @@ class LineBufferedNonBlockingSocket():
         if not len(self.out_buffer):
             return
         try:
-            if self.nonblocking:
-                count = self.socket.send(self.out_buffer)
-            else:
-                count = self.socket.write(self.out_buffer[0])
+            count = self.socket.send(self.out_buffer)
+            self.out_buffer = self.out_buffer[count:]
+        except:
+            self.socket.close()
 
+class LineBufferedNonBlockingSocketPython(object):
+    def __init__(self, connection):
+        connection.setblocking(0)
+        self.socket = connection
+        self.in_buffer = ''
+        self.no_newline_pos = 0
+        self.out_buffer = ''
+
+    def send(self, data):
+        self.out_buffer += data
+
+    def flush(self):
+        if not len(self.out_buffer):
+            return
+        try:
+            count = self.socket.send(self.out_buffer)
             self.out_buffer = self.out_buffer[count:]
         except:
             self.socket.close()
 
     def recv(self):
-        if self.nonblocking:
-            size = 4096
-            data = self.socket.recv(size)
-        else:
-            size = 1
-            data = self.socket.read()
+        size = 4096
+        data = self.socket.recv(size)
 
         l = len(data)
         if l == 0:
             return False
 
         self.in_buffer += data
-        if self.nonblocking and l == size:
+        if l == size:
             return l+self.recv()
         return l
 
@@ -78,7 +90,10 @@ class LineBufferedNonBlockingSocket():
                 return ret
             self.no_newline_pos += 1
         return ''
-    
+
+
+   
+
 class SignalKServer(object):
     def __init__(self, port=DEFAULT_PORT):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -100,17 +115,6 @@ class SignalKServer(object):
         if value.name in self.values:
             print 'warning, registering existing value:', value.name
         self.values[value.name] = value
-
-        def make_send():
-            def send():
-                if value.need_persistent_store():
-                    value.store_persistent()
-                if value.watchers:
-                    request = value.get_signalk() + '\n'
-                    for socket in value.watchers:
-                        socket.send(request)
-            return send
-        value.send = make_send()
         return value
 
     def TimeStamp(self, name, t=False):
@@ -199,7 +203,6 @@ class SignalKServer(object):
           self.poller.register(self.server_socket, READ_ONLY)
         
       t1 = t2 = time.time()
-
       while t2 - t1 < totaltime:
         dt = t2 - t1
         if dt > totaltime:
@@ -207,7 +210,6 @@ class SignalKServer(object):
           dt = totaltime / 2
 
         events = self.poller.poll(1000.0 * (totaltime - dt))
-#        events = self.poller.poll(0)
         while events:
             event = events.pop()
             fd, flag = event
@@ -228,18 +230,16 @@ class SignalKServer(object):
                 self.RemoveSocket(socket)
                 continue
             elif flag & select.POLLIN:
-                if not socket.recv():
-                    self.RemoveSocket(socket)
-            elif flag & select.POLLOUT:
-                socket.flush()
+                socket.recv()
+#                if not socket.recv():
+ #                   self.RemoveSocket(socket)
+                while True:
+                    line = socket.readline()
+                    if not line:
+                        break
+                    self.HandleRequest(socket, line)
 
         for socket in self.sockets:
-            while True:
-                line = socket.readline()
-                if not line:
-                    break
-                self.HandleRequest(socket, line)
-
             socket.flush()            
 
         t2 = time.time()

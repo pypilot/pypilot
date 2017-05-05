@@ -95,7 +95,7 @@ class AutopilotBase(object):
 
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
-    self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind'], persistent=True)
+    self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
     self.lastmode = False
     self.last_heading = False
 
@@ -119,7 +119,8 @@ class AutopilotBase(object):
     if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
       print 'warning, failed to make autopilot process realtime'
 
-        
+    self.starttime = time.time()
+    self.times = 4*[0]
     # read initial value from imu as this takes time
 #    while not self.boatimu.IMURead():
 #        time.sleep(.1)
@@ -140,14 +141,13 @@ class AutopilotBase(object):
   def ap_iteration(self):
       period = .1 # 10hz
       data = False
-      # try 3 times to read data within the period
-      for i in range(3):
+      # try 7 times to read data within the period
+      for i in range(7):
           t0 = time.time()
           data = self.boatimu.IMURead()
           if data:
               break
-          time.sleep(period/3)
-          #self.server.HandleRequests(period/3)
+          time.sleep(period/7)
 
       if data and 'calupdate' in data and self.last_heading:
           # with compass calibration updates, adjust the autopilot heading_command
@@ -168,11 +168,13 @@ class AutopilotBase(object):
           self.enabled.update(False)
 
       #compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
-      self.server.TimeStamp('ap', time.time())
+      self.server.TimeStamp('ap', time.time()-self.starttime)
       compass_heading = self.boatimu.SensorValues['heading'].value
       if self.mode.value == 'compass':
           self.heading.set(compass_heading)
       elif self.mode.value == 'gps':
+        if self.nmea.values['gps']['source'].value == 'none':
+            self.mode.set('compass')
         if self.nmea.values['gps']['speed'].value > 1:
             offset = self.gps_heading_offset.value
             diff = resolv(compass_heading - self.nmea.values['gps']['track'].value, offset)
@@ -180,20 +182,37 @@ class AutopilotBase(object):
             self.gps_heading_offset.set(resolv((1-d)*offset + d*diff))
         self.heading.set(resolv(compass_heading - self.gps_heading_offset.value, 180))
       elif self.mode.value == 'wind':
+        # if wind sensor drops out, switch to compass
+        if self.nmea.values['wind']['source'].value == 'none':
+            self.mode.set('compass')
         offset = self.wind_heading_offset.value
-        diff = resolv(compass_heading - self.nmea.values['wind']['direction'].value, offset)
+        wind_direction = self.nmea.values['wind']['direction'].value
+        diff = resolv(compass_heading - wind_direction, offset)
         d = .1
         d = 1 # for now, don't even use compass (raw wind)
         self.wind_heading_offset.set(resolv((1-d)*offset + d*diff))
         self.heading.set(resolv(compass_heading - self.wind_heading_offset.value, 180))
+      elif self.mode.value == 'true wind':
+          if self.nmea.values['wind']['source'].value == 'none':
+              self.mode.set('gps')
+          elif self.nmea.values['gps']['source'].value == 'none':
+              self.mode.set('wind')
 
-#        self.heading.set(self.wind.direction.value)
+          wind_direction = self.nmea.values['wind']['direction'].value
+          wind_speed = self.nmea.values['wind']['speed'].value
+          if wind_speed < 2:
+              wind_speed = 2
+          rd = math.radians(wind_direction)
+          windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
+          gpsspeed = self.nmea.values['gps']['speed'].value
+          truewindv = windv[0], windv[1] - gpsspeed
+          truewindd = math.degrees(math.atan2(*truewindv))
+          self.heading.set(resolv(truewindd, 180))
 
       if self.enabled.value:
           if self.mode.value != self.lastmode:
               self.heading_command.set(self.heading.value)
           self.process_imu_data(self.boatimu)
-
           self.runtime.update()
 
       self.lastmode = self.mode.value
@@ -203,22 +222,25 @@ class AutopilotBase(object):
           print 'Autopilot routine is running too _slowly_', t1-t0, period/2
 
       self.servo.poll()
-      t12 = time.time()
-      self.servo.send_command()
-
       t2 = time.time()
-      if t2-t1 > period/2:
-          print 'servo is running too _slowly_', t2-t1, t12-t1
+      self.servo.send_command()
+      t3 = time.time()
+      if t3-t1 > period/2:
+          print 'servo is running too _slowly_', t3-t2, t2-t1
 
       self.nmea.poll()
 
-      t3 = time.time()
-      if t3 - t2 > period/2:
-          print 'nmea is running too _slowly_', t3-t2
-          
-      t = max(period - (t3 - t0), .02)
+      t4 = time.time()
+      if t4 - t3 > period/2:
+          print 'nmea is running too _slowly_', t4-t3
+
+      t = max(period - (t4 - t0), .02)
       self.server.HandleRequests(t)
 
+      times = t1-t0, t2-t1, t3-t2, t4-t3
+      self.times = map(lambda x, y : .975*x + .025*y, self.times, times)
+      #print 'times', map(lambda t : '%.2f' % (t*1000), self.times)
+      
       if self.watchdog_device:
           self.watchdog_device.write('c')
 

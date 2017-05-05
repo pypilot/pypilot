@@ -11,10 +11,13 @@ import time, json
 from signalk.server import SignalKServer
 from signalk.values import *
 import autopilot
-
-from crc import crc8
-
+import select
 import serial
+
+import fcntl
+# these are not defined in python module
+TIOCEXCL = 0x540C
+TIOCNXCL = 0x540D
 
 def sign(x):
     if x > 0:
@@ -37,7 +40,7 @@ class RaspberryHWPWMServoDriver:
         wiringpi.wiringPiSetup()
         self.engauged = False
 
-    def command(self, command):
+    def command(self, command, max_current):
         if command == 0:
             stop()
             return
@@ -70,14 +73,14 @@ class RaspberryHWPWMServoDriver:
 # the arduino pypilot servo sketch is used and communication
 # over serial port controllers the servo motor controller
 # as well as voltage and current feedback
-class ArduinoServoFlags(Value):
+class ServoFlags(Value):
     SYNC = 1
     FAULTPIN = 2
     OVERCURRENT = 4
     ENGAUGED = 8
     
     def __init__(self, name):
-        super(ArduinoServoFlags, self).__init__(name, 0)
+        super(ServoFlags, self).__init__(name, 0)
             
     def strvalue(self):
         ret = ''
@@ -93,107 +96,15 @@ class ArduinoServoFlags(Value):
         
     def get_signalk(self):
         return '{"' + self.name + '": {"value": "' + self.strvalue() + '"}}'
-        
-class ArduinoServo:
-    sync_bytes = [0xe7, 0xf9, 0xc7, 0x1e, 0xa7, 0x19, 0x1c, 0xb3]
-    def __init__(self, device):
-        self.in_sync = self.out_sync = 0
-        self.in_sync_count = 0
-        self.in_buf = []
-        self.device = serial.Serial(*device)
 
-        #self.device.setTimeout(0)
-        self.device.timeout=0
-        self.lasttime = self.timeout = time.time()
-        self.servo = False
+class ServoTelemetry:
+    CURRENT = 1
+    VOLTAGE = 2
+    TEMPERATURE = 4
+    SPEED = 8
+    POSITION = 16
+    FLAGS = 32
 
-        self.flags = ArduinoServoFlags('servo/flags')
-
-        cnt = 0
-
-        data = False
-        while self.flags.value & ArduinoServoFlags.OVERCURRENT or \
-          not self.flags.value & ArduinoServoFlags.SYNC:
-            self.stop()
-            if self.poll():
-                data = True
-
-            time.sleep(.001)
-            cnt+=1
-            if cnt == 400 and not data:
-                raise Exception
-            if cnt == 1000:
-                raise Exception
-
-    def send_value(self, value):
-        value = int(value)
-        code = [ArduinoServo.sync_bytes[self.out_sync], value&0xff, (value>>8)&0xff]
-        b = '%c%c%c' % (code[1], code[2], crc8(code))
-
-        self.device.write(b)
-        self.out_sync += 1
-
-    def raw_command(self, command):
-        if self.out_sync == 0:
-            if self.servo:
-                max_current = self.servo.max_current.value
-            else:
-                max_current = 10
-            self.send_value(max_current*65536.0*.05/1.1)
-        self.send_value(command)
-        if self.out_sync == len(ArduinoServo.sync_bytes):
-            self.out_sync = 0;
-
-    def command(self, command):
-        # onlyupdate at .5 seconds when command is zero
-        if command == 0:
-            if time.time() > self.timeout and time.time() - self.lasttime < .5:
-                return
-            self.lasttime = time.time()
-        else:
-            self.timeout = time.time()+1
-
-        command = min(max(command, -1), 1)
-        self.raw_command((3*command+1)*1000)
-
-    def stop(self):
-        self.raw_command(0x5342)
-
-    def poll(self):
-        if len(self.in_buf) < 3:
-            c = self.device.read(12)
-            self.in_buf += map(ord, c)
-            if len(self.in_buf) < 3:
-                return False
-
-        ret = {'result': True}
-        code = [ArduinoServo.sync_bytes[self.in_sync]] + self.in_buf[:2]
-        crc = crc8(code)
-	#print 'got code', code, self.in_buf
-        if crc == self.in_buf[2]:
-            if self.in_sync_count == 2:
-                value = self.in_buf[0] + (self.in_buf[1]<<8)
-                if self.in_sync > 0:
-                    ret['current'] = value * 1.1 / .05 / 65536
-                else:
-                    ret['voltage'] = (value >> 4) * 1.1 * 10560 / 560 / 4096
-                    self.flags.set(value & 0xf)
-
-            self.in_sync+=1
-            if self.in_sync == len(ArduinoServo.sync_bytes):
-                self.in_sync = 0;
-                if self.in_sync_count < 2:
-                    self.in_sync_count+=1
-
-            self.in_buf = self.in_buf[3:]
-        else:
-            self.in_sync = self.in_sync_count = 0
-            self.in_buf = self.in_buf[1:]
-
-        return ret
-
-    def fault(self):
-        return self.flags.value & (ArduinoServoFlags.FAULTPIN | ArduinoServoFlags.OVERCURRENT) != 0
 
 # special case for servo calibration, and to convert the map key
 class CalibrationProperty(Property):
@@ -250,8 +161,8 @@ class Servo:
         self.slow_period = self.Register(RangeProperty, 'Slow Period', 1.5, .1, 10, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
-        self.amphours = self.Register(Value, 'Amp Hours', 0)
-        self.powerconsumption = self.Register(ResettableValue, 'Power Consumption', 0, persistent=True, persistent_timeout=300)
+        self.amphours = self.Register(ResettableValue, 'Amp Hours', 0, persistent=True, persistent_timeout=300)
+        self.watts = self.Register(RoundedValue, 'Watts', 0)
 
         self.calibration = self.Register(CalibrationProperty, 'calibration', {})
         self.load_calibration()
@@ -261,8 +172,11 @@ class Servo:
         self.lastpositiontime = time.time()
         self.lastpositionamphours = 0
 
+        self.last_zero_command_time = self.command_timeout = time.time()
+
         self.mode = self.Register(StringValue, 'mode', 'none')
         self.controller = self.Register(StringValue, 'controller', 'none')
+        self.flags = self.Register(ServoFlags, 'flags')
 
         self.driver = False
 
@@ -434,29 +348,46 @@ class Servo:
 
         if not self.driver:
             t0 = time.time()
-            device = self.serialprobe.probe('servo', [115200])
-            if device:
-                try:
-                    self.driver = ArduinoServo(device)
-                except:
+            device_path = self.serialprobe.probe('servo', [115200])
+            if device_path:
+                #from arduino_servo.arduino_servo_python import ArduinoServo
+                from arduino_servo.arduino_servo import ArduinoServo
+                device = serial.Serial(*device_path)
+                device.timeout=0 #nonblocking
+                fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
+                self.driver = ArduinoServo(device.fileno())
+                self.driver.max_current(self.max_current.value)
+
+                t0 = time.time()
+                if self.driver.initialize():
+                    self.device = device
+                    print 'arduino servo found on', device_path
+                    self.serialprobe.probe_success('servo')
+                    self.controller.set('arduino')
+
+                    if self.brake_hack.value:
+                        self.driver.command(-.2) # flush any brake
+                    self.driver.command(0)
+                    self.lastpolltime = time.time()
+                else:
+                    print 'failed in ', time.time()-t0
+                    device.close()
+                    self.driver = False
                     print 'failed to initialize servo on', device
 
-            if self.driver:
-                self.serialprobe.probe_success('servo')
-                self.driver.servo = self
-                self.controller.set('arduino')
-                self.server.Register(self.driver.flags)
 
-                if self.brake_hack.value:
-                    self.driver.command(-.2) # flush any brake
-                self.driver.command(0)
-                self.lastpolltime = time.time()
-
+        # only send at .5 seconds when command is zero
+        t = time.time()
+        if command == 0:
+            if t > self.command_timeout and t - self.last_zero_command_time < .5:
+                return
+            self.last_zero_command_time = t
+        else:
+            self.command_timeout = t+1
+                
         if self.driver:
-            try:
-                self.driver.command(command)
-            except:
-                self.close_driver()
+            self.driver.max_current(self.max_current.value)
+            self.driver.command(command)
 
     def stop(self):
         if self.driver:
@@ -473,52 +404,52 @@ class Servo:
     def close_driver(self):
         print 'servo lost connection'
         self.controller.set('none')
+        self.device.close()
         self.driver = False
 
 
     def poll(self):
-    	i = 0
-        while self.driver:
-            try:
-                result = self.driver.poll()
-            except:
+        if not self.driver:
+            return
+        result = self.driver.poll()
+        if result == -1:
+            print 'poll -1'
+            self.close_driver()
+            return
+
+        if result == 0:
+            d = time.time() - self.lastpolltime
+            #print 'i', i, d
+            if d > 10: # correct for clock skew
+                self.lastpolltime = time.time()
+            elif d > 8:
+                print 'd', d
                 self.close_driver()
-                break
+            return
+        self.lastpolltime = time.time()
 
-            if not result:
-                d = time.time() - self.lastpolltime
-                #print 'i', i, d
-                if d > 10: # correct for clock skew
-                    self.lastpolltime = time.time()
-                elif d > 8:
-                    print 'd', d
-                    self.close_driver()
-                    pass
-                break
-            self.lastpolltime = time.time()
+        if self.fault():
+            if self.speed > 0:
+                self.fwd_fault = True
+            elif self.speed < 0:
+                self.rev_fault = True
 
-            if self.fault():
-                if self.speed > 0:
-                    self.fwd_fault = True
-                elif self.speed < 0:
-                    self.rev_fault = True
-
-            self.timestamp = time.time()
-            self.server.TimeStamp('servo', self.timestamp)
-            lasttimestamp = self.timestamp
-            if 'voltage' in result:
-                self.voltage.set(result['voltage'])
-            if 'current' in result:
-                self.current.set(result['current'])
-
-                # integrate power consumption
-                dt = (self.timestamp-lasttimestamp)
-                amphours = self.current.value*dt/3600
-                self.amphours.set(self.amphours.value + amphours)
-                self.powerconsumption.set(self.powerconsumption.value + self.voltage.value*amphours)
-
-        if self.driver:
-            self.engauged.update(not not self.driver.flags.value & ArduinoServoFlags.ENGAUGED)
+        self.timestamp = time.time()
+        self.server.TimeStamp('servo', self.timestamp)
+        lasttimestamp = self.timestamp
+        if result & ServoTelemetry.VOLTAGE:
+            self.voltage.set(self.driver.voltage)
+        if result & ServoTelemetry.CURRENT:
+            self.current.set(self.driver.current)
+            # integrate power consumption
+            dt = (self.timestamp-lasttimestamp)
+            amphours = self.current.value*dt/3600
+            self.amphours.set(self.amphours.value + amphours)
+            lp = .003
+            self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
+        if result & ServoTelemetry.FLAGS:
+            self.flags.update(self.driver.flags)
+            self.engauged.update(not not self.driver.flags & ServoFlags.ENGAUGED)
 
     def fault(self):
         if not self.driver:
