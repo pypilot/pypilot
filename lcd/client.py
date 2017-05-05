@@ -167,7 +167,8 @@ class LCDClient():
 
         self.modes = {'compass': self.have_compass,
                       'gps':     self.have_gps,
-                      'wind':    self.have_wind};        
+                      'wind':    self.have_wind,
+                      'true wind': self.have_true_wind};        
 
         self.initial_gets = ['ap/P', 'ap/I', 'ap/D', 'servo/Max Current', 'servo/Min Speed', 'servo/Max Speed', 'imu/alignmentCounter']
 
@@ -473,6 +474,9 @@ class LCDClient():
     def have_wind(self):
         return self.last_msg['wind/source'] != 'none'
 
+    def have_true_wind(self):
+        return self.have_gps() and self.have_wind()
+
     def display_wifi(self):
         wifi = False
         try:
@@ -563,7 +567,7 @@ class LCDClient():
                     self.control['heading_command'] = self.last_msg['ap/heading_command']
 
         def modes():
-            return [self.have_compass(), self.have_gps(), self.have_wind()]
+            return [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
                     
         if warning:
             self.control['mode'] = False
@@ -572,9 +576,10 @@ class LCDClient():
             self.control['mode'] = mode
             self.control['mode'] = modes()
             #print 'mode', self.last_msg['ap/mode']
-            modes = {'compass': ('C', self.have_compass, rectangle(.03, .74, .30, .16)),
-                     'gps':     ('G', self.have_gps,     rectangle(.34, .74, .30, .16)),
-                     'wind':    ('W', self.have_wind,    rectangle(.65, .74, .30, .16))}
+            modes = {'compass': ('C', self.have_compass, rectangle(0, .74, .25, .16)),
+                     'gps':     ('G', self.have_gps,     rectangle(.25, .74, .25, .16)),
+                     'wind':    ('W', self.have_wind,    rectangle(.5, .74, .25, .16)),
+                     'true wind': ('T', self.have_true_wind, rectangle(.75, .74, .25, .16))}
 
             self.surface.box(*(self.convrect(rectangle(0, .74, 1, .18)) + [black]))
             for mode in modes:

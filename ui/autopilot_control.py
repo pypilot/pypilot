@@ -13,8 +13,6 @@ from signalk.client import SignalKClient
 
 class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     ID_MESSAGES = 1000
-    ID_GPS_TIMEOUT = 1001
-    ID_WIND_TIMEOUT = 1002
 
     def __init__(self):
         super(AutopilotControl, self).__init__(None)
@@ -34,8 +32,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.gps_heading_offset = 0
 
         watchlist += ['ap/enabled', 'ap/mode', 'ap/heading_command',
-                      'gps/track', 'wind/direction',
-                      'ap/heading', 'servo/command', 'servo/flags',
+                      'gps/source', 'wind/source',
+                      'ap/heading', 'servo/flags',
                       'servo/mode', 'servo/engauged']
 
         value_list = self.client.list_values()
@@ -85,12 +83,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.timer.Start(50)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=self.ID_MESSAGES)
 
-        self.gps_timer = wx.Timer(self, self.ID_GPS_TIMEOUT)
-        self.Bind(wx.EVT_TIMER, self.gps_timeout, id=self.ID_GPS_TIMEOUT)
-
-        self.wind_timer = wx.Timer(self, self.ID_WIND_TIMEOUT)
-        self.Bind(wx.EVT_TIMER, self.wind_timeout, id=self.ID_WIND_TIMEOUT)
-
         self.SetSize(wx.Size(500, 580))
         self.stop()
 
@@ -118,6 +110,15 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         if abs(statvalue - slidervalue) >= .001 / 100.0:
             self.client.set(name, slidervalue)
+
+    def set_mode_color(self):
+        modecolors = {'compass': wx.GREEN, 'gps': wx.YELLOW,
+                      'wind': wx.BLUE, 'true wind': wx.CYAN}
+        if self.enabled and self.mode in modecolors:
+            color = modecolors[self.mode]
+        else:
+            color = wx.RED
+        self.tbAP.SetForegroundColour(color)
 
     def receive_messages(self, event):
         command = self.sCommand.GetValue()
@@ -172,32 +173,26 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.tbAP.SetForegroundColour(wx.RED)
             elif name == 'ap/enabled':
                 self.tbAP.SetValue(value)
-                if value:
-                    color = {'compass': wx.GREEN, 'gps': wx.BLUE, 'wind': wx.YELLOW}[self.mode]
-                else:
-                    color = wx.RED
-                self.tbAP.SetForegroundColour(color)
                 self.enabled = value
+                self.set_mode_color()
             elif name == 'ap/mode':
-                rb = {'compass': self.rbCompass, 'gps': self.rbGPS, 'wind': self.rbWind}
+                rb = {'compass': self.rbCompass, 'gps': self.rbGPS, 'wind': self.rbWind, 'true wind': self.rbTrueWind}
                 rb[value].SetValue(True)
                 self.mode = value
-            elif name == 'ap/heading_command' and not self.rbGPS.GetValue():
+                self.set_mode_color()
+            elif name == 'ap/heading_command':
                 self.stHeadingCommand.SetLabel('%.1f' % value)
                 if command == 0:
                     self.heading_command = value
-            elif name == 'gps/track':
-                self.rbGPS.Enable()
-                self.gps_timer.Start(5000)
-            elif name == 'wind/direction':
-                self.rbWind.Enable()
-                self.wind_timer.Start(5000)
+            elif name == 'gps/source':
+                self.rbGPS.Enable(value != 'none')
+                self.rbTrueWind.Enable(value != 'none' and self.rbWind.IsEnabled())
+            elif name == 'wind/source':
+                self.rbWind.Enable(value != 'none')
+                self.rbTrueWind.Enable(value != 'none' and self.rbGPS.IsEnabled())
             elif name == 'ap/heading':
                 self.stHeading.SetLabel('%.1f' % value)
                 self.heading = value
-            elif name == 'servo/command':
-                #print 'command', command
-                pass
             elif name == 'servo/engauged':
                 self.stEngauged.SetLabel('Ready' if value else 'Fault')
             elif name == 'servo/flags':
@@ -206,12 +201,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.stMode.SetLabel(value)
             else:
                 print 'warning: unhandled message "%s"' % name
-
-    def gps_timeout(self, event):
-        self.rbGPS.Disable()
-
-    def wind_timeout(self, event):
-        self.rbWind.Disable()
 
     def onAP( self, event ):
         self.client.set('servo/raw_command', 0)
@@ -227,6 +216,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             mode = 'gps'
         elif self.rbWind.GetValue():
             mode = 'wind'
+        elif self.rbTrueWind.GetValue():
+            mode = 'true wind'
         else:
             mode = 'compass'
         self.client.set('ap/mode', mode)

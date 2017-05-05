@@ -102,6 +102,11 @@ class AutopilotControlBase ( wx.Frame ):
 		
 		fgSizer26.Add( self.rbWind, 0, wx.ALL, 5 )
 		
+		self.rbTrueWind = wx.RadioButton( self, wx.ID_ANY, u"True Wind", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.rbTrueWind.Enable( False )
+		
+		fgSizer26.Add( self.rbTrueWind, 0, wx.ALL, 5 )
+		
 		
 		fgSizer20.Add( fgSizer26, 1, wx.EXPAND, 5 )
 		
@@ -158,6 +163,7 @@ class AutopilotControlBase ( wx.Frame ):
 		self.rbCompass.Bind( wx.EVT_RADIOBUTTON, self.onMode )
 		self.rbGPS.Bind( wx.EVT_RADIOBUTTON, self.onMode )
 		self.rbWind.Bind( wx.EVT_RADIOBUTTON, self.onMode )
+		self.rbTrueWind.Bind( wx.EVT_RADIOBUTTON, self.onMode )
 		self.sCommand.Bind( wx.EVT_SCROLL, self.onCommand )
 		self.bScope.Bind( wx.EVT_BUTTON, self.onScope )
 		self.bClient.Bind( wx.EVT_BUTTON, self.onClient )
@@ -174,6 +180,7 @@ class AutopilotControlBase ( wx.Frame ):
 	
 	def onMode( self, event ):
 		event.Skip()
+	
 	
 	
 	
