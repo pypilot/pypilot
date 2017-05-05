@@ -399,7 +399,6 @@ def CalibrationProcess(points, fit_output, initial):
             n = map(lambda a, b: (a-b)**2, bias, initial[:3])
             d = n[0]+n[1]+n[2]
             initial = fit[0]
-            print 'd', d
 
             # if the bias has sufficiently changed
             if d > .1 or True:

@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import gps, multiprocessing, time, socket
+import select
 
 from signalk.values import *
 from signalk.pipeserver import nonblockingpipe
@@ -70,9 +71,15 @@ class GpsdPoller():
 
         self.process = GpsProcess()
         self.process.start()
+        READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
+        self.poller = select.poll()
+        self.poller.register(self.process.pipe.fileno(), READ_ONLY)
 
     def poll(self):
         # flush queue entries
+        if not self.poller.poll(0):
+            return
+
         try:
             fix = self.process.pipe.recv()
         except IOError:

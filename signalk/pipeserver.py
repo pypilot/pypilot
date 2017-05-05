@@ -14,6 +14,7 @@ import time
 from server import SignalKServer, DEFAULT_PORT
 from values import *
 import multiprocessing
+import select
 
 def nonblockingpipe():
   import _multiprocessing, socket
@@ -29,6 +30,9 @@ class SignalKPipeServerClient(SignalKServer):
       self.watches = {}
       self.gets = {}
       self.pipe = pipe
+
+      self.pipe_poller = select.poll()
+      self.pipe_poller.register(pipe, select.POLLIN)
 
     def Register(self, value):
       super(SignalKPipeServerClient, self).Register(value)
@@ -72,31 +76,38 @@ class SignalKPipeServerClient(SignalKServer):
         else:
           print 'unimplemented pipe method', method
 
-    def HandlePipeMessages(self):
-        try:
-          msgs = self.pipe.recv()
-        except IOError:
+    def HandlePipeMessage(self):
+        if not self.pipe_poller.poll(0):
           return False
+
+        msgs = self.pipe.recv()
 
         values = {}
         for name in msgs:
-          value = msgs[name]
-          if name == '_register':
-            self.Register(value)
-          elif name in self.timestamps:
-            self.TimeStamp(name, value)
-          else:
-            values[name] = value
+            value = msgs[name]
+            if name == '_register':
+                self.Register(value)
+            elif name in self.timestamps:
+                self.TimeStamp(name, value)
+            else:
+                values[name] = value
 
         # send values once all potential timestamps are received
         # TODO: benchmark without timestamp
         for name in values:
-          self.values[name].set(values[name])
+          if False:
+            self.values[name].set(values[name])
+            
+          else:
+            value = self.values[name]
+            value.value = values[name]
+            self.values[name].send()
+
           if self.gets[name]:
-            response = self.values[name].get_signalk() + '\n'
-            for socket in self.gets[name]:
-              socket.send(response)
-            self.gets[name] = []
+              response = self.values[name].get_signalk() + '\n'
+              for socket in self.gets[name]:
+                  socket.send(response)
+              self.gets[name] = []
         return True
 
 def pipe_server_process(pipe, port):
@@ -104,13 +115,15 @@ def pipe_server_process(pipe, port):
     server = SignalKPipeServerClient(pipe, port)
     # handle only pipe messages (to get all registrations) for first second
     t0 = time.time()
-    while time.time() - t0 < 1:
-      server.HandlePipeMessages()
+    while time.time() - t0 < 2:
+      while server.HandlePipeMessage():
+        pass
       time.sleep(.1)
 
     while True:
-      while server.HandlePipeMessages():
+      while server.HandlePipeMessage():
         pass
+      
       server.HandleRequests(.1)
 
 
@@ -124,6 +137,10 @@ class SignalKPipeServer:
         self.timestamps = {}
         self.last_recv = time.time()
 
+        self.poller = select.poll()
+        READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
+        self.poller.register(self.pipe, READ_ONLY)
+          
     def __del__(self):
         self.process.terminate()
 
@@ -134,10 +151,8 @@ class SignalKPipeServer:
         def make_send():
             def send():
                 if value.watchers or value.need_persistent_store():
-                  try:
+                  if value.timestamp in self.timestamps:
                     self.sets[value.timestamp] = self.timestamps[value.timestamp]
-                  except:
-                    pass
                   self.sets[value.name] = value.value
             return send
         value.send = make_send()
@@ -164,21 +179,16 @@ class SignalKPipeServer:
         
     def HandleRequests(self, totaltime):            
         t0 = time.time()
-        try:
-          while True:
-            self.HandleRequest(self.pipe.recv())
-        except IOError:
-          pass
-
-        if self.sets:
-          self.pipe.send(self.sets)
-          self.sets = {}
-
-        dt = totaltime - (time.time()-t0)
-        if dt > 0:
-          time.sleep(dt)
-        else:
-          print 'pipe server overrun', dt
+        dt = totaltime
+        while dt >= 0:
+          if self.sets:
+            self.pipe.send(self.sets)
+            self.sets = {}
+            dt = totaltime - (time.time()-t0)
+  
+          if self.poller.poll(1000.0 * dt):
+              self.HandleRequest(self.pipe.recv())
+          dt = totaltime - (time.time()-t0)
     
 if __name__ == '__main__':
     print 'pipe server demo'

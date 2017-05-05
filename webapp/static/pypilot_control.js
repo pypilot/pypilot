@@ -114,7 +114,7 @@ $(document).ready(function() {
         } else if(tab == 'Configuration') {
             get('servo/Max Current');
         } else if(tab == 'Statistics') {
-            get('servo/Power Consumption');
+            get('servo/Amp Hours');
             get('ap/runtime');
             get('servo/engauged');
         }
@@ -218,9 +218,9 @@ $(document).ready(function() {
         }
 
         // statistics
-        if('servo/Power Consumption' in msg.data) {
-            value = msg.data['servo/Power Consumption']['value'];
-            $('#power_consumption').text(Math.round(1e4*value)/1e4);
+        if('servo/Amp Hours' in msg.data) {
+            value = msg.data['servo/Amp Hours']['value'];
+            $('#amp_hours').text(Math.round(1e4*value)/1e4);
         }
         
         if('ap/runtime' in msg.data) {
@@ -292,8 +292,8 @@ $(document).ready(function() {
     });
 
     // Statistics
-    $('#reset_power_consumption').click(function(event) {
-        signalk_set('servo/Power Consumption', 0);
+    $('#reset_amp_hours').click(function(event) {
+        signalk_set('servo/Amp Hours', 0);
         return false;
     });
     

@@ -14,11 +14,11 @@ class Value(object):
     def __init__(self, name, initial, **kwargs):
         self.name = name
         self.timestamp = False
+        self.watchers = []
+        self.persistent = False # value is stored to config file
         self.set(initial)
         self.client_can_set = False
         
-        self.watchers = []
-        self.persistent = False # value is stored to config file
         if 'persistent' in kwargs and kwargs['persistent']:
             timeout = 60
             if 'persistent_timeout' in kwargs:
@@ -82,7 +82,12 @@ class Value(object):
         self.send()
 
     def send(self):
-        pass
+        if self.need_persistent_store():
+            self.store_persistent()
+        if self.watchers:
+            request = self.get_signalk() + '\n'
+            for socket in self.watchers:
+                socket.send(request)
 
 def round_value(value):
   if type(value) == type([]):

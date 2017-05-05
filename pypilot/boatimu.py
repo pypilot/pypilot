@@ -14,7 +14,7 @@
 
 import os
 from sys import stdout
-import json, time, math, multiprocessing
+import json, time, math, multiprocessing, select
 
 import autopilot
 from calibration_fit import MagnetometerAutomaticCalibration
@@ -205,6 +205,9 @@ class BoatIMU(object):
     self.imu_pipe = nonblockingpipe()
     imu_cal_pipe = nonblockingpipe()
 
+    self.poller = select.poll()
+    self.poller.register(self.imu_pipe[0], select.POLLIN)
+    
     #if self.load_calibration():
     #  imu_cal_pipe.put(tuple(self.compass_calibration.value[0][:3]))
 
@@ -251,11 +254,8 @@ class BoatIMU(object):
     
     data = False
 
-    while True: # read all the data from the non-blocking pipe
-      try:
-        data = self.imu_pipe[0].recv()
-      except IOError:
-        break
+    while self.poller.poll(0): # read all the data from the non-blocking pipe
+      data = self.imu_pipe[0].recv()
 
     if not data:
       if time.time() - self.last_imuread > 1 and self.loopfreq.value:
