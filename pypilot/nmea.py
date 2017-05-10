@@ -122,29 +122,38 @@ class NMEASerialDevice(object):
         fcntl.ioctl(self.device.fileno(), TIOCEXCL)
         self.b = linebuffer.LineBuffer(self.device.fileno())
 
-    def next_nmea(self):
-        return self.b.next_nmea()
-
     def readline_nmea(self):
         return self.b.readline_nmea()
 
     def close(self):
         self.device.close()
 
-class NMEASocket(linebuffer.LineBuffer):
+class NMEASocket(object):
     def __init__(self, connection):
         connection.setblocking(0)
-        super(NMEASocket, self).__init__(connection.fileno())
+        #super(NMEASocket, self).__init__(connection.fileno())
         self.socket = connection
+        self.b = linebuffer.LineBuffer(connection.fileno())
+        self.out_buffer = ''
+
+    def readline_nmea(self):
+        return self.b.readline_nmea()
 
     def close(self):
         self.socket.close()
 
     def send(self, data):
-        self.socket.send(data)
+        self.out_buffer += data
 
     def flush(self):
-        pass
+        if not len(self.out_buffer):
+            return
+        try:
+            count = self.socket.send(self.out_buffer)
+            self.out_buffer = self.out_buffer[count:]
+        except:
+            self.socket.close()
+
     
 class Nmea:
     def __init__(self, server, serialprobe):
@@ -295,7 +304,7 @@ class Nmea:
         else:
             # see if the probe device gets a valid nmea message
             if self.probedevice:
-                if self.probedevice.next_nmea():
+                if self.probedevice.readline_nmea():
                     print 'new nmea device', self.probedevicepath
                     self.serialprobe.probe_success('nmea%d' % len(self.devices))
                     self.devices.append(self.probedevice)
@@ -342,9 +351,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
             self.client.watch(name, watch)
 
     def receive_nmea_from_socket(self, sock, msgs):
-        if not sock.next_nmea():
+        line = sock.readline_nmea()
+        if not line:
             return False
-        line = sock.line()
 
         for parser in self.parsers:
             result = parser(line)
@@ -479,8 +488,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
                     self.new_socket_connection(server)
                 elif sock == pipe:
                     self.pipe_message(flag)
-                elif (flag & (select.POLLHUP | select.POLLERR)) or \
-                     (flag & select.POLLIN and not sock.recv()):
+                elif flag & (select.POLLHUP | select.POLLERR):
                     self.socket_lost(sock)
 
             msgs = {}
