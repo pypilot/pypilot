@@ -31,9 +31,7 @@ class LineBufferedNonBlockingSocket(object):
         return True
         
     def readline(self):
-        if self.b.next():
-            return self.b.line()
-        return False
+        return self.b.readline()
 
     def send(self, data):
         self.out_buffer += data

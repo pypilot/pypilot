@@ -26,6 +26,10 @@ bool LineBuffer::next()
 {
     if(readline_buf() || (recv() && readline_buf()))
         return true;
+    if(len == sizeof buf[0]) {
+        printf("overflow!!!!\n");
+        len = 0;
+    }
     return false;
 }
 
@@ -33,6 +37,10 @@ bool LineBuffer::next_nmea()
 {
     if(readline_buf_nmea() || (recv() && readline_buf_nmea()))
         return true;
+    if(len == sizeof buf[0]) {
+        printf("overflow!!!!\n");
+        len = 0;
+    }
     return false;
 }
 
@@ -61,8 +69,6 @@ bool LineBuffer::recv()
     if(c <= 0)
         return false;
     len += c;
-    if(len == sizeof buf[0])
-        len = 0;
     return true;
 }
 

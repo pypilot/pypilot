@@ -12,6 +12,7 @@ public:
     bool next();
     bool next_nmea();
     const char *readline_nmea();
+    const char *readline();
     const char *line();
     bool recv();
 };
