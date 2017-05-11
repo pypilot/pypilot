@@ -422,7 +422,7 @@ void loop()
           sync_b++;
       } else {
           if(c == crc8(in_bytes, 3)) {
-              if(in_sync_count >= 3) { // if crc matches, we have a valid packet
+              if(in_sync_count >= 1) { // if crc matches, we have a valid packet
                   wdt_reset(); // strobe watchdog
                   process_packet();
               } else
@@ -481,7 +481,7 @@ void loop()
             code = VOLTAGE;
         } else if(out_sync_pos == 4 && arduino_tempcount) {
             v = TakeArduinoTemp();
-          code = ARDUINO_TEMP;
+          code = CONTROLLER_TEMP;
         } else {
             if(ampcount == 0)
               return;

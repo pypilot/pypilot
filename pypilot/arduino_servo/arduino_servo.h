@@ -10,6 +10,7 @@ public:
     void command(double command);
     void stop();
     void disengauge();
+    void reprogram();
     int poll();
     bool fault();
     void max_values(double current, double controller_temp);

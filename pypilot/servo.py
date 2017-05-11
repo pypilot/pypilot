@@ -166,6 +166,7 @@ class Servo(object):
         self.windup = 0
         self.windup_change = 0
 
+        self.disengauged = True
         self.last_zero_command_time = self.command_timeout = time.time()
 
         self.mode = self.Register(StringValue, 'mode', 'none')
@@ -179,26 +180,33 @@ class Servo(object):
         return self.server.Register(_type(*(['servo/' + name] + list(args)), **kwargs))
 
     def send_command(self):
-        def disengauge():
-            if self.driver:
-                t = time.time()
-                if t > self.command_timeout:
-                    self.driver.disengauge()
-                    self.command_timeout = t+1
+        t = time.time()
+
+        def engauge():
+            if self.disengauged:
+                print 'engauge'
+                self.disengauged = False
 
         timeout = 1 # command will expire after 1 second
         if self.rawcommand.value:
             if time.time() - self.rawcommand.time > timeout:
-                disengauge()
+                self.disengauged = True
                 self.rawcommand.update(0)
             else:
+                engauge()
                 self.raw_command(self.rawcommand.value)
-        else:
+        elif self.command.value:
             if time.time() - self.command.time > timeout:
-                disengauge()
+                self.disengauged = True
                 self.command.update(0)
             else:
+                engauge()
                 self.velocity_command(self.command.value)
+        else:
+            #print 'timeout', t - self.command_timeout
+            if t - self.command_timeout > self.period.value*3:
+                self.disengauged = True
+            self.raw_command(0)
 
     def velocity_command(self, speed):
         # complete integration from previous step
@@ -370,11 +378,14 @@ class Servo(object):
                 return
             self.last_zero_command_time = t
         else:
-            self.command_timeout = t+1
+            self.command_timeout = t
                 
         if self.driver:
-            self.driver.max_values(self.max_current.value, self.max_controller_temp.value)
-            self.driver.command(command)
+            if self.disengauged:
+                self.driver.disengauge()
+            else:
+                self.driver.max_values(self.max_current.value, self.max_controller_temp.value)
+                self.driver.command(command)
 
     def stop(self):
         if self.driver:
