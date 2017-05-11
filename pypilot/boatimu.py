@@ -393,7 +393,7 @@ if __name__ == "__main__":
     if data:
       print 'pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading']
     server.HandleRequests()
-    dt = time.time() - t0
-    if dt > .1:
+    dt = .1 - (time.time() - t0)
+    if dt > 0:
       time.sleep(dt);
 

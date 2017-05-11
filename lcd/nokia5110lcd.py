@@ -7,11 +7,21 @@ import Adafruit_GPIO.SPI as SPI
 
 
 # Raspberry Pi hardware SPI config:
-#DC = 22
-DC = 25
-#RST = 18
-RST = 24
-SPI_PORT = 0
+try:
+    import RPi.GPIO as GPIO
+    DC = 25
+    RST = 24
+    SPI_PORT = 0
+except ImportError:
+    try:
+        import OPi.GPIO as GPIO
+        DC = 22
+        RST = 18
+        SPI_PORT = 1
+    except:
+        print 'No gpio available'
+        exit(1)
+
 SPI_DEVICE = 0
 
 # Raspberry Pi software SPI config:

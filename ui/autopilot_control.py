@@ -118,10 +118,10 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         command = self.sCommand.GetValue()
         if self.enabled:
             if command != 0:
-                self.heading_command += (-1 if command < 0 else 1) / 4.0
+                self.heading_command += (-1 if command < 0 else 1) / 2.0
                 self.client.set('ap/heading_command', self.heading_command)
         else:
-            self.servo_command(command / 100.0)
+            self.servo_command(command / 50.0)
 
         for gain in self.gains:
             if gain['need_update']:

@@ -19,7 +19,8 @@ adc pin0 is a resistor divider to measure voltage
              allowing up to 20 volts (10k and 560 ohm, 1.1 volt reference)
              
 adc pin1 goes to .1 ohm shunt to measure current
-adc pin2 goies to 18k resistor and 10k NTC thermistor measure temperature
+adc pin2 goies to 100k resistor to 5v and 10k NTC thermistor to gnd ctrl temp
+adc pin3 goies to 100k resistor to 5v and 10k NTC thermistor to gnd motor temp
 
 pwm output on arduino pin 9
 esc programming input/output on pin 2
@@ -109,6 +110,8 @@ Servo myservo;  // create servo object to control a servo
 #endif
 
 #define fault_pin 7 // use pin 7 for optional fault
+#define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
+uint8_t shunt_resistance = 1;
 // if switches pull this pin low, the motor is disengauged
 // and will be noticed by the control program
 
@@ -152,7 +155,7 @@ void setup()
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
 //    ADMUX = _BV(REFS0); // external 5v
-    ADMUX = _BV(REFS0)| _BV(REFS1); // 1.1v
+    ADMUX = _BV(REFS0)| _BV(REFS1) | _BV(MUX0); // 1.1v
 
     ADCSRA = _BV(ADEN) | _BV(ADIE); // enable adc with interrupts 
     ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
@@ -161,10 +164,13 @@ void setup()
 
     pinMode(fault_pin, INPUT);
     digitalWrite(fault_pin, HIGH); /* enable internal pullups */
+
+    pinMode(shunt_sense_pin, INPUT);
+    digitalWrite(shunt_sense_pin, HIGH); /* enable internal pullups */    
 } 
 
-enum commands {COMMAND = 0xc7, STOP = 0xe7, MAX_CURRENT = 0x1e, MAX_CONTROLLER_TEMP = 0xa4, REPROGRAM = 0x19, DISENGAUGE=0x68};
-enum results {CURRENT = 0x1c, VOLTAGE = 0xb3, CONTROLLER_TEMP=0xf9, FLAGS = 0x8f};
+enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
+enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, FLAGS_CODE=0x8f};
 enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FAULTPIN=16*2};
 
 uint8_t in_bytes[3];
@@ -173,9 +179,10 @@ uint8_t sync_b = 0, in_sync_count = 0;
 uint8_t out_sync_b = 0, out_sync_pos = 0;
 uint8_t crcbytes[3];
 uint16_t max_current = 0;
-int16_t max_arduino_temp = 8000; // 80C
+uint16_t max_controller_temp = 7000; // 70C
+uint16_t max_motor_temp = 7000; // 70C
 
-uint16_t flags = 0;
+uint16_t flags = 0, faults = 0;
 
 uint8_t timeout;
 
@@ -241,123 +248,128 @@ void engauge()
 }
 
 // set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
-volatile uint32_t amptotal, volttotal, arduino_temptotal;
-volatile uint16_t ampcount, voltcount, arduino_tempcount;
 
-uint16_t adc_current_counter;
+enum {CURRENT, VOLTAGE, CONTROLLER_TEMP, MOTOR_TEMP, /*INTERNAL_TEMP,*/ CHANNEL_COUNT};
+const uint8_t muxes[] = {_BV(MUX0), 0, _BV(MUX1), _BV(MUX0) | _BV(MUX1), _BV(MUX3)};
+
+volatile struct adc_results_t {
+    uint32_t total;
+    uint16_t count;
+} adc_results[CHANNEL_COUNT][2];
+
+const uint8_t defmux = _BV(REFS0)| _BV(REFS1); // 1.1v
+uint16_t adc_counter;
+uint8_t adc_cnt;
 
 ISR(ADC_vect)
 {
     uint16_t adcw = ADCW;
-    if(adc_current_counter < 2) {
-      if(adc_current_counter == 1) {
-        if(voltcount < 5000) {
-            // if voltage
-            volttotal += adcw;
-            voltcount++;
+    if(adc_cnt > 2) { // discard first few readings after changing channel
+        for(int i=0; i<2; i++) {
+            if(adc_results[adc_counter][i].count < 4000) {
+                adc_results[adc_counter][i].total += adcw;
+                adc_results[adc_counter][i].count++;
+            }
         }
-        ADMUX = _BV(MUX0) | _BV(REFS0) | _BV(REFS1);
-      }
-    } else if(adc_current_counter > 2 && ampcount < 50000) {
-        amptotal += adcw;
-        ampcount ++;
-    }
-
-    if(++adc_current_counter == 10) {
-        adc_current_counter=0;
-//        ADMUX = _BV(REFS0); // 5v reference
-        ADMUX = _BV(REFS0)| _BV(REFS1); // 1.1v
-    }
-
+        if(adc_counter == CURRENT) { // take 50x more current measurements
+            if(++adc_cnt == 50) {
+                adc_cnt = 0;
+                ++adc_counter;
+                ADMUX = defmux | muxes[adc_counter];
+            }
+        } else {
+            adc_cnt = 0;
+            if(++adc_counter == CHANNEL_COUNT)
+                adc_counter=0;
+            ADMUX = defmux | muxes[adc_counter];
+        }
+    } else
+          adc_cnt++;
     ADCSRA |= _BV(ADSC); // enable conversion
 }
 
+uint32_t TakeADC(uint8_t index, uint8_t p)
+{
+    uint32_t t, c;
+    cli();
+    t = adc_results[index][p].total;
+    c = adc_results[index][p].count;
+    if(p) { // fault measurements are not lowpassed
+        adc_results[index][p].total = 0;
+        adc_results[index][p].count = 0;
+    } else {
+        adc_results[index][p].total >>= 1;
+        adc_results[index][p].count >>= 1;
+    }
+
+    sei();
+    if(c == 0)
+        return 0;
+
+    uint32_t avg = 16 * t / c;
+    if(!p && c&1) { // correct rounding errors from lowapss
+        int havg = avg>>5;
+        cli();
+        adc_results[index][p].total -= havg;
+        sei();
+    }
+    return avg; // multiply by 16 to keep less significant bits
+}
+
+uint16_t TakeAmps(uint8_t p)
+{
+    // current units of 10mA
+    // 275 / 128 = 100.0/1024/.05*1.1   for 0.05 ohm shunt
+    // 1375 / 128 = 100.0/1024/.01*1.1   for 0.01 ohm shunt
+    uint32_t v = TakeADC(CURRENT, p);
+
+    if(shunt_resistance)
+        return v * 275 / 128 / 16;
+    return v * 1375 / 128 / 16;
+}
+
+uint16_t TakeVolts(uint8_t p)
+{
+    // voltage in 10mV increments 1.1ref, 560 and 10k resistors
+    // 1815 / 896 = 100.0/1024*10560/560*1.1  cli();
+    uint32_t v = TakeADC(VOLTAGE, p);
+    return v * 1815 / 896 / 16;
+}
+
+uint16_t TakeTemp(uint8_t index, uint8_t p)
+{
+    uint32_t v = TakeADC(index, p);
+    // thermistors are 100k resistor to 5v, and 10k NTC to GND with 1.1v ref
+    // V = 1.1 * v / 1024
+    // V = R / (R + 100k) * 5.0
+    // x = 1.1 / 5.0 * v / 1024
+    // R = 100k * x / (1 - x)
+    uint32_t R = 100061 * v / (74464 - v);  // resistance in ohms
+    // T0 = 298, B = 3905, R0 = 10000
+    // T = 1 / (1 / T0 + 1/B * ln(R/R0))
+    // T = 1.0 / (1.0 / 298.0 + 1/3905.0 * math.log(R/10000.0)) - 273.0
+    
+    // a reasonable approximation to avoid floating point math over our range:
+    // within 2 degrees from 30C to 80C
+    // T = 300000/(R+2600) + 2
+
+    // temperature in hundreths of degrees
+    return 30000000/(R+2600) + 200;
+}
+#if 0
+uint16_t TakeInternalTemp(uint8_t p)
+{
+    uint32_t v = TakeADC(INTERNAL_TEMP, p);
+    // voltage = v * 1.1 / 1023
+    // 25C = 314mV, 85C = 380mV
+    // T = 909*V - 260
+    return 611 * v / 100 - 26000;
+}
+#endif
 ISR(TIMER2_OVF_vect)
 {
   if(++timeout == 60) // 1 second
       disengauge();
-}
-
-uint16_t GetAmps()
-{
-  cli();
-  uint32_t t = amptotal, d = ampcount;
-  sei();
-  
-  return 275 * t / d / 128; // units of 10mA
-}
-
-// rather than flush amps, keep last half
-// to ensure we always have a running average
-// to compare against overcurrent
-uint16_t TakeAmps()
-{
-    uint16_t avg = GetAmps();
-  cli();
-  uint32_t d = ampcount;
-   amptotal >>= 1;
-   ampcount >>= 1;
-  sei();
-  
-  if(d & 1) {
-    int havg = avg>>7;
-    cli();
-    amptotal -= havg;
-    sei();
-  }
-  return avg;
-}
-
-uint16_t TakeVolts()
-{
-  cli();
-    uint32_t t = volttotal, d = voltcount;
-    volttotal = voltcount = 0;
-    sei();
-    return t / d * 1815 / 896; /* voltage in 10mV increments (1.1ref, 560 and 10k resistors
-                                  1815 / 896 = 100.0/1024*10560/560*1.1          */
-}
-
-int16_t GetArduinoTemp()
-{
-  cli();
-  uint32_t t = arduino_temptotal, d = arduino_tempcount;
-  sei();
-  
-  return 0; // no thermistor yet
-}
-
-// to ensure we always have a running average
-// to compare against overtemp
-uint16_t TakeArduinoTemp()
-{
-  cli();
-  uint32_t d = arduino_tempcount;
-   arduino_temptotal >>= 1;
-   arduino_tempcount >>= 1;
-  sei();
-  
-  int16_t avg = GetArduinoTemp();
-  if(d & 1) {
-    int havg = avg>>7;
-    cli();
-    arduino_temptotal -= havg;
-    sei();
-  }
-  return avg;
-}
-
-
-void debug_amps()
-{
-  uint32_t amps = TakeAmps();
-  debug("%lu.%03lu  ", amps/100, amps%100);
-}
-
-void debug_volts()
-{
-  uint32_t volts = TakeVolts();
-  debug("%lu.%02lu", volts/100, volts%100);
 }
 
 void process_packet()
@@ -366,38 +378,43 @@ void process_packet()
     flags |= SYNC;
     uint16_t value = in_bytes[1] | (in_bytes[2]<<8);
     switch(in_bytes[0]) {
-    case MAX_CURRENT: // current in units of 10mA
-        max_current = value;
-        if(max_current > 2000) // maximum is 20 amps
-            max_current = 2000;
-        break;
-    case REPROGRAM:
+    case REPROGRAM_CODE:
     {
         // jump to bootloader
         asm volatile ("ijmp" ::"z" (0x3c00));
         //goto *0x3c00;
     } break;  
-    case STOP:
+    case STOP_CODE:
         stop();
-        if (flags & (OVERTEMP | OVERCURRENT | FAULTPIN)) {
-            //flags &= ~(OVERTEMP | OVERCURRENT | FAULTPIN);
-            flags = 0; // force resync
-        }
-        delay(60); // stay stopped for at least some time
+        // reset faults
+        if (flags & (OVERTEMP | OVERCURRENT | FAULTPIN))
+            flags &= ~(OVERTEMP | OVERCURRENT | FAULTPIN);
         break;
-    case COMMAND:
+    case COMMAND_CODE:
         if(value > 2000) {
             // unused range, invalid!!!
             // ignored
-        } else if(!(flags & (OVERTEMP | OVERCURRENT | FAULTPIN))) {
+        } else if(!(faults & (OVERTEMP | OVERCURRENT | FAULTPIN))) {
             position(value);
             engauge();
         }
         break;
-    case MAX_CONTROLLER_TEMP:
-        max_arduino_temp = value;
+    case MAX_CURRENT_CODE: // current in units of 10mA
+        if(value > 2000) // maximum is 20 amps
+            value = 2000;
+        max_current = value;
         break;
-    case DISENGAUGE:
+    case MAX_CONTROLLER_TEMP_CODE:
+        if(value > 10000) // maximum is 100C
+            value = 10000;
+        max_controller_temp = value;
+        break;
+    case MAX_MOTOR_TEMP_CODE:
+        if(value > 10000) // maximum is 100C
+            value = 10000;
+        max_motor_temp = value;
+        break;
+    case DISENGAUGE_CODE:
         disengauge();
         delay(60);
         break;
@@ -406,6 +423,17 @@ void process_packet()
 
 void loop()
 {
+#if 0
+    uint16_t v = TakeVolts(0);
+    uint16_t c = TakeAmps(0);
+    uint16_t t1 = TakeTemp(CONTROLLER_TEMP, 0);
+    uint16_t t2 = TakeTemp(MOTOR_TEMP, 0);
+    //uint16_t t3 = TakeInternalTemp(0);
+
+    debug("voltage %u current %u ct %u mt %u\r\n", v, c, t1, t2);
+    delay(200); // small dead time to be safe
+    return;
+#endif
     // wait for characters
     // boot powered down, wake on data
     if(!Serial.available())
@@ -430,7 +458,7 @@ void loop()
               sync_b = 0;
               flags &= ~INVALID;
           } else {
-          // invalid packet
+              // invalid packet
               flags &= ~SYNC;
               stop(); //disengauge();
               in_sync_count = 0;
@@ -446,22 +474,36 @@ void loop()
     // test fault pin
     if(!digitalRead(fault_pin)) {
         stop();
-        flags |= FAULTPIN;
-    }
+        faults |= FAULTPIN;
+    } else
+      faults &= ~FAULTPIN;
+
+    // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
+    shunt_resistance = digitalRead(shunt_sense_pin);
     
     // test current
-    uint16_t amps = GetAmps();
-    if(flags & ENGAUGED && ampcount > 0 && amps >= max_current) {
-        stop();
-        flags |= OVERCURRENT;
+    const int react_count = 350; // need 350 readings for 0.05s reaction time
+    if(adc_results[CURRENT][1].count > react_count) {
+        uint16_t amps = TakeAmps(1);
+        if(amps >= max_current) {
+            stop();
+            faults |= OVERCURRENT;
+        } else
+            faults &= ~OVERCURRENT;
     }
 
-    // test temp
-    int16_t temp = GetArduinoTemp();
-    if(flags & ENGAUGED && arduino_tempcount > 0 && temp >= max_arduino_temp) {
-        stop();
-        flags |= OVERTEMP;
+    // test over temp
+    if(adc_results[CONTROLLER_TEMP][1].count > react_count &&
+       adc_results[MOTOR_TEMP][1].count > react_count) {
+        uint16_t controller_temp = TakeTemp(CONTROLLER_TEMP, 1);
+        uint16_t motor_temp = TakeTemp(MOTOR_TEMP, 1);
+        if(controller_temp >= max_controller_temp || motor_temp > max_motor_temp) {
+            stop();
+            faults |= OVERTEMP;
+        } else
+            faults &= ~OVERTEMP;
     }
+    flags |= faults;
 
     delay(1); // small dead time to be safe
     // match output rate to input rate
@@ -473,24 +515,28 @@ void loop()
     case 0:
         uint16_t v;
         uint8_t code;
+        
         if(out_sync_pos == 0) {
             v = flags;
-            code = FLAGS;
-        } else if(out_sync_pos == 2 && voltcount) {
-            v = TakeVolts();
-            code = VOLTAGE;
-        } else if(out_sync_pos == 4 && arduino_tempcount) {
-            v = TakeArduinoTemp();
-          code = CONTROLLER_TEMP;
+            code = FLAGS_CODE;
+        } else if(out_sync_pos == 2) {
+            v = TakeVolts(0);
+            code = VOLTAGE_CODE;
+        } else if(out_sync_pos == 4) {
+            v = TakeTemp(CONTROLLER_TEMP, 0);
+          code = CONTROLLER_TEMP_CODE;
+        } else if(out_sync_pos == 6) {
+            v = TakeTemp(MOTOR_TEMP, 0);
+          code = MOTOR_TEMP_CODE;
         } else {
-            if(ampcount == 0)
-              return;
-            v = TakeAmps();
-            code = CURRENT;
+            if(adc_results[CURRENT][0].count < 100)
+                break;
+            v = TakeAmps(0);
+            code = CURRENT_CODE;
             serialin-=4;
         }
 
-        if(++out_sync_pos >= 6)
+        if(++out_sync_pos >= 8)
             out_sync_pos = 0;
         
         crcbytes[0] = code;

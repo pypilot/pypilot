@@ -124,6 +124,7 @@ class AutopilotBase(object):
 
     self.starttime = time.time()
     self.times = 4*[0]
+    self.lastdata = False
     # read initial value from imu as this takes time
 #    while not self.boatimu.IMURead():
 #        time.sleep(.1)
@@ -148,12 +149,11 @@ class AutopilotBase(object):
       period = .1 # 10hz
       data = False
       # try 7 times to read data within the period
-      for i in range(7):
-          t0 = time.time()
-          data = self.boatimu.IMURead()
-          if data:
-              break
-          time.sleep(period/7)
+      t0 = time.time()
+      data = self.boatimu.IMURead()
+      if not data and self.lastdata:
+          print 'warning no imu data'
+      self.lastdata = data
 
       if data and 'calupdate' in data and self.last_heading:
           # with compass calibration updates, adjust the autopilot heading_command
@@ -226,7 +226,10 @@ class AutopilotBase(object):
           if self.mode.value != self.lastmode:
               self.heading_command.set(self.heading.value)
           self.runtime.update()
+          self.servo.calibration.stop()
 
+      # servo can only disengauge under manual control
+      self.servo.force_engauged = self.enabled.value
       self.lastmode = self.mode.value
 
       t1 = time.time()
@@ -235,32 +238,31 @@ class AutopilotBase(object):
 
       self.servo.poll()
       t2 = time.time()
-      self.servo.send_command()
-      t3 = time.time()
-      if t3-t1 > period/2:
-          print 'servo is running too _slowly_', t3-t2, t2-t1
+      if t2-t1 > period/2:
+          print 'servo is running too _slowly_', t2-t1
 
       self.nmea.poll()
 
       t4 = time.time()
-      if t4 - t3 > period/2:
-          print 'nmea is running too _slowly_', t4-t3
+      if t4 - t2 > period/2:
+          print 'nmea is running too _slowly_', t4-t2
 
       self.server.HandleRequests()
       t5 = time.time()
       if t5 - t4 > period/2:
           print 'server is running too _slowly_', t5-t4
 
- #     times = t1-t0, t2-t1, t3-t2, t4-t3
-#      self.times = map(lambda x, y : .975*x + .025*y, self.times, times)
+      times = t1-t0, t2-t1, t4-t2
+      #self.times = map(lambda x, y : .975*x + .025*y, self.times, times)
       #print 'times', map(lambda t : '%.2f' % (t*1000), self.times)
       
       if self.watchdog_device:
           self.watchdog_device.write('c')
 
-      dt = time.time() - t0
-      if dt < period:
-          time.sleep(period - dt)
+      dt = period - (time.time() - t0)
+      if dt > 0:
+          time.sleep(dt)
+
 
 if __name__ == '__main__':
   print 'You must run an actual autopilot implementation, eg: simple_autopilot.py'
