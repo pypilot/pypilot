@@ -7,11 +7,11 @@ from PIL import Image
 
 
 # Raspberry Pi hardware SPI config:
-DC = 22
-#DC = 25
-RST = 18
-#RST = 24
-SPI_PORT = 1
+#DC = 22
+DC = 25
+#RST = 18
+RST = 24
+SPI_PORT = 0
 SPI_DEVICE = 0
 
 # Raspberry Pi software SPI config:

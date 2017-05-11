@@ -40,7 +40,7 @@ except:
 
 from signalk.client import SignalKClient
 
-from ugfx import ugfx
+import ugfx
 import font
 
 def nr(x):
@@ -152,6 +152,7 @@ class rectangle():
 
 AUTO, MENU, UP, DOWN, SELECT = range(5)
 keynames = {'auto': AUTO, 'menu': MENU, 'up': UP, 'down': DOWN, 'select': SELECT}
+gains = ['ap/P', 'ap/I', 'ap/D', 'ap/P2', 'ap/D2']
 
 class LCDClient():
     def __init__(self, screen):
@@ -196,7 +197,7 @@ class LCDClient():
                       'wind':    self.have_wind,
                       'true wind': self.have_true_wind};        
 
-        self.initial_gets = ['ap/P', 'ap/I', 'ap/D', 'servo/Max Current', 'servo/Min Speed', 'servo/Max Speed', 'imu/alignmentCounter']
+        self.initial_gets = gains + ['servo/min_speed', 'servo/max_speed', 'servo/max_current', 'servo/period', 'imu/alignmentCounter']
 
         self.have_select = False
         self.create_mainmenu()
@@ -217,11 +218,11 @@ class LCDClient():
         self.overcurrent_time = 0
         
         self.contrast_edit=RangeEdit('Contrast', lambda : '', self.config['contrast'], False, self, 30, 90, 1)
-        #self.pins = [18, 17, 27, 22, 23]
-        self.pins = [12, 11, 13, 15, 16]
+        self.pins = [18, 17, 27, 22, 23]
+        #self.pins = [12, 11, 13, 15, 16]
 
         if GPIO:
-            GPIO.setmode(GPIO.BOARD)
+            #GPIO.setmode(GPIO.BOARD)
             if orangepi:
                 for pin in self.pins:
                     cmd = 'gpio -1 mode ' + str(pin) + ' up'
@@ -265,9 +266,10 @@ class LCDClient():
             print 'failed to save config file:', self.configfilename
             
     def create_mainmenu(self):
-        def value_edit(name, desc, signalk_name, step, value=False):
+        def value_edit(name, desc, signalk_name, value=False):
             min = self.value_list[signalk_name]['min']
             max = self.value_list[signalk_name]['max']
+            step = (max-min)/100.0
 
             def thunk():
                 self.range_edit=RangeEdit(name, desc, self.last_msg[signalk_name],
@@ -280,10 +282,11 @@ class LCDClient():
 
         def gain():
             self.menu = LCDMenu(self, _('Gain'),
-                                [value_edit('P', _('position gain'), 'ap/P', .0002, True),
-                                 value_edit('I', _('integral gain'), 'ap/I', .0002, True),
-                                 value_edit('D', _('rate gain'),     'ap/D', .0007, True)],
-                                self.menu) 
+                                [value_edit('P', _('position gain'), 'ap/P', True),
+                                 value_edit('I', _('integral gain'), 'ap/I', True),
+                                 value_edit('D', _('rate gain'),     'ap/D', True),
+                                 value_edit('P2', _('position2 gain'), 'ap/P2', True),
+                                 value_edit('D2', _('rate2 gain'),     'ap/D2',  True)], self.menu)
             return self.display_menu
 
         def level():
@@ -300,7 +303,7 @@ class LCDClient():
 
             self.menu = LCDMenu(self, _('Calibrate'),
                                 [(_('level'), level),
-                                 value_edit(_('heading'), getheading, 'imu/heading_offset', 1),
+                                 value_edit(_('heading'), getheading, 'imu/heading_offset'),
                                  (_('info'), lambda : self.display_calibrate_info)],
                                 self.menu)
             self.menu.display_hook = self.display_calibrate
@@ -330,11 +333,22 @@ class LCDClient():
 
             def motor():
                 self.menu = LCDMenu(self, _('Motor'),
-                                    [value_edit(_('max current'), _('amps'), 'servo/Max Current', .25),
-                                     value_edit(_('min speed'), _('relative'), 'servo/Min Speed', .05),
-                                     value_edit(_('max speed'), _('relative'), 'servo/Max Speed', .05)],
+                                    [value_edit(_('min speed'), _('relative'), 'servo/min_speed'),
+                                     value_edit(_('max speed'), _('relative'), 'servo/max_speed'),
+                                     value_edit(_('max current'), _('amps'), 'servo/max_current'),
+                                     value_edit(_('period'), _('seconds'), 'servo/period')],
                                     self.menu)
                 return self.display_menu
+
+            
+            def filter():
+                self.menu = LCDMenu(self, _('Filter'),
+                                    [value_edit(_('heading'), _('relative'), 'imu/heading_lowpass_constant'),
+                                     value_edit(_("heading'"), _('relative'), 'imu/headingraterate_lowpass_constant'),
+                                     value_edit(_("heading''"), _('relative'), 'imu/headingraterate_lowpass_constant')],
+                                    self.menu)
+                return self.display_menu
+
 
             def language():
                 def set_language(name):
@@ -381,6 +395,7 @@ class LCDClient():
             self.menu = LCDMenu(self, _('Settings'),
                                 [(_('mode'), mode),
                                  (_('motor'), motor),
+                                 (_('filter'), filter),
                                  (_('language'), language),
                                  (_('display'), display)],
                                 self.menu)
@@ -488,21 +503,23 @@ class LCDClient():
         watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command',
                      'gps/source', 'wind/source', 'servo/controller', 'servo/flags']
         poll_list = ['ap/heading']
-        nalist = watchlist + poll_list + \
+        nalist = watchlist + poll_list + gains + \
         ['imu/pitch', 'imu/heel', 'ap/runtime', 'ap/version',
-         'ap/P', 'ap/I', 'ap/D',
-         'imu/heading', 'imu/heading_offset',
+         'imu/heading',
          'imu/alignmentCounter',
          'imu/compass_calibration',
          'imu/compass_calibration_age',
-         'servo/Watts', 'servo/Amp Hours', 'servo/Max Current',
-         'servo/Min Speed', 'servo/Max Speed']
+         'imu/heading_lowpass_constant', 'imu/headingrate_lowpass_constant',
+         'imu/headingraterate_lowpass_constant',
+         'servo/watts', 'servo/amp_hours', 'servo/max_current',
+         'servo/min_speed', 'servo/max_speed']
         self.last_msg = {}
         for name in nalist:
             self.last_msg[name] = _('N/A')
         for name in ['gps/source', 'wind/source']:
             self.last_msg[name] = 'none'
         self.last_msg['ap/heading_command'] = 0
+        self.last_msg['imu/heading_offset'] = 0
         
         host = ''
         if len(sys.argv) > 1:
@@ -682,9 +699,7 @@ class LCDClient():
             self.invertrectangle(r)
         self.get('imu/alignmentCounter')
             
-        self.fittext(rectangle(0, .72, .5, .14), _('pitch'))
-        self.fittext(rectangle(.5, .72, .5, .14), self.round_last_msg('imu/pitch', 1))
-        self.fittext(rectangle(0, .86, .5, .14), _('heel'))
+        self.fittext(rectangle(0, .86, .5, .14), self.round_last_msg('imu/pitch', 1))
         self.fittext(rectangle(.5, .86, .5, .14), self.round_last_msg('imu/heel', 1))
         self.get('imu/pitch')
         self.get('imu/heel')
@@ -711,12 +726,12 @@ class LCDClient():
         y = .2
         if self.info_page == 0:
             spacing = .11
-            v = self.round_last_msg('servo/Watts', 3)
+            v = self.round_last_msg('servo/watts', 3)
             runtime = self.last_msg['ap/runtime'][:7]
-            ah = self.round_last_msg('servo/Amp Hours', 3)
+            ah = self.round_last_msg('servo/amp_hours', 3)
             items = [_('Watts'), v, _('Amp Hours'), ah, _('runtime'), runtime]
-            self.get('servo/Watts')
-            self.get('servo/Amp Hours')
+            self.get('servo/watts')
+            self.get('servo/amp_hours')
             self.get('ap/runtime')
         else:
             spacing = .18
@@ -740,7 +755,7 @@ class LCDClient():
         try:
             cal = self.last_msg['imu/compass_calibration']
             ndeviation = (cal[0][3] - cal[1][3])**2
-            print ndeviation
+            #print ndeviation
             names = [(0, _('incomplete')), (1, _('excellent')), (2, _('good')), (4, _('poor')), (1000, _('bad'))]
             for n in names:
                 if ndeviation <= n[0]:

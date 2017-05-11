@@ -164,6 +164,7 @@ class NMEASocket(object):
         try:
             if not self.pollout.poll(0):
                 print 'nmea socket failed to send'
+                self.out_buffer = ''
                 return
             count = self.socket.send(self.out_buffer)
             self.out_buffer = self.out_buffer[count:]
