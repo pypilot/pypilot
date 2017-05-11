@@ -455,7 +455,7 @@ class Servo(object):
             self.calibration.set(json.loads(file.readline()))
         except:
             print 'WARNING: using default servo calibration!!'
-            self.calibration.set({'forward': [0, .6], 'reverse': [0, .6]})
+            self.calibration.set({'forward': [.2, .6], 'reverse': [.2, .6]})
 
     def save_calibration(self):
         file = open(Servo.calibration_filename, 'w')
