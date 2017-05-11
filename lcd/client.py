@@ -246,8 +246,9 @@ class LCDClient():
         if LIRC:
             try:
                 LIRC.init('pypilot')
+                self.lirctime = False
             except:
-                print 'failed to initialize lirc. is .lircrc missing?'
+                print 'failed to initialize lirc. is .lircrc missing?'            
 
     def get(self, name):
         if self.client:
@@ -966,14 +967,33 @@ class LCDClient():
             self.keystate[pini] = value
 
         if LIRC:
+            if self.lirctime and time.time()- self.lirctime > .4:
+                self.keypad[self.lirckey] = 0
+                self.keypadup[self.lirckey] = True
+                self.lirctime = False
+                #print 'keypad', self.keypad, self.keypadup
+                
             while True:
-                code = LIRC.nextcode()
+                code = LIRC.nextcode(1)
                 if not code:
                     break
-                pini = int(code[0])
+                repeat = code[0]['repeat']
+
+                lirc_mapping = {'up': UP, 'down': DOWN, 'left': UP, 'right': DOWN,
+                                'power': AUTO, 'select': MENU, 'record': MENU, 'time': SELECT}
+                pini = lirc_mapping[code[0]['config']]
                 if not self.surface and (pini == MENU or pini == SELECT):
                     continue
-                self.keypadup[pini] = True
+
+                self.keypad[pini] += 1
+                
+                if repeat == 0: # ignore first repeat
+                    if self.lirctime:
+                        self.keypad[self.lirckey] = self.keypadup[self.lirckey] = False
+                    self.lirckey = pini;
+                    self.keypad[pini] = 0
+                self.lirctime = time.time()
+                self.keypad[pini] += 1
 
         self.process_keys()
 
