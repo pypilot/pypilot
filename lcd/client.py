@@ -244,7 +244,10 @@ class LCDClient():
                 GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
 
         if LIRC:
-            LIRC.init('pypilot')
+            try:
+                LIRC.init('pypilot')
+            except:
+                print 'failed to initialize lirc. is .lircrc missing?'
 
     def get(self, name):
         if self.client:
