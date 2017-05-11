@@ -981,7 +981,10 @@ class LCDClient():
 
                 lirc_mapping = {'up': UP, 'down': DOWN, 'left': UP, 'right': DOWN,
                                 'power': AUTO, 'select': MENU, 'record': MENU, 'time': SELECT}
-                pini = lirc_mapping[code[0]['config']]
+                code = code[0]['config']
+                if not code in lirc_mapping:
+                    continue
+                pini = lirc_mapping[code]
                 if not self.surface and (pini == MENU or pini == SELECT):
                     continue
 
