@@ -406,6 +406,7 @@ class ServoCalibration(object):
     def poll(self):
         if not self.thread.is_alive():
             if self.run.value: # calibration should start
+                self.force_engauged = True
                 self.command = self.servo.command.value
                 self.raw_command = self.servo.raw_command.value
                 self.servo.brake_hack.set(False)
