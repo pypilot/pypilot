@@ -534,7 +534,7 @@ screen::screen(const char *device)
     printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
 
     // Figure out the size of the screen in bytes
-    screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel/8;
+    screensize = vinfo.yres * finfo.line_length;
 
     // Map the device to memory
     fbp = (char*)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
