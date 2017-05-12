@@ -9,10 +9,9 @@ class LineBuffer {
 public:
     LineBuffer(int _fd);
 
-    bool next();
-    bool next_nmea();
-    const char *readline_nmea();
-    const char *readline();
     const char *line();
+    const char *line_nmea();
     bool recv();
+//    const char *readline();
+    const char *readline_nmea();
 };

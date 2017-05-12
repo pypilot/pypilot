@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import select, socket, time, json
+import fcntl, os
 
 from values import *
 
@@ -19,19 +20,20 @@ from signalk.linebuffer import linebuffer
 #class LineBufferedNonBlockingSocket(linebuffer.LineBuffer):
 class LineBufferedNonBlockingSocket(object):
     def __init__(self, connection):
-        connection.setblocking(0)
+        #connection.setblocking(0)
         # somehow it's much slower to baseclass ?!?
         #super(LineBufferedNonBlockingSocket, self).__init__(connection.fileno())
+        fcntl.fcntl(connection.fileno(), fcntl.F_SETFD, os.O_NONBLOCK)
         self.b = linebuffer.LineBuffer(connection.fileno())
 
         self.socket = connection
         self.out_buffer = ''
 
     def recv(self):
-        return True
+        return self.b.recv()
         
     def readline(self):
-        return self.b.readline()
+        return self.b.line()
 
     def send(self, data):
         self.out_buffer += data
@@ -45,7 +47,7 @@ class LineBufferedNonBlockingSocket(object):
         except:
             self.socket.close()
 
-class LineBufferedNonBlockingSocketPython(object):
+class LineBufferedNonBlockingSocketPytho(object):
     def __init__(self, connection):
         connection.setblocking(0)
         self.socket = connection
@@ -228,9 +230,8 @@ class SignalKServer(object):
                 self.RemoveSocket(socket)
                 continue
             elif flag & select.POLLIN:
-                socket.recv()
-#                if not socket.recv():
- #                   self.RemoveSocket(socket)
+                if not socket.recv():
+                    self.RemoveSocket(socket)
                 while True:
                     line = socket.readline()
                     if not line:

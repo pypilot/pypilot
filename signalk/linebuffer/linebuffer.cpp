@@ -22,28 +22,32 @@ LineBuffer::LineBuffer(int _fd)
     pos = len = b = 0;
 }
 
-bool LineBuffer::next()
+const char *LineBuffer::line()
 {
-    if(readline_buf() || (recv() && readline_buf()))
-        return true;
+    if(readline_buf())
+        return buf[!b];
+    return NULL;
+}
+
+const char *LineBuffer::line_nmea()
+{
+    if(readline_buf_nmea())
+        return buf[!b];
+    return NULL;
+}
+
+bool LineBuffer::recv()
+{
     if(len == sizeof buf[0]) {
         printf("overflow!!!!\n");
         len = 0;
     }
-    return false;
+    int c = read(fd, buf[b] + len, sizeof buf[0] - len);
+    if(c <= 0)
+        return false;
+    len += c;
+    return true;
 }
-
-bool LineBuffer::next_nmea()
-{
-    if(readline_buf_nmea() || (recv() && readline_buf_nmea()))
-        return true;
-    if(len == sizeof buf[0]) {
-        printf("overflow!!!!\n");
-        len = 0;
-    }
-    return false;
-}
-
 const char *LineBuffer::readline_nmea()
 {
     if(next_nmea())
@@ -51,6 +55,13 @@ const char *LineBuffer::readline_nmea()
     return NULL;
 }
 
+bool LineBuffer::next_nmea()
+{
+    if(readline_buf_nmea() || (recv() && readline_buf_nmea()))
+        return true;
+    return false;
+}
+#if 0
 const char *LineBuffer::readline()
 {
     if(next())
@@ -58,20 +69,14 @@ const char *LineBuffer::readline()
     return NULL;
 }
 
-const char *LineBuffer::line()
+bool LineBuffer::next()
 {
-    return buf[!b];
+    if(readline_buf() || (recv() && readline_buf()))
+        return true;
+    return false;
 }
 
-bool LineBuffer::recv()
-{
-    int c = read(fd, buf[b] + len, sizeof buf[0] - len);
-    if(c <= 0)
-        return false;
-    len += c;
-    return true;
-}
-
+#endif
 static int nmea_cksum(const char *buf, int len)
 {
     int value = 0;

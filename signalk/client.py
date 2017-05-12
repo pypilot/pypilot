@@ -25,7 +25,8 @@ except:
 class ConnectionLost(Exception):
     pass
 
-READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
+#POLLRDHUP = 0x2000
+READ_ONLY = select.POLLIN | select.POLLERR
 
 class SignalKClient(object):
     def __init__(self, f_on_connected, host=False, port=False, autoreconnect=False, have_watches=False):
@@ -96,20 +97,16 @@ class SignalKClient(object):
         t0 = time.time()
         self.socket.flush()
         events = self.poller.poll(1000.0 * timeout)
-        while events != []:
+        if events != []:
             event = events.pop()
             fd, flag = event
-            if flag & (select.POLLHUP | select.POLLERR):
+            if flag & select.POLLERR:
                 raise ConnectionLost
             if flag & select.POLLIN:
-                if self.socket:
-                    if not self.socket.recv():
-                        raise ConnectionLost
-            if flag & select.POLLOUT:
-                if self.socket:
-                    self.socket.flush()
-                    #if not self.socket.out_buffer:
-                    #    self.poller.register(self.socket.socket, READ_ONLY)
+                if self.socket and not self.socket.recv():
+                    raise ConnectionLost
+                return True
+        return False
 
     def send(self, request):
         #if not self.socket.out_buffer:
@@ -117,46 +114,40 @@ class SignalKClient(object):
         self.socket.send(json.dumps(request)+'\n')
 
     def receive_line(self, timeout = 0):
+        line = self.socket.readline()
+        if line:
+            try:
+                msg = json.loads(line.rstrip())
+            except:
+                raise Exception('invalid message from server:', line)
+            return msg
+
+        if timeout < 0:
+            return False
         try:
-            t0 = t1 = time.time()
-            if self.socket:
-                f = self.socket
-            else:
-                f = self.serial
-            while timeout - (t1 - t0) >= 0:
-                line = f.readline()
-                if line:
-#                    msg = json.loads(line.rstrip())
-                    try:
-                        msg = json.loads(line.rstrip())
-                    except:
-                        raise Exception('invalid message from server:', line)
-
-                    return msg
-                else:
-                    self.poll(timeout - (t1 - t0) > 0)
-
-                t1 = time.time()
-
+            if not self.poll(timeout):
+                return False
         except ConnectionLost:
-            self.socket.socket.close()
-            if not self.autoreconnect:
-                raise ConnectionLost
+            self.disconnected()
+        return self.receive_line(-1)
+
+    def disconnected(self):
+        self.socket.socket.close()
+        if not self.autoreconnect:
+            raise ConnectionLost
                 
-            connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            while True:
-                print 'Disconnected.  Reconnecting in 3...'
-                time.sleep(3)
-                try:
-                    connection.connect(self.host_port)
-                    print 'Connected.'
-                    break
-                except:
-                    continue
+        connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        while True:
+            print 'Disconnected.  Reconnecting in 3...'
+            time.sleep(3)
+            try:
+                connection.connect(self.host_port)
+                print 'Connected.'
+                break
+            except:
+                continue
 
-            self.onconnected(connection)
-
-        return False
+        self.onconnected(connection)
 
     def receive(self, timeout = 0):
         ret = {}
@@ -166,7 +157,7 @@ class SignalKClient(object):
             if name in ret:
                 break
             ret[name] = value
-            msg = self.receive_single()
+            msg = self.receive_single(-1)
         return ret
 
     def receive_single(self, timeout = 0):
@@ -178,7 +169,7 @@ class SignalKClient(object):
         line = self.receive_line(timeout)
         if line:
             self.msg_queue += self.flatten_line(line)
-            return self.receive_single()
+            return self.receive_single(-1)
         return False
 
     def flatten_line(self, line, name_prefix=''):

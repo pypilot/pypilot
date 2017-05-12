@@ -38,6 +38,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         value_list = self.client.list_values()
         self.gains = []
+        self.needs_gains = {}
         for name in value_list:
             if 'AutopilotGain' in value_list[name]:
                 sizer = wx.FlexGridSizer( 0, 1, 0, 0 )
@@ -63,7 +64,13 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 sizer.Add( hsizer, 1, wx.EXPAND, 5 )
                 
                 min_val, max_val = value_list[name]['min'], value_list[name]['max']
-                self.gains.append((stname, stvalue, gauge, slider, min_val, max_val))
+                gain = stname, stvalue, gauge, slider, min_val, max_val
+                self.gains.append(gain)
+                def make_ongain(gain):
+                    def do_gain(event):
+                        self.needs_gains[gain] = True
+                    return do_gain
+                slider.Bind( wx.EVT_SCROLL, make_ongain(gain) )
 
                 fgGains.Add( sizer, 1, wx.EXPAND, 5 )
 
@@ -80,11 +87,10 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.recv = {}
 
         self.timer = wx.Timer(self, self.ID_MESSAGES)
-        self.timer.Start(50)
+        self.timer.Start(100)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=self.ID_MESSAGES)
 
         self.SetSize(wx.Size(500, 580))
-        self.stop()
 
     def stop(self):
         self.client.set('ap/enabled', False)
@@ -129,13 +135,14 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         else:
             self.servo_command(command / 50.0)
 
+        for gain in self.needs_gains:
+            self.send_gain(gain)
+        self.needs_gains = {}
+
         if command > 0:
             self.sCommand.SetValue(command - 1)
         elif command < 0:
             self.sCommand.SetValue(command + 1)
-
-        for gain in self.gains:
-            self.send_gain(gain)
 
         msgs = self.client.receive()
         for name in msgs:
