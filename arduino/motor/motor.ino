@@ -261,6 +261,12 @@ const uint8_t defmux = _BV(REFS0)| _BV(REFS1); // 1.1v
 uint16_t adc_counter;
 uint8_t adc_cnt;
 
+// take 4 channels, 4 samples of each using last sample,
+// except for current, 50 samples, discarding first 3
+// total 62 measurements, each measurement takes 13 cycles,
+// channel change takes 12 cycles, total is 854 cycles,
+// 16mhz / 128 / 854 = 146 samples/s, except for current,
+// has 6862 samples/s
 ISR(ADC_vect)
 {
     uint16_t adcw = ADCW;
@@ -416,7 +422,7 @@ void process_packet()
         break;
     case DISENGAUGE_CODE:
         disengauge();
-        delay(60);
+        //delay(60);
         break;
     }
 }
@@ -482,7 +488,7 @@ void loop()
     shunt_resistance = digitalRead(shunt_sense_pin);
     
     // test current
-    const int react_count = 350; // need 350 readings for 0.05s reaction time
+    const int react_count = 686; // need 686 readings for 0.1s reaction time
     if(adc_results[CURRENT][1].count > react_count) {
         uint16_t amps = TakeAmps(1);
         if(amps >= max_current) {
