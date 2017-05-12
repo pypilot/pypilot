@@ -417,10 +417,10 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 self.client.set('ap/enabled', True)
 
             if self.last_values['ap/mode'] != 'gps':
-                client.set('ap/mode', 'gps')
+                self.client.set('ap/mode', 'gps')
 
             if abs(self.last_values['ap/heading_command'] - float(data[7])) > .1:
-               client.set('ap/heading_command', float(data[7]))
+                self.client.set('ap/heading_command', float(data[7]))
 
     def new_socket_connection(self, server):
         connection, address = server.accept()

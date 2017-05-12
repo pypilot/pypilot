@@ -124,7 +124,6 @@ class AutopilotBase(object):
 
     self.starttime = time.time()
     self.times = 4*[0]
-    self.lastdata = False
     # read initial value from imu as this takes time
 #    while not self.boatimu.IMURead():
 #        time.sleep(.1)
@@ -149,11 +148,14 @@ class AutopilotBase(object):
       period = .1 # 10hz
       data = False
       # try 7 times to read data within the period
+      t00 = time.time()
+      while not data:
+          data = self.boatimu.IMURead()
+          #if not data:
+          #    print 'warning no imu data', time.time()
+          if not data:
+              time.sleep(.01)
       t0 = time.time()
-      data = self.boatimu.IMURead()
-      if not data and self.lastdata:
-          print 'warning no imu data'
-      self.lastdata = data
 
       if data and 'calupdate' in data and self.last_heading:
           # with compass calibration updates, adjust the autopilot heading_command
@@ -170,8 +172,9 @@ class AutopilotBase(object):
           self.last_heading = data['heading']
               
       # calibration or other mode, disable autopilot
-      if not data or self.servo.rawcommand.value:
-          self.enabled.update(False)
+      #if not data or self.servo.rawcommand.value:
+      #    print 'disable', data ,self.servo.rawcommand.value
+      #    self.enabled.update(False)
 
       #compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
       self.server.TimeStamp('ap', time.time()-self.starttime)
@@ -226,7 +229,7 @@ class AutopilotBase(object):
           if self.mode.value != self.lastmode:
               self.heading_command.set(self.heading.value)
           self.runtime.update()
-          self.servo.calibration.stop()
+          self.servo.servo_calibration.stop()
 
       # servo can only disengauge under manual control
       self.servo.force_engauged = self.enabled.value
@@ -259,9 +262,12 @@ class AutopilotBase(object):
       if self.watchdog_device:
           self.watchdog_device.write('c')
 
-      dt = period - (time.time() - t0)
-      if dt > 0:
+      while True:
+          dt = period - (time.time() - t00)
+          if dt <= 0:
+              break
           time.sleep(dt)
+
 
 
 if __name__ == '__main__':
