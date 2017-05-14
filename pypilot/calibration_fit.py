@@ -440,6 +440,9 @@ class MagnetometerAutomaticCalibration():
         self.process = multiprocessing.Process(target=CalibrationProcess, args=(self.points, self.fit_output, self.sphere_fit))
         self.process.start()
 
+    def __del__(self):
+        self.process.terminate()
+
     def AddPoint(self, point):
         if self.points.qsize() < 256:
             self.points.put(point)

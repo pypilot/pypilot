@@ -162,7 +162,7 @@ class Servo:
         self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
         self.amphours = self.Register(ResettableValue, 'Amp Hours', 0, persistent=True, persistent_timeout=300)
-        self.watts = self.Register(RoundedValue, 'Watts', 0)
+        self.watts = self.Register(SensorValue, 'Watts', timestamp)
 
         self.calibration = self.Register(CalibrationProperty, 'calibration', {})
         self.load_calibration()
@@ -407,7 +407,6 @@ class Servo:
         self.device.close()
         self.driver = False
 
-
     def poll(self):
         if not self.driver:
             return
@@ -434,9 +433,9 @@ class Servo:
             elif self.speed < 0:
                 self.rev_fault = True
 
+        lasttimestamp = self.timestamp
         self.timestamp = time.time()
         self.server.TimeStamp('servo', self.timestamp)
-        lasttimestamp = self.timestamp
         if result & ServoTelemetry.VOLTAGE:
             self.voltage.set(self.driver.voltage)
         if result & ServoTelemetry.CURRENT:
@@ -445,7 +444,7 @@ class Servo:
             dt = (self.timestamp-lasttimestamp)
             amphours = self.current.value*dt/3600
             self.amphours.set(self.amphours.value + amphours)
-            lp = .003
+            lp = .003*dt # 5 minute time constant to average wattage
             self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
         if result & ServoTelemetry.FLAGS:
             self.flags.update(self.driver.flags)

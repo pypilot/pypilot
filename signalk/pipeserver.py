@@ -11,10 +11,19 @@
 # offload socket and parsing work to background process
 
 import time
-from server import SignalKServer, DEFAULT_PORT, nonblockingpipe
+from server import SignalKServer, DEFAULT_PORT
 from values import *
 import multiprocessing
 import select
+
+
+def nonblockingpipe():
+  import _multiprocessing, socket
+  s = socket.socketpair()
+  map(lambda t : t.setblocking(False), s)
+  p = map(lambda t : _multiprocessing.Connection(os.dup(t.fileno())), s)
+  s[0].close(), s[1].close()
+  return p
 
 class SignalKPipeServerClient(SignalKServer):
     def __init__(self, pipe, port):

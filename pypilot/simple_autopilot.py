@@ -10,24 +10,28 @@
 from autopilot import *
 import servo
 
+def minmax(value, r):
+  return min(max(value, -r), r)
+
+
 class SimpleAutopilot(AutopilotBase):
   def __init__(self, *args, **keywords):
     super(SimpleAutopilot, self).__init__(*args, **keywords)
 
     # create filters
-    self.heading_error = self.Register(Value, 'heading_error', 0)
-    self.heading_error_int = self.Register(Value, 'heading_error_int', 0)
+    self.heading_error = self.Register(SensorValue, 'heading_error', 0)
+    self.heading_error_int = self.Register(SensorValue, 'heading_error_int', 0)
+    self.heading_error_int_time = time.time()
     
     # create simple pid filter
     self.gains = {}
-    self.timestamp = time.time()
     timestamp = self.server.TimeStamp('ap')
     def Gain(name, default, max_val):
       self.gains[name] = (self.Register(AutopilotGain, name, default, 0, max_val),
                           self.Register(SensorValue, name+'gain', timestamp))
-    Gain('P', .01, .05)
+    Gain('P', .005, .025)
     Gain('I', 0, .05)
-    Gain('D', .1, .25)
+    Gain('D', .15, .5)
     Gain('DD', 0, 1)
     Gain('rP', 0, .1)
     Gain('rD', 0, .1)
@@ -42,19 +46,19 @@ class SimpleAutopilot(AutopilotBase):
 
     heading_command = self.heading_command.value
 
-    # filter the incoming heading and gyro heading
-    err = heading - heading_command
-    if err > 180:
-      err -= 360
-    elif err <= -180:
-      err += 360
+    t = time.time()
 
+    # filter the incoming heading and gyro heading
     # error +- 60 degrees
-    err = min(max(err, -60), 60)
-      
+    err = minmax(autopilot.resolv(heading - heading_command), 60)
     self.heading_error.set(err)
-    lp = .02
-    self.heading_error_int.set(self.heading_error_int.value*(1-lp) + err*lp)
+
+    # int error +- 20
+    dt = t - self.heading_error_int_time
+    dt = max(min(dt, 1), 0) # ensure dt is from 0 to 1
+    self.heading_error_int_time = t
+    err_int = minmax(self.heading_error_int.value + err*dt, 20)
+    self.heading_error_int.set(err_int)
 
     command = 0
     gain_values = {'P': self.heading_error.value,
@@ -64,7 +68,7 @@ class SimpleAutopilot(AutopilotBase):
                    'rP': roll,
                    'rD': rollrate}
 
-    self.server.TimeStamp('ap', time.time())
+    self.server.TimeStamp('ap', t)
     for gain in self.gains:
       value = gain_values[gain]
       gains = self.gains[gain]

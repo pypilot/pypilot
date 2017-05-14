@@ -122,7 +122,10 @@ class NMEASerialDevice(object):
         fcntl.ioctl(self.device.fileno(), TIOCEXCL)
         self.b = linebuffer.LineBuffer(self.device.fileno())
 
-    def readline_nmea(self):
+#    def recv(self):
+#        return self.b.recv()
+        
+    def readline(self):
         return self.b.readline_nmea()
 
     def close(self):
@@ -136,8 +139,11 @@ class NMEASocket(object):
         self.b = linebuffer.LineBuffer(connection.fileno())
         self.out_buffer = ''
 
-    def readline_nmea(self):
-        return self.b.readline_nmea()
+    def recv(self):
+        return self.b.recv()
+
+    def readline(self):
+        return self.b.line_nmea()
 
     def close(self):
         self.socket.close()
@@ -212,7 +218,7 @@ class Nmea:
     def read_serial_device(self, device, serial_msgs):
         t = time.time()
         while True:
-            line = device.readline_nmea()
+            line = device.readline()
             if not line:
                 break
             if self.process.sockets:
@@ -277,7 +283,6 @@ class Nmea:
                     if device == self.primarydevices[name]:
                         self.primarydevices[name] = None
                 device.close()
-                        
 
         self.gpsdpoller.poll()
         if self.process.sockets and time.time() - self.last_imu_time > .5 and \
@@ -304,7 +309,7 @@ class Nmea:
         else:
             # see if the probe device gets a valid nmea message
             if self.probedevice:
-                if self.probedevice.readline_nmea():
+                if self.probedevice.readline():
                     print 'new nmea device', self.probedevicepath
                     self.serialprobe.probe_success('nmea%d' % len(self.devices))
                     self.devices.append(self.probedevice)
@@ -350,11 +355,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
         for name in watchlist:
             self.client.watch(name, watch)
 
-    def receive_nmea_from_socket(self, sock, msgs):
-        line = sock.readline_nmea()
-        if not line:
-            return False
-
+    def receive_nmea(self, line, msgs):
         for parser in self.parsers:
             result = parser(line)
             if result:
@@ -479,6 +480,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
             timeout = 100 if self.sockets else 10000
             t0 = time.time()
             events = self.poller.poll(timeout)
+            msgs = {}
             while events:
                 event = events.pop()
                 fd, flag = event
@@ -490,11 +492,16 @@ class NmeaBridgeProcess(multiprocessing.Process):
                     self.pipe_message(flag)
                 elif flag & (select.POLLHUP | select.POLLERR):
                     self.socket_lost(sock)
+                elif flag & select.POLLIN:
+                    if not sock.recv():
+                        self.socket_lost(sock)
+                    else:
+                        while True:
+                            line = sock.readline()
+                            if not line:
+                                break
+                            self.receive_nmea(line, msgs)
 
-            msgs = {}
-            for sock in self.sockets:
-                while self.receive_nmea_from_socket(sock, msgs):
-                    pass
             if msgs:
                 self.pipe.send(msgs)
 

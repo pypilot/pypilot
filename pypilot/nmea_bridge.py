@@ -19,7 +19,8 @@
 import sys, select, time, socket
 import multiprocessing
 from signalk.client import SignalKClient
-from signalk.server import LineBufferedNonBlockingSocket, nonblockingpipe
+from signalk.server import LineBufferedNonBlockingSocket
+from signalk.pipeserver import nonblockingpipe
 
 # nmea uses a simple xor checksum
 def cksum(msg):

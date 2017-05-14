@@ -21,7 +21,7 @@ from calibration_fit import MagnetometerAutomaticCalibration
 import vector
 import quaternion
 from signalk.server import SignalKServer
-from signalk.pipeserver import SignalKPipeServer
+from signalk.pipeserver import SignalKPipeServer, nonblockingpipe
 from signalk.values import *
 
 try:
@@ -177,13 +177,6 @@ class QuaternionValue(ResettableValue):
     def set(self, value):
       super(QuaternionValue, self).set(quaternion.normalize(value))
 
-def nonblockingpipe():
-  import _multiprocessing, socket
-  s = socket.socketpair()
-  map(lambda t : t.setblocking(False), s)
-  p = map(lambda t : _multiprocessing.Connection(os.dup(t.fileno())), s)
-  s[0].close(), s[1].close()
-  return p
 
 class BoatIMU(object):
   def __init__(self, server, *args, **keywords):
@@ -221,7 +214,7 @@ class BoatIMU(object):
 
     self.SensorValues = {}
     timestamp = server.TimeStamp('imu')
-    for name in ['timestamp', 'fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'accelresiduals', 'heading_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']:
+    for name in ['fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'accelresiduals', 'heading_lowpass', 'heading_rate_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']:
       self.SensorValues[name] = self.Register(SensorValue, name, timestamp)
 
     self.SensorValues['gyrobias'].make_persistent(120) # write gyrobias every 2 minutes
@@ -325,6 +318,9 @@ class BoatIMU(object):
 
  #   data['heading_lowpass'] = self.heading_lowpass3
     data['heading_lowpass'] = data['heading']
+
+    llp = .1
+    data['heading_rate_lowpass'] = llp*data['heading_rate'] + (1-llp)*self.SensorValues['heading_rate_lowpass'].value
 
     data['gyro'] = map(math.degrees, data['gyro'])
     data['gyrobias'] = map(math.degrees, data['gyrobias'])

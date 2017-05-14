@@ -86,7 +86,7 @@ class SerialProbe:
             probe['devices'] = []
             lastdevice = self.lastworkingdevice(name)
             if lastdevice:
-                probe['devices'].append(lastdevice)
+                probe['devices'].append(lastdevice.copy())
             for device in self.devices:
                 probe['devices'].append({'path': device, 'bauds': bauds})
 
@@ -100,7 +100,7 @@ class SerialProbe:
         for n in self.probes:
             if self.probes[n]['device'] and \
                self.probes[n]['device']['path'] == probe_device['path']:
-                probe['devices'].append(probe_device)
+                probe['devices'].append(probe_device) # try later
                 return False
         probe['device'] = probe_device
 
@@ -138,12 +138,10 @@ class SerialProbe:
 
     def probe_success(self, name):
         probe = self.probes[name]
-        if 'success' in probe:
-            return # already success
+        probe['devices'] = 'none'
         filename = pypilot_dir + name + 'device'
         device = probe['device']
-        probe['success'] = True
-        #print 'serialprobe: record', filename, device
+        print 'serialprobe success:', filename, device
         try:
             file = open(filename, 'w')
             file.write(json.dumps(device) + '\n')

@@ -46,7 +46,7 @@ class GpsProcess(multiprocessing.Process):
                     fix = {}
                     #fix['time'] = self.gpsd.fix.time
                     fix['track'] = self.gpsd.fix.track
-                    fix['speed'] = self.gpsd.fix.speed
+                    fix['speed'] = self.gpsd.fix.speed * 1.944 # knots
                     pipe.send(fix)
                     lasttime = time.time()
 
