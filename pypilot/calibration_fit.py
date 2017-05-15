@@ -17,6 +17,8 @@ from signalk.pipeserver import NonBlockingPipe
 
 import numpy
 
+debug=False
+
 def FitLeastSq(beta0, f, zpoints):
     try:
         import scipy.optimize
@@ -56,7 +58,8 @@ def FitPoints(points, sphere_fit):
         return False
         #sphere_fit[3] = abs(sphere_fit[3])
     sphere_fit[3] = math.sqrt(sphere_fit[3])
-    print 'sphere fit', sphere_fit
+    if debug:
+        print 'sphere fit', sphere_fit
 
     def f_ellipsoid3(beta, x):
         return (x[0]-beta[0])**2 + (beta[4]*(x[1]-beta[1]))**2 + (beta[5]*(x[2]-beta[2]))**2 - beta[3]**2
@@ -74,7 +77,8 @@ def FitPoints(points, sphere_fit):
         return r0+r1
         
     new_bias_fit = FitLeastSq(sphere_fit[:4] + [0], f_new_bias3, zpoints)
-    print 'new bias fit', new_bias_fit, math.degrees(math.asin(new_bias_fit[4]))
+    if debug:
+        print 'new bias fit', new_bias_fit, math.degrees(math.asin(new_bias_fit[4]))
 
     if not ellipsoid_fit:
         ellipsoid_fit = sphere_fit + [1, 1]
@@ -235,14 +239,16 @@ def CalibrationProcess(points, fit_output, initial):
 
         coverage = 360 - math.degrees(ComputeCoverage(cal.sigma_points, bias))
         if coverage < 60: # require 60 degrees
-            print 'calibration: not enough coverage', coverage, 'degrees'
+            if debug:
+                print 'calibration: not enough coverage', coverage, 'degrees'
             continue
 
         # sphere fit should basically agree with new bias
         spherebias = fit[1][:3]
         sbd = vector.norm(vector.sub(bias, spherebias))
         if sbd > 5:
-            print 'sphere and newbias disagree', sbd
+            if debug:
+                print 'sphere and newbias disagree', sbd
             continue
 
         # if the bias has sufficiently changed
@@ -250,12 +256,11 @@ def CalibrationProcess(points, fit_output, initial):
         d = n[0]+n[1]+n[2]
         initial = fit[0]
         if d < .1:
-            print 'insufficient change in bias'
+            if debug:
+                print 'insufficient change in bias'
             continue
 
-        print 'coverage', coverage
-        print 'got new fit:', fit
-        print 'calibration: sphere bias difference', sbd
+        print 'coverage', coverage, 'new fit:', fit, 'sphere bias difference', sbd
         fit_output.send((fit, map(lambda p : p.compass + p.down, cal.sigma_points)), False)
                                  
 class MagnetometerAutomaticCalibration(object):
@@ -423,6 +428,7 @@ def ExtraFit():
 if __name__ == '__main__':
     r = 38.0
     s = math.sin(math.pi/4) * r
+    debug = True
     points = [[ r, 0, 0, 0, 0, 1],
               [ s*1.1, s, 0, 0, 0, 1],
               [ 0, r, 0, 0, 0, 1],
