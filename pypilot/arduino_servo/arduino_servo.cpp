@@ -14,8 +14,8 @@
 
 #include "arduino_servo.h"
 
-enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_ARDUINO_TEMP_CODE = 0xa7, REPROGRAM_CODE = 0x19};
-enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, ARDUINO_TEMP_CODE=0xf9, FLAGS_CODE = 0x8f};
+enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
+enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, FLAGS_CODE = 0x8f};
 
 const unsigned char crc8_table[256]
 = {
@@ -122,10 +122,10 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
         voltage = value / 100.0;
         //printf("servo voltage  %f\n", voltage);
         return VOLTAGE;
-    case ARDUINO_TEMP_CODE:
-        arduino_temp = (int16_t)value / 100.0;
-        //printf("servo temp  %f\n", arduino_temp);
-        return ARDUINO_TEMP;
+    case CONTROLLER_TEMP_CODE:
+        controller_temp = (int16_t)value / 100.0;
+        //printf("servo temp  %f\n", controller_temp);
+        return CONTROLLER_TEMP;
     case FLAGS_CODE:
         flags = value;
 //        if(flags != 9)
@@ -174,10 +174,10 @@ bool ArduinoServo::fault()
     return flags & (OVERTEMP | OVERCURRENT | FAULTPIN);
 }
 
-void ArduinoServo::max_values(double current, double arduino_temp)
+void ArduinoServo::max_values(double current, double controller_temp)
 {
     max_current_value = fmin(10, fmax(0, current));
-    max_arduino_temp_value = fmin(80, fmax(30, arduino_temp));
+    max_controller_temp_value = fmin(80, fmax(30, controller_temp));
 }
 
 void ArduinoServo::send_value(uint8_t command, uint16_t value)
@@ -195,7 +195,7 @@ void ArduinoServo::raw_command(uint16_t value)
         send_value(MAX_CURRENT_CODE, max_current_value*100);
         break;
     case 4:
-        send_value(MAX_ARDUINO_TEMP_CODE, max_arduino_temp_value*100);
+        //send_value(MAX_CONTROLLER_TEMP_CODE, max_controller_temp_value*100);
         break;
     case 7:
         out_sync = 0;
