@@ -223,7 +223,8 @@ def CalibrationProcess(points, fit_output, initial):
         if not fit:
             continue
 
-        print 'fit', fit
+        if debug:
+            print 'fit', fit
         mag = fit[0][3]
         if mag < 9 or mag > 70:
             print 'fit found field outside of normal earth field strength', fit

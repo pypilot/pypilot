@@ -148,7 +148,7 @@ class Servo(object):
         self.engauged = self.Register(BooleanValue, 'engauged', False)
         self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 10, persistent=True)
         self.max_arduino_temp = self.Register(RangeProperty, 'Max Controller Temp', 65, 30, 80, persistent=True)
-        self.period = self.Register(RangeProperty, 'Period', .7, .3, 3, persistent=True)
+        self.period = self.Register(RangeProperty, 'Period', .7, .1, 3, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
         self.amphours = self.Register(ResettableValue, 'Amp Hours', 0, persistent=True)
@@ -161,8 +161,6 @@ class Servo(object):
 
         self.windup = 0
         self.windup_change = 0
-        self.windup_speed = 0
-        self.windup_last_speed = 0
 
         self.last_zero_command_time = self.command_timeout = time.time()
 
@@ -190,6 +188,11 @@ class Servo(object):
             self.velocity_command(command)
 
     def velocity_command(self, speed):
+        # complete integration from previous step
+        t = time.time()
+        dt = t - self.lastpositiontime
+        self.lastpositiontime = t
+
         if self.fault():
             if self.speed > 0:
                 self.fwd_fault = True
@@ -201,21 +204,16 @@ class Servo(object):
             self.stop()
             return
 
-        if speed == 0: # optimization
-            self.windup = self.windup_speed = self.windup_last_speed = 0
+        if speed == 0 and self.speed == 0: # optimization
             self.raw_command(0)
             return
 
         if self.fwd_fault and speed > 0 or \
            self.rev_fault and speed < 0:
+            self.speed = 0
             self.raw_command(0)
             return # abort
 
-
-        # complete integration from previous step
-        t = time.time()
-        dt = t - self.lastpositiontime
-        self.lastpositiontime = t
         #        print 'integrate pos', self.position, self.speed, speed, dt
 
         self.position += self.speed * dt
@@ -224,62 +222,74 @@ class Servo(object):
             self.fwd_fault = False
         if self.position > .1:
             self.rev_fault = False
+
+        if False: # don't keep moving too long in same direction.....
+            rng = 5;
+            if self.position > 1 + rng:
+                self.fwd_fault = True
+            if self.position < -rng:
+                self.rev_fault = True
             
         if self.compensate_voltage.value:
             speed *= 12 / self.voltage.value
-        # clamp to max speed
-        abs_speed = min(abs(speed), self.max_speed.value)
+
         if self.compensate_current.value:
             # get current
             ampseconds = 3600*(self.amphours.value - self.lastpositionamphours)
             current = ampseconds / dt
             self.lastpositionamphours = self.amphours.value
             pass #todo fix this
-        
-        min_speed = self.min_speed.value
-        # ensure max_speed is at least min_speed
-        if min_speed > self.max_speed.value:
-            self.max_speed.set(min_speed)
-
-        # if slower than the min speed, use windup to determine if we should
-        # move at the minimum speed
-        if abs_speed < min_speed:
-            self.windup += self.windup_last_speed * dt
-            self.windup_last_speed = speed
-            # never turn motor on or off faster than the servo period
-            if t - self.windup_change < self.period.value:
-                speed = self.windup_speed
-            else:
-                if abs(self.windup) >= min_speed * self.period.value:
-                    speed = min_speed if speed > 0 else -min_speed
-                else:
-                    speed = 0
-
-                if self.windup_speed != speed:
-                    self.windup_change = t
-                    self.windup_speed = speed
-                
-            if speed == 0:
-                self.speed = 0
-                self.raw_command(0)
-                return
-
-            if self.windup * speed > 0:
-                self.windup -= speed * dt
-            abs_speed = abs(speed)
-
+        # allow higher current with higher voltage???
         #max_current = self.max_current.value
         #if self.compensate_voltage.value:
         #    max_current *= self.voltage.value/voltage
+        
+        min_speed = self.min_speed.value
+        
+        # ensure max_speed is at least min_speed
+        #if min_speed > self.max_speed.value:
+        #    self.max_speed.set(min_speed)
+
+        # integrate windup
+        self.windup += (speed - self.speed) * dt
+
+        if abs(self.windup) > self.period.value*min_speed / 1.5:
+            if abs(speed) < min_speed:
+                speed = min_speed if self.windup > 0 else -min_speed
+        else:
+            speed = 0
+            
+        # don't let windup overflow
+        self.windup = min(max(self.windup, -self.period.value), self.period.value)
+        #print 'windup', self.windup, dt, self.windup / dt, speed, self.speed
+
+        if speed * self.speed <= 0: # switched direction or stopped?
+            if t - self.windup_change < self.period.value:
+                # less than period, keep previous direction, but use minimum speed
+                if self.speed > 0:
+                    speed = min_speed
+                elif self.speed < 0:
+                    speed = -min_speed
+                else:
+                    speed = 0
+            else:
+                self.windup_change = t
+
+        # clamp to max speed
+        speed = min(max(speed, -self.max_speed.value), self.max_speed.value)
+        self.speed = speed
 
         if speed > 0:
             cal = self.calibration.value['forward']
-        else:
+        elif speed < 0:
             cal = self.calibration.value['reverse']
-        raw_speed = cal[0] + abs_speed*cal[1]
+        else:
+            self.raw_command(0)
+            return
+
+        raw_speed = cal[0] + abs(speed)*cal[1]
         command = raw_speed if speed > 0 else -raw_speed
 
-        self.speed = speed
         self.raw_command(command)
 
     def raw_command(self, command):

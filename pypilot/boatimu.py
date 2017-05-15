@@ -102,7 +102,7 @@ def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
 
         if cal_poller.poll(0):
           new_cal = cal_pipe.recv()
-          print '[imu process] new cal', new_cal
+          #print '[imu process] new cal', new_cal
           s.CompassCalEllipsoidValid = True
           s.CompassCalEllipsoidOffset = new_cal
           #rtimu.resetFusion()
@@ -369,7 +369,7 @@ class BoatIMU(object):
     result = self.compass_auto_cal.UpdatedCalibration()
     
     if result and not self.compass_calibration_locked.value:
-      print '[boatimu] cal result', result
+      #print '[boatimu] cal result', result[0]
       self.compass_calibration_sigmapoints.set(result[1])
 
       if result[0]:
