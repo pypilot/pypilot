@@ -39,7 +39,7 @@ const char *LineBuffer::line_nmea()
 bool LineBuffer::recv()
 {
     if(len == sizeof buf[0]) {
-        printf("overflow!!!!\n");
+        printf("linebuffer overflow!!!!\n");
         len = 0;
     }
     int c = read(fd, buf[b] + len, sizeof buf[0] - len);
