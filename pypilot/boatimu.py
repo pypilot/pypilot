@@ -224,14 +224,14 @@ class BoatIMU(object):
     self.FirstTimeStamp = False
 
     self.headingrate = self.heel = 0
-    self.heading_lowpass_constant = self.Register(RangeProperty, 'heading_lowpass_constant', .1, .01, .5)
-    self.headingrate_lowpass_constant = self.Register(RangeProperty, 'headingrate_lowpass_constant', .05, .01, .25)
-
-      
+    self.heading_lowpass_constant = self.Register(RangeProperty, 'heading_lowpass_constant', .1, .01, 1)
+    self.headingrate_lowpass_constant = self.Register(RangeProperty, 'headingrate_lowpass_constant', .1, .01, 1)
+    self.headingraterate_lowpass_constant = self.Register(RangeProperty, 'headingraterate_lowpass_constant', .1, .01, 1)
+          
     sensornames = ['fusionQPose', 'accel', 'gyro', 'compass', 'accelresiduals', 'pitch', 'roll']
 
     sensornames += ['pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']
-    sensornames += ['headingrate_lowpass']
+    sensornames += ['headingrate_lowpass', 'headingraterate_lowpass']
     directional_sensornames = ['heading', 'heading_lowpass']
     sensornames += directional_sensornames
     
@@ -315,7 +315,8 @@ class BoatIMU(object):
 
     self.headingrate = data['headingrate']
 
-    data['heel'] = self.heel = data['roll']*.05 + self.heel*.95
+    data['heel'] = self.heel = data['roll']*.03 + self.heel*.97
+    data['roll'] -= data['heel']
 
     data['gyro'] = map(math.degrees, data['gyro'])
     data['gyrobias'] = map(math.degrees, data['gyrobias'])
@@ -326,6 +327,9 @@ class BoatIMU(object):
 
     llp = self.headingrate_lowpass_constant.value
     data['headingrate_lowpass'] = llp*data['headingrate'] + (1-llp)*self.SensorValues['headingrate_lowpass'].value
+
+    llp = self.headingraterate_lowpass_constant.value
+    data['headingraterate_lowpass'] = llp*data['headingraterate'] + (1-llp)*self.SensorValues['headingraterate_lowpass'].value
 
     # set sensors
     self.server.TimeStamp('imu', data['timestamp'])

@@ -25,20 +25,57 @@ class BasicAutopilot(AutopilotBase):
     
     # create simple pid filter
     self.gains = {}
-    def Gain(name, default, max_val):
-      self.gains[name] = (self.Register(AutopilotGain, name, default, 0, max_val),
-                          self.Register(SensorValue, name+'gain', timestamp))
-    Gain('P', .005, .05)
-    Gain('I',    0, .02)
-    Gain('D',  .15, 1.0)
 
-    Gain('P2', 0, .025)
-    Gain('PD', 0, .1)
-    Gain('D2', 0, 1)
+    def Gain(name, default, min_val, max_val, compute=None):
+      if not compute:
+        compute = lambda value : value * self.gains[name]['apgain'].value
+      self.gains[name] = {'apgain': self.Register(AutopilotGain, name, default, min_val, max_val),
+                          'sensor': self.Register(SensorValue, name+'gain', timestamp),
+                          'compute': compute}
+
+    def PosGain(name, default, max_val):
+      Gain(name, default, 0, max_val)
+        
+    PosGain('P', .005, .02)
+    PosGain('I',    0, .5)
+    PosGain('D',  .15, 1.0)
+
+    PosGain('DD',  0, 1.0)
+    
+    def PosGain2(name, default, max_val, other):
+      def compute2(value):
+        return value * abs(value) * self.gains[name]['apgain'].value * self.gains[other]['apgain'].value
+      Gain(name, default, 0, max_val, compute2)
+
+    PosGain2('P2', 0, 1, 'P')
+    PosGain2('D2', 0, 1, 'D')
+
+    Gain('Pr',  0, -.25, .25)
+    Gain('Dr',  0, -.25, .25)
+    Gain('Pp',  0, -.25, .25)
+    Gain('Dp',  0, -.25, .25)
+    
+    Gain('C',  0, -.25, .25)
+
+    self.lastenabled = False
 
   def process_imu_data(self, boatimu):
+    if self.enabled.value != self.lastenabled:
+      self.lastenabled = self.enabled.value
+      if self.enabled.value:
+        self.heading_error_int.set(0) # reset integral
+    if not self.enabled.value: # only bother to compute if a client cares
+      compute = False
+      for gain in self.gains:
+        if self.gains[gain]['sensor'].watchers:
+          compute = True
+          break
+      if not compute:
+        return
+    
     heading = self.heading.value
     headingrate = boatimu.SensorValues['headingrate_lowpass'].value
+    headingraterate = boatimu.SensorValues['headingraterate_lowpass'].value
 
     heading_command = self.heading_command.value
 
@@ -49,32 +86,35 @@ class BasicAutopilot(AutopilotBase):
     err = minmax(autopilot.resolv(heading - heading_command), 60)
     self.heading_error.set(err)
 
-    # int error +- 60
     dt = t - self.heading_error_int_time
     dt = max(min(dt, 1), 0) # ensure dt is from 0 to 1
     self.heading_error_int_time = t
-    err_int = minmax(self.heading_error_int.value + err*dt, 60)
+    # int error +- 1, from 0 to 300 deg/s
+    err_int = minmax(self.heading_error_int.value + (err/300)*dt, 1)
     self.heading_error_int.set(err_int)
 
     command = 0
     gain_values = {'P': self.heading_error.value,
                    'I': self.heading_error_int.value,
-                   'D': headingrate}
-    gain_values['P2'] = abs(gain_values['P'])*gain_values['P']
-    if gain_values['P']*gain_values['D'] > 0:
-      gain_values['PD'] = abs(gain_values['P'])*gain_values['D']
-    else:
-      gain_values['PD'] = 0
-    gain_values['D2'] = abs(gain_values['D'])*gain_values['D']
+                   'D': headingrate,
+                   'DD': headingraterate,
+                   'Pr': boatimu.SensorValues['roll'].value,
+                   'Dr': boatimu.SensorValues['rollrate'].value,
+                   'Pp': boatimu.SensorValues['pitch'].value,
+                   'Dp': boatimu.SensorValues['pitchrate'].value,
+                   'C': 1}
+    gain_values['P2'] = gain_values['P']
+    gain_values['D2'] = gain_values['D']
 
     self.server.TimeStamp('ap', t)
     for gain in self.gains:
       value = gain_values[gain]
       gains = self.gains[gain]
-      gains[1].set(gains[0].value*value)
-      command += gains[1].value
+      gains['sensor'].set(gains['compute'](value))
+      command += gains['sensor'].value
 
-    self.servo.command.set(command)
+    if self.enabled.value:
+      self.servo.command.set(command)
 
 def main():
   ap = BasicAutopilot()

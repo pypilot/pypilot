@@ -216,10 +216,10 @@ class AutopilotBase(object):
           truewindd = math.degrees(math.atan2(*truewindv))
           self.heading.set(resolv(truewindd, 180))
 
+      self.process_imu_data(self.boatimu)
       if self.enabled.value:
           if self.mode.value != self.lastmode:
               self.heading_command.set(self.heading.value)
-          self.process_imu_data(self.boatimu)
           self.runtime.update()
 
       self.lastmode = self.mode.value
