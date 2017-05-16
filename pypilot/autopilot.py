@@ -103,7 +103,7 @@ class AutopilotBase(object):
     self.last_heading = False
 
     timestamp = self.server.TimeStamp('ap')
-    self.heading = self.Register(SensorValue, 'heading', timestamp)
+    self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)
 
     self.gps_heading_offset = self.Register(Value, 'gps_heading_offset', 0)
     self.wind_heading_offset = self.Register(Value, 'wind_heading_offset', 0)
@@ -240,15 +240,21 @@ class AutopilotBase(object):
       if t4 - t3 > period/2:
           print 'nmea is running too _slowly_', t4-t3
 
-      t = max(period - (t4 - t0), .02)
-      self.server.HandleRequests(t)
+      self.server.HandleRequests()
+      t5 = time.time()
+      if t5 - t4 > period/2:
+          print 'server is running too _slowly_', t5-t4
 
-      times = t1-t0, t2-t1, t3-t2, t4-t3
-      self.times = map(lambda x, y : .975*x + .025*y, self.times, times)
+ #     times = t1-t0, t2-t1, t3-t2, t4-t3
+#      self.times = map(lambda x, y : .975*x + .025*y, self.times, times)
       #print 'times', map(lambda t : '%.2f' % (t*1000), self.times)
       
       if self.watchdog_device:
           self.watchdog_device.write('c')
+
+      dt = time.time() - t0
+      if dt < period:
+          time.sleep(period - dt)
 
 if __name__ == '__main__':
   print 'You must run an actual autopilot implementation, eg: simple_autopilot.py'

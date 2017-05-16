@@ -84,8 +84,11 @@ class SensorValue(Value): # same as Value with added timestamp
     def __init__(self, name, timestamp, initial=False, **kwargs):
         super(SensorValue, self).__init__(name, initial, **kwargs)
         self.timestamp = timestamp
+        self.directional = 'directional' in kwargs and kwargs['directional']
 
     def type(self):
+        if self.directional:
+            return {'type': 'SensorValue', 'directional': True}
         return 'SensorValue'
 
     def get_signalk(self):
@@ -93,7 +96,7 @@ class SensorValue(Value): # same as Value with added timestamp
         if type(value) == type(tuple()):
             value = list(value)
         return '{"' + self.name + '": {"value": ' + round_value(value) + ', "timestamp": %.3f }}' % self.timestamp[0]
-
+    
 # a value that may be modified by external clients
 class Property(Value):
     def __init__(self, name, initial, **kwargs):

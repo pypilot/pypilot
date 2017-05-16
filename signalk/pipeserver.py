@@ -16,13 +16,17 @@ from values import *
 import multiprocessing
 import select
 
-class nonblockingpipe: #for debugging
-    def __init__(self, pipe):
+class NonBlockingPipeEnd(object):
+    def __init__(self, pipe, name, recvfailok):
         self.pipe = pipe
         self.pollin = select.poll()
         self.pollin.register(self.pipe, select.POLLIN)
         self.pollout = select.poll()
         self.pollout.register(self.pipe, select.POLLOUT)
+        self.name = name
+        self.sendfailcount = 0
+        self.failcountmsg = 1
+        self.recvfailok = recvfailok
 
     def fileno(self):
       return self.pipe.fileno()
@@ -30,18 +34,25 @@ class nonblockingpipe: #for debugging
     def recv(self, timeout=0):
         if self.pollin.poll(1000.0*timeout):
             return self.pipe.recv()
-        print 'error pipe block on recv'
+        if not self.recvfailok:
+            print 'error pipe block on recv!', self.name
         return False
 
-    def send(self, value):
-        if not self.pollout.poll(0):
-            print 'pipeserver pipe full, cannot send:', value
-            return
-        self.pipe.send(value)
+    def send(self, value, block=True):
+        if block or self.pollout.poll(0):
+            self.pipe.send(value)
+            return True
+        
+        self.sendfailcount += 1
+        if self.sendfailcount == self.failcountmsg:
+            print 'pipe full (%d)' % self.sendfailcount, self.name, 'cannot send'
+            self.failcountmsg *= 10
+        return False
 
-def duplexnonblockingpipe():
+
+def NonBlockingPipe(name, recvfailok=False):
   pipe = multiprocessing.Pipe()
-  return nonblockingpipe(pipe[0]), nonblockingpipe(pipe[1])
+  return NonBlockingPipeEnd(pipe[0], name+'[0]', recvfailok), NonBlockingPipeEnd(pipe[1], name+'[1]', recvfailok)
 
 class SignalKPipeServerClient(SignalKServer):
     def __init__(self, pipe, port, persistent_path):
@@ -49,9 +60,6 @@ class SignalKPipeServerClient(SignalKServer):
       self.watches = {}
       self.gets = {}
       self.pipe = pipe
-
-      self.pipe_poller = select.poll()
-      self.pipe_poller.register(pipe.fileno(), select.POLLIN)
 
     def __del__(self):
       while self.HandlePipeMessage():
@@ -101,10 +109,9 @@ class SignalKPipeServerClient(SignalKServer):
           print 'unimplemented pipe method', method
 
     def HandlePipeMessage(self):
-        if not self.pipe_poller.poll(0):
-          return False
-
         msgs = self.pipe.recv()
+        if not msgs:
+            return False
 
         values = {}
         for name in msgs:
@@ -145,16 +152,16 @@ def pipe_server_process(pipe, port, persistent_path):
       time.sleep(.1)
 
     while True:
-      while server.HandlePipeMessage():
-        pass
-      
-      server.HandleRequests(.1)
+        while server.HandlePipeMessage():
+            pass
+        server.HandleRequests()
+        time.sleep(.1)
 
 
 class SignalKPipeServer(object):
     def __init__(self, port=DEFAULT_PORT, persistent_path=default_persistent_path):
         #self.pipe, process_pipe = multiprocessing.Pipe()
-        self.pipe, process_pipe = duplexnonblockingpipe()
+        self.pipe, process_pipe = NonBlockingPipe('signalkpipeserver', True)
     
         self.process = multiprocessing.Process(target=pipe_server_process, args=(process_pipe, port, persistent_path))
         self.process.start()
@@ -163,10 +170,6 @@ class SignalKPipeServer(object):
         self.timestamps = {}
         self.last_recv = time.time()
         
-        self.poller = select.poll()
-        READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
-        self.poller.register(self.pipe.fileno(), READ_ONLY)
-
         self.persistent_path = persistent_path
         self.ResetPersistentState()
         self.LoadPersistentValues()
@@ -183,7 +186,7 @@ class SignalKPipeServer(object):
     def __del__(self):
       # ensure persistent values get sent to server process
       self.SetPersistentValues()
-      self.pipe.send(self.sets)
+      self.pipe.send(self.sets, False)
       self.process.terminate()
         
     def SetPersistentValues(self):
@@ -236,28 +239,41 @@ class SignalKPipeServer(object):
       elif method == 'watch':
           self.values[name].watchers = request['value']
         
-    def HandleRequests(self, totaltime):            
+    def HandleRequests(self):
         t0 = time.time()
         if t0 >= self.persistent_timeout:
-          self.SetPersistentValues()
+            self.SetPersistentValues()
 
-        dt = totaltime
-        while dt >= 0:
-          if self.sets:
+        if self.sets:
             ta = time.time()
             # should we break up sets if there are many!?!
-            if len(self.sets) > 30:
-              print 'warning, more than 30 values in pipe server', list(self.sets)
-            self.pipe.send(self.sets)
+            if len(self.sets) > 20:
+                setnames = list(self.sets)
+                while setnames:
+                    sets = {}
+                    for i in range(20): # send 20 values at a time
+                        if not setnames:
+                            break
+                        name = setnames.pop()
+                        sets[name] = self.sets[name]
+                    if not self.pipe.send(sets, False):
+                        break
+                    for name in sets:
+                        del self.sets[name]
+            else:
+                if self.pipe.send(self.sets, False):
+                    self.sets = {}
+
             dta = time.time() - ta
             if dta > .01:
-              print 'too long to send sets down pipe', dta, len(self.sets), self.sets
-            self.sets = {}
-            dt = totaltime - (time.time()-t0)
-  
-          if self.poller.poll(1000.0 * dt):
-              self.HandleRequest(self.pipe.recv())
-          dt = totaltime - (time.time()-t0)
+              print 'too long to send sets down pipe', dta, len(self.sets)
+
+        while True:
+            request = self.pipe.recv()
+            if request:
+                self.HandleRequest(request)
+            else:
+                break
     
 if __name__ == '__main__':
     print 'pipe server demo'

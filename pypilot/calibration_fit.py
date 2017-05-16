@@ -13,28 +13,10 @@ import math
 import time
 import vector
 from quaternion import *
-import multiprocessing, select
+import multiprocessing
+from signalk.pipeserver import NonBlockingPipe
 
 import numpy
-
-class nonblockingpipe:
-    def __init__(self):
-        self.pipe = multiprocessing.Pipe(duplex=False)
-        self.pollin = select.poll()
-        self.pollin.register(self.pipe[0], select.POLLIN)
-        self.pollout = select.poll()
-        self.pollout.register(self.pipe[1], select.POLLOUT)
-
-    def recv(self, timeout=0):
-        if self.pollin.poll(1000.0*timeout):
-            return self.pipe[0].recv()
-        return False
-
-    def send(self, value):
-        if not self.pollout.poll(0):
-            print 'pipe full, cannot send:', value
-            return
-        self.pipe[1].send(value)
 
 def FitLeastSq(beta0, f, zpoints):
     try:
@@ -75,13 +57,13 @@ def FitPoints(points, sphere_fit):
         return False
         #sphere_fit[3] = abs(sphere_fit[3])
     sphere_fit[3] = math.sqrt(sphere_fit[3])
-    print 'sphere fit', sphere_fit
+    #print 'sphere fit', sphere_fit
 
     def f_ellipsoid3(beta, x):
         return (x[0]-beta[0])**2 + (beta[4]*(x[1]-beta[1]))**2 + (beta[5]*(x[2]-beta[2]))**2 - beta[3]**2
-    ellipsoid_fit = FitLeastSq(sphere_fit + [1, 1], f_ellipsoid3, zpoints)
-    print 'ellipsoid_fit', ellipsoid_fit
-    #ellipsoid_fit = False
+    #ellipsoid_fit = FitLeastSq(sphere_fit + [1, 1], f_ellipsoid3, zpoints)
+    #print 'ellipsoid_fit', ellipsoid_fit
+    ellipsoid_fit = False
 
     def f_new_bias3(beta, x):
         #print 'beta', beta
@@ -93,7 +75,7 @@ def FitPoints(points, sphere_fit):
         return r0+r1
         
     new_bias_fit = FitLeastSq(sphere_fit[:4] + [0], f_new_bias3, zpoints)
-    print 'new bias fit', new_bias_fit, math.degrees(math.asin(new_bias_fit[4]))
+    #print 'new bias fit', new_bias_fit, math.degrees(math.asin(new_bias_fit[4]))
 
     if not ellipsoid_fit:
         ellipsoid_fit = sphere_fit + [1, 1]
@@ -213,7 +195,7 @@ def CalibrationProcess(points, fit_output, initial):
     while True:
         t = time.time()
         addedpoint = False
-        while time.time() - t < 30:
+        while time.time() - t < 300:
             p = points.recv(1)
             if p:
                 cal.AddPoint(p[:3], p[3:6])
@@ -224,8 +206,8 @@ def CalibrationProcess(points, fit_output, initial):
         # remove points with less than 5 measurements, or older than 1 hour
         p = []
         for sigma in cal.sigma_points:
-            # require at least 2 measurements
-            if sigma.count >= 2:
+            # require at least 2 measurements, and only use measurements in last hour
+            if sigma.count >= 2 and time.time() - sigma.time < 3600:
                 p.append(sigma)
         cal.sigma_points = p
 
@@ -240,7 +222,7 @@ def CalibrationProcess(points, fit_output, initial):
 
         mag = fit[0][3]
         if mag < 9 or mag > 70:
-            print 'fit found field outside of normal earth field strength', fit
+            #print 'fit found field outside of normal earth field strength', fit
             continue
 
         bias = fit[0][:3]
@@ -252,17 +234,15 @@ def CalibrationProcess(points, fit_output, initial):
                 cal.sigma_points.remove(sigma)
 
         coverage = 360 - math.degrees(ComputeCoverage(cal.sigma_points, bias))
-        print 'coverage', coverage
         if coverage < 60: # require 60 degrees
-            print 'calibration: not enough coverage', coverage, 'degrees'
+            #print 'calibration: not enough coverage', coverage, 'degrees'
             continue
 
         # sphere fit should basically agree with new bias
         spherebias = fit[1][:3]
-        n = vector.norm(vector.sub(bias, spherebias))
-        print 'newbias diff', n
-        if n > 6:
-            print 'calibration: sphere bias not agree'
+        sbd = vector.norm(vector.sub(bias, spherebias))
+        #print 'newbias diff', n
+        if sbd > 5
             continue
 
         # if the bias has sufficiently changed
@@ -273,17 +253,19 @@ def CalibrationProcess(points, fit_output, initial):
             print 'insufficient change in bias'
             continue
 
+        print 'coverage', coverage
         print 'got new fit:', fit
-        fit_output.send((fit, map(lambda p : p.compass + p.down, cal.sigma_points)))
+        print 'calibration: sphere bias difference', sbd
+        fit_output.send((fit, map(lambda p : p.compass + p.down, cal.sigma_points)), False)
                                  
 class MagnetometerAutomaticCalibration(object):
     def __init__(self, cal_pipe, initial):
         self.cal_pipe = cal_pipe
         self.sphere_fit = initial
-        self.points = nonblockingpipe()
-        self.fit_output = nonblockingpipe()
+        points, self.points = NonBlockingPipe('points pipe', True)
+        self.fit_output, fit_output = NonBlockingPipe('fit output', True)
 
-        self.process = multiprocessing.Process(target=CalibrationProcess, args=(self.points, self.fit_output, self.sphere_fit))
+        self.process = multiprocessing.Process(target=CalibrationProcess, args=(points, fit_output, self.sphere_fit))
         self.process.start()
 
     def __del__(self):
@@ -291,7 +273,7 @@ class MagnetometerAutomaticCalibration(object):
         self.process.terminate()
 
     def AddPoint(self, point):
-        self.points.send(point)
+        self.points.send(point, False)
     
     def UpdatedCalibration(self):
         result = self.fit_output.recv()

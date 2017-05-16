@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2017 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -20,14 +20,16 @@ from signalk.linebuffer import linebuffer
 #class LineBufferedNonBlockingSocket(linebuffer.LineBuffer):
 class LineBufferedNonBlockingSocket(object):
     def __init__(self, connection):
-        #connection.setblocking(0)
+        connection.setblocking(0)
+        #//fcntl.fcntl(connection.fileno(), fcntl.F_SETFD, os.O_NONBLOCK)
         # somehow it's much slower to baseclass ?!?
         #super(LineBufferedNonBlockingSocket, self).__init__(connection.fileno())
-        fcntl.fcntl(connection.fileno(), fcntl.F_SETFD, os.O_NONBLOCK)
         self.b = linebuffer.LineBuffer(connection.fileno())
 
         self.socket = connection
         self.out_buffer = ''
+        self.pollout = select.poll()
+        self.pollout.register(connection, select.POLLOUT)
 
     def recv(self):
         return self.b.recv()
@@ -37,12 +39,25 @@ class LineBufferedNonBlockingSocket(object):
 
     def send(self, data):
         self.out_buffer += data
-
+        if len(self.out_buffer) > 65536:
+            self.out_buffer = data
+            print 'overflow in signalk socket'
+    
     def flush(self):
-        if not len(self.out_buffer):
+        if not self.out_buffer:
             return
         try:
+            if not self.pollout.poll(0):
+                print 'nmea socket failed to send'
+                return
+            t0 = time.time()
             count = self.socket.send(self.out_buffer)
+            t1 = time.time()
+            if t1-t0 > .1:
+                print 'socket send took too long!?!?', t1-t0
+            if count < 0:
+                print 'socket send error', count
+                self.socket.close()
             self.out_buffer = self.out_buffer[count:]
         except:
             self.socket.close()
@@ -165,7 +180,7 @@ class SignalKServer(object):
         msg = {}
         for value in self.values:
             t = self.values[value].type()
-            if type(t) == type(""):
+            if type(t) == type(''):
                 t = {'type' : t}
             msg[value] = t
 
@@ -212,19 +227,57 @@ class SignalKServer(object):
 
     def RemoveSocket(self, socket):
         self.sockets.remove(socket)
-        fd = socket.socket.fileno()
-        self.poller.unregister(socket.socket)
+
+        found = False
+        for fd in self.fd_to_socket:
+            if socket == self.fd_to_socket[fd]:
+                del self.fd_to_socket[fd]
+                self.poller.unregister(fd)
+                found = True
+                break
 
         socket.socket.close()
 
-        del self.fd_to_socket[fd]
+        if not found:
+            print 'socket not found in fd_to_socket'
 
         for name in self.values:
             if socket in self.values[name].watchers:
                 self.values[name].watchers.remove(socket)
-    
-    def HandleRequests(self, totaltime):
-      READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
+
+    def PollSockets(self):
+        events = self.poller.poll(0)
+        while events:
+            event = events.pop()
+            fd, flag = event
+            socket = self.fd_to_socket[fd]
+            if socket == self.server_socket:
+                connection, address = socket.accept()
+                if len(self.sockets) == max_connections:
+                    print 'max connections reached!!!', len(self.sockets)
+                    self.RemoveSocket(self.sockets[0]) # dump first socket??
+
+                socket = LineBufferedNonBlockingSocket(connection)
+                self.sockets.append(socket)
+                fd = socket.socket.fileno()
+                print 'new client', address, fd
+                self.fd_to_socket[fd] = socket
+                self.poller.register(fd, select.POLLIN)
+            elif flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
+                self.RemoveSocket(socket)
+            elif flag & select.POLLIN:
+                if not socket.recv():
+                    self.RemoveSocket(socket)
+                while True:
+                    line = socket.readline()
+                    if not line:
+                        break
+                    self.HandleRequest(socket, line)
+        # flush all sockets
+        for socket in self.sockets:
+            socket.flush()
+                
+    def HandleRequests(self):
       if not self.init:
           try:
               self.server_socket.bind(('0.0.0.0', self.port))
@@ -237,55 +290,16 @@ class SignalKServer(object):
           self.init = True
           self.fd_to_socket = {self.server_socket.fileno() : self.server_socket}
           self.poller = select.poll()
-          self.poller.register(self.server_socket, READ_ONLY)
+          self.poller.register(self.server_socket, select.POLLIN)
         
       t1 = time.time()
       if t1 >= self.persistent_timeout:
           self.StorePersistentValues()
-          if time.time() - t1 > totaltime:
+          if time.time() - t1 > .1:
               print 'persistent store took too long!', time.time() - t1
               return
 
-      t2 = time.time()
-      while t2 - t1 < totaltime:
-        dt = t2 - t1
-        if dt > totaltime:
-          print 'time overflow, clock adjusted?'
-          dt = totaltime / 2
-
-        events = self.poller.poll(1000.0 * (totaltime - dt))
-        while events:
-            event = events.pop()
-            fd, flag = event
-            socket = self.fd_to_socket[fd]
-            if socket == self.server_socket:
-                connection, address = socket.accept()
-                #print 'new client', address
-                if len(self.sockets) == max_connections:
-                    print 'max connections reached!!!', len(self.sockets)
-                    self.RemoveSocket(self.sockets[0]) # dump first socket
-
-                socket = LineBufferedNonBlockingSocket(connection)
-                self.sockets.append(socket)
-                fd = socket.socket.fileno()
-                self.fd_to_socket[fd] = socket
-                self.poller.register(socket.socket, READ_ONLY)
-            elif flag & (select.POLLHUP | select.POLLERR):
-                self.RemoveSocket(socket)
-                continue
-            elif flag & select.POLLIN:
-                if not socket.recv():
-                    self.RemoveSocket(socket)
-                while True:
-                    line = socket.readline()
-                    if not line:
-                        break
-                    self.HandleRequest(socket, line)
-
-        for socket in self.sockets:
-            socket.flush()            
-
-        t2 = time.time()
+      self.PollSockets()
 
 if __name__ == '__main__':
     server = SignalKServer()
@@ -293,4 +307,5 @@ if __name__ == '__main__':
     clock = server.Register(Value('clock', 0))
     while True:
         clock.set(clock.value + 1)
-        server.HandleRequests(.02)
+        server.HandleRequests()
+        time.sleep(.02)

@@ -15,6 +15,7 @@
 import os
 from sys import stdout
 import json, time, math, multiprocessing, select
+from signalk.pipeserver import NonBlockingPipe
 
 import autopilot
 from calibration_fit import MagnetometerAutomaticCalibration
@@ -93,7 +94,7 @@ def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
           data['accelresiduals'] = list(rtimu.getAccelResiduals())
           data['gyrobias'] = s.GyroBias
           data['timestamp'] = t0 # imu timestamp is perfectly accurate
-          pipe.send(data)
+          pipe.send(data, False)
         else:
           print 'failed to read IMU!!!!!!!!!!!!!!'
           break # reinitialize imu
@@ -209,8 +210,8 @@ class BoatIMU(object):
     self.compass_calibration_sigmapoints = self.Register(RoundedValue, 'compass_calibration_sigmapoints', False)
     self.compass_calibration_locked = self.Register(BooleanProperty, 'compass_calibration_locked', False, persistent=True)
     
-    self.imu_pipe, imu_pipe = multiprocessing.Pipe(duplex=False)
-    imu_cal_pipe = multiprocessing.Pipe(duplex=False)
+    self.imu_pipe, imu_pipe = NonBlockingPipe('imu_pipe')
+    imu_cal_pipe = NonBlockingPipe('imu_cal_pipe')
 
     self.poller = select.poll()
     self.poller.register(self.imu_pipe, select.POLLIN)
@@ -225,15 +226,17 @@ class BoatIMU(object):
     self.headingrate_lowpass_constant = self.Register(RangeProperty, 'headingrate_lowpass_constant', .05, .01, .25)
 
       
-    sensornames = ['fusionQPose', 'accel', 'gyro', 'compass', 'accelresiduals', 'pitch', 'roll', 'heading']
+    sensornames = ['fusionQPose', 'accel', 'gyro', 'compass', 'accelresiduals', 'pitch', 'roll']
 
     sensornames += ['pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']
-    sensornames += ['heading_lowpass', 'headingrate_lowpass']
+    sensornames += ['headingrate_lowpass']
+    directional_sensornames = ['heading', 'heading_lowpass']
+    sensornames += directional_sensornames
     
     self.SensorValues = {}
     timestamp = server.TimeStamp('imu')
     for name in sensornames:
-      self.SensorValues[name] = self.Register(SensorValue, name, timestamp)
+      self.SensorValues[name] = self.Register(SensorValue, name, timestamp, directional = name in directional_sensornames)
 
     sensornames += ['gyrobias']
     self.SensorValues['gyrobias'] = self.Register(SensorValue, 'gyrobias', timestamp, persistent=True)
