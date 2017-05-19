@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import wx, sys, subprocess, os
+import wx, sys, subprocess, os, time
 import autopilot_control_ui
 from signalk.client import SignalKClient
 
@@ -38,7 +38,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         value_list = self.client.list_values()
         self.gains = []
-        self.needs_gains = {}
         for name in value_list:
             if 'AutopilotGain' in value_list[name]:
                 sizer = wx.FlexGridSizer( 0, 1, 0, 0 )
@@ -64,11 +63,12 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 sizer.Add( hsizer, 1, wx.EXPAND, 5 )
                 
                 min_val, max_val = value_list[name]['min'], value_list[name]['max']
-                gain = stname, stvalue, gauge, slider, min_val, max_val
+                gain = {'stname': stname, 'stvalue': stvalue, 'gauge': gauge, 'slider': slider, 'min': min_val, 'max': max_val, 'need_update': False, 'last_change': 0, 'sliderval': 0}
                 self.gains.append(gain)
                 def make_ongain(gain):
                     def do_gain(event):
-                        self.needs_gains[gain] = True
+                        gain['need_update'] = True
+                        gain['last_change'] = time.time()
                     return do_gain
                 slider.Bind( wx.EVT_SCROLL, make_ongain(gain) )
 
@@ -103,19 +103,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             self.client.set('servo/command', command)
 
     def send_gain(self, gain):
-        stname, stvalue, gauge, slider, min_val, max_val = gain
-        name = stname.GetLabel()
-
-        if not name in self.recv:
-            return
-        try:
-            statvalue = float(stvalue.GetLabel())
-        except:
-            statvalue = -1 # force update
-        slidervalue = slider.GetValue() / 1000.0 * (max_val - min_val) + min_val
-
-        if abs(statvalue - slidervalue) >= .001 / 100.0:
-            self.client.set(name, slidervalue)
+        name = gain['stname'].GetLabel()
+        slidervalue = gain['slider'].GetValue() / 1000.0 * (gain['max'] - gain['min']) + gain['min']
+        self.client.set(name, slidervalue)
 
     def set_mode_color(self):
         modecolors = {'compass': wx.GREEN, 'gps': wx.YELLOW,
@@ -135,9 +125,14 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         else:
             self.servo_command(command / 50.0)
 
-        for gain in self.needs_gains:
-            self.send_gain(gain)
-        self.needs_gains = {}
+        for gain in self.gains:
+            if gain['need_update']:
+                self.send_gain(gain)
+                gain['need_update'] = False
+                
+            if gain['slider'].GetValue() != gain['sliderval'] and \
+               time.time() - gain['last_change'] > 1:
+                gain['slider'].SetValue(gain['sliderval'])
 
         if command > 0:
             self.sCommand.SetValue(command - 1)
@@ -147,29 +142,29 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         msgs = self.client.receive()
         for name in msgs:
             data = msgs[name]
+            if not 'value' in data:
+                print 'no value?!?!', data
+                continue
             value = data['value']
             self.recv[name] = True
 
             found = False
             for gain in self.gains:
-                stname, stvalue, gauge, slider, min_val, max_val = gain
-                if name == stname.GetLabel():
-                    stvalue.SetLabel('%.5f' % value)
-                    val = (value-min_val)*1000/(max_val - min_val)
-                    if slider.GetValue() != val:
-                        slider.SetValue(val)
+                if name == gain['stname'].GetLabel():
+                    gain['stvalue'].SetLabel('%.5f' % value)
+                    gain['sliderval'] = (value-gain['min'])*1000/(gain['max'] - gain['min'])
                     found = True
-                elif name == stname.GetLabel() + 'gain':
-                    v = abs(value) * 1000.0 * 5
-                    if v < gauge.GetRange():
-                        gauge.SetValue(v)
+                elif name == gain['stname'].GetLabel() + 'gain':
+                    v = abs(value) * 1000.0
+                    if v < gain['gauge'].GetRange():
+                        gain['gauge'].SetValue(v)
                         if value > 0:
-                            gauge.SetBackgroundColour(wx.RED)
+                            gain['gauge'].SetBackgroundColour(wx.RED)
                         else:
-                            gauge.SetBackgroundColour(wx.GREEN)
+                            gain['gauge'].SetBackgroundColour(wx.GREEN)
                     else:
-                        gauge.SetValue(0)
-                        gauge.SetBackgroundColour(wx.BLUE)
+                        gain['gauge'].SetValue(0)
+                        gain['gauge'].SetBackgroundColour(wx.BLUE)
 
                     found = True
 

@@ -59,6 +59,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def on_con(self, client):
         watchlist = ['imu/compass_calibration', 'imu/compass_calibration_age', \
                      'imu/compass', 'imu/compass_calibration_sigmapoints', \
+                     'imu/compass_calibration_locked', \
                      'imu/accel', 'imu/fusionQPose', 'imu/alignmentCounter', \
                      'imu/heading', \
                      'imu/alignmentQ', 'imu/pitch', 'imu/roll', 'imu/heel', \
@@ -94,9 +95,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         
         if name == 'imu/compass_calibration':
             self.stCompassCal.SetLabel(str(round3(value[0])))
-            self.stCompassCalDeviation.SetLabel(str(round3(value[1])))
+            self.stCompassCalDeviation.SetLabel('N/A')
         elif name == 'imu/compass_calibration_age':
             self.stCompassCalAge.SetLabel(str(value))
+        elif name == 'imu/compass_calibration_locked':
+            self.cbCompassCalibrationLocked.SetValue(value)
         elif name == 'imu/alignmentQ':
             self.alignmentQ = value
             self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(pypilot.quaternion.angle(self.alignmentQ))))
@@ -179,6 +182,9 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onClearCompass( self, event ):
         self.compass_calibration_plot.points = []
+
+    def onCompassCalibrationLocked( self, event ):
+        self.client.set('imu/compass_calibration_locked', self.cbCompassCalibrationLocked.GetValue())
 
     def onMouseEventsCompass( self, event ):
         self.CompassCalibration.SetFocus()

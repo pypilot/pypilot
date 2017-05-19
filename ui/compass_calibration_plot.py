@@ -116,12 +116,10 @@ class CompassCalibrationPlot():
     default_radius = 30
     def __init__(self):
         self.unit_sphere = Spherical([0, 0, 0], lambda beta, x: x, 32, 16)
-        self.mag_fit_sphere = self.mag_fit_ellipsoid = self.mag_fit_new_bias = False
-        self.mag_cal_q = [1,0,0,0]
-
+        self.mag_fit_sphere = self.mag_fit_new_bias = self.mag_fit_ellipsoid  = False
         self.mag_cal_sphere = [0, 0, 0, 30]
-        self.mag_cal_ellipsoid = [0, 0, 0, 30, 1, 1]
         self.mag_cal_new_bias = [0, 0, 0, 30, 0]
+        self.mag_cal_ellipsoid = [0, 0, 0, 30, 1, 1]
         
         self.fusionQPose = False
         self.alignmentQ = False
@@ -186,19 +184,22 @@ class CompassCalibrationPlot():
                 return beta[3]*x+beta[:3]
             self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  64, 32);
 
+            self.mag_cal_new_bias = data['value'][1]
+            self.mag_fit_new_bias = Spherical(self.mag_cal_new_bias, fsphere,  64, 32);
+
             self.mag_cal_ellipsoid = data['value'][2]
             def fellipsoid(beta, x):
                 return numpy.array([beta[3]*x[0] + beta[0], \
                                     x[1]*beta[3]/beta[4] + beta[1], \
                                     x[2]*beta[3]/beta[5] + beta[2]])
             self.mag_fit_ellipsoid = Spherical(self.mag_cal_ellipsoid, fellipsoid,  64, 32);
-            self.mag_cal_new_bias = data['value'][3]
-            self.mag_fit_new_bias = Spherical(self.mag_cal_new_bias, fsphere,  64, 32);
-
-            self.mag_cal_q = data['value'][4]
 
         elif name == 'imu/fusionQPose':
             self.fusionQPose = data['value']
+
+
+
+
         elif name == 'imu/alignmentQ':
             self.alignmentQ = data['value']
         
