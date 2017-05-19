@@ -20,10 +20,12 @@ def wxglutkeypress(event, special, key):
     if event.GetKeyCode() in translation:
         special(translation[event.GetKeyCode()], event.GetPosition().x, event.GetPosition().y)
     else:
-        k = '%c' % (event.GetKeyCode()&255)
-        if not event.GetModifiers() & wx.MOD_SHIFT:
-            k = k.lower()
-        key(k, event.GetPosition().x, event.GetPosition().y)
+        code = event.GetKeyCode()
+        if code < 255:
+            k = '%c' % code
+            if not event.GetModifiers() & wx.MOD_SHIFT:
+                k = k.lower()
+            key(k, event.GetPosition().x, event.GetPosition().y)
 
 class SignalKScope(SignalKScopeBase):
     def __init__(self):

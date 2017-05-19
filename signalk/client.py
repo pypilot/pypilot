@@ -124,12 +124,15 @@ class SignalKClient(object):
 
         if timeout < 0:
             return False
+
+        t = time.time()
         try:
             if not self.poll(timeout):
                 return False
         except ConnectionLost:
             self.disconnected()
-        return self.receive_line(-1)
+        dt = time.time()-t
+        return self.receive_line(timeout - dt)
 
     def disconnected(self):
         self.socket.socket.close()
@@ -154,8 +157,6 @@ class SignalKClient(object):
         msg = self.receive_single(timeout)
         while msg:
             name, value = msg
-            if name in ret:
-                break
             ret[name] = value
             msg = self.receive_single(-1)
         return ret
@@ -187,7 +188,23 @@ class SignalKClient(object):
         request = {'method' : 'list'}
         self.send(request)
         return self.receive(10)
-
+    '''        
+        oneget = False
+        t = time.time()
+        ret = {}
+        done = False
+        while time.time() - t < 10 and not done:
+            msgs = self.receive(10)
+            for name in msgs:
+                if name == oneget:
+                    done = True
+                else:
+                    ret[name] = msgs[name]
+            if not oneget and msgs:
+                oneget = list(msgs)[0]
+                self.get(oneget)
+        return ret
+    '''
     def get(self, name):
         request = {'method' : 'get', 'name' : name}
         self.send(request)
