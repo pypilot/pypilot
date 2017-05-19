@@ -8,22 +8,19 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os, time, json
-persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
 
 class Value(object):
     def __init__(self, name, initial, **kwargs):
         self.name = name
         self.timestamp = False
         self.watchers = []
-        self.persistent = False # value is stored to config file
+        self.persistent = False
         self.set(initial)
         self.client_can_set = False
-        
+
+        # value is stored to config file
         if 'persistent' in kwargs and kwargs['persistent']:
-            timeout = 60
-            if 'persistent_timeout' in kwargs:
-                timeout = kwargs['persistent_timeout']
-            self.make_persistent(timeout)
+            self.persistent = True
 
     def type(self):
         return 'Value'
@@ -35,55 +32,11 @@ class Value(object):
     def get_signalk(self):
         return '{"' + self.name + '": {"value": ' + str(self.value) + '}}'
 
-    def make_persistent(self, timeout=0):
-        self.persistent = True
-        self.persistent_timeout = timeout
-        self.persistent_time = 0
-        data = {}
-        try:
-            file = open(persistent_path)
-            data = json.loads(file.readline())
-            file.close()
-        except:
-            print 'failed to load', persistent_path
-
-        if self.name in data:
-            self.value = data[self.name]
-
-    def need_persistent_store(self):
-        if not self.persistent:
-            return False
-        t = time.time()
-        if t-self.persistent_time < self.persistent_timeout:
-            return False
-        self.persistent_time = t
-        return True
-
-    def store_persistent(self):
-        data = {}
-        try:
-            file = open(persistent_path, 'r')
-            data = json.loads(file.readline().rstrip())
-            file.close()
-        except:
-            print 'failed to open', persistent_path
-
-        data[self.name] = self.value
-            
-        try:
-            file = open(persistent_path, 'w')
-            file.write(json.dumps(data)+'\n')
-            file.close()
-        except:
-            print 'failed to write', persistent_path
-
     def set(self, value):
         self.value = value
         self.send()
 
     def send(self):
-        if self.need_persistent_store():
-            self.store_persistent()
         if self.watchers:
             request = self.get_signalk() + '\n'
             for socket in self.watchers:
@@ -120,8 +73,8 @@ class StringValue(Value):
         return '{"' + self.name + '": {"value": ' + strvalue + '}}'
 
 class SensorValue(Value): # same as Value with added timestamp
-    def __init__(self, name, timestamp, initial=False):
-        super(SensorValue, self).__init__(name, initial)
+    def __init__(self, name, timestamp, initial=False, **kwargs):
+        super(SensorValue, self).__init__(name, initial, **kwargs)
         self.timestamp = timestamp
 
     def type(self):
@@ -160,6 +113,8 @@ class RangeProperty(Property):
     def __init__(self, name, initial, min_value, max_value, **kwargs):
         self.min_value = min_value
         self.max_value = max_value
+        if initial < min_value or initial > max_value:
+            raise 'invalid initial value for range property', name, initial
         super(RangeProperty, self).__init__(name, initial, **kwargs)
 
     def type(self):

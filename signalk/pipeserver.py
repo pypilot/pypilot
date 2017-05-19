@@ -7,8 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-# The pipe server communicates traffic via a pipe to
-# offload socket and parsing work to background process
+# the pipe server communicates traffic via a pipe to
+# offload socket and parsing work to a separate process
 
 import time
 from server import SignalKServer, DEFAULT_PORT
@@ -34,6 +34,13 @@ class SignalKPipeServerClient(SignalKServer):
 
       self.pipe_poller = select.poll()
       self.pipe_poller.register(pipe, select.POLLIN)
+      self.persistent_data = {}
+
+    def __del__(self):
+      print 'pipeserver cliet finishing all pipe messages'
+      while self.HandlePipeMessage():
+        pass
+      super(SignalKPipeServerClient, self).__del__()
 
     def Register(self, value):
       super(SignalKPipeServerClient, self).Register(value)
@@ -121,6 +128,12 @@ def pipe_server_process(pipe, port):
         pass
       time.sleep(.1)
 
+    # send persistent values to pipe server
+    server.LoadPersistentValues()
+    for name in server.persistent_data:
+      data = {'method': 'set', 'name': name, 'value': server.values[name].value}
+      server.pipe.send(data)
+
     while True:
       while server.HandlePipeMessage():
         pass
@@ -128,9 +141,9 @@ def pipe_server_process(pipe, port):
       server.HandleRequests(.1)
 
 
-class SignalKPipeServer:
+class SignalKPipeServer(object):
     def __init__(self, port=DEFAULT_PORT):
-        self.pipe, process_pipe = nonblockingpipe()
+        self.pipe, process_pipe = multiprocessing.Pipe()
         self.process = multiprocessing.Process(target=pipe_server_process, args=(process_pipe, port))
         self.process.start()
         self.values = {}
@@ -138,23 +151,45 @@ class SignalKPipeServer:
         self.timestamps = {}
         self.last_recv = time.time()
 
+        self.ResetPersistentState()
+        
         self.poller = select.poll()
         READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
         self.poller.register(self.pipe, READ_ONLY)
           
     def __del__(self):
-        self.process.terminate()
+      # ensure persistent values get sent to server process
+      self.SetPersistentValues()
+      self.pipe.send(self.sets)
+      self.process.terminate()
+        
+    def SetPersistentValues(self):
+      for name in self.persistent_sets:
+        if self.persistent_sets[name]:
+          self.sets[name] = self.values[name].value
+      self.ResetPersistentState()
 
+    def ResetPersistentState(self):
+        self.persistent_timeout = time.time()+600
+        self.persistent_sets = {}
+
+    def queue_send(self, value):
+      if value.timestamp:
+          self.sets[value.timestamp] = self.timestamps[value.timestamp]
+      self.sets[value.name] = value.value
+      if value.persistent:
+        self.persistent_sets[value.name] = False
+        
     def Register(self, value):
         self.pipe.send({'_register': value})
         self.values[value.name] = value
 
         def make_send():
             def send():
-                if value.watchers or value.need_persistent_store():
-                  if value.timestamp in self.timestamps:
-                    self.sets[value.timestamp] = self.timestamps[value.timestamp]
-                  self.sets[value.name] = value.value
+              if value.watchers:
+                self.queue_send(value)
+              elif value.persistent:
+                self.persistent_sets[value.name] = True
             return send
         value.send = make_send()
         return value
@@ -168,22 +203,29 @@ class SignalKPipeServer:
       name = request['name']
 
       if method == 'get':
-        value = self.values[name]
-        if value.timestamp:
-          self.sets[value.timestamp] = self.timestamps[value.timestamp]
-        self.sets[name] = value.value
+        self.queue_send(self.values[name])
       elif method == 'set':
         self.values[name].set(request['value'])
-        self.sets[name] = self.values[name].value
+        self.queue_send(self.values[name])
       elif method == 'watch':
           self.values[name].watchers = request['value']
         
     def HandleRequests(self, totaltime):            
         t0 = time.time()
+        if t0 >= self.persistent_timeout:
+          self.SendPersistentValues()
+        
         dt = totaltime
         while dt >= 0:
           if self.sets:
+            ta = time.time()
+            # should we break up sets if there are many!?!
+            if len(self.sets) > 20:
+              print 'warning, more than 20 values in pipe server', list(self.sets)
             self.pipe.send(self.sets)
+            dta = time.time() - ta
+            if dta > .01:
+              print 'too long to send sets down pipe', dta
             self.sets = {}
             dt = totaltime - (time.time()-t0)
   
