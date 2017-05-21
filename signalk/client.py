@@ -100,7 +100,7 @@ class SignalKClient(object):
         if events != []:
             event = events.pop()
             fd, flag = event
-            if flag & select.POLLERR:
+            if flag & (select.POLLERR | select.POLLNVAL):
                 raise ConnectionLost
             if flag & select.POLLIN:
                 if self.socket and not self.socket.recv():

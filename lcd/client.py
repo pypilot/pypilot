@@ -336,7 +336,8 @@ class LCDClient():
     def text(self, pos, text, size, crop=False):
         pos = int(pos[0]*self.surface.width), int(pos[1]*self.surface.height)
         size = int(size*self.surface.width/48)
-        font.draw(self.surface, pos, text, size, self.bw, crop)
+        size = font.draw(self.surface, pos, text, size, self.bw, crop)
+        return float(size[0])/self.surface.width, float(size[1])/self.surface.height
 
     def fittext(self, rect, text, wordwrap=False, crop=False):
         metric_size = 16
@@ -385,6 +386,8 @@ class LCDClient():
                     text = curtext
         else:
             s = font.draw(self.surface, False, text, metric_size, self.bw, crop)
+            if s[0] == 0 or s[1] == 0:
+                return 0, 0
             sw = self.surface.width * float(rect.width) / s[0]
             sh = self.surface.height * float(rect.height) / s[1]
             size = int(min(sw*metric_size, sh*metric_size))
@@ -417,6 +420,7 @@ class LCDClient():
                 self.surface.invert(box[0]+px_width, box[1]+px_width, box[2]-px_width, box[3]-px_width)
         
     def connect(self):
+        self.display_page = self.display_connecting
         watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command',
                      'servo/controller']
         poll_list = ['ap/heading']
@@ -617,15 +621,14 @@ class LCDClient():
 
     def display_connecting(self):
         self.surface.fill(black)
-        self.fittext(rectangle(0, 0, 1, .4), _('connect to server...'), True)
+        self.fittext(rectangle(0, 0, 1, .4), _('connect to server'), True)
         dots = ''
         for i in range(self.connecting_dots):
             dots += '.'
-        self.text((0, .4), dots, 12)
+        size = self.text((0, .4), dots, 12)
         self.connecting_dots += 1
-        if self.connecting_dots > 16:
+        if size[0] >= 1:
             self.connecting_dots = 0
-
         self.display_wifi()
             
     def display_info(self):
@@ -835,10 +838,14 @@ class LCDClient():
 
         while True:
             result = False
-            if self.client:
-                result = self.client.receive_single()
-            else:
+            if not self.client:
                 self.connect()
+                break
+            try:
+                result = self.client.receive_single()
+            except:
+                print 'disconnected'
+                self.client = False
 
             if not result:
                 break
