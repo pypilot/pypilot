@@ -35,7 +35,7 @@ def enumerate_devices(name):
             
     return existing_devices
 
-class SerialProbe:
+class SerialProbe(object):
     def __init__(self):
         self.gpsdevices = []
         self.lastworkingdevices = {}

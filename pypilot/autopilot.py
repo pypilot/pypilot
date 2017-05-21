@@ -33,7 +33,7 @@ def resolv(angle, offset=0):
         angle -= 360
     return angle
 
-class Filter:
+class Filter(object):
     def __init__(self,filtered, lowpass):
         self.filtered = filtered
         self.lowpass = lowpass
@@ -51,7 +51,7 @@ class Filter:
         filtered = self.filtered.value
         self.filtered.set(filtered + rate * (value-filtered))
         
-class FilterHeading():
+class FilterHeading(object):
   def __init__(self, *args, **keywords):
     super(FilterHeading, self).__init__(*args, **keywords)
     self.variables = []
@@ -77,14 +77,18 @@ class AutopilotBase(object):
   def __init__(self, *args, **keywords):
     super(AutopilotBase, self).__init__(*args, **keywords)
 
-    # setup all processes to exit on any signal
-    def cleanup(signal_number, frame):
-        exit(1)
+    if True:  # disabled debugging from keyboard interrupt
+        # setup all processes to exit on any signal
+        def cleanup(signal_number, frame):
+           # if signal_number == 2:
+            raise KeyboardInterrupt # to get backtrace on all processes
+            exit(1)
 
-    import signal
-    for s in range(1, 16):
-        if s != 9:
-            signal.signal(s, cleanup)
+        import signal
+        for s in range(1, 16):
+            if s != 9 and s!=2:
+                signal.signal(s, cleanup)
+            pass
 
     serial_probe = serialprobe.SerialProbe()
 #    self.server = SignalKServer()
@@ -92,7 +96,6 @@ class AutopilotBase(object):
     self.boatimu = BoatIMU(self.server)
     self.servo = servo.Servo(self.server, serial_probe)
     self.nmea = Nmea(self.server, serial_probe)
-
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
     self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
@@ -126,6 +129,9 @@ class AutopilotBase(object):
 #        time.sleep(.1)
 
   def __del__(self):
+      print 'closing autopilot'
+      self.server.__del__()
+
       if self.watchdog_device:
           print 'close watchdog'
           self.watchdog_device.write('V')
@@ -169,7 +175,7 @@ class AutopilotBase(object):
 
       #compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
       self.server.TimeStamp('ap', time.time()-self.starttime)
-      compass_heading = self.boatimu.SensorValues['heading'].value
+      compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
       if self.mode.value == 'compass':
           self.heading.set(compass_heading)
       elif self.mode.value == 'gps':

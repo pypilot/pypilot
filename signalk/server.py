@@ -14,7 +14,7 @@ from values import *
 
 DEFAULT_PORT = 21311
 max_connections = 20
-
+default_persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
 
 from signalk.linebuffer import linebuffer
 #class LineBufferedNonBlockingSocket(linebuffer.LineBuffer):
@@ -91,11 +91,8 @@ class LineBufferedNonBlockingSocketPytho(object):
             self.no_newline_pos += 1
         return ''
 
-
-   
-
 class SignalKServer(object):
-    def __init__(self, port=DEFAULT_PORT):
+    def __init__(self, port=DEFAULT_PORT, persistent_path=default_persistent_path):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setblocking(0)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -106,14 +103,54 @@ class SignalKServer(object):
         self.values = {}
         self.timestamps = {}
 
+        self.persistent_path = persistent_path
+        self.persistent_timeout = 0
+        self.LoadPersistentValues()
+
     def __del__(self):
+        self.StorePersistentValues()
         self.server_socket.close()
         for socket in self.sockets:
             socket.socket.close()
 
+    def LoadPersistentValues(self):
+        try:
+            file = open(self.persistent_path)
+            self.persistent_data = json.loads(file.readline())
+            file.close()
+        except:
+            print 'failed to load', self.persistent_path
+            self.persistent_data = {}
+            
+    def StorePersistentValues(self):
+        self.persistent_timeout = time.time() + 600 # 10 minutes
+        persistent_data = {}
+        need_store = False
+        for name in self.values:
+            value = self.values[name]
+            if not value.persistent:
+                continue
+            if not name in self.persistent_data or self.values[name].value != self.persistent_data[name]:
+                need_store = True
+            persistent_data[name] = self.values[name].value
+
+        if not need_store:
+            return
+                
+        try:
+            file = open(self.persistent_path, 'w')
+            file.write(json.dumps(persistent_data)+'\n')
+            file.close()
+        except:
+            print 'failed to write', self.persistent_path
+
     def Register(self, value):
+        if value.persistent and value.name in self.persistent_data:
+            value.value = self.persistent_data[value.name]
+
         if value.name in self.values:
             print 'warning, registering existing value:', value.name
+            
         self.values[value.name] = value
         return value
 
@@ -202,7 +239,14 @@ class SignalKServer(object):
           self.poller = select.poll()
           self.poller.register(self.server_socket, READ_ONLY)
         
-      t1 = t2 = time.time()
+      t1 = time.time()
+      if t1 >= self.persistent_timeout:
+          self.StorePersistentValues()
+          if time.time() - t1 > totaltime:
+              print 'persistent store took too long!', time.time() - t1
+              return
+
+      t2 = time.time()
       while t2 - t1 < totaltime:
         dt = t2 - t1
         if dt > totaltime:
@@ -216,7 +260,7 @@ class SignalKServer(object):
             socket = self.fd_to_socket[fd]
             if socket == self.server_socket:
                 connection, address = socket.accept()
-                print 'new client', address
+                #print 'new client', address
                 if len(self.sockets) == max_connections:
                     print 'max connections reached!!!', len(self.sockets)
                     self.RemoveSocket(self.sockets[0]) # dump first socket

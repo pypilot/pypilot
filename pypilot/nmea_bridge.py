@@ -20,7 +20,7 @@ import sys, select, time, socket
 import multiprocessing
 from signalk.client import SignalKClient
 from signalk.server import LineBufferedNonBlockingSocket
-from signalk.pipeserver import nonblockingpipe
+_
 
 # nmea uses a simple xor checksum
 def cksum(msg):
@@ -29,7 +29,7 @@ def cksum(msg):
         value ^= ord(c)
     return '%02x' % (value & 255)
 
-class NmeaBridge:
+class NmeaBridge(object):
     def __init__(self, server, gps, wind):
         self.process = False
         self.server = server

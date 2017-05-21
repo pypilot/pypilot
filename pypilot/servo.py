@@ -34,7 +34,7 @@ def interpolate(x, x0, x1, y0, y1):
 # the pwm0 output from the raspberry pi directly to
 # a servo or motor controller
 # there is no current feedback, instead a fault pin is used
-class RaspberryHWPWMServoDriver:
+class RaspberryHWPWMServoDriver(object):
     def __init__(self):
         import wiringpi
         wiringpi.wiringPiSetup()
@@ -97,34 +97,13 @@ class ServoFlags(Value):
     def get_signalk(self):
         return '{"' + self.name + '": {"value": "' + self.strvalue() + '"}}'
 
-class ServoTelemetry:
+class ServoTelemetry(object):
     CURRENT = 1
     VOLTAGE = 2
     TEMPERATURE = 4
     SPEED = 8
     POSITION = 16
     FLAGS = 32
-
-
-# special case for servo calibration, and to convert the map key
-class CalibrationProperty(Property):
-    def __init__(self, name, initial):
-        super(CalibrationProperty, self).__init__(name, initial)
-
-    def set(self, value):
-        nvalue = {}
-        for cal in value:
-            nvalue[round(1000*float(cal))/1000.0] = map(lambda x : round(1000*x)/1000.0, value[cal])
-        if not 0 in nvalue: #remove?
-            nvalue[0] = 0, 0, 0, 12, 0
-
-        return super(CalibrationProperty, self).set(nvalue)
-
-    def get_signalk(self):
-        strkey = {}
-        for key in self.value:
-            strkey[str(key)] = self.value[key]
-        return '{"' + self.name + '": {"value": ' + json.dumps(strkey) + '}}'
 
 
 # a property which records the time when it is updated
@@ -137,16 +116,25 @@ class TimedProperty(Property):
         self.time = time.time()
         return super(TimedProperty, self).set(value)
     
-class Servo:
+class Servo(object):
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
 
     def __init__(self, server, serialprobe):
         self.server = server
         self.serialprobe = serialprobe
         self.fwd_fault = self.rev_fault = False
-        self.min_speed = self.Register(RangeProperty, 'Min Speed', .3, 0, 1, persistent=True)
+
+        self.calibration = self.Register(JSONValue, 'calibration', {})
+        self.load_calibration()
+
+        if 'Min Speed' in self.calibration.value:
+            min_speed = self.calibration.value['Min Speed']
+        else:
+            min_speed = 0
+        self.min_speed = self.Register(RangeProperty, 'Min Speed', max(min_speed, .3), min_speed, 1, persistent=True)
         self.max_speed = self.Register(RangeProperty, 'Max Speed', 1, 0, 1, persistent=True)
-        self.brake_hack = self.Register(BooleanProperty, 'Brake Hack', True, persistent=True)
+        brake_hack = 'Brake Hack' in self.calibration.value and self.calibration.value['Brake Hack']
+        self.brake_hack = self.Register(BooleanProperty, 'Brake Hack', brake_hack, persistent=True)
         self.brake_hack_state = 0
 
         # power usage
@@ -161,11 +149,8 @@ class Servo:
         self.slow_period = self.Register(RangeProperty, 'Slow Period', 1.5, .1, 10, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
-        self.amphours = self.Register(ResettableValue, 'Amp Hours', 0, persistent=True, persistent_timeout=300)
+        self.amphours = self.Register(ResettableValue, 'Amp Hours', 0, persistent=True)
         self.watts = self.Register(SensorValue, 'Watts', timestamp)
-
-        self.calibration = self.Register(CalibrationProperty, 'calibration', {})
-        self.load_calibration()
 
         self.position = .5
         self.speed = 0
@@ -202,98 +187,7 @@ class Servo:
             self.raw_command(0)
             return
 
-        # complete integration from previous step
-        t = time.time()
-        dt = t - self.lastpositiontime
-        self.lastpositiontime = t
-        #        print 'integrate pos', self.position, self.speed, speed, dt
-
-        self.position += self.speed * dt
-        self.position = min(max(self.position, 0), 1)
-
-        # get current
-        ampseconds = 3600*(self.amphours.value - self.lastpositionamphours)
-        current = ampseconds / dt
-        self.lastpositionamphours = self.amphours.value
-
-        speed = max(min(speed, self.max_speed.value),-self.max_speed.value)
-
-        # apply calibration
-        cal0 = cal1 = False
-        for calspeed in sorted(self.calibration.value):
-            if calspeed != 0 and abs(calspeed) < self.min_speed.value:
-                continue
-            
-            cal = self.calibration.value[calspeed]
-            command, idle_current, stall_current, cal_voltage, dt = cal
-            if self.compensate_current.value:
-                #1 = m*idle_current + b
-                #0 = m*stall_current + b
-
-                if idle_current  - stall_current == 0:
-                    factor = 1
-                else:
-                    m = 1/(idle_current  - stall_current)
-                    b = -m*stall_current
-                    factor = m*self.current.value + b
-                    print "factor", factor, idle_current, self.current.value, calspeed
-                calspeed *= factor
-
-            if self.compensate_voltage.value:
-                calspeed *= cal_voltage / self.voltage.value
-
-#            print 'speed', speed, calspeed
-            if speed < calspeed:
-                calspeed1 = calspeed
-                cal1 = cal
-                break
-
-            calspeed0 = calspeed
-            cal0 = cal
-
-        duty = 1
-        if not cal0: # minimum calibrated speed
-            cal = cal1
-            speed = calspeed1
-        elif not cal1: # maximum calibrated speed
-            cal = cal0
-            speed = calspeed0
-        else:
-            if False: # interpolate
-#            print 'speed', cal0, cal1, speed, calspeed0, calspeed1
-                cal = map(lambda x, y :
-                          interpolate(speed, calspeed0, calspeed1, x, y), cal0, cal1)
-            else:
-                duty = (speed - calspeed0)/(calspeed1 - calspeed0)
-                slow_period = self.slow_period.value
-
-                # move at least 1/2th of a second
-                minduty = .35 / slow_period
-
-                # double slow period until we get a duty so the motor will run
-                # at least 1/3rd of a second
-                if duty > 0 and duty < 1:
-                    while duty < minduty or duty > 1-minduty:
-                        slow_period *= 2
-                        minduty /= 2
-                #print 'duty', minduty, duty, slow_period, calspeed0, calspeed1
-
-                if (time.time() % slow_period) / slow_period > duty:
-                    speed = calspeed0
-                    cal = cal0
-                else:
-                    speed = calspeed1
-                    cal = cal1
-#            print 'duty', duty, speed, (time.time() % self.slow_period.value) / self.slow_period.value
-        command, idle_current, stall_current, voltage, dt = cal
-
-#        max_current = stall_current
-        max_current = self.max_current.value
-        if self.compensate_voltage.value:
-            max_current *= self.voltage.value/voltage
-
         if self.fault():
-            #print 'fault, should stop and reset', self.fault(), self.current.value, current, max_current, idle_current, stall_current
             if self.speed > 0:
                 self.fwd_fault = True
                 self.position = 1
@@ -304,15 +198,70 @@ class Servo:
             self.stop()
             return
 
+        if self.fwd_fault and speed > 0 or \
+           self.rev_fault and speed < 0:
+            self.raw_command(0)
+            return # abort
+
+
+        # complete integration from previous step
+        t = time.time()
+        dt = t - self.lastpositiontime
+        self.lastpositiontime = t
+        #        print 'integrate pos', self.position, self.speed, speed, dt
+
+        self.position += self.speed * dt
+        self.position = min(max(self.position, 0), 1)
         if self.position < .9:
             self.fwd_fault = False
         if self.position > .1:
             self.rev_fault = False
+            
+        # clamp to max speed
+        abs_speed = min(abs(speed), self.max_speed.value)
+        if self.compensate_voltage.value:
+            abs_speed *= 12 / self.voltage.value
+        if self.compensate_current.value:
+            # get current
+            ampseconds = 3600*(self.amphours.value - self.lastpositionamphours)
+            current = ampseconds / dt
+            self.lastpositionamphours = self.amphours.value
+            pass #todo fix this
+        
+        duty = 1
+        min_speed = self.min_speed.value
+        if abs_speed < min_speed:
+            duty = abs_speed / min_speed
+            slow_period = self.slow_period.value
 
-        if self.fwd_fault and command > 0 or \
-           self.rev_fault and command < 0:
-            self.raw_command(0)
-            return # abort
+            # move at least 1/2th of a second
+            minduty = .35 / slow_period
+
+            # double slow period until we get a duty so the motor will run
+            # at least 1/3rd of a second
+            if duty > 0 and duty < 1:
+                while duty < minduty or duty > 1-minduty:
+                    slow_period *= 2
+                    minduty /= 2
+                    #print 'duty', minduty, duty, slow_period, calspeed0, calspeed1
+
+            if (time.time() % slow_period) / slow_period > duty:
+                self.speed = 0
+                self.raw_command(0)
+                return
+            abs_speed = min_speed
+
+#        max_current = stall_current
+        max_current = self.max_current.value
+        if self.compensate_voltage.value:
+            max_current *= self.voltage.value/voltage
+
+        if speed > 0:
+            cal = self.calibration.value['forward']
+        else:
+            cal = self.calibration.value['reverse']
+        raw_speed = cal[0] + abs_speed*cal[1]
+        command = raw_speed if speed > 0 else -raw_speed
 
         self.speed = speed
         self.raw_command(command)

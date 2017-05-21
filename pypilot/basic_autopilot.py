@@ -13,28 +13,32 @@ import servo
 def minmax(value, r):
   return min(max(value, -r), r)
 
-class SimpleAutopilot(AutopilotBase):
+class BasicAutopilot(AutopilotBase):
   def __init__(self, *args, **keywords):
-    super(SimpleAutopilot, self).__init__(*args, **keywords)
+    super(BasicAutopilot, self).__init__(*args, **keywords)
 
     # create filters
-    self.heading_error = self.Register(SensorValue, 'heading_error', 0)
-    self.heading_error_int = self.Register(SensorValue, 'heading_error_int', 0)
+    timestamp = self.server.TimeStamp('ap')
+    self.heading_error = self.Register(SensorValue, 'heading_error', timestamp)
+    self.heading_error_int = self.Register(SensorValue, 'heading_error_int', timestamp)
     self.heading_error_int_time = time.time()
     
     # create simple pid filter
     self.gains = {}
-    timestamp = self.server.TimeStamp('ap')
     def Gain(name, default, max_val):
       self.gains[name] = (self.Register(AutopilotGain, name, default, 0, max_val),
                           self.Register(SensorValue, name+'gain', timestamp))
     Gain('P', .005, .025)
-    Gain('I', 0, .05)
-    Gain('D', .15, .5)
+    Gain('I',    0, .05)
+    Gain('D',  .15, .5)
+
+    Gain('P2', 0, .025)
+    Gain('PD', 0, .1)
+    Gain('D2', 0, 1)
 
   def process_imu_data(self, boatimu):
     heading = self.heading.value
-    headingrate = boatimu.SensorValues['headingrate'].value
+    headingrate = boatimu.SensorValues['headingrate_lowpass'].value
 
     heading_command = self.heading_command.value
 
@@ -56,6 +60,12 @@ class SimpleAutopilot(AutopilotBase):
     gain_values = {'P': self.heading_error.value,
                    'I': self.heading_error_int.value,
                    'D': headingrate}
+    gain_values['P2'] = abs(gain_values['P'])*gain_values['P']
+    if gain_values['P']*gain_values['D'] > 0:
+      gain_values['PD'] = abs(gain_values['P'])*gain_values['D']
+    else:
+      gain_values['PD'] = 0
+    gain_values['D2'] = abs(gain_values['D'])*gain_values['D']
 
     self.server.TimeStamp('ap', t)
     for gain in self.gains:
@@ -67,7 +77,7 @@ class SimpleAutopilot(AutopilotBase):
     self.servo.command.set(command)
 
 def main():
-  ap = SimpleAutopilot()
+  ap = BasicAutopilot()
   ap.run()
 
 if __name__ == '__main__':

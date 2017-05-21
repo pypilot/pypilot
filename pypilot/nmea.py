@@ -25,7 +25,6 @@ import multiprocessing
 import serial
 from signalk.client import SignalKClient
 from signalk.server import SignalKServer
-from signalk.pipeserver import nonblockingpipe
 from signalk.values import *
 from serialprobe import SerialProbe
 from gpsdpoller import GpsdPoller
@@ -92,7 +91,7 @@ def parse_nmea_wind(line):
     return 'wind', {'direction': float(data[1]), 'speed': speed}
 
 # because serial.readline() is very slow
-class LineBufferedSerialDevice:
+class LineBufferedSerialDevice(object):
     def __init__(self, path):
         self.device = serial.Serial(*path)
         self.device.timeout=0 #nonblocking
@@ -161,7 +160,7 @@ class NMEASocket(object):
             self.socket.close()
 
     
-class Nmea:
+class Nmea(object):
     def __init__(self, server, serialprobe):
         self.server = server
         self.values = {'gps': {}, 'wind': {}}
@@ -182,91 +181,87 @@ class Nmea:
         self.devices_lastmsg = {}
         self.probedevice = None
         self.primarydevices = {'gps': None, 'wind': None}
+        self.gpsdpoller = GpsdPoller(self)
 
         self.process = NmeaBridgeProcess()
         self.process.start()
         READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
         self.poller = select.poll()
-        self.poller.register(self.process.pipe.fileno(), READ_ONLY)
         self.process_fd = self.process.pipe.fileno()
+        self.poller.register(self.process_fd, READ_ONLY)
+        self.gps_fd = self.gpsdpoller.process.pipe.fileno()
+        self.poller.register(self.gps_fd, READ_ONLY)
         self.device_fd = {}
 
         self.nmea_times = {}
-        self.gpsdpoller = GpsdPoller(self)
         self.last_imu_time = time.time()
         self.starttime = time.time()
 
     def __del__(self):
         if self.gps.process:
+            print 'terminate gps process'
             self.gps.process.terminate()
+        print 'terminate nmea process'
         self.process.terminate()
 
     def read_process_pipe(self):
-        while True:
-            try:
-                msgs = self.process.pipe.recv()
-            except IOError:
-                break
-
-            if msgs == 'sockets':
-                self.process.sockets = True
-            elif msgs == 'nosockets':
-                self.process.sockets = False
-            else:
-                self.handle_messages(msgs, 'tcp')
+        msgs = self.process.pipe.recv()
+        if msgs == 'sockets':
+            self.process.sockets = True
+        elif msgs == 'nosockets':
+            self.process.sockets = False
+        else:
+            self.handle_messages(msgs, 'tcp')
 
     def read_serial_device(self, device, serial_msgs):
         t = time.time()
-        while True:
-            line = device.readline()
-            if not line:
-                break
-            if self.process.sockets:
-                nmea_name = line[:6]
-                # do not output nmea data over tcp faster than 2hz
-                # for each message time
-                if not nmea_name in self.nmea_times or t-self.nmea_times[nmea_name]>.5:
-                    self.process.pipe.send(line)
-                    self.nmea_times[nmea_name] = t
+        line = device.readline()
+        if not line:
+            return
+        if self.process.sockets:
+            nmea_name = line[:6]
+            # do not output nmea data over tcp faster than 2hz
+            # for each message time
+            if not nmea_name in self.nmea_times or t-self.nmea_times[nmea_name]>.5:
+                self.process.pipe.send(line)
+                self.nmea_times[nmea_name] = t
 
-            self.devices_lastmsg[device] = t
-            parsers = []
-            if not self.primarydevices['wind'] or self.primarydevices['wind'] == device:
-                parsers.append(parse_nmea_wind)
-            if self.values['gps']['source'] != 'gpsd' and \
-               (not self.primarydevices['gps'] or self.primarydevices['gps'] == device):
-                parsers.append(parse_nmea_gps)
+        self.devices_lastmsg[device] = t
+        parsers = []
+        if not self.primarydevices['wind'] or self.primarydevices['wind'] == device:
+            parsers.append(parse_nmea_wind)
+        if self.values['gps']['source'] != 'gpsd' and \
+           (not self.primarydevices['gps'] or self.primarydevices['gps'] == device):
+            parsers.append(parse_nmea_gps)
                 
-            for parser in parsers:
-                result = parser(line)
-                if result:
-                    name, msg = result
-                    if not self.primarydevices[name]:
-                        print 'found primary serial device for', name
-                        self.primarydevices[name] = device
-                    serial_msgs[name] = msg
-                    break
+        for parser in parsers:
+            result = parser(line)
+            if result:
+                name, msg = result
+                if not self.primarydevices[name]:
+                    print 'found primary serial device for', name
+                    self.primarydevices[name] = device
+                serial_msgs[name] = msg
+                break
 
     def poll(self):
         self.probe_serial()
         
         # handle tcp nmea messages
         serial_msgs = {}
-        if True:
+        while True:
             events = self.poller.poll(0)
+            if not events:
+                break
             while events:
                 event = events.pop()
                 fd, flag = event
                 if fd == self.process_fd:
                     self.read_process_pipe()
+                elif fd == self.gps_fd:
+                    self.gpsdpoller.read()
                 else:
-                    device = self.device_fd[fd]
-                    self.read_serial_device(device, serial_msgs)
-        else:
-            if self.poller.poll(0):
-                self.read_process_pipe()
-            for device in self.devices:
-                self.read_serial_device(device, serial_msgs)
+                    self.read_serial_device(self.device_fd[fd], serial_msgs)
 
         self.handle_messages(serial_msgs, 'serial')
                 
@@ -284,7 +279,6 @@ class Nmea:
                         self.primarydevices[name] = None
                 device.close()
 
-        self.gpsdpoller.poll()
         if self.process.sockets and time.time() - self.last_imu_time > .5 and \
            'imu/pitch' in self.server.values:
             self.send_nmea('APXDR,A,%.3f,D,PTCH' % self.server.values['imu/pitch'].value)
@@ -346,7 +340,7 @@ class Nmea:
 READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
 class NmeaBridgeProcess(multiprocessing.Process):
     def __init__(self):
-        self.pipe, pipe = nonblockingpipe()
+        self.pipe, pipe = multiprocessing.Pipe()
         self.sockets = False
         super(NmeaBridgeProcess, self).__init__(target=self.process, args=(pipe,))
 
@@ -401,13 +395,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
         if flag != select.POLLIN:
             print 'nmea bridge lost pipe to autopilot'
             exit(2)
-        while True:
-            try:
-                msg = self.pipe.recv() + '\r\n'
-                for sock in self.sockets:
-                    sock.send(msg)
-            except IOError:
-                break
+        msg = self.pipe.recv() + '\r\n'
+        for sock in self.sockets:
+            sock.send(msg)
 
     def socket_lost(self, sock):
         #print 'lost connection: ', self.addresses[sock]
@@ -476,20 +466,30 @@ class NmeaBridgeProcess(multiprocessing.Process):
         self.poller.register(server, READ_ONLY)
         self.poller.register(pipe, READ_ONLY)
         self.fd_to_socket = {server.fileno() : server, pipe.fileno() : pipe}
+
+        self.pipe_poller = select.poll()
+        self.pipe_poller.register(pipe, READ_ONLY)
+
         while True:
             timeout = 100 if self.sockets else 10000
             t0 = time.time()
             events = self.poller.poll(timeout)
             msgs = {}
             while events:
-                event = events.pop()
-                fd, flag = event
+                fd, flag = events.pop()
                 sock = self.fd_to_socket[fd]
 
                 if sock == server:
                     self.new_socket_connection(server)
                 elif sock == pipe:
                     self.pipe_message(flag)
+                    while True: # receive all messages in pipe
+                        events = self.pipe_poller.poll(0)
+                        if not events:
+                            break
+                        fd, flag = events.pop()
+                        self.pipe_message(flag)
+                        
                 elif flag & (select.POLLHUP | select.POLLERR):
                     self.socket_lost(sock)
                 elif flag & select.POLLIN:

@@ -21,7 +21,7 @@ from calibration_fit import MagnetometerAutomaticCalibration
 import vector
 import quaternion
 from signalk.server import SignalKServer
-from signalk.pipeserver import SignalKPipeServer, nonblockingpipe
+from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 
 try:
@@ -40,8 +40,7 @@ def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
     s.FusionType = 1
     s.CompassCalValid = False
 
-    s.CompassCalEllipsoidOffset = tuple(compass_cal[:3])
-    
+    s.CompassCalEllipsoidOffset = tuple(compass_cal[:3])  
     s.CompassCalEllipsoidValid = True
     s.MPU9255AccelFsr = 0 # +- 2g
     s.MPU9255GyroFsr = 0 # +- 250 deg/s
@@ -83,6 +82,9 @@ def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
       time.sleep(.1)
 
       c = 0
+      cal_poller = select.poll()
+      cal_poller.register(cal_pipe, select.POLLIN)
+
       while True:
         t0 = time.time()
         
@@ -96,14 +98,11 @@ def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
           print 'failed to read IMU!!!!!!!!!!!!!!'
           break # reinitialize imu
 
-        try:
+        if cal_poller.poll(0):
           new_cal = cal_pipe.recv()
           s.CompassCalEllipsoidValid = True
           s.CompassCalEllipsoidOffset = new_cal
           #rtimu.resetFusion()
-        except IOError:
-          pass
-
         
         dt = time.time() - t0
         t = .1 - dt # 10hz
@@ -177,6 +176,19 @@ class QuaternionValue(ResettableValue):
     def set(self, value):
       super(QuaternionValue, self).set(quaternion.normalize(value))
 
+def heading_filter(lp, a, b):
+    if not a:
+        return b
+    if not b:
+        return a
+    if a - b > 180:
+        a -= 360
+    elif b - a > 180:
+        b -= 360
+    result = lp*a + (1-lp)*b
+    if result < 0:
+        result += 360
+    return result
 
 class BoatIMU(object):
   def __init__(self, server, *args, **keywords):
@@ -192,41 +204,50 @@ class BoatIMU(object):
     self.uptime = self.Register(AgeValue, 'uptime')
     self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age')
 
-    self.compass_calibration = self.Register(RoundedValue, 'compass_calibration', [[0, 0, 0, 30], 0, [0, 0, 0, 30, 1, 1], [0, 0, 0, 30, 0], [1, 0, 0, 0]], persistent=True)
+    self.compass_calibration = self.Register(RoundedValue, 'compass_calibration', [[0, 0, 0, 30, 0], [0, 0, 0, 30], [0, 0, 0, 30, 1, 1]], persistent=True)
 
     self.compass_calibration_sigmapoints = self.Register(RoundedValue, 'compass_calibration_sigmapoints', False)
-    self.imu_pipe = nonblockingpipe()
-    imu_cal_pipe = nonblockingpipe()
+    self.compass_calibration_locked = self.Register(BooleanProperty, 'compass_calibration_locked', False, persistent=True)
+    
+    self.imu_pipe, imu_pipe = multiprocessing.Pipe(duplex=False)
+    imu_cal_pipe = multiprocessing.Pipe(duplex=False)
 
     self.poller = select.poll()
-    self.poller.register(self.imu_pipe[0], select.POLLIN)
-    
-    #if self.load_calibration():
-    #  imu_cal_pipe.put(tuple(self.compass_calibration.value[0][:3]))
+    self.poller.register(self.imu_pipe, select.POLLIN)
 
-    self.compass_auto_cal = MagnetometerAutomaticCalibration(imu_cal_pipe[0], self.compass_calibration.value[0])
+    self.compass_auto_cal = MagnetometerAutomaticCalibration(imu_cal_pipe[1], self.compass_calibration.value[0])
 
     self.lastqpose = False
     self.FirstTimeStamp = False
 
     self.headingrate = self.heel = 0
-    self.heading_lowpass3 = self.heading_lowpass3a = self.heading_lowpass3b = False
+    self.heading_lowpass_constant = self.Register(RangeProperty, 'heading_lowpass_constant', .1, .01, .5)
+    self.headingrate_lowpass_constant = self.Register(RangeProperty, 'headingrate_lowpass_constant', .05, .01, .25)
 
+      
+    sensornames = ['fusionQPose', 'accel', 'gyro', 'compass', 'accelresiduals', 'pitch', 'roll', 'heading']
+
+    sensornames += ['pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']
+    sensornames += ['heading_lowpass', 'headingrate_lowpass']
+    
     self.SensorValues = {}
     timestamp = server.TimeStamp('imu')
-    for name in ['fusionQPose', 'accel', 'gyro', 'compass', 'gyrobias', 'accelresiduals', 'heading_lowpass', 'heading_rate_lowpass', 'pitch', 'roll', 'heading', 'pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']:
+    for name in sensornames:
       self.SensorValues[name] = self.Register(SensorValue, name, timestamp)
 
-    self.SensorValues['gyrobias'].make_persistent(120) # write gyrobias every 2 minutes
+    sensornames += ['gyrobias']
+    self.SensorValues['gyrobias'] = self.Register(SensorValue, 'gyrobias', timestamp, persistent=True)
 
-    self.imu_process = multiprocessing.Process(target=imu_process, args=(self.imu_pipe[1],imu_cal_pipe[1], self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
+    self.imu_process = multiprocessing.Process(target=imu_process, args=(imu_pipe,imu_cal_pipe[0], self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
+    self.imu_process.start()
+
     self.last_imuread = time.time()
     self.lasttimestamp = 0
     self.last_heading_off = 0
 
   def __del__(self):
+    print 'terminate imu process'
     self.imu_process.terminate()
-    self.compass_auto_cal.process.terminate()
 
   def Register(self, _type, name, *args, **kwargs):
     value = _type(*(['imu/' + name] + list(args)), **kwargs)
@@ -239,16 +260,11 @@ class BoatIMU(object):
     o = quaternion.angvec2quat(off*math.pi/180, [0, 0, 1])
     self.alignmentQ.update(quaternion.normalize(quaternion.multiply(q, o)))
 
-  def IMURead(self):
-    if not self.imu_process.is_alive():
-      print 'launching imu process...'
-      self.imu_process.start()
-      return False
-    
+  def IMURead(self):    
     data = False
 
-    while self.poller.poll(0): # read all the data from the non-blocking pipe
-      data = self.imu_pipe[0].recv()
+    while self.poller.poll(0): # read all the data from the pipe
+      data = self.imu_pipe.recv()
 
     if not data:
       if time.time() - self.last_imuread > 1 and self.loopfreq.value:
@@ -296,42 +312,24 @@ class BoatIMU(object):
 
     data['heel'] = self.heel = data['roll']*.05 + self.heel*.95
 
-    def heading_filter(lp, a, b):
-      if not a:
-        return b
-      if not b:
-        return a
-      if a - b > 180:
-        a -= 360
-      elif b - a > 180:
-        b -= 360
-      result = llp*a + (1-llp)*b
-      if result < 0:
-        result += 360
-      return result
-
-    # third order lowpass
-    llp = .2
-#    self.heading_lowpass3a = heading_filter(llp, data['heading'], self.heading_lowpass3a)
-#    self.heading_lowpass3b = heading_filter(llp, self.heading_lowpass3a, self.heading_lowpass3b)
-#    self.heading_lowpass3 = heading_filter(llp, self.heading_lowpass3b, self.heading_lowpass3)
-
- #   data['heading_lowpass'] = self.heading_lowpass3
-    data['heading_lowpass'] = data['heading']
-
-    llp = .1
-    data['heading_rate_lowpass'] = llp*data['heading_rate'] + (1-llp)*self.SensorValues['heading_rate_lowpass'].value
-
     data['gyro'] = map(math.degrees, data['gyro'])
     data['gyrobias'] = map(math.degrees, data['gyrobias'])
 
+    # lowpass heading and rate
+    llp = self.heading_lowpass_constant.value
+    data['heading_lowpass'] = heading_filter(llp, data['heading'], self.SensorValues['heading_lowpass'].value)
+
+    llp = self.headingrate_lowpass_constant.value
+    data['headingrate_lowpass'] = llp*data['headingrate'] + (1-llp)*self.SensorValues['headingrate_lowpass'].value
+
+    # set sensors
     self.server.TimeStamp('imu', data['timestamp'])
     for name in self.SensorValues:
       self.SensorValues[name].set(data[name])
 
-    # in main process:
-    down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(origfusionQPose))
-    self.compass_auto_cal.AddPoint(list(data['compass']) + down)
+    if not self.compass_calibration_locked.value:
+      down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(origfusionQPose))
+      self.compass_auto_cal.AddPoint(list(data['compass']) + down)
 
     self.uptime.update()
 
@@ -360,7 +358,7 @@ class BoatIMU(object):
       self.last_heading_off = self.heading_off.value
 
     result = self.compass_auto_cal.UpdatedCalibration()
-    if result:
+    if result and not self.compass_calibration_locked.value:
       self.compass_calibration_sigmapoints.set(result[1])
 
       if result[0]:

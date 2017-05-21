@@ -11,11 +11,10 @@ import gps, multiprocessing, time, socket
 import select
 
 from signalk.values import *
-from signalk.pipeserver import nonblockingpipe
 
 class GpsProcess(multiprocessing.Process):
     def __init__(self):
-        self.pipe, pipe = nonblockingpipe()
+        self.pipe, pipe = multiprocessing.Pipe(duplex=False)
         super(GpsProcess, self).__init__(target=self.gps_process, args=(pipe, ))
         self.devices = []
 
@@ -61,7 +60,7 @@ class GpsProcess(multiprocessing.Process):
             self.connect()
             self.read(pipe)
             
-class GpsdPoller():
+class GpsdPoller(object):
     def __init__(self, nmea):
         self.nmea = nmea
 
@@ -75,15 +74,8 @@ class GpsdPoller():
         self.poller = select.poll()
         self.poller.register(self.process.pipe.fileno(), READ_ONLY)
 
-    def poll(self):
-        # flush queue entries
-        if not self.poller.poll(0):
-            return
-
-        try:
-            fix = self.process.pipe.recv()
-        except IOError:
-            return
+    def read(self):
+        fix = self.process.pipe.recv()
 
         if 'device' in fix:
             self.devices.append(fix['device'])
