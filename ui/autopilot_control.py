@@ -97,7 +97,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.client.set('servo/command', 0)
 
     def servo_command(self, command):
-        if self.lastcommand != command:
+        if self.lastcommand != command or command != 0:
             self.lastcommand = command
 
             self.client.set('servo/command', command)
