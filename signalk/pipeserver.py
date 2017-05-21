@@ -11,33 +11,49 @@
 # offload socket and parsing work to a separate process
 
 import time
-from server import SignalKServer, DEFAULT_PORT
+from server import SignalKServer, DEFAULT_PORT, default_persistent_path
 from values import *
 import multiprocessing
 import select
 
+class nonblockingpipe: #for debugging
+    def __init__(self, pipe):
+        self.pipe = pipe
+        self.pollin = select.poll()
+        self.pollin.register(self.pipe, select.POLLIN)
+        self.pollout = select.poll()
+        self.pollout.register(self.pipe, select.POLLOUT)
 
-def nonblockingpipe():
-  import _multiprocessing, socket
-  s = socket.socketpair()
-  map(lambda t : t.setblocking(False), s)
-  p = map(lambda t : _multiprocessing.Connection(os.dup(t.fileno())), s)
-  s[0].close(), s[1].close()
-  return p
+    def fileno(self):
+      return self.pipe.fileno()
+        
+    def recv(self, timeout=0):
+        if self.pollin.poll(1000.0*timeout):
+            return self.pipe.recv()
+        print 'error pipe block on recv'
+        return False
+
+    def send(self, value):
+        if not self.pollout.poll(0):
+            print 'pipeserver pipe full, cannot send:', value
+            return
+        self.pipe.send(value)
+
+def duplexnonblockingpipe():
+  pipe = multiprocessing.Pipe()
+  return nonblockingpipe(pipe[0]), nonblockingpipe(pipe[1])
 
 class SignalKPipeServerClient(SignalKServer):
-    def __init__(self, pipe, port):
-      super(SignalKPipeServerClient, self).__init__(port)
+    def __init__(self, pipe, port, persistent_path):
+      super(SignalKPipeServerClient, self).__init__(port, persistent_path)
       self.watches = {}
       self.gets = {}
       self.pipe = pipe
 
       self.pipe_poller = select.poll()
-      self.pipe_poller.register(pipe, select.POLLIN)
-      self.persistent_data = {}
+      self.pipe_poller.register(pipe.fileno(), select.POLLIN)
 
     def __del__(self):
-      print 'pipeserver cliet finishing all pipe messages'
       while self.HandlePipeMessage():
         pass
       super(SignalKPipeServerClient, self).__del__()
@@ -118,21 +134,15 @@ class SignalKPipeServerClient(SignalKServer):
               self.gets[name] = []
         return True
 
-def pipe_server_process(pipe, port):
+def pipe_server_process(pipe, port, persistent_path):
     print 'pipe server on', os.getpid()
-    server = SignalKPipeServerClient(pipe, port)
+    server = SignalKPipeServerClient(pipe, port, persistent_path)
     # handle only pipe messages (to get all registrations) for first second
     t0 = time.time()
     while time.time() - t0 < 2:
       while server.HandlePipeMessage():
         pass
       time.sleep(.1)
-
-    # send persistent values to pipe server
-    server.LoadPersistentValues()
-    for name in server.persistent_data:
-      data = {'method': 'set', 'name': name, 'value': server.values[name].value}
-      server.pipe.send(data)
 
     while True:
       while server.HandlePipeMessage():
@@ -142,20 +152,33 @@ def pipe_server_process(pipe, port):
 
 
 class SignalKPipeServer(object):
-    def __init__(self, port=DEFAULT_PORT):
-        self.pipe, process_pipe = multiprocessing.Pipe()
-        self.process = multiprocessing.Process(target=pipe_server_process, args=(process_pipe, port))
+    def __init__(self, port=DEFAULT_PORT, persistent_path=default_persistent_path):
+        #self.pipe, process_pipe = multiprocessing.Pipe()
+        self.pipe, process_pipe = duplexnonblockingpipe()
+    
+        self.process = multiprocessing.Process(target=pipe_server_process, args=(process_pipe, port, persistent_path))
         self.process.start()
         self.values = {}
         self.sets = {}
         self.timestamps = {}
         self.last_recv = time.time()
-
-        self.ResetPersistentState()
         
         self.poller = select.poll()
         READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
-        self.poller.register(self.pipe, READ_ONLY)
+        self.poller.register(self.pipe.fileno(), READ_ONLY)
+
+        self.persistent_path = persistent_path
+        self.ResetPersistentState()
+        self.LoadPersistentValues()
+
+    def LoadPersistentValues(self): # unfortunately duplicated from server
+        try:
+            file = open(self.persistent_path)
+            self.persistent_data = json.loads(file.readline())
+            file.close()
+        except:
+            print 'failed to load', self.persistent_path
+            self.persistent_data = {}
           
     def __del__(self):
       # ensure persistent values get sent to server process
@@ -170,8 +193,8 @@ class SignalKPipeServer(object):
       self.ResetPersistentState()
 
     def ResetPersistentState(self):
-        self.persistent_timeout = time.time()+600
-        self.persistent_sets = {}
+      self.persistent_timeout = time.time()+600
+      self.persistent_sets = {}
 
     def queue_send(self, value):
       if value.timestamp:
@@ -181,6 +204,9 @@ class SignalKPipeServer(object):
         self.persistent_sets[value.name] = False
         
     def Register(self, value):
+        if value.persistent and value.name in self.persistent_data:
+            value.value = self.persistent_data[value.name]
+      
         self.pipe.send({'_register': value})
         self.values[value.name] = value
 
@@ -213,19 +239,19 @@ class SignalKPipeServer(object):
     def HandleRequests(self, totaltime):            
         t0 = time.time()
         if t0 >= self.persistent_timeout:
-          self.SendPersistentValues()
-        
+          self.SetPersistentValues()
+
         dt = totaltime
         while dt >= 0:
           if self.sets:
             ta = time.time()
             # should we break up sets if there are many!?!
-            if len(self.sets) > 20:
-              print 'warning, more than 20 values in pipe server', list(self.sets)
+            if len(self.sets) > 30:
+              print 'warning, more than 30 values in pipe server', list(self.sets)
             self.pipe.send(self.sets)
             dta = time.time() - ta
             if dta > .01:
-              print 'too long to send sets down pipe', dta
+              print 'too long to send sets down pipe', dta, len(self.sets), self.sets
             self.sets = {}
             dt = totaltime - (time.time()-t0)
   

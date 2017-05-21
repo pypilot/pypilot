@@ -10,7 +10,7 @@
 import time
 from signalk.client import SignalKClient
 
-class gain():
+class gain(object):
     def __init__(self, value, min_val, max_val, step):
         self.value, self.min_val, self.max_val, self.step = value, min_val, max_val, step
 
@@ -27,7 +27,7 @@ class gain():
     def reverse(self):
         self.step = -self.step
 
-class autogain():
+class autogain(object):
     def __init__(self):
         self.gains = {'P' : gain(.01, .005, .02, .001), 'D' : gain(.1, .05, .2, .01)}
         self.period = 60

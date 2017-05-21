@@ -42,6 +42,14 @@ class Value(object):
             for socket in self.watchers:
                 socket.send(request)
 
+class JSONValue(Value):
+    def __init__(self, name, initial, **kwargs):
+      super(JSONValue, self).__init__(name, initial, **kwargs)
+
+    def get_signalk(self):
+        return '{"' + self.name + '": {"value": ' + json.dumps(self.value) + '}}'
+
+
 def round_value(value):
   if type(value) == type([]):
     ret = '['
