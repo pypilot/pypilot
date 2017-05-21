@@ -142,7 +142,7 @@ void surface::store_grey(const char *filename)
 
     char last = 0;
     uint8_t run = 0;
-    for(int i=0; i<sizeof gray_data; i++) {
+    for(unsigned int i=0; i<sizeof gray_data; i++) {
         if(gray_data[i] == last) {
             if(run == 255) {
                 fwrite(&run, 1, 1, f);
@@ -192,6 +192,9 @@ void surface::blit(surface *src, int xoff, int yoff)
     if (yoff + h > height)
         h = height - yoff;
 
+    if(w <= 0 || h <= 0)
+        return;
+    
     for(int y = 0; y<h; y++) {
         long dest_location = (xoff+xoffset) * bypp + (y+yoff+yoffset) * line_length;
         memcpy(p + dest_location, src->p + src_location, bypp*w);

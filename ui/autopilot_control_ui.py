@@ -265,8 +265,18 @@ class CalibrationDialogBase ( wx.Dialog ):
 		
 		fgSizer191.Add( fgSizer10, 1, wx.EXPAND, 5 )
 		
+		fgSizer27 = wx.FlexGridSizer( 0, 1, 0, 0 )
+		fgSizer27.SetFlexibleDirection( wx.BOTH )
+		fgSizer27.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
 		self.m_button10 = wx.Button( self.m_panel1, wx.ID_ANY, u"Clear", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer191.Add( self.m_button10, 0, wx.ALL, 5 )
+		fgSizer27.Add( self.m_button10, 0, wx.ALL, 5 )
+		
+		self.cbCompassCalibrationLocked = wx.CheckBox( self.m_panel1, wx.ID_ANY, u"calibratiion locked", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer27.Add( self.cbCompassCalibrationLocked, 0, wx.ALL, 5 )
+		
+		
+		fgSizer191.Add( fgSizer27, 1, wx.EXPAND, 5 )
 		
 		m_sdbSizer1 = wx.StdDialogButtonSizer()
 		self.m_sdbSizer1OK = wx.Button( self.m_panel1, wx.ID_OK )
@@ -598,6 +608,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.CompassCalibration.Bind( wx.EVT_PAINT, self.onPaintGLCompass )
 		self.CompassCalibration.Bind( wx.EVT_SIZE, self.onSizeGLCompass )
 		self.m_button10.Bind( wx.EVT_BUTTON, self.onClearCompass )
+		self.cbCompassCalibrationLocked.Bind( wx.EVT_CHECKBOX, self.onCompassCalibrationLocked )
 		self.BoatPlot.Bind( wx.EVT_KEY_DOWN, self.onKeyPressBoatPlot )
 		self.BoatPlot.Bind( wx.EVT_LEFT_DOWN, self.onMouseEventsBoatPlot )
 		self.BoatPlot.Bind( wx.EVT_LEFT_UP, self.onMouseEventsBoatPlot )
@@ -640,6 +651,9 @@ class CalibrationDialogBase ( wx.Dialog ):
 		event.Skip()
 	
 	def onClearCompass( self, event ):
+		event.Skip()
+	
+	def onCompassCalibrationLocked( self, event ):
 		event.Skip()
 	
 	def onKeyPressBoatPlot( self, event ):

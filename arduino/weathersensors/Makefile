@@ -22,7 +22,6 @@ LDFLAGS = -Os -Wl,--gc-sections -lm
 
 ARDUINO_SRCS = \
 $(ARDUINO_PATH)/libraries/Wire/Wire.cpp \
-$(ARDUINO_PATH)/libraries/Wire/utility/twi.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/avr-libc/realloc.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/avr-libc/malloc.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_digital.c \
@@ -37,7 +36,9 @@ $(ARDUINO_PATH)/hardware/arduino/cores/arduino/Stream.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/Print.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/HardwareSerial.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/WMath.cpp \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/main.cpp
+$(ARDUINO_PATH)/hardware/arduino/cores/arduino/main.cpp \
+
+#$(ARDUINO_PATH)/libraries/Wire/utility/twi.c \
 
 SRCS = $(ARDUINO_SRCS)
 
@@ -57,7 +58,7 @@ $(SKETCHNAME).cpp.elf: $(OBJSD) obj/$(SKETCHNAME).o objs
 .PHONY: objs
 objs:
 	echo $(OBJSD) | sed s,$(ARDUINO_PATH),obj$(ARDUINO_PATH),g > objs
-        OBJS = $(shell cat objs) obj/$(SKETCHNAME).o
+        OBJS = $(shell cat objs) obj/$(SKETCHNAME).o obj/twi.o
 
 obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 	cp $< obj/$<.cpp
@@ -72,6 +73,9 @@ upload: $(SKETCHNAME).cpp.hex
 serial:
 	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5 38400
 	cat $(DEVICE)
+
+obj/twi.o : twi.c
+	$(CC) $(CXXFLAGS) -c $< -o obj/$@
 
 %.o : %.cpp
 	mkdir -p obj$(@:.o=)

@@ -12,55 +12,76 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include <HardwareSerial.h>
-#include <Wire.h>
+
+extern "C" {
+  #include "twi.h"
+}
 
 const int analogInPin = A7;  // Analog input pin that the potentiometer is attached to
 
 uint8_t have_bmp280 = 0;
+uint8_t bmX280_tries = 10;  // try 10 times to configure
 uint16_t dig_T1, dig_P1;
 int16_t dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, dig_P9;
 
-void bmp280_setup()
+void bmX280_setup()
 {
-  Wire.begin();        // join i2c bus (address optional for master)
+  Serial.println("bmp280 setup");
 
-#if 0
-  Wire.beginTransmission(0x76);
-  Wire.write(0xE0);
-  Wire.write(0xB6);
-  Wire.endTransmission();
-#endif
-  
-  Wire.beginTransmission(0x76);
-  Wire.write(0xD0);
-  Wire.endTransmission();
-  
-  Wire.requestFrom(0x76, 1);
-  if(Wire.read() != 0x58)
+  // NOTE:  local version of twi does not enable pullup as
+  // bmX_280 device is 3.3v and arduino runs at 5v
+  twi_init();
+
+  // incase arduino version (although pullups will put
+  // too high voltage for short time anyway....
+  pinMode(SDA, INPUT);
+  pinMode(SCL, INPUT);
+
+  have_bmp280 = 0;
+  bmX280_tries--;
+
+  uint8_t d[24];
+  d[0] = 0xd0;
+  twi_writeTo(0x76, d, 1, 1, 1);
+
+  d[0] = 0;
+  twi_readFrom(0x76, d, 1, 1);
+  uint8_t id = d[0];
+  if(id == 0x58)
+      have_bmp280 = 1;
+  else {
+      Serial.println("bmp280 not found");
+      Serial.println(id);
+      // attempt reset command
+      d[0] = 0xe0;
+      d[1] = 0xb6;
+      twi_writeTo(0x76, d, 2, 1, 1);
       return;
+  }
 
-  have_bmp280 = 1;
-  
-  Wire.beginTransmission(0x76);
-  Wire.write(0x88);
-  Wire.endTransmission();
-  
-  Wire.requestFrom(0x76, 24);    // request 6 bytes from slave device #2
-  dig_T1 = Wire.read() | Wire.read() << 8;
-  dig_T2 = Wire.read() | Wire.read() << 8;
-  dig_T3 = Wire.read() | Wire.read() << 8;
-  dig_P1 = Wire.read() | Wire.read() << 8;
-  dig_P2 = Wire.read() | Wire.read() << 8;
-  dig_P3 = Wire.read() | Wire.read() << 8;
-  dig_P4 = Wire.read() | Wire.read() << 8;
-  dig_P5 = Wire.read() | Wire.read() << 8;
-  dig_P6 = Wire.read() | Wire.read() << 8;
-  dig_P7 = Wire.read() | Wire.read() << 8;
-  dig_P8 = Wire.read() | Wire.read() << 8;
-  dig_P9 = Wire.read() | Wire.read() << 8;
+  d[0] = 0x88;
+  twi_writeTo(0x76, d, 1, 1, 1);
+
+  uint8_t c = twi_readFrom(0x76, d, 24, 1);
+  if(c != 24)
+      Serial.println("bmp280 failed to read calibration");
+      
+  dig_T1 = d[0] | d[1] << 8;
+  dig_T2 = d[2] | d[3] << 8;
+  dig_T3 = d[4] | d[5] << 8;
+  dig_P1 = d[6] | d[7] << 8;
+  dig_P2 = d[8] | d[9] << 8;
+  dig_P3 = d[10] | d[11] << 8;
+  dig_P4 = d[12] | d[13] << 8;
+  dig_P5 = d[14] | d[15] << 8;
+  dig_P6 = d[16] | d[17] << 8;
+  dig_P7 = d[18] | d[19] << 8;
+  dig_P8 = d[20] | d[21] << 8;
+  dig_P9 = d[22] | d[23] << 8;
+
   
 #if 0
-  Serial.println("pressure compensation:");
+  Serial.println("bmp280 pressure compensation:");
   Serial.println(dig_T1);
   Serial.println(dig_T2);
   Serial.println(dig_T3);
@@ -75,11 +96,10 @@ void bmp280_setup()
   Serial.println(dig_P9);
 #endif  
 
-  Wire.beginTransmission(0x76);
-  Wire.write(0xF4);
   // b00011111  // configure
-  Wire.write(0xff);
-  Wire.endTransmission();
+  d[0] = 0xf4;
+  d[1] = 0xff;
+  twi_writeTo(0x76, d, 2, 1, 1);
 }
 
 volatile unsigned int rotation_count;
@@ -100,7 +120,8 @@ void isr_anenometer_count()
  void setup()
 {
   Serial.begin(38400);  // start serial for output
-  bmp280_setup();
+  
+  bmX280_setup();
 
   attachInterrupt(0, isr_anenometer_count, FALLING);
   pinMode(analogInPin, INPUT);
@@ -242,32 +263,30 @@ uint32_t pressure, temperature;
 int bmp280_count;
 void read_pressure_temperature()
 {
-    Wire.beginTransmission(0x76);
-    Wire.write(0xF7);
-    Wire.endTransmission();
-  
-    Wire.requestFrom(0x76, 6);    // request 6 bytes from slave device #2
-
+    if(!bmX280_tries)
+        return;
     uint8_t buf[6] = {0};
-    int i = 0;
-    while(Wire.available())    // slave may send less than requested
-    {
-        buf[i++] = Wire.read();
-        if(i == 6)
-            break;
-    }     
-    
+    buf[0] = 0xf7;
+    uint8_t r = twi_writeTo(0x76, buf, 1, 1, 1);
+    if(r) {
+        Serial.print("bmp280 twierror ");
+        Serial.println(r);
+        have_bmp280 = 0;
+    }
+
+    uint8_t c = twi_readFrom(0x76, buf, 6, 1);
+    if(c != 6) {
+        Serial.println("bmp280 failed to read 6 bytes from bmp280");
+        have_bmp280 = 0;
+    }
+
     int32_t p, t;
     
     p = (int32_t)buf[0] << 16 | (int32_t)buf[1] << 8 | (int32_t)buf[2];
     t = (int32_t)buf[3] << 16 | (int32_t)buf[4] << 8 | (int32_t)buf[5];
     
-    if(t == 0 || p == 0) {
-        Serial.println("reset bmp280");
-        bmp280_setup();
-        //  delay_ms(100);
-        return;
-    }
+    if(t == 0 || p == 0)
+        have_bmp280 = 0;
 
     pressure += p >> 2;
     temperature += t >> 2;
@@ -280,6 +299,13 @@ void read_pressure_temperature()
     
         int32_t temperature_comp = bmp280_compensate_T_int32(temperature);
         int32_t pressure_comp = bmp280_compensate_P_int64(pressure) >> 8;
+        pressure = temperature = 0;
+
+        if(!have_bmp280) {
+            /* only re-run setup when count elapse */
+            bmX280_setup();
+            return;
+        }
   
         char buf[128];
         int ap = pressure_comp/100000;
@@ -291,14 +317,11 @@ void read_pressure_temperature()
         int r = temperature_comp - a*100;
         snprintf(buf, sizeof buf, "ARMTA,%d.%02d,C", a, r);
         send_nmea(buf);
-
-        pressure = temperature = 0;
     }
 }
 
 void loop()
 {
-    if(have_bmp280)
-        read_pressure_temperature();
+    read_pressure_temperature();
     read_anenometer();
 }
