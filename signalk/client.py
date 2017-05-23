@@ -188,23 +188,7 @@ class SignalKClient(object):
         request = {'method' : 'list'}
         self.send(request)
         return self.receive(10)
-    '''        
-        oneget = False
-        t = time.time()
-        ret = {}
-        done = False
-        while time.time() - t < 10 and not done:
-            msgs = self.receive(10)
-            for name in msgs:
-                if name == oneget:
-                    done = True
-                else:
-                    ret[name] = msgs[name]
-            if not oneget and msgs:
-                oneget = list(msgs)[0]
-                self.get(oneget)
-        return ret
-    '''
+
     def get(self, name):
         request = {'method' : 'get', 'name' : name}
         self.send(request)
@@ -224,7 +208,7 @@ class SignalKClient(object):
         request = {'method' : 'watch', 'name' : name, 'value' : value}
         self.send(request)
 
-    def print_values(self):
+    def print_values(self, info=False):
         if len(self.values) == 0:
             self.values = self.list_values()
 
@@ -243,7 +227,15 @@ class SignalKClient(object):
                 results[name] = msgs[name]
 
         for name in sorted(results):
-            print name, '=', results[name]['value']
+            result = str(results[name]['value'])
+            if info:
+                i = self.values[name]
+            else:
+                i = '='
+                maxlen = 80
+                if len(name) + len(result) + 3  > maxlen:
+                    result = result[:80 - len(name) - 7] + ' ...'
+            print name, i, result
 
             
 
@@ -276,13 +268,24 @@ def SignalKClientFromArgs(argv, watch, *cargs):
 # connects, enumerates the values, and then requests
 # each value, printing them
 def main():
+    if '-h' in sys.argv:
+        print 'usage', sys.argv[0], '[host] -i -c -h [NAME]...'
+        print '-i', 'print info about each value type'
+        print '-c', 'continuous watch'
+        print '-h', 'show this message'
+        exit(0)
+
     continuous = '-c' in sys.argv
     if continuous:
         sys.argv.remove('-c')
 
+    info = '-i' in sys.argv
+    if info:
+        sys.argv.remove('-i')
+        
     client = SignalKClientFromArgs(sys.argv, continuous)
     if not client.have_watches:
-        client.print_values()
+        client.print_values(info)
         exit()
 
     while True:
