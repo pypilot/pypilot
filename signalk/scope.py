@@ -24,7 +24,7 @@ class trace():
               [1, 1, 1], [1, .5, 0], [.5, 1, 0],
               [.5, .5, .5], [0, .5, .5], [.5, 0, 1]]
 
-    def __init__(self, name, group, colorindex):
+    def __init__(self, name, group, colorindex, directional):
         self.points = []
         self.offset = 0
         self.visible = True
@@ -32,6 +32,7 @@ class trace():
         self.name = name
         self.group = group
         self.color = self.colors[colorindex%len(self.colors)]
+        self.directional = directional
 
     def add(self, t, data):
         # update previous timestamps based on downtime
@@ -74,7 +75,13 @@ class trace():
                 glEnd()
                 glBegin(gldrawtype)
             else:
-                glVertex2d(point[0]-time, point[1])
+                y = point[1] - self.offset
+                if self.directional:
+                    if y >= 180:
+                        y -= 360
+                    elif y < - 180:
+                        y += 360
+                glVertex2d(point[0]-time, y)
         glEnd()
 
     def draw(self, plot):
@@ -84,7 +91,6 @@ class trace():
         t = time.time() - self.timeoff
         
         glPushMatrix()
-        glTranslated(0, -self.offset, 0)
 
         glColor3dv(self.color)
         self.tracevertexes(t, plot, GL_LINE_STRIP)
@@ -161,7 +167,11 @@ class SignalKPlot():
             for tn in self.traces:
                 if name == group and tn.group == group:
                     return
-            t = trace(name, group, len(self.traces))
+
+            directional = name in self.value_list and \
+                          'directional' in self.value_list[name] and \
+                          self.value_list[name]['directional']
+            t = trace(name, group, len(self.traces), directional)
             self.traces.append(t)
 #            if not self.curtrace:
             self.curtrace = t
@@ -260,7 +270,7 @@ class SignalKPlot():
         
         SignalKPlot.drawputs("noise: %g" % self.curtrace.noise());
 
-    def init(self):
+    def init(self, value_list):
         glClearColor (0.0, 0.0, 0.0, 0.0)
     
         glMatrixMode(GL_PROJECTION)
@@ -270,6 +280,8 @@ class SignalKPlot():
         glEnable(GL_LINE_SMOOTH)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+        self.value_list = value_list
 
     def display(self):
         if self.freeze:
@@ -426,7 +438,7 @@ def main():
     glutSpecialFunc(plot.special)
     glutIdleFunc(idle)
 
-    plot.init()
+    plot.init(client.value_list)
 
     def timeout(arg):
         glutPostRedisplay()

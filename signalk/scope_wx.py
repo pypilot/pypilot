@@ -33,17 +33,18 @@ class SignalKScope(SignalKScopeBase):
 
         self.plot = SignalKPlot()
         self.glContext =  wx.glcanvas.GLContext(self.glArea)
-        self.plot.init()
 
         self.client = SignalKClientFromArgs(sys.argv[:2], True, self.on_con)
         self.host_port = self.client.host_port
         self.client.autoreconnect = False
         self.value_list = self.client.list_values()
+        self.plot.init(self.value_list)
         self.watches = {}
 
         for name in sorted(self.value_list):
             if self.value_list[name]['type'] != 'SensorValue':
                 continue
+
             i = self.clValues.Append(name)
             self.watches[name] = False
             for arg in sys.argv[2:]:
