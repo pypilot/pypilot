@@ -1,4 +1,4 @@
-/* Copyright (C) 2016 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2017 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -7,7 +7,7 @@
  */
 
 /* this program interfaces with the bmp280 pressure sensor and outputs
- calibrated signalk data over serial at 115200 baud
+ calibrated signalk data over serial at 38400 baud
  */
 #include <Arduino.h>
 #include <stdint.h>
@@ -105,10 +105,17 @@ void bmX280_setup()
 volatile unsigned int rotation_count;
 volatile unsigned long lastt;
 volatile unsigned long lastperiod;
+volatile uint8_t odd;
 void isr_anenometer_count()
 {
+    if(!odd) { // magnet causes 2 switches per rotation
+        odd = 1;
+        return;
+    }
+    odd = 0;
   unsigned long t  = millis();
-  if(t - lastt > 15){
+//  unsigned long t  = micros();
+  if(t - lastt > 15) { // debounce, at least for less than 130 knots of wind
     if(rotation_count == 0)
         lastperiod = 0;
     lastperiod += t - lastt;
@@ -127,7 +134,7 @@ void isr_anenometer_count()
   pinMode(analogInPin, INPUT);
   pinMode(2, INPUT_PULLUP);
 
-  analogRead(analogInPin);
+  analogRead(analogInPin); // select channel
 //  ADCSRA |= _BV(ADIE);
   ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
 }
@@ -213,6 +220,7 @@ void read_anenometer() {
 //  Serial.println(sensorValue);
 
 //  float dir = sensorValue / 1024.0 * 360;
+  // compensate 13 degree deadband in potentiometer
   float dir = (sensorValue + 13) * .34;
 
   if(lpdir - dir > 180)
@@ -239,17 +247,18 @@ void read_anenometer() {
     int count;
     cli();
     count = rotation_count;
+    rotation_count = 0;
     long period = lastperiod;
     sei();
     if(count > 0) {
-        rotation_count = 0;
         nowind = 0;
         knots = .868976 * 2.25 * 1000 * count / period;
     } else
         nowind++;
 
-    if(nowind == 10)
-      knots /= 2, nowind = 0;
+    if(nowind == 20) // if no rotation for 1 second, use half of last wind speed
+//      knots /= 2, nowind = 0;
+        knots = 0, nowind = 0;
 
     char buf[128];
     snprintf(buf, sizeof buf, "ARMWV,%d.%d,R,%d.%d,N,A", (int)lpdir, (int)(lpdir*10)%10, \
