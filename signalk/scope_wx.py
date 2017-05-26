@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import wx, wx.glcanvas, sys, socket
+import wx, wx.glcanvas, sys, socket, time
 from OpenGL.GL import *
 from scope_ui import SignalKScopeBase
 from client import SignalKClient, SignalKClientFromArgs, ConnectionLost
@@ -41,22 +41,26 @@ class SignalKScope(SignalKScopeBase):
         self.plot.init(self.value_list)
         self.watches = {}
 
+        watches = sys.argv[2:]
         for name in sorted(self.value_list):
             if self.value_list[name]['type'] != 'SensorValue':
                 continue
 
             i = self.clValues.Append(name)
             self.watches[name] = False
-            for arg in sys.argv[2:]:
+            for arg in watches:
                 if arg == name:
                     self.clValues.Check(i, True)
                     self.watches[name] = True
+                    watches.remove(name)
+        for arg in watches:
+            print 'value not found:', arg
 
         self.on_con(self.client)
 
         self.timer = wx.Timer(self, wx.ID_ANY)
-        self.timer.Start(50)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
+        self.timer.Start(50)
 
         self.sTime.SetValue(self.plot.disptime)
         self.plot_reshape = False
@@ -73,7 +77,7 @@ class SignalKScope(SignalKScopeBase):
             try:
                 host, port = self.host_port
                 self.client = SignalKClient(self.on_con, host, port, autoreconnect=False)
-                self.timer.Start(50)
+                self.timer.Start(100)
             except socket.error:
                 self.timer.Start(1000)
                 return
@@ -90,14 +94,13 @@ class SignalKScope(SignalKScopeBase):
                 pass
             if not result:
                 break
-            refresh = True
 
             if self.watches[result[0]]:
-                self.plot.read_data(result)
+                self.plot.read_data(result, self.glArea.GetSize()[0])
+                refresh = True
 
-        refresh = True
         if refresh:
-            self.Refresh()
+            self.glArea.Refresh()
 
     def onValueSelected( self, event ):
         self.plot.select(self.clValues.GetStringSelection())

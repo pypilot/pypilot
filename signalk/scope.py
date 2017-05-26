@@ -34,9 +34,11 @@ class trace():
         self.color = self.colors[colorindex%len(self.colors)]
         self.directional = directional
 
-    def add(self, t, data):
+    def add(self, t, data, mindt):
+        if self.points and t-self.points[0][0]<mindt:
+            return False
         # update previous timestamps based on downtime
-        if len(self.points) and math.isnan(self.points[0][1]):
+        if self.points and math.isnan(self.points[0][1]):
             dt = time.time() - t - self.timeoff
             self.timeoff = False
             for i in range(len(self.points)):
@@ -46,6 +48,7 @@ class trace():
         if not self.timeoff:
             self.timeoff = time.time() - t
         self.points.insert(0, (t, data))
+        return True
 
     def add_blank(self):
         if self.points:
@@ -156,7 +159,7 @@ class SignalKPlot():
     def reset(self):
         self.traces = []
 
-    def add_data(self, name, group, timestamp, value):
+    def add_data(self, name, group, timestamp, value, width):
         t = False
         for tn in self.traces:
             if tn.name == name:
@@ -175,15 +178,18 @@ class SignalKPlot():
             self.traces.append(t)
 #            if not self.curtrace:
             self.curtrace = t
-        
-        t.add(timestamp, value)
+
+
+        # time must change by 1 pixel to bother to log and display
+        mindt = self.disptime / float(width)
+        return t.add(timestamp, value, mindt)
 
     def add_blank(self, group=False):
         for t in self.traces:
             if not group or group == t.group:
                 t.add_blank()
 
-    def read_data(self, msg):
+    def read_data(self, msg, width):
         name, data = msg
         if 'timestamp' in data:
             timestamp = data['timestamp']
@@ -192,16 +198,18 @@ class SignalKPlot():
 
         value = data['value']
         if type(value) == type([]):
+            ret = False
             for i in range(len(value)):
                 namei = name+str(i)
-                self.add_data(namei, name, timestamp, float(value[i]))
+                ret = self.add_data(namei, name, timestamp, float(value[i]), width) or ret
+            return ret
         else:
             if type(value) == type(True):
                 if value:
                     value = 1
                 else:
                     value = 0
-            self.add_data(name, name, timestamp, float(value))
+            return self.add_data(name, name, timestamp, float(value), width)
 
     @staticmethod
     def drawputs(str):
@@ -403,7 +411,7 @@ def main():
         usage()
 
     plot = SignalKPlot()
-    def on_con():
+    def on_con(client):
         plot.add_blank()
     client = SignalKClientFromArgs(sys.argv, True, on_con)
     if not client.have_watches:
@@ -438,7 +446,7 @@ def main():
     glutSpecialFunc(plot.special)
     glutIdleFunc(idle)
 
-    plot.init(client.value_list)
+    plot.init(client.list_values(10))
 
     def timeout(arg):
         glutPostRedisplay()

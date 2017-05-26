@@ -184,10 +184,10 @@ class SignalKClient(object):
                     msgs += self.flatten_line(msg, name_prefix + name + '/')
         return msgs
 
-    def list_values(self):
+    def list_values(self, timeout=10):
         request = {'method' : 'list'}
         self.send(request)
-        return self.receive(10)
+        return self.receive(timeout)
 
     def get(self, name):
         request = {'method' : 'get', 'name' : name}
@@ -208,35 +208,40 @@ class SignalKClient(object):
         request = {'method' : 'watch', 'name' : name, 'value' : value}
         self.send(request)
 
-    def print_values(self, info=False):
-        if len(self.values) == 0:
-            self.values = self.list_values()
-
+    def print_values(self, timeout, info=False):
+        t0 = time.time()
         if not self.values:
-            return
+            self.values = self.list_values(timeout)
+            if not self.values:
+                return False
 
-        for name in sorted(self.values):
-            self.get(name)
-
+        names = sorted(self.values)
+            
         count = 0
         results = {}
         while count < len(self.values):
-            msgs = self.receive(10)
+            if names:
+                self.get(names.pop())
+            else:
+                time.sleep(.05)
+
+            if time.time()-t0 >= timeout:
+                return False
+            msgs = self.receive()
             for name in msgs:
                 count+=1
                 results[name] = msgs[name]
 
         for name in sorted(results):
-            result = str(results[name]['value'])
             if info:
-                i = self.values[name]
+                print name, self.values[name], results[name]
             else:
-                i = '='
                 maxlen = 80
+                result = str(results[name]['value'])
                 if len(name) + len(result) + 3  > maxlen:
                     result = result[:80 - len(name) - 7] + ' ...'
-            print name, i, result
-
+                print name, '=', result
+        return True
             
 
 def SignalKClientFromArgs(argv, watch, *cargs):
@@ -285,7 +290,12 @@ def main():
         
     client = SignalKClientFromArgs(sys.argv, continuous)
     if not client.have_watches:
-        client.print_values(info)
+        while True:
+            if not client.print_values(10, info):
+                print 'timed out'
+                exit(1)
+            if not continuous:
+                break
         exit()
 
     while True:
