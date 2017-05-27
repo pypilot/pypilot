@@ -18,7 +18,7 @@ import json
 
 from client import SignalKClientFromArgs
 
-class trace():
+class trace(object):
     colors = [[1, 0, 0], [0, 1, 0], [1, 1, 0],
               [1, 0, 1], [0, 1, 1], [0, 0, 1],
               [1, 1, 1], [1, .5, 0], [.5, 1, 0],
@@ -35,8 +35,6 @@ class trace():
         self.directional = directional
 
     def add(self, t, data, mindt):
-        if self.points and t-self.points[0][0]<mindt:
-            return False
         # update previous timestamps based on downtime
         if self.points and math.isnan(self.points[0][1]):
             dt = time.time() - t - self.timeoff
@@ -47,6 +45,9 @@ class trace():
 
         if not self.timeoff:
             self.timeoff = time.time() - t
+        elif self.points and t-self.points[0][0]<mindt:
+            return False
+            
         self.points.insert(0, (t, data))
         return True
 
@@ -182,7 +183,7 @@ class SignalKPlot():
 
         # time must change by 1 pixel to bother to log and display
         mindt = self.disptime / float(width)
-        return t.add(timestamp, value, mindt)
+        return t.add(timestamp, value, mindt) and t.visible
 
     def add_blank(self, group=False):
         for t in self.traces:

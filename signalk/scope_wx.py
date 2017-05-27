@@ -60,7 +60,7 @@ class SignalKScope(SignalKScopeBase):
 
         self.timer = wx.Timer(self, wx.ID_ANY)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
-        self.timer.Start(50)
+        self.timer.Start(100)
 
         self.sTime.SetValue(self.plot.disptime)
         self.plot_reshape = False
@@ -96,8 +96,8 @@ class SignalKScope(SignalKScopeBase):
                 break
 
             if self.watches[result[0]]:
-                self.plot.read_data(result, self.glArea.GetSize()[0])
-                refresh = True
+                if self.plot.read_data(result, self.glArea.GetSize()[0]):
+                    refresh = True
 
         if refresh:
             self.glArea.Refresh()
@@ -135,11 +135,13 @@ class SignalKScope(SignalKScopeBase):
 
         if event.RightDown():
             self.plot.curtrace.center()
+            self.glArea.Refresh()
 
         if event.Dragging():
             offset = pos[1] - self.lastmouse[1]
             self.plot.adjustoffset(offset, self.glArea.GetSize().y)
             self.lastmouse = pos
+            self.glArea.Refresh()
 
         rotation = event.GetWheelRotation() / 60
         if rotation:
@@ -152,36 +154,46 @@ class SignalKScope(SignalKScopeBase):
     def onKeyPress( self, event ):
         wxglutkeypress(event, self.plot.special, self.plot.key)
         self.cbfftw.SetValue(self.plot.fft_on)
+        self.glArea.Refresh()
 
     def onZero( self, event ):
         if self.plot.curtrace:
             self.plot.curtrace.offset = 0
+            self.glArea.Refresh()
 
     def onCenter( self, event ):
         if self.plot.curtrace:
             self.plot.curtrace.center()
+            self.glArea.Refresh()
 
     def onScalePlus( self, event ):
         self.plot.increasescale()
+        self.glArea.Refresh()
 
     def onScaleMinus( self, event ):
         self.plot.decreasescale()
+        self.glArea.Refresh()
 
     def onOffsetPlus( self, event ):
         self.plot.curtrace.offset -= self.plot.scale/10.0
-
+        self.glArea.Refresh()
+            
     def onOffsetMinus( self, event ):
         self.plot.curtrace.offset += self.plot.scale/10.0
+        self.glArea.Refresh()
 
     def onFreeze( self, event ):
         self.plot.freeze = event.IsChecked()
+        self.glArea.Refresh()
 
     def onReset( self, event ):
         self.plot.reset()
+        self.glArea.Refresh()
 
     def onTime(self, event):
         self.plot.disptime = self.sTime.GetValue()
-	
+	self.glArea.Refresh()
+
     def onClose( self, event ):
         self.Close()
 	
