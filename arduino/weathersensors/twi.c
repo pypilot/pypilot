@@ -122,8 +122,11 @@ uint8_t twi_readFrom(uint8_t address, uint8_t* data, uint8_t length, uint8_t sen
   }
 
   // wait until twi is ready, become master receiver
+  int timeout = 0;
   while(TWI_READY != twi_state){
-    continue;
+      if(timeout++ == 10)
+          return 0;
+      delay(1);
   }
   twi_state = TWI_MRX;
   twi_sendStop = sendStop;
@@ -159,8 +162,11 @@ uint8_t twi_readFrom(uint8_t address, uint8_t* data, uint8_t length, uint8_t sen
     TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWEA) | _BV(TWINT) | _BV(TWSTA);
 
   // wait for read operation to complete
+  timeout = 0;
   while(TWI_MRX == twi_state){
-    continue;
+      if(timeout++ == 10)
+          return 0;
+      delay(1);
   }
 
   if (twi_masterBufferIndex < length)
@@ -188,6 +194,7 @@ uint8_t twi_readFrom(uint8_t address, uint8_t* data, uint8_t length, uint8_t sen
  *          2 .. address send, NACK received
  *          3 .. data send, NACK received
  *          4 .. other twi error (lost bus arbitration, bus error, ..)
+            5 .. timeout
  */
 uint8_t twi_writeTo(uint8_t address, uint8_t* data, uint8_t length, uint8_t wait, uint8_t sendStop)
 {
@@ -199,8 +206,11 @@ uint8_t twi_writeTo(uint8_t address, uint8_t* data, uint8_t length, uint8_t wait
   }
 
   // wait until twi is ready, become master transmitter
+  int timeout = 0;
   while(TWI_READY != twi_state){
-    continue;
+      if(timeout++ == 10)
+          return 5;
+      delay(1);
   }
   twi_state = TWI_MTX;
   twi_sendStop = sendStop;
@@ -239,8 +249,11 @@ uint8_t twi_writeTo(uint8_t address, uint8_t* data, uint8_t length, uint8_t wait
     TWCR = _BV(TWINT) | _BV(TWEA) | _BV(TWEN) | _BV(TWIE) | _BV(TWSTA);	// enable INTs
 
   // wait for write operation to complete
+  timeout = 0;
   while(wait && (TWI_MTX == twi_state)){
-    continue;
+      if(timeout++ == 10)
+          return 5;
+      delay(1);
   }
   
   if (twi_error == 0xFF)

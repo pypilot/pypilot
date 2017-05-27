@@ -21,6 +21,9 @@ int16_t dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, 
 void bmp280_setup()
 {
   Wire.begin();        // join i2c bus (address optional for master)
+    pinMode(SDA, INPUT);
+  pinMode(SCL, INPUT);
+
 
 #if 0
   Wire.beginTransmission(0x76);
@@ -35,10 +38,12 @@ void bmp280_setup()
   
   Wire.requestFrom(0x76, 1);
   uint8_t id = Wire.read();
-  Serial.println(id);
       
-  if(id != 0x58)
+  if(id != 0x58) {
+      Serial.print("wrong id: ");
+      Serial.println(id);
       return;
+  }
 
   have_bmp280 = 1;
   
@@ -142,6 +147,7 @@ uint32_t pressure, temperature;
 int count;
 void loop()
 {
+      Serial.print("wrong id:\n");
   Wire.beginTransmission(0x76);
   Wire.write(0xF7);
   Wire.endTransmission();
@@ -165,7 +171,7 @@ void loop()
   if(t == 0 || p == 0) {
     Serial.println("reset bmp280");
     bmp280_setup();
-  //  delay_ms(100);
+    delay(100);
     return;
   }
 

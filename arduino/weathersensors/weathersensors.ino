@@ -9,6 +9,16 @@
 /* this program interfaces with the bmp280 pressure sensor and outputs
  calibrated signalk data over serial at 38400 baud
  */
+
+/* anenometer wires
+
+red  - gnd
+yellow - 5v
+green - a7
+black - d2
+
+*/
+
 #include <Arduino.h>
 #include <stdint.h>
 #include <HardwareSerial.h>
@@ -26,32 +36,32 @@ int16_t dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, 
 
 void bmX280_setup()
 {
-  Serial.println("bmp280 setup");
+  Serial.println("bmX280 setup");
 
   // NOTE:  local version of twi does not enable pullup as
   // bmX_280 device is 3.3v and arduino runs at 5v
+
   twi_init();
 
   // incase arduino version (although pullups will put
   // too high voltage for short time anyway....
   pinMode(SDA, INPUT);
   pinMode(SCL, INPUT);
+  delay(1);
 
   have_bmp280 = 0;
   bmX280_tries--;
 
   uint8_t d[24];
   d[0] = 0xd0;
-  twi_writeTo(0x76, d, 1, 1, 1);
 
-  d[0] = 0;
-  twi_readFrom(0x76, d, 1, 1);
-  uint8_t id = d[0];
-  if(id == 0x58)
+  if(twi_writeTo(0x76, d, 1, 1, 1) == 0 &&
+     twi_readFrom(0x76, d, 1, 1) == 1 &&
+     d[0] == 0x58)
       have_bmp280 = 1;
   else {
-      Serial.println("bmp280 not found");
-      Serial.println(id);
+      Serial.print("bmp280 not found: ");
+      Serial.println(d[0]);
       // attempt reset command
       d[0] = 0xe0;
       d[1] = 0xb6;
@@ -60,11 +70,14 @@ void bmX280_setup()
   }
 
   d[0] = 0x88;
-  twi_writeTo(0x76, d, 1, 1, 1);
+  if(twi_writeTo(0x76, d, 1, 1, 1) != 0)
+      have_bmp280 = 0;
 
   uint8_t c = twi_readFrom(0x76, d, 24, 1);
-  if(c != 24)
+  if(c != 24) {
       Serial.println("bmp280 failed to read calibration");
+      have_bmp280 = 0;
+  }
       
   dig_T1 = d[0] | d[1] << 8;
   dig_T2 = d[2] | d[3] << 8;
@@ -99,35 +112,28 @@ void bmX280_setup()
   // b00011111  // configure
   d[0] = 0xf4;
   d[1] = 0xff;
-  twi_writeTo(0x76, d, 2, 1, 1);
+  if(twi_writeTo(0x76, d, 2, 1, 1) != 0)
+      have_bmp280 = 0;
 }
 
 volatile unsigned int rotation_count;
-volatile unsigned long lastt;
-volatile unsigned long lastperiod;
-volatile uint8_t odd;
+volatile uint16_t lastperiod;
 void isr_anenometer_count()
 {
-    if(!odd) { // magnet causes 2 switches per rotation
-        odd = 1;
+    static uint16_t lastt;
+    int t = millis();
+    uint16_t period = t-lastt;
+    if(period < 15) // debounce, at least for less than 130 knots of wind
         return;
-    }
-    odd = 0;
-  unsigned long t  = millis();
-//  unsigned long t  = micros();
-  if(t - lastt > 15) { // debounce, at least for less than 130 knots of wind
-    if(rotation_count == 0)
-        lastperiod = 0;
-    lastperiod += t - lastt;
-    rotation_count++;
+
     lastt = t;
-  }
+    lastperiod += period;
+    rotation_count++;
 }
 
- void setup()
+void setup()
 {
   Serial.begin(38400);  // start serial for output
-  
   bmX280_setup();
 
   attachInterrupt(0, isr_anenometer_count, FALLING);
@@ -135,7 +141,7 @@ void isr_anenometer_count()
   pinMode(2, INPUT_PULLUP);
 
   analogRead(analogInPin); // select channel
-//  ADCSRA |= _BV(ADIE);
+  ADCSRA |= _BV(ADIE);
   ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
 }
 
@@ -144,8 +150,8 @@ static volatile uint16_t adccount;
 ISR(ADC_vect)
 {
     adcval += (int16_t)ADCW;
-    ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
     adccount++;
+    ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
 }
 
 int32_t t_fine;
@@ -198,75 +204,83 @@ void send_nmea(const char *buf)
 }
 
 
-void read_anenometer() {
-  static float lpdir, lp = .05;
-  
-  // read the analog in value:
-  int sensorValue = 0;
-#if 1
-  if (!(ADCSRA & _BV(ADSC)))
-      sensorValue = ADCW;
-
-  ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
-
+void read_anenometer()
+{
+    static float lpdir;
+    const float lp = .1;
+//    lp = 1;
+    // read the analog in value:
+    float sensorValue = 0;
+#if 0
+    if (!(ADCSRA & _BV(ADSC)))
+        sensorValue = ADCW;
+    
+    ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
+    
 //  sensorValue = analogRead(analogInPin);
 #else
-  cli();
-  uint32_t adcval = adcval;
-  uint16_t count = adccount;
-  sei();
-  sensorValue = adcval / count;
-#endif
-//  Serial.println(sensorValue);
-
-//  float dir = sensorValue / 1024.0 * 360;
-  // compensate 13 degree deadband in potentiometer
-  float dir = (sensorValue + 13) * .34;
-
-  if(lpdir - dir > 180)
-      dir += 360;
-  else if(dir - lpdir > 180)
-      dir -= 360;
-  
-  lpdir = lp*dir + (1-lp)*lpdir;
-
-  if(lpdir >= 360)
-      lpdir -= 360;
-  else if(lpdir < 0)
-      lpdir += 360;
-
-  // print the results to the serial monitor:
-  static float knots;
-  static int nowind;
-  static unsigned long last_time;
-  unsigned long time = millis();
-  unsigned long dt = time - last_time;
-  
-  if(dt >= 100) { // output every 100ms
-    last_time = time;
-    int count;
     cli();
-    count = rotation_count;
-    rotation_count = 0;
-    long period = lastperiod;
+    uint32_t val = adcval;
+    uint16_t count = adccount;
+    adcval = 0;
+    adccount = 0;
     sei();
-    if(count > 0) {
-        nowind = 0;
-        knots = .868976 * 2.25 * 1000 * count / period;
-    } else
-        nowind++;
+    sensorValue = val / count;
+#endif
+//    Serial.println(sensorValue);
+    
+//  float dir = sensorValue / 1024.0 * 360;
+    // compensate 13 degree deadband in potentiometer
+    float dir = (sensorValue + 13) * .34;
+    
+    if(lpdir - dir > 180)
+        dir += 360;
+    else if(dir - lpdir > 180)
+        dir -= 360;
+    
+    lpdir = lp*dir + (1-lp)*lpdir;
+//    lpdir = dir;
+    
+    if(lpdir >= 360)
+        lpdir -= 360;
+    else if(lpdir < 0)
+        lpdir += 360;
 
-    if(nowind == 20) // if no rotation for 1 second, use half of last wind speed
-//      knots /= 2, nowind = 0;
-        knots = 0, nowind = 0;
+    uint16_t time = millis();
+    static uint16_t last_time;
+    uint16_t dt = time - last_time;
+    if(dt >= 100) { // output every 100ms
+        last_time += 100;
 
-    char buf[128];
-    snprintf(buf, sizeof buf, "ARMWV,%d.%d,R,%d.%d,N,A", (int)lpdir, (int)(lpdir*10)%10, \
-             (int)knots, (int)(knots*10)%10);
-    send_nmea(buf);
-  }
+        cli();
+        uint16_t period = lastperiod;
+        uint16_t count = rotation_count;
+        rotation_count = 0;
+        lastperiod = 0;
+        sei();
+        
+        static uint16_t nowindcount;
+        static float knots = 0;
+        const int nowindtimeout = 30;
+        if(count) {
+            if(nowindcount!=nowindtimeout)
+                knots = .868976 * 2.25 * 1000 * count / period;
+            nowindcount = 0;
+        } else {
+            if(nowindcount<nowindtimeout)
+                nowindcount++;
+            else
+                knots = 0;
+        }
+
+        char buf[128];
+        snprintf(buf, sizeof buf, "ARMWV,%d.%02d,R,%d.%02d,N,A", (int)lpdir, (uint16_t)(lpdir*100.0)%100U, (int)knots, (int)(knots*100)%100);
+        //        Serial.println(lpdir*100);
+        //        Serial.println((int)(uint16_t)(lpdir*100.0)%100U);
+
+        send_nmea(buf);
+    }
 }
-
 
 uint32_t pressure, temperature;
 int bmp280_count;
@@ -278,15 +292,16 @@ void read_pressure_temperature()
     buf[0] = 0xf7;
     uint8_t r = twi_writeTo(0x76, buf, 1, 1, 1);
     if(r) {
-        Serial.print("bmp280 twierror ");
-        Serial.println(r);
-        have_bmp280 = 0;
+        if(have_bmp280) {
+            Serial.print("bmp280 twierror ");
+            Serial.println(r);
+        }
     }
 
     uint8_t c = twi_readFrom(0x76, buf, 6, 1);
     if(c != 6) {
-        Serial.println("bmp280 failed to read 6 bytes from bmp280");
-        have_bmp280 = 0;
+        if(have_bmp280)
+            Serial.println("bmp280 failed to read 6 bytes from bmp280");
     }
 
     int32_t p, t;

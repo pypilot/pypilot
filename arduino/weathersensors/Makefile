@@ -52,7 +52,7 @@ $(SKETCHNAME).cpp.hex: $(SKETCHNAME).cpp.elf
 $(SKETCHNAME).cpp.eep: $(SKETCHNAME).cpp.elf
 	$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 $< $@
 
-$(SKETCHNAME).cpp.elf: $(OBJSD) obj/$(SKETCHNAME).o objs
+$(SKETCHNAME).cpp.elf: $(OBJSD) obj/$(SKETCHNAME).o objs obj/twi.o
 	$(CC) -mmcu=$(MCU) $(LDFLAGS) -o $@ $(OBJS)
 
 .PHONY: objs
@@ -75,7 +75,7 @@ serial:
 	cat $(DEVICE)
 
 obj/twi.o : twi.c
-	$(CC) $(CXXFLAGS) -c $< -o obj/$@
+	$(CC) $(CXXFLAGS) -c $< -o $@
 
 %.o : %.cpp
 	mkdir -p obj$(@:.o=)
