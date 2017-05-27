@@ -131,16 +131,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.sHeadingOffset.SetValue(round3(value))
         elif name == 'servo/calibration':
             s = ''
-            for cal in sorted(value):
-                s += str(round3(float(cal))) + ' = ' + str(round3(value[cal])) + '\n'
+            for name in value:
+                s += name + ' = ' + str(value[name]) + '\n'
             self.stServoCalibration.SetLabel(s)
             self.SetSize(wx.Size(self.GetSize().x+1, self.GetSize().y))
-            
-            self.servo_calibration = {}
-            for cal in value:
-                self.servo_calibration[float(cal)] = value[cal]
 
-            self.bServoPlot.Enable()
         elif name == 'servo/calibration console':
             self.stServoCalibrationConsole.SetLabel(self.stServoCalibrationConsole.GetLabel() + value)
         elif name == 'servo/Max Current':
@@ -286,35 +281,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 'imu/pitch', 'imu/roll', 'imu/heel', 'imu/heading']
         subprocess.Popen(args)
 	
-    def onServoPlot( self, event ):
-        plots = [tempfile.NamedTemporaryFile(), tempfile.NamedTemporaryFile(), \
-                 tempfile.NamedTemporaryFile()]
-        ind = 0
-        for plot in plots:
-            file = open(plot.name, 'w')
-            for cal in sorted(self.servo_calibration):
-                file.write('%f %f\n' % (cal, self.servo_calibration[cal][ind]))
-            file.close()
-            xlabel = 'speed'
-            ylabel = ['command', 'idle_current', 'stall_current', 'cal_voltage', 'dt'][ind]
-            
-            ind += 1
-            subprocess.Popen(['gnuplot', '-p', \
-                              '-e', 'set xlabel "' + xlabel + '"',
-                              '-e', 'set ylabel "' + ylabel + '"',
-                              '-e', 'plot \'' + plot.name + '\' with lines, \'' + plot.name + '\' with points'])
-
-            # all data in one plot
-#        cmd = 'plot '
-#        for plot in plots:
-#            cmd += "'" + plot.name + "' with lines, '" + plot.name + "' with points, "
-
-            #subprocess.Popen(['gnuplot', '-p', '-e', cmd])
-
-        time.sleep(1)
-	
     def onCalibrateServo( self, event ):
-#        self.stServoCalibrationConsole.SetLabel('')
         try:
 	    self.servoprocess = subprocess.Popen(['python', 'servo_calibration.py', sys.argv[1]], stdout=subprocess.PIPE)
             self.servo_console('executed servo_calibration.py...')

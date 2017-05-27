@@ -483,26 +483,15 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel2 = wx.Panel( self.m_notebook1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer9 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer9.AddGrowableCol( 0 )
-		fgSizer9.AddGrowableRow( 0 )
 		fgSizer9.AddGrowableRow( 1 )
 		fgSizer9.SetFlexibleDirection( wx.BOTH )
 		fgSizer9.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
 		sbSizer1 = wx.StaticBoxSizer( wx.StaticBox( self.m_panel2, wx.ID_ANY, u"Calibration" ), wx.VERTICAL )
 		
-		self.m_scrolledWindow2 = wx.ScrolledWindow( self.m_panel2, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.HSCROLL|wx.VSCROLL )
-		self.m_scrolledWindow2.SetScrollRate( 5, 5 )
-		gSizer1 = wx.GridSizer( 0, 1, 0, 0 )
-		
-		self.stServoCalibration = wx.StaticText( self.m_scrolledWindow2, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stServoCalibration = wx.StaticText( self.m_panel2, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stServoCalibration.Wrap( 400 )
-		gSizer1.Add( self.stServoCalibration, 0, wx.ALL|wx.EXPAND, 5 )
-		
-		
-		self.m_scrolledWindow2.SetSizer( gSizer1 )
-		self.m_scrolledWindow2.Layout()
-		gSizer1.Fit( self.m_scrolledWindow2 )
-		sbSizer1.Add( self.m_scrolledWindow2, 1, wx.EXPAND |wx.ALL, 5 )
+		sbSizer1.Add( self.stServoCalibration, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		
 		fgSizer9.Add( sbSizer1, 1, wx.EXPAND, 5 )
@@ -544,11 +533,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer15 = wx.FlexGridSizer( 1, 0, 0, 0 )
 		fgSizer15.SetFlexibleDirection( wx.BOTH )
 		fgSizer15.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-		
-		self.bServoPlot = wx.Button( self.m_panel2, wx.ID_ANY, u"Plot in GNUPlot", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.bServoPlot.Enable( False )
-		
-		fgSizer15.Add( self.bServoPlot, 0, wx.ALL, 5 )
 		
 		self.bCalibrateServo = wx.Button( self.m_panel2, wx.ID_ANY, u"Calibrate Servo", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer15.Add( self.bCalibrateServo, 0, wx.ALL, 5 )
@@ -630,7 +614,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.sHeadingOffset.Bind( wx.EVT_SPINCTRL, self.onIMUHeadingOffset )
 		self.cbTextureCompass.Bind( wx.EVT_CHECKBOX, self.onTextureCompass )
 		self.bIMUScope.Bind( wx.EVT_BUTTON, self.onIMUScope )
-		self.bServoPlot.Bind( wx.EVT_BUTTON, self.onServoPlot )
 		self.bCalibrateServo.Bind( wx.EVT_BUTTON, self.onCalibrateServo )
 	
 	def __del__( self ):
@@ -681,9 +664,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		event.Skip()
 	
 	def onIMUScope( self, event ):
-		event.Skip()
-	
-	def onServoPlot( self, event ):
 		event.Skip()
 	
 	def onCalibrateServo( self, event ):
