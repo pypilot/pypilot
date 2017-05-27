@@ -177,13 +177,13 @@ def nmea_bridge_process(pipe=False):
                     speed = float(data[6])
                     heading = float(data[7])
                 
-                    pipe.send({'gps' : {'timestamp': timestamp, 'track': heading, 'speed': speed}})
+                    pipe.send({'gps' : {'timestamp': timestamp, 'track': heading, 'speed': speed}}, False)
 
             elif line[0] == '$' and line[3:6] == 'MVW':
                 if pipe and wind_source != 'internal':
                     winddata = wind.parse_nmea(line)
                     if winddata:
-                        pipe.send({'wind' : winddata})
+                        pipe.send({'wind' : winddata}, False)
 
             elif line[0] == '$' and line[3:6] == 'APB':
                 data = line[7:len(line)-3].split(',')

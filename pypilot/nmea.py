@@ -26,6 +26,7 @@ import serial
 from signalk.client import SignalKClient
 from signalk.server import SignalKServer
 from signalk.values import *
+from signalk.pipeserver import NonBlockingPipe
 from serialprobe import SerialProbe
 from gpsdpoller import GpsdPoller
 
@@ -137,6 +138,8 @@ class NMEASocket(object):
         self.socket = connection
         self.b = linebuffer.LineBuffer(connection.fileno())
         self.out_buffer = ''
+        self.pollout = select.poll()
+        self.pollout.register(connection, select.POLLOUT)
 
     def recv(self):
         return self.b.recv()
@@ -149,11 +152,17 @@ class NMEASocket(object):
 
     def send(self, data):
         self.out_buffer += data
+        if len(self.out_buffer) > 4096:
+            print 'nmea socket out_buffer overflow'
+            self.out_buffer = data
 
     def flush(self):
         if not len(self.out_buffer):
             return
         try:
+            if not self.pollout.poll(0):
+                print 'nmea socket failed to send'
+                return
             count = self.socket.send(self.out_buffer)
             self.out_buffer = self.out_buffer[count:]
         except:
@@ -167,12 +176,12 @@ class Nmea(object):
 
         timestamp = server.TimeStamp('gps')
         
-        self.values['gps']['track'] = server.Register(SensorValue('gps/track', timestamp))
+        self.values['gps']['track'] = server.Register(SensorValue('gps/track', timestamp, directional=True))
         self.values['gps']['speed'] = server.Register(SensorValue('gps/speed', timestamp))
         self.values['gps']['source'] = server.Register(StringValue('gps/source', 'none'))
 
         timestamp = server.TimeStamp('wind')
-        self.values['wind']['direction'] = server.Register(SensorValue('wind/direction', timestamp))
+        self.values['wind']['direction'] = server.Register(SensorValue('wind/direction', timestamp, directional=True))
         self.values['wind']['speed'] = server.Register(SensorValue('wind/speed', timestamp))
         self.values['wind']['source'] = server.Register(StringValue('wind/source', 'none'))
 
@@ -223,7 +232,7 @@ class Nmea(object):
             # do not output nmea data over tcp faster than 2hz
             # for each message time
             if not nmea_name in self.nmea_times or t-self.nmea_times[nmea_name]>.5:
-                self.process.pipe.send(line)
+                self.process.pipe.send(line, False)
                 self.nmea_times[nmea_name] = t
 
         self.devices_lastmsg[device] = t
@@ -245,8 +254,10 @@ class Nmea(object):
                 break
 
     def poll(self):
+        t0 = time.time()
         self.probe_serial()
-        
+
+        t1 = time.time()
         # handle tcp nmea messages
         serial_msgs = {}
         while True:
@@ -257,13 +268,21 @@ class Nmea(object):
                 event = events.pop()
                 fd, flag = event
                 if fd == self.process_fd:
-                    self.read_process_pipe()
+                    if flag != select.POLLIN:
+                        print 'nmea got flag for process pipe:', flag
+                    else:
+                        self.read_process_pipe()
                 elif fd == self.gps_fd:
-                    self.gpsdpoller.read()
+                    if flag != select.POLLIN:
+                        print 'nmea got flag for gpsdpoller pipe:', flag
+                    else:
+                        self.gpsdpoller.read()
                 else:
                     self.read_serial_device(self.device_fd[fd], serial_msgs)
 
+        t2 = time.time()
         self.handle_messages(serial_msgs, 'serial')
+        t3 = time.time()
                 
         for device in self.devices:
             # timeout serial devices
@@ -278,6 +297,7 @@ class Nmea(object):
                     if device == self.primarydevices[name]:
                         self.primarydevices[name] = None
                 device.close()
+        t4 = time.time()
 
         if self.process.sockets and time.time() - self.last_imu_time > .5 and \
            'imu/pitch' in self.server.values:
@@ -285,6 +305,9 @@ class Nmea(object):
             self.send_nmea('APXDR,A,%.3f,D,ROLL' % self.server.values['imu/heel'].value)
             self.send_nmea('APHDM,%.3f,M' % self.server.values['imu/heading_lowpass'].value)
             self.last_imu_time = time.time()
+        t5 = time.time()
+        if t5 - t0 > .1:
+            print 'nmea poll times', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4
             
     def probe_serial(self):
         # probe new nmea data devices
@@ -315,7 +338,7 @@ class Nmea(object):
 
     def send_nmea(self, msg):
         line = '$' + msg + ('*%02X' % nmea_cksum(msg))
-        self.process.pipe.send(line)
+        self.process.pipe.send(line, False)
 
     def handle_messages(self, msgs, source):
         for name in msgs:
@@ -340,7 +363,7 @@ class Nmea(object):
 READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
 class NmeaBridgeProcess(multiprocessing.Process):
     def __init__(self):
-        self.pipe, pipe = multiprocessing.Pipe()
+        self.pipe, pipe = NonBlockingPipe('nmea pipe', True)
         self.sockets = False
         super(NmeaBridgeProcess, self).__init__(target=self.process, args=(pipe,))
 
@@ -390,14 +413,6 @@ class NmeaBridgeProcess(multiprocessing.Process):
         self.fd_to_socket[fd] = sock
 
         self.poller.register(sock.socket, READ_ONLY)
-
-    def pipe_message(self, flag):
-        if flag != select.POLLIN:
-            print 'nmea bridge lost pipe to autopilot'
-            exit(2)
-        msg = self.pipe.recv() + '\r\n'
-        for sock in self.sockets:
-            sock.send(msg)
 
     def socket_lost(self, sock):
         #print 'lost connection: ', self.addresses[sock]
@@ -467,31 +482,34 @@ class NmeaBridgeProcess(multiprocessing.Process):
         self.poller.register(pipe, READ_ONLY)
         self.fd_to_socket = {server.fileno() : server, pipe.fileno() : pipe}
 
-        self.pipe_poller = select.poll()
-        self.pipe_poller.register(pipe, READ_ONLY)
-
+        msgs = {}
         while True:
             timeout = 100 if self.sockets else 10000
             t0 = time.time()
             events = self.poller.poll(timeout)
-            msgs = {}
+            t1 = time.time()
             while events:
                 fd, flag = events.pop()
                 sock = self.fd_to_socket[fd]
 
-                if sock == server:
+                if flag & (select.POLLHUP | select.POLLERR):
+                    if sock == server:
+                        print 'nmea bridge lost server connection'
+                        exit(2)
+                    if sock == pipe:
+                        print 'nmea bridge pipe to autopilot'
+                        exit(2)
+                    self.socket_lost(sock)
+                elif sock == server:
                     self.new_socket_connection(server)
                 elif sock == pipe:
-                    self.pipe_message(flag)
                     while True: # receive all messages in pipe
-                        events = self.pipe_poller.poll(0)
-                        if not events:
+                        msg = self.pipe.recv()
+                        if not msg:
                             break
-                        fd, flag = events.pop()
-                        self.pipe_message(flag)
-                        
-                elif flag & (select.POLLHUP | select.POLLERR):
-                    self.socket_lost(sock)
+                        msg += '\r\n'
+                        for sock in self.sockets:
+                            sock.send(msg)
                 elif flag & select.POLLIN:
                     if not sock.recv():
                         self.socket_lost(sock)
@@ -502,23 +520,30 @@ class NmeaBridgeProcess(multiprocessing.Process):
                                 break
                             self.receive_nmea(line, msgs)
 
+            t2 = time.time()
             if msgs:
-                self.pipe.send(msgs)
+                if self.pipe.send(msgs):
+                    msgs = {}
 
+            t3 = time.time()
             try:
-                msgs = self.client.receive()
-                for name in msgs:
+                signalk_msgs = self.client.receive()
+                for name in signalk_msgs:
                     self.client_message(name, msgs[name]['value'])
             except:
                 pass
 
+            t4 = time.time()
             for sock in self.sockets:
                 sock.flush()
+            t5 = time.time()
 
-            dt = time.time() - t0
-
+            dt = t5 - t0
             if dt < .1:
                 time.sleep(.1 - dt)
+            else:
+                if t5-t1 > .1:
+                    print 'nmea process loop too slow:', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4
 
 if __name__ == '__main__':
     if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):

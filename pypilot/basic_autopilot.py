@@ -29,7 +29,7 @@ class BasicAutopilot(AutopilotBase):
       self.gains[name] = (self.Register(AutopilotGain, name, default, 0, max_val),
                           self.Register(SensorValue, name+'gain', timestamp))
     Gain('P', .005, .025)
-    Gain('I',    0, .05)
+    Gain('I',    0, .01)
     Gain('D',  .15, .5)
 
     Gain('P2', 0, .025)
@@ -49,11 +49,11 @@ class BasicAutopilot(AutopilotBase):
     err = minmax(autopilot.resolv(heading - heading_command), 60)
     self.heading_error.set(err)
 
-    # int error +- 20
+    # int error +- 60
     dt = t - self.heading_error_int_time
     dt = max(min(dt, 1), 0) # ensure dt is from 0 to 1
     self.heading_error_int_time = t
-    err_int = minmax(self.heading_error_int.value + err*dt, 20)
+    err_int = minmax(self.heading_error_int.value + err*dt, 60)
     self.heading_error_int.set(err_int)
 
     command = 0

@@ -8,13 +8,14 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import gps, multiprocessing, time, socket
+from signalk.pipeserver import NonBlockingPipe
 import select
 
 from signalk.values import *
 
 class GpsProcess(multiprocessing.Process):
     def __init__(self):
-        self.pipe, pipe = multiprocessing.Pipe(duplex=False)
+        self.pipe, pipe = NonBlockingPipe('gpsprocess')
         super(GpsProcess, self).__init__(target=self.gps_process, args=(pipe, ))
         self.devices = []
 
@@ -46,7 +47,7 @@ class GpsProcess(multiprocessing.Process):
                     #fix['time'] = self.gpsd.fix.time
                     fix['track'] = self.gpsd.fix.track
                     fix['speed'] = self.gpsd.fix.speed * 1.944 # knots
-                    pipe.send(fix)
+                    pipe.send(fix, False)
                     lasttime = time.time()
 
             except StopIteration:
