@@ -1,5 +1,15 @@
 Installing:
 
+dependencies:
+swig
+RTIMULib2
+
+sudo apt-get install swig
+
+# my version of rtimulib is required!
+git clone https://github.com/seandepagnier/RTIMULib2
+
+
 python setup.py install
 
 

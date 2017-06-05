@@ -23,7 +23,13 @@ arduino_servo_module = Extension('_arduino_servo',
                         extra_compile_args=['-Wno-unused-result'],
                         swig_opts=['-c++']
 )
-    
+
+ugfx_module = Extension('_ugfx',
+                        sources=['lcd/ugfx/ugfx.cpp',
+                                 'lcd/ugfx/ugfx.i'],
+                        extra_compile_args=['-Wno-unused-result'],
+                        swig_opts=['-c++']
+)
 
 import os, os.path
 locale_files = []
@@ -43,7 +49,7 @@ setup (name = 'pypilot',
        author="Sean D'Epagnier",
        url='http://pypilot.org/',
        packages=['pypilot', 'pypilot/arduino_servo', 'ui', 'lcd', 'webapp', 'signalk', 'signalk/linebuffer'],
-       ext_modules = [arduino_servo_module, linebuffer_module],
+       ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module],
 #       py_modules = ['pypilot/arduino_servo', 'signalk/linebuffer/linebuffer'],
        package_data={'lcd': ['font.ttf'] + locale_files,
                      'webapp': ['static/*', 'templates/*']},

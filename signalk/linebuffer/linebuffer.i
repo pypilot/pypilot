@@ -12,6 +12,5 @@ public:
     const char *line();
     const char *line_nmea();
     bool recv();
-//    const char *readline();
     const char *readline_nmea();
 };
