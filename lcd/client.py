@@ -56,6 +56,7 @@ class LCDMenu():
 
     def display(self):
         self.lcd.fittext(rectangle(0, 0, 1, .25), self.name)
+
         firstitem = .25
         y = firstitem
         for item in self.items:
@@ -156,7 +157,7 @@ class LCDClient():
 
             width = min(w, 48*mul)
             self.surface = ugfx.surface(width, width*h/w, screen.bypp, None)
-            self.frameperiod = .2 # 5 frames a second possible
+            self.frameperiod = .25 # 4 frames a second possible
 
         else:
             self.surface = None
@@ -189,7 +190,7 @@ class LCDClient():
         self.control = False
         self.wifi = False
 
-        self.pins = [26, 19, 13, 6, 5]
+        self.pins = [18, 17, 27, 22, 23]
         if GPIO:
             GPIO.setmode(GPIO.BCM)
             for pin in self.pins:
@@ -683,7 +684,7 @@ class LCDClient():
         # status cursor
         w, h = self.surface.width, self.surface.height
         self.blink = self.blink[1], self.blink[0]
-        size = h / 20
+        size = h / 40
         self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
 
     def set(self, name, value):
@@ -867,8 +868,10 @@ class LCDClient():
 def main():
     print 'init...'
     if 'nokia5110' in sys.argv[1:]:
+        print 'using nokia5110'
         import nokia5110lcd
         screen = nokia5110lcd.screen()
+
     elif use_glut:
         #screen = glut.screen((480, 640))
         #screen = glut.screen((64, 128))

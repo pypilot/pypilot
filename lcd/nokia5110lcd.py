@@ -1,3 +1,5 @@
+
+import ugfx
 import Adafruit_Nokia_LCD as LCD
 import Adafruit_GPIO.SPI as SPI
 
@@ -5,7 +7,7 @@ from PIL import Image
 
 
 # Raspberry Pi hardware SPI config:
-DC = 23
+DC = 25
 RST = 24
 SPI_PORT = 0
 SPI_DEVICE = 0
@@ -30,17 +32,16 @@ SPI_DEVICE = 0
 # DIN = 'P8_9'
 # CS = 'P8_11'
 
-
 class screen(ugfx.surface):
     def __init__(self):
-        super(screen, self).__init__(44, 84, 1, None)
+        super(screen, self).__init__(48, 84, 1, None)
         # Hardware SPI usage:
         disp = LCD.PCD8544(DC, RST, spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz=4000000))
         # Software SPI usage (defaults to bit-bang SPI interface):
         #disp = LCD.PCD8544(DC, RST, SCLK, DIN, CS)
 
         # Initialize library.
-        disp.begin(contrast=60)
+        disp.begin(contrast=40)
 
         # Clear display.
         disp.clear()
@@ -48,17 +49,21 @@ class screen(ugfx.surface):
         self.disp = disp
 
     def refresh(self):
-        for row in range(6):
-            # Iterate through all 83 x axis columns.
-            for x in range(84):
-                # Set the bits for the column of pixels at the current position.
+        #self.disp.command(PCD8544_SETYADDR)
+        #self.disp.command(PCD8544_SETXADDR)
+        # Write the buffer.
+        self.disp._gpio.set_high(self.disp._dc)
+        self.binary_write(self.disp._spi._device.fileno())
+
+    def refreshp(self):
+        for col in range(6):
+            for y in range(84):
+                index = y + (5-col)*84
                 bits = 0
-                # Don't use range here as it's a bit slow
-                for bit in [0, 1, 2, 3, 4, 5, 6, 7]:
-                    bits = bits << 1
-                    bits |= 1 if self.getpixel(row*ROWPIXELS+7-bit, x) == 0 else 0
-                    # Update buffer byte and increment to next byte.
+                for bit in range(8):
+                    bits <<= 1
+                    if self.getpixel(col*8+bit, y):
+                        bits |= 1
                     self.disp._buffer[index] = bits
-                index += 1
-            
-        disp.display()
+                        #self.disp._buffer = self.binary()
+        self.disp.display()

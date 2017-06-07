@@ -31,6 +31,7 @@ def draw(surface, pos, text, size, bw, crop=False):
         x, y = pos
     else:
         x, y = 0, 0
+
     origx = x
     width = 0
     lineheight = 0
@@ -42,8 +43,10 @@ def draw(surface, pos, text, size, bw, crop=False):
             height += lineheight
             lineheight = 0
             continue
+        
         if not c in font:
             filename = fontpath + '/%03d%03d' % (size, ord(c))
+
             if bw:
                 filename += 'b';
             if crop:
