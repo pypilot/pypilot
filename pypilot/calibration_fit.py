@@ -242,7 +242,7 @@ def CalibrationProcess(points, fit_output, initial):
         spherebias = fit[1][:3]
         sbd = vector.norm(vector.sub(bias, spherebias))
         #print 'newbias diff', n
-        if sbd > 5
+        if sbd > 5:
             continue
 
         # if the bias has sufficiently changed

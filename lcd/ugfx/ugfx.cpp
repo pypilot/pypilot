@@ -53,6 +53,16 @@ surface::surface(int w, int h, int internal_bypp, const char *data32)
     if (!data32)
         return;
 
+    if(bypp == 1) {
+        int i = 0;
+        for(int y = 0; y<height; y++)
+            for(int x = 0; x<width; x++){
+                uint32_t c = ((uint32_t*)data32)[i];
+                long location = x + y * line_length;
+                *((uint8_t*)(p + location)) = c&0xff;
+                i++;
+            }
+    } else
     if (bypp == 2) {
         int i = 0;
         for(int y = 0; y<height; y++)
@@ -87,6 +97,7 @@ surface::surface(const char* filename)
     xoffset = yoffset = 0;
     p = new char [width*height*file_bypp];
     line_length = width*file_bypp;
+    bypp = file_bypp;
 
     if(colors != 1) // only greyscale supported
         goto fail;  
@@ -101,22 +112,26 @@ surface::surface(const char* filename)
                 goto fail;
             }
             while(run-- > 0)
-            gray_data[i++] = value;
+                gray_data[i++] = value;
         }
 
-        if(file_bypp == 2)
+        if(file_bypp == 1)
+            memcpy(p, gray_data, width*height);
+        else if(file_bypp == 2)
             for(int i = 0; i<width*height; i++)
                 ((uint16_t*)p)[i] = color16gray(gray_data[i]);
-        else
+        else if(file_bypp == 4)
             for(int i = 0; i<width*height; i++)
                 memset(p + 4*i, gray_data[i], 3);
+        else
+            fprintf(stderr, "bypp incompatible\n");
     }
 
-    bypp = file_bypp;
+    return;
 
 fail:
+    printf("failed ot open %s\n", filename);
     fclose(f);
-    return;
 }
 
 surface::~surface()
@@ -128,10 +143,14 @@ void surface::store_grey(const char *filename)
 {
     char gray_data[width*height];
     for(unsigned int i=0; i<sizeof gray_data; i++)
-        if(bypp == 2)
+        if(bypp == 1)
+            gray_data[i] = p[i];
+        else if(bypp == 2)
             gray_data[i] = p[2*i]&0xfc;
-        else
+        else if(bypp == 2)
             gray_data[i] = p[4*i];
+        else
+            fprintf(stderr, "bypp incompatible\n");
 
     FILE *f = fopen(filename, "w");
     uint16_t colors = 1; // grey
@@ -324,7 +343,7 @@ void surface::box(int x1, int y1, int x2, int y2, uint32_t c)
     {
         uint16_t t = c&0xff;
         for(int y = y1; y <= y2; y++)
-            memset(p + y*line_length, t, x2-x1);
+            memset(p + y*line_length + x1, t, x2-x1+1);
     } break;
     case 2:
     {
@@ -380,6 +399,27 @@ void surface::invert(int x1, int y1, int x2, int y2)
 void surface::fill(uint32_t c)
 {
     box(0, 0, width-1, height-1, c);
+}
+
+void surface::binary_write(int fileno)
+{
+    if(bypp != 1)
+        return;
+  
+    char binary[width*height/8];
+    int cols = width/8;
+    for(int col = 0; col<6; col++)
+        for(int y = 0; y < height; y++) {
+            int index = y + (5-col)*height;
+            uint8_t bits = 0;
+            for(int bit = 0; bit<8; bit++) {
+                bits <<= 1;
+                if(*(uint8_t*)(p + y*line_length + col*8+bit))
+                    bits |= 1;
+            }
+            binary[index] = bits;
+        }
+    write(fileno, binary, sizeof binary);
 }
 
 int surface::getpixel(int x, int y)
