@@ -45,7 +45,7 @@ class SignalKClient(object):
             if 'host' in config and not orighost:
                 host = config['host']
 
-        except IOError:
+        except:
             try:
                 config['host'] = host
                 file = open(configfilename, 'w')

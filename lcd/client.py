@@ -92,7 +92,8 @@ class RangeEdit():
         v = min(v, self.range[1])
         v = max(v, self.range[0])
         self.value = v
-        self.lcd.client.set(self.signalk_id, v)
+        if self.signalk_id:
+            self.lcd.client.set(self.signalk_id, v)
         self.lastmovetime = time.time()
 
     def display(self):
@@ -102,7 +103,8 @@ class RangeEdit():
 
         # update name
         if time.time()-self.lastmovetime > 1:
-            self.value = self.lcd.last_msg[self.signalk_id]
+            if self.signalk_id:
+                self.value = self.lcd.last_msg[self.signalk_id]
         
         v = self.value
         try:
@@ -122,7 +124,9 @@ class RangeEdit():
             self.lcd.rectangle(sliderarea)
         except:
             pass
-        self.lcd.client.get(self.signalk_id)
+        # poll for updates
+        if self.signalk_id:
+            self.lcd.client.get(self.signalk_id)
 
 white = ugfx.color(255, 255, 255)
 black = ugfx.color(0, 0, 0)
@@ -141,14 +145,17 @@ class LCDClient():
 
         self.config = {}
         self.configfilename = os.getenv('HOME') + '/.pypilot/lcdclient.conf' 
+        self.config['contrast'] = 50
+        self.config['invert'] = False
+        self.config['language'] = 'en'
+
         try:
             file = open(self.configfilename)
-            self.config = json.loads(file.readline())
+            config = json.loads(file.readline())
+            for name in config:
+                self.config[name] = config[name]
         except:
             print 'failed to load config file:', self.configfilename
-            self.config['invert'] = False
-            self.config['language'] = 'en'
-
         if screen:
             w, h = screen.width, screen.height
             mul = int(math.ceil(w / 48.0))
@@ -190,6 +197,8 @@ class LCDClient():
         self.control = False
         self.wifi = False
 
+        self.contrast_edit=RangeEdit('Contrast', lambda : 'test', self.config['contrast'], False, self, 35, 65, 1)
+
         self.pins = [18, 17, 27, 22, 23]
         if GPIO:
             GPIO.setmode(GPIO.BCM)
@@ -206,6 +215,10 @@ class LCDClient():
                     self.longsleep = 0
 
                 GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
+
+    def get(self, name):
+        if self.client:
+            self.client.get(name)
 
     def set_language(self, name):
         language = gettext.translation('pypilot_lcdclient',
@@ -250,7 +263,7 @@ class LCDClient():
 
         def calibrate():
             def getheading():
-                self.client.get('imu/heading')
+                self.get('imu/heading')
                 try:
                     return '%.1f' % self.last_msg['imu/heading']
                 except:
@@ -315,16 +328,26 @@ class LCDClient():
             
                 return self.display_menu
 
+            def contrast():
+                self.range_edit = self.contrast_edit
+                return self.range_edit.display
+            
             def invert():
                 self.config['invert'] = not self.config['invert']
                 self.save_config()
                 return self.display_menu
 
+            def display():
+                self.menu = LCDMenu(self, _('Display'),
+                                    [(_('contrast'), contrast),
+                                     (_('invert'), invert)],
+                                    self.menu)
+                return self.display_menu
             self.menu = LCDMenu(self, _('Settings'),
-                                [(_('mode'), mode),
-                                 (_('motor'), motor),
+                                [(_('mode'), contrast),
+                                 (_('motor'), invert),
                                  (_('language'), language),
-                                 (_('invert'), invert)],
+                                 (_('display'), display)],
                                 self.menu)
             return self.display_menu
 
@@ -333,6 +356,8 @@ class LCDClient():
                              (_('calibrate'), calibrate),
                              (_('settings'), settings),
                              (_('info'), lambda : self.display_info)])
+        self.info_page = 0
+        return self.display_menu
 
     def text(self, pos, text, size, crop=False):
         pos = int(pos[0]*self.surface.width), int(pos[1]*self.surface.height)
@@ -422,26 +447,27 @@ class LCDClient():
         
     def connect(self):
         self.display_page = self.display_connecting
+        
         watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command',
-                     'servo/controller']
+                     'gps/source', 'wind/source', 'servo/controller']
         poll_list = ['ap/heading']
         nalist = watchlist + poll_list + \
-        ['imu/pitch', 'imu/heel', 'ap/runtime',
+        ['imu/pitch', 'imu/heel', 'ap/runtime', 'ap/version',
          'ap/P', 'ap/I', 'ap/D',
-         'gps/source', 'wind/source',
-         'imu/heading',
-         'imu/heading_offset',
+         'imu/heading', 'imu/heading_offset',
          'imu/alignmentCounter',
          'imu/compass_calibration',
          'imu/compass_calibration_age',
-         'servo/Amp Hours', 'servo/Max Current',
+         'servo/Watts', 'servo/Amp Hours', 'servo/Max Current',
          'servo/Min Speed', 'servo/Max Speed']
         self.last_msg = {}
         for name in nalist:
             self.last_msg[name] = _('N/A')
+        for name in ['gps/source', 'wind/source']:
+            self.last_msg[name] = 'none'
         self.last_msg['ap/heading_command'] = 0
         
-        host = ""
+        host = ''
         if len(sys.argv) > 1:
             host = sys.argv[1]
         
@@ -458,7 +484,7 @@ class LCDClient():
             print 'connected'
 
             for request in self.initial_gets:
-                self.client.get(request)
+                self.get(request)
         except:
             self.client = False
             time.sleep(1)
@@ -611,14 +637,14 @@ class LCDClient():
             r.width = 1-float(counter)/100
             r.height = .25
             self.invertrectangle(r)
-        self.client.get('imu/alignmentCounter')
+        self.get('imu/alignmentCounter')
             
         self.fittext(rectangle(0, .72, .5, .14), _('pitch'))
         self.fittext(rectangle(.5, .72, .5, .14), self.round_last_msg('imu/pitch', 1))
         self.fittext(rectangle(0, .86, .5, .14), _('heel'))
         self.fittext(rectangle(.5, .86, .5, .14), self.round_last_msg('imu/heel', 1))
-        self.client.get('imu/pitch')
-        self.client.get('imu/heel')
+        self.get('imu/pitch')
+        self.get('imu/heel')
 
     def display_connecting(self):
         self.surface.fill(black)
@@ -636,20 +662,32 @@ class LCDClient():
         self.surface.fill(black)
         self.fittext(rectangle(0, 0, 1, .2), _('Info'))
 
-        v = self.round_last_msg('servo/Amp Hours', 3)
+        if self.info_page > 1:
+            self.info_page = 0
 
         y = .2
-        spacing = .11
-        runtime = self.last_msg['ap/runtime'][:7]
-        items = [_('Amp Hours'), v, _('runtime'), runtime, _('version'), '0.1']
+        if self.info_page == 0:
+            spacing = .11
+            v = self.round_last_msg('servo/Watts', 3)
+            runtime = self.last_msg['ap/runtime'][:7]
+            ah = self.round_last_msg('servo/Amp Hours', 3)
+            items = [_('Watts'), v, _('Amp Hours'), ah, _('runtime'), runtime]
+            self.get('servo/Watts')
+            self.get('servo/Amp Hours')
+            self.get('ap/runtime')
+        else:
+            spacing = .18
+            ver = self.last_msg['ap/version']
+
+            items = [_('version'), ver, _('author'), 'Sean D\'Epagnier']
+            self.get('ap/version')
+
         even, odd = 0, .05
         for item in items:
-            self.fittext(rectangle(0, y, 1, spacing+even), item)
+            self.fittext(rectangle(0, y, 1, spacing+even), item, True)
             y += spacing + even
             even, odd = odd, even
 
-        self.client.get('servo/Amp Hours')
-        self.client.get('ap/runtime')
 
     def display_calibrate_info(self):
         self.surface.fill(black)
@@ -657,10 +695,12 @@ class LCDClient():
         
         deviation = _('N/A')
         try:
-            ndeviation = self.last_msg['imu/compass_calibration'][1]
-            names = [(100, _('excellent')), (200, _('good')), (300, _('poor')), (1000, _('bad'))]
+            cal = self.last_msg['imu/compass_calibration']
+            ndeviation = (cal[0][3] - cal[1][3])**2
+            print ndeviation
+            names = [(0, _('incomplete')), (1, _('excellent')), (2, _('good')), (4, _('poor')), (1000, _('bad'))]
             for n in names:
-                if ndeviation < n[0]:
+                if ndeviation <= n[0]:
                     deviation = n[1]
                     break
         except:
@@ -671,11 +711,12 @@ class LCDClient():
         self.fittext(rectangle(0, .65, .4, .15), _('age'))
         self.fittext(rectangle(0, .8, 1, .2), self.last_msg['imu/compass_calibration_age'][:7])
             
-        self.client.get('imu/compass_calibration')
-        self.client.get('imu/compass_calibration_age')
+        self.get('imu/compass_calibration')
+        self.get('imu/compass_calibration_age')
 
     def display(self):
         self.display_page()
+        self.config['contrast'] = self.contrast_edit.value
 
         if self.display_page != self.display_control:
             self.control = False
@@ -762,12 +803,14 @@ class LCDClient():
              self.display_page == self.display_calibrate_info:
             if self.keypadup[MENU]:
                 self.display_page = self.display_menu
+            if self.keypadup[UP] or self.keypadup[DOWN]:
+                self.info_page += 1
 
         elif self.range_edit and self.display_page == self.range_edit.display:
             if self.keypadup[MENU]:
                 self.display_page = self.display_menu
             elif updown:
-                self.range_edit.move(sign*speed*.3)
+                self.range_edit.move(-sign*speed*.1)
         else:
             # self.display_page = self.display_control
             pass
@@ -793,8 +836,7 @@ class LCDClient():
                 self.keypadup[key] = True
 
     def idle(self):
-        if self.client:
-            self.client.get('ap/heading')
+        self.get('ap/heading')
 
         if any(self.keypadup):
             self.longsleep = 0
@@ -867,7 +909,8 @@ class LCDClient():
 
 def main():
     print 'init...'
-    if 'nokia5110' in sys.argv[1:]:
+    if 'nokia5110' in sys.argv:
+        sys.argv.remove('nokia5110')
         print 'using nokia5110'
         import nokia5110lcd
         screen = nokia5110lcd.screen()
@@ -905,6 +948,8 @@ def main():
                 surface = invsurface
                 surface.invert(0, 0, surface.width, surface.height)
 
+                lcdclient.config['invert']
+
             if mag != 1:
                 magsurface.magnify(surface, mag)
                 surface = magsurface
@@ -913,6 +958,9 @@ def main():
 
             screen.blit(surface, 0, 0)
             screen.refresh()
+
+            if 'contrast' in lcdclient.config:
+                screen.contrast = int(lcdclient.config['contrast'])
 
         lcdclient.idle()
 

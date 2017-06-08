@@ -48,6 +48,7 @@ setup (name = 'pypilot',
        package_data={'lcd': ['font.ttf'] + locale_files,
                      'webapp': ['static/*', 'templates/*']},
 #       requires=['flask', 'gevent'], # webapp
+#       install_requires=['gps'],
        entry_points={
            'console_scripts': [
                'pypilot=pypilot.simple_autopilot:main',

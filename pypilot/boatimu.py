@@ -382,11 +382,11 @@ if __name__ == "__main__":
   while True:
     t0 = time.time()
     data = boatimu.IMURead()
-#    if data:
-#      print 'pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading']
-
+    if data:
+      print 'pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading']
+    server.HandleRequests()
     dt = time.time() - t0
-    t1=time.time()
-#    server.HandleRequests(.1 - dt)
-    server.HandleRequests(.1)
+    if dt > .1:
+      time.sleep(dt);
+    
 

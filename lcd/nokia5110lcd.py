@@ -41,7 +41,9 @@ class screen(ugfx.surface):
         #disp = LCD.PCD8544(DC, RST, SCLK, DIN, CS)
 
         # Initialize library.
-        disp.begin(contrast=40)
+        self.contrast = 60
+        self.lastcontrast = False
+        disp.begin(contrast=self.contrast)
 
         # Clear display.
         disp.clear()
@@ -49,8 +51,11 @@ class screen(ugfx.surface):
         self.disp = disp
 
     def refresh(self):
-        #self.disp.command(PCD8544_SETYADDR)
-        #self.disp.command(PCD8544_SETXADDR)
+        if self.contrast != self.lastcontrast:
+            self.disp.set_contrast(self.contrast)
+            self.lastcontrast = self.contrast
+        self.disp.command(LCD.PCD8544_SETYADDR)
+        self.disp.command(LCD.PCD8544_SETXADDR)
         # Write the buffer.
         self.disp._gpio.set_high(self.disp._dc)
         self.binary_write(self.disp._spi._device.fileno())
