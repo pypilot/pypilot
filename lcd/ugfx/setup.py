@@ -15,7 +15,8 @@ from distutils.core import setup, Extension
 
 ugfx_module = Extension('_ugfx',
                         sources=['ugfx_wrap.cxx', 'ugfx.cpp'],
-                        extra_compile_args=['-Wno-unused-result']
+                        extra_compile_args=['-Wno-unused-result'],
+                        libraries=['wiringPi']
 )
 
 setup (name = 'ugfx',

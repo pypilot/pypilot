@@ -15,8 +15,10 @@ fonts = {}
 
 fontpath = os.path.abspath(os.getenv('HOME') + '/.pypilot/ugfxfonts/')
 
+                                                                                                    
+
 if not os.path.exists(fontpath):
-    os.mkdir(fontpath)
+    os.makedirs(fontpath)
 if not os.path.isdir(fontpath):
     raise 'ugfxfonts should be a directory'
 

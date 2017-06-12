@@ -388,5 +388,6 @@ if __name__ == "__main__":
     dt = time.time() - t0
     t1=time.time()
 #    server.HandleRequests(.1 - dt)
-    server.HandleRequests(.1)
+    server.HandleRequests()
+    time.sleep(.1)
 

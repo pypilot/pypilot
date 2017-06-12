@@ -30,6 +30,7 @@ class LineBufferedNonBlockingSocket(object):
         self.out_buffer = ''
         self.pollout = select.poll()
         self.pollout.register(connection, select.POLLOUT)
+        self.sendfail_msg = self.sendfail_cnt = 0
 
     def recv(self):
         return self.b.recv()
@@ -48,7 +49,10 @@ class LineBufferedNonBlockingSocket(object):
             return
         try:
             if not self.pollout.poll(0):
-                print 'nmea socket failed to send'
+                if sendfail_cnt >= sendfail_msg:
+                    print 'signalk socket failed to send', sendfail_cnt
+                    self.sendfail_msg *= 10
+                self.sendfail_cnt += 1
                 return
             t0 = time.time()
             count = self.socket.send(self.out_buffer)
