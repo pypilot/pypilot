@@ -105,9 +105,8 @@ class AutopilotBase(object):
 
     timestamp = self.server.TimeStamp('ap')
     self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)
-
-    self.gps_heading_offset = self.Register(Value, 'gps_heading_offset', 0)
-    self.wind_heading_offset = self.Register(Value, 'wind_heading_offset', 0)
+    self.gps_heading_offset = self.Register(SensorValue, 'gps_heading_offset', timestamp)
+    self.wind_heading_offset = self.Register(SensorValue, 'wind_heading_offset', timestamp)
 
     self.runtime = self.Register(AgeValue, 'runtime') #, persistent=True)
 

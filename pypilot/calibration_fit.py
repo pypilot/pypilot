@@ -272,7 +272,7 @@ class MagnetometerAutomaticCalibration(object):
         self.fit_output, fit_output = NonBlockingPipe('fit output', True)
 
         self.process = multiprocessing.Process(target=CalibrationProcess, args=(points, fit_output, self.sphere_fit))
-        print 'start cal process'
+        #print 'start cal process'
         self.process.start()
 
     def __del__(self):

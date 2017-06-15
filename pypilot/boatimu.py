@@ -31,7 +31,7 @@ except ImportError:
   print "RTIMU library not detected, please install it"
 
 def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
-    print 'imu on', os.getpid()
+    #print 'imu on', os.getpid()
     if os.system('sudo chrt -pf 2 %d 2>&1 > /dev/null' % os.getpid()):
       print 'warning, failed to make imu process realtime'
 

@@ -56,7 +56,7 @@ class GpsProcess(multiprocessing.Process):
 
     def gps_process(self, pipe):
         import os
-        print 'gps on', os.getpid()
+        #print 'gps on', os.getpid()
         while True:
             self.connect()
             self.read(pipe)

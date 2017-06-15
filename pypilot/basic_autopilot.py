@@ -36,8 +36,8 @@ class BasicAutopilot(AutopilotBase):
     def PosGain(name, default, max_val):
       Gain(name, default, 0, max_val)
         
-    PosGain('P', .005, .02)
-    PosGain('I',    0, .5)
+    PosGain('P', .005, .01)
+    PosGain('I',    0, .25)
     PosGain('D',  .15, 1.0)
 
     PosGain('DD',  0, 1.0)
@@ -49,13 +49,6 @@ class BasicAutopilot(AutopilotBase):
 
     PosGain2('P2', 0, 1, 'P')
     PosGain2('D2', 0, 1, 'D')
-
-    Gain('Pr',  0, -.25, .25)
-    Gain('Dr',  0, -.25, .25)
-    Gain('Pp',  0, -.25, .25)
-    Gain('Dp',  0, -.25, .25)
-    
-    Gain('C',  0, -.25, .25)
 
     self.lastenabled = False
 
@@ -97,12 +90,7 @@ class BasicAutopilot(AutopilotBase):
     gain_values = {'P': self.heading_error.value,
                    'I': self.heading_error_int.value,
                    'D': headingrate,
-                   'DD': headingraterate,
-                   'Pr': boatimu.SensorValues['roll'].value,
-                   'Dr': boatimu.SensorValues['rollrate'].value,
-                   'Pp': boatimu.SensorValues['pitch'].value,
-                   'Dp': boatimu.SensorValues['pitchrate'].value,
-                   'C': 1}
+                   'DD': headingraterate}
     gain_values['P2'] = gain_values['P']
     gain_values['D2'] = gain_values['D']
 
