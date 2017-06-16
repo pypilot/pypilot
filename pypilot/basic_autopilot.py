@@ -15,7 +15,7 @@ def minmax(value, r):
 
 class BasicAutopilot(AutopilotBase):
   def __init__(self, *args, **keywords):
-    super(BasicAutopilot, self).__init__(*args, **keywords)
+    super(BasicAutopilot, self).__init__('Basic')
 
     # create filters
     timestamp = self.server.TimeStamp('ap')
