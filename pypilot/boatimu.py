@@ -388,5 +388,4 @@ if __name__ == "__main__":
     dt = time.time() - t0
     if dt > .1:
       time.sleep(dt);
-    
 

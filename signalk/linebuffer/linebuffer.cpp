@@ -48,6 +48,7 @@ bool LineBuffer::recv()
     len += c;
     return true;
 }
+
 const char *LineBuffer::readline_nmea()
 {
     if(next_nmea())

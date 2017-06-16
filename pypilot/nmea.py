@@ -124,7 +124,7 @@ class NMEASerialDevice(object):
 
 #    def recv(self):
 #        return self.b.recv()
-        
+
     def readline(self):
         return self.b.readline_nmea()
 
@@ -145,7 +145,7 @@ class NMEASocket(object):
         return self.b.recv()
 
     def readline(self):
-        return self.b.line_nmea()
+        return self.b.readline_nmea()
 
     def close(self):
         self.socket.close()
@@ -194,12 +194,11 @@ class Nmea(object):
 
         self.process = NmeaBridgeProcess()
         self.process.start()
-        READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
         self.poller = select.poll()
         self.process_fd = self.process.pipe.fileno()
-        self.poller.register(self.process_fd, READ_ONLY)
+        self.poller.register(self.process_fd, select.POLLIN)
         self.gps_fd = self.gpsdpoller.process.pipe.fileno()
-        self.poller.register(self.gps_fd, READ_ONLY)
+        self.poller.register(self.gps_fd, select.POLLIN)
         self.device_fd = {}
 
         self.nmea_times = {}
@@ -253,6 +252,19 @@ class Nmea(object):
                 serial_msgs[name] = msg
                 break
 
+    def remove_serial_device(self, device):
+        index = self.devices.index(device)
+        print 'lost serial nmea%d' % index
+        self.devices[index] = False
+        self.poller.unregister(device.device.fileno())
+        del self.devices_lastmsg[device]
+        for name in self.primarydevices:
+            if device == self.primarydevices[name]:
+                self.primarydevices[name] = None
+                if self.values[name]['source'].value == 'serial':
+                    self.values[name]['source'].set('none')
+        device.close()
+            
     def poll(self):
         t0 = time.time()
         self.probe_serial()
@@ -277,8 +289,12 @@ class Nmea(object):
                         print 'nmea got flag for gpsdpoller pipe:', flag
                     else:
                         self.gpsdpoller.read()
-                else:
+                elif flag == select.POLLIN:
+                    #if flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
                     self.read_serial_device(self.device_fd[fd], serial_msgs)
+                else:
+                    self.remove_serial_device(self.device_fd[fd])
+                    
 
         t2 = time.time()
         self.handle_messages(serial_msgs, 'serial')
@@ -286,17 +302,14 @@ class Nmea(object):
                 
         for device in self.devices:
             # timeout serial devices
+            if not device:
+                continue
             dt = time.time() - self.devices_lastmsg[device]
             if dt > 1:
                 print 'dt', dt
             if dt > 15:
                 print 'serial device timed out', dt
-                self.devices.remove(device)
-                del self.devices_lastmsg[device]
-                for name in self.primarydevices:
-                    if device == self.primarydevices[name]:
-                        self.primarydevices[name] = None
-                device.close()
+                self.remove_serial_device(device)
         t4 = time.time()
 
         if self.process.sockets and time.time() - self.last_imu_time > .5 and \
@@ -312,7 +325,11 @@ class Nmea(object):
     def probe_serial(self):
         # probe new nmea data devices
         if not self.probedevice:
-            self.probedevicepath = self.serialprobe.probe('nmea%d' % len(self.devices), [38400, 4800])
+            try:
+                self.probeindex = self.devices.index(False)
+            except:
+                self.probeindex = len(self.devices)
+            self.probedevicepath = self.serialprobe.probe('nmea%d' % self.probeindex, [38400, 4800])
             if self.probedevicepath:
                 try:
                     self.probedevice = NMEASerialDevice(self.probedevicepath)
@@ -328,8 +345,11 @@ class Nmea(object):
             if self.probedevice:
                 if self.probedevice.readline():
                     print 'new nmea device', self.probedevicepath
-                    self.serialprobe.probe_success('nmea%d' % len(self.devices))
-                    self.devices.append(self.probedevice)
+                    self.serialprobe.probe_success('nmea%d' % self.probeindex)
+                    if self.probeindex < len(self.devices):
+                        self.devices[self.probeindex] = self.probedevice
+                    else:
+                        self.devices.append(self.probedevice)
                     fd = self.probedevice.device.fileno()
                     self.device_fd[fd] = self.probedevice
                     self.poller.register(fd, select.POLLIN)
@@ -360,7 +380,6 @@ class Nmea(object):
             value['source'].update(source)
 
     
-READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
 class NmeaBridgeProcess(multiprocessing.Process):
     def __init__(self):
         self.pipe, pipe = NonBlockingPipe('nmea pipe', True)
@@ -412,7 +431,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
         fd = sock.socket.fileno()
         self.fd_to_socket[fd] = sock
 
-        self.poller.register(sock.socket, READ_ONLY)
+        self.poller.register(sock.socket, select.POLLIN)
 
     def socket_lost(self, sock):
         #print 'lost connection: ', self.addresses[sock]
@@ -478,8 +497,8 @@ class NmeaBridgeProcess(multiprocessing.Process):
         cnt = 0
 
         self.poller = select.poll()
-        self.poller.register(server, READ_ONLY)
-        self.poller.register(pipe, READ_ONLY)
+        self.poller.register(server, select.POLLIN)
+        self.poller.register(pipe, select.POLLIN)
         self.fd_to_socket = {server.fileno() : server, pipe.fileno() : pipe}
 
         msgs = {}
@@ -492,7 +511,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 fd, flag = events.pop()
                 sock = self.fd_to_socket[fd]
 
-                if flag & (select.POLLHUP | select.POLLERR):
+                if flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
                     if sock == server:
                         print 'nmea bridge lost server connection'
                         exit(2)
@@ -554,4 +573,5 @@ if __name__ == '__main__':
 
     while True:
         nmea.poll()
-        server.HandleRequests(.1)
+        server.HandleRequests()
+        time.sleep(.1)

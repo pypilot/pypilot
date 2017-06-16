@@ -30,6 +30,7 @@ public:
     void fill(unsigned int c);
     virtual void refresh() {}
     void binary_write(int fileno);
+    void binary_write_sw(int sclk, int mosi);
 
     int width, height, bypp;
     char *p;

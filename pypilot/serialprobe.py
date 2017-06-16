@@ -68,7 +68,7 @@ class SerialProbe(object):
             self.probes[name] = {'time': 0, 'devices' : 'none', 'device': False}
         probe = self.probes[name]
 
-        if time.time() - probe['time'] < 3:
+        if time.time() - probe['time'] < 15:
             return False
 
         probe['time'] = time.time()

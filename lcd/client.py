@@ -19,6 +19,7 @@ _ = lambda x : x # initially no translation
     
 try:
     import RPi.GPIO as GPIO
+
 except ImportError:
     print 'No gpio available'
     GPIO = None
@@ -198,10 +199,12 @@ class LCDClient():
         self.wifi = False
 
         self.contrast_edit=RangeEdit('Contrast', lambda : '', self.config['contrast'], False, self, 30, 90, 1)
-
         self.pins = [18, 17, 27, 22, 23]
+        #self.pins = [12, 11, 13, 15, 16]
+
         if GPIO:
-            GPIO.setmode(GPIO.BCM)
+            #GPIO.setmode(GPIO.BCM)
+            GPIO.setmode(GPIO.BOARD)
             for pin in self.pins:
                 try:
                     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -209,12 +212,13 @@ class LCDClient():
                     os.system("sudo chown tc /dev/gpiomem")
                     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
                     
-                GPIO.input(pin)
+                #GPIO.input(pin)
 
                 def cbr(channel):
                     self.longsleep = 0
 
                 GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
+                GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
     def get(self, name):
         if self.client:

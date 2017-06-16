@@ -407,7 +407,6 @@ void surface::binary_write(int fileno)
         return;
   
     char binary[width*height/8];
-    int cols = width/8;
     for(int col = 0; col<6; col++)
         for(int y = 0; y < height; y++) {
             int index = y + (5-col)*height;
@@ -419,8 +418,41 @@ void surface::binary_write(int fileno)
             }
             binary[index] = bits;
         }
+#if 1
+    for (int pos=0; pos<sizeof binary; pos += 64) {
+        int len = 64;
+        if (sizeof binary - pos < 64)
+            len = sizeof binary - pos;
+        write(fileno, binary + pos, len);
+    }   
+#else
     write(fileno, binary, sizeof binary);
+#endif
 }
+
+#include <wiringPi.h>
+void surface::binary_write_sw(int sclk, int mosi)
+{
+    static int setup;
+    if(!setup) {
+        wiringPiSetup();
+        setup = 1;
+    }
+    sclk = 13;
+    mosi = 12;
+    for(int col=0; col<6; col++)
+        for(int y=0; y<84; y++)
+            for(int bit=0; bit<8; bit++) {
+                // Write bit to MOSI.
+                int x = (5-col)*8+bit;
+                digitalWrite(mosi, !!p[y*line_length + x*bypp]);
+
+                digitalWrite(sclk, HIGH);
+                digitalWrite(sclk, LOW);
+            }
+
+}
+
 
 int surface::getpixel(int x, int y)
 {

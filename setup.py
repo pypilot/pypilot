@@ -23,7 +23,13 @@ arduino_servo_module = Extension('_arduino_servo',
                         extra_compile_args=['-Wno-unused-result'],
                         swig_opts=['-c++']
 )
-    
+
+ugfx_module = Extension('_ugfx',
+                        sources=['lcd/ugfx/ugfx.cpp',
+                                 'lcd/ugfx/ugfx.i'],
+                        extra_compile_args=['-Wno-unused-result'],
+                        swig_opts=['-c++']
+)
 
 import os, os.path
 locale_files = []
@@ -43,13 +49,18 @@ setup (name = 'pypilot',
        author="Sean D'Epagnier",
        url='http://pypilot.org/',
        packages=['pypilot', 'pypilot/arduino_servo', 'ui', 'lcd', 'webapp', 'signalk', 'signalk/linebuffer'],
-       ext_modules = [arduino_servo_module, linebuffer_module],
+       ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module],
 #       py_modules = ['pypilot/arduino_servo', 'signalk/linebuffer/linebuffer'],
        package_data={'lcd': ['font.ttf'] + locale_files,
                      'webapp': ['static/*', 'templates/*']},
 #       requires=['flask', 'gevent'], # webapp
+<<<<<<< HEAD
 #       install_requires=['gps'],
        entry_points={
+=======
+       dependency_links	= ['https://github.com/adafruit/Adafruit_Nokia_LCD/tarball/master#egg=Adafruit-Nokia-LCD-0.1.0'],
+	  install_requires	= ['Adafruit-Nokia-LCD>=0.1.0'],       entry_points={
+>>>>>>> 7476f72f68f28c3c9c6d5b5fc1bdd8a3ff10a34f
            'console_scripts': [
                'pypilot=pypilot.basic_autopilot:main',
                'pypilot_webapp=webapp.pypilot_webapp:main',
