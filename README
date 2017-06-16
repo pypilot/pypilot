@@ -1,10 +1,14 @@
 Installing:
 
 dependencies:
+python-gps
+python-serial
+python-scipy
+python-dev
 swig
 RTIMULib2
 
-sudo apt-get install swig
+sudo apt-get install swig python-numpy python-scipy python-serial python-gps python-PIL python-dev
 
 # my version of rtimulib is required!
 git clone https://github.com/seandepagnier/RTIMULib2
