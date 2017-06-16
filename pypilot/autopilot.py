@@ -74,8 +74,8 @@ class AutopilotGain(RangeProperty):
       return d
 
 class AutopilotBase(object):
-  def __init__(self, *args, **keywords):
-    super(AutopilotBase, self).__init__(*args, **keywords)
+  def __init__(self, name):
+    super(AutopilotBase, self).__init__()
 
     if True:  # disabled debugging from keyboard interrupt
         # setup all processes to exit on any signal
@@ -96,6 +96,7 @@ class AutopilotBase(object):
     self.boatimu = BoatIMU(self.server)
     self.servo = servo.Servo(self.server, serial_probe)
     self.nmea = Nmea(self.server, serial_probe)
+    self.version = self.Register(JSONValue, 'version', name + ' ' + 'pypilot' + ' ' + str(0.1))
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
     self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
