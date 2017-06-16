@@ -51,7 +51,7 @@ setup (name = 'pypilot',
 #       install_requires=['gps'],
        entry_points={
            'console_scripts': [
-               'pypilot=pypilot.simple_autopilot:main',
+               'pypilot=pypilot.basic_autopilot:main',
                'pypilot_webapp=webapp.pypilot_webapp:main',
                'pypilot_lcdclient=lcd.client:main',
                'pypilot_control=ui.autopilot_control:main',

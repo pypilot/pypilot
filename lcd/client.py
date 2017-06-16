@@ -197,7 +197,7 @@ class LCDClient():
         self.control = False
         self.wifi = False
 
-        self.contrast_edit=RangeEdit('Contrast', lambda : 'test', self.config['contrast'], False, self, 35, 65, 1)
+        self.contrast_edit=RangeEdit('Contrast', lambda : '', self.config['contrast'], False, self, 30, 90, 1)
 
         self.pins = [18, 17, 27, 22, 23]
         if GPIO:
@@ -344,8 +344,8 @@ class LCDClient():
                                     self.menu)
                 return self.display_menu
             self.menu = LCDMenu(self, _('Settings'),
-                                [(_('mode'), contrast),
-                                 (_('motor'), invert),
+                                [(_('mode'), mode),
+                                 (_('motor'), motor),
                                  (_('language'), language),
                                  (_('display'), display)],
                                 self.menu)
@@ -788,11 +788,11 @@ class LCDClient():
                     self.set('servo/command', sign*(speed+8)/40)
 
         elif self.display_page == self.display_menu:
-            if self.keypadup[UP]:
+            if self.keypadup[DOWN]:
                 self.menu.selection -= 1
                 if self.menu.selection < 0:
                     self.menu.selection = len(self.menu.items)-1
-            elif self.keypadup[DOWN]:
+            elif self.keypadup[UP]:
                 self.menu.selection += 1
                 if self.menu.selection == len(self.menu.items):
                     self.menu.selection = 0
@@ -810,7 +810,7 @@ class LCDClient():
             if self.keypadup[MENU]:
                 self.display_page = self.display_menu
             elif updown:
-                self.range_edit.move(-sign*speed*.1)
+                self.range_edit.move(sign*speed*.1)
         else:
             # self.display_page = self.display_control
             pass
