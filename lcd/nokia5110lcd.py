@@ -25,12 +25,12 @@ class screen(ugfx.surface):
     def __init__(self):
         super(screen, self).__init__(48, 84, 1, None)
         # Hardware SPI usage:
-        disp = LCD.PCD8544(DC, RST, spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz=400000))
-        #disp = LCD.PCD8544(DC, RST, SCLK, DIN, CS)
+        disp = LCD.PCD8544(DC, RST, spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz=4000000))
         self.refresh = self.refreshhw
 
         # Software SPI usage (defaults to bit-bang SPI interface):
         #disp = LCD.PCD8544(DC, RST, SCLK, DIN, CS)
+        #self.refresh = self.refreshsw
 
         # Initialize library.
         self.contrast = 60
@@ -42,7 +42,6 @@ class screen(ugfx.surface):
         disp.display()
         self.disp = disp
 
-    def refresh(self):
 
     def refreshhw(self):
         if self.contrast != self.lastcontrast:

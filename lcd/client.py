@@ -203,8 +203,8 @@ class LCDClient():
         #self.pins = [12, 11, 13, 15, 16]
 
         if GPIO:
-            #GPIO.setmode(GPIO.BCM)
-            GPIO.setmode(GPIO.BOARD)
+            GPIO.setmode(GPIO.BCM)
+            #GPIO.setmode(GPIO.BOARD)
             for pin in self.pins:
                 try:
                     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
