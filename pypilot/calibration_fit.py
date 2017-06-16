@@ -250,7 +250,7 @@ def CalibrationProcess(points, fit_output, initial):
         d = n[0]+n[1]+n[2]
         initial = fit[0]
         if d < .1:
-            print 'insufficient change in bias'
+            #print 'insufficient change in bias'
             continue
 
         print 'coverage', coverage

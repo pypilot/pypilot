@@ -15,7 +15,7 @@ def minmax(value, r):
 
 class SimpleAutopilot(AutopilotBase):
   def __init__(self, *args, **keywords):
-    super(SimpleAutopilot, self).__init__(*args, **keywords)
+    super(SimpleAutopilot, self).__init__('Simple')
 
     # create filters
     self.heading_error = self.Register(SensorValue, 'heading_error', 0)
