@@ -304,17 +304,17 @@ class LCDClient():
                         self.set_language(name)
                         self.save_config()
                         self.create_mainmenu()
-                        return self.display_menu
+                        return language()
                     return thunk
 
                 languages = [(_('English'), 'en'), (_('French'), 'fr'),
                              (_('Spanish'), 'es')]
                 index, selection = 0, 0
-                for language in languages:
-                    if language[1] == self.config['language']:
+                for lang in languages:
+                    if lang[1] == self.config['language']:
                         selection = index
                     index+=1
-                self.menu = LCDMenu(self, _('Language'), map(lambda language : (language[0], set_language(language[1])), languages), self.menu)
+                self.menu = LCDMenu(self, _('Language'), map(lambda lang : (lang[0], set_language(lang[1])), languages), self.menu)
                 self.menu.selection = selection
             
                 return self.display_menu
