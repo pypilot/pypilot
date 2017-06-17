@@ -79,6 +79,18 @@ surface::surface(int w, int h, int internal_bypp, const char *data32)
         fprintf(stderr, "bypp incompatible with input data\n");
 }
 
+uint32_t cksum(const char *gray_data, int size)
+{
+    int32_t crc = 0xab325f12, mask = 0;  // random start
+    for(int i=0; i<size; i++) {
+        crc ^= gray_data[i];
+        for(int b=0; b<7; b++) {
+            mask = -(crc & 1);
+            crc = (crc >> 1) ^ (0xEDB88320 & mask);
+        }
+    }
+    return crc;
+}
 
 surface::surface(const char* filename)
 {
@@ -91,9 +103,16 @@ surface::surface(const char* filename)
 
     uint16_t file_bypp, colors;
     if(fread(&width, 2, 1, f) != 1 || fread(&height, 2, 1, f) != 1 ||
-       fread(&file_bypp, 2, 1, f) != 1 || fread(&colors, 2, 1, f) != 1)
+       fread(&file_bypp, 2, 1, f) != 1 || fread(&colors, 2, 1, f) != 1) {
+        fprintf(stderr, "failed reading surface header\n");
         goto fail;
+    }
 
+    if(width*height > 65536) {
+        fprintf(stderr, "invalid surface size\n");
+        goto fail;
+    }
+    
     xoffset = yoffset = 0;
     p = new char [width*height*file_bypp];
     line_length = width*file_bypp;
@@ -108,11 +127,18 @@ surface::surface(const char* filename)
         while(i<sizeof gray_data) {
             uint8_t run, value;
             if(fread(&run, 1, 1, f) != 1 || fread(&value, 1, 1, f) != 1) {
-                printf("fail\n");
+                fprintf(stderr, "failed reading surface data\n");
                 goto fail;
             }
             while(run-- > 0)
                 gray_data[i++] = value;
+        }
+
+        uint32_t computed_crc = cksum(gray_data, sizeof gray_data);
+        uint32_t crc = 0;
+        if(fread(&crc, 4, 1, f) != 1 || computed_crc != crc) {
+            printf("crc doesn't match %x %x\n", computed_crc, crc);
+            goto fail;
         }
 
         if(file_bypp == 1)
@@ -130,8 +156,9 @@ surface::surface(const char* filename)
     return;
 
 fail:
-    printf("failed ot open %s\n", filename);
+    fprintf(stderr, "failed ot open %s\n", filename);
     fclose(f);
+    bypp = 0;
 }
 
 surface::~surface()
@@ -181,6 +208,8 @@ void surface::store_grey(const char *filename)
     
     fwrite(&run, 1, 1, f);
     fwrite(&last, 1, 1, f);
+    uint32_t crc = cksum(gray_data, sizeof gray_data);
+    fwrite(&crc, 1, 4, f);
     fclose(f);
 }
 
@@ -419,7 +448,7 @@ void surface::binary_write(int fileno)
             binary[index] = bits;
         }
 #if 1
-    for (int pos=0; pos<sizeof binary; pos += 64) {
+    for (unsigned int pos=0; pos<sizeof binary; pos += 64) {
         int len = 64;
         if (sizeof binary - pos < 64)
             len = sizeof binary - pos;
