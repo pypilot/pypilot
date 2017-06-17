@@ -4,7 +4,7 @@ pip install gevent
 
 python pypilot_webapp.py
 
-firefox localhost:5000
+firefox localhost
 
 For apache2:
 

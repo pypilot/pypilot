@@ -54,13 +54,9 @@ setup (name = 'pypilot',
        package_data={'lcd': ['font.ttf'] + locale_files,
                      'webapp': ['static/*', 'templates/*']},
 #       requires=['flask', 'gevent'], # webapp
-<<<<<<< HEAD
-#       install_requires=['gps'],
-       entry_points={
-=======
        dependency_links	= ['https://github.com/adafruit/Adafruit_Nokia_LCD/tarball/master#egg=Adafruit-Nokia-LCD-0.1.0'],
-	  install_requires	= ['Adafruit-Nokia-LCD>=0.1.0'],       entry_points={
->>>>>>> 7476f72f68f28c3c9c6d5b5fc1bdd8a3ff10a34f
+       install_requires	= ['Adafruit-Nokia-LCD>=0.1.0'],
+       entry_points={
            'console_scripts': [
                'pypilot=pypilot.basic_autopilot:main',
                'pypilot_webapp=webapp.pypilot_webapp:main',

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+s#!/usr/bin/env python
 #
 #   Copyright (C) 2016 Sean D'Epagnier
 #
