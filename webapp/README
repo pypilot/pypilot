@@ -2,7 +2,7 @@ pip install Flask
 pip install flask-socketio
 pip install gevent
 
-python pypilot_webapp.py
+sudo python webapp.py
 
 firefox localhost
 

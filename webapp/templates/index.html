@@ -78,7 +78,8 @@
     </div>
     
     <div id="Calibration" class="w3-container tab">
-      Compass Calibration <span id="compass_calibration"></span>
+      Pitch <span id="pitch"></span>
+      Roll <span id="roll"></span>
       <p>Press <button id="level" class="button">here</button>
         when the boat is level to align the inertial sensors.
       </p>
@@ -89,8 +90,7 @@
 
     <div id="Configuration" class="w3-container tab">
       <p>Max Current
-        <input type="number" id="max_current" min="0" max="10" step=".1" value="2"
-               style="width: 100px"></input> Amps
+        <div id="max_current_container"></div>
       </p>
     </div>
 

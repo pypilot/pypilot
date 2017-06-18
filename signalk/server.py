@@ -66,7 +66,7 @@ class LineBufferedNonBlockingSocket(object):
         except:
             self.socket.close()
 
-class LineBufferedNonBlockingSocketPytho(object):
+class LineBufferedNonBlockingSocketPython(object):
     def __init__(self, connection):
         connection.setblocking(0)
         self.socket = connection
@@ -213,13 +213,7 @@ class SignalKServer(object):
             socket.send('invalid method: ' + method + ' for ' + name + '\n')
         
     def HandleRequest(self, socket, request):
-        try:
-            data = json.loads(request)
-        except:
-            print 'invalid request from socket', request
-            print 'end'
-            socket.send('invalid request: ' + request + '\n')
-            return
+        data = json.loads(request)
         if data['method'] == 'list':
             self.ListValues(socket)
         else:
@@ -264,7 +258,7 @@ class SignalKServer(object):
                 socket = LineBufferedNonBlockingSocket(connection)
                 self.sockets.append(socket)
                 fd = socket.socket.fileno()
-                print 'new client', address, fd
+                # print 'new client', address, fd
                 self.fd_to_socket[fd] = socket
                 self.poller.register(fd, select.POLLIN)
             elif flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
@@ -276,7 +270,12 @@ class SignalKServer(object):
                     line = socket.readline()
                     if not line:
                         break
-                    self.HandleRequest(socket, line)
+                    try:
+                        self.HandleRequest(socket, line)
+                    except:
+                        print 'invalid request from socket', line
+                        socket.send('invalid request: ' + line + '\n')
+
         # flush all sockets
         for socket in self.sockets:
             socket.flush()

@@ -59,7 +59,7 @@ setup (name = 'pypilot',
        entry_points={
            'console_scripts': [
                'pypilot=pypilot.basic_autopilot:main',
-               'pypilot_webapp=webapp.pypilot_webapp:main',
+               'pypilot_webapp=webapp.webapp:main',
                'pypilot_lcdclient=lcd.client:main',
                'pypilot_control=ui.autopilot_control:main',
                'signalk_client=signalk.client:main',
