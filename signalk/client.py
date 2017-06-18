@@ -26,7 +26,6 @@ class ConnectionLost(Exception):
     pass
 
 #POLLRDHUP = 0x2000
-READ_ONLY = select.POLLIN | select.POLLERR
 
 class SignalKClient(object):
     def __init__(self, f_on_connected, host=False, port=False, autoreconnect=False, have_watches=False):
@@ -90,7 +89,7 @@ class SignalKClient(object):
             fd = self.socket.socket.fileno()
         else:
             fd = self.serial.fileno()
-        self.poller.register(fd, READ_ONLY)
+        self.poller.register(fd, select.POLLIN)
 
 
     def poll(self, timeout = 0):
@@ -109,8 +108,6 @@ class SignalKClient(object):
         return False
 
     def send(self, request):
-        #if not self.socket.out_buffer:
-        #    self.poller.register(self.socket.socket, READ_ONLY | select.POLLOUT)
         self.socket.send(json.dumps(request)+'\n')
 
     def receive_line(self, timeout = 0):

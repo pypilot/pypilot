@@ -247,7 +247,8 @@ class SignalKPipeServer(object):
         if self.sets:
             ta = time.time()
             # should we break up sets if there are many!?!
-            if len(self.sets) > 20:
+            l = len(self.sets)
+            if l > 20:
                 setnames = list(self.sets)
                 while setnames:
                     sets = {}
@@ -265,8 +266,8 @@ class SignalKPipeServer(object):
                     self.sets = {}
 
             dta = time.time() - ta
-            if dta > .01:
-              print 'too long to send sets down pipe', dta, len(self.sets)
+            if dta > .02:
+              print 'too long to send sets down pipe', dta, l
 
         while True:
             request = self.pipe.recv()
