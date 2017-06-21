@@ -408,6 +408,8 @@ class LCDClient():
                 maxh = posy + lineheight
                     
                 s = maxw, maxh
+                if s[0] == 0 or s[1] == 0:
+                    continue
                 sw = self.surface.width * float(rect.width) / s[0]
                 sh = self.surface.height * float(rect.height) / s[1]
                 cursize = int(min(sw*metric_size, sh*metric_size))
@@ -421,7 +423,7 @@ class LCDClient():
             sw = self.surface.width * float(rect.width) / s[0]
             sh = self.surface.height * float(rect.height) / s[1]
             size = int(min(sw*metric_size, sh*metric_size))
-#        size = max(size, 8)
+
         pos = int(rect.x*self.surface.width), int(rect.y*self.surface.height)
         size = font.draw(self.surface, pos, text, size, self.bw, crop)
         return float(size[0])/self.surface.width, float(size[1])/self.surface.height

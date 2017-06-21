@@ -459,6 +459,7 @@ void surface::binary_write(int fileno)
 #endif
 }
 
+#ifdef __ARMEL__
 #include <wiringPi.h>
 void surface::binary_write_sw(int sclk, int mosi)
 {
@@ -481,7 +482,12 @@ void surface::binary_write_sw(int sclk, int mosi)
             }
 
 }
-
+#else
+void surface::binary_write_sw(int sclk, int mosi)
+{
+    fprintf(stderr, "no wiring pi\n");
+}
+#endif
 
 int surface::getpixel(int x, int y)
 {

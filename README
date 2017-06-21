@@ -1,12 +1,18 @@
 Installing:
 
 dependencies:
+libpython-dev
+python-numpy
+
+server dependencies (autopilot implementation)
 python-gps
 python-serial
 python-scipy
-python-dev
 swig
 RTIMULib2
+
+client dependencies (viewers control applications)
+python-opengl
 
 sudo apt-get install swig python-numpy python-scipy python-serial python-gps python-PIL python-dev
 

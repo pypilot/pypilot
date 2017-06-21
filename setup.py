@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2017 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -48,7 +48,7 @@ setup (name = 'pypilot',
        license = 'GPLv3',
        author="Sean D'Epagnier",
        url='http://pypilot.org/',
-       packages=['pypilot', 'pypilot/arduino_servo', 'ui', 'lcd', 'webapp', 'signalk', 'signalk/linebuffer'],
+       packages=['pypilot', 'pypilot/arduino_servo', 'ui', 'lcd', 'webapp', 'signalk', 'signalk/linebuffer', 'lcd/ugfx'],
        ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module],
 #       py_modules = ['pypilot/arduino_servo', 'signalk/linebuffer/linebuffer'],
        package_data={'lcd': ['font.ttf'] + locale_files,
