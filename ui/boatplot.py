@@ -13,22 +13,26 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
-import objview
+#from objloader import *
+import pywavefront
+
 from pypilot import quaternion
 
 class BoatPlot():
     def __init__(self):
         self.Q = [-0.32060682, -0.32075041, 0.73081691, -0.51013437]
-        self.Scale = 3
+#        self.Q = [1, 0, 0, 0]
+        self.Scale = 1
         self.compasstex = 0
-        self.objinit = False
+        self.obj = False
         self.texture_compass = True
 
     def display(self, fusionQPose):
         #fusionQPose = [1, 0, 0, 0]
-        if not self.objinit:
-            objview.init('sailboat.obj')
-            self.objinit = True
+        if not self.obj:
+            #self.obj = OBJ('Vagabond.obj', swapyz=True)
+            self.obj = pywavefront.Wavefront('Vagabond.obj')
+            pass
 
         glClearColor(0, .2, .7, 0)
         glClearDepth(100)
@@ -43,7 +47,7 @@ class BoatPlot():
             except:
                 pass
 
-        dist = 16
+        dist = 12
         glTranslatef(0, 0, -dist)
         glScalef(self.Scale, self.Scale, self.Scale)
         glRotateQ(self.Q)
@@ -52,10 +56,25 @@ class BoatPlot():
         #q = quaternion.multiply(fusionQPose, quaternion.angvec2quat(-math.pi/2, [1, 0, 0]))
         q = fusionQPose
         glRotateQ(q)
-        glTranslatef(0, 0, -.7)
-        objview.draw()
+        #OAglTranslatef(0, 0, -.7)
+
+
+        s = .2
+        glScalef(s,s,s)
+#        glTranslated(0, 0, -3)
+        glRotatef(90, 0, 0, -1)
+        glRotatef(90, -1, 0, 0)
+        glEnable(GL_LIGHTING)
+        
+        lightfv = ctypes.c_float * 4
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, lightfv(1.0, 1.0, 1.0, 1.0))
+        glEnable(GL_LIGHT0)
+        self.obj.draw()
+        glDisable(GL_LIGHTING)
+
         glPopMatrix()
 
+        glEnable(GL_DEPTH_TEST)
         if self.texture_compass:
             self.draw_texture_compass()
         else:
@@ -120,10 +139,10 @@ class BoatPlot():
 
         glBindTexture(GL_TEXTURE_2D, self.compasstex)
         glBegin(GL_QUADS)
-        glTexCoord2f(0, 0),        glVertex3f(1, -1, 0)
-        glTexCoord2f(1, 0),        glVertex3f(1,  1, 0)
-        glTexCoord2f(1, 1),        glVertex3f(-1, 1, 0)
-        glTexCoord2f(0, 1),        glVertex3f(-1,-1, 0)
+        glTexCoord2f(0, 0),        glVertex3f( 1, -1, 0)
+        glTexCoord2f(1, 0),        glVertex3f( 1,  1, 0)
+        glTexCoord2f(1, 1),        glVertex3f(-1,  1, 0)
+        glTexCoord2f(0, 1),        glVertex3f(-1, -1, 0)
         glEnd()
         glDisable(GL_BLEND)
         glDisable(GL_TEXTURE_2D)
