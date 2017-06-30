@@ -5,7 +5,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, sys, json
+import time, sys, json, os
 from signalk.client import SignalKClient
 
 def console(*text):
@@ -49,16 +49,25 @@ def FitCalibration(cal):
         commands.append(raw_cmd)
     
     fits = {}
+    print 'speeds', len(speeds)
+    print 'speeds', 'commands', [speeds, commands]
     for n in [1, 3, 5]:  # linear, 3rd and 5th order fit
-        fits[n] = fit([speeds, commands], n)
+        if len(speeds) > n+1:
+            fits[n] = fit([speeds, commands], n)
+        else:
+            fits[n] = False
+            
         print 'fit order', n, fits[n]
-        print fit_str(fits[n][0])
+        if fits[n]:
+            print fit_str(fits[n][0])
 
     # did third order help much?
     #if fits[3][1] / fits[1][1] < .9:
     #    print 'warning non-linear servo!'
-        
-    return map(float, fits[1][0]) # first order, good enough
+    if fits[1]:
+        return map(float, fits[1][0]) # first order, good enough
+    else:
+        return False
     
 class ServoClient(object):
     def __init__(self):
@@ -90,8 +99,8 @@ class ServoClient(object):
                 self.first_command = True
             elif name == 'servo/raw_command':
                 cmd = data[name]['value']
-                if cmd != self.lastcommand and cmd != self.lastlastcommand:
-                    print cmd, self.lastcommand, self.lastlastcommand
+                if abs(cmd - self.lastcommand) > .01 and abs(cmd - self.lastlastcommand) > .01:
+                    print cmd, self.lastcommand, self.lastlastcommand,  cmd-self.lastcommand, cmd - self.lastlastcommand
                     console('raw servo command received, aborting')
                     console('ensure no other calibration client is running')
                     exit(1)
@@ -123,7 +132,8 @@ class ServoClient(object):
 
     def command(self, value):
         self.client.set('servo/raw_command', value)
-        self.lastlastcommand = self.lastcommand
+        if value != self.lastcommand:
+            self.lastlastcommand = self.lastcommand
         self.lastcommand = value
 
     def stop(self):
@@ -180,7 +190,7 @@ class ServoClient(object):
                 break
 
             #print 'current', current, idle_current, lp_current
-            if idle_current and (current > idle_current*2 or lp_current > idle_current * 1.25):
+            if idle_current and (current > idle_current*1.3 or lp_current > idle_current * 1.1):
                 #console('found stall current', current, lp_current)
 
                 voltage, current, t1 = self.average_power(.1)
@@ -217,7 +227,7 @@ class ServoClient(object):
     def safe_raw_cmd(self, d):
         if self.brake_hack and d > 0:
             d *= 1.4
-        return .15*d
+        return .3*d
     
     def search_end(self, sign):
         self.reset()
@@ -236,7 +246,7 @@ class ServoClient(object):
         return True
 
     def calibrate(self):
-        self.brake_hack = True
+        self.brake_hack = False
         
         self.client.set('ap/enabled', False)
         self.client.set('servo/Brake Hack', self.brake_hack)
@@ -259,9 +269,9 @@ class ServoClient(object):
         
         complete = [False, False]
         lastspeed = [0, 0]
-        steps = 30 # speeds 20 speeds
-        mincmd = 120
-        maxcmd = 500
+        steps = 12 # speeds 20 speeds
+        mincmd = 300
+        maxcmd = 460
         stepi = 0
         for abs_raw_cmd in range(mincmd, maxcmd, (maxcmd - mincmd)/(steps-1)):
             for signi in [0, 1]:
@@ -278,7 +288,7 @@ class ServoClient(object):
                     command, idle_current, stall_current, cal_voltage, dt = cal
                     truespeed = 1/dt
                     print 'truespeed', truespeed, 'lastspeed', lastspeed[signi]
-                    if truespeed - lastspeed[signi] < .1/steps:
+                    if truespeed - lastspeed[signi] < .05/steps:
                         complete[signi] += 1
                         console('completed this direction when counter >= 3:', complete[signi])
                     else:
@@ -294,11 +304,11 @@ class ServoClient(object):
                         print 'failed to find end'
                         exit(0)
 
-            if complete[0] > 3 and complete[1] > 3:
+            if complete[0] >= 2 and complete[1] >= 2:
                 console('higher commands do not yield higher speeds: finished')
                 break
 
-        if complete[0] <= 3 or complete[1] <= 3:
+        if complete[0] < 3 or complete[1] < 3:
             console('did not reach highest speed')
 
         self.stop()
@@ -321,7 +331,7 @@ class ServoClient(object):
         for truespeed in calibration:
             # discard speeds above 85% full speed for calibration
             # to avoid using saturated results in the calibration fit
-            if abs(truespeed) <= max_speed*.85:
+            if abs(truespeed) <= max_speed*.925:
                 speed = truespeed / max_speed
                 cal = calibration[truespeed]
                 if truespeed > 0:
@@ -359,6 +369,6 @@ if __name__ == '__main__':
     cal = round_any(cal, 5)
     print 'result', cal
 
-    f = open('~/.pypilot/servocalibration', 'w')
+    f = open(os.getenv('HOME') + '/.pypilot/servocalibration', 'w')
     f.write(json.dumps(cal))
     console('calibration complete')
