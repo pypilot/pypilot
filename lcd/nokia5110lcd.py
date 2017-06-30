@@ -7,15 +7,15 @@ from PIL import Image
 
 
 # Raspberry Pi hardware SPI config:
-#DC = 22
-DC = 25
-#RST = 18
-RST = 24
-SPI_PORT = 0
+DC = 22
+#DC = 25
+RST = 18
+#RST = 24
+SPI_PORT = 1
 SPI_DEVICE = 0
 
 # Raspberry Pi software SPI config:
-SCLK = 21
+SCLK = 23
 DIN = 19
 # DC = 23
 # RST = 24
@@ -29,11 +29,11 @@ class screen(ugfx.surface):
         self.refresh = self.refreshhw
 
         # Software SPI usage (defaults to bit-bang SPI interface):
-        #disp = LCD.PCD8544(DC, RST, SCLK, DIN, CS)
-        #self.refresh = self.refreshsw
+ #       disp = LCD.PCD8544(DC, RST, SCLK, DIN, CS)
+#        self.refresh = self.refreshsw
 
         # Initialize library.
-        self.contrast = 60
+        self.contrast = 40
         self.lastcontrast = False
         disp.begin(contrast=self.contrast)
 

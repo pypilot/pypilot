@@ -465,11 +465,9 @@ void surface::binary_write_sw(int sclk, int mosi)
 {
     static int setup;
     if(!setup) {
-        wiringPiSetup();
+        wiringPiSetupPhys();
         setup = 1;
     }
-    sclk = 13;
-    mosi = 12;
     for(int col=0; col<6; col++)
         for(int y=0; y<84; y++)
             for(int bit=0; bit<8; bit++) {
