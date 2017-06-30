@@ -5,7 +5,7 @@ DefaultDependencies=false
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/pypilot
-User=pi
+User=pypilot
 Restart=always
 RestartSec=2
 

@@ -57,7 +57,7 @@ def FitPoints(points, sphere_fit):
         return False
         #sphere_fit[3] = abs(sphere_fit[3])
     sphere_fit[3] = math.sqrt(sphere_fit[3])
-    #print 'sphere fit', sphere_fit
+    print 'sphere fit', sphere_fit
 
     def f_ellipsoid3(beta, x):
         return (x[0]-beta[0])**2 + (beta[4]*(x[1]-beta[1]))**2 + (beta[5]*(x[2]-beta[2]))**2 - beta[3]**2
@@ -75,7 +75,7 @@ def FitPoints(points, sphere_fit):
         return r0+r1
         
     new_bias_fit = FitLeastSq(sphere_fit[:4] + [0], f_new_bias3, zpoints)
-    #print 'new bias fit', new_bias_fit, math.degrees(math.asin(new_bias_fit[4]))
+    print 'new bias fit', new_bias_fit, math.degrees(math.asin(new_bias_fit[4]))
 
     if not ellipsoid_fit:
         ellipsoid_fit = sphere_fit + [1, 1]
@@ -195,7 +195,7 @@ def CalibrationProcess(points, fit_output, initial):
     while True:
         t = time.time()
         addedpoint = False
-        while time.time() - t < 300:
+        while time.time() - t < 60:
             p = points.recv(1)
             if p:
                 cal.AddPoint(p[:3], p[3:6])
@@ -220,9 +220,10 @@ def CalibrationProcess(points, fit_output, initial):
         if not fit:
             continue
 
+        print 'fit', fit
         mag = fit[0][3]
         if mag < 9 or mag > 70:
-            #print 'fit found field outside of normal earth field strength', fit
+            print 'fit found field outside of normal earth field strength', fit
             continue
 
         bias = fit[0][:3]
@@ -235,14 +236,14 @@ def CalibrationProcess(points, fit_output, initial):
 
         coverage = 360 - math.degrees(ComputeCoverage(cal.sigma_points, bias))
         if coverage < 60: # require 60 degrees
-            #print 'calibration: not enough coverage', coverage, 'degrees'
+            print 'calibration: not enough coverage', coverage, 'degrees'
             continue
 
         # sphere fit should basically agree with new bias
         spherebias = fit[1][:3]
         sbd = vector.norm(vector.sub(bias, spherebias))
-        #print 'newbias diff', n
         if sbd > 5:
+            print 'sphere and newbias disagree', sbd
             continue
 
         # if the bias has sufficiently changed
@@ -250,7 +251,7 @@ def CalibrationProcess(points, fit_output, initial):
         d = n[0]+n[1]+n[2]
         initial = fit[0]
         if d < .1:
-            #print 'insufficient change in bias'
+            print 'insufficient change in bias'
             continue
 
         print 'coverage', coverage
@@ -266,6 +267,7 @@ class MagnetometerAutomaticCalibration(object):
         self.fit_output, fit_output = NonBlockingPipe('fit output', True)
 
         self.process = multiprocessing.Process(target=CalibrationProcess, args=(points, fit_output, self.sphere_fit))
+        print 'start cal process'
         self.process.start()
 
     def __del__(self):

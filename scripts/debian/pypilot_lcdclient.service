@@ -4,10 +4,10 @@ DefaultDependencies=false
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/pypilot_lcdclient nokia5110
-User=pi
+ExecStart=/usr/bin/sudo pypilot_lcdclient nokia5110
+User=pypilot
 Restart=always
-RestartSec=2
+RestartSec=3
 
 [Install]
 WantedBy=local-fs.target

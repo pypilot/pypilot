@@ -34,7 +34,7 @@ try:
     print 'have lirc for remote control'
 except:
     print 'no lirc available'
-    LIRC = NONE
+    LIRC = None
 
 from signalk.client import SignalKClient
 
