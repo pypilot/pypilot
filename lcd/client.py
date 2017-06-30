@@ -21,8 +21,12 @@ try:
     import RPi.GPIO as GPIO
 
 except ImportError:
-    print 'No gpio available'
-    GPIO = None
+
+    try:
+        import OPi.GPIO as GPIO
+    except:
+        print 'No gpio available'
+        GPIO = None
 
 from signalk.client import SignalKClient
 
@@ -150,6 +154,7 @@ class LCDClient():
         self.config['invert'] = False
         self.config['language'] = 'en'
 
+        print 'loading load config file:', self.configfilename
         try:
             file = open(self.configfilename)
             config = json.loads(file.readline())
@@ -199,15 +204,16 @@ class LCDClient():
         self.wifi = False
 
         self.contrast_edit=RangeEdit('Contrast', lambda : '', self.config['contrast'], False, self, 30, 90, 1)
-        self.pins = [18, 17, 27, 22, 23]
-        #self.pins = [12, 11, 13, 15, 16]
+        #self.pins = [18, 17, 27, 22, 23]
+        self.pins = [12, 11, 13, 15, 16]
 
         if GPIO:
-            GPIO.setmode(GPIO.BCM)
-            #GPIO.setmode(GPIO.BOARD)
+            #GPIO.setmode(GPIO.BCM)
+            GPIO.setmode(GPIO.BOARD)
             for pin in self.pins:
                 try:
                     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                    pass
                 except RuntimeError:
                     os.system("sudo chown tc /dev/gpiomem")
                     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -218,8 +224,6 @@ class LCDClient():
                     self.longsleep = 0
 
                 GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
-                GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
     def get(self, name):
         if self.client:
             self.client.get(name)
@@ -774,6 +778,7 @@ class LCDClient():
                         break
                     tries += 1
             else:
+                self.menu = self.menu.adam() # reset to main menu
                 self.display_page = self.display_control
 
         # for up and down keys providing acceration
@@ -858,6 +863,7 @@ class LCDClient():
 
         # read from keys
         for pini in range(len(self.pins)):
+            # without a display, ignore these keys
             if not self.surface and (pini == MENU or pini == SELECT):
                 continue
         
