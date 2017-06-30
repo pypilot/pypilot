@@ -13,10 +13,9 @@ pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 def enumerate_devices(name):
     devices = []
     by_id = '/dev/serial/by-id'
-    if False: #rpi3
-        devicesp = ['/dev/ttyS']
-    else:
-        devicesp = ['/dev/ttyAMA']
+    #rpi3, orange pi have ttyS, othes have ttyAMA
+    devicesp = ['/dev/ttyAMA', '/dev/ttyS']
+
     if os.path.exists(by_id):
         for device_path in os.listdir(by_id):
             devices.append(os.path.join(by_id, device_path))
@@ -62,13 +61,13 @@ class SerialProbe(object):
         self.lastworkingdevices[name] = lastdevice
         return lastdevice
 
-    def probe(self, name, bauds):
+    def probe(self, name, bauds, timeout=15):
         t0 = time.time()
         if not name in self.probes:
             self.probes[name] = {'time': 0, 'devices' : 'none', 'device': False}
         probe = self.probes[name]
 
-        if time.time() - probe['time'] < 15:
+        if time.time() - probe['time'] < timeout:
             return False
 
         probe['time'] = time.time()
