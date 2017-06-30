@@ -71,6 +71,7 @@ def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
       if not rtimu.IMUInit():
         print("ERROR: IMU Init Failed, no inertial data available")
         time.sleep(3)
+        exit(1) # if we run without gyros, how to inform user???
         continue
 
       # this is a good time to set any fusion parameters
