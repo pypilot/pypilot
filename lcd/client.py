@@ -748,7 +748,10 @@ class LCDClient():
 
     def display(self):
         self.display_page()
-        self.config['contrast'] = self.contrast_edit.value
+        if self.config['contrast'] != self.contrast_edit.value:
+            self.config['contrast'] = self.contrast_edit.value
+            self.save_config()
+
 
         if self.display_page != self.display_control:
             self.control = False
