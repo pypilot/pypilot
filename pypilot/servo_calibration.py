@@ -269,9 +269,9 @@ class ServoClient(object):
         
         complete = [False, False]
         lastspeed = [0, 0]
-        steps = 12 # speeds 20 speeds
-        mincmd = 300
-        maxcmd = 460
+        steps = 5 # speeds 20 speeds
+        mincmd = 320
+        maxcmd = 600
         stepi = 0
         for abs_raw_cmd in range(mincmd, maxcmd, (maxcmd - mincmd)/(steps-1)):
             for signi in [0, 1]:
@@ -304,7 +304,7 @@ class ServoClient(object):
                         print 'failed to find end'
                         exit(0)
 
-            if complete[0] >= 2 and complete[1] >= 2:
+            if complete[0] >= 3 and complete[1] >= 3:
                 console('higher commands do not yield higher speeds: finished')
                 break
 
@@ -320,18 +320,20 @@ class ServoClient(object):
         max_fwd_speed = max(speeds)
         max_rev_speed = -min(speeds)
 
-        ratio = max_rev_speed / max_fwd_speed
+        ratio = max_fwd_speed / max_rev_speed
+        print 'fwd/rev', ratio
         if ratio > 1.1 or ratio < .9:
-            print 'warning: very unbalanced ratio in forward/reverse speed:', ratio
+            print 'warning: very unbalanced ratio in forward/reverse speed'
 
         max_speed = min(max_rev_speed, max_fwd_speed)
+        print 'max speed', max_speed
 
         fwd_calibration = {}
         rev_calibration = {}
         for truespeed in calibration:
             # discard speeds above 85% full speed for calibration
             # to avoid using saturated results in the calibration fit
-            if abs(truespeed) <= max_speed*.925:
+            if abs(truespeed) <= max_speed*.99 or True:
                 speed = truespeed / max_speed
                 cal = calibration[truespeed]
                 if truespeed > 0:
