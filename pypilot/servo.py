@@ -126,12 +126,8 @@ class Servo(object):
         self.calibration = self.Register(JSONValue, 'calibration', {})
         self.load_calibration()
 
-        if 'Min Speed' in self.calibration.value:
-            min_speed = self.calibration.value['Min Speed']
-        else:
-            min_speed = 0
-        self.min_speed = self.Register(RangeProperty, 'Min Speed', max(min_speed, .3), min(min_speed, .6), 1, persistent=True)
-        self.max_speed = self.Register(RangeProperty, 'Max Speed', 1, .3, 1, persistent=True)
+        self.min_speed = self.Register(RangeProperty, 'Min Speed', .2, 0, 1, persistent=True)
+        self.max_speed = self.Register(RangeProperty, 'Max Speed', 1, 0, 1, persistent=True)
         brake_hack = 'Brake Hack' in self.calibration.value and self.calibration.value['Brake Hack']
         self.brake_hack = self.Register(BooleanProperty, 'Brake Hack', brake_hack, persistent=True)
         self.brake_hack_state = 0
@@ -231,6 +227,9 @@ class Servo(object):
         
         duty = 1
         min_speed = self.min_speed.value
+        # ensure max_speed is at least min_speed
+        if min_speed > self.max_speed.value:
+            self.max_speed.set(min_speed)
         if abs_speed < min_speed:
             duty = abs_speed / min_speed
             slow_period = self.slow_period.value
@@ -415,7 +414,7 @@ class Servo(object):
             self.calibration.set(json.loads(file.readline()))
         except:
             print 'WARNING: using default servo calibration!!'
-            self.calibration.set({'forward': [0, .6], 'reverse': [0, .6], 'Min Speed': .15})
+            self.calibration.set({'forward': [0, .6], 'reverse': [0, .6]})
 
     def save_calibration(self):
         file = open(Servo.calibration_filename, 'w')
