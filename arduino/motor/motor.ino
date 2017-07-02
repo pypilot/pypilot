@@ -6,6 +6,9 @@
  * version 3 of the License, or (at your option) any later version.
  */
 
+#include <Arduino.h>
+#include <stdint.h>
+#include <HardwareSerial.h>
 
 /*
 This program is meant to interface with pwm based
@@ -220,7 +223,7 @@ void position(uint16_t value)
 #ifdef ARDUINO_SERVO
     myservo.write(value * 9 / 100 - 12);
 #else
-  OCR1A = 1000 + value*17/10;
+  OCR1A = 1500 + value * 3 / 2;
 #endif
 }
 
@@ -366,7 +369,7 @@ void loop()
                       } else if(value > 2000) {
                         // unused range, invalid!!!
                         // ignored
-                      } else if(!(flags & (FAULTPIN | OVERCURRENT))) {                      
+                      } else if(!(flags & (FAULTPIN | OVERCURRENT))) {
                           position(value);
                           engauge();
                       }
