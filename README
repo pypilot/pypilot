@@ -22,8 +22,8 @@ sudo apt-get install swig python-numpy python-scipy python-serial python-gps pyt
 # my version of rtimulib is required!
 git clone https://github.com/seandepagnier/RTIMULib2
 
-
-python setup.py install
+python setup.py build
+sudo python setup.py install
 
 
 pypilot.build is a build script to build tinycore linux packages
@@ -43,23 +43,31 @@ most of the scripts can be run individually as standalone
 or test programs, some function as clients, other as servers
 
 
-servers:
+servers (each of these run a signalk server)
 
-simple_autopilot.py -- classic PID based autopilot implementation
-
-boatimu.py -- specialized imu specific to boat motions
+signalk/server.py -- implements poll based server allowing external manipulation, basic demo server
+signalk/pipeserver.py -- implements sockets in a separate process communicating to the main process via a pipe.  This allows the main process to be high priority or realtime scheduled
+pypilot/boatimu.py -- specialized imu specific to boat motions
                includes automatic 2d/3d calibration and alignment of magnetic sensors
+pypilot/nmea.py -- signalk <-> nmea0183 translator
+pypilot/servo.py -- controls servo via RC pwm signal, and gpio feedback for fault
 
-servo.py -- controls servo via RC pwm signal, and gpio feedback for fault
+the autopilot servers below contain boatimu, nmea, and servo:
+pypilot/simple_autopilot.py -- classic PID based autopilot implementation
+pypilot/basic_autopilot.py -- basic PID based autopilot with additional gains and filters
 
-signalk_server.py -- implements poll based server allowing external manipulation
 
 
 clients:
 
-autopilot_control.py -- simple interface to command autopilot
-autopilot_calibration.py -- interactive gui for all autopilot calibrations
+signalk/client.py -- console client
+signalk/client_wx.py -- graphical user version
+signalk/scope.py -- glut plot client
+signalk/scope_wx.py -- plot client with selectable fields
 
-signalk_client.py -- console client
-signalk_client_gui.py -- graphical user version
-signalk_scope.py -- gui client for plot client
+ui/autopilot_control.py -- simple interface to command autopilot
+ui/autopilot_calibration.py -- interactive gui for all autopilot calibrations
+ui/kivy -- work in progress kivy control app
+
+lcd/client.py -- simple control interface using GPIO pins. linux framebuffer, glut, and nokia5110 lcd outputs are supported
+webapp/webapp.py -- python flask application that runs a webserver providing remote autopilot control through a web browser
