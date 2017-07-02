@@ -297,7 +297,7 @@ class Servo(object):
 
         if not self.driver:
             t0 = time.time()
-            device_path = self.serialprobe.probe('servo', [115200])
+            device_path = self.serialprobe.probe('servo', [115200], 1)
             if device_path:
                 #from arduino_servo.arduino_servo_python import ArduinoServo
                 from arduino_servo.arduino_servo import ArduinoServo
@@ -419,12 +419,17 @@ class Servo(object):
 
 
 if __name__ == '__main__':
+    import serialprobe
     print 'Servo Server'
     server = SignalKServer()
-    servo = Servo(server)
+    serial_probe = serialprobe.SerialProbe()
+    servo = Servo(server, serial_probe)
 
     while True:
         servo.send_command()
         servo.poll()
-        print servo.voltage.value
-        server.HandleRequests(.05)
+        if servo.voltage.value:
+            print 'voltage:', servo.voltage.value, 'current', servo.current.value
+        server.HandleRequests()
+        time.sleep(.1)
+
