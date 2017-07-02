@@ -1,19 +1,19 @@
 Installing:
 
 dependencies:
-libpython-dev
-python-numpy
+libpython-dev python-numpy
 
 server dependencies (autopilot implementation)
-python-gps
-python-serial
-python-scipy
-swig
-RTIMULib2
+python-gps python-serial python-scipy swig RTIMULib2
+
+lcd viewer
+python-pillow
+
+webapp
+python-flask
 
 client dependencies (viewers control applications)
-python-opengl
-python-pip
+python-opengl python-pip
 pip install pyglet
 pip install pywavefront
 

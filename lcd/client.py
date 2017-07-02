@@ -202,14 +202,17 @@ class LCDClient():
         self.blink = black, white
         self.control = False
         self.wifi = False
-
+        self.overcurrent_time = 0
+        
         self.contrast_edit=RangeEdit('Contrast', lambda : '', self.config['contrast'], False, self, 30, 90, 1)
         #self.pins = [18, 17, 27, 22, 23]
         self.pins = [12, 11, 13, 15, 16]
 
         if GPIO:
-            #GPIO.setmode(GPIO.BCM)
             GPIO.setmode(GPIO.BOARD)
+            for pin in self.pins:
+                cmd = 'gpio -1 mode ' + str(pin) + ' up'
+                os.system(cmd)
             for pin in self.pins:
                 try:
                     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -224,6 +227,7 @@ class LCDClient():
                     self.longsleep = 0
 
                 GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
+
     def get(self, name):
         if self.client:
             self.client.get(name)
@@ -459,7 +463,7 @@ class LCDClient():
         self.display_page = self.display_connecting
         
         watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command',
-                     'gps/source', 'wind/source', 'servo/controller']
+                     'gps/source', 'wind/source', 'servo/controller', 'servo/flags']
         poll_list = ['ap/heading']
         nalist = watchlist + poll_list + \
         ['imu/pitch', 'imu/heel', 'ap/runtime', 'ap/version',
@@ -571,8 +575,14 @@ class LCDClient():
 
         warning = True
         mode = self.last_msg['ap/mode']
+
+        if 'OVERCURRENT' in self.last_msg['servo/flags']:
+            self.overcurrent_time = time.time()
+        
         if self.last_msg['servo/controller'] == 'none' and self.control['mode'] != 'no controller':
             self.fittext(rectangle(0, .5, 1, .4), _('WARNING no motor controller'), True)
+        elif time.time() - self.overcurrent_time < 3:
+            self.fittext(rectangle(0, .5, 1, .4), _('OVER CURRENT'), True)
         elif mode == 'gps' and not self.have_gps() and self.control['mode'] != 'no gps':
             self.fittext(rectangle(0, .55, 1, .3), _('WARNING GPS not detected'), True)
             self.control['mode'] = 'no gps'
