@@ -31,26 +31,34 @@ class SignalKClient(object):
     def __init__(self, f_on_connected, host=False, port=False, autoreconnect=False, have_watches=False):
         self.autoreconnect = autoreconnect
 
-        orighost = host
-        if not host:
-            host = 'pypilot'
-
         config = {}
-        configfilename = os.getenv('HOME') + '/.pypilot/signalk.conf'
+        configfilepath = os.getenv('HOME') + '/.pypilot/'
+        if not os.path.exists(configfilepath):
+            os.makedirs(configfilepath)
+        if not os.path.isdir(configfilepath):
+            raise configfilepath + 'should be a directory'
+        configfilename = configfilepath + 'signalk.conf'
+
         try:
             file = open(configfilename)
             config = json.loads(file.readline())
 
-            if 'host' in config and not orighost:
+            if 'host' in config and not host:
                 host = config['host']
-
         except:
+            print 'failed to read config file:', configfilename
+
+        if host:
             try:
                 config['host'] = host
                 file = open(configfilename, 'w')
                 file.write(json.dumps(config) + '\n')
             except IOError:
                 print 'failed to write config file:', configfilename
+
+        if not host:
+            host = 'pypilot'
+            print 'host not specified using host', host
 
         if '/dev' in host: # serial port
             device, baud = host, port
