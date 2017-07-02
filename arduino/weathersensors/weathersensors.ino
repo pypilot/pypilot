@@ -24,7 +24,7 @@ black - d2
 #include <HardwareSerial.h>
 
 extern "C" {
-  #include "twi.h"
+  #include <twi.h>
 }
 
 const int analogInPin = A7;  // Analog input pin that the potentiometer is attached to

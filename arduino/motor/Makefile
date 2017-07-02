@@ -5,7 +5,7 @@
 # upload: make upload
 # serial monitor: make serial
 
-SKETCHNAME = weathersensors
+SKETCHNAME = motor
 DEVICE = /dev/ttyUSB0
 
 MCU = atmega328p
@@ -16,12 +16,11 @@ CXX = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-g++
 OBJCOPY = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-objcopy
 
 
-CXXFLAGS = -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=16000000L -DUSB_VID=null -DUSB_PID=null -DARDUINO=105 -D__PROG_TYPES_COMPAT__ -I$(ARDUINO_PATH)/hardware/arduino/cores/arduino -I$(ARDUINO_PATH)/hardware/arduino/variants/standard  -I$(ARDUINO_PATH)/libraries/Wire -I$(ARDUINO_PATH)/libraries/Wire/utility
+CXXFLAGS = -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=16000000L -DUSB_VID=null -DUSB_PID=null -DARDUINO=105 -D__PROG_TYPES_COMPAT__ -I$(ARDUINO_PATH)/hardware/arduino/cores/arduino -I$(ARDUINO_PATH)/hardware/arduino/variants/standard
 LDFLAGS = -Os -Wl,--gc-sections -lm
 
 
 ARDUINO_SRCS = \
-$(ARDUINO_PATH)/libraries/Wire/Wire.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/avr-libc/realloc.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/avr-libc/malloc.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_digital.c \
@@ -38,8 +37,6 @@ $(ARDUINO_PATH)/hardware/arduino/cores/arduino/HardwareSerial.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/WMath.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/main.cpp \
 
-#$(ARDUINO_PATH)/libraries/Wire/utility/twi.c \
-
 SRCS = $(ARDUINO_SRCS)
 
 OBJSC = $(SRCS:.cpp=.o)
@@ -52,13 +49,13 @@ $(SKETCHNAME).cpp.hex: $(SKETCHNAME).cpp.elf
 $(SKETCHNAME).cpp.eep: $(SKETCHNAME).cpp.elf
 	$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 $< $@
 
-$(SKETCHNAME).cpp.elf: $(OBJSD) obj/$(SKETCHNAME).o objs obj/twi.o
+$(SKETCHNAME).cpp.elf: $(OBJSD) obj/$(SKETCHNAME).o objs
 	$(CC) -mmcu=$(MCU) $(LDFLAGS) -o $@ $(OBJS)
 
 .PHONY: objs
 objs:
 	echo $(OBJSD) | sed s,$(ARDUINO_PATH),obj$(ARDUINO_PATH),g > objs
-        OBJS = $(shell cat objs) obj/$(SKETCHNAME).o obj/twi.o
+        OBJS = $(shell cat objs) obj/$(SKETCHNAME).o
 
 obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 	cp $< obj/$<.cpp
@@ -73,9 +70,6 @@ upload: $(SKETCHNAME).cpp.hex
 serial:
 	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5 9600
 	cat $(DEVICE)
-
-obj/twi.o : twi.c
-	$(CC) $(CXXFLAGS) -c $< -o $@
 
 %.o : %.cpp
 	mkdir -p obj$(@:.o=)
