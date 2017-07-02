@@ -46,7 +46,7 @@ class AutopilotControlApp(App):
 
         self._anim = None
 
-        self.texture = Image(source='../compass.png').texture
+        self.texture = Image(source='compass.png').texture
         self.control = AutopilotControl()
         return self.control
 

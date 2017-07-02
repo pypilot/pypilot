@@ -74,7 +74,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
                 fgGains.Add( sizer, 1, wx.EXPAND, 5 )
 
-
         on_con(self.client)
 
         self.GetSizer().Fit(self)
