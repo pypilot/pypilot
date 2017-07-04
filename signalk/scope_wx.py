@@ -96,7 +96,7 @@ class SignalKScope(SignalKScopeBase):
                 break
 
             if self.watches[result[0]]:
-                if self.plot.read_data(result, self.glArea.GetSize()[0]):
+                if self.plot.read_data(result):
                     refresh = True
 
         if refresh:
