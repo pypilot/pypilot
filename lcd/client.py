@@ -18,15 +18,23 @@ import json
 _ = lambda x : x # initially no translation
     
 try:
+    print 'have gpio for raspberry pi'
     import RPi.GPIO as GPIO
 
 except ImportError:
-
     try:
+        print 'have gpio for orange pi'
         import OPi.GPIO as GPIO
     except:
         print 'No gpio available'
         GPIO = None
+
+try:
+    import pylirc as LIRC
+    print 'have lirc for remote control'
+except:
+    print 'no lirc available'
+    LIRC = NONE
 
 from signalk.client import SignalKClient
 
@@ -141,6 +149,7 @@ class rectangle():
         self.x, self.y, self.width, self.height = x, y, width, height
 
 AUTO, MENU, UP, DOWN, SELECT = range(5)
+keynames = {'auto': AUTO, 'menu': MENU, 'up': UP, 'down': DOWN, 'select': SELECT}
 
 class LCDClient():
     def __init__(self, screen):
@@ -227,6 +236,9 @@ class LCDClient():
                     self.longsleep = 0
 
                 GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
+
+        if LIRC:
+            LIRC.init('pypilot')
 
     def get(self, name):
         if self.client:
@@ -794,7 +806,7 @@ class LCDClient():
         # for up and down keys providing acceration
         updownheld = self.keypad[UP] > 10 or self.keypad[DOWN] > 10
         updownup = self.keypadup[UP] or self.keypadup[DOWN]
-        sign = 1 if self.keypad[UP] or self.keypadup[UP] else -1
+        sign = -1 if self.keypad[UP] or self.keypadup[UP] else 1
         speed = float(1 if updownup else min(20, .001*max(self.keypad[UP], self.keypad[DOWN])**3))
         updown = updownheld or updownup
 
@@ -809,11 +821,11 @@ class LCDClient():
                     self.set('servo/command', sign*(speed+8)/40)
 
         elif self.display_page == self.display_menu:
-            if self.keypadup[DOWN]:
+            if self.keypadup[UP]:
                 self.menu.selection -= 1
                 if self.menu.selection < 0:
                     self.menu.selection = len(self.menu.items)-1
-            elif self.keypadup[UP]:
+            elif self.keypadup[DOWN]:
                 self.menu.selection += 1
                 if self.menu.selection == len(self.menu.items):
                     self.menu.selection = 0
@@ -840,21 +852,43 @@ class LCDClient():
             if self.keypadup[key]:
                 self.keypad[key] = self.keypadup[key] = False
 
+    def key(self, k, down):
+        if k >= 0 and k < len(self.pins):
+            if down:
+                self.keypad[k] = True
+            else:
+                self.keypadup[k] = True
+
     def glutkeydown(self, k, x, y):
-        if k == 'q' or k == 27:
-            exit(0)
         self.glutkey(k);
-        
+
     def glutkeyup(self, k, x, y):
         self.glutkey(k, False)
 
     def glutkey(self, k, down=True):
-        key = ord(k) - ord('1')
-        if key >= 0 and key < len(self.pins):
-            if down:
-                self.keypad[key] = True
-            else:
-                self.keypadup[key] = True
+        if k == 'q' or k == 27:
+            exit(0)
+        if k == ' ':
+            key = keynames['auto']
+        elif k == '\n':
+            key = keynames['menu']
+        elif k == '\t':
+            key = keynames['select']
+        else:
+            key = ord(k) - ord('1')
+        self.key(key, down)
+
+    def glutspecialdown(self, k, x, y):
+        self.glutspecial(k);
+
+    def glutspecialup(self, k, x, y):
+        self.glutspecial(k, False)
+
+    def glutspecial(self, k, down=True):
+        if k == glut.GLUT_KEY_LEFT or k == glut.GLUT_KEY_UP:
+            self.key(keynames['up'], down)
+        elif k == glut.GLUT_KEY_RIGHT or k == glut.GLUT_KEY_DOWN:
+            self.key(keynames['down'], down)
 
     def idle(self):
         self.get('ap/heading')
@@ -899,6 +933,16 @@ class LCDClient():
 
             self.keystate[pini] = value
 
+        if LIRC:
+            while True:
+                code = LIRC.nextcode()
+                if not code:
+                    break
+                pini = int(code[0])
+                if not self.surface and (pini == MENU or pini == SELECT):
+                    continue
+                self.keypadup[pini] = True
+
         self.process_keys()
 
         while True:
@@ -938,9 +982,9 @@ def main():
         screen = nokia5110lcd.screen()
 
     elif use_glut:
-        #screen = glut.screen((480, 640))
+        screen = glut.screen((120, 210))
         #screen = glut.screen((64, 128))
-        screen = glut.screen((44, 84))
+        #screen = glut.screen((48, 84))
     else:
         screen = ugfx.screen("/dev/fb0")
         if screen.width == 416 and screen.height == 656:
@@ -991,9 +1035,13 @@ def main():
         from OpenGL.GLUT import glutIdleFunc
         from OpenGL.GLUT import glutKeyboardFunc
         from OpenGL.GLUT import glutKeyboardUpFunc
+        from OpenGL.GLUT import glutSpecialFunc
+        from OpenGL.GLUT import glutSpecialUpFunc
 
         glutKeyboardFunc(lcdclient.glutkeydown)
         glutKeyboardUpFunc(lcdclient.glutkeyup)
+        glutSpecialFunc(lcdclient.glutspecialdown)
+        glutSpecialUpFunc(lcdclient.glutspecialup)
         glutIdleFunc(idle)
 #        glutIgnoreKeyRepeat(True)
         glutMainLoop()
