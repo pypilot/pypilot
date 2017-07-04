@@ -160,7 +160,7 @@ class SignalKPlot():
     def reset(self):
         self.traces = []
 
-    def add_data(self, name, group, timestamp, value, width):
+    def add_data(self, name, group, timestamp, value):
         t = False
         for tn in self.traces:
             if tn.name == name:
@@ -182,7 +182,7 @@ class SignalKPlot():
 
 
         # time must change by 1 pixel to bother to log and display
-        mindt = self.disptime / float(width)
+        mindt = self.disptime / float(self.width)
         return t.add(timestamp, value, mindt) and t.visible
 
     def add_blank(self, group=False):
@@ -190,7 +190,7 @@ class SignalKPlot():
             if not group or group == t.group:
                 t.add_blank()
 
-    def read_data(self, msg, width):
+    def read_data(self, msg):
         name, data = msg
         if 'timestamp' in data:
             timestamp = data['timestamp']
@@ -202,7 +202,7 @@ class SignalKPlot():
             ret = False
             for i in range(len(value)):
                 namei = name+str(i)
-                ret = self.add_data(namei, name, timestamp, float(value[i]), width) or ret
+                ret = self.add_data(namei, name, timestamp, float(value[i])) or ret
             return ret
         else:
             if type(value) == type(True):
@@ -210,7 +210,7 @@ class SignalKPlot():
                     value = 1
                 else:
                     value = 0
-            return self.add_data(name, name, timestamp, float(value), width)
+            return self.add_data(name, name, timestamp, float(value))
 
     @staticmethod
     def drawputs(str):
@@ -220,10 +220,8 @@ class SignalKPlot():
     # because glutbitmapcharacter doesn't get the glcolor unless the raster position is set
     @staticmethod
     def synccolor():
-        pos = (GLdouble * 4)()
-        vp = (GLdouble * 4)()
-        glGetDoublev(GL_VIEWPORT, vp)
-        glGetDoublev(GL_CURRENT_RASTER_POSITION, pos)
+        vp = glGetDoublev(GL_VIEWPORT)
+        pos = glGetDoublev(GL_CURRENT_RASTER_POSITION)
         glRasterPos2d(pos[0]/vp[2], pos[1]/vp[3])
 
 
@@ -325,6 +323,7 @@ class SignalKPlot():
         glMatrixMode (GL_MODELVIEW)
         glLoadIdentity()
         gluOrtho2D(0, 1, 0, 1)
+        self.width = w
 
     def increasescale(self):
         if self.scalestate%3 == 1:
