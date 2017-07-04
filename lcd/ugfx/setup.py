@@ -13,10 +13,22 @@ setup.py file for ugfx
 
 from distutils.core import setup, Extension
 
+libraries=[]
+try:
+    import RPi.GPIO
+    libraries=['wiringPi']
+except:
+    pass
+try:
+    import OPi.GPIO
+    libraries=['wiringPi']
+except:
+    pass
+
 ugfx_module = Extension('_ugfx',
                         sources=['ugfx_wrap.cxx', 'ugfx.cpp'],
                         extra_compile_args=['-Wno-unused-result'],
-                        libraries=['wiringPi']
+                        libraries=libraries
 )
 
 setup (name = 'ugfx',

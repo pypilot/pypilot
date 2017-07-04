@@ -150,7 +150,7 @@ surface::surface(const char* filename)
             for(int i = 0; i<width*height; i++)
                 memset(p + 4*i, gray_data[i], 3);
         else
-            fprintf(stderr, "bypp incompatible\n");
+            fprintf(stderr, "bypp incompatible reading %s\n", filename);
     }
 
     return;
@@ -174,10 +174,10 @@ void surface::store_grey(const char *filename)
             gray_data[i] = p[i];
         else if(bypp == 2)
             gray_data[i] = p[2*i]&0xfc;
-        else if(bypp == 2)
+        else if(bypp == 4)
             gray_data[i] = p[4*i];
         else
-            fprintf(stderr, "bypp incompatible\n");
+            fprintf(stderr, "bypp incompatible storing %s\n", filename);
 
     FILE *f = fopen(filename, "w");
     uint16_t colors = 1; // grey

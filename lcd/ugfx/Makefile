@@ -10,4 +10,3 @@ splash: splash.cpp ugfx.cpp
 
 ugfx.py ugfx_wrap.cxx: ugfx.i
 	swig -c++ -python ugfx.i
-
