@@ -13,12 +13,12 @@ class ArduinoServo
 public:
     ArduinoServo(int _fd);
 
-    bool initialize();
+    bool initialize(int baud);
     void command(double command);
     void stop();
     int poll();
     bool fault();
-    void max_current(double value);
+    void max_values(double current, double arduino_temp);
 
     double voltage, current;
     int flags;

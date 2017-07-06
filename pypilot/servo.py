@@ -40,7 +40,7 @@ class RaspberryHWPWMServoDriver(object):
         wiringpi.wiringPiSetup()
         self.engauged = False
 
-    def command(self, command, max_current):
+    def raw_command(self, command):
         if command == 0:
             stop()
             return
@@ -98,13 +98,12 @@ class ServoFlags(Value):
         return '{"' + self.name + '": {"value": "' + self.strvalue() + '"}}'
 
 class ServoTelemetry(object):
-    CURRENT = 1
-    VOLTAGE = 2
-    TEMPERATURE = 4
+    FLAGS = 1
+    CURRENT = 2
+    VOLTAGE = 4
     SPEED = 8
     POSITION = 16
-    FLAGS = 32
-
+    ARDUINO_TEMP = 32
 
 # a property which records the time when it is updated
 class TimedProperty(Property):
@@ -131,8 +130,8 @@ class Servo(object):
             min_speed = self.calibration.value['Min Speed']
         else:
             min_speed = 0
-        self.min_speed = self.Register(RangeProperty, 'Min Speed', max(min_speed, .3), min_speed, 1, persistent=True)
-        self.max_speed = self.Register(RangeProperty, 'Max Speed', 1, 0, 1, persistent=True)
+        self.min_speed = self.Register(RangeProperty, 'Min Speed', max(min_speed, .3), min(min_speed, .6), 1, persistent=True)
+        self.max_speed = self.Register(RangeProperty, 'Max Speed', 1, .3, 1, persistent=True)
         brake_hack = 'Brake Hack' in self.calibration.value and self.calibration.value['Brake Hack']
         self.brake_hack = self.Register(BooleanProperty, 'Brake Hack', brake_hack, persistent=True)
         self.brake_hack_state = 0
@@ -144,8 +143,10 @@ class Servo(object):
         timestamp = server.TimeStamp('servo')
         self.voltage = self.Register(SensorValue, 'voltage', timestamp)
         self.current = self.Register(SensorValue, 'current', timestamp)
+        self.temperature = self.Register(SensorValue, 'temperature', timestamp)
         self.engauged = self.Register(BooleanValue, 'engauged', False)
         self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 10, persistent=True)
+        self.max_arduino_temp = self.Register(RangeProperty, 'Max Arduino Temp', 65, 30, 80, persistent=True)
         self.slow_period = self.Register(RangeProperty, 'Slow Period', 1.5, .1, 10, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
@@ -297,7 +298,7 @@ class Servo(object):
 
         if not self.driver:
             t0 = time.time()
-            device_path = self.serialprobe.probe('servo', [115200], 1)
+            device_path = self.serialprobe.probe('servo', [38400], 1)
             if device_path:
                 #from arduino_servo.arduino_servo_python import ArduinoServo
                 from arduino_servo.arduino_servo import ArduinoServo
@@ -305,10 +306,10 @@ class Servo(object):
                 device.timeout=0 #nonblocking
                 fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
                 self.driver = ArduinoServo(device.fileno())
-                self.driver.max_current(self.max_current.value)
+                self.driver.max_values(self.max_current.value, self.max_arduino_temp.value)
 
                 t0 = time.time()
-                if self.driver.initialize():
+                if self.driver.initialize(device_path[1]):
                     self.device = device
                     print 'arduino servo found on', device_path
                     self.serialprobe.probe_success('servo')
@@ -335,7 +336,7 @@ class Servo(object):
             self.command_timeout = t+1
                 
         if self.driver:
-            self.driver.max_current(self.max_current.value)
+            self.driver.max_values(self.max_current.value, self.max_arduino_temp.value)
             self.driver.command(command)
 
     def stop(self):
@@ -387,6 +388,8 @@ class Servo(object):
         self.server.TimeStamp('servo', self.timestamp)
         if result & ServoTelemetry.VOLTAGE:
             self.voltage.set(self.driver.voltage)
+        if result & ServoTelemetry.ARDUINO_TEMP:
+            self.temperature.set(self.driver.arduino_temp)
         if result & ServoTelemetry.CURRENT:
             self.current.set(self.driver.current)
             # integrate power consumption
@@ -411,7 +414,8 @@ class Servo(object):
             file = open(filename)
             self.calibration.set(json.loads(file.readline()))
         except:
-            print 'no servo calibration!!'
+            print 'WARNING: using default servo calibration!!'
+            self.calibration.set({'forward': [.1, .6], 'reverse': [.1, .6], 'Min Speed': .25})
 
     def save_calibration(self):
         file = open(Servo.calibration_filename, 'w')
@@ -429,7 +433,7 @@ if __name__ == '__main__':
         servo.send_command()
         servo.poll()
         if servo.voltage.value:
-            print 'voltage:', servo.voltage.value, 'current', servo.current.value
+            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'temp', servo.temperature.value
         server.HandleRequests()
         time.sleep(.1)
 

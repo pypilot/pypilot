@@ -14,7 +14,8 @@
 
 #include "arduino_servo.h"
 
-static const uint8_t sync_bytes[] = {0xe7, 0xf9, 0xc7, 0x1e, 0xa7, 0x19, 0x1c, 0xb3};
+enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_ARDUINO_TEMP_CODE = 0xa7, REPROGRAM_CODE = 0x19};
+enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, ARDUINO_TEMP_CODE=0xf9, FLAGS_CODE = 0x41};
 
 const unsigned char crc8_table[256]
 = {
@@ -71,29 +72,32 @@ static uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
 ArduinoServo::ArduinoServo(int _fd)
     : fd(_fd)
 {
-    in_sync = out_sync = 0;
     in_sync_count = 0;
+    out_sync = 0;
     in_buf_len = 0;
     max_current_value = 0;
 
     flags = 0;
 }
 
-bool ArduinoServo::initialize()
+bool ArduinoServo::initialize(int baud)
 {
     int cnt = 0;
     bool data = false;
     while (flags & OVERCURRENT || !(flags & SYNC)) {
         stop();
-        if(poll()>0)
+        if(poll()>0) {
+            while(poll());
             data = true;
-
-        usleep(1000);
+        } else
+            usleep(1e6 * 120 / baud);
         cnt++;
-        if(cnt == 400 && !data)
+        if(cnt >= 400 && !data) {
+            printf("arduino servo fail no data\n");
             return false;
+        }
         if(cnt == 1000) {
-            printf("fail no daa\n");
+            printf("arduino servo fail sync\n");
             return false;
         }
     }
@@ -106,51 +110,51 @@ void ArduinoServo::command(double command)
     raw_command((command+1)*1000);
 }
 
-void ArduinoServo::stop()
+int ArduinoServo::process_packet(uint8_t *in_buf)
 {
-    raw_command(0x5342);
-}
+    uint16_t value = in_buf[1] + (in_buf[2]<<8);
+    switch(in_buf[0]) {
+    case CURRENT_CODE:
+        current = value / 100.0;
+        return CURRENT;
+    case VOLTAGE_CODE:
+        voltage = value / 100.0;
+        return VOLTAGE;
+    case ARDUINO_TEMP_CODE:
+        arduino_temp = (int16_t)value / 100.0;
+        return ARDUINO_TEMP;
+    case FLAGS_CODE:
+        flags = value;
+        return FLAGS;
+    }
+    return 0;
+}    
 
 int ArduinoServo::poll()
 {
-    if(in_buf_len < 3) {
+    if(in_buf_len < 4) {
         int c = read(fd, in_buf + in_buf_len, sizeof in_buf - in_buf_len);
         if(c<=0) // todo: support failure if the device is unplugged
             return 0;
         in_buf_len += c;
-        if(in_buf_len < 3)
+        if(in_buf_len < 4)
             return 0;
     }
 
     int ret = 0;
-    while(in_buf_len >= 3) {
-        uint8_t code[3] = {sync_bytes[in_sync], in_buf[0], in_buf[1]};
-        uint8_t crc = crc8(code, 3);
-
-        if(crc == in_buf[2]) {
-            if(in_sync_count == 2) {
-                uint16_t value = in_buf[0] + (in_buf[1]<<8);
-                if(in_sync > 0) {
-                    current = value * 1.1 / .05 / 65536;
-                    ret |= CURRENT;
-                } else {
-                    voltage = (value >> 4) * 1.1 * 10560 / 560 / 4096;
-                    flags = value & 0xf;
-                    ret |= VOLTAGE | FLAGS;
-                }
-            }
-
-            in_sync++;
-            if(in_sync == sizeof sync_bytes) {
-                in_sync = 0;
-                if(in_sync_count < 2)
-                    in_sync_count++;
-            }
-            in_buf_len-=3;
+    while(in_buf_len >= 4) {
+        uint8_t crc = crc8(in_buf, 3);
+        if(crc == in_buf[3]) { // valid packet
+            if(in_sync_count >= 3)
+                ret |= process_packet(in_buf);
+            else
+                in_sync_count++;
+            in_buf_len-=4;
             for(int i=0; i<in_buf_len; i++)
-                in_buf[i] = in_buf[i+3];
+                in_buf[i] = in_buf[i+4];
         } else {
-            in_sync = in_sync_count = 0;
+            // invalid packet, shift by 1 byte
+            in_sync_count = 0;
             in_buf_len--;
             for(int i=0; i<in_buf_len; i++)
                 in_buf[i] = in_buf[i+1];
@@ -165,25 +169,37 @@ bool ArduinoServo::fault()
     return flags & (FAULTPIN | OVERCURRENT);
 }
 
-void ArduinoServo::max_current(double value)
+void ArduinoServo::max_values(double current, double arduino_temp)
 {
-    max_current_value = fmin(10, fmax(0, value));
+    max_current_value = fmin(10, fmax(0, current));
+    max_arduino_temp_value = fmin(80, fmax(30, arduino_temp));
 }
 
-void ArduinoServo::send_value(uint16_t value)
+void ArduinoServo::send_value(uint8_t command, uint16_t value)
 {
-    uint8_t code[3] = {sync_bytes[out_sync], (uint8_t)(value&0xff), (uint8_t)((value>>8)&0xff)};
-    uint8_t b[3] = {code[1], code[2], crc8(code, 3)};
-
-    write(fd, b, 3);
-    out_sync++;
+    uint8_t code[3] = {command, (uint8_t)(value&0xff), (uint8_t)((value>>8)&0xff)};
+    uint8_t b[4] = {code[0], code[1], code[2], crc8(code, 3)};
+    write(fd, b, 4);
 }
 
-void ArduinoServo::raw_command(uint16_t command)
+void ArduinoServo::raw_command(uint16_t value)
 {
-    if(!out_sync)
-        send_value(max_current_value*65536.0*.05/1.1);
-    send_value(command);
-    if(out_sync == sizeof sync_bytes)
+    // send max current and temp occasionally
+    switch(out_sync++) {
+    case 0:
+        send_value(MAX_CURRENT_CODE, max_current_value*100);
+        break;
+    case 4:
+        send_value(MAX_ARDUINO_TEMP_CODE, max_arduino_temp_value*100);
+        break;
+    case 7:
         out_sync = 0;
+    }
+    send_value(COMMAND_CODE, value);
+        
+}
+
+void ArduinoServo::stop()
+{
+    send_value(STOP_CODE, 0);
 }

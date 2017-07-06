@@ -138,14 +138,21 @@ void delay_us(long us)
       _delay_us(1);
 }
 
+//ISR(WDT_vect)
+//{
+//    sync_b = 0, in_sync_count = 0;
+//    setup();
+//}
+
 void setup() 
-{ 
+{
     // set up Serial library
-    Serial.begin(115200);
+    Serial.begin(38400);
             
+    wdt_reset();
     wdt_disable();
+    //wdt_enable(WDTO_4S);
     set_sleep_mode(SLEEP_MODE_IDLE); // wait for serial
-//    wdt_enable(WDTO_4S);
 
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
@@ -161,16 +168,18 @@ void setup()
     digitalWrite(fault_pin, HIGH); /* enable internal pullups */
 } 
 
-uint8_t sync_bytes[] = {0xe7, 0xf9, 0xc7, 0x1e, 0xa7, 0x19, 0x1c, 0xb3};
-uint8_t nsync_bytes = (sizeof sync_bytes) / (sizeof *sync_bytes);
-uint8_t sync_b = 0, sync_pos = 0, sync_count = 0;
-uint8_t in_bytes[3];
+enum commands {COMMAND = 0xc7, STOP = 0xe7, MAX_CURRENT = 0x1e, MAX_ARDUINO_TEMP = 0xa7, REPROGRAM = 0x19};
+enum results {CURRENT = 0x1c, VOLTAGE = 0xb3, ARDUINO_TEMP=0xf9, FLAGS = 0x41};
+enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, FAULTPIN=16};
+
+uint8_t in_bytes[4];
+uint8_t sync_b = 0, in_sync_count = 0;
 
 uint8_t out_sync_b = 0, out_sync_pos = 0;
 uint8_t crcbytes[3];
 uint16_t max_current = 0;
+int16_t max_arduino_temp = 8000; // 80C
 
-enum {SYNC=1, FAULTPIN=2, OVERCURRENT=4, ENGAUGED=8};
 uint8_t flags = 0;
 
 uint8_t timeout;
@@ -218,6 +227,7 @@ void engauge()
     flags |= ENGAUGED;
 }
 
+// set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
 void position(uint16_t value)
 {
 #ifdef ARDUINO_SERVO
@@ -227,8 +237,8 @@ void position(uint16_t value)
 #endif
 }
 
-volatile uint32_t amptotal, volttotal;
-volatile uint16_t ampcount, voltcount;
+volatile uint32_t amptotal, volttotal, arduino_temptotal;
+volatile uint16_t ampcount, voltcount, arduino_tempcount;
 
 uint16_t adc_current_counter;
 
@@ -271,7 +281,7 @@ uint16_t GetAmps()
   uint32_t t = amptotal, d = ampcount;
   sei();
   
-  return 64*t / d;
+  return 275 * t / d / 128; // units of 10mA
 }
 
 // rather than flush amps, keep last half
@@ -279,15 +289,13 @@ uint16_t GetAmps()
 // to compare against overcurrent
 uint16_t TakeAmps()
 {
+    uint16_t avg = GetAmps();
   cli();
-  uint32_t t = amptotal, d = ampcount;
-//  amptotal = ampcount=0;
+  uint32_t d = ampcount;
    amptotal >>= 1;
    ampcount >>= 1;
   sei();
   
-  uint16_t avg = 64 * t / d;
-//  return avg;
   if(d & 1) {
     int havg = avg>>7;
     cli();
@@ -303,26 +311,94 @@ uint16_t TakeVolts()
     uint32_t t = volttotal, d = voltcount;
     volttotal = voltcount = 0;
     sei();
-    return 4*t / d;
+    return t / d * 1815 / 896; /* voltage in 10mV increments (1.1ref, 560 and 10k resistors
+                                  1815 / 896 = 100.0/1024*10560/560*1.1          */
 }
+
+
+int16_t GetArduinoTemp()
+{
+  cli();
+  uint32_t t = arduino_temptotal, d = arduino_tempcount;
+  sei();
+  
+  return 0; // no thermistor yet
+}
+
+// to ensure we always have a running average
+// to compare against overtemp
+uint16_t TakeArduinoTemp()
+{
+  cli();
+  uint32_t d = arduino_tempcount;
+   arduino_temptotal >>= 1;
+   arduino_tempcount >>= 1;
+  sei();
+  
+  int16_t avg = GetArduinoTemp();
+  if(d & 1) {
+    int havg = avg>>7;
+    cli();
+    arduino_temptotal -= havg;
+    sei();
+  }
+  return avg;
+}
+
 
 void debug_amps()
 {
   uint32_t amps = TakeAmps();
-  uint32_t ampsout =  amps * 11000 / 1024 / 64;
-  
-  debug("%lu.%03lu  ", ampsout/1000, ampsout%1000);
+  debug("%lu.%03lu  ", amps/100, amps%100);
 }
 
 void debug_volts()
 {
   uint32_t volts = TakeVolts();
-  uint32_t voltsout = volts * 1300 * 10560. / 10 / 560 / 4096;
-  
-  debug("%lu.%02lu", voltsout/100, voltsout%100);
+  debug("%lu.%02lu", volts/100, volts%100);
 }
 
 uint8_t serialin;
+
+void process_packet(uint8_t *in_bytes)
+{
+    timeout = 0;
+    flags |= SYNC;
+    uint16_t value = in_bytes[1] | (in_bytes[2]<<8);
+    switch(in_bytes[0]) {
+    case MAX_CURRENT: // current in units of 10mA
+        max_current = value;
+        if(max_current > 2000) // maximum is 20 amps
+            max_current = 2000;
+        break;
+    case REPROGRAM:
+        // jump to bootloader
+        break;
+    case STOP:
+        // stop
+        position(0);
+        disengauge();
+        if (flags & (FAULTPIN | OVERCURRENT)) {
+            ;//delay(1000); // delay 1 second fault
+            flags &= ~(FAULTPIN | OVERCURRENT);
+            //flags = 0; // force resync
+        }
+        break;
+    case COMMAND:
+        if(value > 2000) {
+            // unused range, invalid!!!
+            // ignored
+        } else if(!(flags & (FAULTPIN | OVERCURRENT))) {
+            position(value);
+            engauge();
+        }
+        break;
+    case MAX_ARDUINO_TEMP:
+        max_arduino_temp = value;
+        break;
+    
+    }
+}
 
 void loop()
 {
@@ -334,58 +410,26 @@ void loop()
     // serial input
     while(Serial.available()) {
       uint8_t c = Serial.read();
-      if(serialin < 6)
-     //    serialin+=3; //   output at 3x input rate
+      if(serialin < 8)
         serialin++; // output at input rate
-      
-      switch(sync_b) {
-      case 0:
-          in_bytes[1] = c;
-          sync_b = 1;
-          break;
-      case 1:
-          in_bytes[2] = c;
-          sync_b = 2;
-          break;
-      case 2:
-          in_bytes[0] = sync_bytes[sync_pos];
+
+      if(sync_b < 3) {
+          in_bytes[sync_b] = c;
+          sync_b++;
+      } else {
           if(c == crc8(in_bytes, 3)) {
-              if(sync_count >= 2) {
-//                  wdt_reset(); // strobe watchdog
-                  timeout = 0;
-                  flags |= SYNC;
-                  uint16_t value = in_bytes[1] | (in_bytes[2]<<8);
-                  if(sync_pos == 0) {
-                      max_current = value;
-                  } else {
-                      if(value == 0x5342) { // stop
-                          position(0);
-                          disengauge();
-                          if (flags & (FAULTPIN | OVERCURRENT)) {
-                            ;//delay(1000); // delay 1 second fault
-                          flags &= ~(FAULTPIN | OVERCURRENT);
-                          //flags = 0; // force resync
-                          }
-                      } else if(value > 2000) {
-                        // unused range, invalid!!!
-                        // ignored
-                      } else if(!(flags & (FAULTPIN | OVERCURRENT))) {
-                          position(value);
-                          engauge();
-                      }
-                  }
-              }
+              if(in_sync_count >= 3) { // if crc matches, we have a valid packet
+                  wdt_reset(); // strobe watchdog
+                  process_packet(in_bytes);
+              } else
+                  in_sync_count++;
               sync_b = 0;
-              
-              if(++sync_pos == nsync_bytes) {
-                sync_pos = 0;
-                if(sync_count < 3)
-                  sync_count++;
-              }
           } else {
+          // invalid packet
               flags &= ~SYNC;
               disengauge();
-              sync_pos = sync_count = 0;
+              in_sync_count = 0;
+              in_bytes[0] = in_bytes[1];
               in_bytes[1] = in_bytes[2];
               in_bytes[2] = c;
           }
@@ -406,65 +450,58 @@ void loop()
         flags |= OVERCURRENT;
     }
 
-    delay(1); // small dead time to be safe
-#if 0 // enable to debug directly from serial port
-//engauge();
-//position(550);
+    // test temp
+    int16_t temp = GetArduinoTemp();
+    if(flags & ENGAUGED && arduino_tempcount > 0 && temp >= max_arduino_temp) {
+        disengauge();
+        
+        flags |= OVERTEMP;
+    }
 
-    debug_volts();
-    debug("\n");
-    debug_amps();
-    debug("\n");
-    debug("flags %d\n", flags);
-    delay(100);
-    return;
-#endif
+    delay(1); // small dead time to be safe
     // match output rate to input rate
     if(serialin == 0)
       return;
-
-    if(out_sync_pos > 0) // don't decrement for voltage
-      serialin--;
       
     // output 1 byte
     switch(out_sync_b) {
     case 0:
         int16_t v;
+        uint8_t code;
         if(out_sync_pos == 0) {
-            if(voltcount == 0)
-                return;
-            // voltage and flags
+            v = flags;
+          code = FLAGS;
+        } else if(out_sync_pos == 2 && voltcount) {
             v = TakeVolts();
-            v <<= 4; //make space for rlags
-            v |= flags;         
+            code = VOLTAGE;
+        } else if(out_sync_pos == 4 && arduino_tempcount) {
+            v = TakeArduinoTemp();
+          code = ARDUINO_TEMP;
         } else {
             if(ampcount == 0)
-                return;
+              return;
             v = TakeAmps();
+            code = CURRENT;
+            serialin-=4;
         }
+
+        if(++out_sync_pos >= 6)
+            out_sync_pos = 0;
         
-        crcbytes[0] = sync_bytes[out_sync_pos];
+        crcbytes[0] = code;
         crcbytes[1] = v;
         crcbytes[2] = v>>8;
-
-        Serial.write(crcbytes[1]);
-
-        if(++out_sync_pos == nsync_bytes)
-            out_sync_pos = 0;
-
-        out_sync_b = 1;
-        break;
+        // fall through
     case 1:
-        // write the high byte
-        Serial.write(crcbytes[2]);
-        out_sync_b = 2;
-        break;
-
     case 2:
+        // write next
+        Serial.write(crcbytes[out_sync_b]);
+        out_sync_b++;
+        break;
+    case 3:
         // write crc of sync byte plus bytes transmitted
         Serial.write(crc8(crcbytes, 3));
         out_sync_b = 0;
         break;
     }
 }
-
