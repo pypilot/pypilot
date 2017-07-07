@@ -142,7 +142,7 @@ class Servo(object):
         self.temperature = self.Register(SensorValue, 'temperature', timestamp)
         self.engauged = self.Register(BooleanValue, 'engauged', False)
         self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 10, persistent=True)
-        self.max_arduino_temp = self.Register(RangeProperty, 'Max Arduino Temp', 65, 30, 80, persistent=True)
+        self.max_arduino_temp = self.Register(RangeProperty, 'Max Controller Temp', 65, 30, 80, persistent=True)
         self.slow_period = self.Register(RangeProperty, 'Slow Period', 1.5, .1, 10, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
