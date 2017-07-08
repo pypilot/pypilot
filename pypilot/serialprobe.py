@@ -78,10 +78,14 @@ class SerialProbe(object):
             if device['bauds']:
                 return device['path'], device['bauds'][0]
 
-        if not self.devices:
-            self.devices = enumerate_devices(name)
+#        if not self.devices:
+#            self.devices = enumerate_devices(name)
 
         if probe['devices'] == 'none':
+            t0 = time.time()
+            self.devices = enumerate_devices(name)
+            print 'time to enumerate serial devices', time.time() - t0
+            
             probe['devices'] = []
             lastdevice = self.lastworkingdevice(name)
             if lastdevice:
@@ -91,6 +95,7 @@ class SerialProbe(object):
 
         probe['device'] = False
         if not probe['devices']:
+            probe['devices'] = 'none'
             return False
         
         probe_device = probe['devices'][0]
