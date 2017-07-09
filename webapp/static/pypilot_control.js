@@ -313,7 +313,7 @@ $(document).ready(function() {
             if(x != 0) {
                 sign = x > 0 ? 1 : -1;
                 servo_command = -sign;
-                servo_command_timeout = Math.pow(Math.abs(x),.5);
+                servo_command_timeout = Math.pow(Math.abs(x),.7);
             }
         }
     }

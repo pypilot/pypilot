@@ -30,6 +30,8 @@ class Value(object):
             self.set(value)
 
     def get_signalk(self):
+        if type(self.value) == type(''):
+            return '{"' + self.name + '": {"value": "' + self.value + '"}}'
         return '{"' + self.name + '": {"value": ' + str(self.value) + '}}'
 
     def set(self, value):
@@ -83,6 +85,10 @@ class StringValue(Value):
 class SensorValue(Value): # same as Value with added timestamp
     def __init__(self, name, timestamp, initial=False, **kwargs):
         super(SensorValue, self).__init__(name, initial, **kwargs)
+        if type(timestamp) != type([]) or \
+           len(timestamp) != 2 or \
+            type(timestamp[1]) != type(''):
+            print 'invalid timstamp', timestamp, 'for sensorvalue', name
         self.timestamp = timestamp
         self.directional = 'directional' in kwargs and kwargs['directional']
 

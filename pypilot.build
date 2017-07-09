@@ -11,6 +11,11 @@
 # Configure extension creation parameters            #
 ######################################################
 
+# pypilot.build is a build script to build the pypilot
+# tinycore linux package
+# it can be run to update the packages in tinypilot
+# then tinypilot is restarted
+
 SRCNAM=pypilot
 WRKDIR=.
 EXTNAM=pypilot

@@ -14,8 +14,8 @@
 
 #include "arduino_servo.h"
 
-enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
-enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, FLAGS_CODE = 0x8f};
+enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
+enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, FLAGS_CODE = 0x8f};
 
 const unsigned char crc8_table[256]
 = {
@@ -126,6 +126,9 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
         controller_temp = (int16_t)value / 100.0;
         //printf("servo temp  %f\n", controller_temp);
         return CONTROLLER_TEMP;
+    case MOTOR_TEMP_CODE:
+        motor_temp = (int16_t)value / 100.0;
+        return MOTOR_TEMP;
     case FLAGS_CODE:
         flags = value;
 //        if(flags != 9)
@@ -177,10 +180,11 @@ bool ArduinoServo::fault()
     return flags & (OVERTEMP | OVERCURRENT | FAULTPIN);
 }
 
-void ArduinoServo::max_values(double current, double controller_temp)
+void ArduinoServo::max_values(double current, double controller_temp, double motor_temp)
 {
-    max_current_value = fmin(10, fmax(0, current));
+    max_current_value = fmin(20, fmax(0, current));
     max_controller_temp_value = fmin(80, fmax(30, controller_temp));
+    max_motor_temp_value = fmin(80, fmax(30, motor_temp));
 }
 
 void ArduinoServo::send_value(uint8_t command, uint16_t value)
@@ -193,18 +197,21 @@ void ArduinoServo::send_value(uint8_t command, uint16_t value)
 void ArduinoServo::raw_command(uint16_t value)
 {
     // send max current and temp occasionally
-    switch(out_sync++) {
-    case 0:
+    switch(out_sync) {
+    case 0: case 8: case 16: case 24:
         send_value(MAX_CURRENT_CODE, max_current_value*100);
         break;
     case 4:
         send_value(MAX_CONTROLLER_TEMP_CODE, max_controller_temp_value*100);
         break;
-    case 7:
-        out_sync = 0;
+    case 12:
+        send_value(MAX_MOTOR_TEMP_CODE, max_motor_temp_value*100);
     }
+
+//        printf("command %u\n", value);
     send_value(COMMAND_CODE, value);
-        
+    if(++out_sync == 32)
+        out_sync = 0;
 }
 
 void ArduinoServo::stop()

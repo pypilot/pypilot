@@ -136,7 +136,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.stServoCalibration.SetLabel(s)
             self.SetSize(wx.Size(self.GetSize().x+1, self.GetSize().y))
 
-        elif name == 'servo/calibration console':
+        elif name == 'servo/calibration/console':
             self.stServoCalibrationConsole.SetLabel(self.stServoCalibrationConsole.GetLabel() + value)
         elif name == 'servo/max_current':
             self.dsServoMaxCurrent.SetValue(round3(value))
