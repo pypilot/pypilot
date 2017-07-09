@@ -50,7 +50,10 @@ def FitCalibration(cal):
     
     fits = {}
     print 'speeds', len(speeds)
-    print 'speeds', 'commands', [speeds, commands]
+    print 'plot'
+    for val in zip(speeds, commands):
+        print val[0], val[1]
+
     for n in [1, 3, 5]:  # linear, 3rd and 5th order fit
         if len(speeds) > n+1:
             fits[n] = fit([speeds, commands], n)
@@ -227,7 +230,7 @@ class ServoClient(object):
     def safe_raw_cmd(self, d):
         if self.brake_hack and d > 0:
             d *= 1.4
-        return .3*d
+        return .6*d
     
     def search_end(self, sign):
         self.reset()
@@ -269,9 +272,9 @@ class ServoClient(object):
         
         complete = [False, False]
         lastspeed = [0, 0]
-        steps = 5 # speeds 20 speeds
-        mincmd = 320
-        maxcmd = 600
+        steps = 20 # speeds 20 speeds
+        mincmd = 480
+        maxcmd = 700
         stepi = 0
         for abs_raw_cmd in range(mincmd, maxcmd, (maxcmd - mincmd)/(steps-1)):
             for signi in [0, 1]:
@@ -288,7 +291,7 @@ class ServoClient(object):
                     command, idle_current, stall_current, cal_voltage, dt = cal
                     truespeed = 1/dt
                     print 'truespeed', truespeed, 'lastspeed', lastspeed[signi]
-                    if truespeed - lastspeed[signi] < .05/steps:
+                    if lastspeed[signi] and truespeed / lastspeed[signi] < 1+.1/steps:
                         complete[signi] += 1
                         console('completed this direction when counter >= 3:', complete[signi])
                     else:

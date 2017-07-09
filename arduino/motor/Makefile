@@ -79,4 +79,8 @@ serial:
 	mkdir -p obj$(@:.o=)
 	$(CC) $(CXXFLAGS) -c $< -o obj$@
 
+clean:
+	rm -r obj objs $(SKETCHNAME).cpp.elf $(SKETCHNAME).cpp.hex
+
+
 

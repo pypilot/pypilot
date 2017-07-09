@@ -299,7 +299,6 @@ class Servo(object):
             self.mode.update('forward')
 
         if not self.driver:
-            t0 = time.time()
             device_path = self.serialprobe.probe('servo', [38400], 1)
             if device_path:
                 #from arduino_servo.arduino_servo_python import ArduinoServo

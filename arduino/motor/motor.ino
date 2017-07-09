@@ -15,35 +15,28 @@ This program is meant to interface with pwm based
 motor controller either brushless or brushed, or
 a regular RC servo
 
-adc pin0 is a 1:4 resistor divider to input voltage
-             allowing up to 20 volts (5 volt reference)
+adc pin0 is a resistor divider to measure voltage
+             allowing up to 20 volts (10k and 560 ohm, 1.1 volt reference)
              
-adc pin1 goes to .1 ohm shunt
+adc pin1 goes to .1 ohm shunt to measure current
+adc pin2 goies to 18k resistor and 10k NTC thermistor measure temperature
 
 pwm output on arduino pin 9
-
+esc programming input/output on pin 2
 
 The program uses a simple protocol to ensure only
 correct data can be received and to ensure that
 false/incorrect or random data is very unlikely to
 produce motor movement.
 
-The input and output over uart has 3 byte packets
-with 7 packets per frame.
+The input and output over uart has 4 byte packets
 
-The first two bytes are a value, and the third is
-the crc of the sync byte plus the data bytes
-The sync is fixed depending on the position in the frame.
+The first byte is the command or register, the next
+two bytes is a 16bit value (signed or unsigned)
+the last byte is a crc8 of the first 3 bytes
 
-If all the packets have correct crc for a few frames
+If incomming data has the correct crc for a few frames
 the command can be recognized.
-
-The first packet in each frame is either max current
-setting (input) or voltage in the upper 12 bits, and
-flags in the lower 4 bits (output)
-
-The remaining 6 packets contain motor command (input)
-or motor current (output)
 
 */
 
@@ -143,9 +136,11 @@ void delay_us(long us)
 //    sync_b = 0, in_sync_count = 0;
 //    setup();
 //}
+uint8_t serialin;
 
 void setup() 
 {
+    serialin = 0;
     // set up Serial library
     Serial.begin(38400);
             
@@ -169,10 +164,10 @@ void setup()
 } 
 
 enum commands {COMMAND = 0xc7, STOP = 0xe7, MAX_CURRENT = 0x1e, MAX_ARDUINO_TEMP = 0xa7, REPROGRAM = 0x19};
-enum results {CURRENT = 0x1c, VOLTAGE = 0xb3, ARDUINO_TEMP=0xf9, FLAGS = 0x41};
-enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, FAULTPIN=16};
+enum results {CURRENT = 0x1c, VOLTAGE = 0xb3, ARDUINO_TEMP=0xf9, FLAGS = 0x8f};
+enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FAULTPIN=16*2};
 
-uint8_t in_bytes[4];
+uint8_t in_bytes[3];
 uint8_t sync_b = 0, in_sync_count = 0;
 
 uint8_t out_sync_b = 0, out_sync_pos = 0;
@@ -180,7 +175,7 @@ uint8_t crcbytes[3];
 uint16_t max_current = 0;
 int16_t max_arduino_temp = 8000; // 80C
 
-uint8_t flags = 0;
+uint16_t flags = 0;
 
 uint8_t timeout;
 
@@ -358,9 +353,7 @@ void debug_volts()
   debug("%lu.%02lu", volts/100, volts%100);
 }
 
-uint8_t serialin;
-
-void process_packet(uint8_t *in_bytes)
+void process_packet()
 {
     timeout = 0;
     flags |= SYNC;
@@ -372,15 +365,18 @@ void process_packet(uint8_t *in_bytes)
             max_current = 2000;
         break;
     case REPROGRAM:
+    {
         // jump to bootloader
-        break;
+        asm volatile ("ijmp" ::"z" (0x3c00));
+        //goto *0x3c00;
+    } break;  
     case STOP:
         // stop
         position(0);
         disengauge();
-        if (flags & (FAULTPIN | OVERCURRENT)) {
+        if (flags & (OVERTEMP | OVERCURRENT | FAULTPIN)) {
             ;//delay(1000); // delay 1 second fault
-            flags &= ~(FAULTPIN | OVERCURRENT);
+            flags &= ~(OVERTEMP | OVERCURRENT | FAULTPIN);
             //flags = 0; // force resync
         }
         break;
@@ -388,7 +384,7 @@ void process_packet(uint8_t *in_bytes)
         if(value > 2000) {
             // unused range, invalid!!!
             // ignored
-        } else if(!(flags & (FAULTPIN | OVERCURRENT))) {
+        } else if(!(flags & (OVERTEMP | OVERCURRENT | FAULTPIN))) {
             position(value);
             engauge();
         }
@@ -396,7 +392,6 @@ void process_packet(uint8_t *in_bytes)
     case MAX_ARDUINO_TEMP:
         max_arduino_temp = value;
         break;
-    
     }
 }
 
@@ -410,7 +405,7 @@ void loop()
     // serial input
     while(Serial.available()) {
       uint8_t c = Serial.read();
-      if(serialin < 8)
+      if(serialin < 12)
         serialin++; // output at input rate
 
       if(sync_b < 3) {
@@ -420,10 +415,11 @@ void loop()
           if(c == crc8(in_bytes, 3)) {
               if(in_sync_count >= 3) { // if crc matches, we have a valid packet
                   wdt_reset(); // strobe watchdog
-                  process_packet(in_bytes);
+                  process_packet();
               } else
                   in_sync_count++;
               sync_b = 0;
+              flags &= ~INVALID;
           } else {
           // invalid packet
               flags &= ~SYNC;
@@ -432,6 +428,7 @@ void loop()
               in_bytes[0] = in_bytes[1];
               in_bytes[1] = in_bytes[2];
               in_bytes[2] = c;
+              flags |= INVALID;
           }
           break;
       }
@@ -454,23 +451,22 @@ void loop()
     int16_t temp = GetArduinoTemp();
     if(flags & ENGAUGED && arduino_tempcount > 0 && temp >= max_arduino_temp) {
         disengauge();
-        
         flags |= OVERTEMP;
     }
 
     delay(1); // small dead time to be safe
     // match output rate to input rate
-    if(serialin == 0)
+    if(serialin < 4)
       return;
       
     // output 1 byte
     switch(out_sync_b) {
     case 0:
-        int16_t v;
+        uint16_t v;
         uint8_t code;
         if(out_sync_pos == 0) {
             v = flags;
-          code = FLAGS;
+            code = FLAGS;
         } else if(out_sync_pos == 2 && voltcount) {
             v = TakeVolts();
             code = VOLTAGE;
