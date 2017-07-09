@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os
-import ugfx
+from ugfx import ugfx
 
 global fonts
 fonts = {}

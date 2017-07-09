@@ -131,7 +131,7 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
 //        if(flags != 9)
         //printf("servo flags %d %x\n", flags, flags);
         if(flags & INVALID)
-            printf("servo received invalid packet (check serial connection)\n")
+            printf("servo received invalid packet (check serial connection)\n");
         return FLAGS;
     }
     return 0;

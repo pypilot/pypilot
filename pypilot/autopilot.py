@@ -152,7 +152,7 @@ class AutopilotBase(object):
       # try 7 times to read data within the period
       t0 = time.time()
       data = self.boatimu.IMURead()
-      if data != self.lastdata:
+      if not data and self.lastdata:
           print 'warning no imu data'
       self.lastdata = data
 
