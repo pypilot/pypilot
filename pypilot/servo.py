@@ -169,6 +169,8 @@ class Servo(object):
         self.position = self.Register(SensorValue, 'position', timestamp)
         self.position.set(.5)
 
+        self.rawcommand = self.Register(SensorValue, 'raw_comand', timestamp)
+
         self.lastpositiontime = time.time()
         self.lastpositionamphours = 0
 
@@ -326,6 +328,7 @@ class Servo(object):
         self.raw_command(command)
 
     def raw_command(self, command):
+        self.rawcommand.set(command)
         if self.brake_hack_state == 1:
             if self.fault():
                 return

@@ -85,9 +85,8 @@ class StringValue(Value):
 class SensorValue(Value): # same as Value with added timestamp
     def __init__(self, name, timestamp, initial=False, **kwargs):
         super(SensorValue, self).__init__(name, initial, **kwargs)
-        if type(timestamp) != type([]) or \
-           len(timestamp) != 2 or \
-            type(timestamp[1]) != type(''):
+        if type(timestamp) != type('') and \
+           (type(timestamp) != type([]) or len(timestamp) != 2 or type(timestamp[1]) != type('')):
             print 'invalid timstamp', timestamp, 'for sensorvalue', name
         self.timestamp = timestamp
         self.directional = 'directional' in kwargs and kwargs['directional']

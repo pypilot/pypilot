@@ -238,7 +238,7 @@ class AutopilotBase(object):
 
       self.servo.poll()
       t2 = time.time()
-      if t3-t1 > period/2:
+      if t2-t1 > period/2:
           print 'servo is running too _slowly_', t2-t1
 
       self.nmea.poll()
