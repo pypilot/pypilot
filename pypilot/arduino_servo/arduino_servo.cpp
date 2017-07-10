@@ -177,9 +177,9 @@ void ArduinoServo::max_values(double current, double arduino_temp)
 
 void ArduinoServo::send_value(uint8_t command, uint16_t value)
 {
-    uint8_t code[3] = {command, (uint8_t)(value&0xff), (uint8_t)((value>>8)&0xff)};
-    uint8_t b[4] = {code[0], code[1], code[2], crc8(code, 3)};
-    write(fd, b, 4);
+    uint8_t code[4] = {command, (uint8_t)(value&0xff), (uint8_t)((value>>8)&0xff), 0};
+    code[3] = crc8(code, 3);
+    write(fd, code, 4);
 }
 
 void ArduinoServo::raw_command(uint16_t value)
