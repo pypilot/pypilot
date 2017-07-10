@@ -213,7 +213,7 @@ void surface::store_grey(const char *filename)
     fclose(f);
 }
 
-void surface::blit(surface *src, int xoff, int yoff)
+void surface::blit(surface *src, int xoff, int yoff, bool flip)
 {
     if(bypp != src->bypp) {
         printf("incompatible surfaces cannot be blit\n");
@@ -242,12 +242,20 @@ void surface::blit(surface *src, int xoff, int yoff)
 
     if(w <= 0 || h <= 0)
         return;
-    
-    for(int y = 0; y<h; y++) {
-        long dest_location = (xoff+xoffset) * bypp + (y+yoff+yoffset) * line_length;
-        memcpy(p + dest_location, src->p + src_location, bypp*w);
-        src_location += src->line_length;
-    }
+
+    if(flip)
+        for(int y = h-1; y>=0; y--) {
+            long dest_location = (xoff+xoffset) * bypp + (y+yoff+yoffset) * line_length;
+            for(int x=0; x<w; x++)
+                memcpy(p + dest_location + x*bypp, src->p + src_location + bypp*(w-x-1), bypp);
+            src_location += src->line_length;
+        }
+    else
+        for(int y = 0; y<h; y++) {
+            long dest_location = (xoff+xoffset) * bypp + (y+yoff+yoffset) * line_length;
+            memcpy(p + dest_location, src->p + src_location, bypp*w);
+            src_location += src->line_length;
+        }
 }
 
 void surface::magnify(surface *src, int factor)

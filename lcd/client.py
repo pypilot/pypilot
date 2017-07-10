@@ -161,6 +161,7 @@ class LCDClient():
         self.configfilename = os.getenv('HOME') + '/.pypilot/lcdclient.conf' 
         self.config['contrast'] = 50
         self.config['invert'] = False
+        self.config['flip'] = False
         self.config['language'] = 'en'
 
         print 'loading load config file:', self.configfilename
@@ -361,10 +362,16 @@ class LCDClient():
                 self.save_config()
                 return self.display_menu
 
+            def flip():
+                self.config['flip'] = not self.config['flip']
+                self.save_config()
+                return self.display_menu
+
             def display():
                 self.menu = LCDMenu(self, _('Display'),
                                     [(_('contrast'), contrast),
-                                     (_('invert'), invert)],
+                                     (_('invert'), invert),
+                                     (_('flip'), flip)],
                                     self.menu)
                 return self.display_menu
             self.menu = LCDMenu(self, _('Settings'),
@@ -1017,15 +1024,14 @@ def main():
                 surface = invsurface
                 surface.invert(0, 0, surface.width, surface.height)
 
-                lcdclient.config['invert']
-
             if mag != 1:
                 magsurface.magnify(surface, mag)
                 surface = magsurface
                 #        mag = 2
                 #surface.magnify(mag)
 
-            screen.blit(surface, 0, 0)
+            screen.blit(surface, 0, 0, lcdclient.config['flip'])
+                
             screen.refresh()
 
             if 'contrast' in lcdclient.config:

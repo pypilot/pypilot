@@ -19,7 +19,7 @@ public:
     virtual ~surface();
 
     void store_grey(const char *filename);
-    void blit(surface *src, int xoff, int yoff);
+    void blit(surface *src, int xoff, int yoff, bool flip=false);
     void magnify(surface *src, int factor);
     void putpixel(int x, int y, unsigned int c);
     void line(int x1, int y1, int x2, int y2, unsigned int c);
