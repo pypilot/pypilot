@@ -28,9 +28,9 @@ class BasicAutopilot(AutopilotBase):
     def Gain(name, default, max_val):
       self.gains[name] = (self.Register(AutopilotGain, name, default, 0, max_val),
                           self.Register(SensorValue, name+'gain', timestamp))
-    Gain('P', .005, .025)
-    Gain('I',    0, .01)
-    Gain('D',  .15, .5)
+    Gain('P', .005, .05)
+    Gain('I',    0, .02)
+    Gain('D',  .15, 1.0)
 
     Gain('P2', 0, .025)
     Gain('PD', 0, .1)

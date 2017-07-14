@@ -17,14 +17,16 @@ import gettext
 import json
 _ = lambda x : x # initially no translation
     
+orangepi = False
 try:
-    print 'have gpio for raspberry pi'
     import RPi.GPIO as GPIO
+    print 'have gpio for raspberry pi'
 
 except ImportError:
     try:
-        print 'have gpio for orange pi'
         import OPi.GPIO as GPIO
+        orangepi = True
+        print 'have gpio for orange pi'
     except:
         print 'No gpio available'
         GPIO = None
@@ -38,7 +40,7 @@ except:
 
 from signalk.client import SignalKClient
 
-import ugfx
+from ugfx import ugfx
 import font
 
 def nr(x):
@@ -220,9 +222,11 @@ class LCDClient():
 
         if GPIO:
             GPIO.setmode(GPIO.BOARD)
-            for pin in self.pins:
-                cmd = 'gpio -1 mode ' + str(pin) + ' up'
-                os.system(cmd)
+            if orangepi:
+                for pin in self.pins:
+                    cmd = 'gpio -1 mode ' + str(pin) + ' up'
+                    os.system(cmd)
+
             for pin in self.pins:
                 try:
                     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -1001,6 +1005,11 @@ def main():
             # no actual device or display
             print 'no actual screen, running headless'
             screen = None
+
+        if screen.width > 480:
+            screen.width = 480
+            screen.height= min(screen.height, 640)
+
 
     lcdclient = LCDClient(screen)
     print 'complete'

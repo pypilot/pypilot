@@ -24,6 +24,7 @@ try:
     libraries=['wiringPi']
 except:
     pass
+print 'libraries', libraries
 
 ugfx_module = Extension('_ugfx',
                         sources=['ugfx_wrap.cxx', 'ugfx.cpp'],
