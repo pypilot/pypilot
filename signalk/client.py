@@ -7,13 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import json
-import socket
-import select
-import sys
-import os
-import time
-
+import kjson, socket, select, sys, os, time
 from values import *
 import server
 
@@ -41,7 +35,7 @@ class SignalKClient(object):
 
         try:
             file = open(configfilename)
-            config = json.loads(file.readline())
+            config = kjson.loads(file.readline())
 
             if 'host' in config and not host:
                 host = config['host']
@@ -52,7 +46,7 @@ class SignalKClient(object):
             try:
                 config['host'] = host
                 file = open(configfilename, 'w')
-                file.write(json.dumps(config) + '\n')
+                file.write(kjson.dumps(config) + '\n')
             except IOError:
                 print 'failed to write config file:', configfilename
 
@@ -116,13 +110,13 @@ class SignalKClient(object):
         return False
 
     def send(self, request):
-        self.socket.send(json.dumps(request)+'\n')
+        self.socket.send(kjson.dumps(request)+'\n')
 
     def receive_line(self, timeout = 0):
         line = self.socket.readline()
         if line:
             try:
-                msg = json.loads(line.rstrip())
+                msg = kjson.loads(line.rstrip())
             except:
                 raise Exception('invalid message from server:', line)
             return msg
@@ -306,7 +300,7 @@ def main():
     while True:
         result = client.receive(1000)
         if result:
-            print json.dumps(result)
+            print kjson.dumps(result)
             if not continuous:
                 return
 

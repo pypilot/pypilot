@@ -14,7 +14,7 @@
 
 import os
 from sys import stdout
-import json, time, math, multiprocessing, select
+import time, math, multiprocessing, select
 from signalk.pipeserver import NonBlockingPipe
 
 import autopilot

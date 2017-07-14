@@ -7,9 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import select, socket, time, json
+import select, socket, time, kjson
 import fcntl, os
-
 from values import *
 
 DEFAULT_PORT = 21311
@@ -135,7 +134,7 @@ class SignalKServer(object):
     def LoadPersistentValues(self):
         try:
             file = open(self.persistent_path)
-            self.persistent_data = json.loads(file.readline())
+            self.persistent_data = kjson.loads(file.readline())
             file.close()
         except:
             print 'failed to load', self.persistent_path
@@ -158,7 +157,7 @@ class SignalKServer(object):
                 
         try:
             file = open(self.persistent_path, 'w')
-            file.write(json.dumps(persistent_data)+'\n')
+            file.write(kjson.dumps(persistent_data)+'\n')
             file.close()
         except:
             print 'failed to write', self.persistent_path
@@ -188,7 +187,7 @@ class SignalKServer(object):
                 t = {'type' : t}
             msg[value] = t
 
-        socket.send(json.dumps(msg) + '\n')
+        socket.send(kjson.dumps(msg) + '\n')
 
     def HandleNamedRequest(self, socket, data):
         method = data['method']
@@ -213,7 +212,7 @@ class SignalKServer(object):
             socket.send('invalid method: ' + method + ' for ' + name + '\n')
         
     def HandleRequest(self, socket, request):
-        data = json.loads(request)
+        data = kjson.loads(request)
         if data['method'] == 'list':
             self.ListValues(socket)
         else:

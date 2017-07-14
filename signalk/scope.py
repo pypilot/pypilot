@@ -14,7 +14,6 @@ import numpy
 import math
 import time
 import sys
-import json
 
 from client import SignalKClientFromArgs
 
