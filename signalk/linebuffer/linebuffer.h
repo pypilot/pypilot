@@ -26,5 +26,5 @@ private:
 
     int fd;
     int b, pos, len;
-    char buf[2][4096];
+    char buf[2][16384];
 };

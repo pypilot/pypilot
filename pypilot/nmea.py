@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 #
-# A separate process listens on port 10110 for tcp connections
+# A separate process listens on port 20220 for tcp connections
 # any nmea data received is relayed to all clients
 #
 # serial ports are probed for incomming nmea data
@@ -19,6 +19,7 @@
 # signalk->nmea: pitch, roll, and heading messages
 # nmea->signalk: autopilot commands
 
+DEFAULT_PORT = 20220
 
 import sys, select, time, socket
 import multiprocessing
@@ -37,6 +38,7 @@ TIOCNXCL = 0x540D
 
 # favor lower priority sources
 source_priority = {'gpsd' : 1, 'serial' : 2, 'tcp' : 3, 'none' : 4}
+
 
 # nmea uses a simple xor checksum
 def nmea_cksum(msg):
@@ -392,7 +394,13 @@ class NmeaBridgeProcess(multiprocessing.Process):
             self.client.watch(name, watch)
 
     def receive_nmea(self, line, msgs):
-        for parser in self.parsers:
+        parsers = []
+        if source_priority[self.last_values['gps/source']] >= source_priority['tcp']:
+            parsers.append(parse_nmea_gps)
+        if source_priority[self.last_values['wind/source']] >= source_priority['tcp']:
+            parsers.append(parse_nmea_wind)
+
+        for parser in parsers:
             result = parser(line)
             if result:
                 name, msg = result
@@ -410,7 +418,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 client.set('ap/mode', 'gps')
 
             if abs(self.last_values['ap/heading_command'] - float(data[7])) > .1:
-                client.set('ap/heading_command', float(data[7]))
+               client.set('ap/heading_command', float(data[7]))
 
     def new_socket_connection(self, server):
         connection, address = server.accept()
@@ -445,25 +453,14 @@ class NmeaBridgeProcess(multiprocessing.Process):
         del self.fd_to_socket[fd]
         sock.close()
 
-    def update_parsers(self):
-        self.parsers = []
-        if source_priority[self.last_values['gps/source']] >= source_priority['tcp']:
-            self.parsers.append(parse_nmea_gps)
-
-        if source_priority[self.last_values['wind/source']] >= source_priority['tcp']:
-            self.parsers.append(parse_nmea_wind)
-
     def client_message(self, name, value):
         self.last_values[name] = value
-        if name == 'gps/source' or name == 'wind/source':
-            self.update_parsers()
 
     def process(self, pipe):
         import os
         print 'nmea bridge on', os.getpid()
         self.pipe = pipe
         self.sockets = []
-        self.parsers = []
         self.last_apb_time = time.time()
         def on_con(client):
             print 'nmea client connected'
@@ -482,7 +479,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
         server.setblocking(0)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        port = 20220
+        port = DEFAULT_PORT
         try:
             server.bind(('0.0.0.0', port))
         except:
