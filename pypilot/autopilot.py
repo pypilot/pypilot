@@ -162,7 +162,7 @@ class AutopilotBase(object):
 
           heading_off = data['heading'] - self.last_heading
           new_command = self.heading_command.value + heading_off
-          while new_command > 360:
+          while new_command >= 360:
               new_command -= 360
           while new_command < 0:
               new_command += 360
