@@ -43,31 +43,45 @@ most of the scripts can be run individually as standalone
 or test programs, some function as clients, other as servers
 
 
-servers (each of these run a signalk server)
+servers
+* execute this script directly
 
-signalk/server.py -- implements poll based server allowing external manipulation, basic demo server
-signalk/pipeserver.py -- implements sockets in a separate process communicating to the main process via a pipe.  This allows the main process to be high priority or realtime scheduled
+signalk/server.py -- implements poll based server allowing external manipulation,
+                     * basic demo server with clock
+signalk/pipeserver.py -- implements tcp sockets in a separate unix process
+                         relieving the main process from json parsing, and transmission.
+                         * basic demo server
 pypilot/boatimu.py -- specialized imu specific to boat motions
-               includes automatic 2d/3d calibration and alignment of magnetic sensors
+                      includes automatic 2d/3d calibration and alignment of magnetic sensors
+                      * useful for testing the imu (gyros) or even just reading gyros
+                      
 pypilot/nmea.py -- signalk <-> nmea0183 translator
-pypilot/servo.py -- controls servo via RC pwm signal, and gpio feedback for fault
+                   reads nmea0183 from serial ports or from tcp connections, and multiplexes
+                   the output to both nmea0183.
+                   * convert and multiplex nmea0183 data
 
-the autopilot servers below contain boatimu, nmea, and servo:
+pypilot/servo.py -- controls servo via RC pwm signal, and gpio feedback for fault
+                    * use to test or verify a working servo is detected,
+                      can be used to control or calibrate the servo
+
+
+the autopilot servers below integrate boatimu, nmea, and servo so have
+all of their combined functionallity as well as autopilot support.
+
 pypilot/simple_autopilot.py -- classic PID based autopilot implementation
 pypilot/basic_autopilot.py -- basic PID based autopilot with additional gains and filters
 
 
-
-clients:
+clients (run as many of these):
 
 signalk/client.py -- console client
-signalk/client_wx.py -- graphical user version
-signalk/scope.py -- glut plot client
-signalk/scope_wx.py -- plot client with selectable fields
+signalk/client_wx.py -- graphical user version (wx widgets)
+signalk/scope.py -- glut plot client -- useful for sensors and control
+signalk/scope_wx.py -- plot client with wx widgets
 
 ui/autopilot_control.py -- simple interface to command autopilot
 ui/autopilot_calibration.py -- interactive gui for all autopilot calibrations
 ui/kivy -- work in progress kivy control app
 
-lcd/client.py -- simple control interface using GPIO pins. linux framebuffer, glut, and nokia5110 lcd outputs are supported
+lcd/client.py -- autopilot control interface using GPIO pins.
 webapp/webapp.py -- python flask application that runs a webserver providing remote autopilot control through a web browser
