@@ -270,7 +270,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer27.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
 		self.m_button10 = wx.Button( self.m_panel1, wx.ID_ANY, u"Clear", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer27.Add( self.m_button10, 0, wx.ALL, 5 )
+		fgSizer27.Add( self.m_button10, 0, wx.ALIGN_RIGHT | wx.ALL, 5 )
 		
 		self.cbCompassCalibrationLocked = wx.CheckBox( self.m_panel1, wx.ID_ANY, u"calibratiion locked", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer27.Add( self.cbCompassCalibrationLocked, 0, wx.ALL, 5 )
@@ -363,8 +363,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		
 		self.gAlignment = wx.Gauge( self.m_panel5, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
 		self.gAlignment.SetValue( 0 ) 
-		fgSizer19.Add( self.gAlignment, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
-		
+		fgSizer19.Add( self.gAlignment, 0, wx.LEFT, 40 )
 		
 		fgSizer29.Add( fgSizer19, 1, wx.EXPAND, 5 )
 		
@@ -390,7 +389,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		
 		self.bLevel = wx.Button( self.m_panel5, wx.ID_ANY, u"Boat is level", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer13.Add( self.bLevel, 0, wx.ALL, 5 )
-		
 		
 		fgSizer29.Add( fgSizer13, 1, wx.EXPAND, 5 )
 		
@@ -462,15 +460,16 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer181.SetFlexibleDirection( wx.BOTH )
 		fgSizer181.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
-		self.bIMUScope = wx.Button( self.m_panel3, wx.ID_ANY, u"Scope", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer181.Add( self.bIMUScope, 0, wx.ALL, 5 )
-		
+		#self.bIMUScope = wx.Button( self.m_panel3, wx.ID_ANY, u"Scope", wx.DefaultPosition, wx.DefaultSize, 0 )
+		#fgSizer181.Add( self.bIMUScope, 0, wx.ALL, 5 )
+		fgSizer181.Add((0,0), 0, wx.ALL, 5 )
+
 		m_sdbSizer2 = wx.StdDialogButtonSizer()
 		self.m_sdbSizer2OK = wx.Button( self.m_panel3, wx.ID_OK )
 		m_sdbSizer2.AddButton( self.m_sdbSizer2OK )
 		m_sdbSizer2.Realize();
 		
-		fgSizer181.Add( m_sdbSizer2, 1, wx.ALIGN_RIGHT|wx.EXPAND, 5 )
+		fgSizer181.Add( m_sdbSizer2, 1, wx.ALL|wx.ALIGN_RIGHT|wx.EXPAND, 10 )
 		
 		
 		fgSizer12.Add( fgSizer181, 1, wx.EXPAND, 5 )
@@ -564,7 +563,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel2.SetSizer( fgSizer9 )
 		self.m_panel2.Layout()
 		fgSizer9.Fit( self.m_panel2 )
-		self.m_notebook1.AddPage( self.m_panel2, u"servo", False )
+		#self.m_notebook1.AddPage( self.m_panel2, u"servo", False )
 		
 		fgSizer7.Add( self.m_notebook1, 1, wx.EXPAND |wx.ALL, 5 )
 		
@@ -613,7 +612,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.bLevel.Bind( wx.EVT_BUTTON, self.onLevel )
 		self.sHeadingOffset.Bind( wx.EVT_SPINCTRL, self.onIMUHeadingOffset )
 		self.cbTextureCompass.Bind( wx.EVT_CHECKBOX, self.onTextureCompass )
-		self.bIMUScope.Bind( wx.EVT_BUTTON, self.onIMUScope )
+		#self.bIMUScope.Bind( wx.EVT_BUTTON, self.onIMUScope )
 		self.bCalibrateServo.Bind( wx.EVT_BUTTON, self.onCalibrateServo )
 	
 	def __del__( self ):
