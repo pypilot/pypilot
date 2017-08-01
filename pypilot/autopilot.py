@@ -177,27 +177,33 @@ class AutopilotBase(object):
       #compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
       self.server.TimeStamp('ap', time.time()-self.starttime)
       compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
+
+      #update wind and gps offsets
+      if self.nmea.values['gps']['source'].value != 'none' and \
+         self.nmea.values['gps']['speed'].value > 1: # don't update gps offset below 1 knot
+          offset = self.gps_heading_offset.value
+          diff = resolv(compass_heading - self.nmea.values['gps']['track'].value, offset)
+          d = .01
+          self.gps_heading_offset.set(resolv((1-d)*offset + d*diff))
+
+      if self.nmea.values['wind']['source'].value != 'none':
+          offset = self.wind_heading_offset.value
+          wind_direction = self.nmea.values['wind']['direction'].value
+          diff = resolv(compass_heading - wind_direction, offset)
+          d = .1
+          d = 1 # for now, don't even use compass (raw wind)
+          self.wind_heading_offset.set(resolv((1-d)*offset + d*diff))
+          
       if self.mode.value == 'compass':
           self.heading.set(compass_heading)
       elif self.mode.value == 'gps':
         if self.nmea.values['gps']['source'].value == 'none':
             self.mode.set('compass')
-        if self.nmea.values['gps']['speed'].value > 1:
-            offset = self.gps_heading_offset.value
-            diff = resolv(compass_heading - self.nmea.values['gps']['track'].value, offset)
-            d = .01
-            self.gps_heading_offset.set(resolv((1-d)*offset + d*diff))
         self.heading.set(resolv(compass_heading - self.gps_heading_offset.value, 180))
       elif self.mode.value == 'wind':
         # if wind sensor drops out, switch to compass
         if self.nmea.values['wind']['source'].value == 'none':
             self.mode.set('compass')
-        offset = self.wind_heading_offset.value
-        wind_direction = self.nmea.values['wind']['direction'].value
-        diff = resolv(compass_heading - wind_direction, offset)
-        d = .1
-        d = 1 # for now, don't even use compass (raw wind)
-        self.wind_heading_offset.set(resolv((1-d)*offset + d*diff))
         self.heading.set(resolv(compass_heading - self.wind_heading_offset.value, 180))
       elif self.mode.value == 'true wind':
           if self.nmea.values['wind']['source'].value == 'none':
