@@ -163,8 +163,8 @@ void setup()
     digitalWrite(fault_pin, HIGH); /* enable internal pullups */
 } 
 
-enum commands {COMMAND = 0xc7, STOP = 0xe7, MAX_CURRENT = 0x1e, MAX_ARDUINO_TEMP = 0xa7, REPROGRAM = 0x19};
-enum results {CURRENT = 0x1c, VOLTAGE = 0xb3, ARDUINO_TEMP=0xf9, FLAGS = 0x8f};
+enum commands {COMMAND = 0xc7, STOP = 0xe7, MAX_CURRENT = 0x1e, MAX_CONTROLLER_TEMP = 0xa4, REPROGRAM = 0x19, DISENGAUGE=0x68};
+enum results {CURRENT = 0x1c, VOLTAGE = 0xb3, CONTROLLER_TEMP=0xf9, FLAGS = 0x8f};
 enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FAULTPIN=16*2};
 
 uint8_t in_bytes[3];
@@ -179,8 +179,26 @@ uint16_t flags = 0;
 
 uint8_t timeout;
 
+// command is from 0 to 2000 with 1000 being neutral
+void position(uint16_t value)
+{
+#ifdef ARDUINO_SERVO
+    myservo.write(value * 9 / 100 - 12);
+#else
+  OCR1A = 1500 + value * 3 / 2;
+#endif
+}
+
+void stop()
+{
+    position(1000);
+}
+
 void disengauge()
 {
+    stop();
+    delay(60); // ensure esc gets stop signal
+
     flags &= ~ENGAUGED;
 #ifdef ARDUINO_SERVO
     myservo.detach();
@@ -223,15 +241,6 @@ void engauge()
 }
 
 // set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
-void position(uint16_t value)
-{
-#ifdef ARDUINO_SERVO
-    myservo.write(value * 9 / 100 - 12);
-#else
-  OCR1A = 1500 + value * 3 / 2;
-#endif
-}
-
 volatile uint32_t amptotal, volttotal, arduino_temptotal;
 volatile uint16_t ampcount, voltcount, arduino_tempcount;
 
@@ -268,7 +277,6 @@ ISR(TIMER2_OVF_vect)
   if(++timeout == 60) // 1 second
       disengauge();
 }
-
 
 uint16_t GetAmps()
 {
@@ -309,7 +317,6 @@ uint16_t TakeVolts()
     return t / d * 1815 / 896; /* voltage in 10mV increments (1.1ref, 560 and 10k resistors
                                   1815 / 896 = 100.0/1024*10560/560*1.1          */
 }
-
 
 int16_t GetArduinoTemp()
 {
@@ -371,14 +378,12 @@ void process_packet()
         //goto *0x3c00;
     } break;  
     case STOP:
-        // stop
-        position(0);
-        disengauge();
+        stop();
         if (flags & (OVERTEMP | OVERCURRENT | FAULTPIN)) {
-            ;//delay(1000); // delay 1 second fault
-            flags &= ~(OVERTEMP | OVERCURRENT | FAULTPIN);
-            //flags = 0; // force resync
+            //flags &= ~(OVERTEMP | OVERCURRENT | FAULTPIN);
+            flags = 0; // force resync
         }
+        delay(60); // stay stopped for at least some time
         break;
     case COMMAND:
         if(value > 2000) {
@@ -389,8 +394,12 @@ void process_packet()
             engauge();
         }
         break;
-    case MAX_ARDUINO_TEMP:
+    case MAX_CONTROLLER_TEMP:
         max_arduino_temp = value;
+        break;
+    case DISENGAUGE:
+        disengauge();
+        delay(60);
         break;
     }
 }
@@ -423,7 +432,7 @@ void loop()
           } else {
           // invalid packet
               flags &= ~SYNC;
-              disengauge();
+              stop(); //disengauge();
               in_sync_count = 0;
               in_bytes[0] = in_bytes[1];
               in_bytes[1] = in_bytes[2];
@@ -436,21 +445,21 @@ void loop()
 
     // test fault pin
     if(!digitalRead(fault_pin)) {
-        disengauge();
+        stop();
         flags |= FAULTPIN;
     }
     
     // test current
     uint16_t amps = GetAmps();
     if(flags & ENGAUGED && ampcount > 0 && amps >= max_current) {
-        disengauge();
+        stop();
         flags |= OVERCURRENT;
     }
 
     // test temp
     int16_t temp = GetArduinoTemp();
     if(flags & ENGAUGED && arduino_tempcount > 0 && temp >= max_arduino_temp) {
-        disengauge();
+        stop();
         flags |= OVERTEMP;
     }
 

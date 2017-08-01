@@ -78,7 +78,9 @@ class ServoFlags(Value):
     OVERTEMP = 2
     OVERCURRENT = 4
     ENGAUGED = 8
-    FAULTPIN = 16
+
+    INVALID=16*1
+    FAULTPIN=16*2
     
     def __init__(self, name):
         super(ServoFlags, self).__init__(name, 0)
@@ -93,6 +95,8 @@ class ServoFlags(Value):
             ret += 'OVERCURRENT '
         if self.value & self.ENGAUGED:
             ret += 'ENGAUGED '
+        if self.value & self.INVALID:
+            ret += 'INVALID '
         if self.value & self.FAULTPIN:
             ret += 'FAULTPIN '
         return ret
@@ -106,7 +110,7 @@ class ServoTelemetry(object):
     VOLTAGE = 4
     SPEED = 8
     POSITION = 16
-    ARDUINO_TEMP = 32
+    CONTROLLER_TEMP = 32
 
 # a property which records the time when it is updated
 class TimedProperty(Property):
@@ -147,7 +151,7 @@ class Servo(object):
         self.temperature = self.Register(SensorValue, 'temperature', timestamp)
         self.engauged = self.Register(BooleanValue, 'engauged', False)
         self.max_current = self.Register(RangeProperty, 'Max Current', 2, 0, 10, persistent=True)
-        self.max_arduino_temp = self.Register(RangeProperty, 'Max Controller Temp', 65, 30, 80, persistent=True)
+        self.max_controller_temp = self.Register(RangeProperty, 'Max Controller Temp', 65, 30, 80, persistent=True)
         self.period = self.Register(RangeProperty, 'Period', .7, .3, 3, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'Compensate Current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'Compensate Voltage', False, persistent=True)
@@ -176,18 +180,24 @@ class Servo(object):
         return self.server.Register(_type(*(['servo/' + name] + list(args)), **kwargs))
 
     def send_command(self):
+        def disengauge():
+            if self.driver and self.driver.flags & ServoFlags.ENGAUGED:
+                self.driver.disengauge()
+
         timeout = 1 # command will expire after 1 second
         if self.rawcommand.value:
             if time.time() - self.rawcommand.time > timeout:
-                self.rawcommand.set(0)
+                disengauge()
+                self.rawcommand.update(0)
             else:
                 self.raw_command(self.rawcommand.value)
         else:
             if time.time() - self.command.time > timeout:
-                command = 0
+                disengauge()
+                self.command.update(0)
             else:
                 command = self.command.value
-            self.velocity_command(command)
+                self.velocity_command(command)
 
     def velocity_command(self, speed):
         if self.fault():
@@ -350,7 +360,7 @@ class Servo(object):
             self.command_timeout = t+1
                 
         if self.driver:
-            self.driver.max_values(self.max_current.value, self.max_arduino_temp.value)
+            self.driver.max_values(self.max_current.value, self.max_controller_temp.value)
             self.driver.command(command)
 
     def stop(self):
@@ -406,8 +416,8 @@ class Servo(object):
         self.server.TimeStamp('servo', self.timestamp)
         if result & ServoTelemetry.VOLTAGE:
             self.voltage.set(self.driver.voltage)
-        if result & ServoTelemetry.ARDUINO_TEMP:
-            self.temperature.set(self.driver.arduino_temp)
+        if result & ServoTelemetry.CONTROLLER_TEMP:
+            self.temperature.set(self.driver.controller_temp)
         if result & ServoTelemetry.CURRENT:
             self.current.set(self.driver.current)
             # integrate power consumption

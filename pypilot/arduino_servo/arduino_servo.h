@@ -11,9 +11,9 @@ public:
     void stop();
     int poll();
     bool fault();
-    void max_values(double current, double arduino_temp);
+    void max_values(double current, double controller_temp);
 
-    double voltage, current, arduino_temp;
+    double voltage, current, controller_temp;
     int flags;
 
 private:
@@ -25,5 +25,5 @@ private:
     int in_buf_len;
     int fd;
     int out_sync;
-    double max_current_value, max_arduino_temp_value;
+    double max_current_value, max_controller_temp_value;
 };
