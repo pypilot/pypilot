@@ -314,7 +314,8 @@ class Nmea(object):
                 self.remove_serial_device(device)
         t4 = time.time()
 
-        if self.process.sockets and time.time() - self.last_imu_time > .5 and \
+        dt = time.time() - self.last_imu_time
+        if self.process.sockets and (dt > .5 or dt < 0) and \
            'imu/pitch' in self.server.values:
             self.send_nmea('APXDR,A,%.3f,D,PTCH' % self.server.values['imu/pitch'].value)
             self.send_nmea('APXDR,A,%.3f,D,ROLL' % self.server.values['imu/heel'].value)
@@ -458,7 +459,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
     def process(self, pipe):
         import os
-        print 'nmea bridge on', os.getpid()
+        #print 'nmea bridge on', os.getpid()
         self.pipe = pipe
         self.sockets = []
         self.last_apb_time = time.time()

@@ -1,7 +1,7 @@
 
 class ArduinoServo
 {
-    enum Telemetry {FLAGS= 1, CURRENT = 2, VOLTAGE = 4, SPEED = 8, POSITION = 16, ARDUINO_TEMP = 32};
+    enum Telemetry {FLAGS= 1, CURRENT = 2, VOLTAGE = 4, SPEED = 8, POSITION = 16, CONTROLLER_TEMP = 32};
     enum flags {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FAULTPIN=16*2};
 public:
     ArduinoServo(int _fd);
@@ -9,6 +9,7 @@ public:
     bool initialize(int baud);
     void command(double command);
     void stop();
+    void disengauge();
     int poll();
     bool fault();
     void max_values(double current, double controller_temp);

@@ -16,6 +16,7 @@ public:
     bool initialize(int baud);
     void command(double command);
     void stop();
+    void disengauge();
     int poll();
     bool fault();
     void max_values(double current, double arduino_temp);

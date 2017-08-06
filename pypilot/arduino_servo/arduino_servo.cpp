@@ -195,7 +195,7 @@ void ArduinoServo::raw_command(uint16_t value)
         send_value(MAX_CURRENT_CODE, max_current_value*100);
         break;
     case 4:
-        //send_value(MAX_CONTROLLER_TEMP_CODE, max_controller_temp_value*100);
+        send_value(MAX_CONTROLLER_TEMP_CODE, max_controller_temp_value*100);
         break;
     case 7:
         out_sync = 0;
@@ -207,4 +207,9 @@ void ArduinoServo::raw_command(uint16_t value)
 void ArduinoServo::stop()
 {
     send_value(STOP_CODE, 0);
+}
+
+void ArduinoServo::disengauge()
+{
+    send_value(DISENGAUGE_CODE, 0);
 }

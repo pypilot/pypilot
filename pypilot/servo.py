@@ -173,14 +173,18 @@ class Servo(object):
         self.flags = self.Register(ServoFlags, 'flags')
 
         self.driver = False
+        self.raw_command(0)
 
     def Register(self, _type, name, *args, **kwargs):
         return self.server.Register(_type(*(['servo/' + name] + list(args)), **kwargs))
 
     def send_command(self):
         def disengauge():
-            if self.driver and self.driver.flags & ServoFlags.ENGAUGED:
-                self.driver.disengauge()
+            if self.driver:
+                t = time.time()
+                if t > self.command_timeout:
+                    self.driver.disengauge()
+                    self.command_timeout = t+1
 
         timeout = 1 # command will expire after 1 second
         if self.rawcommand.value:
@@ -194,8 +198,7 @@ class Servo(object):
                 disengauge()
                 self.command.update(0)
             else:
-                command = self.command.value
-                self.velocity_command(command)
+                self.velocity_command(self.command.value)
 
     def velocity_command(self, speed):
         # complete integration from previous step
@@ -340,7 +343,7 @@ class Servo(object):
                 device.timeout=0 #nonblocking
                 fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
                 self.driver = ArduinoServo(device.fileno())
-                self.driver.max_values(self.max_current.value, self.max_arduino_temp.value)
+                self.driver.max_values(self.max_current.value, self.max_controller_temp.value)
 
                 t0 = time.time()
                 if self.driver.initialize(device_path[1]):
@@ -397,17 +400,16 @@ class Servo(object):
         #print 'servo poll'
         result = self.driver.poll()
         if result == -1:
-            print 'poll -1'
+            print 'servo poll -1'
             self.close_driver()
             return
 
         if result == 0:
             d = time.time() - self.lastpolltime
-            #print 'i', i, d
             if d > 10: # correct for clock skew
                 self.lastpolltime = time.time()
             elif d > 8:
-                print 'd', d
+                print 'servo timeout', d
                 self.close_driver()
             return
         self.lastpolltime = time.time()
