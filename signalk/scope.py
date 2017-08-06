@@ -42,11 +42,13 @@ class trace(object):
                 point = self.points[i]
                 self.points[i] = point[0]-dt, point[1]
 
-        if not self.timeoff:
+                
+        if not self.timeoff or self.timeoff < time.time() - t or self.timeoff > time.time() - t + 1:
             self.timeoff = time.time() - t
+            
         elif self.points and t-self.points[0][0]<mindt:
             return False
-            
+
         self.points.insert(0, (t, data))
         return True
 
@@ -178,7 +180,6 @@ class SignalKPlot():
             self.traces.append(t)
 #            if not self.curtrace:
             self.curtrace = t
-
 
         # time must change by 1 pixel to bother to log and display
         mindt = self.disptime / float(self.width)
