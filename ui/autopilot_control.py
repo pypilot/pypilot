@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2017 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -98,7 +98,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def servo_command(self, command):
         if self.lastcommand != command or command != 0:
             self.lastcommand = command
-
             self.client.set('servo/command', command)
 
     def send_gain(self, gain):
@@ -119,10 +118,10 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         command = self.sCommand.GetValue()
         if self.enabled:
             if command != 0:
-                self.heading_command += (-1 if command < 0 else 1) / 2.0
+                self.heading_command += (-1 if command < 0 else 1) / 4.0
                 self.client.set('ap/heading_command', self.heading_command)
         else:
-            self.servo_command(command / 50.0)
+            self.servo_command(command / 100.0)
 
         for gain in self.gains:
             if gain['need_update']:
@@ -195,7 +194,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.stHeading.SetLabel('%.1f' % value)
                 self.heading = value
             elif name == 'servo/engauged':
-                self.stEngauged.SetLabel('Ready' if value else 'Fault')
+                self.stEngauged.SetLabel('Engauged' if value else 'Disengauged')
             elif name == 'servo/flags':
                 self.stStatus.SetLabel(value)
             elif name == 'servo/mode':
