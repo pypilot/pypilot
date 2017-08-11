@@ -246,8 +246,11 @@ class AutopilotBase(object):
           self.heading.set(compass_heading)
 
       if self.enabled.value:
-          if self.mode.value != self.lastmode:
-              self.heading_command.set(self.heading.value)
+          if self.mode.value != self.lastmode: # mode changed?
+              err = self.heading_error.value
+              if 'wind' in self.mode.value:
+                  err = -err
+              self.heading_command.set(resolv(self.heading.value - err, 180))
           self.runtime.update()
           self.servo.servo_calibration.stop()
 
@@ -255,16 +258,9 @@ class AutopilotBase(object):
       # error +- 60 degrees
       heading = self.heading.value
       heading_command = self.heading_command.value
-      err = minmax(autopilot.resolv(heading - heading_command), 60)
+      err = minmax(resolv(heading - heading_command), 60)
       # since wind direction is where the wind is from, the sign is reversed
-      if self.mode.value == 'wind' or self.mode.value =='true wind':
-          err = -err
-      self.heading_error.set(err)
-      # filter the incoming heading and gyro heading
-      # error +- 60 degrees
-      err = minmax(autopilot.resolv(heading - heading_command), 60)
-      # since wind direction is where the wind is from, the sign is reversed
-      if self.mode.value == 'wind' or self.mode.value =='true wind':
+      if 'wind' in self.mode.value:
           err = -err
       self.heading_error.set(err)
 
