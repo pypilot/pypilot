@@ -83,7 +83,7 @@ class LCDMenu():
 class RangeEdit():
     def __init__(self, name, desc, id, signalk, lcd, minval, maxval, step):
         self.name = name
-        if type(desc) == type(u''):
+        if type(desc) == type('') or type(desc) == type(u''):
             self.desc = lambda : desc
         else:
             self.desc = desc
