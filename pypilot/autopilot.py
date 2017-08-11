@@ -83,19 +83,17 @@ class AutopilotBase(object):
     # setup all processes to exit on any signal
     self.childpids = []
     def cleanup(signal_number, frame):
-        print 'got signal', signal_number
+        print 'got signal', signal_number, 'cleaning up'
         while self.childpids:
             pid = self.childpids.pop()
-            print 'kill child', pid
-            os.kill(pid, signal.SIGINT) # get backtrace
-            # if signal_number == 2:
+            #print 'kill child', pid
+            os.kill(pid, signal.SIGTERM) # get backtrace
         sys.stdout.flush()
         raise KeyboardInterrupt # to get backtrace on all processes
-        exit(1)
 
     import signal
     for s in range(1, 16):
-        if s != 9 and s!=2:
+        if s != 9:
             signal.signal(s, cleanup)
 
     serial_probe = serialprobe.SerialProbe()
