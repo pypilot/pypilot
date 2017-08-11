@@ -1,0 +1,26 @@
+# dependencies:
+
+sudo apt-get install python-gps python-serial libpython-dev python-numpy python-scipy swig python-pillow python-flask python-socketio python-pip python-pylirc
+
+git clone https://github.com/seandepagnier/RTIMULib2
+cd RTIMULib2/Linux/python
+python setup.py build
+sudo python setup.py install
+
+# orange pi
+
+sudo apt install python-setuptools
+git clone https://github.com/rm-hull/OPi.GPIO
+cd OPi.GPIO
+sudo python setup.py install
+
+
+
+
+
+git clone https://github.com/pypilot/pypilot
+cd pypilot
+cd scripts/debian
+sudo cp -r etc /
+cd ../..
+sudo python setup.py install

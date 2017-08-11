@@ -128,11 +128,11 @@ class ServoFlags(Value):
             
     def fwd_fault(self):
         self.update((self.value | ServoFlags.FWD_FAULT) \
-                          & ~ServoFlags.REV_FAULT)
+                    & ~ServoFlags.REV_FAULT)
 
     def rev_fault(self):
         self.update((self.value | ServoFlags.REV_FAULT) \
-                          & ~ServoFlags.FWD_FAULT)
+                    & ~ServoFlags.FWD_FAULT)
         
     def get_signalk(self):
         return '{"' + self.name + '": {"value": "' + self.strvalue() + '"}}'

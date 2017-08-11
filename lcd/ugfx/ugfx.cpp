@@ -565,17 +565,8 @@ screen::~screen()
 #include <wiringPiSPI.h>
 
 #define SPI_DEVICE 0
-#if 1 // raspberry pi
-
-#define SPI_PORT 0
 #define DC 6 //25
 #define RST 5 //24
-
-#else //orange pi
-#define DC 22
-#define RST 18
-#define SPI_PORT 1
-#endif
 
 #define LCDWIDTH 84
 #define LCDHEIGHT 48
@@ -599,15 +590,20 @@ class PCD8544
 {
 public:
     PCD8544() {
+	setenv("WIRINGPI_CODES", "1", 1);
         wiringPiSetup () ;
+	
         pinMode(RST, OUTPUT);
         pinMode(DC, OUTPUT);
 
-        spifd = wiringPiSPISetup(SPI_PORT, 4000000);
-        if(spifd == -1) {
+	for(int port=0; port<2; port++)
+	    if((spifd = wiringPiSPISetup(port, 4000000)) != -1)
+		break;
+	  
+	if(spifd == -1) {
             fprintf(stderr, "failed to open spi device");
             exit(1);
-        }
+	}
     }
 
     ~PCD8544() {
@@ -656,8 +652,7 @@ nokia5110screen::nokia5110screen()
     : surface(48, 84, 1, NULL)
 {
     disp = new PCD8544();
-    contrast = 60;
-    lastcontrast = -1;
+    contrast = 50;
     disp->begin(contrast);
 }
 
@@ -669,11 +664,9 @@ nokia5110screen::~nokia5110screen()
 
 void nokia5110screen::refresh()
 {
-    if(contrast != lastcontrast || 1) {
-        disp->set_bias(4);
-        disp->set_contrast(contrast);
-        lastcontrast = contrast;
-    }
+    disp->set_bias(4);
+    disp->set_contrast(contrast);
+
     disp->command(PCD8544_SETYADDR);
     disp->command(PCD8544_SETXADDR);
 
