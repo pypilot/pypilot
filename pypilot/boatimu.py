@@ -191,7 +191,7 @@ class BoatIMU(object):
 
     self.loopfreq = self.Register(LoopFreqValue, 'loopfreq', 0)
     self.alignmentQ = self.Register(QuaternionValue, 'alignmentQ', [1, 0, 0, 0], persistent=True)
-    self.heading_off = self.Register(RangeProperty, 'heading_offset', 0, -180, 180)
+    self.heading_off = self.Register(RangeProperty, 'heading_offset', 0, -180, 180, persistent=True)
 
     self.alignmentCounter = self.Register(Property, 'alignmentCounter', 0)
     self.last_alignmentCounter = False
