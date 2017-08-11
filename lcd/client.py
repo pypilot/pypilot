@@ -450,7 +450,7 @@ class LCDClient():
             words = text.split(' ')
             spacewidth = font.draw(self.surface, False, ' ', metric_size, self.bw)[0]
             if len(words) < 2: # need at least 2 words to wrap
-                return self.fittext(rect, text, False, fill, crop)
+                return self.fittext(rect, text, False, fill)
             metrics = map(lambda word : (word, font.draw(self.surface, False, word, metric_size, self.bw)), words)
 
             widths = map(lambda metric : metric[1][0], metrics)
@@ -1015,7 +1015,7 @@ class LCDClient():
             self.keystate[pini] = value
 
         if LIRC:
-            if self.lirctime and time.time()- self.lirctime > .4:
+            if self.lirctime and time.time()- self.lirctime > .25:
                 self.keypad[self.lirckey] = 0
                 self.keypadup[self.lirckey] = True
                 self.lirctime = False
@@ -1028,7 +1028,7 @@ class LCDClient():
                 repeat = code[0]['repeat']
 
                 lirc_mapping = {'up': UP, 'down': DOWN, 'left': LEFT, 'right': RIGHT,
-                                'power': AUTO, 'select': MENU, 'tab': SELECT}
+                                'power': AUTO, 'select': MENU, 'mute': MENU, 'tab': SELECT}
                 code = code[0]['config']
                 if not code in lirc_mapping:
                     continue
@@ -1036,14 +1036,19 @@ class LCDClient():
                 if not self.surface and (pini == MENU or pini == SELECT):
                     continue
 
-                self.keypad[pini] += 1
-                if repeat == 0: # ignore first repeat
-                    if self.lirctime:
-                        self.keypad[self.lirckey] = self.keypadup[self.lirckey] = False
+                if repeat == 1: # ignore first repeat
+                    #if self.lirctime:
+                    #    self.keypad[self.lirckey] = self.keypadup[self.lirckey] = False
+                    pass
+                else:
+                    if repeat == 0:
+                        if self.lirctime:
+                            self.keypad[self.lirckey] = 0
+                            self.keypadup[self.lirckey] = True
+                        self.keypad[pini] = 0
                     self.lirckey = pini;
-                    self.keypad[pini] = 0
-                self.lirctime = time.time()
-                self.keypad[pini] += 1
+                    self.keypad[pini] += 1
+                    self.lirctime = time.time()
 
         self.process_keys()
 
