@@ -177,16 +177,16 @@ class Nmea(object):
         self.server = server
         self.values = {'gps': {}, 'wind': {}}
 
-        timestamp = server.TimeStamp('gps')
-        
-        self.values['gps']['track'] = server.Register(SensorValue('gps.track', timestamp, directional=True))
-        self.values['gps']['speed'] = server.Register(SensorValue('gps.speed', timestamp))
-        self.values['gps']['source'] = server.Register(StringValue('gps.source', 'none'))
 
-        timestamp = server.TimeStamp('wind')
-        self.values['wind']['direction'] = server.Register(SensorValue('wind.direction', timestamp, directional=True))
-        self.values['wind']['speed'] = server.Register(SensorValue('wind.speed', timestamp))
-        self.values['wind']['source'] = server.Register(StringValue('wind.source', 'none'))
+        def make_source(name, dirname):
+            timestamp = server.TimeStamp(name)
+            self.values[name][dirname] = server.Register(SensorValue(name + '.' + dirname, timestamp, directional=True))
+            self.values[name]['speed'] = server.Register(SensorValue(name + '.speed', timestamp))
+            self.values[name]['source'] = server.Register(StringValue(name + '.source', 'none'))
+            self.values[name]['lastupdate'] = 0
+
+        make_source('gps', 'track')
+        make_source('wind', 'direction')
 
         self.serialprobe = serialprobe
         self.devices = []
@@ -264,8 +264,6 @@ class Nmea(object):
         for name in self.primarydevices:
             if device == self.primarydevices[name]:
                 self.primarydevices[name] = None
-                if self.values[name]['source'].value == 'serial':
-                    self.values[name]['source'].set('none')
         device.close()
             
     def poll(self):
@@ -309,12 +307,22 @@ class Nmea(object):
                 continue
             dt = time.time() - self.devices_lastmsg[device]
             if dt > 1:
-                print 'dt', dt
+                print 'serial device dt', dt, device
             if dt > 15:
-                print 'serial device timed out', dt
+                print 'serial device timed out', dt, device
                 self.remove_serial_device(device)
         t4 = time.time()
 
+        # timeout sources
+        for name in self.values:
+            value = self.values[name]
+            if value['source'].value == 'none':
+                continue
+            if t4 - value['lastupdate'] > 5:
+                print 'nmea timeout for', name, 'source', value['source'].value
+                value['source'].set('none')
+
+        # send nmea messages to sockets
         dt = time.time() - self.last_imu_time
         if self.process.sockets and (dt > .5 or dt < 0) and \
            'imu.pitch' in self.server.values:
@@ -382,6 +390,7 @@ class Nmea(object):
                 if vname != 'timestamp':
                     value[vname].set(msg[vname])
             value['source'].update(source)
+            value['lastupdate'] = time.time()
 
     
 class NmeaBridgeProcess(multiprocessing.Process):

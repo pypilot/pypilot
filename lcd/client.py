@@ -150,8 +150,8 @@ class rectangle():
     def __init__(self, x, y, width, height):
         self.x, self.y, self.width, self.height = x, y, width, height
 
-AUTO, MENU, UP, DOWN, SELECT = range(5)
-keynames = {'auto': AUTO, 'menu': MENU, 'up': UP, 'down': DOWN, 'select': SELECT}
+AUTO, MENU, UP, DOWN, SELECT, LEFT, RIGHT = range(7)
+keynames = {'auto': AUTO, 'menu': MENU, 'up': UP, 'down': DOWN, 'select': SELECT, 'left': LEFT, 'right': RIGHT}
 gains = ['ap.P', 'ap.I', 'ap.D', 'ap.P2', 'ap.D2']
 
 class LCDClient():
@@ -162,7 +162,7 @@ class LCDClient():
 
         self.config = {}
         self.configfilename = os.getenv('HOME') + '/.pypilot/lcdclient.conf' 
-        self.config['contrast'] = 45
+        self.config['contrast'] = 60
         self.config['invert'] = False
         self.config['flip'] = False
         self.config['language'] = 'en'
@@ -210,7 +210,7 @@ class LCDClient():
         self.client = False
 
         self.keystate = {}
-        self.keypad = [False, False, False, False, False, False]
+        self.keypad = [False, False, False, False, False, False, False, False]
         self.keypadup = list(self.keypad)
 
         self.blink = black, white
@@ -246,13 +246,13 @@ class LCDClient():
 
                 GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
 
+        global LIRC
         if LIRC:
             try:
                 LIRC.init('pypilot')
                 self.lirctime = False
             except:
                 print 'failed to initialize lirc. is .lircrc missing?'
-                global LIRC
                 LIRC = None
 
     def get(self, name):
@@ -382,6 +382,7 @@ class LCDClient():
 
             def contrast():
                 self.range_edit = self.contrast_edit
+                self.save_config()
                 return self.range_edit.display
             
             def invert():
@@ -674,30 +675,32 @@ class LCDClient():
 
         def modes():
             return [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
-            
         warning = False
         if mode == 'compass':
+            warning = False
             cal = self.last_msg['imu.compass_calibration']
             if cal == 'N/A':
                 ndeviation = 0
             else:
                 ndeviation = cal[0][3] - cal[1][3]
-            def warncal(str):
+            def warncal(s):
                 r = rectangle(0, .6, 1, .3)
                 apply(self.surface.box, self.convrect(r) + [white])
-                self.fittext(r, str, True)
+                self.fittext(r, s, True)
                 self.invertrectangle(r)
                 self.control['mode'] = 'warning'
-                warning = True
             if ndeviation == 0:
                 warncal(_('No C Cal'))
+                warning = True
             if ndeviation > 4:
                 warncal(_('Bad C Cal'))
+                warning = True
 
         if not warning and \
            (self.control['mode'] != mode or self.control['modes'] != modes()):
             self.control['mode'] = mode
             self.control['modes'] = modes()
+
             #print 'mode', self.last_msg['ap.mode']
             modes = {'compass': ('C', self.have_compass, rectangle(0, .74, .25, .16)),
                      'gps':     ('G', self.have_gps,     rectangle(.25, .74, .25, .16)),
@@ -858,21 +861,24 @@ class LCDClient():
                 self.display_page = self.display_control
 
         # for up and down keys providing acceration
-        updownheld = self.keypad[UP] > 10 or self.keypad[DOWN] > 10
+        sign = -1 if self.keypad[DOWN] or self.keypadup[DOWN] or self.keypad[LEFT] or self.keypadup[LEFT] else 1
         updownup = self.keypadup[UP] or self.keypadup[DOWN]
-        sign = -1 if self.keypad[UP] or self.keypadup[UP] else 1
-        speed = float(1 if updownup else min(20, .001*max(self.keypad[UP], self.keypad[DOWN])**3))
+        updownheld = self.keypad[UP] > 10 or self.keypad[DOWN] > 10
+        speed = float(1.5 if updownup else min(20, .002*max(self.keypad[UP], self.keypad[DOWN])**2.5))
         updown = updownheld or updownup
+        if self.keypadup[LEFT] or self.keypadup[RIGHT]:
+            updown = True
+            speed = 10
 
         if self.display_page == self.display_control:
-            if self.keypadup[MENU]: # MENU
+            if self.keypadup[MENU] and self.surface: # MENU
                 self.display_page = self.display_menu
             elif updown: # LEFT/RIGHT
                 if self.last_msg['ap.enabled']:
                     cmd = self.last_msg['ap.heading_command'] + sign*speed
                     self.set('ap.heading_command', cmd)
                 else:
-                    self.set('servo.command', sign*(speed+8)/40)
+                    self.set('servo.command', sign*(speed+8.0)/40)
 
         elif self.display_page == self.display_menu:
             if self.keypadup[UP]:
@@ -897,12 +903,12 @@ class LCDClient():
             if self.keypadup[MENU]:
                 self.display_page = self.display_menu
             elif updown:
-                self.range_edit.move(sign*speed*.1)
+                self.range_edit.move(sign*speed*.2)
         else:
             # self.display_page = self.display_control
             pass
 
-        for key in range(6):
+        for key in range(len(keynames)):
             if self.keypadup[key]:
                 self.keypad[key] = self.keypadup[key] = False
 
@@ -939,10 +945,14 @@ class LCDClient():
         self.glutspecial(k, False)
 
     def glutspecial(self, k, down=True):
-        if k == glut.GLUT_KEY_LEFT or k == glut.GLUT_KEY_UP:
+        if k == glut.GLUT_KEY_UP:
             self.key(keynames['up'], down)
-        elif k == glut.GLUT_KEY_RIGHT or k == glut.GLUT_KEY_DOWN:
+        elif k == glut.GLUT_KEY_DOWN:
             self.key(keynames['down'], down)
+        elif k == glut.GLUT_KEY_LEFT:
+            self.key(keynames['left'], down)
+        elif k == glut.GLUT_KEY_RIGHT:
+            self.key(keynames['right'], down)
 
     def idle(self):
         self.get('ap.heading')
@@ -961,10 +971,6 @@ class LCDClient():
 
         # read from keys
         for pini in range(len(self.pins)):
-            # without a display, ignore these keys
-            if not self.surface and (pini == MENU or pini == SELECT):
-                continue
-        
             pin = self.pins[pini]
             value = True
 
@@ -1000,8 +1006,8 @@ class LCDClient():
                     break
                 repeat = code[0]['repeat']
 
-                lirc_mapping = {'up': UP, 'down': DOWN, 'left': UP, 'right': DOWN,
-                                'power': AUTO, 'select': MENU, 'record': MENU, 'time': SELECT}
+                lirc_mapping = {'up': UP, 'down': DOWN, 'left': LEFT, 'right': RIGHT,
+                                'power': AUTO, 'select': MENU, 'tab': SELECT}
                 code = code[0]['config']
                 if not code in lirc_mapping:
                     continue
@@ -1010,7 +1016,6 @@ class LCDClient():
                     continue
 
                 self.keypad[pini] += 1
-                
                 if repeat == 0: # ignore first repeat
                     if self.lirctime:
                         self.keypad[self.lirckey] = self.keypadup[self.lirckey] = False
