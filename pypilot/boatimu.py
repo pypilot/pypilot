@@ -158,7 +158,7 @@ class AgeValue(StringValue):
         dt = time.time() - self.value
         if abs(dt - self.dt) > 1:
             self.dt = dt
-            self.lastage = self.readable_timespan(dt))
+            self.lastage = self.readable_timespan(dt)
         return '{"' + self.name + '": {"value": "' + self.lastage + '"}}'
 
 

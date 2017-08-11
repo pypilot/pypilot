@@ -30,6 +30,9 @@ def FitLeastSq(beta0, f, zpoints):
     return list(leastsq[0])
 
 def FitPoints(points, sphere_fit):
+    if debug:
+        print 'FitPoints', len(points)
+
     if len(points) < 4:
         return False
 
@@ -38,16 +41,18 @@ def FitPoints(points, sphere_fit):
         zpoints[i] = map(lambda x : x[i], points)
 
     # with few sigma points, adjust only bias
-#    def f_sphere_bias3(beta, x, r):
-#        return ((x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2)/r**2 - 1
-#    sphere_bias_fit = FitLeastSq(sphere_fit[:3], f_sphere_bias3, (zpoints, sphere_fit[3]))
-#    if not sphere_bias_fit:
-#        print 'sphere bias failed!!! ', len(points), points
-#        return False
-#    print 'sphere bias fit', sphere_bias_fit
+    '''   #Useful if no other cal can be found??
+    def f_sphere_bias3(beta, x, r):
+        return ((x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2)/r**2 - 1
+    sphere_bias_fit = FitLeastSq(sphere_fit[:3], f_sphere_bias3, (zpoints, sphere_fit[3]))
+    if not sphere_bias_fit:
+        print 'sphere bias failed!!! ', len(points), points
+        return False
+    print 'sphere bias fit', sphere_bias_fit
 #    sphere_fit = sphere_bias_fit + [sphere_fit[3]]
+    '''
 
-    if len(points) < 9:
+    if len(points) < 5:
         return False
 
     def f_sphere3(beta, x):
@@ -61,12 +66,14 @@ def FitPoints(points, sphere_fit):
     if debug:
         print 'sphere fit', sphere_fit
 
-    def f_ellipsoid3(beta, x):
-        return (x[0]-beta[0])**2 + (beta[4]*(x[1]-beta[1]))**2 + (beta[5]*(x[2]-beta[2]))**2 - beta[3]**2
-    #ellipsoid_fit = FitLeastSq(sphere_fit + [1, 1], f_ellipsoid3, zpoints)
-    #print 'ellipsoid_fit', ellipsoid_fit
     ellipsoid_fit = False
-
+    '''
+    if len(points) >= 10:
+        def f_ellipsoid3(beta, x):
+            return (x[0]-beta[0])**2 + (beta[4]*(x[1]-beta[1]))**2 + (beta[5]*(x[2]-beta[2]))**2 - beta[3]**2
+        ellipsoid_fit = FitLeastSq(sphere_fit + [1, 1], f_ellipsoid3, zpoints)
+        print 'ellipsoid_fit', ellipsoid_fit
+    '''
     def f_new_bias3(beta, x):
         #print 'beta', beta
         b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
@@ -115,34 +122,31 @@ class SigmaPoints(object):
             self.lastpoint = SigmaPoint(compass, down)
             return
 
-        lastcompass = self.lastpoint.compass
-        dist = (lastcompass[0] - compass[0])**2 + \
-               (lastcompass[1] - compass[1])**2 + \
-               (lastcompass[2] - compass[2])**2
-
-        if dist < SigmaPoints.sigma:
-            self.lastpoint.add_measurement(compass, down)
+        if vector.dist2(self.lastpoint.compass, compass) < SigmaPoints.sigma:
+            fac = .2
+            for i in range(3):
+                self.lastpoint.compass[i] = fac*compass[i] + (1-fac)*self.lastpoint.compass[i]
+                self.lastpoint.down[i] += down[i]
+            self.lastpoint.count += 1
             return
-            #self.lastpoint = compass, down
 
-        compass = self.lastpoint.compass
-        down = self.lastpoint.down
+        if self.lastpoint.count < 3: # require 3 in a row
+            self.lastpoint = False
+            return
+
+        compass, down = self.lastpoint.compass, self.lastpoint.down
+        for i in range(3):
+            down[i] /= self.lastpoint.count
         self.lastpoint = False
-        
+
         ind = 0
         for point in self.sigma_points:
-            #dist = vector.dist(point.compass, compass)
-            dist = (point.compass[0] - compass[0])**2 + \
-                   (point.compass[1] - compass[1])**2 + \
-                   (point.compass[2] - compass[2])**2
-            #down_dist = vector.dist(point.down, down)
-            #print 'dist', dist, 'down_dist', down_dist
-            if dist < SigmaPoints.sigma:
-            #and down_dist < SigmaPoints.down_sigma:
+            if vector.dist2(point.compass, compass) < SigmaPoints.sigma:
                 point.add_measurement(compass, down)
                 if ind > 0:
-#                    self.sigma_points = [point] + self.sigma_points[:ind] + self.sigma_points[ind+1:]
-                    self.sigma_points = self.sigma_points[:ind-1] + [point] + [self.sigma_points[ind-1]] + self.sigma_points[ind+1:]
+                    # put at front of list to speed up future tests
+                    self.sigma_points = self.sigma_points[:ind-1] + [point] + \
+                                        [self.sigma_points[ind-1]] + self.sigma_points[ind+1:]
                 return
             ind += 1
 
@@ -209,8 +213,8 @@ def CalibrationProcess(points, fit_output, initial):
         # remove points with less than 5 measurements, or older than 1 hour
         p = []
         for sigma in cal.sigma_points:
-            # require at least 2 measurements, and only use measurements in last hour
-            if sigma.count >= 2 and time.time() - sigma.time < 3600:
+            # only use measurements in last hour
+            if time.time() - sigma.time < 3600:
                 p.append(sigma)
         cal.sigma_points = p
 

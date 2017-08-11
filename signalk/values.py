@@ -71,8 +71,8 @@ class RoundedValue(Value):
       return '{"' + self.name + '": {"value": ' + round_value(self.value) + '}}'
 
 class StringValue(Value):
-    def __init__(self, name, initial):
-        super(StringValue, self).__init__(name, initial)
+    def __init__(self, name, initial, **kwargs):
+        super(StringValue, self).__init__(name, initial, **kwargs)
 
     def get_signalk(self):
         if type(self.value) == type(False):

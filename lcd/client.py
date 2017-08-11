@@ -507,13 +507,13 @@ class LCDClient():
         self.display_page = self.display_connecting
         
         watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command',
-                     'gps/source', 'wind/source', 'servo/controller', 'servo/flags']
+                     'gps/source', 'wind/source', 'servo/controller', 'servo/flags',
+                     'imu/compass_calibration']
         poll_list = ['ap/heading']
         nalist = watchlist + poll_list + gains + \
         ['imu/pitch', 'imu/heel', 'ap/runtime', 'ap/version',
          'imu/heading',
          'imu/alignmentCounter',
-         'imu/compass_calibration',
          'imu/compass_calibration_age',
          'imu/heading_lowpass_constant', 'imu/headingrate_lowpass_constant',
          'imu/headingraterate_lowpass_constant',
@@ -526,7 +526,7 @@ class LCDClient():
             self.last_msg[name] = 'none'
         self.last_msg['ap/heading_command'] = 0
         self.last_msg['imu/heading_offset'] = 0
-        
+
         host = ''
         if len(sys.argv) > 1:
             host = sys.argv[1]
@@ -669,8 +669,26 @@ class LCDClient():
         def modes():
             return [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
             
-        if self.control['mode'] != mode or \
-            self.control['modes'] != modes(): # mode ok
+        warning = False
+        if mode == 'compass':
+            cal = self.last_msg['imu/compass_calibration']
+            if cal == 'N/A':
+                ndeviation = 0
+            else:
+                ndeviation = cal[0][3] - cal[1][3]
+            def warncal(str):
+                r = rectangle(0, .6, 1, .3)
+                apply(self.surface.box, self.convrect(r) + [white])
+                self.fittext(r, str, True)
+                self.invertrectangle(r)
+                warning = True
+            if ndeviation == 0:
+                warncal(_('No C Cal'))
+            if ndeviation > 4:
+                warncal(_('Bad C Cal'))
+
+        if not warning and \
+           (self.control['mode'] != mode or self.control['modes'] != modes()):
             self.control['mode'] = mode
             self.control['modes'] = modes()
             #print 'mode', self.last_msg['ap/mode']
@@ -688,6 +706,7 @@ class LCDClient():
                     marg = .02
                     self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
 
+            #self.control['mode'] = False # refresh mode
         self.display_wifi()
 
     def display_menu(self):
@@ -763,7 +782,8 @@ class LCDClient():
             cal = self.last_msg['imu/compass_calibration']
             ndeviation = cal[0][3] - cal[1][3]
             #print ndeviation
-            names = [(0, _('incomplete')), (1, _('excellent')), (2, _('good')), (4, _('poor')), (1000, _('bad'))]
+            names = [(0, _('incomplete')), (1, _('excellent')), (2, _('good')),
+                     (3, _('fair')), (4, _('poor')), (1000, _('bad'))]
             for n in names:
                 if ndeviation <= n[0]:
                     deviation = n[1]
@@ -776,7 +796,7 @@ class LCDClient():
         self.fittext(rectangle(0, .65, .4, .15), _('age'))
         self.fittext(rectangle(0, .8, 1, .2), self.last_msg['imu/compass_calibration_age'][:7])
             
-        self.get('imu/compass_calibration')
+        #self.get('imu/compass_calibration')
         self.get('imu/compass_calibration_age')
 
     def display(self):

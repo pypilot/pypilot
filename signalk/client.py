@@ -42,17 +42,16 @@ class SignalKClient(object):
         except:
             print 'failed to read config file:', configfilename
 
-        if host:
-            try:
-                config['host'] = host
-                file = open(configfilename, 'w')
-                file.write(kjson.dumps(config) + '\n')
-            except IOError:
-                print 'failed to write config file:', configfilename
-
         if not host:
             host = 'pypilot'
             print 'host not specified using host', host
+
+        try:
+            config['host'] = host
+            file = open(configfilename, 'w')
+            file.write(kjson.dumps(config) + '\n')
+        except IOError:
+            print 'failed to write config file:', configfilename
 
         if '/dev' in host: # serial port
             device, baud = host, port

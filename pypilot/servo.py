@@ -87,7 +87,8 @@ class ServoFlags(Value):
 
     FWD_FAULT=256*1
     REV_FAULT=256*2
-    DRIVE_TIMEOUT = 256*4
+    DRIVER_TIMEOUT = 256*4
+
     def __init__(self, name):
         super(ServoFlags, self).__init__(name, 0)
 
