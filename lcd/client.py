@@ -418,7 +418,7 @@ class LCDClient():
             self.menu = LCDMenu(self, _('Settings'),
                                 [(_('mode'), mode),
                                  (_('motor'), motor),
-                                 (_('filter'), filter),
+#                                 (_('filter'), filter),
                                  (_('control'), control),
                                  (_('display'), display),
                                  (_('language'), language)],
