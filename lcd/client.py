@@ -39,6 +39,7 @@ except:
     LIRC = None
 
 from signalk.client import SignalKClient
+from pypilot import quaternion
 
 from ugfx import ugfx
 import font
@@ -529,7 +530,7 @@ class LCDClient():
         
         watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
                      'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
-                     'imu.compass_calibration']
+                     'imu.compass_calibration', 'imu.compass_calibration_sigmapoints', 'imu.alignmentQ']
         poll_list = ['ap.heading']
         nalist = watchlist + poll_list + gains + \
         ['imu.pitch', 'imu.heel', 'ap.runtime', 'ap.version',
@@ -812,30 +813,73 @@ class LCDClient():
 
 
     def display_calibrate_info(self):
+        if self.info_page > 2:
+            self.info_page = 0
+        elif self.info_page < 0:
+            self.info_page = 2
+        
         self.surface.fill(black)
-        self.fittext(rectangle(0, 0, 1, .3), _('Calibrate Info'), True)
-        
-        deviation = _('N/A')
-        try:
-            cal = self.last_msg['imu.compass_calibration']
-            ndeviation = cal[0][1]
-            #print ndeviation
-            names = [(0, _('incomplete')), (.01, _('excellent')), (.02, _('good')),
-                     (.04, _('fair')), (.06, _('poor')), (1000, _('bad'))]
-            for n in names:
-                if ndeviation <= n[0]:
-                    deviation = n[1]
-                    break
-        except:
-            pass
-        
-        self.fittext(rectangle(0, .3, 1, .15), _('compass'))
-        self.fittext(rectangle(0, .42, 1, .23), deviation)
-        self.fittext(rectangle(0, .65, .4, .15), _('age'))
-        self.fittext(rectangle(0, .8, 1, .2), self.last_msg['imu.compass_calibration_age'][:7])
+        self.fittext(rectangle(0, 0, 1, .24), _('Calibrate Info'), True)
+
+        if self.info_page == 0:
+            deviation = [_('N/A'), _('N/A')]
+            deviationstr = _('N/A')
+            dim = '?'
+            try:
+                cal = self.last_msg['imu.compass_calibration']
+                deviation = ['%.2f' % cal[1][0], '%.2f' % cal[1][1]]
+                dim = str(int(cal[2]))
+                #print ndeviation
+                names = [(0, _('incomplete')), (.01, _('excellent')), (.02, _('good')),
+                         (.04, _('fair')), (.06, _('poor')), (1000, _('bad'))]
+                for n in names:
+                    if cal[1][0] <= n[0]:
+                        deviationstr = n[1]
+                        break
+            except:
+                pass
             
-        #self.get('imu.compass_calibration')
-        self.get('imu.compass_calibration_age')
+            self.fittext(rectangle(0, .3, 1, .15), _('compass'))
+            self.fittext(rectangle(0, .42, 1, .23), deviationstr)
+            self.fittext(rectangle(0, .66, 1, .14), deviation[0] + ' ' + dim + 'd')
+            self.fittext(rectangle(0, .8, 1, .2), self.last_msg['imu.compass_calibration_age'][:7])
+            
+            self.get('imu.compass_calibration_age')
+
+        elif self.info_page == 1:
+            try:
+                cal = self.last_msg['imu.compass_calibration']
+                raw = ''
+                for c in cal[0]:
+                    raw += '%.1f\n' % c
+            except:
+                raw = 'N/A'                    
+
+            self.fittext(rectangle(0, .3, 1, .7), raw)
+        else:
+            mod = int(time.time()%11)/3
+            self.fittext(rectangle(0, .24, 1, .15), 'sigma plot')
+            cal = self.last_msg['imu.compass_calibration'][0]
+            m = cal[3]
+            dip = math.radians(cal[4])
+            if mod == 1:
+                m *= math.cos(dip)
+            try:
+                p = self.last_msg['imu.compass_calibration_sigmapoints']
+                q = self.last_msg['imu.alignmentQ']
+                p = map(lambda p0 : map(lambda x0, c : (x0 - c) / m, p0[:3], cal[:3]), p)
+                x, y, r = 24, 56, 20
+                if mod > 1:
+                    if mod == 3:
+                        x1, y1 = int(r*math.cos(dip)), int(r*math.sin(dip))
+                        self.surface.line(x, y, x + x1, y + y1, white)
+                        self.surface.line(x, y, x - x1, y + y1, white)
+                    q = quaternion.multiply(q, quaternion.angvec2quat(math.radians(90), [0, 1, 0]))
+                p = map(lambda p0 : quaternion.rotvecquat(p0, q), p)
+                for p0 in p:
+                    self.surface.putpixel(int(r*p0[0]+x), int(r*p0[1]+y), white)
+            except:
+                self.fittext(rectangle(0, .3, 1, .7), 'N/A')
 
     def display(self):
         self.display_page()
