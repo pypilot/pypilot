@@ -10,10 +10,16 @@ from signalk.client import SignalKClient
 from servo import *
 
 import threading
-import numpy, scipy.optimize
+import numpy
 
 # fit to order n
 def fit(x, n):
+    try:
+        import scipy.optimize
+    except:
+        print "failed to load scientific library, cannot perform calibration update!"
+        return False
+    
     def func(b, x, n):
         res = -x[1]
         for o in range(n+1):
