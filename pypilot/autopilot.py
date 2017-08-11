@@ -115,7 +115,8 @@ class AutopilotBase(object):
     self.gps_heading_offset = 0;
     self.gps_heading = self.Register(SensorValue, 'gps_heading', timestamp, directional=True)
     self.gps_speed = self.Register(SensorValue, 'gps_speed', timestamp)
-    
+
+    self.wind_heading_offset = 0;
     self.wind_direction = self.Register(SensorValue, 'wind_direction', timestamp, directional=True)
     self.wind_speed = self.Register(SensorValue, 'wind_speed', timestamp)
 
@@ -198,16 +199,21 @@ class AutopilotBase(object):
           d = .01
           self.gps_speed.set((1-d)*self.gps_speed.value + d*gps_speed)
       if self.nmea.values['wind']['source'].value != 'none':
-          wind_direction = self.nmea.values['wind']['direction'].value
-          inv_heading = 180-compass_heading # compass heading is from 0 to 360
-          diff = resolv(wind_direction - inv_heading, 180)
-          d = .01
-          self.wind_heading_offset = resolv((1-d)*self.wind_heading_offset + d*diff)
-          # filtered wind direction from compass
-          self.wind_direction.set(resolv(inv_heading + self.wind_heading_offset, 180))
           wind_speed = self.nmea.values['wind']['speed'].value
           self.wind_speed.set((1-d)*self.wind_speed.value + d*wind_speed)
 
+          headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
+          wind_direction_ap = self.wind_direction.value
+          
+          wind_direction_ap -= headingrate*.1
+
+          # weight wind direction more with higher wind speed
+          d = .01*math.log(self.wind_speed.value/5.0 + .2)
+          if d < 0: # below 4 knots of wind, can't even use it
+              d = 0
+          wind_direction = self.nmea.values['wind']['direction'].value
+          wind_direction_ap = resolv((1-d)*wind_direction_ap + d*wind_direction, 180)
+          self.wind_direction.set(wind_direction_ap)
 
       if self.mode.value == 'true wind':
           # for true wind, we must have both wind and gps
