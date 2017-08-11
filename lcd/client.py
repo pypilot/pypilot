@@ -224,7 +224,7 @@ class LCDClient():
             self.pins = [18, 17, 27, 22, 23]
 
         if GPIO:
-            #GPIO.setmode(GPIO.BOARD)
+            GPIO.setmode(GPIO.BCM)
             if orangepi:
                 for pin in self.pins:
                     cmd = 'gpio -1 mode ' + str(pin) + ' up'
@@ -1035,8 +1035,9 @@ def main():
     if 'nokia5110' in sys.argv:
         sys.argv.remove('nokia5110')
         print 'using nokia5110'
-        import nokia5110lcd
-        screen = nokia5110lcd.screen()
+        #import nokia5110lcd
+        #screen = nokia5110lcd.screen()
+        screen = ugfx.nokia5110screen()
 
     elif use_glut:
         screen = glut.screen((120, 210))
@@ -1083,7 +1084,6 @@ def main():
                 #surface.magnify(mag)
 
             screen.blit(surface, 0, 0, lcdclient.config['flip'])
-                
             screen.refresh()
 
             if 'contrast' in lcdclient.config:

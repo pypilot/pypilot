@@ -31,35 +31,39 @@ surface *load_logo(int bypp)
 }
 
 
-int main()
+int main(int argc, char *argv[])
 {
-    screen framebuffer("/dev/fb0");
+    surface *framebuffer;
+    if(argc > 1 && !strcmp(argv[1], "nokia5110"))
+        framebuffer = new nokia5110screen();
+    else
+        framebuffer = new screen("/dev/fb0");
 
 #if 1
-    surface *logo = load_logo(framebuffer.bypp);
+    surface *logo = load_logo(framebuffer->bypp);
 #else
     const char *path = "/home/tc/.pypilot/splash.surf";
     surface *logo = new surface(path);
-    if(logo->bypp != framebuffer.bypp) {
-        logo = load_logo(framebuffer.bypp);
+    if(logo->bypp != framebuffer->bypp) {
+        logo = load_logo(framebuffer->bypp);
         logo->store_grey(path);
         delete logo;
 
         logo = new surface(path);
-        if(logo->bypp != framebuffer.bypp) {
+        if(logo->bypp != framebuffer->bypp) {
             printf("failed to load %s\n", path);
             exit(1);
         }
     }
 #endif    
-    int facw = framebuffer.width / logo->width, fach = framebuffer.height / logo->height;
+    int facw = framebuffer->width / logo->width, fach = framebuffer->height / logo->height;
     int fac = facw < fach ? facw : fach;
     surface *logom = new surface(framebuffer);
 
     logom->magnify(logo, fac);
+    logom->invert(0, 0, logom->width, logom->height);
 
-    for(;;) {
-        framebuffer.blit(logom, 0, 0);
-        usleep(100000);
-    }
+    framebuffer->blit(logom, 0, 0);
+    framebuffer->refresh();
+    delete framebuffer;
 }

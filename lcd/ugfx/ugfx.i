@@ -54,3 +54,12 @@ public:
     int fbfd = 0;
     long int screensize = 0;
 };
+
+class nokia5110screen : public surface
+{
+public:
+    nokia5110screen();
+    virtual ~nokia5110screen();
+
+    void refresh();
+};
