@@ -591,8 +591,11 @@ class PCD8544
 public:
     PCD8544() {
 	setenv("WIRINGPI_CODES", "1", 1);
-        wiringPiSetup () ;
-	
+        if(wiringPiSetup () < 0) {
+            printf("wiringPiSetup Failed (no permissions?)\n");
+            exit(1);
+        }
+
         pinMode(RST, OUTPUT);
         pinMode(DC, OUTPUT);
 
