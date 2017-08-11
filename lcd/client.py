@@ -684,16 +684,16 @@ class LCDClient():
             else:
                 ndeviation = cal[0][3] - cal[1][3]
             def warncal(s):
-                r = rectangle(0, .6, 1, .3)
+                r = rectangle(0, .75, 1, .3)
                 apply(self.surface.box, self.convrect(r) + [white])
                 self.fittext(r, s, True)
                 self.invertrectangle(r)
                 self.control['mode'] = 'warning'
             if ndeviation == 0:
-                warncal(_('No C Cal'))
+                warncal(_('No Cal'))
                 warning = True
             if ndeviation > 4:
-                warncal(_('Bad C Cal'))
+                warncal(_('Bad Cal'))
                 warning = True
 
         if not warning and \
