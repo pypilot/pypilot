@@ -314,6 +314,7 @@ class BoatIMU(object):
         self.loopfreq.set(0)
         for name in self.SensorValues:
           self.SensorValues[name].set(False)
+        self.uptime.reset();
       return False
   
     if vector.norm(data['accel']) == 0:
