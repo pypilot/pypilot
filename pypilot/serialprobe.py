@@ -92,6 +92,8 @@ class SerialProbe(object):
             probe['devices'] = []
             lastdevice = self.lastworkingdevice(name)
             if lastdevice:
+                if lastdevice['path'] == 'none': # none disables this port and avoids probing
+                    return False
                 probe['devices'].append(lastdevice.copy())
             for device in self.devices:
                 probe['devices'].append({'path': device, 'bauds': bauds})
@@ -101,8 +103,6 @@ class SerialProbe(object):
             #print 'all devices failed for', name, self.lastworkingdevices
             probe['devices'] = 'done'
             return False
-
-
 
         probe_device = probe['devices'][0]
         probe['devices'] = probe['devices'][1:]
@@ -121,7 +121,7 @@ class SerialProbe(object):
                     return False
             except:
                 pass
-                    
+
         serial_device = probe['device']['path'], probe['device']['bauds'][0]
         try:
             import serial
@@ -133,7 +133,7 @@ class SerialProbe(object):
             elif err.args[0] == 6: # No such device or address, don't try again
                 pass
             else:
-                print 'serial exception', device, name, err
+                print 'serial exception', serial_device, name, err
                 # don't try again if ttyS port?
             probe['device'] = False
         except IOError:

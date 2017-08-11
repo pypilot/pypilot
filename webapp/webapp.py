@@ -7,13 +7,15 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time
+import time, sys
 from flask import Flask, render_template, session, request
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
 from signalk.server import LineBufferedNonBlockingSocket
 
 pypilot_webapp_port=80
+if len(sys.argv) > 1:
+    pypilot_webapp_port=int(sys.argv[1])
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose

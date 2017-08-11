@@ -151,6 +151,7 @@ class AutopilotBase(object):
     self.childpids = [self.boatimu.imu_process.pid, self.boatimu.compass_auto_cal.process.pid,
                  self.server.process.pid, self.nmea.process.pid, self.nmea.gpsdpoller.process.pid]
     signal.signal(signal.SIGCHLD, cleanup)
+    self.lasttime = time.time()
 
     # read initial value from imu as this takes time
 #    while not self.boatimu.IMURead():
@@ -169,11 +170,10 @@ class AutopilotBase(object):
     return self.server.Register(_type(*(['ap.' + name] + list(args)), **kwargs))
 
   def run(self):
-      self.lasttime = time.time()
       while True:
-          self.ap_iteration()
+          self.iteration()
 
-  def ap_iteration(self):
+  def iteration(self):
       data = False
       t00 = time.time()
       for tries in range(14): # try 14 times to read from imu 

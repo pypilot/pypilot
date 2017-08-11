@@ -12,22 +12,34 @@
 
 /* anenometer wires
 
-red  - gnd
-yellow - 5v
-green - a7
-black - d2
+using potentiometer for wind direction
+using a reed switch for wind speed
+
+red    - gnd - pin 3 - potentiometer power A - reed switch A
+yellow - 5v  - pin 5 - potentiometer power B
+green  - a7  - pin 4 - potentiometer reading
+black  - d2  - pin 2 -                         reed switch B
 
 */
 
 #include <Arduino.h>
 #include <stdint.h>
+#include <avr/sleep.h>
 #include <HardwareSerial.h>
+#include "PCD8544.h"
 
 extern "C" {
   #include <twi.h>
 }
 
+#define LCD
+#ifdef LCD
+static PCD8544 lcd(13, 11, 8, 7, 4);
+#endif
+
 const int analogInPin = A7;  // Analog input pin that the potentiometer is attached to
+const int analogLightPin = A6;
+const int analogBacklightPin = 9;
 
 uint8_t have_bmp280 = 0;
 uint8_t bmX280_tries = 10;  // try 10 times to configure
@@ -138,19 +150,31 @@ void setup()
 
   attachInterrupt(0, isr_anenometer_count, FALLING);
   pinMode(analogInPin, INPUT);
+  pinMode( analogLightPin, INPUT);
   pinMode(2, INPUT_PULLUP);
 
-  analogRead(analogInPin); // select channel
+  //analogRead(analogInPin); // select channel
+  ADMUX = _BV(REFS0) | 6;
   ADCSRA |= _BV(ADIE);
   ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
+
+#ifdef LCD
+    // PCD8544-compatible displays may have a different resolution...
+  lcd.begin(84, 48);
+#endif
 }
 
-static volatile uint32_t adcval;
-static volatile uint16_t adccount;
+static volatile uint8_t adcchannel;
+static volatile uint32_t adcval[2];
+static volatile int16_t adccount[2];
+
 ISR(ADC_vect)
 {
-    adcval += (int16_t)ADCW;
-    adccount++;
+    adccount[adcchannel]++;
+    if(adccount[adcchannel] > 0)
+        adcval[adcchannel] += (int16_t)ADCW;
+    if(adcchannel == 0 && adccount[adcchannel] == 1)
+        ADMUX = _BV(REFS0) | 7, adcchannel = 1;
     ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
 }
 
@@ -203,7 +227,8 @@ void send_nmea(const char *buf)
   Serial.print(buf2);
 }
 
-
+int lcd_update;
+float wind_dir, wind_speed, wind_speed_30;
 void read_anenometer()
 {
     static float lpdir;
@@ -220,14 +245,42 @@ void read_anenometer()
 //  sensorValue = analogRead(analogInPin);
 #else
     cli();
-    uint32_t val = adcval;
-    uint16_t count = adccount;
-    adcval = 0;
-    adccount = 0;
+    int16_t light = adcval[0];
+    uint32_t val = adcval[1];
+    uint16_t count = adccount[1];
+    // reset the adc
+    adcval[0] = adcval[1] = 0;
+    adccount[0] = adccount[1] = -4; // skip the first 4 readings after changing channel
+    adcchannel = 0;
+    ADMUX = _BV(REFS0) | 6;
     sei();
     sensorValue = val / count;
+
+    // filter and map light value
+    static int lastlight, lighton;
+    light = (light + 31*lastlight) / 32;
+    lastlight = light;
+
+    int pwm = 255L*light / 600 - 120;
+    if(!lighton) {
+        if(pwm < 200)
+            lighton = 1;
+        else
+            pwm = 255;
+    }
+    if(pwm < 120) // limit backlight brightness
+        pwm = 120;
+    if(pwm > 220) 
+        pwm = 255, lighton = 0;
+    #if 0
+    Serial.print("light ");
+    Serial.print(light);
+    Serial.print(" pwm ");
+    Serial.print(pwm);
+    Serial.println("");
+    #endif
+    analogWrite(analogBacklightPin, pwm);
 #endif
-//    Serial.println(sensorValue);
     
 //  float dir = sensorValue / 1024.0 * 360;
     // compensate 13 degree deadband in potentiometer
@@ -279,10 +332,16 @@ void read_anenometer()
         //        Serial.println((int)(uint16_t)(lpdir*100.0)%100U);
 
         send_nmea(buf);
+
+        wind_dir = lpdir;
+        wind_speed = knots;
+        wind_speed_30 = wind_speed_30*299.0/300.0 + wind_speed/300.0;
+        lcd_update = 1;
     }
 }
 
 uint32_t pressure, temperature;
+int32_t pressure_comp, temperature_comp;
 int bmp280_count;
 void read_pressure_temperature()
 {
@@ -321,8 +380,8 @@ void read_pressure_temperature()
         pressure >>= 12;
         temperature >>= 12;
     
-        int32_t temperature_comp = bmp280_compensate_T_int32(temperature);
-        int32_t pressure_comp = bmp280_compensate_P_int64(pressure) >> 8;
+        temperature_comp = bmp280_compensate_T_int32(temperature);
+        pressure_comp = bmp280_compensate_P_int64(pressure) >> 8;
         pressure = temperature = 0;
 
         if(!have_bmp280) {
@@ -339,13 +398,104 @@ void read_pressure_temperature()
 
         int a = temperature_comp / 100;
         int r = temperature_comp - a*100;
-        snprintf(buf, sizeof buf, "ARMTA,%d.%02d,C", a, r);
+        snprintf(buf, sizeof buf, "ARMTA,%d.%02d,C", a, abs(r));
         send_nmea(buf);
+
+        lcd_update  = 1;
     }
+}
+
+void draw()
+{
+#ifdef LCD
+    if(!lcd_update)
+        return;
+
+    uint16_t time = millis();
+    static uint16_t last_lcd_updatetime, last_lcd_texttime;
+    uint16_t dt = time - last_lcd_updatetime;
+    if(dt < 100) // don't update faster than 2frames per second
+        return;
+
+    last_lcd_updatetime = time;
+    
+    lcd_update = 0;
+
+    static char status_buf[4][16];
+
+    dt = time - last_lcd_texttime;
+    if(dt > 700) { // don't update text so fast
+        last_lcd_texttime = time;
+        int a = temperature_comp / 100;
+        int r = temperature_comp - a*100;
+        snprintf(status_buf[3], sizeof status_buf[3], "%d.%02dC", a, abs(r));
+
+        snprintf(status_buf[0], sizeof status_buf[0], "%02d", (int) round(wind_dir));
+        snprintf(status_buf[1], sizeof status_buf[1], "%02d", (int) round(wind_speed));
+
+        lcd.rectangle(0, 46, 48, 83, 0); // clear text
+        // draw wind speed
+        lcd.setfont(3);
+        lcd.setpos(0, 38);
+        lcd.print(status_buf[1]);
+
+        // draw 30 second average wind speed
+        snprintf(status_buf[1], sizeof status_buf[1], "%02d", (int) round(wind_speed_30));
+        lcd.setfont(2);
+        lcd.setpos(29, 45);
+        lcd.print(status_buf[1]);
+
+        lcd.setfont(0);
+        lcd.setpos(0, 61);
+        a = pressure_comp/1e2, r = pressure_comp - a*1e2;
+        a = snprintf(status_buf[2], sizeof status_buf[2], "%d", a);
+        lcd.print(status_buf[2]);
+        lcd.rectangle(a*7+3, 73, a*7+4, 73, 255); // draw decimal
+        snprintf(status_buf[2], sizeof status_buf[2], "%02d", r);
+        lcd.setpos(a*7+6, 61);
+        lcd.print(status_buf[2]);
+
+        lcd.setfont(0);
+        lcd.setpos(1, 71);
+        lcd.print(status_buf[3]);
+    }
+    
+    lcd.rectangle(0, 0, 48, 45, 0); // clear compass
+    // draw direction dial for wind
+    lcd.circle(24, 22, 22, 255);
+    float wind_rad = wind_dir/180.0*M_PI;
+    {
+        int r = 22;
+        int x = r*sin(wind_rad);
+        int y = -r*cos(wind_rad);
+        for(int s=1; s<3; s++) {
+            int xp = s*cos(wind_rad);
+            int yp = s*sin(wind_rad);
+            lcd.line(24+xp, 22+yp, 24+x, 22+y, 255);
+            lcd.line(24-xp, 22-yp, 24+x, 22+y, 255);
+        }
+    }
+    // print the heading under the dial
+    lcd.setfont(1);
+    int xp, yp;
+    xp = -11.0*sin(wind_rad), yp = 10.0*cos(wind_rad);
+    static float nxp = 0, nyp = 0;
+    nxp = (xp + 31*nxp)/32;
+    nyp = (yp + 31*nyp)/32;
+    xp = 24+nxp-12, yp = 22+nyp-8; 
+    lcd.rectangle(xp-1, yp+3, xp+22, yp+14, 0); // clear heading text area
+    lcd.setpos(xp, yp);
+    lcd.print(status_buf[0]);
+    
+    lcd.refresh();
+#endif
 }
 
 void loop()
 {
+      set_sleep_mode(SLEEP_MODE_IDLE);
     read_pressure_temperature();
     read_anenometer();
+
+    draw();
 }

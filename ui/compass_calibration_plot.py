@@ -51,7 +51,7 @@ class Shape(object):
     def draw(self):
         glEnableClientState(GL_VERTEX_ARRAY);
         glVertexPointer(3, GL_FLOAT, 0, self.array)
-        glDrawArrays(GL_QUADS, 0, len(self.array)/3)
+        glDrawArrays(GL_LINE_STRIP, 0, len(self.array)/3)
         glDisableClientState(GL_VERTEX_ARRAY);
 
 class Spherical(Shape):
@@ -67,7 +67,8 @@ class Spherical(Shape):
                 x = math.cos(flat)*math.cos(flon)
                 y = math.cos(flat)*math.sin(flon)
                 z = math.sin(flat)
-                v = f(beta, numpy.array([x, y, z]))
+                #v = f(beta, numpy.array([x, y, z]))
+                v = beta[3]*numpy.array([x, y, z])
                 points.append(v)
 
             if lastPoints:
@@ -85,6 +86,40 @@ class Spherical(Shape):
 
         super(Spherical, self).__init__(vertexes)
 
+class Conical(Shape):
+    def __init__(self, beta, lons, rs):
+        lastPoints = False
+        vertexes = []
+        dip = math.radians(beta[4])
+        for r in range(rs):
+            fr = beta[3]*r/rs
+            points = []
+
+            for lon in range(lons):
+                flon = -math.pi + 2*math.pi/(lons-1)*lon
+                x = fr*math.cos(dip)*math.cos(flon)
+                y = fr*math.cos(dip)*math.sin(flon)
+                z = fr*math.sin(dip)
+                #v = beta[:3] + numpy.array([x, y, z])
+                v = numpy.array([x, y, z])
+                points.append(v)
+
+            if lastPoints:
+                l_lp = lastPoints[0]
+                l_p = points[0]
+                for i in range(1, len(points)):
+                    lp = lastPoints[i]
+                    p = points[i]
+                    vertexes += [l_lp, l_p, p, lp]
+
+                    l_lp = lp
+                    l_p = p
+            
+            lastPoints = points
+
+        super(Conical, self).__init__(vertexes)
+
+        
 class Plane(Shape):
     def __init__(self, plane_fit, gridsize):
         plane = numpy.array(plane_fit)
@@ -116,17 +151,17 @@ class Plane(Shape):
 class CompassCalibrationPlot():
     default_radius = 30
     def __init__(self):
-        self.unit_sphere = Spherical([0, 0, 0], lambda beta, x: x, 32, 16)
-        self.mag_fit_new_bias = self.mag_fit_sphere = self.mag_fit_ellipsoid  = False
+        self.unit_sphere = Spherical([0, 0, 0, 1], lambda beta, x: x, 32, 16)
+        self.mag_fit_new_bias = self.mag_fit_new_sphere = False
+        self.mag_fit_sphere = self.mag_fit_cone = False
         self.mag_cal_new_bias = [0, 0, 0, 30, 0]
-        self.mag_cal_sphere_bias = [0, 0, 0, 30]
+        self.mag_cal_new_sphere = [0, 0, 0, 30, 0]
         self.mag_cal_sphere = [0, 0, 0, 30]
-        self.mag_cal_ellipsoid = [0, 0, 0, 30, 1, 1]
         
         self.fusionQPose = False
         self.alignmentQ = False
 
-        self.userscale = .01
+        self.userscale = .005
         self.accel = [0, 0, 0]
         self.heading = 0
         self.points = []
@@ -192,14 +227,17 @@ class CompassCalibrationPlot():
         elif name == 'imu.compass_calibration' and data['value']:
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
-            self.mag_cal_new_bias = data['value'][0]
-            self.mag_fit_new_bias = Spherical(self.mag_cal_new_bias, fsphere,  64, 32);
 
-            self.mag_cal_sphere_bias = data['value'][1]
-            self.mag_fit_sphere_bias = Spherical(self.mag_cal_sphere_bias, fsphere,  64, 32);
+            self.mag_cal_sphere = data['value'][0]
+            self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  32, 16);
 
-            self.mag_cal_sphere = data['value'][2]
-            self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  64, 32);
+            self.mag_fit_cone = Conical(self.mag_cal_sphere, 32, 16);
+
+            #self.mag_cal_new_bias = data['value'][0]
+            #self.mag_fit_new_bias = Spherical(self.mag_cal_new_bias, fsphere,  64, 32);
+
+            #self.mag_cal_new_sphere = data['value'][1]
+            #self.mag_fit_new_sphere = Spherical(self.mag_cal_new_sphere, fsphere,  64, 32);
 
             '''
             self.mag_cal_ellipsoid = data['value'][2]
@@ -215,9 +253,6 @@ class CompassCalibrationPlot():
         elif name == 'imu.fusionQPose':
             self.fusionQPose = data['value']
 
-
-
-
         elif name == 'imu.alignmentQ':
             self.alignmentQ = data['value']
         
@@ -227,13 +262,13 @@ class CompassCalibrationPlot():
         glViewport(0, 0, width, height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        glFrustum( -.1*ar, .1*ar, -.1, .1, .1, 15 )
+        fac = .05
+        glFrustum( -fac*ar, fac*ar, -fac, fac, .1, 15 )
         glMatrixMode(GL_MODELVIEW)
 
         cal_new_bias = self.mag_cal_new_bias
-        cal_sphere_bias = self.mag_cal_sphere_bias
+        cal_new_sphere = self.mag_cal_new_sphere
         cal_sphere = self.mag_cal_sphere
-        cal_ellipsoid = self.mag_cal_ellipsoid
 
         glClearColor(0, 0, 0, 0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -248,24 +283,41 @@ class CompassCalibrationPlot():
 
         if self.uncalibrated_view:
             glPushMatrix()
-            glTranslatef(-cal_sphere_bias[0], -cal_sphere_bias[1], -cal_sphere_bias[2])
             glLineWidth(1)
+
+            down = [0, 0, 1]
+            if self.fusionQPose and self.alignmentQ:
+                q = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
+                down = quaternion.rotvecquat(down, quaternion.conjugate(q))
+                #down =             self.accel
+
+
+            glPushMatrix()
+
+            q = [1, 0, 0, 0]
+            if self.fusionQPose and self.alignmentQ:
+                q = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
+            glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
 
             if self.mag_fit_new_bias:
                 glColor3f(1, 0, 0)
                 self.mag_fit_new_bias.draw()
 
-            if self.mag_fit_sphere_bias:
+            if self.mag_fit_new_sphere:
                 glColor3f(1, 0, 1)
-                self.mag_fit_sphere_bias.draw()
+                self.mag_fit_new_sphere.draw()
                 
             if self.mag_fit_sphere:
                 glColor3f(0, 0, 1)
                 self.mag_fit_sphere.draw()
 
-            if self.mag_fit_ellipsoid:
-                glColor3f(0, 1, 1)
-                self.mag_fit_ellipsoid.draw()    
+            if self.mag_fit_cone:
+                glColor3f(1, 0, 0)
+                self.mag_fit_cone.draw()
+
+            glPopMatrix()
+            glTranslatef(-cal_sphere[0], -cal_sphere[1], -cal_sphere[2])
+
         
             glPointSize(4)
             glColor3f(1,.3,.3)
@@ -298,37 +350,23 @@ class CompassCalibrationPlot():
             glEnd()
 
             glColor3f(1,1,1)
-            glLineWidth(1.8)
+            glLineWidth(3.8)
             glBegin(GL_LINES)
 #            glVertex3fv(cal[:3])
 
-            down = [0, 0, 1]
-            if self.fusionQPose:
-                if self.alignmentQ:
-                    q = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
-                    down = quaternion.rotvecquat(down, quaternion.conjugate(q))
-                #down =             self.accel
-
             try:
-                glColor3f(1, 0, 1)
+                '''
+                glColor3f(.8, 0, 0)
                 glVertex3fv(map(lambda x,y :-x*cal_new_bias[3]+y, down, cal_new_bias[:3]))
                 glVertex3fv(map(lambda x,y : x*cal_new_bias[3]+y, down, cal_new_bias[:3]))
 
-
-                glColor3f(1, 1, 0)
-                glVertex3fv(map(lambda x,y :-x*cal_sphere[3]+y, down, cal_sphere_bias[:3]))
-                glVertex3fv(map(lambda x,y : x*cal_sphere[3]+y, down, cal_sphere_bias[:3]))
-                
-                glColor3f(1, 1, 1)
+                glColor3f(.8, 0, .8)
+                glVertex3fv(map(lambda x,y :-x*cal_new_sphere[3]+y, down, cal_new_sphere[:3]))
+                glVertex3fv(map(lambda x,y : x*cal_new_sphere[3]+y, down, cal_new_sphere[:3]))
+                '''                
+                glColor3f(.8, .8, .8)
                 glVertex3fv(map(lambda x,y :-x*cal_sphere[3]+y, down, cal_sphere[:3]))
                 glVertex3fv(map(lambda x,y : x*cal_sphere[3]+y, down, cal_sphere[:3]))
-
-                if self.mag_fit_ellipsoid:
-                    glColor3f(0, 1, 0)                
-                    glVertex3fv(map(lambda x,y :-x*cal_ellipsoid[3]+y, down, cal_ellipsoid[:3]))
-                    glVertex3fv(map(lambda x,y : x*cal_ellipsoid[3]+y, down, cal_ellipsoid[:3]))
-
-
             except:
                 print 'ERROR!!!!!!!!!!!!!!', self.accel, cal_sphere
             glEnd()
@@ -411,7 +449,7 @@ if __name__ == '__main__':
         host = sys.argv[1]
 
     def on_con(client):
-        watchlist = ['imu.accel', 'imu.compass', 'imu.compass_calibration', 'imu.compass_calibration_sphere', 'imu.compass_calibration_sigmapoints', 'imu.fusionQpose']
+        watchlist = ['imu.accel', 'imu.compass', 'imu.compass_calibration', 'imu.compass_calibration', 'imu.compass_calibration_sigmapoints', 'imu.fusionQPose']
         for name in watchlist:
             client.watch(name)
         

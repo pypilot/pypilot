@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- 
 
 ###########################################################################
-## Python code generated with wxFormBuilder (version Jul 25 2017)
+## Python code generated with wxFormBuilder (version Dec  3 2017)
 ## http://www.wxformbuilder.org/
 ##
 ## PLEASE DO "NOT" EDIT THIS FILE!
@@ -24,7 +24,7 @@ class AutopilotControlBase ( wx.Frame ):
 		
 		fgSizer5 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer5.AddGrowableCol( 0 )
-		fgSizer5.AddGrowableRow( 2 )
+		fgSizer5.AddGrowableRow( 3 )
 		fgSizer5.SetFlexibleDirection( wx.BOTH )
 		fgSizer5.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
@@ -92,6 +92,12 @@ class AutopilotControlBase ( wx.Frame ):
 		
 		fgSizer20.Add( fgSizer8, 1, wx.EXPAND, 5 )
 		
+		
+		fgSizer4.Add( fgSizer20, 1, wx.EXPAND, 5 )
+		
+		
+		fgSizer5.Add( fgSizer4, 1, wx.EXPAND, 5 )
+		
 		fgSizer26 = wx.FlexGridSizer( 1, 0, 0, 0 )
 		fgSizer26.SetFlexibleDirection( wx.BOTH )
 		fgSizer26.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
@@ -115,15 +121,9 @@ class AutopilotControlBase ( wx.Frame ):
 		fgSizer26.Add( self.rbTrueWind, 0, wx.ALL, 5 )
 		
 		
-		fgSizer20.Add( fgSizer26, 1, wx.EXPAND, 5 )
+		fgSizer5.Add( fgSizer26, 1, wx.EXPAND, 5 )
 		
-		
-		fgSizer4.Add( fgSizer20, 1, wx.EXPAND, 5 )
-		
-		
-		fgSizer5.Add( fgSizer4, 1, wx.EXPAND, 5 )
-		
-		self.sCommand = wx.Slider( self, wx.ID_ANY, 0, -100, 100, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_AUTOTICKS|wx.SL_HORIZONTAL )
+		self.sCommand = wx.Slider( self, wx.ID_ANY, 0, -250, 250, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_AUTOTICKS|wx.SL_HORIZONTAL )
 		fgSizer5.Add( self.sCommand, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		self.swGains = wx.ScrolledWindow( self, wx.ID_ANY, wx.DefaultPosition, wx.Size( -1,-1 ), wx.VSCROLL )
@@ -172,6 +172,7 @@ class AutopilotControlBase ( wx.Frame ):
 		self.rbWind.Bind( wx.EVT_RADIOBUTTON, self.onMode )
 		self.rbTrueWind.Bind( wx.EVT_RADIOBUTTON, self.onMode )
 		self.sCommand.Bind( wx.EVT_SCROLL, self.onCommand )
+		self.sCommand.Bind( wx.EVT_UPDATE_UI, self.onPaintControlSlider )
 		self.bScope.Bind( wx.EVT_BUTTON, self.onScope )
 		self.bClient.Bind( wx.EVT_BUTTON, self.onClient )
 		self.bCalibration.Bind( wx.EVT_BUTTON, self.onCalibration )
@@ -192,6 +193,9 @@ class AutopilotControlBase ( wx.Frame ):
 	
 	
 	def onCommand( self, event ):
+		event.Skip()
+	
+	def onPaintControlSlider( self, event ):
 		event.Skip()
 	
 	def onScope( self, event ):

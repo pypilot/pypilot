@@ -84,13 +84,13 @@ class SignalKClient(object):
         self.socket = server.LineBufferedNonBlockingSocket(connection)
         self.values = []
         self.msg_queue = []
-        self.f_on_connected(self)
         self.poller = select.poll()
         if self.socket:
             fd = self.socket.socket.fileno()
         else:
             fd = self.serial.fileno()
         self.poller.register(fd, select.POLLIN)
+        self.f_on_connected(self)
 
 
     def poll(self, timeout = 0):
@@ -299,9 +299,25 @@ def main():
     while True:
         result = client.receive(1000)
         if result:
-            print kjson.dumps(result)
             if not continuous:
+                # split on separate lines if not continuous
+                for r in result:
+                    if info:
+                        print kjson.dumps({r: result[r]})
+                    else:
+                        print r, '=', result[r]['value']
                 return
+            if info:
+                print kjson.dumps(result)
+            else:
+                first = True
+                for r in result:
+                    if first:
+                        first = False
+                    else:
+                        sys.stdout.write(', ')
+                    sys.stdout.write(r + ' = ' + str(result[r]['value']))
+                print ''
 
 if __name__ == '__main__':
     main()

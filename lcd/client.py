@@ -203,7 +203,7 @@ class LCDClient():
                       'true wind': self.have_true_wind};
         self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
 
-        self.initial_gets = gains + ['servo.min_speed', 'servo.max_speed', 'servo.max_current', 'servo.period', 'imu.alignmentCounter']
+        self.initial_gets = gains + ['servo.min_speed', 'servo.max_speed', 'servo.max_slew_rate', 'servo.max_current', 'servo.period', 'imu.alignmentCounter']
 
         self.have_select = False
         self.create_mainmenu()
@@ -354,6 +354,7 @@ class LCDClient():
                 self.menu = LCDMenu(self, _('Motor'),
                                     [value_edit(_('min speed'), _('relative'), 'servo.min_speed'),
                                      value_edit(_('max speed'), _('relative'), 'servo.max_speed'),
+                                     value_edit(_('max slew rate'), _('speed/sec^2'), 'servo.max_slew_rate'),
                                      value_edit(_('max current'), _('amps'), 'servo.max_current'),
                                      value_edit(_('period'), _('seconds'), 'servo.period')],
                                     self.menu)
@@ -537,12 +538,10 @@ class LCDClient():
         nalist = watchlist + poll_list + gains + \
         ['imu.pitch', 'imu.heel', 'ap.runtime', 'ap.version',
          'imu.heading',
-         'imu.alignmentCounter',
          'imu.compass_calibration_age',
          'imu.heading_lowpass_constant', 'imu.headingrate_lowpass_constant',
          'imu.headingraterate_lowpass_constant',
-         'servo.watts', 'servo.amp_hours', 'servo.max_current',
-         'servo.min_speed', 'servo.max_speed']
+         'servo.watts', 'servo.amp_hours'] + self.initial_gets
         self.last_msg = {}
         for name in nalist:
             self.last_msg[name] = _('N/A')

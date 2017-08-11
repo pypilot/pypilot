@@ -81,13 +81,17 @@ class ServoFlags(Value):
     ENGAUGED = 8
 
     INVALID=16*1
-    FAULTPIN=16*2
+    FWD_FAULTPIN=16*2
+    REV_FAULTPIN=16*4
 
-    DRIVER_MASK = 255 # bits used for driver flags
+    MIN_RUDDER=256*1
+    MAX_RUDDER=256*2    
 
-    FWD_FAULT=256*1
-    REV_FAULT=256*2
-    DRIVER_TIMEOUT = 256*4
+    DRIVER_MASK = 2047 # bits used for driver flags
+
+    FWD_FAULT=2048*1 # overcurrent faults
+    REV_FAULT=2048*2
+    DRIVER_TIMEOUT = 2048*4
 
     def __init__(self, name):
         super(ServoFlags, self).__init__(name, 0)
@@ -107,8 +111,14 @@ class ServoFlags(Value):
             ret += 'ENGAUGED '
         if self.value & self.INVALID:
             ret += 'INVALID '
-        if self.value & self.FAULTPIN:
-            ret += 'FAULTPIN '
+        if self.value & self.FWD_FAULTPIN:
+            ret += 'FWD_FAULTPIN '
+        if self.value & self.REV_FAULTPIN:
+            ret += 'REV_FAULTPIN '
+        if self.value & self.MIN_RUDDER:
+            ret += 'MIN_RUDDER '
+        if self.value & self.MAX_RUDDER:
+            ret += 'MAX_RUDDER '
         if self.value & self.FWD_FAULT:
             ret += 'FWD_FAULT '
         if self.value & self.REV_FAULT:
@@ -145,6 +155,7 @@ class ServoTelemetry(object):
     POSITION = 16
     CONTROLLER_TEMP = 32
     MOTOR_TEMP = 64
+    RUDDER_POS = 128
 
 # a property which records the time when it is updated
 class TimedProperty(Property):
@@ -170,6 +181,7 @@ class Servo(object):
 
         self.min_speed = self.Register(RangeProperty, 'min_speed', .5, 0, 1, persistent=True)
         self.max_speed = self.Register(RangeProperty, 'max_speed', 1, 0, 1, persistent=True)
+
         brake_hack = 'brake_hack' in self.calibration.value and self.calibration.value['brake_hack']
         self.brake_hack = self.Register(BooleanProperty, 'brake_hack', brake_hack, persistent=True)
         self.brake_hack_state = 0
@@ -178,16 +190,20 @@ class Servo(object):
 
         # power usage
         self.command = self.Register(TimedProperty, 'command', 0)
-        self.timestamp = time.time()
+        self.current_timestamp = time.time()
         timestamp = server.TimeStamp('servo')
         self.voltage = self.Register(SensorValue, 'voltage', timestamp)
         self.current = self.Register(SensorValue, 'current', timestamp)
         self.controller_temp = self.Register(SensorValue, 'controller_temp', timestamp)
         self.motor_temp = self.Register(SensorValue, 'motor_temp', timestamp)
+        self.rudder_pos = self.Register(SensorValue, 'rudder_pos', timestamp)
+        
         self.engauged = self.Register(BooleanValue, 'engauged', False)
         self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 20, persistent=True)
         self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 60, 45, 100, persistent=True)
         self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 55, 30, 100, persistent=True)
+        self.min_rudder_pos = self.Register(RangeProperty, 'min_rudder_pos', -100, -100, 100, persistent=True)
+        self.max_rudder_pos = self.Register(RangeProperty, 'max_rudder_pos',  100, -100, 100, persistent=True)
         self.period = self.Register(RangeProperty, 'period', .7, .1, 3, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'compensate_voltage', False, persistent=True)
@@ -213,7 +229,7 @@ class Servo(object):
         self.force_engauged = False
 
         self.last_zero_command_time = self.command_timeout = time.time()
-        self.last_current_measured = time.time()
+        self.driver_timeout_start = 0
 
         self.mode = self.Register(StringValue, 'mode', 'none')
         self.controller = self.Register(StringValue, 'controller', 'none')
@@ -306,8 +322,8 @@ class Servo(object):
         min_speed = self.min_speed.value
         
         # ensure max_speed is at least min_speed
-        #if min_speed > self.max_speed.value:
-        #    self.max_speed.set(min_speed)
+        if min_speed > self.max_speed.value:
+            self.max_speed.set(min_speed)
 
         # integrate windup
         self.windup += (speed - self.speed.value) * dt
@@ -318,11 +334,11 @@ class Servo(object):
                 speed = min_speed if self.windup > 0 else -min_speed
         else:
             speed = 0
-            
-        # don't let windup overflow
-        self.windup = min(max(self.windup, -self.period.value), self.period.value)
-        #print 'windup', self.windup, dt, self.windup / dt, speed, self.speed
 
+        # don't let windup overflow
+        self.windup = min(max(self.windup, -1.5*self.period.value), 1.5*self.period.value)
+        #print 'windup', self.windup, dt, self.windup / dt, speed, self.speed
+            
         if speed * self.speed.value <= 0: # switched direction or stopped?
             if t - self.windup_change < self.period.value:
                 # less than period, keep previous direction, but use minimum speed
@@ -399,7 +415,7 @@ class Servo(object):
             self.last_zero_command_time = t
         else:
             self.command_timeout = t
-                
+
         if self.driver:
             if self.disengauged: # keep sending disengauge to keep sync
                 self.driver.disengauge()
@@ -408,8 +424,19 @@ class Servo(object):
                 if self.flags.value & ServoFlags.FWD_FAULT or \
                    self.flags.value & ServoFlags.REV_FAULT: # allow more current to "unstuck" ram
                     max_current *= 2
-                self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value)
+                self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.min_rudder_pos.value, self.max_rudder_pos.value)
                 self.driver.command(command)
+
+                # detect driver timeout if commanded without measuring current
+                if self.current.value:
+                    self.flags.clearbit(ServoFlags.DRIVER_TIMEOUT)
+                    self.driver_timeout_start = 0
+                elif command:
+                    if self.driver_timeout_start:
+                        if time.time() - self.driver_timeout_start > 1:
+                            self.flags.setbit(ServoFlags.DRIVER_TIMEOUT)
+                    else:
+                        self.driver_timeout_start = time.time()
 
     def stop(self):
         if self.driver:
@@ -439,7 +466,7 @@ class Servo(object):
                 device.timeout=0 #nonblocking
                 fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
                 self.driver = ArduinoServo(device.fileno())
-                self.driver.max_values(self.max_current.value, self.max_controller_temp.value, self.max_motor_temp.value)
+                self.driver.max_values(self.max_current.value, self.max_controller_temp.value, self.max_motor_temp.value, self.min_rudder_pos.value, self.max_rudder_pos.value)
 
                 t0 = time.time()
                 if self.driver.initialize(device_path[1]):
@@ -476,8 +503,8 @@ class Servo(object):
             elif d > 4:
                 print 'servo timeout', d
                 self.close_driver()
-            return
-        self.lastpolltime = time.time()
+        else:
+            self.lastpolltime = time.time()
 
         if self.fault():
             if not self.flags.value & ServoFlags.FWD_FAULT and \
@@ -496,30 +523,34 @@ class Servo(object):
 
             self.stop() # clear fault condition
 
-        lasttimestamp = self.timestamp
-        self.timestamp = time.time()
-        self.server.TimeStamp('servo', self.timestamp)
+        t = time.time()
+        self.server.TimeStamp('servo', t)
         if result & ServoTelemetry.VOLTAGE:
             self.voltage.set(self.driver.voltage)
         if result & ServoTelemetry.CONTROLLER_TEMP:
             self.controller_temp.set(self.driver.controller_temp)
         if result & ServoTelemetry.MOTOR_TEMP:
             self.motor_temp.set(self.driver.motor_temp)
+        if result & ServoTelemetry.RUDDER_POS:
+            if math.isnan(self.driver.rudder_pos):
+                self.rudder_pos.update(False)
+            else:
+                self.rudder_pos.set(self.driver.rudder_pos)
         if result & ServoTelemetry.CURRENT:
             self.current.set(self.driver.current)
             # integrate power consumption
-            dt = (self.timestamp-lasttimestamp)
+            dt = (t - self.current_timestamp)
+            #print 'have current', round(1/dt), dt
+            self.current_timestamp = t
             if self.current.value:
                 amphours = self.current.value*dt/3600
                 self.amphours.set(self.amphours.value + amphours)
-                self.last_current_measured = time.time()
             lp = .003*dt # 5 minute time constant to average wattage
             self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
         if result & ServoTelemetry.FLAGS:
             self.flags.updatedriver(self.driver.flags)
             self.engauged.update(not not self.driver.flags & ServoFlags.ENGAUGED)
 
-        self.flags.setbit(ServoFlags.DRIVER_TIMEOUT, self.command_timeout - self.last_current_measured > 1)
         self.send_command()
 
     def fault(self):
@@ -550,11 +581,20 @@ if __name__ == '__main__':
     servo = Servo(server, serial_probe)
     servo.max_current.set(10)
 
+    period = .1
+    lastt = time.time()
     while True:
         servo.poll()
 
         if servo.driver:
-            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'flags', servo.flags.strvalue()
+            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', servo.rudder_pos.value, 'flags', servo.flags.strvalue()
+            #print servo.command.value, servo.speed.value, servo.windup
+            pass
         server.HandleRequests()
-        time.sleep(.1)
 
+        dt = period - time.time() + lastt
+        if dt > 0 and dt < period:
+            time.sleep(dt)
+            lastt += period
+        else:
+            lastt = time.time()

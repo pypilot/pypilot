@@ -6,7 +6,8 @@
 # serial monitor: make serial
 
 SKETCHNAME = weathersensors
-DEVICE = /dev/ttyUSB0
+#DEVICE = /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
+DEVICE = /dev/ttyAMA0
 
 MCU = atmega328p
 
@@ -16,7 +17,7 @@ CXX = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-g++
 OBJCOPY = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-objcopy
 
 
-CXXFLAGS = -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=16000000L -DUSB_VID=null -DUSB_PID=null -DARDUINO=105 -D__PROG_TYPES_COMPAT__ -I$(ARDUINO_PATH)/hardware/arduino/cores/arduino -I$(ARDUINO_PATH)/hardware/arduino/variants/standard  -I$(ARDUINO_PATH)/libraries/Wire -I$(ARDUINO_PATH)/libraries/Wire/utility
+CXXFLAGS = -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=16000000L -DUSB_VID=null -DUSB_PID=null -DARDUINO=105 -D__PROG_TYPES_COMPAT__ -I$(ARDUINO_PATH)/hardware/arduino/cores/arduino -I$(ARDUINO_PATH)/hardware/arduino/variants/standard  -I$(ARDUINO_PATH)/libraries/Wire -I$(ARDUINO_PATH)/libraries/Wire/utility  -I$(ARDUINO_PATH)/libraries/SPI -I.
 LDFLAGS = -Os -Wl,--gc-sections -lm
 
 
@@ -37,6 +38,7 @@ $(ARDUINO_PATH)/hardware/arduino/cores/arduino/Print.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/HardwareSerial.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/WMath.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/main.cpp \
+/usr/share/arduino/libraries/SPI/SPI.cpp \
 
 #$(ARDUINO_PATH)/libraries/Wire/utility/twi.c \
 
@@ -52,13 +54,13 @@ $(SKETCHNAME).cpp.hex: $(SKETCHNAME).cpp.elf
 $(SKETCHNAME).cpp.eep: $(SKETCHNAME).cpp.elf
 	$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 $< $@
 
-$(SKETCHNAME).cpp.elf: $(OBJSD) obj/$(SKETCHNAME).o objs obj/twi.o
+$(SKETCHNAME).cpp.elf: $(OBJSD) obj/$(SKETCHNAME).o objs obj/twi.o obj/PCD8544.o
 	$(CC) -mmcu=$(MCU) $(LDFLAGS) -o $@ $(OBJS)
 
 .PHONY: objs
 objs:
 	echo $(OBJSD) | sed s,$(ARDUINO_PATH),obj$(ARDUINO_PATH),g > objs
-        OBJS = $(shell cat objs) obj/$(SKETCHNAME).o obj/twi.o
+        OBJS = $(shell cat objs) obj/$(SKETCHNAME).o obj/twi.o obj/PCD8544.o
 
 obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 	cp $< obj/$<.cpp
@@ -77,6 +79,9 @@ serial:
 obj/twi.o : twi.c
 	$(CC) $(CXXFLAGS) -c $< -o $@
 
+obj/PCD8544.o : PCD8544.cpp charset.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
 %.o : %.cpp
 	mkdir -p obj$(@:.o=)
 	$(CXX) $(CXXFLAGS) -c $< -o obj$@
@@ -86,3 +91,5 @@ obj/twi.o : twi.c
 	$(CC) $(CXXFLAGS) -c $< -o obj$@
 
 
+charset.h: make_charset.py font.ttf
+	python make_charset.py > charset.h

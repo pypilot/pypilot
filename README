@@ -10,6 +10,20 @@ client dependencies (viewers control applications)
 python-opengl python-pip
 sudo pip install pyglet
 sudo pip install pywavefront
+
+# correct a bug in pywavefront
+typically in /usr/local/lib/python2.7/dist-packages/pywavefront
++++ material.py 2017-10-30 19:43:53.288141444 +0000
+@@ -100,6 +100,7 @@
+         glMaterialfv(face, GL_AMBIENT, self.gl_light(self.ambient))
+         glMaterialfv(face, GL_SPECULAR, self.gl_light(self.specular))
+         glMaterialfv(face, GL_EMISSION, self.gl_light(self.emissive))
++        self.shininess = min(128, self.shininess)
+         glMaterialf(face, GL_SHININESS, self.shininess)
+
+         if self.gl_floats is None:
+
+
 sudo pip install ujson
 
 wxwidgets client dependencies: python-opengl python-pip

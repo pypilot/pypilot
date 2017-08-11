@@ -13,10 +13,12 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include <sys/time.h>
+
 #include "arduino_servo.h"
 
-enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
-enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, FLAGS_CODE = 0x8f};
+enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
+enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE = 0x8f};
 
 const unsigned char crc8_table[256]
 = {
@@ -85,7 +87,11 @@ bool ArduinoServo::initialize(int baud)
 {
     int cnt = 0;
     bool data = false;
-    while (!(flags & SYNC)) {
+
+    // flush device data
+//    while(read(fd, in_buf, in_buf_len) > 0);
+
+    while (!(flags & SYNC) || out_sync < 20) {
         raw_command(0); // ensure we set the temp limits as well here
         stop();
         if(poll()>0) {
@@ -131,10 +137,14 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
     case MOTOR_TEMP_CODE:
         motor_temp = (int16_t)value / 100.0;
         return MOTOR_TEMP;
+    case RUDDER_SENSE_CODE:
+        if(value == 65535)
+            rudder_pos = NAN;
+        else
+            rudder_pos = (uint16_t)value * 200 / 65472.0 - 100.0;
+        return RUDDER_POS;
     case FLAGS_CODE:
         flags = value;
-//        if(flags != 9)
-        //printf("servo flags %d %x\n", flags, flags);
         if(flags & INVALID)
             printf("servo received invalid packet (check serial connection)\n");
         return FLAGS;
@@ -145,7 +155,15 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
 int ArduinoServo::poll()
 {
     if(in_buf_len < 4) {
-        int c = read(fd, in_buf + in_buf_len, sizeof in_buf - in_buf_len);
+        int c;
+        for(;;) {
+            int cnt = sizeof in_buf - in_buf_len;
+            c = read(fd, in_buf + in_buf_len, cnt);
+            if(c < cnt)
+                break;
+            in_buf_len = 0;
+            printf("arduino server buffer overflow\n");
+        }
         if(c<0) {
             if(errno != EAGAIN)
                 return -1;
@@ -158,6 +176,12 @@ int ArduinoServo::poll()
     int ret = 0;
     while(in_buf_len >= 4) {
         uint8_t crc = crc8(in_buf, 3);
+#if 0
+        static int cnt;
+        struct timeval tv;
+        gettimeofday(&tv, 0);
+        printf("input %d %ld:%ld %x %x %x %x %x\n", cnt++, tv.tv_sec, tv.tv_usec, in_buf[0], in_buf[1], in_buf[2], in_buf[3], crc);
+#endif
         if(crc == in_buf[3]) { // valid packet
             if(in_sync_count >= 1)
                 ret |= process_packet(in_buf);
@@ -180,20 +204,27 @@ int ArduinoServo::poll()
 
 bool ArduinoServo::fault()
 {
-    return flags & (OVERTEMP | OVERCURRENT | FAULTPIN);
+    return flags & OVERCURRENT;
 }
 
-void ArduinoServo::max_values(double current, double controller_temp, double motor_temp)
+void ArduinoServo::max_values(double current, double controller_temp, double motor_temp, double min_rudder_pos, double max_rudder_pos)
 {
     max_current_value = fmin(20, fmax(0, current));
     max_controller_temp_value = fmin(80, fmax(30, controller_temp));
     max_motor_temp_value = fmin(80, fmax(30, motor_temp));
+    min_rudder_pos_value = fmin(100, fmax(-100, min_rudder_pos));
+    max_rudder_pos_value = fmin(100, fmax(-100, max_rudder_pos));
 }
 
 void ArduinoServo::send_value(uint8_t command, uint16_t value)
 {
     uint8_t code[4] = {command, (uint8_t)(value&0xff), (uint8_t)((value>>8)&0xff), 0};
     code[3] = crc8(code, 3);
+#if 0
+    struct timeval tv;
+    gettimeofday(&tv, 0);
+    printf("output %ld:%ld %x %x %x %x\n", tv.tv_sec, tv.tv_usec, code[0], code[1], code[2], code[3]);
+#endif
     write(fd, code, 4);
 }
 
@@ -201,19 +232,24 @@ void ArduinoServo::raw_command(uint16_t value)
 {
     // send max current and temp occasionally
     switch(out_sync) {
-    case 0: case 8: case 16: case 24:
+    case 0: case 8: case 16:
         send_value(MAX_CURRENT_CODE, max_current_value*100);
         break;
-    case 4:
+    case 6:
         send_value(MAX_CONTROLLER_TEMP_CODE, max_controller_temp_value*100);
         break;
     case 12:
         send_value(MAX_MOTOR_TEMP_CODE, max_motor_temp_value*100);
+        break;
+    case 18:
+        send_value(RUDDER_RANGE_CODE,
+                   ((int)((min_rudder_pos_value+100)*255/200) & 0xff) |
+                   ((int)((max_rudder_pos_value+100)*255/200) & 0xff) << 8);
     }
 
-//        printf("command %u\n", value);
+    //printf("command %u %d\n", value, out_sync);
     send_value(COMMAND_CODE, value);
-    if(++out_sync == 32)
+    if(++out_sync == 23)
         out_sync = 0;
 }
 

@@ -213,6 +213,7 @@ class Nmea(object):
 
         self.nmea_times = {}
         self.last_imu_time = time.time()
+        self.last_rudder_pos_time = time.time()
         self.starttime = time.time()
 
     def __del__(self):
@@ -337,6 +338,15 @@ class Nmea(object):
             self.send_nmea('APXDR,A,%.3f,D,ROLL' % self.server.values['imu.roll'].value)
             self.send_nmea('APHDM,%.3f,M' % self.server.values['imu.heading_lowpass'].value)
             self.last_imu_time = time.time()
+
+        dt = time.time() - self.last_rudder_pos_time
+        if self.process.sockets and (dt > .5 or dt < 0) and \
+           'servo.rudder_pos' in self.server.values:
+            value = self.server.values['servo.rudder_pos'].value
+            if value:
+                self.send_nmea('APRSA,%.3f,A,,' % value)
+            self.last_rudder_pos_time = time.time()
+            
         t5 = time.time()
         if t5 - t0 > .1:
             print 'nmea poll times', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4
@@ -428,17 +438,50 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 break
 
         # also allow ap commands (should we allow via serial too??)
+        '''
+   ** APB - Autopilot Sentence "B"
+   **                                         13    15
+   **        1 2 3   4 5 6 7 8   9 10   11  12|   14|
+   **        | | |   | | | | |   | |    |   | |   | |
+   ** $--APB,A,A,x.x,a,N,A,A,x.x,a,c--c,x.x,a,x.x,a*hh<CR><LF>
+   **
+   **  1) Status
+   **     V = LORAN-C Blink or SNR warning
+   **     V = general warning flag or other navigation systems when a reliable
+   **         fix is not available
+   **  2) Status
+   **     V = Loran-C Cycle Lock warning flag
+   **     A = OK or not used
+   **  3) Cross Track Error Magnitude
+   **  4) Direction to steer, L or R
+   **  5) Cross Track Units, N = Nautical Miles
+   **  6) Status
+   **     A = Arrival Circle Entered
+   **  7) Status
+   **     A = Perpendicular passed at waypoint
+   **  8) Bearing origin to destination
+   **  9) M = Magnetic, T = True
+   ** 10) Destination Waypoint ID
+   ** 11) Bearing, present position to Destination
+   ** 12) M = Magnetic, T = True
+   ** 13) Heading to steer to destination waypoint
+   ** 14) M = Magnetic, T = True
+   ** 15) Checksum
+        '''
+        #
         if line[3:6] == 'APB' and time.time() - self.last_apb_time > 1:
             self.last_apb_time = time.time()
             data = line[7:len(line)-3].split(',')
-            if not self.last_values['ap.enabled']:
-                self.client.set('ap.enabled', True)
+            #if not self.last_values['ap.enabled']:
+            #    self.client.set('ap.enabled', True)
+            if self.last_values['ap.enabled']:
+                mode = 'compass' if data[11] == 'M' else 'gps'
+                if self.last_values['ap.mode'] != mode:
+                    self.client.set('ap.mode', mode)
 
-            if self.last_values['ap.mode'] != 'gps':
-                self.client.set('ap.mode', 'gps')
-
-            if abs(self.last_values['ap.heading_command'] - float(data[7])) > .1:
-                self.client.set('ap.heading_command', float(data[7]))
+                command = float(data[10])
+                if abs(self.last_values['ap.heading_command'] - command) > .1:
+                    self.client.set('ap.heading_command', command)
 
     def new_socket_connection(self, server):
         connection, address = server.accept()
