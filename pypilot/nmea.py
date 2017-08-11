@@ -317,10 +317,10 @@ class Nmea(object):
 
         dt = time.time() - self.last_imu_time
         if self.process.sockets and (dt > .5 or dt < 0) and \
-           'imu/pitch' in self.server.values:
-            self.send_nmea('APXDR,A,%.3f,D,PTCH' % self.server.values['imu/pitch'].value)
-            self.send_nmea('APXDR,A,%.3f,D,ROLL' % self.server.values['imu/heel'].value)
-            self.send_nmea('APHDM,%.3f,M' % self.server.values['imu/heading_lowpass'].value)
+           'imu.pitch' in self.server.values:
+            self.send_nmea('APXDR,A,%.3f,D,PTCH' % self.server.values['imu.pitch'].value)
+            self.send_nmea('APXDR,A,%.3f,D,ROLL' % self.server.values['imu.roll'].value)
+            self.send_nmea('APHDM,%.3f,M' % self.server.values['imu.heading_lowpass'].value)
             self.last_imu_time = time.time()
         t5 = time.time()
         if t5 - t0 > .1:
