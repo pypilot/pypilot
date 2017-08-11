@@ -231,10 +231,9 @@ class Servo(object):
         if self.command.value:
             if time.time() - self.command.time > timeout:
                 print 'servo command timeout', time.time() - self.command.time
-                self.command.update(0)
-            else:
-                engauge()
-                self.velocity_command(self.command.value)
+                self.command.set(0)
+            engauge()
+            self.velocity_command(self.command.value)
         else:
             #print 'timeout', t - self.command_timeout
             if self.disengauge_on_timeout.value and \
