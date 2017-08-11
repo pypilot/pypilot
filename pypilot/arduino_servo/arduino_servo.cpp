@@ -11,6 +11,7 @@
 #include <math.h>
 
 #include <stdio.h>
+#include <errno.h>
 
 #include "arduino_servo.h"
 
@@ -142,11 +143,12 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
 
 int ArduinoServo::poll()
 {
-    int debug = true;
     if(in_buf_len < 4) {
         int c = read(fd, in_buf + in_buf_len, sizeof in_buf - in_buf_len);
-        if(c<=0) // todo: support failure if the device is unplugged
-            return 0;
+        if(c<0) {
+            if(errno != EAGAIN)
+                return -1;
+        }
         in_buf_len += c;
         if(in_buf_len < 4)
             return 0;
