@@ -301,11 +301,8 @@ class LCDClient():
 
         def gain():
             self.menu = LCDMenu(self, _('Gain'),
-                                [value_edit('P', _('position gain'), 'ap.P', True),
-                                 value_edit('I', _('integral gain'), 'ap.I', True),
-                                 value_edit('D', _('rate gain'),     'ap.D', True),
-                                 value_edit('P2', _('position2 gain'), 'ap.P2', True),
-                                 value_edit('D2', _('rate2 gain'),     'ap.D2',  True)], self.menu)
+                                map(lambda gain : value_edit(gain[gain.find('.')+1:],
+                                                             gain, gain, True), gains), self.menu)
             return self.display_menu
 
         def level():
