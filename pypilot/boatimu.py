@@ -307,7 +307,7 @@ class BoatIMU(object):
     self.headingrate = data['headingrate']
 
     data['heel'] = self.heel = data['roll']*.03 + self.heel*.97
-    data['roll'] -= data['heel']
+    #data['roll'] -= data['heel']
 
     data['gyro'] = map(math.degrees, data['gyro'])
     data['gyrobias'] = map(math.degrees, data['gyrobias'])
