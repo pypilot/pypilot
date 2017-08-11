@@ -34,7 +34,7 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
     try:
         import scipy.odr
     except:
-        print "failed to load scientific library, cannot perform calibration update!"
+        print 'failed to load scientific library, cannot perform calibration update!'
         return False
 
 #    try:

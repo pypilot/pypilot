@@ -461,10 +461,10 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         try:
             self.poller.unregister(sock.socket)
+            fd = sock.socket.fileno()
+            del self.fd_to_socket[fd]
         except:
             pass # Bad file descriptor, can't unregister
-        fd = sock.socket.fileno()
-        del self.fd_to_socket[fd]
         sock.close()
 
     def client_message(self, name, value):
