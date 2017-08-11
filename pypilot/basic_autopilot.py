@@ -32,7 +32,7 @@ class BasicAutopilot(AutopilotBase):
     def PosGain(name, default, max_val):
       Gain(name, default, 0, max_val)
         
-    PosGain('P', .003, .01)
+    PosGain('P', .003, .02)
     PosGain('I', 0, .1)
     PosGain('D',  .1, 1.0)
     PosGain('DD',  .05, 1.0)
