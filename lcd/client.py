@@ -594,11 +594,14 @@ class LCDClient():
         
         def draw_big_number(pos, num, lastnum):
             num = nr(num)
-            if len(num) < 3:
-                print 'i', '"'+num+'"'
-
             if lastnum:
                 lastnum = nr(lastnum)
+
+            if num == 'N/A' and lastnum != num:
+                r = rectangle(pos[0], pos[1], 1, .4)
+                self.surface.box(*(self.convrect(r) + [black]))
+                self.fittext(r, num)
+                return
 
             if self.surface.width < 256:
                 size = 34
