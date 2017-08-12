@@ -57,14 +57,14 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.fusionQPose = [1, 0, 0, 0]
 
     def on_con(self, client):
-        watchlist = ['imu/compass_calibration', 'imu/compass_calibration_age', \
-                     'imu/compass', 'imu/compass_calibration_sigmapoints', \
-                     'imu/compass_calibration_locked', \
-                     'imu/accel', 'imu/fusionQPose', 'imu/alignmentCounter', \
-                     'imu/heading', \
-                     'imu/alignmentQ', 'imu/pitch', 'imu/roll', 'imu/heel', \
-                     'imu/heading_offset', 'servo/calibration', \
-                     'servo/max_current']
+        watchlist = ['imu.compass_calibration', 'imu.compass_calibration_age', \
+                     'imu.compass', 'imu.compass_calibration_sigmapoints', \
+                     'imu.compass_calibration_locked', \
+                     'imu.accel', 'imu.fusionQPose', 'imu.alignmentCounter', \
+                     'imu.heading', \
+                     'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', \
+                     'imu.heading_offset', 'servo.calibration', \
+                     'servo.max_current']
         for name in watchlist:
             client.watch(name)
 
@@ -90,20 +90,20 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.compass_calibration_plot.read_data(msg)
 
-        if name == 'imu/compass':
+        if name == 'imu.compass':
             self.CompassCalibration.Refresh()
         
-        if name == 'imu/compass_calibration':
+        if name == 'imu.compass_calibration':
             self.stCompassCal.SetLabel(str(round3(value[0])))
             self.stCompassCalDeviation.SetLabel('N/A')
-        elif name == 'imu/compass_calibration_age':
+        elif name == 'imu.compass_calibration_age':
             self.stCompassCalAge.SetLabel(str(value))
-        elif name == 'imu/compass_calibration_locked':
+        elif name == 'imu.compass_calibration_locked':
             self.cbCompassCalibrationLocked.SetValue(value)
-        elif name == 'imu/alignmentQ':
+        elif name == 'imu.alignmentQ':
             self.alignmentQ = value
             self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(pypilot.quaternion.angle(self.alignmentQ))))
-        elif name == 'imu/fusionQPose':
+        elif name == 'imu.fusionQPose':
             if self.cCoords.GetSelection() == 1:
                 self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, self.fusionQPose)
                 self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, pypilot.quaternion.conjugate(value))
@@ -113,32 +113,32 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
             self.fusionQPose = value
             self.BoatPlot.Refresh()
-        elif name=='imu/alignmentCounter':
+        elif name=='imu.alignmentCounter':
             self.gAlignment.SetValue(100 - value)
 
             enable = value == 0
             self.bLevel.Enable(enable)
 
-        elif name == 'imu/pitch':
+        elif name == 'imu.pitch':
             self.stPitch.SetLabel(str(round3(value)))
-        elif name == 'imu/roll':
+        elif name == 'imu.roll':
             self.stRoll.SetLabel(str(round3(value)))
-        elif name == 'imu/heel':
+        elif name == 'imu.heel':
             self.stHeel.SetLabel(str(round3(value)))
-        elif name == 'imu/heading':
+        elif name == 'imu.heading':
             self.stHeading.SetLabel(str(round3(value)))
-        elif name == 'imu/heading_offset':
+        elif name == 'imu.heading_offset':
             self.sHeadingOffset.SetValue(round3(value))
-        elif name == 'servo/calibration':
+        elif name == 'servo.calibration':
             s = ''
             for name in value:
                 s += name + ' = ' + str(value[name]) + '\n'
             self.stServoCalibration.SetLabel(s)
             self.SetSize(wx.Size(self.GetSize().x+1, self.GetSize().y))
 
-        elif name == 'servo/calibration/console':
+        elif name == 'servo.calibration/console':
             self.stServoCalibrationConsole.SetLabel(self.stServoCalibrationConsole.GetLabel() + value)
-        elif name == 'servo/max_current':
+        elif name == 'servo.max_current':
             self.dsServoMaxCurrent.SetValue(round3(value))
 
 
@@ -164,7 +164,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             if self.servoprocess.returncode == 0:
                 file = open('servo_calibration')
                 calibration = json.loads(file.readline())
-                self.client.set('servo/calibration', calibration)
+                self.client.set('servo.calibration', calibration)
                 self.servo_console('calibration sent.')
             else:
                 self.servo_console('calibration failed.')
@@ -179,7 +179,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.compass_calibration_plot.points = []
 
     def onCompassCalibrationLocked( self, event ):
-        self.client.set('imu/compass_calibration_locked', self.cbCompassCalibrationLocked.GetValue())
+        self.client.set('imu.compass_calibration_locked', self.cbCompassCalibrationLocked.GetValue())
 
     def onMouseEventsCompass( self, event ):
         self.CompassCalibration.SetFocus()
@@ -214,16 +214,16 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.compass_calibration_plot.reshape(event.GetSize().x, event.GetSize().y)
 
     def StartAlignment(self):
-        self.client.set('imu/alignmentCounter', 100)
+        self.client.set('imu.alignmentCounter', 100)
 
     def onResetAlignment(self, event):
-        self.client.set('imu/alignmentQ', [1, 0, 0, 0])
+        self.client.set('imu.alignmentQ', [1, 0, 0, 0])
 
     def onLevel( self, event ):
         self.StartAlignment()
 	
     def onIMUHeadingOffset( self, event ):
-        self.client.set('imu/heading_offset', self.sHeadingOffset.GetValue())
+        self.client.set('imu.heading_offset', self.sHeadingOffset.GetValue())
 
     def onKeyPressBoatPlot( self, event ):
         self.BoatPlot.SetFocus()
@@ -278,7 +278,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def onIMUScope( self, event ):
         host, port = self.client.host_port
         args = ['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/scope_wx.py', host + ':' + str(port),
-                'imu/pitch', 'imu/roll', 'imu/heel', 'imu/heading']
+                'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading']
         subprocess.Popen(args)
 	
     def onCalibrateServo( self, event ):
@@ -291,7 +291,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.servo_console('Failed to execute servo_calibration.py.\n')
 
     def onMaxCurrent( self, event ):
-        self.client.set('servo/max_current', event.GetValue())
+        self.client.set('servo.max_current', event.GetValue())
 
 def main():
     glutInit(sys.argv)

@@ -179,14 +179,14 @@ class Nmea(object):
 
         timestamp = server.TimeStamp('gps')
         
-        self.values['gps']['track'] = server.Register(SensorValue('gps/track', timestamp, directional=True))
-        self.values['gps']['speed'] = server.Register(SensorValue('gps/speed', timestamp))
-        self.values['gps']['source'] = server.Register(StringValue('gps/source', 'none'))
+        self.values['gps']['track'] = server.Register(SensorValue('gps.track', timestamp, directional=True))
+        self.values['gps']['speed'] = server.Register(SensorValue('gps.speed', timestamp))
+        self.values['gps']['source'] = server.Register(StringValue('gps.source', 'none'))
 
         timestamp = server.TimeStamp('wind')
-        self.values['wind']['direction'] = server.Register(SensorValue('wind/direction', timestamp, directional=True))
-        self.values['wind']['speed'] = server.Register(SensorValue('wind/speed', timestamp))
-        self.values['wind']['source'] = server.Register(StringValue('wind/source', 'none'))
+        self.values['wind']['direction'] = server.Register(SensorValue('wind.direction', timestamp, directional=True))
+        self.values['wind']['speed'] = server.Register(SensorValue('wind.speed', timestamp))
+        self.values['wind']['source'] = server.Register(StringValue('wind.source', 'none'))
 
         self.serialprobe = serialprobe
         self.devices = []
@@ -391,15 +391,15 @@ class NmeaBridgeProcess(multiprocessing.Process):
         super(NmeaBridgeProcess, self).__init__(target=self.process, args=(pipe,))
 
     def setup_watches(self, watch=True):
-        watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command', 'gps/source', 'wind/source']
+        watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command', 'gps.source', 'wind.source']
         for name in watchlist:
             self.client.watch(name, watch)
 
     def receive_nmea(self, line, msgs):
         parsers = []
-        if source_priority[self.last_values['gps/source']] >= source_priority['tcp']:
+        if source_priority[self.last_values['gps.source']] >= source_priority['tcp']:
             parsers.append(parse_nmea_gps)
-        if source_priority[self.last_values['wind/source']] >= source_priority['tcp']:
+        if source_priority[self.last_values['wind.source']] >= source_priority['tcp']:
             parsers.append(parse_nmea_wind)
 
         for parser in parsers:
@@ -413,14 +413,14 @@ class NmeaBridgeProcess(multiprocessing.Process):
         if line[3:6] == 'APB' and time.time() - self.last_apb_time > 1:
             self.last_apb_time = time.time()
             data = line[7:len(line)-3].split(',')
-            if not self.last_values['ap/enabled']:
-                self.client.set('ap/enabled', True)
+            if not self.last_values['ap.enabled']:
+                self.client.set('ap.enabled', True)
 
-            if self.last_values['ap/mode'] != 'gps':
-                self.client.set('ap/mode', 'gps')
+            if self.last_values['ap.mode'] != 'gps':
+                self.client.set('ap.mode', 'gps')
 
-            if abs(self.last_values['ap/heading_command'] - float(data[7])) > .1:
-                self.client.set('ap/heading_command', float(data[7]))
+            if abs(self.last_values['ap.heading_command'] - float(data[7])) > .1:
+                self.client.set('ap.heading_command', float(data[7]))
 
     def new_socket_connection(self, server):
         connection, address = server.accept()
@@ -491,7 +491,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         server.listen(5)
 
-        self.last_values = {'ap/enabled': False, 'ap/mode': 'N/A', 'ap/heading_command' : 1000, 'gps/source' : 'none', 'wind/source' : 'none'}
+        self.last_values = {'ap.enabled': False, 'ap.mode': 'N/A', 'ap.heading_command' : 1000, 'gps.source' : 'none', 'wind.source' : 'none'}
         self.addresses = {}
         cnt = 0
 

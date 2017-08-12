@@ -28,15 +28,15 @@ def frange(min, max, step):
 class autogain(object):
     def __init__(self):
         self.search = [ \
-                       #{'name': 'ap/I', 'min': 0, 'max': .006, 'step': .003},
-                       #{'name': 'ap/P2', 'min': 0, 'max': .006, 'step': .006},
-                       {'name': 'ap/P', 'min': .002, 'max': .006, 'step': .001},
-                       {'name': 'ap/D', 'min': .06, 'max': .12, 'step': .01}]
-        self.variables = ['ap/heading_error', 'servo/Watts', 'servo/current', 'gps/speed']
+                       #{'name': 'ap.I', 'min': 0, 'max': .006, 'step': .003},
+                       #{'name': 'ap.P2', 'min': 0, 'max': .006, 'step': .006},
+                       {'name': 'ap.P', 'min': .002, 'max': .006, 'step': .001},
+                       {'name': 'ap.D', 'min': .06, 'max': .12, 'step': .01}]
+        self.variables = ['ap.heading_error', 'servo.Watts', 'servo.current', 'gps.speed']
         self.settle_period = 2
         self.period = 5
 
-        self.watchlist = ['ap/enabled']
+        self.watchlist = ['ap.enabled']
         for var in self.search:
             self.watchlist.append(var['name'])
         for var in self.variables:
@@ -78,7 +78,7 @@ class autogain(object):
                     if name == var:
                         self.total[name]['total'] += value
                         self.total[name]['count'] += 1
-            if name == 'ap/enabled' and not value:
+            if name == 'ap.enabled' and not value:
                 #print 'autopilot disabled!!'
                 #exit(0)
                 pass

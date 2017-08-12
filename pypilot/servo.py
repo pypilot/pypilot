@@ -223,7 +223,7 @@ class Servo(object):
         self.raw_command(0)
 
     def Register(self, _type, name, *args, **kwargs):
-        return self.server.Register(_type(*(['servo/' + name] + list(args)), **kwargs))
+        return self.server.Register(_type(*(['servo.' + name] + list(args)), **kwargs))
 
     def send_command(self):
         if self.fault():

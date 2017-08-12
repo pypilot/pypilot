@@ -166,11 +166,11 @@ class CompassCalibrationPlot():
     def read_data(self, msg):
         name, data = msg
 
-        if name == 'imu/accel':
+        if name == 'imu.accel':
             self.accel = data['value']
-        elif name == 'imu/heading':
+        elif name == 'imu.heading':
             self.heading = data['value']
-        elif name == 'imu/compass':
+        elif name == 'imu.compass':
             value = data['value']
             if value:
                 self.recent_points.append(value)
@@ -186,9 +186,9 @@ class CompassCalibrationPlot():
                     if len(self.points) > point_count:
                         self.points = self.points[1:]
                     
-        elif name == 'imu/compass_calibration_sigmapoints':
+        elif name == 'imu.compass_calibration_sigmapoints':
             self.sigmapoints = data['value']
-        elif name == 'imu/compass_calibration' and data['value']:
+        elif name == 'imu.compass_calibration' and data['value']:
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
             self.mag_cal_new_bias = data['value'][0]
@@ -206,13 +206,13 @@ class CompassCalibrationPlot():
                abs(1-self.mag_cal_ellipsoid[5]) < .25:
                 self.mag_fit_ellipsoid = Spherical(self.mag_cal_ellipsoid, fellipsoid,  64, 32);
 
-        elif name == 'imu/fusionQPose':
+        elif name == 'imu.fusionQPose':
             self.fusionQPose = data['value']
 
 
 
 
-        elif name == 'imu/alignmentQ':
+        elif name == 'imu.alignmentQ':
             self.alignmentQ = data['value']
         
     def display(self):
@@ -397,7 +397,7 @@ if __name__ == '__main__':
         host = sys.argv[1]
 
     def on_con(client):
-        watchlist = ['imu/accel', 'imu/compass', 'imu/compass_calibration', 'imu/compass_calibration_sphere', 'imu/compass_calibration_sigmapoints', 'imu/fusionQpose']
+        watchlist = ['imu.accel', 'imu.compass', 'imu.compass_calibration', 'imu.compass_calibration_sphere', 'imu.compass_calibration_sigmapoints', 'imu.fusionQpose']
         for name in watchlist:
             client.watch(name)
         
