@@ -165,6 +165,7 @@ $(document).ready(function() {
                 poll(conf_names[i][0]);
         } else if(tab == 'Statistics') {
             poll('servo.amp_hours');
+            poll('servo.voltage');
             poll('ap.runtime');
             poll('servo.engauged');
         }
@@ -278,6 +279,11 @@ $(document).ready(function() {
         if('servo.amp_hours' in data) {
             value = data['servo.amp_hours']['value'];
             $('#amp_hours').text(Math.round(1e4*value)/1e4);
+        }
+
+        if('servo.voltage' in data) {
+            value = data['servo.voltage']['value'];
+            $('#voltage').text(Math.round(1e3*value)/1e3);
         }
         
         if('ap.runtime' in data) {

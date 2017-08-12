@@ -533,11 +533,12 @@ class LCDClient():
         poll_list = ['ap.heading']
         nalist = watchlist + poll_list + gains + \
         ['imu.pitch', 'imu.heel', 'ap.runtime', 'ap.version',
+         'imu.loopfreq', 'imu.uptime',         
          'imu.heading',
          'imu.compass_calibration_age',
          'imu.heading_lowpass_constant', 'imu.headingrate_lowpass_constant',
          'imu.headingraterate_lowpass_constant',
-         'servo.watts', 'servo.amp_hours'] + self.initial_gets
+         'servo.voltage', 'servo.watts', 'servo.amp_hours'] + self.initial_gets
         self.last_msg = {}
         for name in nalist:
             self.last_msg[name] = _('N/A')
@@ -772,8 +773,10 @@ class LCDClient():
         self.surface.fill(black)
         self.fittext(rectangle(0, 0, 1, .2), _('Info'))
 
-        if self.info_page > 1:
+        if self.info_page > 2:
             self.info_page = 0
+        elif self.info_page < 0:
+            self.info_page = 2
 
         y = .2
         if self.info_page == 0:
@@ -785,11 +788,20 @@ class LCDClient():
             self.get('servo.watts')
             self.get('servo.amp_hours')
             self.get('ap.runtime')
+        elif self.info_page == 1:
+            spacing = .11
+            v = self.round_last_msg('servo.voltage', 3)
+            rate = self.round_last_msg('imu.loopfreq', 0)
+            uptime = self.last_msg['imu.uptime'][:7]
+            items = [_('voltage'), v, _('rate'), rate, _('uptime'), uptime]
+            self.get('servo.voltage')
+            self.get('imu.loopfreq')
+            self.get('imu.uptime')
         else:
             spacing = .18
             ver = self.last_msg['ap.version']
 
-            items = [_('version'), ver, _('author'), 'Sean D\'Epagnier']
+            items = [_('version'), ver, _('author'), "Sean D'Epagnier"]
             self.get('ap.version')
 
         even, odd = 0, .05
@@ -912,8 +924,10 @@ class LCDClient():
              self.display_page == self.display_calibrate_info:
             if self.keypadup[MENU]:
                 self.display_page = self.display_menu
-            if self.keypadup[UP] or self.keypadup[DOWN]:
+            if self.keypadup[UP] or self.keypadup[RIGHT]:
                 self.info_page += 1
+            if self.keypadup[DOWN] or self.keypadup[LEFT]:
+                self.info_page -= 1
 
         elif self.range_edit and self.display_page == self.range_edit.display:
             if self.keypadup[MENU]:
