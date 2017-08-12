@@ -41,7 +41,7 @@ class LineBufferedNonBlockingSocket(object):
         self.out_buffer += data
         if len(self.out_buffer) > 65536:
             self.out_buffer = data
-            print 'overflow in signalk socket'
+            print 'overflow in signalk socket', len(data)
     
     def flush(self):
         if not self.out_buffer:
