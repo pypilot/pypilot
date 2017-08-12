@@ -127,12 +127,12 @@ class ServoFlags(Value):
         self.setbit(bit, False)
             
     def fwd_fault(self):
-        update((self.flags.value | ServoFlags.FWD_FAULT) \
-               & ~ServoFlags.REV_FAULT)
+        self.update((self.value | ServoFlags.FWD_FAULT) \
+                          & ~ServoFlags.REV_FAULT)
 
     def rev_fault(self):
-        update((self.flags.value | ServoFlags.REV_FAULT) \
-               & ~ServoFlags.FWD_FAULT)
+        self.update((self.value | ServoFlags.REV_FAULT) \
+                          & ~ServoFlags.FWD_FAULT)
         
     def get_signalk(self):
         return '{"' + self.name + '": {"value": "' + self.strvalue() + '"}}'
@@ -519,7 +519,7 @@ class Servo(object):
             self.flags.updatedriver(self.driver.flags)
             self.engauged.update(not not self.driver.flags & ServoFlags.ENGAUGED)
 
-        self.flags.setbit(DRIVER_TIMEOUT, self.command_timeout - self.last_current_measured > 1)
+        self.flags.setbit(ServoFlags.DRIVER_TIMEOUT, self.command_timeout - self.last_current_measured > 1)
         self.send_command()
 
     def fault(self):
