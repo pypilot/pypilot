@@ -82,14 +82,15 @@ class AutopilotBase(object):
 
     # setup all processes to exit on any signal
     self.childpids = []
-    def cleanup(signal_number, frame):
+    def cleanup(signal_number, frame=None):
         print 'got signal', signal_number, 'cleaning up'
         while self.childpids:
             pid = self.childpids.pop()
             #print 'kill child', pid
             os.kill(pid, signal.SIGTERM) # get backtrace
         sys.stdout.flush()
-        raise KeyboardInterrupt # to get backtrace on all processes
+        if signal_number != 'atexit':
+            raise KeyboardInterrupt # to get backtrace on all processes
 
     # unfortunately we occasionally get this signal,
     # some sort of timing issue where python doesn't realize the pipe
@@ -153,6 +154,9 @@ class AutopilotBase(object):
     self.childpids = [self.boatimu.imu_process.pid, self.boatimu.compass_auto_cal.process.pid,
                  self.server.process.pid, self.nmea.process.pid, self.nmea.gpsdpoller.process.pid]
     signal.signal(signal.SIGCHLD, cleanup)
+    import atexit
+    atexit.register(lambda : cleanup('atexit'))
+    
     self.lasttime = time.time()
 
     # read initial value from imu as this takes time

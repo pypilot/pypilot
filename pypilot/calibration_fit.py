@@ -192,7 +192,10 @@ def FitPoints(points, current, norm):
         r0 = map(lambda y : beta[1] - vector.norm(y), m)
         g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
         fac = .03 # weight deviation as 1 degree ~ .03 mag
-        r1 = map(lambda y, z : fac*beta[1]*(beta[2] - math.degrees(math.asin(vector.dot(y, z)/vector.norm(y)))), m, g)
+        def deg(y, z):
+            n = min(max(vector.dot(y, z)/vector.norm(y), -1), 1)
+            return math.degrees(math.asin(n))
+        r1 = map(lambda y, z : fac*beta[1]*(beta[2] - deg(y, z)), m, g)
         return r0 + r1
     new_sphere1d_fit = FitLeastSq([0, initial[3], 0], f_new_sphere1, zpoints, 2)
     if not new_sphere1d_fit or new_sphere1d_fit[1] < 0:
@@ -244,7 +247,10 @@ def FitPoints(points, current, norm):
         r0 = map(lambda y : beta[2] - vector.norm(y), m)
         g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
         fac = .03 # weight deviation as 1 degree ~ .03 mag
-        r1 = map(lambda y, z : fac*beta[2]*(beta[3] - math.degrees(math.asin(vector.dot(y, z)/vector.norm(y)))), m, g)
+        def deg(y, z):
+            n = min(max(vector.dot(y, z)/vector.norm(y), -1), 1)
+            return math.degrees(math.asin(n))
+        r1 = map(lambda y, z : fac*beta[2]*(beta[3] - deg(y, z)), m, g)
         return r0 + r1
     new_sphere2d_fit = FitLeastSq([0, 0, initial[3], 0], f_new_sphere2, zpoints, 2)
     if not new_sphere2d_fit or new_sphere2d_fit[2] < 0:
@@ -283,7 +289,10 @@ def FitPoints(points, current, norm):
         r0 = map(lambda y : beta[3] - vector.norm(y), m)
         g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
         fac = .03 # weight deviation as 1 degree ~ .03 mag
-        r1 = map(lambda y, z : fac*beta[3]*(beta[4] - math.degrees(math.asin(vector.dot(y, z)/vector.norm(y)))), m, g)
+        def deg(y, z):
+            n = min(max(vector.dot(y, z)/vector.norm(y), -1), 1)
+            return math.degrees(math.asin(n))
+        r1 = map(lambda y, z : fac*beta[3]*(beta[4] - deg(y, z)), m, g)
         return r0 + r1
     new_sphere3d_fit = FitLeastSq(initial[:4] + [0], f_new_sphere3, zpoints, 2)
     if not new_sphere3d_fit or new_sphere3d_fit[3] < 0:
