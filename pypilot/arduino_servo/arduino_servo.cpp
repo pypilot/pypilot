@@ -86,6 +86,7 @@ bool ArduinoServo::initialize(int baud)
     int cnt = 0;
     bool data = false;
     while (!(flags & SYNC)) {
+        raw_command(0); // ensure we set the temp limits as well here
         stop();
         if(poll()>0) {
             while(poll());
