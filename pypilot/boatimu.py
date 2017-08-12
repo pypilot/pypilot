@@ -59,19 +59,19 @@ def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
     s.KalmanRk, s.KalmanQ = .002, .001
 #    s.KalmanRk, s.KalmanQ = .0005, .001
 
-    rtimu = RTIMU.RTIMU(s)    
-
-    print("Using settings file " + SETTINGS_FILE + ".ini")
-    if not os.path.exists(SETTINGS_FILE + ".ini"):
-        print("Settings file does not exist, will be created")
-
-    print("IMU Name: " + rtimu.IMUName())
-
     while True:
+      print("Using settings file " + SETTINGS_FILE + ".ini")
+      rtimu = RTIMU.RTIMU(s)
+      if rtimu.IMUName() == 'Null IMU':
+        print 'no IMU detected... try again'
+        time.sleep(1)
+        continue
+      
+      print("IMU Name: " + rtimu.IMUName())
+
       if not rtimu.IMUInit():
         print("ERROR: IMU Init Failed, no inertial data available")
-        time.sleep(3)
-        exit(1) # if we run without gyros, how to inform user???
+        time.sleep(1)
         continue
 
       # this is a good time to set any fusion parameters
@@ -108,7 +108,7 @@ def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
           #rtimu.resetFusion()
         
         dt = time.time() - t0
-        t = .1 - dt # 10hz
+        t = BoatIMU.period - dt # 10hz
 
         if t > 0:
           time.sleep(t)
@@ -185,6 +185,7 @@ def heading_filter(lp, a, b):
     return result
 
 class BoatIMU(object):
+  period = .1 # 10hz
   def __init__(self, server, *args, **keywords):
     self.server = server
 
@@ -270,6 +271,10 @@ class BoatIMU(object):
           self.SensorValues[name].set(False)
       return False
   
+    if vector.norm(data['accel']) == 0:
+      print 'vector n', data['accel']
+      return False
+
     self.last_imuread = time.time()
     self.loopfreq.strobe()
 
@@ -283,10 +288,6 @@ class BoatIMU(object):
     # apply alignment calibration
     origfusionQPose = data['fusionQPose']
     data['fusionQPose'] = quaternion.multiply(data['fusionQPose'], self.alignmentQ.value)
-
-    if vector.norm(data['accel']) == 0:
-      print 'vector n', data['accel']
-      return False
 
     data['roll'], data['pitch'], data['heading'] = map(math.degrees, quaternion.toeuler(data['fusionQPose']))
 
@@ -384,6 +385,6 @@ if __name__ == "__main__":
       print 'pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading']
     server.HandleRequests()
     dt = time.time() - t0
-    if dt > .1:
+    if dt > BoatIMU.period:
       time.sleep(dt);
 
