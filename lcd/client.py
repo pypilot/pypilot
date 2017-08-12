@@ -155,7 +155,7 @@ class rectangle():
 
 AUTO, MENU, UP, DOWN, SELECT, LEFT, RIGHT = range(7)
 keynames = {'auto': AUTO, 'menu': MENU, 'up': UP, 'down': DOWN, 'select': SELECT, 'left': LEFT, 'right': RIGHT}
-gains = ['ap.P', 'ap.I', 'ap.D', 'ap.FF']
+gains = ['ap.P', 'ap.DD', 'ap.D', 'ap.FF']
 
 class LCDClient():
     def __init__(self, screen):
