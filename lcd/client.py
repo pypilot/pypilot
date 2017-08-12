@@ -442,8 +442,9 @@ class LCDClient():
         size = font.draw(self.surface, pos, text, size, self.bw, crop)
         return float(size[0])/self.surface.width, float(size[1])/self.surface.height
 
-    def fittext(self, rect, text, wordwrap=False, fill=None):
-        if fill:
+    def fittext(self, rect, text, wordwrap=False, fill='none'):
+        #print 'fittext', text, wordwrap, fill
+        if fill != 'none':
             self.surface.box(*(self.convrect(rect) + [fill]))
         metric_size = 16
         if wordwrap:
@@ -684,7 +685,7 @@ class LCDClient():
         else:
             # no warning, display the desired course or 'standby'
             if self.last_msg['ap.enabled'] != True:
-                if self.control['heading_command'] != 'standby' or True:
+                if self.control['heading_command'] != 'standby':
                     r = rectangle(0, .4, 1, .34)
                     self.fittext(r, _('standby'), False, black)
                     self.control['heading_command'] = 'standby'
@@ -710,7 +711,7 @@ class LCDClient():
                 self.fittext(r, s, True, white)
                 self.invertrectangle(r)
                 self.control['mode'] = 'warning'
-            if ndeviation == 0:
+            if ndeviation == 0 and False:
                 warncal(_('No Cal'))
                 warning = True
             if ndeviation > 6:
@@ -1015,7 +1016,7 @@ class LCDClient():
             self.keystate[pini] = value
 
         if LIRC:
-            if self.lirctime and time.time()- self.lirctime > .25:
+            if self.lirctime and time.time()- self.lirctime > .35:
                 self.keypad[self.lirckey] = 0
                 self.keypadup[self.lirckey] = True
                 self.lirctime = False
@@ -1028,7 +1029,7 @@ class LCDClient():
                 repeat = code[0]['repeat']
 
                 lirc_mapping = {'up': UP, 'down': DOWN, 'left': LEFT, 'right': RIGHT,
-                                'power': AUTO, 'select': MENU, 'mute': MENU, 'tab': SELECT}
+                                'power': AUTO, 'select': SELECT, 'mute': MENU, 'tab': MENU}
                 code = code[0]['config']
                 if not code in lirc_mapping:
                     continue
@@ -1082,28 +1083,28 @@ class LCDClient():
 
 def main():
     print 'init...'
-    if 'nokia5110' in sys.argv:
-        sys.argv.remove('nokia5110')
-        print 'using nokia5110'
-        #import nokia5110lcd
-        #screen = nokia5110lcd.screen()
-        screen = ugfx.nokia5110screen()
+    screen = None
+    for arg in sys.argv:
+        if 'nokia5110' in arg:
+            sys.argv.remove(arg)
+            print 'using nokia5110'
+            screen = ugfx.nokia5110screen()
 
-    elif use_glut:
-        screen = glut.screen((120, 210))
-        #screen = glut.screen((64, 128))
-        #screen = glut.screen((48, 84))
-    else:
-        screen = ugfx.screen("/dev/fb0")
-        if screen.width == 416 and screen.height == 656:
-            # no actual device or display
-            print 'no actual screen, running headless'
-            screen = None
+    if not screen:
+        if use_glut:
+            screen = glut.screen((120, 210))
+            #screen = glut.screen((64, 128))
+            #screen = glut.screen((48, 84))
+        else:
+            screen = ugfx.screen("/dev/fb0")
+            if screen.width == 416 and screen.height == 656:
+                # no actual device or display
+                print 'no actual screen, running headless'
+                screen = None
 
-        if screen.width > 480:
-            screen.width = 480
-            screen.height= min(screen.height, 640)
-
+            if screen.width > 480:
+                screen.width = 480
+                screen.height= min(screen.height, 640)
 
     lcdclient = LCDClient(screen)
     if screen:
