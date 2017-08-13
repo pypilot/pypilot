@@ -474,7 +474,6 @@ class NmeaBridgeProcess(multiprocessing.Process):
             data = line[7:len(line)-3].split(',')
             #if not self.last_values['ap.enabled']:
             #    self.client.set('ap.enabled', True)
-            #print 'apb', data, self.last_values
             if self.last_values['ap.enabled']:
                 mode = 'compass' if data[13] == 'M' else 'gps'
                 if self.last_values['ap.mode'] != mode:

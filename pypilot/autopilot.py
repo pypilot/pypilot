@@ -247,9 +247,8 @@ class AutopilotBase(object):
           self.heading.set(wind_direction)
 
       if self.mode.value == 'gps':
-          # if gps drops out or speed too slow, switch to compass
-          if self.nmea.values['gps']['source'].value == 'none' or \
-             self.gps_speed.value < 1:
+          # if gps drops out switch to compass
+          if self.nmea.values['gps']['source'].value == 'none':
               self.mode.set('compass')
           gps_heading = resolv(compass_heading + self.gps_compass_offset.value, 180)
           self.heading.set(gps_heading)
