@@ -17,7 +17,7 @@ from signalk.pipeserver import NonBlockingPipe
 
 import numpy
 
-debug=True
+debug=False
 calibration_fit_period = 60  # run every 60 seconds
 
 def FitLeastSq(beta0, f, zpoints, dimensions=1):
@@ -130,7 +130,8 @@ def FitPoints(points, initial, norm):
     if len(points) < 5:
         return False
 
-    print 'fitpoints initial', initial
+    if debug:
+        print 'fitpoints initial', initial
     zpoints = [[], [], [], [], [], []]
     for i in range(6):
         zpoints[i] = map(lambda x : x[i], points)
@@ -138,7 +139,8 @@ def FitPoints(points, initial, norm):
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
     if point_max_dev < 7:
-        print '0d fit, insufficient data', point_dev, point_max_dev, '< 7'
+        if debug:
+            print '0d fit, insufficient data', point_dev, point_max_dev, '< 7'
         return False
 
     line, plane = LinearFit(points)
@@ -173,7 +175,8 @@ def FitPoints(points, initial, norm):
         return r0 + r1
     new_sphere1d_fit = FitLeastSq([0, initial[3], 90], f_new_sphere1, zpoints, 2)
     if not new_sphere1d_fit or new_sphere1d_fit[2] < 0:
-        print 'FitLeastSq new_sphere1 failed!!!! ', len(points)
+        if debug:
+            print 'FitLeastSq new_sphere1 failed!!!! ', len(points)
         new_sphere1d_fit = initial
     else:
         new_sphere1d_fit = map(lambda x, a: x + new_sphere1d_fit[0]*a, initial[:3], norm) + new_sphere1d_fit[1:]
@@ -181,7 +184,8 @@ def FitPoints(points, initial, norm):
         #print 'new sphere1 fit', new_sphere1d_fit
         
     if line_max_dev < 3:
-        print 'line fit found, insufficient data', line_dev, line_max_dev
+        if debug:
+            print 'line fit found, insufficient data', line_dev, line_max_dev
         return [new_sphere1d_fit, False, False]
     
     # 2d sphere fit across normal vector
@@ -216,14 +220,16 @@ def FitPoints(points, initial, norm):
         return r0 + r1
     new_sphere2d_fit = FitLeastSq([0, 0, initial[3], 90], f_new_sphere2, zpoints, 2)
     if not new_sphere2d_fit or new_sphere2d_fit[3] < 0:
-        print 'FitLeastSq sphere failed!!!! ', len(points)
+        if debug:
+            print 'FitLeastSq sphere failed!!!! ', len(points)
         return False
     new_sphere2d_fit = map(lambda x, a, b: x + new_sphere2d_fit[0]*a + new_sphere2d_fit[1]*b, initial[:3], u, v) + new_sphere2d_fit[2:]
     new_sphere2d_fit = [new_sphere2d_fit, ComputeDeviation(points, new_sphere2d_fit), 2]
     #print 'new sphere2 fit', new_sphere2d_fit
 
     if plane_max_dev < 1.2:
-        print 'plane fit found, 2D fit only', plane_fit, plane_dev, plane_max_dev
+        if debug:
+            print 'plane fit found, 2D fit only', plane_fit, plane_dev, plane_max_dev
         return [new_sphere1d_fit, new_sphere2d_fit, False]
 
     '''
@@ -250,7 +256,8 @@ def FitPoints(points, initial, norm):
         return r0 + r1
     new_sphere3d_fit = FitLeastSq(initial[:4] + [90], f_new_sphere3, zpoints, 2)
     if not new_sphere3d_fit or new_sphere3d_fit[3] < 0:
-        print 'FitLeastSq sphere failed!!!! ', len(points)
+        if debug:
+            print 'FitLeastSq sphere failed!!!! ', len(points)
         return False
     new_sphere3d_fit = [new_sphere3d_fit, ComputeDeviation(points, new_sphere3d_fit), 3]
     #print 'new sphere3 fit', new_sphere3d_fit
@@ -443,10 +450,12 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
 
         g_required_dev = .15 # must have more than this to allow 1d or 3d fit
         avg, g_dev, g_max_dev = PointFit(gpoints)
-        print 'gdev', g_dev, g_max_dev
+        if debug:
+            print 'gdev', g_dev, g_max_dev
         if g_max_dev < g_required_dev:
             c = fit[1] # use 2d fit
-            print 'sigmapoints flat, 2d fit only'
+            if debug:
+                print 'sigmapoints flat, 2d fit only'
         else:
             c = fit[2] # 3d fit
             if not c:
@@ -466,7 +475,8 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
         # make sure the magnitude is sane
         mag = c[0][3]
         if mag < 7 or mag > 80:
-            print 'fit found field outside of normal earth field strength', mag
+            if debug:
+                print 'fit found field outside of normal earth field strength', mag
             continue
 
         # sphere fit should basically agree with new bias
@@ -485,7 +495,8 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
         # test points for deviation, all must fall on a sphere
         deviation = c[1]
         if deviation[0] > .15 or deviation[1] > 3:
-            print 'bad fit:', deviation
+            if debug:
+                print 'bad fit:', deviation
             cal.RemoveOldest()            # remove oldest point if too much deviation
             continue # don't use this fit
         
@@ -496,7 +507,8 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
                 print 'insufficient change in bias, calibration ok'
             continue
 
-        print 'coverage', coverage, 'new fit:', c
+        if debug:
+            print 'coverage', coverage, 'new fit:', c
         fit_output.send((c, map(lambda p : p.compass + p.down, cal.sigma_points)), False)
         initial = c[0]
                                  
