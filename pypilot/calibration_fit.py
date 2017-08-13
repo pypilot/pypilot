@@ -18,7 +18,7 @@ from signalk.pipeserver import NonBlockingPipe
 import numpy
 
 debug=True
-calibration_fit_period = 10  # run every 10 seconds
+calibration_fit_period = 60  # run every 60 seconds
 
 def FitLeastSq(beta0, f, zpoints, dimensions=1):
     try:
@@ -130,6 +130,7 @@ def FitPoints(points, initial, norm):
     if len(points) < 5:
         return False
 
+    print 'fitpoints initial', initial
     zpoints = [[], [], [], [], [], []]
     for i in range(6):
         zpoints[i] = map(lambda x : x[i], points)
@@ -176,8 +177,8 @@ def FitPoints(points, initial, norm):
         new_sphere1d_fit = initial
     else:
         new_sphere1d_fit = map(lambda x, a: x + new_sphere1d_fit[0]*a, initial[:3], norm) + new_sphere1d_fit[1:]
-    if debug:
-        print 'new sphere1 fit', new_sphere1d_fit, new_sphere1d_fit[4], ComputeDeviation(points, new_sphere1d_fit)
+    new_sphere1d_fit = [new_sphere1d_fit, ComputeDeviation(points, new_sphere1d_fit), 1]
+        #print 'new sphere1 fit', new_sphere1d_fit
         
     if line_max_dev < 3:
         print 'line fit found, insufficient data', line_dev, line_max_dev
@@ -218,10 +219,10 @@ def FitPoints(points, initial, norm):
         print 'FitLeastSq sphere failed!!!! ', len(points)
         return False
     new_sphere2d_fit = map(lambda x, a, b: x + new_sphere2d_fit[0]*a + new_sphere2d_fit[1]*b, initial[:3], u, v) + new_sphere2d_fit[2:]
-    if debug:
-        print 'new sphere2 fit', new_sphere2d_fit, new_sphere2d_fit[4], ComputeDeviation(points, new_sphere2d_fit)
+    new_sphere2d_fit = [new_sphere2d_fit, ComputeDeviation(points, new_sphere2d_fit), 2]
+    #print 'new sphere2 fit', new_sphere2d_fit
 
-    if plane_max_dev < 1.5:
+    if plane_max_dev < 1.2:
         print 'plane fit found, 2D fit only', plane_fit, plane_dev, plane_max_dev
         return [new_sphere1d_fit, new_sphere2d_fit, False]
 
@@ -251,8 +252,8 @@ def FitPoints(points, initial, norm):
     if not new_sphere3d_fit or new_sphere3d_fit[3] < 0:
         print 'FitLeastSq sphere failed!!!! ', len(points)
         return False
-    if debug:
-        print 'new sphere3 fit', new_sphere3d_fit, new_sphere3d_fit[4], ComputeDeviation(points, new_sphere3d_fit)
+    new_sphere3d_fit = [new_sphere3d_fit, ComputeDeviation(points, new_sphere3d_fit), 3]
+    #print 'new sphere3 fit', new_sphere3d_fit
     
     return [new_sphere1d_fit, new_sphere2d_fit, new_sphere3d_fit]
 
@@ -424,7 +425,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
             p.append(sigma.compass + sigma.down)
 
         if debug:
-            print 'FitPoints', len(p)
+            print 'FitPoints', len(p), norm
 
         # for now, require at least 6 points to agree well for update
         if len(p) < 6:
@@ -440,10 +441,10 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
         if debug:
             print 'fit', fit
 
+        g_required_dev = .15 # must have more than this to allow 1d or 3d fit
         avg, g_dev, g_max_dev = PointFit(gpoints)
-        g_dev = .07 # must have more than this to allow 1d or 3d fit
         print 'gdev', g_dev, g_max_dev
-        if g_max_dev < g_dev:
+        if g_max_dev < g_required_dev:
             c = fit[1] # use 2d fit
             print 'sigmapoints flat, 2d fit only'
         else:
@@ -452,10 +453,9 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
                 c = fit[0] # 1d fit only possible
 
         if not c:
-            print 'insufficient data'
             continue
                 
-        coverage = 360 - math.degrees(ComputeCoverage(cal.sigma_points, c[:3]))
+        coverage = 360 - math.degrees(ComputeCoverage(cal.sigma_points, c[0][:3]))
         if coverage < 120: # require 120 degrees
             if debug:
                 print 'calibration: not enough coverage', coverage, 'degrees'
@@ -464,7 +464,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
             c = fit[0] # 1d fit ok with insufficient coverage
 
         # make sure the magnitude is sane
-        mag = c[3]
+        mag = c[0][3]
         if mag < 7 or mag > 80:
             print 'fit found field outside of normal earth field strength', mag
             continue
@@ -483,33 +483,22 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
         print 'sphere bias difference', sbd
         '''
         # test points for deviation, all must fall on a sphere
-        bias = c[:3]
-        mag = c[3]
-        maxdev = 0
-        for sigma in cal.sigma_points:
-            dev = map(lambda a, b: (a-b)/mag, sigma.compass, bias)
-            maxdev = max(abs(1-vector.norm(dev)), maxdev)
-            maxdev_sigma = sigma
-        if debug:
-            print 'maxdev', maxdev
-        if maxdev > .2:
-            if debug:
-                print 'maxdev > 0.1', maxdev
+        deviation = c[1]
+        if deviation[0] > .15 or deviation[1] > 3:
+            print 'bad fit:', deviation
             cal.RemoveOldest()            # remove oldest point if too much deviation
             continue # don't use this fit
         
         # if the bias has not sufficiently changed,
         # the fit didn't change much, so don't bother to report this update
-        n = map(lambda a, b: (a-b)**2, bias, initial[:3])
-        d = n[0]+n[1]+n[2]
-        if d < .1:
+        if vector.dist2(c[0], initial) < .1:
             if debug:
                 print 'insufficient change in bias, calibration ok'
             continue
 
-        print 'coverage', coverage, 'new fit:', fit
-        initial = c
-        fit_output.send(([c, fit[0], fit[1]], map(lambda p : p.compass + p.down, cal.sigma_points)), False)
+        print 'coverage', coverage, 'new fit:', c
+        fit_output.send((c, map(lambda p : p.compass + p.down, cal.sigma_points)), False)
+        initial = c[0]
                                  
 class MagnetometerAutomaticCalibration(object):
     def __init__(self, cal_pipe, initial):
