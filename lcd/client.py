@@ -705,7 +705,7 @@ class LCDClient():
             if cal == 'N/A':
                 ndeviation = 0
             else:
-                ndeviation = cal[0][3] - cal[2][3]
+                ndeviation = cal[1][0]
             def warncal(s):
                 r = rectangle(0, .75, 1, .15)
                 self.fittext(r, s, True, white)
@@ -811,10 +811,10 @@ class LCDClient():
         deviation = _('N/A')
         try:
             cal = self.last_msg['imu.compass_calibration']
-            ndeviation = cal[0][3] - cal[2][3]
+            ndeviation = cal[0][1]
             #print ndeviation
-            names = [(0, _('incomplete')), (1, _('excellent')), (2, _('good')),
-                     (4, _('fair')), (6, _('poor')), (1000, _('bad'))]
+            names = [(0, _('incomplete')), (.01, _('excellent')), (.02, _('good')),
+                     (.04, _('fair')), (.06, _('poor')), (1000, _('bad'))]
             for n in names:
                 if ndeviation <= n[0]:
                     deviation = n[1]
