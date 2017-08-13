@@ -121,8 +121,6 @@ class AutopilotBase(object):
     timestamp = self.server.TimeStamp('ap')
     self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)
     self.heading_error = self.Register(SensorValue, 'heading_error', timestamp)
-    self.heading_error_int = self.Register(SensorValue, 'heading_error_int', timestamp)
-    self.heading_error_int_time = time.time()
 
     self.gps_compass_offset = self.Register(SensorValue, 'gps_offset', timestamp, directional=True)
     self.gps_speed = self.Register(SensorValue, 'gps_speed', timestamp)
@@ -290,12 +288,6 @@ class AutopilotBase(object):
 
       t = time.time()
       self.server.TimeStamp('ap', t)
-      dt = t - self.heading_error_int_time
-      dt = max(min(dt, 1), 0) # ensure dt is from 0 to 1
-      self.heading_error_int_time = t
-      # int error +- 1, from 0 to 500 deg/s
-      self.heading_error_int.set(minmax(self.heading_error_int.value + \
-                                        (self.heading_error.value/500)*dt, 1))
       self.process_imu_data() # implementation specific process
 
       # servo can only disengauge under manual control
