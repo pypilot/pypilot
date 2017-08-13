@@ -474,12 +474,13 @@ class NmeaBridgeProcess(multiprocessing.Process):
             data = line[7:len(line)-3].split(',')
             #if not self.last_values['ap.enabled']:
             #    self.client.set('ap.enabled', True)
+            #print 'apb', data, self.last_values
             if self.last_values['ap.enabled']:
-                mode = 'compass' if data[11] == 'M' else 'gps'
+                mode = 'compass' if data[13] == 'M' else 'gps'
                 if self.last_values['ap.mode'] != mode:
                     self.client.set('ap.mode', mode)
 
-                command = float(data[10])
+                command = float(data[12])
                 if abs(self.last_values['ap.heading_command'] - command) > .1:
                     self.client.set('ap.heading_command', command)
 
@@ -506,7 +507,12 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
     def socket_lost(self, sock):
         #print 'lost connection: ', self.addresses[sock]
-        self.sockets.remove(sock)
+        try:
+            self.sockets.remove(sock)
+        except:
+            print 'sock not in sockets!'
+            pass
+        
         if not self.sockets:
             self.setup_watches(False)
             self.pipe.send('nosockets')
@@ -516,6 +522,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
             fd = sock.socket.fileno()
             del self.fd_to_socket[fd]
         except:
+            print 'bad file descriptor', fd
             pass # Bad file descriptor, can't unregister
         sock.close()
 
@@ -611,9 +618,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
             try:
                 signalk_msgs = self.client.receive()
                 for name in signalk_msgs:
-                    self.client_message(name, msgs[name]['value'])
-            except:
-                pass
+                    self.client_message(name, signalk_msgs[name]['value'])
+            except Exception, e:
+                print 'nmea exception receiving:', e
 
             t4 = time.time()
             for sock in self.sockets:
