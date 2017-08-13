@@ -167,8 +167,15 @@ class NMEASocket(object):
                 self.out_buffer = ''
                 return
             count = self.socket.send(self.out_buffer)
+            if count < 0:
+                print 'nmea socket send error'
+                self.out_buffer = ''
+                self.socket.close()
+                return
+
             self.out_buffer = self.out_buffer[count:]
         except:
+            self.out_buffer = ''
             self.socket.close()
 
     
@@ -319,7 +326,7 @@ class Nmea(object):
             if value['source'].value == 'none':
                 continue
             if t4 - value['lastupdate'] > 5:
-                print 'nmea timeout for', name, 'source', value['source'].value
+                print 'nmea timeout for', name, 'source', value['source'].value, time.time()
                 value['source'].set('none')
 
         # send nmea messages to sockets
@@ -389,6 +396,8 @@ class Nmea(object):
             for vname in msg:
                 if vname != 'timestamp':
                     value[vname].set(msg[vname])
+            if value['source'].value != source:
+                print 'nmea source for', name, 'source', source, time.time()
             value['source'].update(source)
             value['lastupdate'] = time.time()
 

@@ -91,9 +91,17 @@ class AutopilotBase(object):
         sys.stdout.flush()
         raise KeyboardInterrupt # to get backtrace on all processes
 
+    # unfortunately we occasionally get this signal,
+    # some sort of timing issue where python doesn't realize the pipe
+    # is broken yet, so doesn't raise an exception
+    def printpipewarning(signal_number, frame):
+        print 'got SIGPIPE, ignoring'
+
     import signal
     for s in range(1, 16):
-        if s != 9:
+        if s == 13:
+            signal.signal(s, printpipewarning)
+        elif s != 9:
             signal.signal(s, cleanup)
 
     serial_probe = serialprobe.SerialProbe()
@@ -125,7 +133,7 @@ class AutopilotBase(object):
     self.wind_direction = self.Register(SensorValue, 'wind_direction', timestamp, directional=True)
     self.wind_speed = self.Register(SensorValue, 'wind_speed', timestamp)
 
-    self.runtime = self.Register(AgeValue, 'runtime') #, persistent=True)
+    self.runtime = self.Register(TimeValue, 'runtime') #, persistent=True)
 
     device = '/dev/watchdog0'
     self.watchdog_device = False
@@ -226,7 +234,7 @@ class AutopilotBase(object):
 
           offset = truewindd - compass_heading
           d = .01
-          self.true_wind_compass_offset.set(resolv(d*offset + (1-d)*self.true_wind_compass_offset.value), 180)
+          self.true_wind_compass_offset.set(resolv(d*offset + (1-d)*self.true_wind_compass_offset.value, 180))
           true_wind = resolv(compass_heading + self.true_wind_compass_offset.value, 180)
           self.heading.set(true_wind)
       if self.mode.value == 'wind':
@@ -267,6 +275,8 @@ class AutopilotBase(object):
               self.heading_command.set(resolv(self.heading.value - err, 180))
           self.runtime.update()
           self.servo.servo_calibration.stop()
+      else:
+          self.runtime.stop()
 
       # filter the incoming heading and gyro heading
       # error +- 60 degrees
