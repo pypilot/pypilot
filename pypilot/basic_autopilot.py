@@ -32,8 +32,9 @@ class BasicAutopilot(AutopilotBase):
     def PosGain(name, default, max_val):
       Gain(name, default, 0, max_val)
         
-    PosGain('D',  .1, 1.0)
     PosGain('P', .003, .01)
+    PosGain('I', 0, .1)
+    PosGain('D',  .1, 1.0)
     PosGain('DD',  .05, 1.0)
     
     def PosGain2(name, default, max_val, other):
@@ -52,6 +53,7 @@ class BasicAutopilot(AutopilotBase):
     if self.enabled.value != self.lastenabled:
       self.lastenabled = self.enabled.value
       if self.enabled.value:
+        self.heading_error_int.set(0) # reset integral
         # reset feed-forward gain
         self.last_heading_command = self.heading_command.value
         self.heading_command_rate.set(0)
@@ -81,8 +83,9 @@ class BasicAutopilot(AutopilotBase):
     command = 0
     headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = self.boatimu.SensorValues['headingraterate_lowpass'].value
-    gain_values = {'D': headingrate,
-                   'P': self.heading_error.value,
+    gain_values = {'P': self.heading_error.value,
+                   'I': self.heading_error_int.value,
+                   'D': headingrate,      
                    'DD': headingraterate,
                    'FF': -self.heading_command_rate.value}
     PR = math.sqrt(abs(gain_values['D']))
