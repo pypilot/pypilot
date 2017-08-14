@@ -34,7 +34,6 @@ $(document).ready(function() {
     $('#power_consumption').text("N/A");
     $('#runtime').text("N/A");
 
-    var gains = ['P', 'I', 'D', 'PR', 'D2', 'FF'];
     var conf_names = [['servo.min_speed', 'min_speed',''],
                       ['servo.max_speed', 'max_speed',''],
                       ['servo.max_current', 'max_current','Amps'],
@@ -70,6 +69,7 @@ $(document).ready(function() {
     var block_polling = 0;
 
     var servo_command = 0, servo_command_timeout=0;
+    var gains = [];
     socket.on('signalk_connect', function(msg) {
         $('#connection').text('Connected')
         $('#aperrors0').text("");
@@ -83,6 +83,11 @@ $(document).ready(function() {
         // gain
         $('#gain_container').text('')
         var list_values = JSON.parse(msg)
+        gains = [];
+        for (var name in list_values)
+            if('AutopilotGain' in list_values[name] && name.substr(0, 3) == 'ap.')
+                gains.push(name.substr(3)); // remove ap.
+
         for (var i = 0; i<gains.length; i++) {
             var w = $(window).width();
             var info = list_values['ap.' + gains[i]]
