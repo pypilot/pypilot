@@ -474,14 +474,15 @@ class NmeaBridgeProcess(multiprocessing.Process):
             data = line[7:len(line)-3].split(',')
             #if not self.last_values['ap.enabled']:
             #    self.client.set('ap.enabled', True)
+            #print 'apb', data
             if self.last_values['ap.enabled']:
                 mode = 'compass' if data[13] == 'M' else 'gps'
                 if self.last_values['ap.mode'] != mode:
                     self.client.set('ap.mode', mode)
 
-                command = float(data[12])
-                if abs(self.last_values['ap.heading_command'] - command) > .1:
-                    self.client.set('ap.heading_command', command)
+            command = float(data[12])
+            if abs(self.last_values['ap.heading_command'] - command) > .1:
+                self.client.set('ap.heading_command', command)
 
     def new_socket_connection(self, server):
         connection, address = server.accept()
