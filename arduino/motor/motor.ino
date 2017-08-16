@@ -380,10 +380,10 @@ void process_packet()
     case STOP:
         stop();
         if (flags & (OVERTEMP | OVERCURRENT | FAULTPIN)) {
-            //flags &= ~(OVERTEMP | OVERCURRENT | FAULTPIN);
-            flags = 0; // force resync
+            flags &= ~(OVERTEMP | OVERCURRENT | FAULTPIN);
+            //  flags = 0; // force resync
         }
-        delay(60); // stay stopped for at least some time
+        //delay(60); // stay stopped for at least some time
         break;
     case COMMAND:
         if(value > 2000) {

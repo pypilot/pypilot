@@ -84,7 +84,7 @@ bool ArduinoServo::initialize(int baud)
 {
     int cnt = 0;
     bool data = false;
-    while (flags & OVERCURRENT || !(flags & SYNC)) {
+    while (!(flags & SYNC)) {
         stop();
         if(poll()>0) {
             while(poll());
@@ -130,6 +130,8 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
         flags = value;
 //        if(flags != 9)
         //printf("servo flags %d %x\n", flags, flags);
+        if(flags & INVALID)
+            printf("servo received invalid packet (check serial connection)\n")
         return FLAGS;
     }
     return 0;

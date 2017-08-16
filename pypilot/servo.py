@@ -167,6 +167,9 @@ class Servo(object):
         self.windup_change = 0
 
         self.disengauged = True
+        self.disengauge_on_timeout = self.Register(BooleanValue, 'disengauge_on_timeout', False)
+        self.force_engauged = False
+
         self.last_zero_command_time = self.command_timeout = time.time()
 
         self.mode = self.Register(StringValue, 'mode', 'none')
@@ -180,12 +183,18 @@ class Servo(object):
         return self.server.Register(_type(*(['servo/' + name] + list(args)), **kwargs))
 
     def send_command(self):
+        if self.fwd_fault:
+            print 'fwd fault', time.time()
+        if self.rev_fault:
+            print 'rev fault', time.time()
         t = time.time()
 
         def engauge():
             if self.disengauged:
-                print 'engauge'
                 self.disengauged = False
+                
+        if not self.disengauge_on_timeout.value:
+            engauge()
 
         timeout = 1 # command will expire after 1 second
         if self.rawcommand.value:
@@ -193,6 +202,10 @@ class Servo(object):
                 self.disengauged = True
                 self.rawcommand.update(0)
             else:
+                if self.fwd_fault and self.rawcommand.value < 0:
+                    self.fwd_fault = False
+                elif self.rev_fault and self.rawcommand.value > 0:
+                    self.rev_fault = False
                 engauge()
                 self.raw_command(self.rawcommand.value)
         elif self.command.value:
@@ -204,7 +217,9 @@ class Servo(object):
                 self.velocity_command(self.command.value)
         else:
             #print 'timeout', t - self.command_timeout
-            if t - self.command_timeout > self.period.value*3:
+            if self.disengauge_on_timeout.value and \
+               not self.servo.force_engauged and \
+               t - self.command_timeout > self.period.value*3:
                 self.disengauged = True
             self.raw_command(0)
 
@@ -213,17 +228,6 @@ class Servo(object):
         t = time.time()
         dt = t - self.lastpositiontime
         self.lastpositiontime = t
-
-        if self.fault():
-            if self.speed > 0:
-                self.fwd_fault = True
-                self.position = 1
-            elif self.speed < 0:
-                self.rev_fault = True
-                self.position = -1
-
-            self.stop()
-            return
 
         if speed == 0 and self.speed == 0: # optimization
             self.raw_command(0)
@@ -274,6 +278,7 @@ class Servo(object):
         # integrate windup
         self.windup += (speed - self.speed) * dt
 
+        # if windup overflows, move at minimum speed
         if abs(self.windup) > self.period.value*min_speed / 1.5:
             if abs(speed) < min_speed:
                 speed = min_speed if self.windup > 0 else -min_speed
@@ -298,7 +303,12 @@ class Servo(object):
 
         # clamp to max speed
         speed = min(max(speed, -self.max_speed.value), self.max_speed.value)
-        self.speed = speed
+        if True:
+            self.speed = speed
+        else:
+            # estimate true speed from voltage, current, and last command
+            # TODO
+            pass
 
         if speed > 0:
             cal = self.calibration.value['forward']
@@ -309,11 +319,24 @@ class Servo(object):
             return
 
         raw_speed = cal[0] + abs(speed)*cal[1]
-        command = raw_speed if speed > 0 else -raw_speed
+        if speed < 0:
+            raw_speed = - raw_speed
+        command = raw_speed
 
         self.raw_command(command)
 
     def raw_command(self, command):
+        if self.fault():
+            if self.speed > 0:
+                self.fwd_fault = True
+                self.position = 1
+            elif self.speed < 0:
+                self.rev_fault = True
+                self.position = -1
+
+            self.stop()
+            return
+        
         if self.brake_hack_state == 1:
             if self.fault():
                 return
@@ -374,17 +397,20 @@ class Servo(object):
         # only send at .5 seconds when command is zero
         t = time.time()
         if command == 0:
-            if t > self.command_timeout and t - self.last_zero_command_time < .5:
-                return
+            #if t > self.command_timeout and t - self.last_zero_command_time < .5:
+            #    return
             self.last_zero_command_time = t
         else:
             self.command_timeout = t
                 
         if self.driver:
-            if self.disengauged:
+            if self.disengauged: # keep sending disengauge to keep sync
                 self.driver.disengauge()
             else:
-                self.driver.max_values(self.max_current.value, self.max_controller_temp.value)
+                max_current = self.max_current.value
+                if self.fwd_fault or self.rev_fault: # allow more current to "unstuck" ram
+                    max_current *= 2
+                self.driver.max_values(max_current, self.max_controller_temp.value)
                 self.driver.command(command)
 
     def stop(self):
@@ -466,7 +492,7 @@ class Servo(object):
             self.calibration.set(json.loads(file.readline()))
         except:
             print 'WARNING: using default servo calibration!!'
-            self.calibration.set({'forward': [0, .6], 'reverse': [0, .6]})
+            self.calibration.set({'forward': [.2, .6], 'reverse': [.2, .6]})
 
     def save_calibration(self):
         file = open(Servo.calibration_filename, 'w')
