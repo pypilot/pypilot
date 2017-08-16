@@ -57,6 +57,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.fusionQPose = [1, 0, 0, 0]
 
     def on_con(self, client):
+        '''
         watchlist = ['imu/compass_calibration', 'imu/compass_calibration_age', \
                      'imu/compass', 'imu/compass_calibration_sigmapoints', \
                      'imu/compass_calibration_locked', \
@@ -65,6 +66,14 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                      'imu/alignmentQ', 'imu/pitch', 'imu/roll', 'imu/heel', \
                      'imu/heading_offset', 'servo/calibration', \
                      'servo/Max Current']
+        '''
+        watchlist = ['imu/compass_calibration', 'imu/compass_calibration_age', \
+                     'imu/compass', 'imu/compass_calibration_sigmapoints', \
+                     'imu/compass_calibration_locked', \
+                     'imu/accel', 'imu/fusionQPose', 'imu/alignmentCounter', \
+                     'imu/heading', \
+                     'imu/alignmentQ', 'imu/pitch', 'imu/roll', 'imu/heel', \
+                     'imu/heading_offset']
         for name in watchlist:
             client.watch(name)
 
@@ -293,7 +302,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def onMaxCurrent( self, event ):
         self.client.set('servo/Max Current', event.GetValue())
 
-if __name__ == "__main__":
+def main():
     glutInit(sys.argv)
     app = wx.App()
     CalibrationDialog().ShowModal()
+
+if __name__ == "__main__":
+    main()
