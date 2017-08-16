@@ -44,7 +44,7 @@ def FitCalibration(cal):
     commands = []
     for speed in cal:
         # only care about speed and raw command for now...
-        raw_cmd, idle_current, stall_current, idle_voltage, dt = cal[speed]
+        raw_cmd, idle_current, stall_current, idle_voltage, dt, power = cal[speed]
         speeds.append(speed)
         commands.append(raw_cmd)
     
@@ -71,24 +71,33 @@ def FitCalibration(cal):
         return map(float, fits[1][0]) # first order, good enough
     else:
         return False
+
+period_speed = .6
     
 class ServoClient(object):
     def __init__(self):
-        watches = ['servo/voltage', 'servo/current', 'servo/engauged', 'servo/command', 'servo/raw_command', 'servo/Max Current', 'servo/flags']
+        watches = ['servo/voltage', 'servo/current', 'servo/engauged', 'servo/command', 'servo/raw_command', 'servo/max_current', 'servo/flags']
         def on_con(client):
             for name in watches:
                 client.watch(name)
-        self.client = SignalKClient(on_con)
+        host = False
+        if len(sys.argv) > 1:
+            host = sys.argv[1]
+        self.client = SignalKClient(on_con, host=host
+)
                 
         # should only run one instance, for now hardcode local connection
-        self.data = {'servo/engauged': False}
+        self.data = {'servo/flags': '', 'servo/engauged': False}
         self.current_total = self.voltage_total = 0, 0
 
         self.first_command = False
         self.lastcommand = self.lastlastcommand = 0
 
     def fault(self):
-        return not self.data['servo/engauged']
+        return 'OVERCURRENT' in self.data['servo/flags'] or \
+            'OVERTEMP' in self.data['servo/flags'] or \
+            'FAULTPIN' in self.data['servo/flags'] or \
+            not self.data['servo/engauged']
 
     def process_messages(self):
         data = self.client.receive()
@@ -145,7 +154,7 @@ class ServoClient(object):
     def reset(self):
         self.stop()
         if not self.waitnofault(7):
-            print 'servo reset failed'
+            print 'servo reset failed', self.fault(), self.data['servo/flags']
             exit(1)
 
     def average_power(self, timeout):
@@ -154,22 +163,74 @@ class ServoClient(object):
         while time.time() - start < timeout or self.current_total[1] == 0:
             self.process_messages()
             if self.fault():
-                print 'fault in avg power, set the servo current higher!'
+                #print 'fault in avg power, set the servo current higher!'
+                dt = timeout - (time.time() - start)
+                if dt > 0:
+                    time.sleep(dt)
                 break
+
             time.sleep(.01)
 
         if self.voltage_total[1] == 0:
             voltage = self.data['servo/voltage']
         else:
             voltage = self.voltage_total[0] / self.voltage_total[1]
-        current = self.current_total[0] / self.current_total[1]
+        if self.current_total[1] == 0:
+            current = 0
+        else:
+            current = self.current_total[0] / self.current_total[1]
         self.voltage_total = 0, 0
         self.current_total = 0, 0
         return voltage, current, self.currenttimestamp
 
+    def calibrate_period(self, raw_cmd, period, idle_current):
+        #print 'reset, and cool down'
+        self.reset()
+        for t in range(20):
+            sys.stdout.write('%d ' % t)
+            sys.stdout.flush()
+            self.average_power(1) # wait to reset and cool
+        print 'start'
+        t0 = time.time()
+        transitions = 0
+        #print 'run', raw_cmd, period
+        while True:
+            def period_command(raw_cmd):
+                t = time.time()
+                while time.time() - t <= period - .05:
+                    self.command(raw_cmd)
+                    self.process_messages()
+                    if self.fault() and time.time() - t0 > 3:
+                        return True
+                    #print 'idle current', idle_current, self.data['servo/current']
+                    if time.time() - t0 > 3 and self.data['servo/current'] > 1.6 * idle_current:
+                        #print 'max current', self.data['servo/current'], idle_current
+                        return True
+                    time.sleep(.1)
+                return False
+
+            t1 = time.time()
+            transitions += 1
+            if period_command(raw_cmd):
+                break
+            period_command(0)
+
+        dt = t1-t0 + (time.time() - t1)*2
+        current, voltage, t = self.average_power(0)
+        power = current*voltage*dt
+        truespeed = 1/dt
+        print transitions, truespeed, 'plota' if raw_cmd > 0 else 'plotb'
+        return current, voltage, transitions, dt, power
+
+    
     def calibrate_speed(self, raw_cmd):
         self.reset()
-        self.average_power(1) # wait a second
+        for t in range(10):
+            sys.stdout.write('%d ' % t)
+            sys.stdout.flush()
+            self.average_power(1) # wait to reset and cool
+        self.client.set('servo/max_current', 10)
+
         #console('calibration raw command:', raw_cmd)
         t0 = False
 
@@ -178,15 +239,19 @@ class ServoClient(object):
         prevcurrent = False
         lp_current = 0
         count = 0
+        power = 0
+        lastt = self.currenttimestamp
         while True:
             self.command(raw_cmd)
 
-            if idle_current:
-                avgtime = .2
-            else:
-                avgtime = .5
+            avgtime = .3
 
             voltage, current, t = self.average_power(avgtime)
+            dt = t - lastt
+            lastt = t
+
+            power += voltage * current * dt
+            
             if not t0:
                 t0 = t
             if t-t0 >= self.timeout:
@@ -194,10 +259,10 @@ class ServoClient(object):
 
             #print 'current', current, idle_current, lp_current
             if idle_current and (current > idle_current*1.3 or lp_current > idle_current * 1.1):
-                #console('found stall current', current, lp_current)
+                console('found stall current', current, lp_current)
 
                 voltage, current, t1 = self.average_power(.1)
-                #console('settled to stall current', current)
+                console('settled to stall current', current)
 
                 stall_current = current
             elif self.fault():
@@ -205,17 +270,20 @@ class ServoClient(object):
                     console('motor fault without finding idle current:', raw_cmd)
                     return False
                 console('stall current above max current for raw_cmd:', raw_cmd)
-                stall_current = self.data['servo/Max Current']
-            elif idle_current and current > self.data['servo/Max Current']:
+                stall_current = self.data['servo/max_current']
+                
+            elif idle_current and current > self.data['servo/max_current']:
                 console('servo failed to stop overcurrent!!!!', current)
-                stall_current = self.data['servo/Max Current']
+                stall_current = self.data['servo/max_current']
 
             if stall_current:
-                return [raw_cmd, idle_current, stall_current, idle_voltage, t - t0]
+                return [raw_cmd, idle_current, stall_current, idle_voltage, t - t0, power]
 
-            if not idle_current and count > 1 and current > 0 and prevcurrent and \
+            if not idle_current and count > 4 and current > 0 and prevcurrent and \
                abs(prevcurrent - current) < .03:
-                #console('found idle current', current)
+                console('found idle current', current)
+                self.client.set('servo/max_current', current*1.8)
+
                 idle_current = current
                 idle_voltage = voltage
                 
@@ -227,10 +295,11 @@ class ServoClient(object):
         print 'timeout calibrating raw_cmd', raw_cmd
         return False
 
+
     def safe_raw_cmd(self, d):
         if self.brake_hack and d > 0:
             d *= 1.4
-        return .6*d
+        return period_speed*d # 60% of full speed should always work??
     
     def search_end(self, sign):
         self.reset()
@@ -238,43 +307,68 @@ class ServoClient(object):
         console('moving away from end')
         self.reset()
         self.command(self.safe_raw_cmd(-sign))
-        self.waitfault(5)
+        self.waitfault(4)
         self.reset()
         self.waitfault(1)
         console('continuing to end at', self.safe_raw_cmd(sign))
-        if not self.calibrate_speed(self.safe_raw_cmd(sign)):
+        calibration = self.calibrate_speed(self.safe_raw_cmd(sign))
+        if not calibration:
             console('failed to reach end at safe speed')
             return False
         console('reached end')
-        return True
+        return calibration
 
     def calibrate(self):
         self.brake_hack = False
-        
         self.client.set('ap/enabled', False)
-        self.client.set('servo/Brake Hack', self.brake_hack)
-        self.client.set('servo/Max Current', 10)
+        self.client.set('servo/brake_hack', self.brake_hack)
+        self.client.set('servo/max_current', 10)
+        self.client.set('servo/disengauge_on_timeout', False)
         self.client.set('servo/raw_command', 0)
 
         self.timeout = 40 # max time to move end to end
 
-        if not self.search_end(-1):
+        cal = self.search_end(-1)
+        if not cal:
             console('failed to reset servo position to start')
             console('Trying with brake hack')
             self.brake_hack = True
-            self.client.set('servo/Brake Hack', self.brake_hack)
-            if not self.search_end(-1):
+            self.client.set('servo/brake_hack', self.brake_hack)
+            cal = self.search_end(-1)
+            if not cal:
                 console('failed to reset servo position to start')
                 exit(1)
+        
+        print 'initial cal', cal
+        command, idle_current, stall_current, cal_voltage, dt, power = cal
+        truespeed = 1/dt
+        max_current = idle_current + .75*(stall_current - idle_current)
 
+        self.reset()        
+        #self.client.set('servo/max_current', max_current)
+                        
+        console('max current found', max_current)
         console('found start')
+
+        if False:
+            period = .2
+            for d in range(12):
+                print 'period', period
+                cal = self.calibrate_period(period_speed, period, idle_current)
+                print 'fwd', cal
+                cal = self.calibrate_period(-period_speed, period, idle_current)
+                print 'rev', cal
+                period *= 1.5
+                                          
+            exit(0)
+            
         calibration = {} # clear old cal
         
         complete = [False, False]
         lastspeed = [0, 0]
-        steps = 20 # speeds 20 speeds
-        mincmd = 480
-        maxcmd = 700
+        steps = 14 # speeds 20 speeds
+        mincmd = 400
+        maxcmd = 750
         stepi = 0
         for abs_raw_cmd in range(mincmd, maxcmd, (maxcmd - mincmd)/(steps-1)):
             for signi in [0, 1]:
@@ -288,9 +382,9 @@ class ServoClient(object):
                 stepi += 1
                 cal = self.calibrate_speed(raw_cmd)
                 if cal:
-                    command, idle_current, stall_current, cal_voltage, dt = cal
+                    command, idle_current, stall_current, cal_voltage, dt, power = cal
                     truespeed = 1/dt
-                    print 'truespeed', truespeed, 'lastspeed', lastspeed[signi]
+                    print 'truespeed', truespeed, 'lastspeed', lastspeed[signi], 'power', power
                     if lastspeed[signi] and truespeed / lastspeed[signi] < 1+.1/steps:
                         complete[signi] += 1
                         console('completed this direction when counter >= 3:', complete[signi])

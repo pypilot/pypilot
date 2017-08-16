@@ -64,7 +64,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                      'imu/heading', \
                      'imu/alignmentQ', 'imu/pitch', 'imu/roll', 'imu/heel', \
                      'imu/heading_offset', 'servo/calibration', \
-                     'servo/Max Current']
+                     'servo/max_current']
         for name in watchlist:
             client.watch(name)
 
@@ -138,7 +138,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         elif name == 'servo/calibration console':
             self.stServoCalibrationConsole.SetLabel(self.stServoCalibrationConsole.GetLabel() + value)
-        elif name == 'servo/Max Current':
+        elif name == 'servo/max_current':
             self.dsServoMaxCurrent.SetValue(round3(value))
 
 
@@ -291,7 +291,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.servo_console('Failed to execute servo_calibration.py.\n')
 
     def onMaxCurrent( self, event ):
-        self.client.set('servo/Max Current', event.GetValue())
+        self.client.set('servo/max_current', event.GetValue())
 
 if __name__ == "__main__":
     glutInit(sys.argv)
