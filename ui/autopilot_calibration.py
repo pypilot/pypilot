@@ -293,7 +293,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def onMaxCurrent( self, event ):
         self.client.set('servo/max_current', event.GetValue())
 
-if __name__ == "__main__":
+def main():
     glutInit(sys.argv)
     app = wx.App()
     CalibrationDialog().ShowModal()
+
+if __name__ == "__main__":
+    main()
