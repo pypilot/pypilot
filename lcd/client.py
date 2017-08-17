@@ -442,14 +442,16 @@ class LCDClient():
         size = font.draw(self.surface, pos, text, size, self.bw, crop)
         return float(size[0])/self.surface.width, float(size[1])/self.surface.height
 
-    def fittext(self, rect, text, wordwrap=False, crop=False):
+    def fittext(self, rect, text, wordwrap=False, fill=None):
+        if fill:
+            self.surface.box(*(self.convrect(rect) + [fill]))
         metric_size = 16
         if wordwrap:
             words = text.split(' ')
-            spacewidth = font.draw(self.surface, False, ' ', metric_size, self.bw, crop)[0]
+            spacewidth = font.draw(self.surface, False, ' ', metric_size, self.bw)[0]
             if len(words) < 2: # need at least 2 words to wrap
-                return self.fittext(rect, text, False, crop)
-            metrics = map(lambda word : (word, font.draw(self.surface, False, word, metric_size, self.bw, crop)), words)
+                return self.fittext(rect, text, False, fill, crop)
+            metrics = map(lambda word : (word, font.draw(self.surface, False, word, metric_size, self.bw)), words)
 
             widths = map(lambda metric : metric[1][0], metrics)
             maxwordwidth = apply(max, widths)
@@ -490,7 +492,7 @@ class LCDClient():
                     size = cursize
                     text = curtext
         else:
-            s = font.draw(self.surface, False, text, metric_size, self.bw, crop)
+            s = font.draw(self.surface, False, text, metric_size, self.bw)
             if s[0] == 0 or s[1] == 0:
                 return 0, 0
             sw = self.surface.width * float(rect.width) / s[0]
@@ -498,7 +500,7 @@ class LCDClient():
             size = int(min(sw*metric_size, sh*metric_size))
 
         pos = int(rect.x*self.surface.width), int(rect.y*self.surface.height)
-        size = font.draw(self.surface, pos, text, size, self.bw, crop)
+        size = font.draw(self.surface, pos, text, size, self.bw)
         return float(size[0])/self.surface.width, float(size[1])/self.surface.height
 
     def line(self, x1, y1, x2, y2):
@@ -629,8 +631,7 @@ class LCDClient():
 
             if num == 'N/A' and lastnum != num:
                 r = rectangle(pos[0], pos[1], 1, .4)
-                self.surface.box(*(self.convrect(r) + [black]))
-                self.fittext(r, num)
+                self.fittext(r, num, False, black)
                 return
 
             if self.surface.width < 256:
@@ -650,8 +651,7 @@ class LCDClient():
 
         if type(self.last_msg['ap.heading']) == type(False):
             r = rectangle(0, 0, 1, .8)
-            self.surface.box(*(self.convrect(r) + [black]))
-            self.fittext(r, _('ERROR\ncompass or gyro failure!'), True)
+            self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
             self.control['heading_command'] = 'no imu'
         else:
             draw_big_number((0,0), self.last_msg['ap.heading'], self.control['heading'])
@@ -663,31 +663,30 @@ class LCDClient():
 
         if self.last_msg['servo.controller'] == 'none':
             if self.control['heading_command'] != 'no controller':
-                self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True)
+                self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
                 self.control['heading_command'] = 'no controller'
         elif time.time() - self.overcurrent_time < 5: # 5 seconds
             if self.control['heading_command'] != 'overcurrent':
-                self.fittext(rectangle(0, .4, 1, .35), _('OVER CURRENT'), True)
+                self.fittext(rectangle(0, .4, 1, .35), _('OVER CURRENT'), True, black)
                 self.control['heading_command'] = 'overcurrent'
         elif 'OVERTEMP' in self.last_msg['servo.flags']:
             if self.control['heading_command'] != 'overtemp':
-                self.fittext(rectangle(0, .4, 1, .35), _('OVER TEMP'), True)
+                self.fittext(rectangle(0, .4, 1, .35), _('OVER TEMP'), True, black)
                 self.control['heading_command'] = 'overtemp'
         elif mode == 'gps' and not self.have_gps():
             if self.control['heading_command'] != 'no gps':
-                self.fittext(rectangle(0, .4, 1, .4), _('GPS not detected'), True)
+                self.fittext(rectangle(0, .4, 1, .4), _('GPS not detected'), True, black)
                 self.control['heading_command'] = 'no gps'
         elif (mode == 'wind' or mode == 'true wind') and not self.have_wind():
             if self.control['heading_command'] != 'no wind':
-                self.fittext(rectangle(0, .4, 1, .4), _('WIND not detected'), True)
+                self.fittext(rectangle(0, .4, 1, .4), _('WIND not detected'), True, black)
                 self.control['heading_command'] = 'no wind'
         else:
             # no warning, display the desired course or 'standby'
             if self.last_msg['ap.enabled'] != True:
                 if self.control['heading_command'] != 'standby' or True:
                     r = rectangle(0, .4, 1, .34)
-                    self.surface.box(*(self.convrect(r) + [black]))
-                    self.fittext(r, _('standby'))
+                    self.fittext(r, _('standby'), False, black)
                     self.control['heading_command'] = 'standby'
             else:
                 if self.control['heading_command'] != self.last_msg['ap.heading_command']:
@@ -708,8 +707,7 @@ class LCDClient():
                 ndeviation = cal[0][3] - cal[2][3]
             def warncal(s):
                 r = rectangle(0, .75, 1, .15)
-                apply(self.surface.box, self.convrect(r) + [white])
-                self.fittext(r, s, True)
+                self.fittext(r, s, True, white)
                 self.invertrectangle(r)
                 self.control['mode'] = 'warning'
             if ndeviation == 0:
@@ -750,9 +748,8 @@ class LCDClient():
         counter = self.last_msg['imu.alignmentCounter']
         if counter:
             r = rectangle(0, 0, 1, .25)
-            self.surface.box(*(self.convrect(r) + [black]))
             r.height = .2
-            self.fittext(r, ' %d%%' % (100-counter))
+            self.fittext(r, ' %d%%' % (100-counter), False, black)
             r.width = 1-float(counter)/100
             r.height = .25
             self.invertrectangle(r)
