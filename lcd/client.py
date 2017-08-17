@@ -43,15 +43,6 @@ from signalk.client import SignalKClient
 from ugfx import ugfx
 import font
 
-def nr(x):
-    try:
-        s = str(int(x))
-        while len(s) < 3:
-            s = ' ' + s
-        return s
-    except:
-        return x
-
 class LCDMenu():
     def __init__(self, lcd, name, items, prev=False):
         self.lcd = lcd
@@ -620,9 +611,18 @@ class LCDClient():
     def display_control(self):
         if not self.control:
             self.surface.fill(black)
-            self.control = {'heading': False, 'heading_command': True, 'mode': False}
+            self.control = {'heading': '   ', 'heading_command': '   ', 'mode': False}
         
         def draw_big_number(pos, num, lastnum):
+            def nr(x):
+                try:
+                    s = str(int(round(x)))
+                    while len(s) < 3:
+                        s = ' ' + s
+                    return s
+                except:
+                    return x
+
             num = nr(num)
             if lastnum:
                 lastnum = nr(lastnum)
@@ -638,18 +638,15 @@ class LCDClient():
             else:
                 size = 30
 
-            def drawnum(ind, c):
-                x = pos[0]+float(ind)/3
-                self.surface.box(*(self.convrect(rectangle(x, pos[1], .34, .4)) + [black]))
-                self.text((x, pos[1]), c, size, True)
-
             for i in range(3):
                 try:
                     if num[i] == lastnum[i]:
                         continue
                 except:
                     pass
-                drawnum(i, num[i])
+                x = pos[0]+float(i)/3
+                self.surface.box(*(self.convrect(rectangle(x, pos[1], .34, .4)) + [black]))
+                self.text((x, pos[1]), num[i], size, True)
 
         if type(self.last_msg['ap.heading']) == type(False):
             r = rectangle(0, 0, 1, .8)
@@ -708,9 +705,9 @@ class LCDClient():
             if cal == 'N/A':
                 ndeviation = 0
             else:
-                ndeviation = cal[0][3] - cal[1][3]
+                ndeviation = cal[0][3] - cal[2][3]
             def warncal(s):
-                r = rectangle(0, .75, 1, .3)
+                r = rectangle(0, .75, 1, .15)
                 apply(self.surface.box, self.convrect(r) + [white])
                 self.fittext(r, s, True)
                 self.invertrectangle(r)
@@ -718,7 +715,7 @@ class LCDClient():
             if ndeviation == 0:
                 warncal(_('No Cal'))
                 warning = True
-            if ndeviation > 4:
+            if ndeviation > 6:
                 warncal(_('Bad Cal'))
                 warning = True
 
@@ -816,10 +813,10 @@ class LCDClient():
         deviation = _('N/A')
         try:
             cal = self.last_msg['imu.compass_calibration']
-            ndeviation = cal[0][3] - cal[1][3]
+            ndeviation = cal[0][3] - cal[2][3]
             #print ndeviation
             names = [(0, _('incomplete')), (1, _('excellent')), (2, _('good')),
-                     (3, _('fair')), (4, _('poor')), (1000, _('bad'))]
+                     (4, _('fair')), (6, _('poor')), (1000, _('bad'))]
             for n in names:
                 if ndeviation <= n[0]:
                     deviation = n[1]
