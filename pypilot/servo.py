@@ -13,6 +13,7 @@ from signalk.values import *
 import autopilot
 import select
 import serial
+from servo_calibration import *
 
 import fcntl
 # these are not defined in python module
@@ -130,6 +131,7 @@ class Servo(object):
         self.serialprobe = serialprobe
         self.fwd_fault = self.rev_fault = False
 
+        self.servo_calibration = ServoCalibration(self)
         self.calibration = self.Register(JSONValue, 'calibration', {})
         self.load_calibration()
 
@@ -143,7 +145,6 @@ class Servo(object):
 
         # power usage
         self.command = self.Register(TimedProperty, 'command', 0)
-        self.rawcommand = self.Register(TimedProperty, 'raw_command', 0)
         self.timestamp = time.time()
         timestamp = server.TimeStamp('servo')
         self.voltage = self.Register(SensorValue, 'voltage', timestamp)
@@ -183,10 +184,6 @@ class Servo(object):
         return self.server.Register(_type(*(['servo/' + name] + list(args)), **kwargs))
 
     def send_command(self):
-        if self.fwd_fault:
-            print 'fwd fault', time.time()
-        if self.rev_fault:
-            print 'rev fault', time.time()
         t = time.time()
 
         def engauge():
@@ -196,19 +193,11 @@ class Servo(object):
         if not self.disengauge_on_timeout.value:
             engauge()
 
+        if self.servo_calibration.thread.is_alive():
+            return
+
         timeout = 1 # command will expire after 1 second
-        if self.rawcommand.value:
-            if time.time() - self.rawcommand.time > timeout:
-                self.disengauged = True
-                self.rawcommand.update(0)
-            else:
-                if self.fwd_fault and self.rawcommand.value < 0:
-                    self.fwd_fault = False
-                elif self.rev_fault and self.rawcommand.value > 0:
-                    self.rev_fault = False
-                engauge()
-                self.raw_command(self.rawcommand.value)
-        elif self.command.value:
+        if self.command.value:
             if time.time() - self.command.time > timeout:
                 self.disengauged = True
                 self.command.update(0)
@@ -478,6 +467,7 @@ class Servo(object):
         if result & ServoTelemetry.FLAGS:
             self.flags.update(self.driver.flags)
             self.engauged.update(not not self.driver.flags & ServoFlags.ENGAUGED)
+        self.servo_calibration.poll()
 
     def fault(self):
         if not self.driver:
@@ -507,8 +497,8 @@ if __name__ == '__main__':
     servo = Servo(server, serial_probe)
 
     while True:
-        servo.send_command()
         servo.poll()
+        servo.send_command()
         if servo.voltage.value:
             print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'temp', servo.temperature.value
         server.HandleRequests()

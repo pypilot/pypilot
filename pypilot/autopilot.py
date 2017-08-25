@@ -227,6 +227,7 @@ class AutopilotBase(object):
           if self.mode.value != self.lastmode:
               self.heading_command.set(self.heading.value)
           self.runtime.update()
+          self.servo.calibration.stop()
 
       # servo can only disengauge under manual control
       self.servo.force_engauged = self.enabled.value
