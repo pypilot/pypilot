@@ -1,49 +1,45 @@
 Installing:
 
-dependencies:
-libpython-dev python-numpy
+The dependencies can be installed with "apt install" or sometimes pip, eg:
+sudo apt-get install python-numpy python-scipy
 
-server dependencies (autopilot implementation)
-python-gps python-serial python-scipy swig RTIMULib2
 
-lcd viewer
-python-pillow
+server dependencies (required): python-gps python-serial libpython-dev python-numpy python-scipy swig
+lcdclient dependencies: python-pillow
+webapp dependencies: python-flask
 
-webapp
-python-flask
-
-client dependencies (viewers control applications)
-python-opengl python-pip
-pip install pyglet
-pip install pywavefront
-
-sudo apt-get install swig python-numpy python-scipy python-serial python-gps python-PIL python-dev
+wxwidgets client dependencies: python-opengl python-pip
+# for the calibration program also:
+    pip install pyglet
+    pip install pywavefront
 
 # my version of rtimulib is required!
 git clone https://github.com/seandepagnier/RTIMULib2
-
+cd RTIMULib2/Linux/python
 python setup.py build
 sudo python setup.py install
 
 
-pypilot.build is a build script to build tinycore linux packages
-it can be run to update the packages in tinypilot
 
+You may want to run pypilot as a service, see the scripts/debian directory
 
-
-
-This collection of scripts are the building blocks of a simple autopilot
 
 install:
 
 pip install PyOpenGL
 sudo apt-get install python-numpy python-scipy
 
+
 most of the scripts can be run individually as standalone
 or test programs, some function as clients, other as servers
 
 
-servers
+servers (only one executes at a time)
+
+pypilot/simple_autopilot.py -- classic PID based autopilot implementation
+pypilot/basic_autopilot.py -- basic PID based autopilot with additional gains and filters
+
+These server scripts can be run as tests:
 * execute this script directly
 
 signalk/server.py -- implements poll based server allowing external manipulation,
@@ -65,23 +61,18 @@ pypilot/servo.py -- controls servo via RC pwm signal, and gpio feedback for faul
                       can be used to control or calibrate the servo
 
 
-the autopilot servers below integrate boatimu, nmea, and servo so have
-all of their combined functionallity as well as autopilot support.
-
-pypilot/simple_autopilot.py -- classic PID based autopilot implementation
-pypilot/basic_autopilot.py -- basic PID based autopilot with additional gains and filters
-
 
 clients (run as many of these):
-
-signalk/client.py -- console client
-signalk/client_wx.py -- graphical user version (wx widgets)
-signalk/scope.py -- glut plot client -- useful for sensors and control
-signalk/scope_wx.py -- plot client with wx widgets
 
 ui/autopilot_control.py -- simple interface to command autopilot
 ui/autopilot_calibration.py -- interactive gui for all autopilot calibrations
 ui/kivy -- work in progress kivy control app
 
+signalk/client.py -- console client
+signalk/client_wx.py -- graphical user version (wx widgets)
+signalk/scope.py -- glut plot client -- useful for sensors and control
+signalk/scope_wx.py -- plot client with wx widgets (for checked listbox)
+
 lcd/client.py -- autopilot control interface using GPIO pins.
-webapp/webapp.py -- python flask application that runs a webserver providing remote autopilot control through a web browser
+
+webapp/webapp.py -- python flask application that runs a webserver providing remote autopilot control through a browser
