@@ -14,8 +14,9 @@ python-flask
 
 client dependencies (viewers control applications)
 python-opengl python-pip
-pip install pyglet
-pip install pywavefront
+sudo pip install pyglet
+sudo pip install pywavefront
+sudo pip install ujson
 
 sudo apt-get install swig python-numpy python-scipy python-serial python-gps python-PIL python-dev
 
@@ -36,7 +37,7 @@ This collection of scripts are the building blocks of a simple autopilot
 
 install:
 
-pip install PyOpenGL
+sudo pip install PyOpenGL
 sudo apt-get install python-numpy python-scipy
 
 most of the scripts can be run individually as standalone
