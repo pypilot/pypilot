@@ -112,6 +112,7 @@ class ServoTelemetry(object):
     SPEED = 8
     POSITION = 16
     CONTROLLER_TEMP = 32
+    MOTOR_TEMP = 64
 
 # a property which records the time when it is updated
 class TimedProperty(Property):
@@ -149,10 +150,12 @@ class Servo(object):
         timestamp = server.TimeStamp('servo')
         self.voltage = self.Register(SensorValue, 'voltage', timestamp)
         self.current = self.Register(SensorValue, 'current', timestamp)
-        self.temperature = self.Register(SensorValue, 'temperature', timestamp)
+        self.controller_temp = self.Register(SensorValue, 'controller_temp', timestamp)
+        self.motor_temp = self.Register(SensorValue, 'motor_temp', timestamp)
         self.engauged = self.Register(BooleanValue, 'engauged', False)
         self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 10, persistent=True)
         self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 65, 30, 80, persistent=True)
+        self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 65, 30, 80, persistent=True)
         self.period = self.Register(RangeProperty, 'period', .7, .1, 3, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'compensate_voltage', False, persistent=True)
@@ -316,12 +319,16 @@ class Servo(object):
 
     def raw_command(self, command):
         if self.fault():
-            if self.speed > 0:
-                self.fwd_fault = True
-                self.position = 1
-            elif self.speed < 0:
-                self.rev_fault = True
-                self.position = -1
+            # if overcurrent then fault in the direction traveled
+            if self.overcurrent():
+                if self.speed > 0:
+                    self.fwd_fault = True
+                    self.rev_fault = False
+                    self.position = 1
+                elif self.speed < 0:
+                    self.rev_fault = True
+                    self.fwd_fault = True
+                    self.position = -1
 
             self.stop()
             return
@@ -363,7 +370,7 @@ class Servo(object):
                 device.timeout=0 #nonblocking
                 fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
                 self.driver = ArduinoServo(device.fileno())
-                self.driver.max_values(self.max_current.value, self.max_controller_temp.value)
+                self.driver.max_values(self.max_current.value, self.max_controller_temp.value, self.max_motor_temp.value)
 
                 t0 = time.time()
                 if self.driver.initialize(device_path[1]):
@@ -399,7 +406,7 @@ class Servo(object):
                 max_current = self.max_current.value
                 if self.fwd_fault or self.rev_fault: # allow more current to "unstuck" ram
                     max_current *= 2
-                self.driver.max_values(max_current, self.max_controller_temp.value)
+                self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value)
                 self.driver.command(command)
 
     def stop(self):
@@ -432,9 +439,9 @@ class Servo(object):
 
         if result == 0:
             d = time.time() - self.lastpolltime
-            if d > 10: # correct for clock skew
+            if d > 5: # correct for clock skew
                 self.lastpolltime = time.time()
-            elif d > 8:
+            elif d > 4:
                 print 'servo timeout', d
                 self.close_driver()
             return
@@ -455,7 +462,9 @@ class Servo(object):
         if result & ServoTelemetry.VOLTAGE:
             self.voltage.set(self.driver.voltage)
         if result & ServoTelemetry.CONTROLLER_TEMP:
-            self.temperature.set(self.driver.controller_temp)
+            self.controller_temp.set(self.driver.controller_temp)
+        if result & ServoTelemetry.MOTOR_TEMP:
+            self.motor_temp.set(self.driver.motor_temp)
         if result & ServoTelemetry.CURRENT:
             self.current.set(self.driver.current)
             # integrate power consumption
@@ -499,8 +508,9 @@ if __name__ == '__main__':
     while True:
         servo.poll()
         servo.send_command()
-        if servo.voltage.value:
-            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'temp', servo.temperature.value
+
+        if servo.driver:
+            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value
         server.HandleRequests()
         time.sleep(.1)
 
