@@ -189,7 +189,7 @@ class AutopilotBase(object):
           offset = self.wind_heading_offset.value
           wind_direction = self.nmea.values['wind']['direction'].value
           diff = resolv(wind_direction - compass_heading, offset)
-          d = .1
+          d = .02
           #d = 1 # for now, don't even use compass (raw wind)
           self.wind_heading_offset.set(resolv((1-d)*offset + d*diff))
           

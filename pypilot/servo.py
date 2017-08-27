@@ -184,7 +184,6 @@ class Servo(object):
 
         def engauge():
             if self.disengauged:
-                print 'engauge'
                 self.disengauged = False
 
         timeout = 1 # command will expire after 1 second
@@ -215,13 +214,6 @@ class Servo(object):
         self.lastpositiontime = t
 
         if self.fault():
-            if self.speed > 0:
-                self.fwd_fault = True
-                self.position = 1
-            elif self.speed < 0:
-                self.rev_fault = True
-                self.position = -1
-
             self.stop()
             return
 
@@ -235,10 +227,10 @@ class Servo(object):
             self.raw_command(0)
             return # abort
 
-        #        print 'integrate pos', self.position, self.speed, speed, dt
 
-        self.position += self.speed * dt
+        self.position += self.speed * dt / 10 # remove when speed is correct
         self.position = min(max(self.position, 0), 1)
+        #print 'integrate pos', self.position, self.speed, speed, dt, self.fwd_fault, self.rev_fault
         if self.position < .9:
             self.fwd_fault = False
         if self.position > .1:
@@ -431,8 +423,10 @@ class Servo(object):
             
             if self.speed > 0:
                 self.fwd_fault = True
+                self.position = 1
             elif self.speed < 0:
                 self.rev_fault = True
+                self.position = 0
 
         lasttimestamp = self.timestamp
         self.timestamp = time.time()
