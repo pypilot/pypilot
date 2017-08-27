@@ -204,7 +204,6 @@ class AutopilotBase(object):
 
           headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
           wind_direction_ap = self.wind_direction.value
-          
           wind_direction_ap -= headingrate*.1
 
           # weight wind direction more with higher wind speed
