@@ -386,7 +386,7 @@ class ServoCalibration(object):
     def __init__(self, servo):
         self.server = servo.server
         self.run = self.Register(BooleanProperty, 'run', False)
-        self.rawcommand = self.Register(SensorValue, 'raw_command', 0)
+        self.rawcommand = self.Register(SensorValue, 'raw_command', self.server.TimeStamp('servo'))
         self.console = self.Register(Value, 'console', '')
         self.current_total = self.voltage_total = 0, 0
         self.servo = servo

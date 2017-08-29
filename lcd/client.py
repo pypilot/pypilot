@@ -40,7 +40,7 @@ except:
 
 from signalk.client import SignalKClient
 
-import ugfx
+from ugfx import ugfx
 import font
 
 def nr(x):
@@ -754,7 +754,7 @@ class LCDClient():
         deviation = _('N/A')
         try:
             cal = self.last_msg['imu/compass_calibration']
-            ndeviation = (cal[0][3] - cal[1][3])**2
+            ndeviation = cal[0][3] - cal[1][3]
             #print ndeviation
             names = [(0, _('incomplete')), (1, _('excellent')), (2, _('good')), (4, _('poor')), (1000, _('bad'))]
             for n in names:

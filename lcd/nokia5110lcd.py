@@ -1,9 +1,9 @@
 
-import ugfx
+from ugfx import ugfx
 import Adafruit_Nokia_LCD as LCD
 import Adafruit_GPIO.SPI as SPI
 
-from PIL import Image
+#from PIL import Image
 
 
 # Raspberry Pi hardware SPI config:

@@ -155,7 +155,7 @@ void setup()
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
 //    ADMUX = _BV(REFS0); // external 5v
-    ADMUX = _BV(REFS0)| _BV(REFS1); // 1.1v
+    ADMUX = _BV(REFS0)| _BV(REFS1) | _BV(MUX0); // 1.1v
 
     ADCSRA = _BV(ADEN) | _BV(ADIE); // enable adc with interrupts 
     ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
@@ -182,7 +182,7 @@ uint16_t max_current = 0;
 uint16_t max_controller_temp = 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
 
-uint16_t flags = 0;
+uint16_t flags = 0, faults = 0;
 
 uint8_t timeout;
 
@@ -249,8 +249,8 @@ void engauge()
 
 // set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
 
-enum {VOLTAGE, CURRENT, CONTROLLER_TEMP, MOTOR_TEMP, /*INTERNAL_TEMP,*/ CHANNEL_COUNT};
-const uint8_t muxes[] = {0, _BV(MUX0), _BV(MUX1), _BV(MUX0) | _BV(MUX1), _BV(MUX3)};
+enum {CURRENT, VOLTAGE, CONTROLLER_TEMP, MOTOR_TEMP, /*INTERNAL_TEMP,*/ CHANNEL_COUNT};
+const uint8_t muxes[] = {_BV(MUX0), 0, _BV(MUX1), _BV(MUX0) | _BV(MUX1), _BV(MUX3)};
 
 volatile struct adc_results_t {
     uint32_t total;
@@ -259,25 +259,32 @@ volatile struct adc_results_t {
 
 const uint8_t defmux = _BV(REFS0)| _BV(REFS1); // 1.1v
 uint16_t adc_counter;
-uint8_t adc_odd;
+uint8_t adc_cnt;
 
 ISR(ADC_vect)
 {
     uint16_t adcw = ADCW;
-    if(adc_odd) {
+    if(adc_cnt > 2) { // discard first few readings after changing channel
         for(int i=0; i<2; i++) {
-            if(adc_results[adc_counter][i].count < 5000) {
+            if(adc_results[adc_counter][i].count < 4000) {
                 adc_results[adc_counter][i].total += adcw;
                 adc_results[adc_counter][i].count++;
             }
         }
-        if(++adc_counter == CHANNEL_COUNT)
-            adc_counter=0;
-
-        ADMUX = defmux | muxes[adc_counter];
-    }
-
-    adc_odd = !adc_odd;
+        if(adc_counter == CURRENT) { // take 50x more current measurements
+            if(++adc_cnt == 50) {
+                adc_cnt = 0;
+                ++adc_counter;
+                ADMUX = defmux | muxes[adc_counter];
+            }
+        } else {
+            adc_cnt = 0;
+            if(++adc_counter == CHANNEL_COUNT)
+                adc_counter=0;
+            ADMUX = defmux | muxes[adc_counter];
+        }
+    } else
+          adc_cnt++;
     ADCSRA |= _BV(ADSC); // enable conversion
 }
 
@@ -287,12 +294,26 @@ uint32_t TakeADC(uint8_t index, uint8_t p)
     cli();
     t = adc_results[index][p].total;
     c = adc_results[index][p].count;
-    adc_results[index][p].total = 0;
-    adc_results[index][p].count = 0;
+    if(p) { // fault measurements are not lowpassed
+        adc_results[index][p].total = 0;
+        adc_results[index][p].count = 0;
+    } else {
+        adc_results[index][p].total >>= 1;
+        adc_results[index][p].count >>= 1;
+    }
+
     sei();
     if(c == 0)
         return 0;
-    return 16 * t / c; // multiply by 16 to keep less significant bits
+
+    uint32_t avg = 16 * t / c;
+    if(!p && c&1) { // correct rounding errors from lowapss
+        int havg = avg>>5;
+        cli();
+        adc_results[index][p].total -= havg;
+        sei();
+    }
+    return avg; // multiply by 16 to keep less significant bits
 }
 
 uint16_t TakeAmps(uint8_t p)
@@ -365,17 +386,15 @@ void process_packet()
     } break;  
     case STOP_CODE:
         stop();
-        if (flags & (OVERTEMP | OVERCURRENT | FAULTPIN)) {
+        // reset faults
+        if (flags & (OVERTEMP | OVERCURRENT | FAULTPIN))
             flags &= ~(OVERTEMP | OVERCURRENT | FAULTPIN);
-            //  flags = 0; // force resync
-        }
-        //delay(60); // stay stopped for at least some time
         break;
     case COMMAND_CODE:
         if(value > 2000) {
             // unused range, invalid!!!
             // ignored
-        } else if(!(flags & (OVERTEMP | OVERCURRENT | FAULTPIN))) {
+        } else if(!(faults & (OVERTEMP | OVERCURRENT | FAULTPIN))) {
             position(value);
             engauge();
         }
@@ -439,7 +458,7 @@ void loop()
               sync_b = 0;
               flags &= ~INVALID;
           } else {
-          // invalid packet
+              // invalid packet
               flags &= ~SYNC;
               stop(); //disengauge();
               in_sync_count = 0;
@@ -455,20 +474,22 @@ void loop()
     // test fault pin
     if(!digitalRead(fault_pin)) {
         stop();
-        flags |= FAULTPIN;
-    }
+        faults |= FAULTPIN;
+    } else
+      faults &= ~FAULTPIN;
 
     // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
     shunt_resistance = digitalRead(shunt_sense_pin);
     
     // test current
-    const int react_count = 100; // need 100 readings for 1/10th of second reaction time
+    const int react_count = 350; // need 350 readings for 0.05s reaction time
     if(adc_results[CURRENT][1].count > react_count) {
         uint16_t amps = TakeAmps(1);
         if(amps >= max_current) {
             stop();
-            flags |= OVERCURRENT;
-        }
+            faults |= OVERCURRENT;
+        } else
+            faults &= ~OVERCURRENT;
     }
 
     // test over temp
@@ -478,9 +499,11 @@ void loop()
         uint16_t motor_temp = TakeTemp(MOTOR_TEMP, 1);
         if(controller_temp >= max_controller_temp || motor_temp > max_motor_temp) {
             stop();
-            flags |= OVERTEMP;
-        }
+            faults |= OVERTEMP;
+        } else
+            faults &= ~OVERTEMP;
     }
+    flags |= faults;
 
     delay(1); // small dead time to be safe
     // match output rate to input rate
@@ -506,6 +529,8 @@ void loop()
             v = TakeTemp(MOTOR_TEMP, 0);
           code = MOTOR_TEMP_CODE;
         } else {
+            if(adc_results[CURRENT][0].count < 100)
+                break;
             v = TakeAmps(0);
             code = CURRENT_CODE;
             serialin-=4;

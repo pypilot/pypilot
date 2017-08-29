@@ -131,6 +131,7 @@ class Servo(object):
         self.server = server
         self.serialprobe = serialprobe
         self.fwd_fault = self.rev_fault = False
+        self.lastdirpos = False # doesn't matter
 
         self.servo_calibration = ServoCalibration(self)
         self.calibration = self.Register(JSONValue, 'calibration', {})
@@ -162,8 +163,12 @@ class Servo(object):
         self.amphours = self.Register(ResettableValue, 'amp_hours', 0, persistent=True)
         self.watts = self.Register(SensorValue, 'watts', timestamp)
 
-        self.position = .5
-        self.speed = 0
+        self.speed = self.Register(SensorValue, 'speed', timestamp)
+        self.speed.set(0)
+
+        self.position = self.Register(SensorValue, 'position', timestamp)
+        self.position.set(.5)
+
         self.lastpositiontime = time.time()
         self.lastpositionamphours = 0
 
@@ -187,6 +192,9 @@ class Servo(object):
         return self.server.Register(_type(*(['servo/' + name] + list(args)), **kwargs))
 
     def send_command(self):
+        if self.fault():
+            return
+
         t = time.time()
 
         def engauge():
@@ -213,7 +221,8 @@ class Servo(object):
                not self.servo.force_engauged and \
                t - self.command_timeout > self.period.value*3:
                 self.disengauged = True
-            self.raw_command(0)
+            self.speed.set(0)
+            self.raw_command(0)            
 
     def velocity_command(self, speed):
         # complete integration from previous step
@@ -221,30 +230,29 @@ class Servo(object):
         dt = t - self.lastpositiontime
         self.lastpositiontime = t
 
-        if speed == 0 and self.speed == 0: # optimization
+        if speed == 0 and self.speed.value == 0: # optimization
             self.raw_command(0)
             return
 
         if self.fwd_fault and speed > 0 or \
            self.rev_fault and speed < 0:
-            self.speed = 0
+            self.speed.set(0)
             self.raw_command(0)
             return # abort
 
-        #        print 'integrate pos', self.position, self.speed, speed, dt
-
-        self.position += self.speed * dt
-        self.position = min(max(self.position, 0), 1)
-        if self.position < .9:
+        position = self.position.value + self.speed.value * dt / 10 # remove when speed is correct
+        self.position.set(min(max(position, 0), 1))
+        #print 'integrate pos', self.position, self.speed, speed, dt, self.fwd_fault, self.rev_fault
+        if self.position.value < .9:
             self.fwd_fault = False
-        if self.position > .1:
+        if self.position.value > .1:
             self.rev_fault = False
 
         if False: # don't keep moving too long in same direction.....
             rng = 5;
-            if self.position > 1 + rng:
+            if self.position.value > 1 + rng:
                 self.fwd_fault = True
-            if self.position < -rng:
+            if self.position.value < -rng:
                 self.rev_fault = True
             
         if self.compensate_voltage.value:
@@ -268,7 +276,7 @@ class Servo(object):
         #    self.max_speed.set(min_speed)
 
         # integrate windup
-        self.windup += (speed - self.speed) * dt
+        self.windup += (speed - self.speed.value) * dt
 
         # if windup overflows, move at minimum speed
         if abs(self.windup) > self.period.value*min_speed / 1.5:
@@ -281,12 +289,12 @@ class Servo(object):
         self.windup = min(max(self.windup, -self.period.value), self.period.value)
         #print 'windup', self.windup, dt, self.windup / dt, speed, self.speed
 
-        if speed * self.speed <= 0: # switched direction or stopped?
+        if speed * self.speed.value <= 0: # switched direction or stopped?
             if t - self.windup_change < self.period.value:
                 # less than period, keep previous direction, but use minimum speed
-                if self.speed > 0:
+                if self.speed.value > 0:
                     speed = min_speed
-                elif self.speed < 0:
+                elif self.speed.value < 0:
                     speed = -min_speed
                 else:
                     speed = 0
@@ -296,7 +304,7 @@ class Servo(object):
         # clamp to max speed
         speed = min(max(speed, -self.max_speed.value), self.max_speed.value)
         if True:
-            self.speed = speed
+            self.speed.set(speed)
         else:
             # estimate true speed from voltage, current, and last command
             # TODO
@@ -312,27 +320,12 @@ class Servo(object):
 
         raw_speed = cal[0] + abs(speed)*cal[1]
         if speed < 0:
-            raw_speed = - raw_speed
+            raw_speed = -raw_speed
         command = raw_speed
 
         self.raw_command(command)
 
     def raw_command(self, command):
-        if self.fault():
-            # if overcurrent then fault in the direction traveled
-            if self.overcurrent():
-                if self.speed > 0:
-                    self.fwd_fault = True
-                    self.rev_fault = False
-                    self.position = 1
-                elif self.speed < 0:
-                    self.rev_fault = True
-                    self.fwd_fault = True
-                    self.position = -1
-
-            self.stop()
-            return
-        
         if self.brake_hack_state == 1:
             if self.fault():
                 return
@@ -354,12 +347,14 @@ class Servo(object):
             if command < 0:
                 if self.mode != 'reverse':
                     self.mode.update('reverse')
+                    self.lastdirpos = False
             else:
 #                if self.mode.value == 'idle':
 #                    return
                 self.mode.update('idle')
         else:
             self.mode.update('forward')
+            self.lastdirpos = True
 
         if not self.driver:
             device_path = self.serialprobe.probe('servo', [38400], 1)
@@ -419,7 +414,7 @@ class Servo(object):
             self.brake_hack_state = 1
 
         self.mode.set('stop')
-        self.speed = 0
+        self.speed.set(0)
 
     def close_driver(self):
         print 'servo lost connection'
@@ -451,10 +446,19 @@ class Servo(object):
             if not self.fwd_fault and not self.rev_fault:
                 self.faults.set(self.faults.value + 1)
             
-            if self.speed > 0:
-                self.fwd_fault = True
-            elif self.speed < 0:
-                self.rev_fault = True
+            # if overcurrent then fault in the direction traveled
+            # this prevents moving further in this direction
+            if self.flags.value & ServoFlags.OVERCURRENT:
+                if self.lastdirpos:
+                    self.fwd_fault = True
+                    self.rev_fault = False
+                    self.position.set(1)
+                else:
+                    self.rev_fault = True
+                    self.fwd_fault = False
+                    self.position.set(-1)
+
+            self.stop() # clear fault condition
 
         lasttimestamp = self.timestamp
         self.timestamp = time.time()
@@ -477,6 +481,7 @@ class Servo(object):
             self.flags.update(self.driver.flags)
             self.engauged.update(not not self.driver.flags & ServoFlags.ENGAUGED)
         self.servo_calibration.poll()
+        self.send_command()
 
     def fault(self):
         if not self.driver:
@@ -504,13 +509,13 @@ if __name__ == '__main__':
     server = SignalKServer()
     serial_probe = serialprobe.SerialProbe()
     servo = Servo(server, serial_probe)
+    servo.max_current.set(10)
 
     while True:
         servo.poll()
-        servo.send_command()
 
         if servo.driver:
-            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value
+            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'flags', servo.flags.strvalue()
         server.HandleRequests()
         time.sleep(.1)
 

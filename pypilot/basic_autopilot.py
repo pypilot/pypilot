@@ -82,8 +82,8 @@ class BasicAutopilot(AutopilotBase):
     dt = t - self.heading_error_int_time
     dt = max(min(dt, 1), 0) # ensure dt is from 0 to 1
     self.heading_error_int_time = t
-    # int error +- 1, from 0 to 3000 deg/s
-    err_int = minmax(self.heading_error_int.value + (err/3000)*dt, 1)
+    # int error +- 1, from 0 to 1000 deg/s
+    err_int = minmax(self.heading_error_int.value + (err/1000)*dt, 1)
     self.heading_error_int.set(err_int)
 
     command = 0
