@@ -8,6 +8,12 @@ server dependencies (required): python-gps python-serial libpython-dev python-nu
 lcdclient dependencies: python-pillow
 webapp dependencies: python-flask
 
+client dependencies (viewers control applications)
+python-opengl python-pip
+sudo pip install pyglet
+sudo pip install pywavefront
+sudo pip install ujson
+
 wxwidgets client dependencies: python-opengl python-pip
 # for the calibration program also:
     pip install pyglet
@@ -26,7 +32,7 @@ You may want to run pypilot as a service, see the scripts/debian directory
 
 install:
 
-pip install PyOpenGL
+sudo pip install PyOpenGL
 sudo apt-get install python-numpy python-scipy
 
 
