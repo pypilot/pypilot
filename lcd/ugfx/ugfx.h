@@ -59,3 +59,18 @@ public:
 };
 
 
+// nokia5110 spi device
+class PCD8544;
+class nokia5110screen : public surface
+{
+public:
+    nokia5110screen();
+    virtual ~nokia5110screen();
+    
+    void refresh();
+
+private:
+    PCD8544 *disp;
+    int contrast, lastcontrast;
+};
+

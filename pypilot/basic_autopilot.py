@@ -10,18 +10,14 @@
 from autopilot import *
 import servo
 
-def minmax(value, r):
-  return min(max(value, -r), r)
-
 class BasicAutopilot(AutopilotBase):
   def __init__(self, *args, **keywords):
     super(BasicAutopilot, self).__init__('Basic')
 
     # create filters
     timestamp = self.server.TimeStamp('ap')
-    self.heading_error = self.Register(SensorValue, 'heading_error', timestamp)
-    self.heading_error_int = self.Register(SensorValue, 'heading_error_int', timestamp)
-    self.heading_error_int_time = time.time()
+
+    self.heading_command_rate = self.Register(SensorValue, 'heading_command_rate', timestamp)
     
     # create simple pid filter
     self.gains = {}
@@ -50,14 +46,25 @@ class BasicAutopilot(AutopilotBase):
     PosGain2('P2', 0, 1, 'P')
     PosGain2('D2', 0, 1, 'D')
 
+    PosGain('FF',  0, 1.0)
+
     self.lastenabled = False
 
-  def process_imu_data(self, boatimu):
+  def process_imu_data(self):
     if self.enabled.value != self.lastenabled:
       self.lastenabled = self.enabled.value
       if self.enabled.value:
         self.heading_error_int.set(0) # reset integral
-    if not self.enabled.value: # only bother to compute if a client cares
+        # reset feed-forward gain
+        self.last_heading_command = self.heading_command.value
+        self.heading_command_rate.set(0)
+
+    # reset feed-forward error if mode changed
+    if self.mode.value != self.lastmode:
+      self.last_heading_command = self.heading_command.value
+    
+    # if disabled, only bother to compute if a client cares        
+    if not self.enabled.value: 
       compute = False
       for gain in self.gains:
         if self.gains[gain]['sensor'].watchers:
@@ -66,35 +73,25 @@ class BasicAutopilot(AutopilotBase):
       if not compute:
         return
     
-    heading = self.heading.value
-    headingrate = boatimu.SensorValues['headingrate_lowpass'].value
-    headingraterate = boatimu.SensorValues['headingraterate_lowpass'].value
+    # filter the heading command to compute feed-forward gain
+    heading_command_diff = self.heading_command.value - self.last_heading_command
+    self.last_heading_command = self.heading_command.value
+    lp = .1
+    command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
+    self.heading_command_rate.set(command_rate)
 
-    heading_command = self.heading_command.value
-
-    t = time.time()
-
-    # filter the incoming heading and gyro heading
-    # error +- 60 degrees
-    err = minmax(autopilot.resolv(heading - heading_command), 60)
-    self.heading_error.set(err)
-
-    dt = t - self.heading_error_int_time
-    dt = max(min(dt, 1), 0) # ensure dt is from 0 to 1
-    self.heading_error_int_time = t
-    # int error +- 1, from 0 to 1000 deg/s
-    err_int = minmax(self.heading_error_int.value + (err/1000)*dt, 1)
-    self.heading_error_int.set(err_int)
-
+    # compute command
     command = 0
+    headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
+    headingraterate = self.boatimu.SensorValues['headingraterate_lowpass'].value
     gain_values = {'P': self.heading_error.value,
                    'I': self.heading_error_int.value,
                    'D': headingrate,
-                   'DD': headingraterate}
+                   'DD': headingraterate,
+                   'FF': self.heading_command_rate.value}
     gain_values['P2'] = gain_values['P']
     gain_values['D2'] = gain_values['D']
 
-    self.server.TimeStamp('ap', t)
     for gain in self.gains:
       value = gain_values[gain]
       gains = self.gains[gain]

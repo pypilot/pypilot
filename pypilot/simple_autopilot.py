@@ -10,18 +10,10 @@
 from autopilot import *
 import servo
 
-def minmax(value, r):
-  return min(max(value, -r), r)
-
 class SimpleAutopilot(AutopilotBase):
   def __init__(self, *args, **keywords):
     super(SimpleAutopilot, self).__init__('Simple')
 
-    # create filters
-    self.heading_error = self.Register(SensorValue, 'heading_error', 0)
-    self.heading_error_int = self.Register(SensorValue, 'heading_error_int', 0)
-    self.heading_error_int_time = time.time()
-    
     # create simple pid filter
     self.gains = {}
     timestamp = self.server.TimeStamp('ap')
@@ -32,32 +24,13 @@ class SimpleAutopilot(AutopilotBase):
     Gain('I', 0, .05)
     Gain('D', .15, .5)
 
-  def process_imu_data(self, boatimu):
-    heading = self.heading.value
-    headingrate = boatimu.SensorValues['headingrate'].value
-
-    heading_command = self.heading_command.value
-
-    t = time.time()
-
-    # filter the incoming heading and gyro heading
-    # error +- 60 degrees
-    err = minmax(autopilot.resolv(heading - heading_command), 60)
-    self.heading_error.set(err)
-
-    # int error +- 20
-    dt = t - self.heading_error_int_time
-    dt = max(min(dt, 1), 0) # ensure dt is from 0 to 1
-    self.heading_error_int_time = t
-    err_int = minmax(self.heading_error_int.value + err*dt, 20)
-    self.heading_error_int.set(err_int)
-
+  def process_imu_data(self):
     command = 0
+    headingrate = self.boatimu.SensorValues['headingrate'].value
     gain_values = {'P': self.heading_error.value,
                    'I': self.heading_error_int.value,
                    'D': headingrate}
 
-    self.server.TimeStamp('ap', t)
     for gain in self.gains:
       value = gain_values[gain]
       gains = self.gains[gain]

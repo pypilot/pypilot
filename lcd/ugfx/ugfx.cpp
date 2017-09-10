@@ -559,3 +559,126 @@ screen::~screen()
     p = 0;
     close(fbfd);
 }
+
+
+#ifdef __ARMEL__
+#include <wiringPiSPI.h>
+
+#define SPI_DEVICE 0
+#if 1 // raspberry pi
+
+#define SPI_PORT 0
+#define DC 6 //25
+#define RST 5 //24
+
+#else //orange pi
+#define DC 22
+#define RST 18
+#define SPI_PORT 1
+#endif
+
+#define LCDWIDTH 84
+#define LCDHEIGHT 48
+#define ROWPIXELS LCDHEIGHT/6
+#define PCD8544_POWERDOWN 0x04
+#define PCD8544_ENTRYMODE 0x02
+#define PCD8544_EXTENDEDINSTRUCTION 0x01
+#define PCD8544_DISPLAYBLANK 0x0
+#define PCD8544_DISPLAYNORMAL 0x4
+#define PCD8544_DISPLAYALLON 0x1
+#define PCD8544_DISPLAYINVERTED 0x5
+#define PCD8544_FUNCTIONSET 0x20
+#define PCD8544_DISPLAYCONTROL 0x08
+#define PCD8544_SETYADDR 0x40
+#define PCD8544_SETXADDR 0x80
+#define PCD8544_SETTEMP 0x04
+#define PCD8544_SETBIAS 0x10
+#define PCD8544_SETVOP 0x80
+
+class PCD8544
+{
+public:
+    PCD8544() {
+        wiringPiSetup () ;
+        pinMode(RST, OUTPUT);
+        pinMode(DC, OUTPUT);
+
+        spifd = wiringPiSPISetup(SPI_PORT, 4000000);
+        if(spifd == -1) {
+            fprintf(stderr, "failed to open spi device");
+            exit(1);
+        }
+    }
+
+    ~PCD8544() {
+        close(spifd);
+    }
+
+    void command(uint8_t c) {
+        digitalWrite (DC, LOW) ;	// Off
+        write(spifd, &c, 1);
+    }
+
+    void extended_command(uint8_t c) {
+        command(PCD8544_FUNCTIONSET | PCD8544_EXTENDEDINSTRUCTION);
+        command(c);
+
+        command(PCD8544_FUNCTIONSET);
+        command(PCD8544_DISPLAYCONTROL | PCD8544_DISPLAYNORMAL);
+    }
+    
+    void begin(int contrast, int bias=4) {
+        reset();
+        set_bias(bias);
+        set_contrast(contrast);
+    }
+
+    void reset() {
+        digitalWrite (RST, LOW);
+        usleep(100000);
+        digitalWrite (RST, HIGH);
+    }
+    
+    void set_contrast(int contrast) {
+        contrast = contrast > 0x7f ? 0x7f : contrast;
+        contrast = contrast < 0 ? 0 : contrast;
+        extended_command(PCD8544_SETVOP | contrast);
+    }
+
+    void set_bias(int bias) {
+        extended_command(PCD8544_SETBIAS | bias);
+    }
+
+    int spifd;
+};
+
+nokia5110screen::nokia5110screen()
+    : surface(48, 84, 1, NULL)
+{
+    disp = new PCD8544();
+    contrast = 60;
+    lastcontrast = -1;
+    disp->begin(contrast);
+}
+
+nokia5110screen::~nokia5110screen()
+{
+    delete disp;
+}
+
+
+void nokia5110screen::refresh()
+{
+    if(contrast != lastcontrast) {
+        disp->set_bias(4);
+        disp->set_contrast(contrast);
+        lastcontrast = contrast;
+    }
+    disp->command(PCD8544_SETYADDR);
+    disp->command(PCD8544_SETXADDR);
+
+    digitalWrite (DC, HIGH) ;
+    binary_write(disp->spifd);
+}
+
+#endif
