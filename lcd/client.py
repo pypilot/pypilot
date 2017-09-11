@@ -195,7 +195,8 @@ class LCDClient():
         self.modes = {'compass': self.have_compass,
                       'gps':     self.have_gps,
                       'wind':    self.have_wind,
-                      'true wind': self.have_true_wind};        
+                      'true wind': self.have_true_wind};
+        self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
 
         self.initial_gets = gains + ['servo/min_speed', 'servo/max_speed', 'servo/max_current', 'servo/period', 'imu/alignmentCounter']
 
@@ -221,14 +222,15 @@ class LCDClient():
         if orangepi:
             self.pins = [12, 11, 13, 15, 16]
         else:
-            self.pins = [18, 17, 27, 22, 23]
+            self.pins = [17, 23, 27, 22, 18]
 
         if GPIO:
-            GPIO.setmode(GPIO.BCM)
             if orangepi:
                 for pin in self.pins:
                     cmd = 'gpio -1 mode ' + str(pin) + ' up'
                     os.system(cmd)
+            else:
+                GPIO.setmode(GPIO.BCM)
 
             for pin in self.pins:
                 try:
@@ -238,8 +240,6 @@ class LCDClient():
                     os.system("sudo chown tc /dev/gpiomem")
                     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
                     
-                #GPIO.input(pin)
-
                 def cbr(channel):
                     self.longsleep = 0
 
@@ -619,24 +619,10 @@ class LCDClient():
 
                 drawnum(i, num[i])
 
-        warning = True
         mode = self.last_msg['ap/mode']
 
         if 'OVERCURRENT' in self.last_msg['servo/flags']:
             self.overcurrent_time = time.time()
-        
-        if self.last_msg['servo/controller'] == 'none' and self.control['mode'] != 'no controller':
-            self.fittext(rectangle(0, .5, 1, .4), _('WARNING no motor controller'), True)
-        elif time.time() - self.overcurrent_time < 3:
-            self.fittext(rectangle(0, .5, 1, .4), _('OVER CURRENT'), True)
-        elif mode == 'gps' and not self.have_gps() and self.control['mode'] != 'no gps':
-            self.fittext(rectangle(0, .55, 1, .3), _('WARNING GPS not detected'), True)
-            self.control['mode'] = 'no gps'
-        elif mode == 'wind' and not self.have_wind() and self.control['mode'] != 'no wind':
-            self.fittext(rectangle(0, .55, 1, .3), _('WARNING WIND not detected'), True)
-            self.control['mode'] = 'no wind'
-        else:
-            warning = False
 
         if type(self.last_msg['ap/heading']) == type(False):
             r = rectangle(0, 0, 1, .8)
@@ -648,8 +634,8 @@ class LCDClient():
             draw_big_number((0,0), self.last_msg['ap/heading'], self.control['heading'])
             self.control['heading'] = self.last_msg['ap/heading']
 
-            if warning: #if self.last_msg['ap/mode'] != 'N/A':
-                self.control['heading_command'] = False
+            if not self.control['heading_command']:
+                pass
             elif self.last_msg['ap/enabled'] != True:
                 if self.control['heading_command'] != 'standby':
                     r = rectangle(0, .4, 1, .4)
@@ -665,13 +651,12 @@ class LCDClient():
 
         def modes():
             return [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
-                    
-        if warning:
-            self.control['mode'] = False
-        elif self.control['mode'] != mode or \
+
+            
+        if self.control['mode'] != mode or \
             self.control['modes'] != modes(): # mode ok
             self.control['mode'] = mode
-            self.control['mode'] = modes()
+            self.control['modes'] = modes()
             #print 'mode', self.last_msg['ap/mode']
             modes = {'compass': ('C', self.have_compass, rectangle(0, .74, .25, .16)),
                      'gps':     ('G', self.have_gps,     rectangle(.25, .74, .25, .16)),
@@ -686,6 +671,24 @@ class LCDClient():
                     r = modes[mode][2]
                     marg = .02
                     self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
+
+        warning = True
+        if self.last_msg['servo/controller'] == 'none' and self.control['mode'] != 'no controller':
+            self.fittext(rectangle(0, .5, 1, .4), _('WARNING no motor controller'), True)
+        elif time.time() - self.overcurrent_time < 3:
+            self.fittext(rectangle(0, .5, 1, .4), _('OVER CURRENT'), True)
+        elif 'OVERTEMP' in self.last_msg['servo/flags']:
+            self.fittext(rectangle(0, .5, 1, .4), _('OVER TEMP'), True)
+        elif mode == 'gps' and not self.have_gps() and self.control['mode'] != 'no gps':
+            self.fittext(rectangle(0, .55, 1, .3), _('WARNING GPS not detected'), True)
+            self.control['mode'] = 'no gps'
+        elif mode == 'wind' and not self.have_wind() and self.control['mode'] != 'no wind':
+            self.fittext(rectangle(0, .55, 1, .3), _('WARNING WIND not detected'), True)
+            self.control['mode'] = 'no wind'
+        else:
+            warning = False
+        if warning:
+            self.control['heading_command'] = False
 
         self.display_wifi()
 
@@ -818,22 +821,13 @@ class LCDClient():
 
         if self.keypadup[SELECT]:
             if self.display_page == self.display_control:
-                index = 0
-                for mode in list(self.modes):
-                    if mode == self.last_msg['ap/mode']:
+                for t in range(len(self.modes_list)):
+                    next_mode = self.modes_list[0]
+                    self.modes_list = self.modes_list[1:] + [next_mode]
+                    if next_mode != self.last_msg['ap/mode'] and \
+                       self.modes[next_mode]():
+                        self.client.set('ap/mode', next_mode)
                         break
-                    index += 1
-
-                tries = 0
-                while tries < len(self.modes):
-                    index += 1
-                    if index == len(self.modes):
-                        index = 0
-
-                    if self.modes[list(self.modes)[index]]():
-                        self.client.set('ap/mode', list(self.modes)[index])
-                        break
-                    tries += 1
             else:
                 self.menu = self.menu.adam() # reset to main menu
                 self.display_page = self.display_control
@@ -1017,7 +1011,7 @@ class LCDClient():
                 break
 
             name, data = result
-            #print name, ' = ', data
+            #print name, ' = ', data, 
 
             if 'value' in data:
                 self.last_msg[name] = data['value']
