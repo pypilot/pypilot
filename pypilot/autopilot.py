@@ -199,6 +199,7 @@ class AutopilotBase(object):
           d = .01
           self.gps_speed.set((1-d)*self.gps_speed.value + d*gps_speed)
       if self.nmea.values['wind']['source'].value != 'none':
+          d = .01
           wind_speed = self.nmea.values['wind']['speed'].value
           self.wind_speed.set((1-d)*self.wind_speed.value + d*wind_speed)
 
@@ -224,7 +225,7 @@ class AutopilotBase(object):
 
           wind_speed = self.wind_speed.value
           if wind_speed < 3: # below 3 knots wind speed, not reliable
-              self.mode.set('gps')
+              self.mode.set('wind')
 
           rd = math.radians(self.wind_direction.value)
           windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
