@@ -616,42 +616,58 @@ class LCDClient():
                         continue
                 except:
                     pass
-
                 drawnum(i, num[i])
-
-        mode = self.last_msg['ap/mode']
-
-        if 'OVERCURRENT' in self.last_msg['servo/flags']:
-            self.overcurrent_time = time.time()
 
         if type(self.last_msg['ap/heading']) == type(False):
             r = rectangle(0, 0, 1, .8)
             self.surface.box(*(self.convrect(r) + [black]))
             self.fittext(r, _('ERROR\ncompass or gyro failure!'), True)
-            self.control['heading'] = False
-            self.control['heading_command'] = False
+            self.control['heading_command'] = 'no imu'
         else:
             draw_big_number((0,0), self.last_msg['ap/heading'], self.control['heading'])
             self.control['heading'] = self.last_msg['ap/heading']
 
-            if not self.control['heading_command']:
-                pass
-            elif self.last_msg['ap/enabled'] != True:
-                if self.control['heading_command'] != 'standby':
-                    r = rectangle(0, .4, 1, .4)
+        mode = self.last_msg['ap/mode']
+        if 'OVERCURRENT' in self.last_msg['servo/flags']:
+            self.overcurrent_time = time.time()
+
+        if self.last_msg['servo/controller'] == 'none':
+            if self.control['heading_command'] != 'no controller':
+                self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True)
+                self.control['heading_command'] = 'no controller'
+        elif time.time() - self.overcurrent_time < 5: # 5 seconds
+            if self.control['heading_command'] != 'overcurrent':
+                self.fittext(rectangle(0, .4, 1, .35), _('OVER CURRENT'), True)
+                self.control['heading_command'] = 'overcurrent'
+        elif 'OVERTEMP' in self.last_msg['servo/flags']:
+            if self.control['heading_command'] != 'overtemp':
+                self.fittext(rectangle(0, .4, 1, .35), _('OVER TEMP'), True)
+                self.control['heading_command'] = 'overtemp'
+        elif mode == 'gps' and not self.have_gps():
+            if self.control['heading_command'] != 'no gps':
+                self.fittext(rectangle(0, .4, 1, .4), _('GPS not detected'), True)
+                self.control['heading_command'] = 'no gps'
+        elif (mode == 'wind' or mode == 'true wind') and not self.have_wind():
+            if self.control['heading_command'] != 'no wind':
+                self.fittext(rectangle(0, .4, 1, .4), _('WIND not detected'), True)
+                self.control['heading_command'] = 'no wind'
+        else:
+            # no warning, display the desired course or 'standby'
+            if self.last_msg['ap/enabled'] != True:
+                if self.control['heading_command'] != 'standby' or True:
+                    r = rectangle(0, .4, 1, .34)
                     self.surface.box(*(self.convrect(r) + [black]))
                     self.fittext(r, _('standby'))
                     self.control['heading_command'] = 'standby'
-                    self.control['mode'] = False
             else:
                 if self.control['heading_command'] != self.last_msg['ap/heading_command']:
                     draw_big_number((0,.4), self.last_msg['ap/heading_command'], self.control['heading_command'])
-                    self.control['mode'] = False
                     self.control['heading_command'] = self.last_msg['ap/heading_command']
+
+                    self.control['mode'] = False # refresh mode
 
         def modes():
             return [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
-
             
         if self.control['mode'] != mode or \
             self.control['modes'] != modes(): # mode ok
@@ -671,24 +687,6 @@ class LCDClient():
                     r = modes[mode][2]
                     marg = .02
                     self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
-
-        warning = True
-        if self.last_msg['servo/controller'] == 'none' and self.control['mode'] != 'no controller':
-            self.fittext(rectangle(0, .5, 1, .4), _('WARNING no motor controller'), True)
-        elif time.time() - self.overcurrent_time < 3:
-            self.fittext(rectangle(0, .5, 1, .4), _('OVER CURRENT'), True)
-        elif 'OVERTEMP' in self.last_msg['servo/flags']:
-            self.fittext(rectangle(0, .5, 1, .4), _('OVER TEMP'), True)
-        elif mode == 'gps' and not self.have_gps() and self.control['mode'] != 'no gps':
-            self.fittext(rectangle(0, .55, 1, .3), _('WARNING GPS not detected'), True)
-            self.control['mode'] = 'no gps'
-        elif mode == 'wind' and not self.have_wind() and self.control['mode'] != 'no wind':
-            self.fittext(rectangle(0, .55, 1, .3), _('WARNING WIND not detected'), True)
-            self.control['mode'] = 'no wind'
-        else:
-            warning = False
-        if warning:
-            self.control['heading_command'] = False
 
         self.display_wifi()
 
@@ -1050,8 +1048,6 @@ def main():
 
 
     lcdclient = LCDClient(screen)
-    print 'complete'
-
     if screen:
         # magnify to fill screen
         mag = min(screen.width / lcdclient.surface.width, screen.height / lcdclient.surface.height)
