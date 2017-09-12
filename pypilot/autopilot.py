@@ -105,6 +105,7 @@ class AutopilotBase(object):
     self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
     self.lastmode = False
     self.last_heading = False
+    self.last_heading_off = self.boatimu.heading_off.value
 
     timestamp = self.server.TimeStamp('ap')
     self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)
@@ -112,11 +113,9 @@ class AutopilotBase(object):
     self.heading_error_int = self.Register(SensorValue, 'heading_error_int', timestamp)
     self.heading_error_int_time = time.time()
 
-    self.gps_heading_offset = 0;
     self.gps_heading = self.Register(SensorValue, 'gps_heading', timestamp, directional=True)
     self.gps_speed = self.Register(SensorValue, 'gps_speed', timestamp)
 
-    self.wind_heading_offset = 0;
     self.wind_direction = self.Register(SensorValue, 'wind_direction', timestamp, directional=True)
     self.wind_speed = self.Register(SensorValue, 'wind_speed', timestamp)
 
@@ -153,6 +152,7 @@ class AutopilotBase(object):
     return self.server.Register(_type(*(['ap/' + name] + list(args)), **kwargs))
 
   def run(self):
+      self.lasttime = time.time()
       while True:
           self.ap_iteration()
 
@@ -169,51 +169,38 @@ class AutopilotBase(object):
       if not data:
           print 'autopilot failed to read imu at time:', time.time()
       t0 = time.time()
-
-      if data and 'calupdate' in data and self.last_heading:
-          # with compass calibration updates, adjust the autopilot heading_command
-          # to prevent actual course change
-
-          heading_off = data['heading'] - self.last_heading
-          new_command = self.heading_command.value + heading_off
-          while new_command >= 360:
-              new_command -= 360
-          while new_command < 0:
-              new_command += 360
-          self.heading_command.set(new_command)
-      if data:
-          self.last_heading = data['heading']
+      dt = t0 - self.lasttime
+      self.lasttime = t0
 
       #compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
       self.server.TimeStamp('ap', time.time()-self.starttime)
       compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
+      headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
+      gps_heading_ap = self.gps_heading.value + headingrate*dt
+      wind_direction_ap = self.wind_direction.value - headingrate*dt
 
       #update wind and gps offsets
       if self.nmea.values['gps']['source'].value != 'none':
-          gps_speed = self.nmea.values['gps']['speed'].value
-          if gps_speed > 1: # don't update gps offset below 1 knot
-              diff = resolv(self.nmea.values['gps']['track'].value - compass_heading, self.gps_heading_offset)
-              d = .001
-              self.gps_heading_offset = resolv((1-d)*self.gps_heading_offset + d*diff)
-          self.gps_heading.set(resolv(compass_heading + self.gps_heading_offset, 180))
           d = .01
+          gps_speed = self.nmea.values['gps']['speed'].value
           self.gps_speed.set((1-d)*self.gps_speed.value + d*gps_speed)
+          if gps_speed > 1: # don't update gps offset below 1 knot
+              d = .001
+              gps_heading = resolv(self.nmea.values['gps']['track'].value, gps_heading_ap)
+              gps_heading_ap = (1-d)*gps_heading_ap * d*gps_heading
+          self.gps_heading.set(resolv(compass_heading + self.gps_heading_offset, 180))
       if self.nmea.values['wind']['source'].value != 'none':
           d = .01
           wind_speed = self.nmea.values['wind']['speed'].value
           self.wind_speed.set((1-d)*self.wind_speed.value + d*wind_speed)
-
-          headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
-          wind_direction_ap = self.wind_direction.value
-          wind_direction_ap -= headingrate*.1
-
           # weight wind direction more with higher wind speed
           d = .01*math.log(self.wind_speed.value/5.0 + .2)
-          if d < 0: # below 4 knots of wind, can't even use it
-              d = 0
-          wind_direction = self.nmea.values['wind']['direction'].value
-          wind_direction_ap = resolv((1-d)*wind_direction_ap + d*wind_direction, 180)
-          self.wind_direction.set(wind_direction_ap)
+          if d > 0: # below 4 knots of wind, can't even use it
+              wind_direction = resolv(self.nmea.values['wind']['direction'].value, wind_direction_ap)
+              wind_direction_ap = (1-d)*wind_direction_ap + d*wind_direction
+
+      self.gps_heading.set(resolv(gps_heading_ap, 180))
+      self.wind_direction.set(resolv(wind_direction_ap, 180))
 
       if self.mode.value == 'true wind':
           # for true wind, we must have both wind and gps
@@ -237,11 +224,26 @@ class AutopilotBase(object):
             self.mode.set('compass')
         self.heading.set(self.wind_direction.value)
       if self.mode.value == 'gps':
-        # if gps drops out, switch to compass
-        if self.nmea.values['gps']['source'].value == 'none':
+        # if gps drops out or speed too slow, switch to compass
+        if self.nmea.values['gps']['source'].value == 'none' or \
+           self.gps_speed.value < 1:
             self.mode.set('compass')
         self.heading.set(self.gps_heading.value)
       if self.mode.value == 'compass':
+          if data:
+              if 'calupdate' in data and self.last_heading:
+                  # with compass calibration updates, adjust the autopilot heading_command
+                  # to prevent actual course change
+                  self.last_heading = resolv(self.last_heading, data['heading'])
+                  heading_off = data['heading'] - headingrate*dt - self.last_heading
+                  self.heading_command.set(resolv(self.heading_command.value + heading_off, 180))
+              self.last_heading = data['heading']
+          # if heading offset alignment changed, keep same course
+          if self.last_heading_off != self.boatimu.heading_off.value:
+              self.last_heading_off = resolv(self.last_heading_off, self.boatimu.heading_off.value)
+              heading_off = self.boatimu.heading_off.value - self.last_heading_off
+              self.heading_command.set(resolv(self.heading_command.value + heading_off, 180))
+              self.last_heading_off = self.boatimu.heading_off.value
           self.heading.set(compass_heading)
 
       if self.enabled.value:
@@ -309,7 +311,6 @@ class AutopilotBase(object):
           if dt <= 0:
               break
           time.sleep(dt)
-
 
 
 if __name__ == '__main__':

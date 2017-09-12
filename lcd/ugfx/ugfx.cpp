@@ -669,7 +669,7 @@ nokia5110screen::~nokia5110screen()
 
 void nokia5110screen::refresh()
 {
-    if(contrast != lastcontrast) {
+    if(contrast != lastcontrast || 1) {
         disp->set_bias(4);
         disp->set_contrast(contrast);
         lastcontrast = contrast;
