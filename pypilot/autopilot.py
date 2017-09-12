@@ -259,13 +259,6 @@ class AutopilotBase(object):
       if self.mode.value == 'wind' or self.mode.value =='true wind':
           err = -err
       self.heading_error.set(err)
-      # filter the incoming heading and gyro heading
-      # error +- 60 degrees
-      err = minmax(autopilot.resolv(heading - heading_command), 60)
-      # since wind direction is where the wind is from, the sign is reversed
-      if self.mode.value == 'wind' or self.mode.value =='true wind':
-          err = -err
-      self.heading_error.set(err)
 
       t = time.time()
       self.server.TimeStamp('ap', t)
