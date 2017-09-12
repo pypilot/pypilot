@@ -178,7 +178,7 @@ uint8_t sync_b = 0, in_sync_count = 0;
 
 uint8_t out_sync_b = 0, out_sync_pos = 0;
 uint8_t crcbytes[3];
-uint16_t max_current = 0;
+uint16_t max_current = 1;
 uint16_t max_controller_temp = 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
 
@@ -528,10 +528,10 @@ void loop()
         } else if(out_sync_pos == 2) {
             v = TakeVolts(0);
             code = VOLTAGE_CODE;
-        } else if(out_sync_pos == 4) {
+        } else if(out_sync_pos == 4 && !shunt_resistance) {
             v = TakeTemp(CONTROLLER_TEMP, 0);
           code = CONTROLLER_TEMP_CODE;
-        } else if(out_sync_pos == 6) {
+        } else if(out_sync_pos == 6 && !shunt_resistance) {
             v = TakeTemp(MOTOR_TEMP, 0);
           code = MOTOR_TEMP_CODE;
         } else {
