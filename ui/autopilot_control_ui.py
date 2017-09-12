@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- 
 
 ###########################################################################
-## Python code generated with wxFormBuilder (version Jul 15 2016)
+## Python code generated with wxFormBuilder (version Jul 25 2017)
 ## http://www.wxformbuilder.org/
 ##
 ## PLEASE DO "NOT" EDIT THIS FILE!
@@ -44,9 +44,16 @@ class AutopilotControlBase ( wx.Frame ):
 		fgSizer20.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
 		fgSizer21 = wx.FlexGridSizer( 1, 0, 0, 0 )
+		fgSizer21.AddGrowableCol( 0 )
 		fgSizer21.AddGrowableCol( 1 )
+		fgSizer21.AddGrowableCol( 2 )
+		fgSizer21.AddGrowableCol( 3 )
 		fgSizer21.SetFlexibleDirection( wx.BOTH )
 		fgSizer21.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
+		self.stController = wx.StaticText( self, wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stController.Wrap( -1 )
+		fgSizer21.Add( self.stController, 0, wx.ALL, 5 )
 		
 		self.stEngauged = wx.StaticText( self, wx.ID_ANY, u"        N/A        ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stEngauged.Wrap( -1 )

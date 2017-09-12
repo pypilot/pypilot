@@ -34,6 +34,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         watchlist += ['ap/enabled', 'ap/mode', 'ap/heading_command',
                       'gps/source', 'wind/source',
                       'ap/heading', 'servo/flags',
+                      'servo/controller',
                       'servo/mode', 'servo/engauged']
 
         value_list = self.client.list_values()
@@ -197,6 +198,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.stEngauged.SetLabel('Engauged' if value else 'Disengauged')
             elif name == 'servo/flags':
                 self.stStatus.SetLabel(value)
+            elif name == 'servo/controller':
+                self.stController.SetLabel(value)
             elif name == 'servo/mode':
                 self.stMode.SetLabel(value)
             else:
