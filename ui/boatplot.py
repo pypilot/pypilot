@@ -20,9 +20,10 @@ from pypilot import quaternion
 
 class BoatPlot():
     def __init__(self):
+        # looking at boat from nice angle
         self.Q = [-0.32060682, -0.32075041, 0.73081691, -0.51013437]
-#        self.Q = [1, 0, 0, 0]
-        self.Scale = 1
+        #self.Q = [1, 0, 0, 0]
+        self.Scale = 2
         self.compasstex = 0
         self.obj = False
         self.texture_compass = True
