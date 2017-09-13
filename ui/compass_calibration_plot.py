@@ -17,7 +17,8 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
-point_count=4000
+point_count=200
+recent_point_count=20
 
 def TranslateAfter(x, y, z):
     m = glGetFloatv(GL_MODELVIEW_MATRIX)
@@ -124,10 +125,11 @@ class CompassCalibrationPlot():
         self.fusionQPose = False
         self.alignmentQ = False
 
-        self.userscale = .02
+        self.userscale = .01
         self.accel = [0, 0, 0]
         self.heading = 0
         self.points = []
+        self.recent_points = []
         
         self.sigmapoints = False
         self.apoints = []
@@ -171,10 +173,18 @@ class CompassCalibrationPlot():
         elif name == 'imu/compass':
             value = data['value']
             if value:
-                self.points.append(value)
-                if len(self.points) > point_count:
-                    self.points = self.points[1:]
-
+                self.recent_points.append(value)
+                if len(self.recent_points) > recent_point_count * 2:
+                    avg = [0, 0, 0]
+                    for point in self.recent_points[:recent_point_count]:
+                        for i in range(3):
+                            avg[i] += point[i]
+                    for i in range(3):
+                        avg[i] /= recent_point_count
+                    self.points.append(avg)
+                    self.recent_points = self.recent_points[recent_point_count:]
+                    if len(self.points) > point_count:
+                        self.points = self.points[1:]
                     
         elif name == 'imu/compass_calibration_sigmapoints':
             self.sigmapoints = data['value']
@@ -251,21 +261,24 @@ class CompassCalibrationPlot():
             glPointSize(4)
             glColor3f(1,.3,.3)
             glBegin(GL_POINTS)
-            for i in range(len(self.points)-10):
-                glVertex3fv(self.points[i])
+            for i in xrange(max(len(self.recent_points) - recent_point_count, 0), \
+                            len(self.recent_points)):
+                glVertex3fv(self.recent_points[i])
             glEnd()
             
             glPointSize(4)
             glColor3f(0,1,0)
             glBegin(GL_POINTS)
-            for i in range(max(len(self.points)-10, 0), len(self.points)):
+            for i in xrange(len(self.points)):
                 glVertex3fv(self.points[i])
             glEnd()
 
+            '''
             glBegin(GL_LINE_STRIP)
-            for i in range(max(len(self.points)-10, 0), len(self.points)):
+            for i in xrange(len(self.points)):
                 glVertex3fv(self.points[i])
             glEnd()
+            '''
 
             glColor3f(1, 1, 0)
             glPointSize(6)
