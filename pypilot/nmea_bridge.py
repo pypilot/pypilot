@@ -74,7 +74,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
 def nmea_bridge_process(pipe=False):
     import os
     sockets = []
-    watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command', 'imu/pitch', 'imu/roll', 'imu/heading_lowpass', 'gps/source', 'wind/speed', 'wind/direction', 'wind/source']
+    watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command', 'imu/pitch', 'imu/roll', 'imu/heading_lowpass', 'gps.source', 'wind.speed', 'wind.direction', 'wind.source']
 
     def setup_watches(client, watch=True):
         for name in watchlist:
@@ -188,13 +188,13 @@ def nmea_bridge_process(pipe=False):
             elif line[0] == '$' and line[3:6] == 'APB':
                 data = line[7:len(line)-3].split(',')
                 if not ap_enabled:
-                    client.set('ap/enabled', True)
+                    client.set('ap.enabled', True)
 
                 if ap_mode != 'gps':
-                    client.set('ap/mode', 'gps')
+                    client.set('ap.mode', 'gps')
 
                 if abs(ap_heading_command - float(data[7])) > .1:
-                    client.set('ap/heading_command', float(data[7]))
+                    client.set('ap.heading_command', float(data[7]))
 
         msgs = client.receive()
         for name in msgs:
@@ -202,11 +202,11 @@ def nmea_bridge_process(pipe=False):
             value = data['value']
 
             msg = False
-            if name == 'ap/enabled':
+            if name == 'ap.enabled':
                 ap_enabled = value
-            elif name == 'ap/mode':
+            elif name == 'ap.mode':
                 ap_mode = value
-            elif name == 'ap/heading_command':
+            elif name == 'ap.heading_command':
                 ap_heading_command = value
             elif name == 'imu/pitch':
                 msg = 'APXDR,A,%.3f,D,PTCH' % value
@@ -214,13 +214,13 @@ def nmea_bridge_process(pipe=False):
                 msg = 'APXDR,A,%.3f,D,ROLL' % value
             elif name == 'imu/heading_lowpass':
                 msg = 'APHDM,%.3f,M' % value
-            elif name == 'gps/source':
+            elif name == 'gps.source':
                 gps_source = value
-            elif name == 'wind/speed':
+            elif name == 'wind.speed':
                 windspeed = value
-            elif name == 'wind/direction':
+            elif name == 'wind.direction':
                 msg = 'APMWV,%.1f,R,%.1f,K,A' % (value, windspeed)
-            elif name == 'wind/source':
+            elif name == 'wind.source':
                 wind_source = value
 
             if msg:

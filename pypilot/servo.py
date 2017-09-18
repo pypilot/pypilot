@@ -223,7 +223,7 @@ class Servo(object):
         self.raw_command(0)
 
     def Register(self, _type, name, *args, **kwargs):
-        return self.server.Register(_type(*(['servo/' + name] + list(args)), **kwargs))
+        return self.server.Register(_type(*(['servo.' + name] + list(args)), **kwargs))
 
     def send_command(self):
         if self.fault():
@@ -519,7 +519,7 @@ class Servo(object):
             self.flags.updatedriver(self.driver.flags)
             self.engauged.update(not not self.driver.flags & ServoFlags.ENGAUGED)
 
-        self.flags.setbit(DRIVER_TIMEOUT, self.command_timeout - self.last_current_measured > 1)
+        self.flags.setbit(ServoFlags.DRIVER_TIMEOUT, self.command_timeout - self.last_current_measured > 1)
         self.send_command()
 
     def fault(self):

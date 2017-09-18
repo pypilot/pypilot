@@ -31,11 +31,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         self.gps_heading_offset = 0
 
-        watchlist += ['ap/enabled', 'ap/mode', 'ap/heading_command',
-                      'gps/source', 'wind/source',
-                      'ap/heading', 'servo/flags',
-                      'servo/controller',
-                      'servo/mode', 'servo/engauged']
+        watchlist += ['ap.enabled', 'ap.mode', 'ap.heading_command',
+                      'gps.source', 'wind.source',
+                      'ap.heading', 'servo.flags',
+                      'servo.controller',
+                      'servo.mode', 'servo.engauged']
 
         value_list = self.client.list_values()
         self.gains = []
@@ -93,13 +93,13 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.SetSize(wx.Size(500, 580))
 
     def stop(self):
-        self.client.set('ap/enabled', False)
-        self.client.set('servo/command', 0)
+        self.client.set('ap.enabled', False)
+        self.client.set('servo.command', 0)
 
     def servo_command(self, command):
         if self.lastcommand != command or command != 0:
             self.lastcommand = command
-            self.client.set('servo/command', command)
+            self.client.set('servo.command', command)
 
     def send_gain(self, gain):
         name = gain['stname'].GetLabel()
@@ -120,7 +120,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         if self.enabled:
             if command != 0:
                 self.heading_command += (-1 if command < 0 else 1) / 2.0
-                self.client.set('ap/heading_command', self.heading_command)
+                self.client.set('ap.heading_command', self.heading_command)
         else:
             self.servo_command(command / 50.0)
 
@@ -169,50 +169,50 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
             if found:
                 pass
-            elif name == 'servo/raw_command':
+            elif name == 'servo.raw_command':
                 self.tbAP.SetValue(False)
                 self.tbAP.SetForegroundColour(wx.RED)
-            elif name == 'ap/enabled':
+            elif name == 'ap.enabled':
                 self.tbAP.SetValue(value)
                 self.enabled = value
                 self.set_mode_color()
-            elif name == 'ap/mode':
+            elif name == 'ap.mode':
                 rb = {'compass': self.rbCompass, 'gps': self.rbGPS, 'wind': self.rbWind, 'true wind': self.rbTrueWind}
                 rb[value].SetValue(True)
                 self.mode = value
                 self.set_mode_color()
-            elif name == 'ap/heading_command':
+            elif name == 'ap.heading_command':
                 self.stHeadingCommand.SetLabel('%.1f' % value)
                 if command == 0:
                     self.heading_command = value
-            elif name == 'gps/source':
+            elif name == 'gps.source':
                 self.rbGPS.Enable(value != 'none')
                 self.rbTrueWind.Enable(value != 'none' and self.rbWind.IsEnabled())
-            elif name == 'wind/source':
+            elif name == 'wind.source':
                 self.rbWind.Enable(value != 'none')
                 self.rbTrueWind.Enable(value != 'none' and self.rbGPS.IsEnabled())
-            elif name == 'ap/heading':
+            elif name == 'ap.heading':
                 self.stHeading.SetLabel('%.1f' % value)
                 self.heading = value
-            elif name == 'servo/engauged':
+            elif name == 'servo.engauged':
                 self.stEngauged.SetLabel('Engauged' if value else 'Disengauged')
-            elif name == 'servo/flags':
+            elif name == 'servo.flags':
                 self.stStatus.SetLabel(value)
-            elif name == 'servo/controller':
+            elif name == 'servo.controller':
                 self.stController.SetLabel(value)
-            elif name == 'servo/mode':
+            elif name == 'servo.mode':
                 self.stMode.SetLabel(value)
             else:
                 print 'warning: unhandled message "%s"' % name
 
     def onAP( self, event ):
-        self.client.set('servo/raw_command', 0)
+        self.client.set('servo.raw_command', 0)
         if self.tbAP.GetValue():
-            self.client.set('ap/heading_command', self.heading)
-            self.client.set('ap/enabled', True)
+            self.client.set('ap.heading_command', self.heading)
+            self.client.set('ap.enabled', True)
         else:
-            self.client.set('servo/command', 0)
-            self.client.set('ap/enabled', False)
+            self.client.set('servo.command', 0)
+            self.client.set('ap.enabled', False)
 
     def onMode( self, event):
         if self.rbGPS.GetValue():
@@ -223,7 +223,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             mode = 'true wind'
         else:
             mode = 'compass'
-        self.client.set('ap/mode', mode)
+        self.client.set('ap.mode', mode)
 
     def onCommand( self, event ):
         if wx.GetMouseState().LeftIsDown():

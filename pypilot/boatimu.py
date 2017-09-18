@@ -246,7 +246,7 @@ class BoatIMU(object):
     self.imu_process.terminate()
 
   def Register(self, _type, name, *args, **kwargs):
-    value = _type(*(['imu/' + name] + list(args)), **kwargs)
+    value = _type(*(['imu.' + name] + list(args)), **kwargs)
     return self.server.Register(value)
       
   def update_alignment(self, q):

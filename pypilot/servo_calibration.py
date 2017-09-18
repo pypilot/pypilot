@@ -101,7 +101,7 @@ def ServoCalibrationThread(calibration):
     def reset(self):
         self.stop()
         if not self.waitnofault(7):
-            print 'servo reset failed', self.fault(), self.data['servo/flags']
+            print 'servo reset failed', self.fault(), self.data['servo.flags']
             exit(1)
 
     def average_power(self, timeout):
@@ -140,9 +140,9 @@ def ServoCalibrationThread(calibration):
                     command(raw_cmd)
                     if self.fault() and time.time() - t0 > 3:
                         return True
-                    #print 'idle current', idle_current, self.data['servo/current']
-                    if time.time() - t0 > 3 and self.data['servo/current'] > 1.6 * idle_current:
-                        #print 'max current', self.data['servo/current'], idle_current
+                    #print 'idle current', idle_current, self.data['servo.current']
+                    if time.time() - t0 > 3 and self.data['servo.current'] > 1.6 * idle_current:
+                        #print 'max current', self.data['servo.current'], idle_current
                         return True
                     time.sleep(.1)
                 return False
@@ -266,7 +266,7 @@ def ServoCalibrationThread(calibration):
         console('failed to reset servo position to start')
         console('Trying with brake hack')
         self.brake_hack = True
-        self.client.set('servo/brake_hack', self.brake_hack)
+        self.client.set('servo.brake_hack', self.brake_hack)
         cal = self.search_end(-1)
         if not cal:
             console('failed to reset servo position to start')
@@ -278,7 +278,7 @@ def ServoCalibrationThread(calibration):
     max_current = idle_current + .75*(stall_current - idle_current)
 
     reset()        
-    #self.client.set('servo/max_current', max_current)
+    #self.client.set('servo.max_current', max_current)
                         
     console('max current found', max_current)
     console('found start')
@@ -310,7 +310,7 @@ def ServoCalibrationThread(calibration):
             #if signi == 0:
             #    raw_cmd += .03
             self.stop()
-            #console('flags', self.data['servo/flags'], 'fault', self.fault())
+            #console('flags', self.data['servo.flags'], 'fault', self.fault())
             console('%.1f%%' % (stepi*100.0/2/steps), 'step', stepi, 'of', 2*steps, 'raw command', raw_cmd)
             stepi += 1
             cal = self.calibrate_speed(raw_cmd)
@@ -342,7 +342,7 @@ def ServoCalibrationThread(calibration):
         console('did not reach highest speed')
 
     self.stop()
-    self.client.set('servo/raw_command', 0)
+    self.client.set('servo.raw_command', 0)
 
     #print 'calibration:', calibration
     # normalize calibration speed from 0 to 1
@@ -403,7 +403,7 @@ class ServoCalibration(object):
         self.rawcommand.set(value)
 
     def Register(self, _type, name, *args, **kwargs):
-        return self.server.Register(_type(*(['servo/calibration/' + name] + list(args)), **kwargs))
+        return self.server.Register(_type(*(['servo.calibration/' + name] + list(args)), **kwargs))
 
         def fault(self):
             return (ServoFlags.OVERCURRENT | ServoFlags.FALTPIN) & self.servo.flags.value or \

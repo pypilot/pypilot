@@ -149,7 +149,7 @@ class AutopilotBase(object):
           self.watchdog_device.close()
 
   def Register(self, _type, name, *args, **kwargs):
-    return self.server.Register(_type(*(['ap/' + name] + list(args)), **kwargs))
+    return self.server.Register(_type(*(['ap.' + name] + list(args)), **kwargs))
 
   def run(self):
       self.lasttime = time.time()

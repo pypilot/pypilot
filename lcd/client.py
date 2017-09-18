@@ -152,7 +152,7 @@ class rectangle():
 
 AUTO, MENU, UP, DOWN, SELECT = range(5)
 keynames = {'auto': AUTO, 'menu': MENU, 'up': UP, 'down': DOWN, 'select': SELECT}
-gains = ['ap/P', 'ap/I', 'ap/D', 'ap/P2', 'ap/D2']
+gains = ['ap.P', 'ap.I', 'ap.D', 'ap.P2', 'ap.D2']
 
 class LCDClient():
     def __init__(self, screen):
@@ -198,7 +198,7 @@ class LCDClient():
                       'true wind': self.have_true_wind};
         self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
 
-        self.initial_gets = gains + ['servo/min_speed', 'servo/max_speed', 'servo/max_current', 'servo/period', 'imu/alignmentCounter']
+        self.initial_gets = gains + ['servo.min_speed', 'servo.max_speed', 'servo.max_current', 'servo.period', 'imu.alignmentCounter']
 
         self.have_select = False
         self.create_mainmenu()
@@ -288,28 +288,28 @@ class LCDClient():
 
         def gain():
             self.menu = LCDMenu(self, _('Gain'),
-                                [value_edit('P', _('position gain'), 'ap/P', True),
-                                 value_edit('I', _('integral gain'), 'ap/I', True),
-                                 value_edit('D', _('rate gain'),     'ap/D', True),
-                                 value_edit('P2', _('position2 gain'), 'ap/P2', True),
-                                 value_edit('D2', _('rate2 gain'),     'ap/D2',  True)], self.menu)
+                                [value_edit('P', _('position gain'), 'ap.P', True),
+                                 value_edit('I', _('integral gain'), 'ap.I', True),
+                                 value_edit('D', _('rate gain'),     'ap.D', True),
+                                 value_edit('P2', _('position2 gain'), 'ap.P2', True),
+                                 value_edit('D2', _('rate2 gain'),     'ap.D2',  True)], self.menu)
             return self.display_menu
 
         def level():
-            self.client.set('imu/alignmentCounter', 100)
+            self.client.set('imu.alignmentCounter', 100)
             return self.display_page
 
         def calibrate():
             def getheading():
-                self.get('imu/heading')
+                self.get('imu.heading')
                 try:
-                    return '%.1f' % self.last_msg['imu/heading']
+                    return '%.1f' % self.last_msg['imu.heading']
                 except:
-                    return str(self.last_msg['imu/heading'])
+                    return str(self.last_msg['imu.heading'])
 
             self.menu = LCDMenu(self, _('Calibrate'),
                                 [(_('level'), level),
-                                 value_edit(_('heading'), getheading, 'imu/heading_offset'),
+                                 value_edit(_('heading'), getheading, 'imu.heading_offset'),
                                  (_('info'), lambda : self.display_calibrate_info)],
                                 self.menu)
             self.menu.display_hook = self.display_calibrate
@@ -319,7 +319,7 @@ class LCDClient():
             def mode():
                 def set_mode(name):
                     def thunk():
-                        self.client.set('ap/mode', name)
+                        self.client.set('ap.mode', name)
                         self.menu = self.menu.adam()
                         return self.display_control
                     return thunk
@@ -329,7 +329,7 @@ class LCDClient():
                 for mode in self.modes:
                     if self.modes[mode]():
                         modes.append((mode, set_mode(mode)))
-                        if mode == self.last_msg['ap/mode']:
+                        if mode == self.last_msg['ap.mode']:
                             selection = index
                         index+=1
                 self.menu = LCDMenu(self, _('Mode'), modes, self.menu)
@@ -339,19 +339,19 @@ class LCDClient():
 
             def motor():
                 self.menu = LCDMenu(self, _('Motor'),
-                                    [value_edit(_('min speed'), _('relative'), 'servo/min_speed'),
-                                     value_edit(_('max speed'), _('relative'), 'servo/max_speed'),
-                                     value_edit(_('max current'), _('amps'), 'servo/max_current'),
-                                     value_edit(_('period'), _('seconds'), 'servo/period')],
+                                    [value_edit(_('min speed'), _('relative'), 'servo.min_speed'),
+                                     value_edit(_('max speed'), _('relative'), 'servo.max_speed'),
+                                     value_edit(_('max current'), _('amps'), 'servo.max_current'),
+                                     value_edit(_('period'), _('seconds'), 'servo.period')],
                                     self.menu)
                 return self.display_menu
 
             
             def filter():
                 self.menu = LCDMenu(self, _('Filter'),
-                                    [value_edit(_('heading'), _('relative'), 'imu/heading_lowpass_constant'),
-                                     value_edit(_("heading'"), _('relative'), 'imu/headingraterate_lowpass_constant'),
-                                     value_edit(_("heading''"), _('relative'), 'imu/headingraterate_lowpass_constant')],
+                                    [value_edit(_('heading'), _('relative'), 'imu.heading_lowpass_constant'),
+                                     value_edit(_("heading'"), _('relative'), 'imu.headingraterate_lowpass_constant'),
+                                     value_edit(_("heading''"), _('relative'), 'imu.headingraterate_lowpass_constant')],
                                     self.menu)
                 return self.display_menu
 
@@ -506,26 +506,26 @@ class LCDClient():
     def connect(self):
         self.display_page = self.display_connecting
         
-        watchlist = ['ap/enabled', 'ap/mode', 'ap/heading_command',
-                     'gps/source', 'wind/source', 'servo/controller', 'servo/flags',
-                     'imu/compass_calibration']
-        poll_list = ['ap/heading']
+        watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
+                     'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
+                     'imu.compass_calibration']
+        poll_list = ['ap.heading']
         nalist = watchlist + poll_list + gains + \
-        ['imu/pitch', 'imu/heel', 'ap/runtime', 'ap/version',
-         'imu/heading',
-         'imu/alignmentCounter',
-         'imu/compass_calibration_age',
-         'imu/heading_lowpass_constant', 'imu/headingrate_lowpass_constant',
-         'imu/headingraterate_lowpass_constant',
-         'servo/watts', 'servo/amp_hours', 'servo/max_current',
-         'servo/min_speed', 'servo/max_speed']
+        ['imu.pitch', 'imu.heel', 'ap.runtime', 'ap.version',
+         'imu.heading',
+         'imu.alignmentCounter',
+         'imu.compass_calibration_age',
+         'imu.heading_lowpass_constant', 'imu.headingrate_lowpass_constant',
+         'imu.headingraterate_lowpass_constant',
+         'servo.watts', 'servo.amp_hours', 'servo.max_current',
+         'servo.min_speed', 'servo.max_speed']
         self.last_msg = {}
         for name in nalist:
             self.last_msg[name] = _('N/A')
-        for name in ['gps/source', 'wind/source']:
+        for name in ['gps.source', 'wind.source']:
             self.last_msg[name] = 'none'
-        self.last_msg['ap/heading_command'] = 0
-        self.last_msg['imu/heading_offset'] = 0
+        self.last_msg['ap.heading_command'] = 0
+        self.last_msg['imu.heading_offset'] = 0
 
         host = ''
         if len(sys.argv) > 1:
@@ -560,10 +560,10 @@ class LCDClient():
         return True
 
     def have_gps(self):
-        return self.last_msg['gps/source'] != 'none'
+        return self.last_msg['gps.source'] != 'none'
 
     def have_wind(self):
-        return self.last_msg['wind/source'] != 'none'
+        return self.last_msg['wind.source'] != 'none'
 
     def have_true_wind(self):
         return self.have_gps() and self.have_wind()
@@ -618,20 +618,20 @@ class LCDClient():
                     pass
                 drawnum(i, num[i])
 
-        if type(self.last_msg['ap/heading']) == type(False):
+        if type(self.last_msg['ap.heading']) == type(False):
             r = rectangle(0, 0, 1, .8)
             self.surface.box(*(self.convrect(r) + [black]))
             self.fittext(r, _('ERROR\ncompass or gyro failure!'), True)
             self.control['heading_command'] = 'no imu'
         else:
-            draw_big_number((0,0), self.last_msg['ap/heading'], self.control['heading'])
-            self.control['heading'] = self.last_msg['ap/heading']
+            draw_big_number((0,0), self.last_msg['ap.heading'], self.control['heading'])
+            self.control['heading'] = self.last_msg['ap.heading']
 
-        mode = self.last_msg['ap/mode']
-        if 'OVERCURRENT' in self.last_msg['servo/flags']:
+        mode = self.last_msg['ap.mode']
+        if 'OVERCURRENT' in self.last_msg['servo.flags']:
             self.overcurrent_time = time.time()
 
-        if self.last_msg['servo/controller'] == 'none':
+        if self.last_msg['servo.controller'] == 'none':
             if self.control['heading_command'] != 'no controller':
                 self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True)
                 self.control['heading_command'] = 'no controller'
@@ -639,7 +639,7 @@ class LCDClient():
             if self.control['heading_command'] != 'overcurrent':
                 self.fittext(rectangle(0, .4, 1, .35), _('OVER CURRENT'), True)
                 self.control['heading_command'] = 'overcurrent'
-        elif 'OVERTEMP' in self.last_msg['servo/flags']:
+        elif 'OVERTEMP' in self.last_msg['servo.flags']:
             if self.control['heading_command'] != 'overtemp':
                 self.fittext(rectangle(0, .4, 1, .35), _('OVER TEMP'), True)
                 self.control['heading_command'] = 'overtemp'
@@ -653,16 +653,16 @@ class LCDClient():
                 self.control['heading_command'] = 'no wind'
         else:
             # no warning, display the desired course or 'standby'
-            if self.last_msg['ap/enabled'] != True:
+            if self.last_msg['ap.enabled'] != True:
                 if self.control['heading_command'] != 'standby' or True:
                     r = rectangle(0, .4, 1, .34)
                     self.surface.box(*(self.convrect(r) + [black]))
                     self.fittext(r, _('standby'))
                     self.control['heading_command'] = 'standby'
             else:
-                if self.control['heading_command'] != self.last_msg['ap/heading_command']:
-                    draw_big_number((0,.4), self.last_msg['ap/heading_command'], self.control['heading_command'])
-                    self.control['heading_command'] = self.last_msg['ap/heading_command']
+                if self.control['heading_command'] != self.last_msg['ap.heading_command']:
+                    draw_big_number((0,.4), self.last_msg['ap.heading_command'], self.control['heading_command'])
+                    self.control['heading_command'] = self.last_msg['ap.heading_command']
 
                     self.control['mode'] = False # refresh mode
 
@@ -671,7 +671,7 @@ class LCDClient():
             
         warning = False
         if mode == 'compass':
-            cal = self.last_msg['imu/compass_calibration']
+            cal = self.last_msg['imu.compass_calibration']
             if cal == 'N/A':
                 ndeviation = 0
             else:
@@ -691,7 +691,7 @@ class LCDClient():
            (self.control['mode'] != mode or self.control['modes'] != modes()):
             self.control['mode'] = mode
             self.control['modes'] = modes()
-            #print 'mode', self.last_msg['ap/mode']
+            #print 'mode', self.last_msg['ap.mode']
             modes = {'compass': ('C', self.have_compass, rectangle(0, .74, .25, .16)),
                      'gps':     ('G', self.have_gps,     rectangle(.25, .74, .25, .16)),
                      'wind':    ('W', self.have_wind,    rectangle(.5, .74, .25, .16)),
@@ -701,7 +701,7 @@ class LCDClient():
             for mode in modes:
                 if modes[mode][1]():
                     self.fittext(modes[mode][2], modes[mode][0])
-                if self.last_msg['ap/mode'] == mode:
+                if self.last_msg['ap.mode'] == mode:
                     r = modes[mode][2]
                     marg = .02
                     self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
@@ -714,7 +714,7 @@ class LCDClient():
         self.menu.display()
 
     def display_calibrate(self):
-        counter = self.last_msg['imu/alignmentCounter']
+        counter = self.last_msg['imu.alignmentCounter']
         if counter:
             r = rectangle(0, 0, 1, .25)
             self.surface.box(*(self.convrect(r) + [black]))
@@ -723,12 +723,12 @@ class LCDClient():
             r.width = 1-float(counter)/100
             r.height = .25
             self.invertrectangle(r)
-        self.get('imu/alignmentCounter')
+        self.get('imu.alignmentCounter')
             
-        self.fittext(rectangle(0, .86, .5, .14), self.round_last_msg('imu/pitch', 1))
-        self.fittext(rectangle(.5, .86, .5, .14), self.round_last_msg('imu/heel', 1))
-        self.get('imu/pitch')
-        self.get('imu/heel')
+        self.fittext(rectangle(0, .86, .5, .14), self.round_last_msg('imu.pitch', 1))
+        self.fittext(rectangle(.5, .86, .5, .14), self.round_last_msg('imu.heel', 1))
+        self.get('imu.pitch')
+        self.get('imu.heel')
 
     def display_connecting(self):
         self.surface.fill(black)
@@ -752,19 +752,19 @@ class LCDClient():
         y = .2
         if self.info_page == 0:
             spacing = .11
-            v = self.round_last_msg('servo/watts', 3)
-            runtime = self.last_msg['ap/runtime'][:7]
-            ah = self.round_last_msg('servo/amp_hours', 3)
+            v = self.round_last_msg('servo.watts', 3)
+            runtime = self.last_msg['ap.runtime'][:7]
+            ah = self.round_last_msg('servo.amp_hours', 3)
             items = [_('Watts'), v, _('Amp Hours'), ah, _('runtime'), runtime]
-            self.get('servo/watts')
-            self.get('servo/amp_hours')
-            self.get('ap/runtime')
+            self.get('servo.watts')
+            self.get('servo.amp_hours')
+            self.get('ap.runtime')
         else:
             spacing = .18
-            ver = self.last_msg['ap/version']
+            ver = self.last_msg['ap.version']
 
             items = [_('version'), ver, _('author'), 'Sean D\'Epagnier']
-            self.get('ap/version')
+            self.get('ap.version')
 
         even, odd = 0, .05
         for item in items:
@@ -779,7 +779,7 @@ class LCDClient():
         
         deviation = _('N/A')
         try:
-            cal = self.last_msg['imu/compass_calibration']
+            cal = self.last_msg['imu.compass_calibration']
             ndeviation = cal[0][3] - cal[1][3]
             #print ndeviation
             names = [(0, _('incomplete')), (1, _('excellent')), (2, _('good')),
@@ -794,10 +794,10 @@ class LCDClient():
         self.fittext(rectangle(0, .3, 1, .15), _('compass'))
         self.fittext(rectangle(0, .42, 1, .23), deviation)
         self.fittext(rectangle(0, .65, .4, .15), _('age'))
-        self.fittext(rectangle(0, .8, 1, .2), self.last_msg['imu/compass_calibration_age'][:7])
+        self.fittext(rectangle(0, .8, 1, .2), self.last_msg['imu.compass_calibration_age'][:7])
             
-        #self.get('imu/compass_calibration')
-        self.get('imu/compass_calibration_age')
+        #self.get('imu.compass_calibration')
+        self.get('imu.compass_calibration_age')
 
     def display(self):
         self.display_page()
@@ -828,12 +828,12 @@ class LCDClient():
             
     def process_keys(self):                           
         if self.keypadup[AUTO]: # AUTO
-            if self.last_msg['ap/enabled'] == False and self.display_page == self.display_control:
-                self.set('ap/heading_command', self.last_msg['ap/heading'])
-                self.set('ap/enabled', True)
+            if self.last_msg['ap.enabled'] == False and self.display_page == self.display_control:
+                self.set('ap.heading_command', self.last_msg['ap.heading'])
+                self.set('ap.enabled', True)
             else:
-                self.set('servo/command', 0) #stop
-                self.set('ap/enabled', False)
+                self.set('servo.command', 0) #stop
+                self.set('ap.enabled', False)
         
             self.display_page = self.display_control
 
@@ -842,9 +842,9 @@ class LCDClient():
                 for t in range(len(self.modes_list)):
                     next_mode = self.modes_list[0]
                     self.modes_list = self.modes_list[1:] + [next_mode]
-                    if next_mode != self.last_msg['ap/mode'] and \
+                    if next_mode != self.last_msg['ap.mode'] and \
                        self.modes[next_mode]():
-                        self.client.set('ap/mode', next_mode)
+                        self.client.set('ap.mode', next_mode)
                         break
             else:
                 self.menu = self.menu.adam() # reset to main menu
@@ -861,11 +861,11 @@ class LCDClient():
             if self.keypadup[MENU]: # MENU
                 self.display_page = self.display_menu
             elif updown: # LEFT/RIGHT
-                if self.last_msg['ap/enabled']:
-                    cmd = self.last_msg['ap/heading_command'] + sign*speed
-                    self.set('ap/heading_command', cmd)
+                if self.last_msg['ap.enabled']:
+                    cmd = self.last_msg['ap.heading_command'] + sign*speed
+                    self.set('ap.heading_command', cmd)
                 else:
-                    self.set('servo/command', sign*(speed+8)/40)
+                    self.set('servo.command', sign*(speed+8)/40)
 
         elif self.display_page == self.display_menu:
             if self.keypadup[UP]:
@@ -938,7 +938,7 @@ class LCDClient():
             self.key(keynames['down'], down)
 
     def idle(self):
-        self.get('ap/heading')
+        self.get('ap.heading')
 
         if any(self.keypadup):
             self.longsleep = 0
