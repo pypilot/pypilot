@@ -17,7 +17,7 @@ from signalk.pipeserver import NonBlockingPipe
 
 import numpy
 
-debug=False
+debug=True
 
 def FitLeastSq(beta0, f, zpoints):
     try:

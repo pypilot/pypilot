@@ -1,8 +1,6 @@
 Installing:
 
-The dependencies can be installed with "apt install" or sometimes pip, eg:
-sudo apt-get install python-numpy python-scipy
-
+The dependencies can be installed with "apt install" or sometimes 'pip install"
 
 server dependencies (required): python-gps python-serial libpython-dev python-numpy python-scipy swig
 lcdclient dependencies: python-pillow

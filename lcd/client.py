@@ -684,6 +684,7 @@ class LCDClient():
                 apply(self.surface.box, self.convrect(r) + [white])
                 self.fittext(r, str, True)
                 self.invertrectangle(r)
+                self.control['mode'] = 'warning'
                 warning = True
             if ndeviation == 0:
                 warncal(_('No C Cal'))
