@@ -35,14 +35,14 @@ $(document).ready(function() {
     $('#runtime').text("N/A");
 
     var gains = ['P', 'I', 'D', 'P2', 'D2'];
-    var conf_names = [['servo/min_speed', 'min_speed',''],
-                      ['servo/max_speed', 'max_speed',''],
-                      ['servo/max_current', 'max_current','Amps'],
-                      ['servo/max_controller_temp', 'max_controller_temp','Degrees C'],
-                      ['servo/period', 'period', 'seconds'],
-                      ['imu/heading_lowpass_constant', 'heading_lowpass_constant', ''],
-                      ['imu/headingrate_lowpass_constant', 'headingrate_lowpass_constant', ''],
-                      ['imu/headingraterate_lowpass_constant', 'headingraterate_lowpass_constant', '']];      
+    var conf_names = [['servo.min_speed', 'min_speed',''],
+                      ['servo.max_speed', 'max_speed',''],
+                      ['servo.max_current', 'max_current','Amps'],
+                      ['servo.max_controller_temp', 'max_controller_temp','Degrees C'],
+                      ['servo.period', 'period', 'seconds'],
+                      ['imu.heading_lowpass_constant', 'heading_lowpass_constant', ''],
+                      ['imu.headingrate_lowpass_constant', 'headingrate_lowpass_constant', ''],
+                      ['imu.headingraterate_lowpass_constant', 'headingraterate_lowpass_constant', '']];      
     // Connect to the Socket.IO server.
     var port = location.port;
     port = pypilot_webapp_port;
@@ -76,28 +76,28 @@ $(document).ready(function() {
         $('#aperrors1').text("");
 
         // control
-        watch('ap/enabled')
-        watch('ap/mode')
-        watch('ap/heading_command')
+        watch('ap.enabled')
+        watch('ap.mode')
+        watch('ap.heading_command')
 
         // gain
         $('#gain_container').text('')
         var list_values = JSON.parse(msg)
         for (var i = 0; i<gains.length; i++) {
             var w = $(window).width();
-            var info = list_values['ap/' + gains[i]]
+            var info = list_values['ap.' + gains[i]]
             var min = info['min']
             var max = info['max']
             $('#gain_container').append('<br>'+gains[i]+' <input type="range" id="' + gains[i] + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" style="width:'+w*3/4+'px"><span id="' + gains[i] + 'label"></span><br>');
             $('#'+gains[i]).change(function(event) {
-                signalk_set('ap/'+this.id, this.valueAsNumber);
+                signalk_set('ap.'+this.id, this.valueAsNumber);
                 block_polling = 2;
             });
         }
 
         // calibration
-        watch('imu/alignmentQ');
-        watch('imu/alignmentCounter');
+        watch('imu.alignmentQ');
+        watch('imu.alignmentCounter');
 
         // configuration
         $('#configuration_container').text('')
@@ -118,7 +118,7 @@ $(document).ready(function() {
             });
         }
 
-        watch('servo/controller');
+        watch('servo.controller');
 
         setTimeout(poll_signalk, 1000)
 
@@ -132,7 +132,7 @@ $(document).ready(function() {
         if(servo_command_timeout > 0) {
             if(servo_command_timeout-- <= 0)
                 servo_command = 0;
-            signalk_set('servo/command', servo_command);
+            signalk_set('servo.command', servo_command);
         }
 
         if(block_polling > 0) {
@@ -149,20 +149,20 @@ $(document).ready(function() {
         socket.emit('signalk_poll', 'clear');
         
         if(tab == 'Control') {
-            poll('ap/heading');
+            poll('ap.heading');
         } else if(tab == 'Gain') {
             for (var i = 0; i<gains.length; i++)
-                poll('ap/' + gains[i]);
+                poll('ap.' + gains[i]);
         } else if(tab == 'Calibration') {
-            poll('imu/pitch');
-            poll('imu/roll');
+            poll('imu.pitch');
+            poll('imu.roll');
         } else if(tab == 'Configuration') {
             for(i=0; i < conf_names.length; i++)
                 poll(conf_names[i][0]);
         } else if(tab == 'Statistics') {
-            poll('servo/amp_hours');
-            poll('ap/runtime');
-            poll('servo/engauged');
+            poll('servo.amp_hours');
+            poll('ap.runtime');
+            poll('servo.engauged');
         }
     }
     
@@ -204,8 +204,8 @@ $(document).ready(function() {
 
         data = JSON.parse(msg);
 
-        if('ap/heading' in data) {
-            heading = data['ap/heading']['value'];
+        if('ap.heading' in data) {
+            heading = data['ap.heading']['value'];
             if(heading.toString()=="false")
                 $('#aperrors0').text('compass or gyro failure!');
             else
@@ -213,8 +213,8 @@ $(document).ready(function() {
 
             $('#heading').text(Math.round(10*heading)/10);
         }
-        if('ap/enabled' in data) {
-            if(data['ap/enabled']['value']) {
+        if('ap.enabled' in data) {
+            if(data['ap.enabled']['value']) {
                 var w = $(window).width();
                 $('#tb_engauged button').css('left', w/12+"px");
                 $('#tb_engauged').addClass('toggle-button-selected');
@@ -223,14 +223,14 @@ $(document).ready(function() {
                 $('#tb_engauged').removeClass('toggle-button-selected');
             }
         }
-        if('ap/mode' in data) {
-            value = data['ap/mode']['value'];
+        if('ap.mode' in data) {
+            value = data['ap.mode']['value'];
             $('#mode').val(value);
         }
 
         for (var i = 0; i<gains.length; i++)
-            if('ap/' + gains[i] in data) {
-                data = data['ap/' + gains[i]]
+            if('ap.' + gains[i] in data) {
+                data = data['ap.' + gains[i]]
                 value = data['value'];
                 if(value != $('#' + gains[i]).valueAsNumber) {
                     $('#' + gains[i]).val(value);
@@ -241,24 +241,24 @@ $(document).ready(function() {
                         $('#' + gains[i]).attr('max', data['max'])
                 }
             }
-        if('ap/heading_command' in data) {
-            heading_command = data['ap/heading_command']['value'];
+        if('ap.heading_command' in data) {
+            heading_command = data['ap.heading_command']['value'];
             $('#heading_command').text(Math.round(heading_command));
         }
-        if('servo/engauged' in data) {
-            if(data['servo/engauged']['value'])
+        if('servo.engauged' in data) {
+            if(data['servo.engauged']['value'])
                 $('#servo_engauged').text('Engauged');
             else
                 $('#servo_engauged').text('Disengauged');
         }
 
         // calibration
-        if('imu/pitch' in data)
-            $('#pitch').text(data['imu/pitch']['value']);
-        if('imu/roll' in data)
-            $('#roll').text(data['imu/roll']['value']);
-        if('imu/alignmentCounter' in data)
-            $('.myBar').width((100-data['imu/alignmentCounter']['value'])+'%');
+        if('imu.pitch' in data)
+            $('#pitch').text(data['imu.pitch']['value']);
+        if('imu.roll' in data)
+            $('#roll').text(data['imu.roll']['value']);
+        if('imu.alignmentCounter' in data)
+            $('.myBar').width((100-data['imu.alignmentCounter']['value'])+'%');
 
         // configuration
         names = conf_names;
@@ -271,18 +271,18 @@ $(document).ready(function() {
         }
 
         // statistics
-        if('servo/amp_hours' in data) {
-            value = data['servo/amp_hours']['value'];
+        if('servo.amp_hours' in data) {
+            value = data['servo.amp_hours']['value'];
             $('#amp_hours').text(Math.round(1e4*value)/1e4);
         }
         
-        if('ap/runtime' in data) {
-            value = data['ap/runtime']['value'];
+        if('ap.runtime' in data) {
+            value = data['ap.runtime']['value'];
             $('#runtime').text(value);
         }
 
-        if('servo/controller' in data) {
-            value = data['servo/controller']['value'];
+        if('servo.controller' in data) {
+            value = data['servo.controller']['value'];
             if(value == 'none')
                 $('#aperrors1').text('no motor controller!');
             else
@@ -298,17 +298,17 @@ $(document).ready(function() {
     // Control
     $('.toggle-button').click(function(event) {
         if($(this).hasClass('toggle-button-selected')) {
-            signalk_set('ap/enabled', false)
+            signalk_set('ap.enabled', false)
         } else {
-            signalk_set('ap/heading_command', heading)
-            signalk_set('ap/enabled', true)
+            signalk_set('ap.heading_command', heading)
+            signalk_set('ap.enabled', true)
         }
     });
     
     move = function(x) {
         var engauged = $('#tb_engauged').hasClass('toggle-button-selected');
         if(engauged) {
-            signalk_set('ap/heading_command', heading_command + x)
+            signalk_set('ap.heading_command', heading_command + x)
         } else {
             if(x != 0) {
                 sign = x > 0 ? 1 : -1;
@@ -319,7 +319,7 @@ $(document).ready(function() {
     }
 
     $('#mode').change(function(event) {
-        signalk_set('ap/mode', $('#mode').val());
+        signalk_set('ap.mode', $('#mode').val());
     });
     
     $('#port10').click(function(event) { move(-10); });
@@ -331,8 +331,8 @@ $(document).ready(function() {
 
     // Calibration
     $('#level').click(function(event) {
-        signalk_set('imu/alignmentCounter', 100);
-        signalk_set('imu/alignmentType', 'level');
+        signalk_set('imu.alignmentCounter', 100);
+        signalk_set('imu.alignmentType', 'level');
         return false;
     });
 
@@ -340,7 +340,7 @@ $(document).ready(function() {
 
     // Statistics
     $('#reset_amp_hours').click(function(event) {
-        signalk_set('servo/amp_hours', 0);
+        signalk_set('servo.amp_hours', 0);
         return false;
     });
     

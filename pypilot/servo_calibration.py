@@ -403,7 +403,7 @@ class ServoCalibration(object):
         self.rawcommand.set(value)
 
     def Register(self, _type, name, *args, **kwargs):
-        return self.server.Register(_type(*(['servo.calibration/' + name] + list(args)), **kwargs))
+        return self.server.Register(_type(*(['servo.calibration.' + name] + list(args)), **kwargs))
 
         def fault(self):
             return (ServoFlags.OVERCURRENT | ServoFlags.FALTPIN) & self.servo.flags.value or \
