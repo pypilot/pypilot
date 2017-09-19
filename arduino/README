@@ -1,0 +1,6 @@
+pypilot can communicate with arduinos over serial port
+
+motor - motor controller   binary checksum 4 byte protocol (38400 baud)
+        used by pypilot to control motor
+weather sensors - nmea0183 wind, presure and air temp (38400 baud)
+
