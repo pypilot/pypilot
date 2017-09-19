@@ -62,4 +62,6 @@ public:
     virtual ~nokia5110screen();
 
     void refresh();
+
+    int contrast;
 };

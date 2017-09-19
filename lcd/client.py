@@ -162,7 +162,7 @@ class LCDClient():
 
         self.config = {}
         self.configfilename = os.getenv('HOME') + '/.pypilot/lcdclient.conf' 
-        self.config['contrast'] = 50
+        self.config['contrast'] = 45
         self.config['invert'] = False
         self.config['flip'] = False
         self.config['language'] = 'en'
@@ -220,7 +220,7 @@ class LCDClient():
         
         self.contrast_edit=RangeEdit('Contrast', lambda : '', self.config['contrast'], False, self, 30, 90, 1)
         if orangepi:
-            self.pins = [12, 11, 13, 15, 16]
+            self.pins = [11, 16, 13, 15, 12]
         else:
             self.pins = [17, 23, 27, 22, 18]
 
@@ -229,6 +229,7 @@ class LCDClient():
                 for pin in self.pins:
                     cmd = 'gpio -1 mode ' + str(pin) + ' up'
                     os.system(cmd)
+                GPIO.setmode(GPIO.BOARD)
             else:
                 GPIO.setmode(GPIO.BCM)
 
@@ -250,7 +251,9 @@ class LCDClient():
                 LIRC.init('pypilot')
                 self.lirctime = False
             except:
-                print 'failed to initialize lirc. is .lircrc missing?'            
+                print 'failed to initialize lirc. is .lircrc missing?'
+                global LIRC
+                LIRC = None
 
     def get(self, name):
         if self.client:

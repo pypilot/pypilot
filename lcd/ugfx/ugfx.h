@@ -69,8 +69,9 @@ public:
     
     void refresh();
 
+    int contrast;
+
 private:
     PCD8544 *disp;
-    int contrast, lastcontrast;
 };
 
