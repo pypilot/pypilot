@@ -213,7 +213,7 @@ class Servo(object):
         self.force_engauged = False
 
         self.last_zero_command_time = self.command_timeout = time.time()
-        self.last_current_measured = time.time()
+        self.driver_timeout_start = 0
 
         self.mode = self.Register(StringValue, 'mode', 'none')
         self.controller = self.Register(StringValue, 'controller', 'none')
@@ -512,14 +512,22 @@ class Servo(object):
             if self.current.value:
                 amphours = self.current.value*dt/3600
                 self.amphours.set(self.amphours.value + amphours)
-                self.last_current_measured = time.time()
             lp = .003*dt # 5 minute time constant to average wattage
             self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
         if result & ServoTelemetry.FLAGS:
             self.flags.updatedriver(self.driver.flags)
             self.engauged.update(not not self.driver.flags & ServoFlags.ENGAUGED)
 
-        self.flags.setbit(ServoFlags.DRIVER_TIMEOUT, self.command_timeout - self.last_current_measured > 1)
+        if self.current.value:
+            self.flags.clearbit(ServoFlags.DRIVER_TIMEOUT)
+            self.driver_timeout_start = 0
+        else:
+            if self.command.value:
+                if self.driver_timeout_start:
+                    if time.time() - self.driver_timeout_start > 1:
+                        self.flags.setbit(ServoFlags.DRIVER_TIMEOUT)
+                else:
+                    self.driver_timeout_start = time.time()
         self.send_command()
 
     def fault(self):
