@@ -109,7 +109,8 @@ uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
 Servo myservo;  // create servo object to control a servo 
 #endif
 
-#define fault_pin 7 // use pin 7 for optional fault
+#define fwd_fault_pin 7 // use pin 7 for optional fault
+#define rev_fault_pin 8 // use pin 7 for optional fault
 #define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
 uint8_t shunt_resistance = 1;
 // if switches pull this pin low, the motor is disengauged
@@ -162,16 +163,19 @@ void setup()
 
     ADCSRA |= _BV(ADSC); // start conversion
 
-    pinMode(fault_pin, INPUT);
-    digitalWrite(fault_pin, HIGH); /* enable internal pullups */
+    pinMode(fwd_fault_pin, INPUT);
+    digitalWrite(fwd_fault_pin, HIGH); /* enable internal pullups */
+    pinMode(rev_fault_pin, INPUT);
+    digitalWrite(rev_fault_pin, HIGH); /* enable internal pullups */
 
     pinMode(shunt_sense_pin, INPUT);
     digitalWrite(shunt_sense_pin, HIGH); /* enable internal pullups */    
 } 
 
 enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
-enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, FLAGS_CODE=0x8f};
-enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FAULTPIN=16*2};
+enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
+
+enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4};
 
 uint8_t in_bytes[3];
 uint8_t sync_b = 0, in_sync_count = 0;
@@ -249,8 +253,8 @@ void engauge()
 
 // set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
 
-enum {CURRENT, VOLTAGE, CONTROLLER_TEMP, MOTOR_TEMP, /*INTERNAL_TEMP,*/ CHANNEL_COUNT};
-const uint8_t muxes[] = {_BV(MUX0), 0, _BV(MUX1), _BV(MUX0) | _BV(MUX1), _BV(MUX3)};
+enum {CURRENT, VOLTAGE, CONTROLLER_TEMP, MOTOR_TEMP, /*INTERNAL_TEMP, */RUDDER, CHANNEL_COUNT};
+const uint8_t muxes[] = {_BV(MUX0), 0, _BV(MUX1), _BV(MUX0) | _BV(MUX1), /*_BV(MUX3),*/ BV(MUX1) | _BV(MUX2)};
 
 volatile struct adc_results_t {
     uint32_t total;
@@ -362,6 +366,16 @@ uint16_t TakeTemp(uint8_t index, uint8_t p)
     // temperature in hundreths of degrees
     return 30000000/(R+2600) + 200;
 }
+
+uint16_t TakeRudder(uint8_t p)
+{
+    // voltage in 10mV increments 1.1ref, 560 and 10k resistors
+    // 1815 / 896 = 100.0/1024*10560/560*1.1  cli();
+    uint32_t v = TakeADC(RUDDER, p);
+    return v * 1815 / 896 / 16;
+}
+
+
 #if 0
 uint16_t TakeInternalTemp(uint8_t p)
 {
@@ -429,7 +443,7 @@ void process_packet()
 
 void loop()
 {
-#if 0
+#if 0 // debug
     uint16_t v = TakeVolts(0);
     uint16_t c = TakeAmps(0);
     uint16_t t1 = TakeTemp(CONTROLLER_TEMP, 0);
@@ -477,12 +491,18 @@ void loop()
       }
     }
 
-    // test fault pin
-    if(!digitalRead(fault_pin)) {
+    // test fault pins
+    if(!digitalRead(fwd_fault_pin)) {
         stop();
-        faults |= FAULTPIN;
+        faults |= FWD_FAULTPIN;
     } else
-      faults &= ~FAULTPIN;
+      faults &= ~FWD_FAULTPIN;
+
+    if(!digitalRead(rev_fault_pin)) {
+        stop();
+        faults |= REV_FAULTPIN;
+    } else
+      faults &= ~REV_FAULTPIN;
 
     // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
     shunt_resistance = digitalRead(shunt_sense_pin);
@@ -534,6 +554,9 @@ void loop()
         } else if(out_sync_pos == 6 && !shunt_resistance) {
             v = TakeTemp(MOTOR_TEMP, 0);
           code = MOTOR_TEMP_CODE;
+        } else if(out_sync_pos == 8) {
+            v = TakeRudder(0);
+          code = RUDDER_SENSE_CODE;
         } else {
             if(adc_results[CURRENT][0].count < 100)
                 break;
@@ -542,7 +565,7 @@ void loop()
             serialin-=4;
         }
 
-        if(++out_sync_pos >= 8)
+        if(++out_sync_pos >= 10)
             out_sync_pos = 0;
         
         crcbytes[0] = code;
