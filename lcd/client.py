@@ -90,25 +90,37 @@ class LCDMenu():
             self.display_hook()
 
 class RangeEdit():
-    def __init__(self, name, desc, value, signalk_id, lcd, minval, maxval, step):
+    def __init__(self, name, desc, id, signalk, lcd, minval, maxval, step):
         self.name = name
         if type(desc) == type(u''):
             self.desc = lambda : desc
         else:
             self.desc = desc
-        self.value = value
-        self.signalk_id = signalk_id
+        self.id = id
+        self.signalk = signalk
         self.range = minval, maxval, step
         self.lcd = lcd
+        self.value = lcd.last_msg[id] if signalk else lcd.config[id]
         self.lastmovetime = 0
      
     def move(self, delta):
-        v = self.value + delta*self.range[2]
+        if self.signalk: #config items rounded to integer
+            v = self.value + delta*self.range[2]
+        else:
+            if delta > 0:
+                delta = max(1, delta)
+            else:
+                delta = min(-1, delta)
+            v = self.value + delta*self.range[2]
+            v = round(v)
+            
         v = min(v, self.range[1])
         v = max(v, self.range[0])
         self.value = v
-        if self.signalk_id:
-            self.lcd.client.set(self.signalk_id, v)
+        if self.signalk:
+            self.lcd.client.set(self.id, v)
+        else:
+            self.lcd.config[self.id] = v
         self.lastmovetime = time.time()
 
     def display(self):
@@ -118,8 +130,8 @@ class RangeEdit():
 
         # update name
         if time.time()-self.lastmovetime > 1:
-            if self.signalk_id:
-                self.value = self.lcd.last_msg[self.signalk_id]
+            if self.signalk:
+                self.value = self.lcd.last_msg[self.id]
         
         v = self.value
         try:
@@ -140,8 +152,8 @@ class RangeEdit():
         except:
             pass
         # poll for updates
-        if self.signalk_id:
-            self.lcd.client.get(self.signalk_id)
+        if self.signalk:
+            self.lcd.client.get(self.id)
 
 white = ugfx.color(255, 255, 255)
 black = ugfx.color(0, 0, 0)
@@ -166,6 +178,8 @@ class LCDClient():
         self.config['invert'] = False
         self.config['flip'] = False
         self.config['language'] = 'en'
+        self.config['bigstep'] = 10
+        self.config['smallstep'] = 1
 
         print 'loading load config file:', self.configfilename
         try:
@@ -218,7 +232,6 @@ class LCDClient():
         self.wifi = False
         self.overcurrent_time = 0
         
-        self.contrast_edit=RangeEdit('Contrast', lambda : '', self.config['contrast'], False, self, 30, 90, 1)
         if orangepi:
             self.pins = [11, 16, 13, 15, 12]
         else:
@@ -281,12 +294,18 @@ class LCDClient():
             step = (max-min)/100.0
 
             def thunk():
-                self.range_edit=RangeEdit(name, desc, self.last_msg[signalk_name],
-                                          signalk_name, self, min, max, step)
+                self.range_edit=RangeEdit(name, desc, signalk_name,
+                                          True, self, min, max, step)
                 return self.range_edit.display
 
             if value:
                 return name, thunk, lambda : (self.last_msg[signalk_name]-min) / (max - min), signalk_name
+            return name, thunk
+        def config_edit(name, desc, config_name, min, max, step):
+            def thunk():
+                self.range_edit=RangeEdit(name, desc, config_name,
+                                          False, self, min, max, step)
+                return self.range_edit.display
             return name, thunk
 
         def gain():
@@ -359,6 +378,34 @@ class LCDClient():
                                     self.menu)
                 return self.display_menu
 
+            def control():
+                self.menu = LCDMenu(self, _('Control'),
+                                    [config_edit(_('small step'), _('degrees'), 'smallstep', 1, 5, 1),
+                                     config_edit(_('big step'), _('degrees'), 'bigstep', 5, 20, 5)],
+                                    self.menu)
+                return self.display_menu
+
+            def contrast():
+                self.range_edit = self.contrast_edit
+                return self.range_edit.display
+            
+            def invert():
+                self.config['invert'] = not self.config['invert']
+                self.save_config()
+                return self.display_menu
+
+            def flip():
+                self.config['flip'] = not self.config['flip']
+                self.save_config()
+                return self.display_menu
+
+            def display():
+                self.menu = LCDMenu(self, _('Display'),
+                                    [config_edit(_('contrast'), '', 'contrast', 30, 90, 1),
+                                     (_('invert'), invert),
+                                     (_('flip'), flip)],
+                                    self.menu)
+                return self.display_menu
 
             def language():
                 def set_language(name):
@@ -380,35 +427,14 @@ class LCDClient():
                 self.menu.selection = selection
             
                 return self.display_menu
-
-            def contrast():
-                self.range_edit = self.contrast_edit
-                self.save_config()
-                return self.range_edit.display
             
-            def invert():
-                self.config['invert'] = not self.config['invert']
-                self.save_config()
-                return self.display_menu
-
-            def flip():
-                self.config['flip'] = not self.config['flip']
-                self.save_config()
-                return self.display_menu
-
-            def display():
-                self.menu = LCDMenu(self, _('Display'),
-                                    [(_('contrast'), contrast),
-                                     (_('invert'), invert),
-                                     (_('flip'), flip)],
-                                    self.menu)
-                return self.display_menu
             self.menu = LCDMenu(self, _('Settings'),
                                 [(_('mode'), mode),
                                  (_('motor'), motor),
                                  (_('filter'), filter),
-                                 (_('language'), language),
-                                 (_('display'), display)],
+                                 (_('control'), control),
+                                 (_('display'), display),
+                                 (_('language'), language)],
                                 self.menu)
             return self.display_menu
 
@@ -810,10 +836,6 @@ class LCDClient():
 
     def display(self):
         self.display_page()
-        if self.config['contrast'] != self.contrast_edit.value:
-            self.config['contrast'] = self.contrast_edit.value
-            self.save_config()
-
 
         if self.display_page != self.display_control:
             self.control = False
@@ -863,17 +885,21 @@ class LCDClient():
         sign = -1 if self.keypad[DOWN] or self.keypadup[DOWN] or self.keypad[LEFT] or self.keypadup[LEFT] else 1
         updownup = self.keypadup[UP] or self.keypadup[DOWN]
         updownheld = self.keypad[UP] > 10 or self.keypad[DOWN] > 10
-        speed = float(1.5 if updownup else min(20, .002*max(self.keypad[UP], self.keypad[DOWN])**2.5))
+        speed = float(1 if updownup else min(10, .004*max(self.keypad[UP], self.keypad[DOWN])**2.5))
         updown = updownheld or updownup
         if self.keypadup[LEFT] or self.keypadup[RIGHT]:
             updown = True
             speed = 10
 
-        if self.display_page == self.display_control:
+        if self.display_page == self.display_control:                
             if self.keypadup[MENU] and self.surface: # MENU
                 self.display_page = self.display_menu
             elif updown: # LEFT/RIGHT
                 if self.last_msg['ap.enabled']:
+                    if self.keypadup[LEFT] or self.keypadup[RIGHT]:
+                        speed = self.config['bigstep']
+                    else:
+                        speed = self.config['smallstep']
                     cmd = self.last_msg['ap.heading_command'] + sign*speed
                     self.set('ap.heading_command', cmd)
                 else:
@@ -901,11 +927,12 @@ class LCDClient():
         elif self.range_edit and self.display_page == self.range_edit.display:
             if self.keypadup[MENU]:
                 self.display_page = self.display_menu
+                if not self.range_edit.signalk:
+                    self.save_config()
             elif updown:
-                self.range_edit.move(sign*speed*.2)
+                self.range_edit.move(sign*speed*.1)
         else:
-            # self.display_page = self.display_control
-            pass
+            print 'unknown display page', self.display_page
 
         for key in range(len(keynames)):
             if self.keypadup[key]:

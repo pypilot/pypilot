@@ -34,7 +34,7 @@ def FitPoints(points, sphere_fit):
     if debug:
         print 'FitPoints', len(points)
 
-    if len(points) < 4:
+    if len(points) < 5:
         return False
 
     zpoints = [[], [], [], [], [], []]
@@ -46,20 +46,18 @@ def FitPoints(points, sphere_fit):
     def f_sphere_bias3(beta, x, r):
         return ((x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2)/r**2 - 1
     sphere_bias_fit = FitLeastSq(sphere_fit[:3], f_sphere_bias3, (zpoints, sphere_fit[3])) + [sphere_fit[3]]
+    sphere_bias_fit[3] = sphere_fit[3]
     if not sphere_bias_fit:
-        print 'sphere bias failed!!! ', len(points), points
+        print 'sphere bias failed!!! ', len(points)
         return False
     print 'sphere bias fit', sphere_bias_fit
 #    sphere_fit = sphere_bias_fit + [sphere_fit[3]]
-
-    if len(points) < 5:
-        return False
 
     def f_sphere3(beta, x):
         return ((x[0]-beta[0])**2 + (x[1]-beta[1])**2 + (x[2]-beta[2])**2) - beta[3]
     sphere_fit = FitLeastSq([0, 0, 0, 30], f_sphere3, zpoints)
     if not sphere_fit:
-        print 'FitLeastSq failed!!!! ', len(points)
+        print 'FitLeastSq sphere failed!!!! ', len(points)
         return False
         #sphere_fit[3] = abs(sphere_fit[3])
     sphere_fit[3] = math.sqrt(sphere_fit[3])
@@ -80,12 +78,14 @@ def FitPoints(points, sphere_fit):
         m = list(numpy.array(b.transpose()))
         r0 = map(lambda y : beta[3] - vector.dot(y, y), m)
         g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
-        fac = 0 #.8 # weight deviation less
+        fac = .8 # weight deviation less than magnitude
         # tan(x)/pi_2 restricts the dot product to the range -1 to 1
         r1 = map(lambda y, z : fac*beta[3]*(math.atan(beta[4])/math.pi*2 - vector.dot(y, z)/vector.norm(y)), m, g)
         return r0+r1
         
     new_bias_fit = FitLeastSq(sphere_fit[:4] + [0], f_new_bias3, zpoints)
+    if not new_bias_fit:
+        print 'FitLeastSq new bias fit failed!!!! ', len(points)
     new_bias_fit[3] = math.sqrt(new_bias_fit[3])
     new_bias_fit[4] = math.atan(new_bias_fit[4]) / math.pi * 2
 
@@ -105,7 +105,7 @@ def FitPoints(points, sphere_fit):
 
     if not ellipsoid_fit:
         ellipsoid_fit = sphere_fit + [1, 1]
-    return [new_bias_fit, sphere_fit, ellipsoid_fit, sphere_bias_fit]
+    return [new_bias_fit, sphere_bias_fit, sphere_fit, ellipsoid_fit]
 
 def avg(fac, v0, v1):
     return map(lambda a, b : (1-fac)*a + fac*b, v0, v1)
@@ -187,6 +187,14 @@ class SigmaPoints(object):
         else:
             self.sigma_points.append(p)
 
+    def RemoveOldest(self):
+        oldest_sigma = self.sigma_points[0]
+        for sigma in self.sigma_points:
+            if sigma.time < oldest_sigma.time:
+                oldest_sigma = sigma
+        self.sigma_points.remove(oldest_sigma)
+
+
 def ComputeCoverage(sigma_points, bias):
     def ang(p):
         v = rotvecquat(vector.sub(p.compass, bias), vec2vec2quat(p.down, [0, 0, 1]))
@@ -216,13 +224,9 @@ def CalibrationProcess(points, fit_output, initial):
     cal = SigmaPoints()
 
     while True:
-        # each iteration remove oldest point if we have many
+        # each iteration remove oldest point if we have more than 12
         if len(cal.sigma_points) > 12:
-            oldest_sigma = cal.sigma_points[0]
-            for sigma in cal.sigma_points:
-                if sigma.time < oldest_sigma.time:
-                    oldest_sigma = sigma
-            cal.sigma_points.remove(oldest_sigma)
+            cal.RemoveOldest()
         
         t = time.time()
         addedpoint = False
@@ -234,7 +238,7 @@ def CalibrationProcess(points, fit_output, initial):
 
         if not addedpoint: # don't bother to run fit if no new data
             continue
-        # remove points with less than 5 measurements, or older than 1 hour
+        # remove points older than 1 hour
         p = []
         print 'len', len(cal.sigma_points)
         for sigma in cal.sigma_points:
@@ -243,62 +247,72 @@ def CalibrationProcess(points, fit_output, initial):
                 p.append(sigma)
         cal.sigma_points = p
 
+        # for now, require at least 6 points to agree well for update
+        if len(p) < 6:
+            continue
+
         # attempt to perform least squares fit
         p = []
         for sigma in cal.sigma_points:
             p.append(sigma.compass + sigma.down)
-
-        if False: # inject points for debugging
-            p = [[9.076,19.17,32.66,-0.078,-0.037,0.996],[8.106,14.431,32.2,-0.077,-0.042,0.996],[9.184,16.653,32.451,-0.07,-0.032,0.997],[11.645,21.557,32.988,-0.077,-0.042,0.996],[20.508,27.569,32.798,-0.075,-0.044,0.996],[22.091,28.787,32.86,-0.076,-0.046,0.996],[11.541,19.82,32.848,-0.075,-0.046,0.996],[10.679,18.367,32.569,-0.076,-0.043,0.996],[8.628,11.927,31.855,-0.075,-0.045,0.996],[14.149,22.908,33.247,-0.072,-0.04,0.997],[18.136,25.664,32.971,-0.074,-0.038,0.997],[16.213,24.721,33.405,-0.071,-0.048,0.996]]
-            cal.sigma_points = []
-            for q in p:
-                cal.sigma_points.append(SigmaPoint(q[:3], q[3:]))
-            
         fit = FitPoints(p, initial)
         if not fit:
             continue
 
         if debug:
-            print 'fit', fit, p
+            print 'fit', fit
+
+        # if we have less than 10 points, only update bias
+        if len(p) < 10:
+            if debug:
+                print 'bias update only'
+            fit[0] = fit[1]
+            
+        # make sure the magnitude is sane
         mag = fit[0][3]
         if mag < 9 or mag > 70:
             print 'fit found field outside of normal earth field strength', mag
-            continue
+            fit[0] = fit[1] # use bias fit
 
+        # sphere fit should basically agree with new bias
+        if fit[0] != fit[1]:
+            spherebias = fit[2][:3]
+            sbd = vector.norm(vector.sub(bias, spherebias))
+            if sbd > 4:
+                if debug:
+                    print 'sphere and newbias disagree', sbd
+                fit[0] = fit[1]
+            
+        # test points for deviation, all must fall closely on a sphere
         bias = fit[0][:3]
+        mag = fit[0][3]
+        maxdev = 0
         for sigma in cal.sigma_points:
             dev = map(lambda a, b: (a-b)/mag, sigma.compass, bias)
-            dev = abs(1-vector.norm(dev))
-            if dev > .05 and time.time()-sigma.time>300 and False:
-                print 'remove bad sigma', sigma.compass, dev
-                cal.sigma_points.remove(sigma)
+            maxdev = max(abs(1-vector.norm(dev)), maxdev)
+        if maxdev > .05:
+            if debug:
+                print 'maxdev > 0.05', maxdev
+            # remove oldest point if too much deviation
+            cal.RemoveOldest()
+            continue # don't use this fit
 
         coverage = 360 - math.degrees(ComputeCoverage(cal.sigma_points, bias))
-        if coverage < 60: # require 60 degrees
+        if coverage < 120: # require 120 degrees
             if debug:
                 print 'calibration: not enough coverage', coverage, 'degrees'
             continue
 
-        # sphere fit should basically agree with new bias
-        spherebias = fit[1][:3]
-        sbd = vector.norm(vector.sub(bias, spherebias))
-        if sbd > 4 and fit[0][4]:
-            if debug:
-                print 'sphere and newbias disagree', sbd
-                #continue
-                print 'using bias fit', fit[3]
-            fit[0] = fit[3]
-
         # if the bias has sufficiently changed, otherwise the fit didn't change much
         n = map(lambda a, b: (a-b)**2, bias, initial[:3])
         d = n[0]+n[1]+n[2]
-        initial = fit[0]
         if d < .1:
             if debug:
-                print 'insufficient change in bias'
+                print 'insufficient change in bias, calibration ok'
             continue
 
         print 'coverage', coverage, 'new fit:', fit, 'sphere bias difference', sbd
+        initial = fit[0]
         fit_output.send((fit, map(lambda p : p.compass + p.down, cal.sigma_points)), False)
                                  
 class MagnetometerAutomaticCalibration(object):
