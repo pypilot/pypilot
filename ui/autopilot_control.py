@@ -159,8 +159,10 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                         gain['gauge'].SetValue(v)
                         if value > 0:
                             gain['gauge'].SetBackgroundColour(wx.RED)
-                        else:
+                        elif value < 0:
                             gain['gauge'].SetBackgroundColour(wx.GREEN)
+                        else:
+                            gain['gauge'].SetBackgroundColour(wx.LIGHT_GREY)
                     else:
                         gain['gauge'].SetValue(0)
                         gain['gauge'].SetBackgroundColour(wx.BLUE)
