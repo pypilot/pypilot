@@ -117,11 +117,11 @@ class CompassCalibrationPlot():
     default_radius = 30
     def __init__(self):
         self.unit_sphere = Spherical([0, 0, 0], lambda beta, x: x, 32, 16)
-        self.mag_fit_new_bias = self.mag_fit_sphere = self.mag_fit_ellipsoid  = False
+        self.mag_fit_new_bias = self.mag_fit_new_sphere = False
+        self.mag_fit_sphere = False
         self.mag_cal_new_bias = [0, 0, 0, 30, 0]
-        self.mag_cal_sphere_bias = [0, 0, 0, 30]
+        self.mag_cal_new_sphere = [0, 0, 0, 30, 0]
         self.mag_cal_sphere = [0, 0, 0, 30]
-        self.mag_cal_ellipsoid = [0, 0, 0, 30, 1, 1]
         
         self.fusionQPose = False
         self.alignmentQ = False
@@ -195,8 +195,8 @@ class CompassCalibrationPlot():
             self.mag_cal_new_bias = data['value'][0]
             self.mag_fit_new_bias = Spherical(self.mag_cal_new_bias, fsphere,  64, 32);
 
-            self.mag_cal_sphere_bias = data['value'][1]
-            self.mag_fit_sphere_bias = Spherical(self.mag_cal_sphere_bias, fsphere,  64, 32);
+            self.mag_cal_new_sphere = data['value'][1]
+            self.mag_fit_new_sphere = Spherical(self.mag_cal_new_sphere, fsphere,  64, 32);
 
             self.mag_cal_sphere = data['value'][2]
             self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  64, 32);
@@ -231,9 +231,8 @@ class CompassCalibrationPlot():
         glMatrixMode(GL_MODELVIEW)
 
         cal_new_bias = self.mag_cal_new_bias
-        cal_sphere_bias = self.mag_cal_sphere_bias
+        cal_new_sphere = self.mag_cal_new_sphere
         cal_sphere = self.mag_cal_sphere
-        cal_ellipsoid = self.mag_cal_ellipsoid
 
         glClearColor(0, 0, 0, 0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -248,24 +247,20 @@ class CompassCalibrationPlot():
 
         if self.uncalibrated_view:
             glPushMatrix()
-            glTranslatef(-cal_sphere_bias[0], -cal_sphere_bias[1], -cal_sphere_bias[2])
+            glTranslatef(-cal_new_bias[0], -cal_new_bias[1], -cal_new_bias[2])
             glLineWidth(1)
 
             if self.mag_fit_new_bias:
                 glColor3f(1, 0, 0)
                 self.mag_fit_new_bias.draw()
 
-            if self.mag_fit_sphere_bias:
+            if self.mag_fit_new_sphere:
                 glColor3f(1, 0, 1)
-                self.mag_fit_sphere_bias.draw()
+                self.mag_fit_new_sphere.draw()
                 
             if self.mag_fit_sphere:
                 glColor3f(0, 0, 1)
                 self.mag_fit_sphere.draw()
-
-            if self.mag_fit_ellipsoid:
-                glColor3f(0, 1, 1)
-                self.mag_fit_ellipsoid.draw()    
         
             glPointSize(4)
             glColor3f(1,.3,.3)
@@ -316,18 +311,12 @@ class CompassCalibrationPlot():
 
 
                 glColor3f(1, 1, 0)
-                glVertex3fv(map(lambda x,y :-x*cal_sphere[3]+y, down, cal_sphere_bias[:3]))
-                glVertex3fv(map(lambda x,y : x*cal_sphere[3]+y, down, cal_sphere_bias[:3]))
+                glVertex3fv(map(lambda x,y :-x*cal_new_sphere[3]+y, down, cal_new_sphere[:3]))
+                glVertex3fv(map(lambda x,y : x*cal_new_sphere[3]+y, down, cal_new_sphere[:3]))
                 
                 glColor3f(1, 1, 1)
                 glVertex3fv(map(lambda x,y :-x*cal_sphere[3]+y, down, cal_sphere[:3]))
                 glVertex3fv(map(lambda x,y : x*cal_sphere[3]+y, down, cal_sphere[:3]))
-
-                if self.mag_fit_ellipsoid:
-                    glColor3f(0, 1, 0)                
-                    glVertex3fv(map(lambda x,y :-x*cal_ellipsoid[3]+y, down, cal_ellipsoid[:3]))
-                    glVertex3fv(map(lambda x,y : x*cal_ellipsoid[3]+y, down, cal_ellipsoid[:3]))
-
 
             except:
                 print 'ERROR!!!!!!!!!!!!!!', self.accel, cal_sphere
