@@ -240,7 +240,7 @@ class BoatIMU(object):
 
     self.last_imuread = time.time()
     self.lasttimestamp = 0
-    self.last_heading_off = 0
+    self.last_heading_off = 3000 # invalid
 
   def __del__(self):
     print 'terminate imu process'
@@ -256,6 +256,7 @@ class BoatIMU(object):
     off = self.heading_off.value - heading_offset
     o = quaternion.angvec2quat(off*math.pi/180, [0, 0, 1])
     self.alignmentQ.update(quaternion.normalize(quaternion.multiply(q, o)))
+    self.compass_auto_cal.SetNorm(quaternion.rotvecquat([0, 0, 1], self.alignmentQ.value))
 
   def IMURead(self):    
     data = False

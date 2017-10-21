@@ -459,7 +459,10 @@ class NmeaBridgeProcess(multiprocessing.Process):
             self.setup_watches(False)
             self.pipe.send('nosockets')
 
-        self.poller.unregister(sock.socket)
+        try:
+            self.poller.unregister(sock.socket)
+        except:
+            pass # Bad file descriptor, can't unregister
         fd = sock.socket.fileno()
         del self.fd_to_socket[fd]
         sock.close()

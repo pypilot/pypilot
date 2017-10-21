@@ -33,7 +33,7 @@ class BasicAutopilot(AutopilotBase):
       Gain(name, default, 0, max_val)
         
     PosGain('P', .005, .01)
-    PosGain('I',    0, .25)
+    PosGain('I',    0, .1)
     PosGain('D',  .15, 1.0)
 
     PosGain('DD',  0, 1.0)
@@ -46,7 +46,7 @@ class BasicAutopilot(AutopilotBase):
     PosGain2('P2', 0, 1, 'P')
     PosGain2('D2', 0, 1, 'D')
 
-    PosGain('FF',  0, 1.0)
+    PosGain('FF',  0, 3.0)
 
     self.lastenabled = False
 
