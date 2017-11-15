@@ -352,7 +352,7 @@ void PCD8544::clear()
 }
 
 void PCD8544::refresh()
-{
+{    
     setCursor(0, 0);
     digitalWrite(this->pin_dc, PCD8544_DATA);
     for(unsigned int i=0; i<sizeof framebuffer; i++) {

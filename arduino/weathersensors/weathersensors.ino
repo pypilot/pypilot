@@ -12,10 +12,13 @@
 
 /* anenometer wires
 
-red  - gnd
-yellow - 5v
-green - a7
-black - d2
+using potentiometer for wind direction
+using a reed switch for wind speed
+
+red    - gnd - pin 3 - potentiometer power A - reed switch A
+yellow - 5v  - pin 5 - potentiometer power B
+green  - a7  - pin 4 - potentiometer reading
+black  - d2  - pin 2 -                         reed switch B
 
 */
 
@@ -36,7 +39,7 @@ static PCD8544 lcd(13, 11, 8, 7, 99);
 
 const int analogInPin = A7;  // Analog input pin that the potentiometer is attached to
 const int analogLightPin = A6;
-const int analogBacklightPin = 9; 
+const int analogBacklightPin = 9;
 
 uint8_t have_bmp280 = 0;
 uint8_t bmX280_tries = 10;  // try 10 times to configure
@@ -245,14 +248,15 @@ void read_anenometer()
     int16_t light = adcval[0];
     uint32_t val = adcval[1];
     uint16_t count = adccount[1];
+    // reset the adc
     adcval[0] = adcval[1] = 0;
-    adccount[0] = adccount[1] = -4;
+    adccount[0] = adccount[1] = -4; // skip the first 4 readings after changing channel
     adcchannel = 0;
     ADMUX = _BV(REFS0) | 6;
     sei();
     sensorValue = val / count;
 
-    // map it;
+    // filter and map light value
     static int lastlight, lighton;
     light = (light + 31*lastlight) / 32;
     lastlight = light;
@@ -264,9 +268,9 @@ void read_anenometer()
         else
             pwm = 255;
     }
-    if(pwm < 160)
+    if(pwm < 160) // limit backlight brightness
         pwm = 160;
-    if(pwm > 255)
+    if(pwm > 255) 
         pwm = 255, lighton = 0;
     #if 0
     Serial.print("light ");
@@ -274,7 +278,7 @@ void read_anenometer()
     Serial.print(" pwm ");
     Serial.print(pwm);
     Serial.println("");
-#endif
+    #endif
     analogWrite(analogBacklightPin, pwm);
 #endif
     
@@ -450,6 +454,7 @@ void draw()
         lcd.print(status_buf[3]);
         break;
     case 1:
+        // draw direction dial for wind
         lcd.circle(24, 24, 22, 255);
         float wind_rad = wind_dir/180*M_PI;
         {
@@ -463,13 +468,15 @@ void draw()
                 lcd.line(24-xp, 24-yp, 24+x, 24+y, 255);
             }
         }
-        
+
+        // draw wind direction behind arrow
         lcd.setfont(1);
         int xp = -10*sin(wind_rad);
         int yp = 10*cos(wind_rad);
-        lcd.setpos(24+xp-12, 24+yp-10);
+        lcd.setpos(24+xp-12, 24+yp-14);
         lcd.print(status_buf[1]);
-            
+
+        // print the heading under the dial
         lcd.setfont(1);
         lcd.setpos(0, 42);
         lcd.print(status_buf[0]);
