@@ -898,7 +898,7 @@ class LCDClient():
                     cmd = self.last_msg['ap.heading_command'] + sign*speed
                     self.set('ap.heading_command', cmd)
                 else:
-                    self.set('servo.command', sign*(speed+8.0)/40)
+                    self.set('servo.command', sign*(speed+8.0)/20)
 
         elif self.display_page == self.display_menu:
             if self.keypadup[UP]:

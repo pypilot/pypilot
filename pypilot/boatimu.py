@@ -287,6 +287,10 @@ class BoatIMU(object):
     #data['accel_comp'] = quaternion.rotvecquat(vector.sub(data['accel'], down), self.alignmentQ.value)
 
     # apply alignment calibration
+    gyro_q = quaternion.rotvecquat(data['gyro'], data['fusionQPose'])
+
+    data['pitchrate'], data['rollrate'], data['headingrate'] = map(math.degrees, gyro_q)
+
     origfusionQPose = data['fusionQPose']
     data['fusionQPose'] = quaternion.multiply(data['fusionQPose'], self.alignmentQ.value)
 
@@ -294,9 +298,6 @@ class BoatIMU(object):
 
     if data['heading'] < 0:
       data['heading'] += 360
-
-    gyro_q = quaternion.rotvecquat(data['gyro'], data['fusionQPose'])
-    data['pitchrate'], data['rollrate'], data['headingrate'] = map(math.degrees, gyro_q)
 
     dt = data['timestamp'] - self.lasttimestamp
     self.lasttimestamp = data['timestamp']
