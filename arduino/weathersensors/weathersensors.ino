@@ -34,7 +34,7 @@ extern "C" {
 
 #define LCD
 #ifdef LCD
-static PCD8544 lcd(13, 11, 8, 7, 99);
+static PCD8544 lcd(13, 11, 8, 7, 4);
 #endif
 
 const int analogInPin = A7;  // Analog input pin that the potentiometer is attached to
@@ -228,7 +228,7 @@ void send_nmea(const char *buf)
 }
 
 int lcd_update;
-float wind_dir, wind_speed;
+float wind_dir, wind_speed, wind_speed_30;
 void read_anenometer()
 {
     static float lpdir;
@@ -261,16 +261,16 @@ void read_anenometer()
     light = (light + 31*lastlight) / 32;
     lastlight = light;
 
-    int pwm = 255L*light / 600 - 120;
+    int pwm = 255L*light / 600 - 100;
     if(!lighton) {
-        if(pwm < 240)
+        if(pwm < 200)
             lighton = 1;
         else
             pwm = 255;
     }
-    if(pwm < 160) // limit backlight brightness
-        pwm = 160;
-    if(pwm > 255) 
+    if(pwm < 140) // limit backlight brightness
+        pwm = 140;
+    if(pwm > 220) 
         pwm = 255, lighton = 0;
     #if 0
     Serial.print("light ");
@@ -335,6 +335,7 @@ void read_anenometer()
 
         wind_dir = lpdir;
         wind_speed = knots;
+        wind_speed_30 = wind_speed_30*299.0/300.0 + wind_speed/300.0;
         lcd_update = 1;
     }
 }
@@ -419,7 +420,6 @@ void draw()
     last_lcd_updatetime = time;
     
     lcd_update = 0;
-    lcd.clear();
 
     static char status_buf[4][16];
 
@@ -429,71 +429,65 @@ void draw()
         int a = temperature_comp / 100;
         int r = temperature_comp - a*100;
         snprintf(status_buf[3], sizeof status_buf[3], "%d.%02dC", a, r);
-        a = pressure_comp/1e2, r = pressure_comp - a*1e2;
-        snprintf(status_buf[2], sizeof status_buf[2], "%d.%02d", a, r);
 
         snprintf(status_buf[0], sizeof status_buf[0], "%02d", (int) round(wind_dir));
         snprintf(status_buf[1], sizeof status_buf[1], "%02d", (int) round(wind_speed));
-    }
 
-    int page = 1;
-    switch(page) {
-    case 0:
-        
-        lcd.setfont(1);
-        lcd.setpos(0, 0);
-        lcd.print(status_buf[0]);
-        lcd.setpos(0, 25);
-        lcd.print(status_buf[1]);
-        lcd.rectangle(30, 49, 32, 51, 255); // decimal point
-
-        lcd.setfont(0);
-        lcd.setpos(0, 56);
-        lcd.print(status_buf[2]);
-        lcd.setpos(0, 70);
-        lcd.print(status_buf[3]);
-        break;
-    case 1:
-        // draw direction dial for wind
-        lcd.circle(24, 24, 22, 255);
-        float wind_rad = wind_dir/180*M_PI;
-        {
-            int r = 22;
-            int x = r*sin(wind_rad);
-            int y = -r*cos(wind_rad);
-            for(int s=1; s<3; s++) {
-                int xp = s*cos(wind_rad);
-                int yp = s*sin(wind_rad);
-                lcd.line(24+xp, 24+yp, 24+x, 24+y, 255);
-                lcd.line(24-xp, 24-yp, 24+x, 24+y, 255);
-            }
-        }
-
-        // draw wind direction behind arrow
-        lcd.setfont(1);
-        int xp = -10*sin(wind_rad);
-        int yp = 10*cos(wind_rad);
-        lcd.setpos(24+xp-12, 24+yp-14);
+        lcd.rectangle(0, 46, 48, 83, 0); // clear text
+        // draw wind speed
+        lcd.setfont(3);
+        lcd.setpos(0, 38);
         lcd.print(status_buf[1]);
 
-        // print the heading under the dial
-        lcd.setfont(1);
-        lcd.setpos(0, 42);
-        lcd.print(status_buf[0]);
+        // draw 30 second average wind speed
+        snprintf(status_buf[1], sizeof status_buf[1], "%02d", (int) round(wind_speed_30));
+        lcd.setfont(2);
+        lcd.setpos(29, 45);
+        lcd.print(status_buf[1]);
 
         lcd.setfont(0);
         lcd.setpos(0, 61);
+        a = pressure_comp/1e2, r = pressure_comp - a*1e2;
+        a = snprintf(status_buf[2], sizeof status_buf[2], "%d", a);
+        lcd.print(status_buf[2]);
+        lcd.rectangle(a*7+3, 73, a*7+4, 73, 255); // draw decimal
+        snprintf(status_buf[2], sizeof status_buf[2], "%02d", r);
+        lcd.setpos(a*7+6, 61);
         lcd.print(status_buf[2]);
 
-        lcd.setpos(0, 71);
+        lcd.setfont(0);
+        lcd.setpos(1, 71);
         lcd.print(status_buf[3]);
-        break;
     }
-    uint16_t time1 = millis();
-
     
-
-  lcd.refresh();
+    lcd.rectangle(0, 0, 48, 45, 0); // clear compass
+    // draw direction dial for wind
+    lcd.circle(24, 22, 22, 255);
+    float wind_rad = wind_dir/180.0*M_PI;
+    {
+        int r = 22;
+        int x = r*sin(wind_rad);
+        int y = -r*cos(wind_rad);
+        for(int s=1; s<3; s++) {
+            int xp = s*cos(wind_rad);
+            int yp = s*sin(wind_rad);
+            lcd.line(24+xp, 22+yp, 24+x, 22+y, 255);
+            lcd.line(24-xp, 22-yp, 24+x, 22+y, 255);
+        }
+    }
+    // print the heading under the dial
+    lcd.setfont(1);
+    int xp, yp;
+    xp = -11.0*sin(wind_rad), yp = 10.0*cos(wind_rad);
+    static float nxp = 0, nyp = 0;
+    nxp = (xp + 31*nxp)/32;
+    nyp = (yp + 31*nyp)/32;
+    xp = 24+nxp-12, yp = 22+nyp-8; 
+    lcd.rectangle(xp-1, yp+3, xp+22, yp+14, 0); // clear heading text area
+    lcd.setpos(xp, yp);
+    lcd.print(status_buf[0]);
+    
+    lcd.refresh();
 #endif
 }
 

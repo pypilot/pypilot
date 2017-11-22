@@ -6,7 +6,7 @@
 # serial monitor: make serial
 
 SKETCHNAME = motor
-DEVICE = /dev/ttyUSB0
+DEVICE = /dev/ttyS0
 
 MCU = atmega328p
 
