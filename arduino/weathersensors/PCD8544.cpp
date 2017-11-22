@@ -180,7 +180,7 @@ void PCD8544::putpixel(uint8_t x, uint8_t y, uint8_t color)
 {
     if(x < 0 || x >= 48 || y < 0 || x >= 84)
         return;
-    x = 48 - x;
+    x = 47 - x;
     int col = x/8, bit = 1<<(x%8);
     int ind = col*84 + y;
     if(color)
@@ -335,15 +335,15 @@ void PCD8544::send(unsigned char type, unsigned char data)
         this->lasttype = type;
     }
     
-    if(this->pin_sce != 99)
+//    if(this->pin_sce != 99)
         digitalWrite(this->pin_sce, LOW);
 #ifdef HWSPI
     SPI.transfer(data);
 #else
     shiftOut(this->pin_sdin, this->pin_sclk, MSBFIRST, data);
 #endif
-    if(this->pin_sce != 99)
-        digitalWrite(this->pin_sce, HIGH);
+//    if(this->pin_sce != 99)
+//        digitalWrite(this->pin_sce, HIGH);
 }
 
 void PCD8544::clear()
