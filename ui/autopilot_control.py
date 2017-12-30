@@ -17,28 +17,37 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def __init__(self):
         super(AutopilotControl, self).__init__(None)
         self.sliderlabels = [-120, -40, -10, -5, 0, 5, 10, 40, 120]
-        fgGains = self.swGains.GetSizer()
+        self.fgGains = self.swGains.GetSizer()
 
-        host = False
+        self.host = False
         if len(sys.argv) > 1:
-            host = sys.argv[1]
-            
-        watchlist = []
-        def on_con(client):
-            for name in watchlist:
-                client.watch(name)
+            self.host = sys.argv[1]
 
-        self.client = SignalKClient(on_con, host, autoreconnect=True)
+        self.client = False
 
         self.gps_heading_offset = 0
 
-        watchlist += ['ap.enabled', 'ap.mode', 'ap.heading_command',
-                      'gps.source', 'wind.source',
-                      'ap.heading', 'servo.flags',
-                      'servo.controller',
-                      'servo.mode', 'servo.engauged']
 
-        value_list = self.client.list_values()
+        self.enabled = False
+        self.mode = 'compass'
+        self.heading_command = 0
+        self.heading = 0
+        self.lastcommand = False
+        self.recv = {}
+
+        self.timer = wx.Timer(self, self.ID_MESSAGES)
+        self.timer.Start(100)
+        self.Bind(wx.EVT_TIMER, self.receive_messages, id=self.ID_MESSAGES)
+
+
+    def on_con(self, client):
+        self.fgGains.Clear(True)
+        self.watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
+                          'gps.source', 'wind.source',
+                          'ap.heading', 'servo.flags',
+                          'servo.controller',
+                          'servo.mode', 'servo.engauged']
+        value_list = client.list_values()
         self.gains = []
         for name in value_list:
             if 'AutopilotGain' in value_list[name]:
@@ -46,8 +55,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 		sizer.AddGrowableRow( 2 )
 		sizer.SetFlexibleDirection( wx.VERTICAL )
 
-                watchlist.append(name)
-                watchlist.append(name+'gain')
+                self.watchlist.append(name)
+                self.watchlist.append(name+'gain')
                 stname = wx.StaticText( self.swGains, wx.ID_ANY, name)
                 sizer.Add( stname, 0, wx.ALL, 5 )
                 stvalue = wx.StaticText( self.swGains, wx.ID_ANY, '   N/A   ')
@@ -74,24 +83,13 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                     return do_gain
                 slider.Bind( wx.EVT_SCROLL, make_ongain(gain) )
 
-                fgGains.Add( sizer, 1, wx.EXPAND, 5 )
-
-        on_con(self.client)
+                self.fgGains.Add( sizer, 1, wx.EXPAND, 5 )
 
         self.GetSizer().Fit(self)
-
-        self.enabled = False
-        self.mode = 'compass'
-        self.heading_command = 0
-        self.heading = 0
-        self.lastcommand = False
-        self.recv = {}
-
-        self.timer = wx.Timer(self, self.ID_MESSAGES)
-        self.timer.Start(100)
-        self.Bind(wx.EVT_TIMER, self.receive_messages, id=self.ID_MESSAGES)
-
         self.SetSize(wx.Size(500, 580))
+
+        for name in self.watchlist:
+            client.watch(name)
 
     def servo_command(self, command):
         if self.lastcommand != command or command != 0:
@@ -117,6 +115,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             self.stStatus.SetLabel('No Connection')
             try:
                 self.client = SignalKClient(self.on_con, self.host, autoreconnect=False)
+                self.timer.Start(100)
+                self.lastmsgtime = time.time()
             except socket.error:
                 self.timer.Start(5000)
                 return
@@ -140,7 +140,20 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         self.sCommand.SetValue(0)
 
-        msgs = self.client.receive()
+        try:
+            msgs = self.client.receive()
+        except signalk.client.ConnectionLost:
+            self.client = False
+            return
+
+        if not msgs:
+            if time.time() - self.lastmsgtime > 2:
+                print 'message timeout'
+                self.client = False
+            return
+
+        self.lastmsgtime = time.time()
+
         for name in msgs:
             data = msgs[name]
             if not 'value' in data:

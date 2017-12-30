@@ -84,13 +84,13 @@ class SignalKClient(object):
         self.socket = server.LineBufferedNonBlockingSocket(connection)
         self.values = []
         self.msg_queue = []
-        self.f_on_connected(self)
         self.poller = select.poll()
         if self.socket:
             fd = self.socket.socket.fileno()
         else:
             fd = self.serial.fileno()
         self.poller.register(fd, select.POLLIN)
+        self.f_on_connected(self)
 
 
     def poll(self, timeout = 0):
