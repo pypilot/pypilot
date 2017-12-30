@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import wx, sys, subprocess, os, time
+import wx, sys, subprocess, socket, os, time
 import autopilot_control_ui
 from signalk.client import SignalKClient
 
@@ -16,6 +16,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
     def __init__(self):
         super(AutopilotControl, self).__init__(None)
+        self.sliderlabels = [-120, -40, -10, -5, 0, 5, 10, 40, 120]
         fgGains = self.swGains.GetSizer()
 
         host = False
@@ -92,10 +93,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         self.SetSize(wx.Size(500, 580))
 
-    def stop(self):
-        self.client.set('ap.enabled', False)
-        self.client.set('servo.command', 0)
-
     def servo_command(self, command):
         if self.lastcommand != command or command != 0:
             self.lastcommand = command
@@ -116,13 +113,21 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.tbAP.SetForegroundColour(color)
 
     def receive_messages(self, event):
+        if not self.client:
+            self.stStatus.SetLabel('No Connection')
+            try:
+                self.client = SignalKClient(self.on_con, self.host, autoreconnect=False)
+            except socket.error:
+                self.timer.Start(5000)
+                return
+                
         command = self.sCommand.GetValue()
         if self.enabled:
             if command != 0:
-                self.heading_command += (-1 if command < 0 else 1) / 2.0
+                self.heading_command += self.apply_command(command)
                 self.client.set('ap.heading_command', self.heading_command)
         else:
-            self.servo_command(command / 50.0)
+            self.servo_command(-command / 20.0)
 
         for gain in self.gains:
             if gain['need_update']:
@@ -133,10 +138,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                time.time() - gain['last_change'] > 1:
                 gain['slider'].SetValue(gain['sliderval'])
 
-        if command > 0:
-            self.sCommand.SetValue(command - 1)
-        elif command < 0:
-            self.sCommand.SetValue(command + 1)
+        self.sCommand.SetValue(0)
 
         msgs = self.client.receive()
         for name in msgs:
@@ -227,6 +229,35 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             mode = 'compass'
         self.client.set('ap.mode', mode)
 
+    def onPaintControlSlider( self, event ):
+        dc = wx.PaintDC( self.sCommand )
+        
+        s = self.sCommand.GetSize()
+
+        dc.SetTextForeground(wx.BLACK);
+        dc.SetPen(wx.Pen(wx.BLACK));
+        dc.SetBrush(wx.TRANSPARENT_BRUSH);
+        y = 10
+        x = 0
+        for l in self.sliderlabels:
+            t = str(abs(l))
+            tx = x
+            if l > 0:
+                tx -= dc.GetTextExtent(t)[0]
+
+            dc.DrawText(t, tx, y)
+            dc.DrawLine(x, 0, x, s.y)
+            x += s.x / (len(self.sliderlabels) - 1)
+
+    def apply_command(self, command):
+        r = self.sCommand.GetMax() - self.sCommand.GetMin() + 1.0
+        p = (len(self.sliderlabels) - 1) * (command - self.sCommand.GetMin()) / r
+        l0 = self.sliderlabels[int(p)]
+        l1 = self.sliderlabels[int(p)+1]
+        v = (p - int(p)) * (l1 - l0) + l0
+        #print 'a', command, r, p, l0, l1, v
+        return v
+            
     def onCommand( self, event ):
         if wx.GetMouseState().LeftIsDown():
             x = self.sCommand.ScreenToClient(wx.GetMousePosition()).x
@@ -243,7 +274,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/autopilot_calibration.py'] + sys.argv[1:])
 	
     def onClose( self, event ):
-        self.stop()
 	self.Close()
 
 def main():
