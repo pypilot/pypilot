@@ -155,7 +155,7 @@ class rectangle():
 
 AUTO, MENU, UP, DOWN, SELECT, LEFT, RIGHT = range(7)
 keynames = {'auto': AUTO, 'menu': MENU, 'up': UP, 'down': DOWN, 'select': SELECT, 'left': LEFT, 'right': RIGHT}
-gains = ['ap.P', 'ap.I', 'ap.D', 'ap.P2', 'ap.D2']
+gains = ['ap.P', 'ap.I', 'ap.D', 'ap.FF']
 
 class LCDClient():
     def __init__(self, screen):
@@ -926,6 +926,8 @@ class LCDClient():
                     self.save_config()
             elif updown:
                 self.range_edit.move(sign*speed*.1)
+        elif self.display_page == self.display_connecting:
+            pass # no keys handled for this page
         else:
             print 'unknown display page', self.display_page
 
@@ -1059,8 +1061,8 @@ class LCDClient():
                 break
             try:
                 result = self.client.receive_single()
-            except:
-                print 'disconnected'
+            except Exception as e:
+                print 'disconnected', e
                 self.client = False
 
             if not result:
