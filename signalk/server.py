@@ -81,8 +81,15 @@ class LineBufferedNonBlockingSocketPython(object):
             return
         try:
             count = self.socket.send(self.out_buffer)
+            if count < 0:
+                print 'socket send error in server flush'
+                self.out_buffer = ''
+                self.socket.close()
+                return
+
             self.out_buffer = self.out_buffer[count:]
         except:
+            self.out_buffer = ''
             self.socket.close()
 
     def recv(self):

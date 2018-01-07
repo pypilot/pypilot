@@ -64,7 +64,7 @@ class SerialProbe(object):
         self.lastworkingdevices[name] = lastdevice
         return lastdevice
             
-    def probe(self, name, bauds, timeout=15):
+    def probe(self, name, bauds, timeout=10):
         t0 = time.time()
         if not name in self.probes:
             self.probes[name] = {'time': 0, 'devices' : 'initial', 'device': False}
@@ -110,7 +110,7 @@ class SerialProbe(object):
         for n in self.probes:
             if self.probes[n]['device'] and \
                self.probes[n]['device']['path'] == probe_device['path']:
-                probe['devices'].append(probe_device) # try later
+                #probe['devices'].append(probe_device) # try later
                 return False
         probe['device'] = probe_device
 
