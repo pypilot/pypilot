@@ -32,19 +32,19 @@ class BasicAutopilot(AutopilotBase):
     def PosGain(name, default, max_val):
       Gain(name, default, 0, max_val)
         
-    PosGain('P',  .15, 1.0)
-    PosGain('I', .005, .01)
-    PosGain('D',  0, 1.0)
+    PosGain('D',  .1, 1.0)
+    PosGain('P', .003, .01)
+    PosGain('DD',  .05, 1.0)
     
     def PosGain2(name, default, max_val, other):
       def compute2(value):
         return value * abs(value) * self.gains[name]['apgain'].value * self.gains[other]['apgain'].value
       Gain(name, default, 0, max_val, compute2)
 
-    PosGain('IR',  0, 1.0)
-    PosGain2('P2', 0, 1, 'P')
+    PosGain('PR',  0, .05)
+    PosGain2('D2', 0, 1, 'P')
 
-    PosGain('FF',  0, 3.0)
+    PosGain('FF',  .5, 3.0)
 
     self.lastenabled = False
 
@@ -81,15 +81,15 @@ class BasicAutopilot(AutopilotBase):
     command = 0
     headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = self.boatimu.SensorValues['headingraterate_lowpass'].value
-    gain_values = {'P': headingrate,
-                   'I': self.heading_error.value,
-                   'D': headingraterate,
+    gain_values = {'D': headingrate,
+                   'P': self.heading_error.value,
+                   'DD': headingraterate,
                    'FF': -self.heading_command_rate.value}
-    IR = math.sqrt(abs(gain_values['I']))
-    if gain_values['I'] < 0:
-      IR = -IR
-    gain_values['IR'] = IR
-    gain_values['P2'] = gain_values['P']
+    PR = math.sqrt(abs(gain_values['D']))
+    if gain_values['P'] < 0:
+      PR = -PR
+    gain_values['PR'] = PR
+    gain_values['D2'] = gain_values['D']
 
     for gain in self.gains:
       value = gain_values[gain]

@@ -194,25 +194,26 @@ class AutopilotBase(object):
 
       #update wind and gps offsets
       if self.nmea.values['gps']['source'].value != 'none':
-          d = .01
+          d = .002
           gps_speed = self.nmea.values['gps']['speed'].value
           self.gps_speed.set((1-d)*self.gps_speed.value + d*gps_speed)
           if gps_speed > 1: # don't update gps offset below 1 knot
-              d = .01*math.log(gps_speed + 1)
-              gps_compass_offset = resolv(self.nmea.values['gps']['track'].value - compass_heading)
-              self.gps_compass_offset.set(d*gps_compass_offset + (1-d)*self.gps_compass_offset.value)
+              # weight gps compass offset higher with more gps speed
+              d = .005*math.log(gps_speed + 1)
+              gps_compass_offset = resolv(self.nmea.values['gps']['track'].value - compass_heading, self.gps_compass_offset.value)
+              self.gps_compass_offset.set(resolv(d*gps_compass_offset + (1-d)*self.gps_compass_offset.value))
       if self.nmea.values['wind']['source'].value != 'none':
-          d = .01
+          d = .005
           wind_speed = self.nmea.values['wind']['speed'].value
           self.wind_speed.set((1-d)*self.wind_speed.value + d*wind_speed)
           # weight wind direction more with higher wind speed
-          d = .01*math.log(wind_speed/5.0 + .2)
+          d = .005*math.log(wind_speed/5.0 + .2)
           if d > 0: # below 4 knots of wind, can't even use it
               wind_direction = resolv(self.nmea.values['wind']['direction'].value, self.wind_direction.value)
               wind_direction = (1-d)*self.wind_direction.value + d*wind_direction
               self.wind_direction.set(resolv(wind_direction, 180))
-              offset = wind_direction - compass_heading
-              self.wind_compass_offset.set(resolv(d*offset + (1-d)*self.wind_compass_offset.value, 180))
+              offset = resolv(wind_direction + compass_heading, self.wind_compass_offset.value)
+              self.wind_compass_offset.set(resolv(d*offset + (1-d)*self.wind_compass_offset.value))
 
       if self.mode.value == 'true wind':
           # for true wind, we must have both wind and gps
@@ -223,31 +224,36 @@ class AutopilotBase(object):
 
           wind_speed = self.wind_speed.value
           if wind_speed < 3: # below 3 knots wind speed, not reliable
+              self.mode.set('gps')
+          gps_speed = self.gps_speed.value
+          if gps_speed < 1:
               self.mode.set('wind')
 
           rd = math.radians(self.wind_direction.value)
           windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
-          truewindv = windv[0], windv[1] - self.gps_speed.value
-          truewindd = math.degrees(math.atan2(*truewindv))
+          truewindd = math.degrees(math.atan2(windv[0], windv[1] - gps_speed))
 
-          offset = truewindd - compass_heading
-          d = .01
-          self.true_wind_compass_offset.set(resolv(d*offset + (1-d)*self.true_wind_compass_offset.value, 180))
-          true_wind = resolv(compass_heading + self.true_wind_compass_offset.value, 180)
+          offset = resolv(truewindd + compass_heading, self.true_wind_compass_offset.value)
+          d = .005
+          self.true_wind_compass_offset.set(resolv(d*offset + (1-d)*self.true_wind_compass_offset.value))
+          true_wind = resolv(self.true_wind_compass_offset.value - compass_heading, 180)
           self.heading.set(true_wind)
+
       if self.mode.value == 'wind':
-        # if wind sensor drops out, switch to compass
-        if self.nmea.values['wind']['source'].value == 'none':
-            self.mode.set('compass')
-        wind_direction = resolv(compass_heading + self.wind_compass_offset.value, 180)
-        self.heading.set(wind_direction)
+          # if wind sensor drops out, switch to compass
+          if self.nmea.values['wind']['source'].value == 'none':
+              self.mode.set('compass')
+          wind_direction = resolv(self.wind_compass_offset.value - compass_heading, 180)
+          self.heading.set(wind_direction)
+
       if self.mode.value == 'gps':
-        # if gps drops out or speed too slow, switch to compass
-        if self.nmea.values['gps']['source'].value == 'none' or \
-           self.gps_speed.value < 1:
-            self.mode.set('compass')
-        gps_heading = resolv(compass_heading + self.gps_compass_offset.value, 180)
-        self.heading.set(gps_heading)
+          # if gps drops out or speed too slow, switch to compass
+          if self.nmea.values['gps']['source'].value == 'none' or \
+             self.gps_speed.value < 1:
+              self.mode.set('compass')
+          gps_heading = resolv(compass_heading + self.gps_compass_offset.value, 180)
+          self.heading.set(gps_heading)
+
       if self.mode.value == 'compass':
           if data:
               if 'calupdate' in data and self.last_heading:
