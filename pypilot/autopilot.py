@@ -171,9 +171,9 @@ class AutopilotBase(object):
   def run(self):
       self.lasttime = time.time()
       while True:
-          self.ap_iteration()
+          self.iteration()
 
-  def ap_iteration(self):
+  def iteration(self):
       data = False
       t00 = time.time()
       for tries in range(14): # try 14 times to read from imu 
