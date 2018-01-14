@@ -1,7 +1,7 @@
 
 class ArduinoServo
 {
-    enum Telemetry {FLAGS= 1, CURRENT = 2, VOLTAGE = 4, SPEED = 8, POSITION = 16, CONTROLLER_TEMP = 32, MOTOR_TEMP = 64};
+    enum Telemetry {FLAGS= 1, CURRENT = 2, VOLTAGE = 4, SPEED = 8, POSITION = 16, CONTROLLER_TEMP = 32, MOTOR_TEMP = 64, RUDDER_POS=128};
     enum flags {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FAULTPIN=16*2};
 public:
     ArduinoServo(int _fd);
@@ -15,7 +15,7 @@ public:
     bool fault();
     void max_values(double current, double controller_temp, double motor_temp);
 
-    double voltage, current, controller_temp, motor_temp;
+    double voltage, current, controller_temp, motor_temp, rudder_pos;
     int flags;
 
 private:

@@ -145,6 +145,7 @@ class ServoTelemetry(object):
     POSITION = 16
     CONTROLLER_TEMP = 32
     MOTOR_TEMP = 64
+    RUDDER_POS = 128
 
 # a property which records the time when it is updated
 class TimedProperty(Property):
@@ -185,6 +186,7 @@ class Servo(object):
         self.current = self.Register(SensorValue, 'current', timestamp)
         self.controller_temp = self.Register(SensorValue, 'controller_temp', timestamp)
         self.motor_temp = self.Register(SensorValue, 'motor_temp', timestamp)
+        self.rudder_pos = self.Register(SensorValue, 'rudder_pos', timestamp)
         self.engauged = self.Register(BooleanValue, 'engauged', False)
         self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 20, persistent=True)
         self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 60, 45, 100, persistent=True)
@@ -317,7 +319,7 @@ class Servo(object):
         self.windup += speed_error*dt/self.period.value
         fac = 1.5*self.period.value
         self.windup = min(max(self.windup, -fac*self.max_speed.value), fac*self.max_speed.value)
-        print 'windup', self.windup, speed, self.speed.value
+        #print 'windup', self.windup, speed, self.speed.value
 
         P, I, D = .2, 1, 0
         speed = P*speed_error/self.period.value + I*self.windup + D*speed_rate
@@ -516,6 +518,8 @@ class Servo(object):
             self.controller_temp.set(self.driver.controller_temp)
         if result & ServoTelemetry.MOTOR_TEMP:
             self.motor_temp.set(self.driver.motor_temp)
+        if result & ServoTelemetry.RUDDER_POS:
+            self.rudder_pos.set(self.driver.rudder_pos)
         if result & ServoTelemetry.CURRENT:
             self.current.set(self.driver.current)
             # integrate power consumption
@@ -573,7 +577,7 @@ if __name__ == '__main__':
         servo.poll()
 
         if servo.driver:
-            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'flags', servo.flags.strvalue()
+            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', servo.rudder_pos.value, 'flags', servo.flags.strvalue()
             #print servo.command.value, servo.speed.value, servo.windup
             pass
         server.HandleRequests()

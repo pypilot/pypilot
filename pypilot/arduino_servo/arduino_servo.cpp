@@ -132,8 +132,8 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
         motor_temp = (int16_t)value / 100.0;
         return MOTOR_TEMP;
     case RUDDER_SENSE_CODE:
-        rudder =  (int16_t)value / 100.0;
-        return RUDDER;
+        rudder_pos =  (int16_t)value;
+        return RUDDER_POS;
     case FLAGS_CODE:
         flags = value;
 //        if(flags != 9)
@@ -161,6 +161,7 @@ int ArduinoServo::poll()
     int ret = 0;
     while(in_buf_len >= 4) {
         uint8_t crc = crc8(in_buf, 3);
+        printf("input %x %x %x %x %x\n", in_buf[0], in_buf[1], in_buf[2], in_buf[3], crc);
         if(crc == in_buf[3]) { // valid packet
             if(in_sync_count >= 1)
                 ret |= process_packet(in_buf);
