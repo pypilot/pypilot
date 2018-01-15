@@ -12,10 +12,16 @@
 import os, sys, time
 import gps
 
+if len(sys.argv) > 1:
+    addr = sys.argv[1]
+else:
+    addr = '127.0.0.1'
+
 while True:
     while True:
         try:
-            gpsd = gps.gps(mode=gps.WATCH_ENABLE) #starting the stream of info
+            print 'try', addr
+            gpsd = gps.gps(host=addr, mode=gps.WATCH_ENABLE) #starting the stream of info
             break
         except:
             time.sleep(3)
