@@ -289,7 +289,7 @@ ISR(ADC_vect)
             }
         } else {
             adc_cnt = 0;
-            if(++adc_counter == CHANNEL_COUNT)
+            if(++adc_counter >= CHANNEL_COUNT)
                 adc_counter=0;
             ADMUX = defmux | muxes[adc_counter];
         }
@@ -528,6 +528,13 @@ void loop()
             faults |= OVERTEMP;
         } else
             faults &= ~OVERTEMP;
+
+        // 100C is max allowed temp, 117C is max measurable.
+        // 110C indicates software fault
+        if(controller_temp > 11000) {
+            stop();
+            asm volatile ("ijmp" ::"z" (0x0000));
+        }
     }
     flags |= faults;
 
