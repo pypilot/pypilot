@@ -12,8 +12,7 @@
 # it is an enhanced imu with special knowledge of boat dynamics
 # giving it the ability to auto-calibrate the inertial sensors
 
-import os
-from sys import stdout
+import os, sys
 import time, math, multiprocessing, select
 from signalk.pipeserver import NonBlockingPipe
 
@@ -411,21 +410,61 @@ class BoatIMU(object):
     self.compass_calibration_age.update()
     return data
 
+class BoatIMUServer():
+  def __init__(self):
+    # setup all processes to exit on any signal
+    self.childpids = []
+    def cleanup(signal_number, frame):
+        print 'got signal', signal_number, 'cleaning up'
+        while self.childpids:
+            pid = self.childpids.pop()
+            os.kill(pid, signal.SIGTERM) # get backtrace
+        sys.stdout.flush()
+        raise KeyboardInterrupt # to get backtrace on all processes
 
-if __name__ == "__main__":
-#  server = SignalKServer()
-  server = SignalKPipeServer()
-  boatimu = BoatIMU(server)
+    # unfortunately we occasionally get this signal,
+    # some sort of timing issue where python doesn't realize the pipe
+    # is broken yet, so doesn't raise an exception
+    def printpipewarning(signal_number, frame):
+        print 'got SIGPIPE, ignoring'
 
-  heading_lp = 0
+    import signal
+    for s in range(1, 16):
+        if s == 13:
+            signal.signal(s, printpipewarning)
+        elif s != 9:
+            signal.signal(s, cleanup)
+
+    #  server = SignalKServer()
+    self.server = SignalKPipeServer()
+    self.boatimu = BoatIMU(self.server)
+
+    self.childpids = [self.boatimu.imu_process.pid, self.boatimu.compass_auto_cal.process.pid,
+                      self.server.process.pid]
+    signal.signal(signal.SIGCHLD, cleanup)
+    
+    self.t00 = time.time()
+
+  def iteration(self):
+    self.server.HandleRequests()
+    self.data = self.boatimu.IMURead()
+
+    while True:
+      dt = BoatIMU.period - (time.time() - self.t00)
+      if dt <= 0:
+        break
+      time.sleep(dt)
+    self.t00 = time.time()
+
+def main():
+  boatimu = BoatIMUServer()
+  quiet = '-q' in sys.argv
 
   while True:
-    t0 = time.time()
-    data = boatimu.IMURead()
-    if data:
+    boatimu.iteration()
+    data = boatimu.data
+    if data and not quiet:
       print 'pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading']
-    server.HandleRequests()
-    dt = time.time() - t0
-    if dt > BoatIMU.period:
-      time.sleep(dt);
 
+if __name__ == '__main__':
+    main()
