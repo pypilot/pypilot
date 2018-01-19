@@ -9,7 +9,7 @@
 
 import wx, sys, subprocess, socket, os, time
 import autopilot_control_ui
-from signalk.client import SignalKClient
+from signalk.client import *
 
 class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     ID_MESSAGES = 1000
@@ -142,7 +142,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         try:
             msgs = self.client.receive()
-        except signalk.client.ConnectionLost:
+        except ConnectionLost:
             self.client = False
             return
 

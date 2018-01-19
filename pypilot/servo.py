@@ -170,6 +170,7 @@ class Servo(object):
 
         self.min_speed = self.Register(RangeProperty, 'min_speed', .5, 0, 1, persistent=True)
         self.max_speed = self.Register(RangeProperty, 'max_speed', 1, 0, 1, persistent=True)
+        self.max_slew_rate = self.Register(RangeProperty, 'max_slew_rate', 2, 0, 10, persistent=True)
         brake_hack = 'brake_hack' in self.calibration.value and self.calibration.value['brake_hack']
         self.brake_hack = self.Register(BooleanProperty, 'brake_hack', brake_hack, persistent=True)
         self.brake_hack_state = 0
@@ -207,6 +208,7 @@ class Servo(object):
 
         self.windup = 0
         self.windup_change = 0
+        self.lastspeed = 0
 
         self.disengauged = True
         self.disengauge_on_timeout = self.Register(BooleanValue, 'disengauge_on_timeout', True, persistent=True)
@@ -243,7 +245,7 @@ class Servo(object):
             return
 
         timeout = 1 # command will expire after 1 second
-        if self.command.value:
+        if self.command.value or True:
             if time.time() - self.command.time > timeout:
                 print 'servo command timeout', time.time() - self.command.time
                 self.command.set(0)
@@ -264,9 +266,9 @@ class Servo(object):
         dt = t - self.lastpositiontime
         self.lastpositiontime = t
 
-        if speed == 0 and self.speed.value == 0: # optimization
-            self.raw_command(0)
-            return
+        #if speed == 0 and self.speed.value == 0: # optimization
+        #    self.raw_command(0)
+        #   return
 
         if self.flags.value & ServoFlags.FWD_FAULT and speed > 0 or \
            self.flags.value & ServoFlags.REV_FAULT and speed < 0:
@@ -306,23 +308,25 @@ class Servo(object):
         min_speed = self.min_speed.value
         
         # ensure max_speed is at least min_speed
-        #if min_speed > self.max_speed.value:
-        #    self.max_speed.set(min_speed)
+        if min_speed > self.max_speed.value:
+            self.max_speed.set(min_speed)
 
         # integrate windup
-        self.windup += (speed - self.speed.value) * dt
+        speed_error = speed - self.speed.value
+        speed_rate = self.lastspeed - self.speed.value
+        self.windup += speed_error*dt/self.period.value
+        fac = 1.5*self.period.value
+        self.windup = min(max(self.windup, -fac*self.max_speed.value), fac*self.max_speed.value)
+        print 'windup', self.windup, speed, self.speed.value
 
-        # if windup overflows, move at minimum speed
-        if abs(self.windup) > self.period.value*min_speed / 1.5:
-            if abs(speed) < min_speed:
-                speed = min_speed if self.windup > 0 else -min_speed
-        else:
+        P, I, D = .2, 1, 0
+        speed = P*speed_error/self.period.value + I*self.windup + D*speed_rate
+        #speed = self.windup
+
+        if abs(speed) < min_speed:
             speed = 0
+        speed = min(max(speed, -self.max_speed.value), self.max_speed.value)
             
-        # don't let windup overflow
-        self.windup = min(max(self.windup, -self.period.value), self.period.value)
-        #print 'windup', self.windup, dt, self.windup / dt, speed, self.speed
-
         if speed * self.speed.value <= 0: # switched direction or stopped?
             if t - self.windup_change < self.period.value:
                 # less than period, keep previous direction, but use minimum speed
@@ -335,9 +339,15 @@ class Servo(object):
             else:
                 self.windup_change = t
 
-        # clamp to max speed
-        speed = min(max(speed, -self.max_speed.value), self.max_speed.value)
+        max_slew_rate = self.max_slew_rate.value * dt
+        speed_d = speed - self.lastspeed
+        if speed_d > max_slew_rate:
+            speed = self.lastspeed + max_slew_rate
+        elif speed_d < -max_slew_rate:
+            speed = self.lastspeed - max_slew_rate
+                
         if True:
+            self.lastspeed = self.speed.value
             self.speed.set(speed)
         else:
             # estimate true speed from voltage, current, and last command
@@ -352,6 +362,7 @@ class Servo(object):
             self.raw_command(0)
             return
 
+        print 'speed', speed
         raw_speed = cal[0] + abs(speed)*cal[1]
         if speed < 0:
             raw_speed = -raw_speed
@@ -563,6 +574,8 @@ if __name__ == '__main__':
 
         if servo.driver:
             print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'flags', servo.flags.strvalue()
+            #print servo.command.value, servo.speed.value, servo.windup
+            pass
         server.HandleRequests()
         time.sleep(.1)
 
