@@ -261,15 +261,15 @@ void read_anenometer()
     light = (light + 31*lastlight) / 32;
     lastlight = light;
 
-    int pwm = 255L*light / 600 - 100;
+    int pwm = 255L*light / 600 - 120;
     if(!lighton) {
         if(pwm < 200)
             lighton = 1;
         else
             pwm = 255;
     }
-    if(pwm < 140) // limit backlight brightness
-        pwm = 140;
+    if(pwm < 120) // limit backlight brightness
+        pwm = 120;
     if(pwm > 220) 
         pwm = 255, lighton = 0;
     #if 0
@@ -398,7 +398,7 @@ void read_pressure_temperature()
 
         int a = temperature_comp / 100;
         int r = temperature_comp - a*100;
-        snprintf(buf, sizeof buf, "ARMTA,%d.%02d,C", a, r);
+        snprintf(buf, sizeof buf, "ARMTA,%d.%02d,C", a, abs(r));
         send_nmea(buf);
 
         lcd_update  = 1;
@@ -428,7 +428,7 @@ void draw()
         last_lcd_texttime = time;
         int a = temperature_comp / 100;
         int r = temperature_comp - a*100;
-        snprintf(status_buf[3], sizeof status_buf[3], "%d.%02dC", a, r);
+        snprintf(status_buf[3], sizeof status_buf[3], "%d.%02dC", a, abs(r));
 
         snprintf(status_buf[0], sizeof status_buf[0], "%02d", (int) round(wind_dir));
         snprintf(status_buf[1], sizeof status_buf[1], "%02d", (int) round(wind_speed));
