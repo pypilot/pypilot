@@ -254,7 +254,7 @@ void engauge()
 // set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
 
 enum {CURRENT, VOLTAGE, CONTROLLER_TEMP, MOTOR_TEMP, /*INTERNAL_TEMP, */RUDDER, CHANNEL_COUNT};
-const uint8_t muxes[] = {_BV(MUX0), 0, _BV(MUX1), _BV(MUX0) | _BV(MUX1), /*_BV(MUX3),*/ BV(MUX1) | _BV(MUX2)};
+const uint8_t muxes[] = {_BV(MUX0), 0, _BV(MUX1), _BV(MUX0) | _BV(MUX1), /*_BV(MUX3),*/ _BV(MUX1) | _BV(MUX2)};
 
 volatile struct adc_results_t {
     uint32_t total;
@@ -369,10 +369,9 @@ uint16_t TakeTemp(uint8_t index, uint8_t p)
 
 uint16_t TakeRudder(uint8_t p)
 {
-    // voltage in 10mV increments 1.1ref, 560 and 10k resistors
-    // 1815 / 896 = 100.0/1024*10560/560*1.1  cli();
+    // 16 bit value for rudder
     uint32_t v = TakeADC(RUDDER, p);
-    return v * 1815 / 896 / 16;
+    return v;
 }
 
 
@@ -406,15 +405,20 @@ void process_packet()
     } break;  
     case STOP_CODE:
         stop();
-        // reset faults
-        if (flags & (OVERTEMP | OVERCURRENT | FAULTPIN))
-            flags &= ~(OVERTEMP | OVERCURRENT | FAULTPIN);
+        // reset overcurrent flag
+        flags &= ~OVERCURRENT;
         break;
     case COMMAND_CODE:
-        if(value > 2000) {
+        if(value > 2000);
             // unused range, invalid!!!
             // ignored
-        } else if(!(faults & (OVERTEMP | OVERCURRENT | FAULTPIN))) {
+        else if(faults & (OVERTEMP | OVERCURRENT));
+            // no command because of overtemp or overcurrent
+        else if((faults & FWD_FAULTPIN) && value > 1000);
+            // no forward command if fwd fault
+        else if((faults & REV_FAULTPIN) && value < 1000);
+            // no reverse command if fwd fault
+        else {
             position(value);
             engauge();
         }

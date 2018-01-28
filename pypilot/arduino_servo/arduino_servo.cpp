@@ -16,7 +16,7 @@
 #include "arduino_servo.h"
 
 enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
-enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, FLAGS_CODE = 0x8f};
+enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE = 0x8f};
 
 const unsigned char crc8_table[256]
 = {
@@ -131,6 +131,9 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
     case MOTOR_TEMP_CODE:
         motor_temp = (int16_t)value / 100.0;
         return MOTOR_TEMP;
+    case RUDDER_SENSE_CODE:
+        rudder =  (int16_t)value / 100.0;
+        return RUDDER;
     case FLAGS_CODE:
         flags = value;
 //        if(flags != 9)
