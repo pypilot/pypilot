@@ -135,12 +135,10 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
         if(value == 65535)
             rudder_pos = NAN;
         else
-            rudder_pos =  (uint16_t)value * 200 / 16368.0 - 100.0;
+            rudder_pos = (uint16_t)value * 200 / 65472.0 - 100.0;
         return RUDDER_POS;
     case FLAGS_CODE:
         flags = value;
-//        if(flags != 9)
-        //printf("servo flags %d %x\n", flags, flags);
         if(flags & INVALID)
             printf("servo received invalid packet (check serial connection)\n");
         return FLAGS;

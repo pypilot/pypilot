@@ -190,7 +190,7 @@ uint8_t crcbytes[3];
 uint16_t max_current = 1;
 uint16_t max_controller_temp = 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
-uint16_t min_rudder_pos = 0, max_rudder_pos = 16384;
+uint16_t min_rudder_pos = 0, max_rudder_pos = 65472;
 
 uint16_t flags = 0, faults = 0;
 
@@ -327,7 +327,8 @@ uint16_t CountADC(uint8_t index, uint8_t p)
     return adc_results[index][p].count;
 }
 
-uint32_t TakeADC(uint8_t index, uint8_t p)
+// return value from 0-16368
+uint16_t TakeADC(uint8_t index, uint8_t p)
 {
     uint32_t t, c;
     uint8_t lp = 0; // don't lowpass
@@ -400,8 +401,7 @@ uint16_t TakeTemp(uint8_t index, uint8_t p)
 uint16_t TakeRudder(uint8_t p)
 {
     // 16 bit value for rudder
-    uint32_t v = TakeADC(RUDDER, p);
-    return v;
+    return TakeADC(RUDDER, p) * 4;
 }
 
 #if 0
@@ -471,8 +471,8 @@ void process_packet()
         max_motor_temp = value;
         break;
     case RUDDER_RANGE_CODE:
-        min_rudder_pos = 64*in_bytes[1];
-        max_rudder_pos = 64*in_bytes[2];
+        min_rudder_pos = 256*in_bytes[1];
+        max_rudder_pos = 256*in_bytes[2];
         break;
     case DISENGAUGE_CODE:
         disengauge();
@@ -581,7 +581,7 @@ void loop()
     }
 
     const int rudder_react_count = 160; // approx 0.2 second reaction
-    if(CountADC(RUDDER, 1) > react_count) {
+    if(CountADC(RUDDER, 1) > rudder_react_count) {
         uint16_t v = TakeRudder(1);
         if(rudder_sense) {
             if(v < min_rudder_pos) {
@@ -594,10 +594,10 @@ void loop()
                 flags |= MAX_RUDDER;
             } else
                 flags &= ~MAX_RUDDER;
-            if(v < 256 || v > 16384 - 256)
+            if(v < 256 || v > 65472 - 256)
                 rudder_sense = 0;
         } else {
-            if(v > 256 && v < 16384 - 256)
+            if(v > 256 && v < 65472 - 256)
                 rudder_sense = 1;
             flags &= ~(MIN_RUDDER | MAX_RUDDER);
         }
@@ -632,7 +632,7 @@ void loop()
             if(CountADC(RUDDER, 0) < 10)
                 return;
             if(rudder_sense == 0)
-                v = 65535; // invalid rudder
+                v = 65535; // indicate invalid rudder measurement
             else
                 v = TakeRudder(0);
             code = RUDDER_SENSE_CODE;
