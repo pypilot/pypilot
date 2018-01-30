@@ -19,11 +19,16 @@ adc pin0 is a resistor divider to measure voltage
              allowing up to 20 volts (10k and 560 ohm, 1.1 volt reference)
              
 adc pin1 goes to .1 ohm shunt to measure current
-adc pin2 goies to 100k resistor to 5v and 10k NTC thermistor to gnd ctrl temp
-adc pin3 goies to 100k resistor to 5v and 10k NTC thermistor to gnd motor temp
+adc pin2 goes to 100k resistor to 5v and 10k NTC thermistor to gnd ctrl temp
+adc pin3 goes to 100k resistor to 5v and 10k NTC thermistor to gnd motor temp
 
-pwm output on arduino pin 9
-esc programming input/output on pin 2
+digital pin9 pwm output on arduino
+digital pin2 esc programming input/output (with arduinousblinker script)
+
+optional:
+digital pin7 forward fault for optional switch to stop forward travel
+digital pin8 reverse fault for optional switch to stop reverse travel
+adc pin6 rudder sense
 
 The program uses a simple protocol to ensure only
 correct data can be received and to ensure that
@@ -36,7 +41,7 @@ The first byte is the command or register, the next
 two bytes is a 16bit value (signed or unsigned)
 the last byte is a crc8 of the first 3 bytes
 
-If incomming data has the correct crc for a few frames
+If incoming data has the correct crc for a few frames
 the command can be recognized.
 
 */
@@ -172,10 +177,10 @@ void setup()
     digitalWrite(shunt_sense_pin, HIGH); /* enable internal pullups */    
 } 
 
-enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
+enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
 enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
 
-enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4};
+enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, MIN_RUDDER=256*1, MAX_RUDDER=256*2};
 
 uint8_t in_bytes[3];
 uint8_t sync_b = 0, in_sync_count = 0;
@@ -185,12 +190,14 @@ uint8_t crcbytes[3];
 uint16_t max_current = 1;
 uint16_t max_controller_temp = 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
+uint16_t min_rudder_pos = 0, max_rudder_pos = 16384;
 
 uint16_t flags = 0, faults = 0;
 
-uint8_t timeout;
+uint8_t timeout, rudder_sense = 0;
 
 // command is from 0 to 2000 with 1000 being neutral
+uint16_t lastpos = 1000;
 void position(uint16_t value)
 {
 #ifdef ARDUINO_SERVO
@@ -198,11 +205,24 @@ void position(uint16_t value)
 #else
   OCR1A = 1500 + value * 3 / 2;
 #endif
+  lastpos = value;
 }
 
 void stop()
 {
     position(1000);
+}
+
+void stop_fwd()
+{
+    if(lastpos > 1000)
+       stop();
+}
+
+void stop_rev()
+{
+    if(lastpos < 1000)
+       stop();
 }
 
 void disengauge()
@@ -274,42 +294,52 @@ uint8_t adc_cnt;
 ISR(ADC_vect)
 {
     uint16_t adcw = ADCW;
-    if(adc_cnt > 2) { // discard first few readings after changing channel
-        for(int i=0; i<2; i++) {
-            if(adc_results[adc_counter][i].count < 4000) {
-                adc_results[adc_counter][i].total += adcw;
-                adc_results[adc_counter][i].count++;
-            }
-        }
-        if(adc_counter == CURRENT) { // take 50x more current measurements
-            if(++adc_cnt == 50) {
-                adc_cnt = 0;
-                ++adc_counter;
-                ADMUX = defmux | muxes[adc_counter];
-            }
-        } else {
-            adc_cnt = 0;
-            if(++adc_counter >= CHANNEL_COUNT)
-                adc_counter=0;
-            ADMUX = defmux | muxes[adc_counter];
-        }
-    } else
-          adc_cnt++;
     ADCSRA |= _BV(ADSC); // enable conversion
+    if(++adc_cnt <= 3) // discard first few readings after changing channel
+        return;
+
+    for(int i=0; i<2; i++) {
+        if(adc_results[adc_counter][i].count < 4000) {
+            adc_results[adc_counter][i].total += adcw;
+            adc_results[adc_counter][i].count++;
+        }
+    }
+    
+    if(adc_counter == CURRENT) { // take more current measurements
+        if(adc_cnt < 50)
+            return;
+    } else if(adc_counter == VOLTAGE) {
+        if(adc_cnt < 7)
+            return;
+    } else if(adc_counter == RUDDER && rudder_sense)
+        if(adc_cnt < 10) // take more samples for rudder, if sampled
+            return;
+    
+    // advance to next channel
+    adc_cnt = 0;
+    if(++adc_counter >= CHANNEL_COUNT)
+        adc_counter=0;
+    ADMUX = defmux | muxes[adc_counter];
+}
+
+uint16_t CountADC(uint8_t index, uint8_t p)
+{
+    return adc_results[index][p].count;
 }
 
 uint32_t TakeADC(uint8_t index, uint8_t p)
 {
     uint32_t t, c;
+    uint8_t lp = 0; // don't lowpass
     cli();
     t = adc_results[index][p].total;
     c = adc_results[index][p].count;
-    if(p) { // fault measurements are not lowpassed
-        adc_results[index][p].total = 0;
-        adc_results[index][p].count = 0;
-    } else {
+    if(lp) { // fault measurements are not lowpassed
         adc_results[index][p].total >>= 1;
         adc_results[index][p].count >>= 1;
+    } else {
+        adc_results[index][p].total = 0;
+        adc_results[index][p].count = 0;
     }
 
     sei();
@@ -317,7 +347,7 @@ uint32_t TakeADC(uint8_t index, uint8_t p)
         return 0;
 
     uint32_t avg = 16 * t / c;
-    if(!p && c&1) { // correct rounding errors from lowapss
+    if(lp && c&1) { // correct rounding errors from lowapss
         int havg = avg>>5;
         cli();
         adc_results[index][p].total -= havg;
@@ -374,7 +404,6 @@ uint16_t TakeRudder(uint8_t p)
     return v;
 }
 
-
 #if 0
 uint16_t TakeInternalTemp(uint8_t p)
 {
@@ -385,6 +414,7 @@ uint16_t TakeInternalTemp(uint8_t p)
     return 611 * v / 100 - 26000;
 }
 #endif
+
 ISR(TIMER2_OVF_vect)
 {
   if(++timeout == 60) // 1 second
@@ -412,11 +442,13 @@ void process_packet()
         if(value > 2000);
             // unused range, invalid!!!
             // ignored
-        else if(faults & (OVERTEMP | OVERCURRENT));
+        else if(flags & (OVERTEMP | OVERCURRENT));
             // no command because of overtemp or overcurrent
-        else if((faults & FWD_FAULTPIN) && value > 1000);
+        else if((flags & (FWD_FAULTPIN | MAX_RUDDER)) && value > 1000)
+            stop();
             // no forward command if fwd fault
-        else if((faults & REV_FAULTPIN) && value < 1000);
+        else if((flags & (REV_FAULTPIN | MIN_RUDDER)) && value < 1000)
+            stop();
             // no reverse command if fwd fault
         else {
             position(value);
@@ -437,6 +469,10 @@ void process_packet()
         if(value > 10000) // maximum is 100C
             value = 10000;
         max_motor_temp = value;
+        break;
+    case RUDDER_RANGE_CODE:
+        min_rudder_pos = 64*in_bytes[1];
+        max_rudder_pos = 64*in_bytes[2];
         break;
     case DISENGAUGE_CODE:
         disengauge();
@@ -497,23 +533,23 @@ void loop()
 
     // test fault pins
     if(!digitalRead(fwd_fault_pin)) {
-        stop();
-        faults |= FWD_FAULTPIN;
+        stop_fwd();
+        flags |= FWD_FAULTPIN;
     } else
-      faults &= ~FWD_FAULTPIN;
+      flags &= ~FWD_FAULTPIN;
 
     if(!digitalRead(rev_fault_pin)) {
-        stop();
-        faults |= REV_FAULTPIN;
+        stop_rev();
+        flags |= REV_FAULTPIN;
     } else
-      faults &= ~REV_FAULTPIN;
+      flags &= ~REV_FAULTPIN;
 
     // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
     shunt_resistance = digitalRead(shunt_sense_pin);
     
     // test current
     const int react_count = 686; // need 686 readings for 0.1s reaction time
-    if(adc_results[CURRENT][1].count > react_count) {
+    if(CountADC(CURRENT, 1) > react_count) {
         uint16_t amps = TakeAmps(1);
         if(amps >= max_current) {
             stop();
@@ -521,17 +557,20 @@ void loop()
         } else
             faults &= ~OVERCURRENT;
     }
+    flags |= faults;
+    
 
     // test over temp
-    if(adc_results[CONTROLLER_TEMP][1].count > react_count &&
-       adc_results[MOTOR_TEMP][1].count > react_count) {
+    const int temp_react_count = 200;
+    if(CountADC(CONTROLLER_TEMP, 1) > temp_react_count &&
+       CountADC(MOTOR_TEMP, 1) > temp_react_count) {
         uint16_t controller_temp = TakeTemp(CONTROLLER_TEMP, 1);
         uint16_t motor_temp = TakeTemp(MOTOR_TEMP, 1);
         if(controller_temp >= max_controller_temp || motor_temp > max_motor_temp) {
             stop();
-            faults |= OVERTEMP;
+            flags |= OVERTEMP;
         } else
-            faults &= ~OVERTEMP;
+            flags &= ~OVERTEMP;
 
         // 100C is max allowed temp, 117C is max measurable.
         // 110C indicates software fault
@@ -540,45 +579,91 @@ void loop()
             asm volatile ("ijmp" ::"z" (0x0000));
         }
     }
-    flags |= faults;
 
-    delay(1); // small dead time to be safe
-    // match output rate to input rate
-    if(serialin < 4)
-      return;
+    const int rudder_react_count = 160; // approx 0.2 second reaction
+    if(CountADC(RUDDER, 1) > react_count) {
+        uint16_t v = TakeRudder(1);
+        if(rudder_sense) {
+            if(v < min_rudder_pos) {
+                stop_rev();
+                flags |= MIN_RUDDER;
+            } else
+                flags &= ~MIN_RUDDER;
+            if(v > max_rudder_pos) {
+                stop_fwd();
+                flags |= MAX_RUDDER;
+            } else
+                flags &= ~MAX_RUDDER;
+            if(v < 256 || v > 16384 - 256)
+                rudder_sense = 0;
+        } else {
+            if(v > 256 && v < 16384 - 256)
+                rudder_sense = 1;
+            flags &= ~(MIN_RUDDER | MAX_RUDDER);
+        }
+    }
       
     // output 1 byte
     switch(out_sync_b) {
     case 0:
+        delay(1); // small dead time to be safe
+        // match output rate to input rate
+        if(serialin < 4)
+            return;
+        
         uint16_t v;
         uint8_t code;
-        
-        if(out_sync_pos == 0) {
+
+        //flg C R V C R ct C R V C  R  flags  C  R  V  C  R mt  C  R  V  C  R
+        //0   1 2 3 4 5  6 7 8 9 10 11  12   13 14 15 16 17 18 19 20 21 22 23    
+        switch(out_sync_pos++) {
+        case 0: case 12:
             v = flags;
             code = FLAGS_CODE;
-        } else if(out_sync_pos == 2) {
-            v = TakeVolts(0);
-            code = VOLTAGE_CODE;
-        } else if(out_sync_pos == 4 && !shunt_resistance) {
-            v = TakeTemp(CONTROLLER_TEMP, 0);
-          code = CONTROLLER_TEMP_CODE;
-        } else if(out_sync_pos == 6 && !shunt_resistance) {
-            v = TakeTemp(MOTOR_TEMP, 0);
-          code = MOTOR_TEMP_CODE;
-        } else if(out_sync_pos == 8) {
-            v = TakeRudder(0);
-          code = RUDDER_SENSE_CODE;
-        } else {
-            if(adc_results[CURRENT][0].count < 100)
-                break;
+            break;
+        case 1: case 4: case 7: case 10: case 13: case 16: case 19: case 22:
+            if(CountADC(CURRENT, 0) < 50)
+                return;
             v = TakeAmps(0);
             code = CURRENT_CODE;
-            serialin-=4;
+            serialin-=4; // fix output rate to input rate
+            break;
+        case 2: case 5: case 8: case 11: case 14: case 17: case 20: case 23:
+            if(CountADC(RUDDER, 0) < 10)
+                return;
+            if(rudder_sense == 0)
+                v = 65535; // invalid rudder
+            else
+                v = TakeRudder(0);
+            code = RUDDER_SENSE_CODE;
+            break;
+        case 3: case 9: case 15: case 21:
+            if(CountADC(VOLTAGE, 0) < 2)
+                return;
+            v = TakeVolts(0);
+            code = VOLTAGE_CODE;
+            break;
+        case 6:
+            if(!shunt_resistance && CountADC(CONTROLLER_TEMP, 0)) {
+                v = TakeTemp(CONTROLLER_TEMP, 0);
+                code = CONTROLLER_TEMP_CODE;
+                break;
+            }
+            return;
+        case 18:
+            if(!shunt_resistance && CountADC(MOTOR_TEMP, 0)) {
+                v = TakeTemp(MOTOR_TEMP, 0);
+                if(v > 1200) { // below 12C means no sensor connected, or too cold to care
+                    code = MOTOR_TEMP_CODE;
+                    break;
+                }
+            }
+            return;
+        default:
+            out_sync_pos = 0;
+            return;
         }
 
-        if(++out_sync_pos >= 10)
-            out_sync_pos = 0;
-        
         crcbytes[0] = code;
         crcbytes[1] = v;
         crcbytes[2] = v>>8;

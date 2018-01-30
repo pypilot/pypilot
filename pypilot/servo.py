@@ -81,13 +81,17 @@ class ServoFlags(Value):
     ENGAUGED = 8
 
     INVALID=16*1
-    FAULTPIN=16*2
+    FWD_FAULTPIN=16*2
+    REV_FAULTPIN=16*4
 
-    DRIVER_MASK = 255 # bits used for driver flags
+    MIN_RUDDER=256*1
+    MAX_RUDDER=256*2    
 
-    FWD_FAULT=256*1
-    REV_FAULT=256*2
-    DRIVER_TIMEOUT = 256*4
+    DRIVER_MASK = 2047 # bits used for driver flags
+
+    FWD_FAULT=2048*1 # overcurrent faults
+    REV_FAULT=2048*2
+    DRIVER_TIMEOUT = 2048*4
 
     def __init__(self, name):
         super(ServoFlags, self).__init__(name, 0)
@@ -107,8 +111,14 @@ class ServoFlags(Value):
             ret += 'ENGAUGED '
         if self.value & self.INVALID:
             ret += 'INVALID '
-        if self.value & self.FAULTPIN:
-            ret += 'FAULTPIN '
+        if self.value & self.FWD_FAULTPIN:
+            ret += 'FWD_FAULTPIN '
+        if self.value & self.REV_FAULTPIN:
+            ret += 'REV_FAULTPIN '
+        if self.value & self.MIN_RUDDER:
+            ret += 'MIN_RUDDER '
+        if self.value & self.MAX_RUDDER:
+            ret += 'MAX_RUDDER '
         if self.value & self.FWD_FAULT:
             ret += 'FWD_FAULT '
         if self.value & self.REV_FAULT:
@@ -171,7 +181,6 @@ class Servo(object):
 
         self.min_speed = self.Register(RangeProperty, 'min_speed', .5, 0, 1, persistent=True)
         self.max_speed = self.Register(RangeProperty, 'max_speed', 1, 0, 1, persistent=True)
-        self.max_slew_rate = self.Register(RangeProperty, 'max_slew_rate', 2, 0, 10, persistent=True)
         brake_hack = 'brake_hack' in self.calibration.value and self.calibration.value['brake_hack']
         self.brake_hack = self.Register(BooleanProperty, 'brake_hack', brake_hack, persistent=True)
         self.brake_hack_state = 0
@@ -187,10 +196,13 @@ class Servo(object):
         self.controller_temp = self.Register(SensorValue, 'controller_temp', timestamp)
         self.motor_temp = self.Register(SensorValue, 'motor_temp', timestamp)
         self.rudder_pos = self.Register(SensorValue, 'rudder_pos', timestamp)
+        
         self.engauged = self.Register(BooleanValue, 'engauged', False)
         self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 20, persistent=True)
         self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 60, 45, 100, persistent=True)
         self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 55, 30, 100, persistent=True)
+        self.min_rudder_pos = self.Register(RangeProperty, 'min_rudder_pos', -100, -100, 100, persistent=True)
+        self.max_rudder_pos = self.Register(RangeProperty, 'max_rudder_pos',  100, -100, 100, persistent=True)
         self.period = self.Register(RangeProperty, 'period', .7, .1, 3, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'compensate_voltage', False, persistent=True)
@@ -210,7 +222,6 @@ class Servo(object):
 
         self.windup = 0
         self.windup_change = 0
-        self.lastspeed = 0
 
         self.disengauged = True
         self.disengauge_on_timeout = self.Register(BooleanValue, 'disengauge_on_timeout', True, persistent=True)
@@ -247,7 +258,7 @@ class Servo(object):
             return
 
         timeout = 1 # command will expire after 1 second
-        if self.command.value or True:
+        if self.command.value:
             if time.time() - self.command.time > timeout:
                 print 'servo command timeout', time.time() - self.command.time
                 self.command.set(0)
@@ -268,9 +279,9 @@ class Servo(object):
         dt = t - self.lastpositiontime
         self.lastpositiontime = t
 
-        #if speed == 0 and self.speed.value == 0: # optimization
-        #    self.raw_command(0)
-        #   return
+        if speed == 0 and self.speed.value == 0: # optimization
+            self.raw_command(0)
+            return
 
         if self.flags.value & ServoFlags.FWD_FAULT and speed > 0 or \
            self.flags.value & ServoFlags.REV_FAULT and speed < 0:
@@ -314,20 +325,17 @@ class Servo(object):
             self.max_speed.set(min_speed)
 
         # integrate windup
-        speed_error = speed - self.speed.value
-        speed_rate = self.lastspeed - self.speed.value
-        self.windup += speed_error*dt/self.period.value
-        fac = 1.5*self.period.value
-        self.windup = min(max(self.windup, -fac*self.max_speed.value), fac*self.max_speed.value)
-        #print 'windup', self.windup, speed, self.speed.value
+        self.windup += (speed - self.speed.value) * dt
 
-        P, I, D = .2, 1, 0
-        speed = P*speed_error/self.period.value + I*self.windup + D*speed_rate
-        #speed = self.windup
-
-        if abs(speed) < min_speed:
+        # if windup overflows, move at minimum speed
+        if abs(self.windup) > self.period.value*min_speed / 1.5:
+            if abs(speed) < min_speed:
+                speed = min_speed if self.windup > 0 else -min_speed
+        else:
             speed = 0
-        speed = min(max(speed, -self.max_speed.value), self.max_speed.value)
+        # don't let windup overflow
+        self.windup = min(max(self.windup, -self.period.value), self.period.value)
+        #print 'windup', self.windup, dt, self.windup / dt, speed, self.speed
             
         if speed * self.speed.value <= 0: # switched direction or stopped?
             if t - self.windup_change < self.period.value:
@@ -341,15 +349,9 @@ class Servo(object):
             else:
                 self.windup_change = t
 
-        max_slew_rate = self.max_slew_rate.value * dt
-        speed_d = speed - self.lastspeed
-        if speed_d > max_slew_rate:
-            speed = self.lastspeed + max_slew_rate
-        elif speed_d < -max_slew_rate:
-            speed = self.lastspeed - max_slew_rate
-                
+        # clamp to max speed
+        speed = min(max(speed, -self.max_speed.value), self.max_speed.value)
         if True:
-            self.lastspeed = self.speed.value
             self.speed.set(speed)
         else:
             # estimate true speed from voltage, current, and last command
@@ -364,7 +366,6 @@ class Servo(object):
             self.raw_command(0)
             return
 
-        print 'speed', speed
         raw_speed = cal[0] + abs(speed)*cal[1]
         if speed < 0:
             raw_speed = -raw_speed
@@ -421,7 +422,7 @@ class Servo(object):
                 if self.flags.value & ServoFlags.FWD_FAULT or \
                    self.flags.value & ServoFlags.REV_FAULT: # allow more current to "unstuck" ram
                     max_current *= 2
-                self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value)
+                self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.min_rudder_pos.value, self.max_rudder_pos.value)
                 self.driver.command(command)
 
     def stop(self):
@@ -452,7 +453,7 @@ class Servo(object):
                 device.timeout=0 #nonblocking
                 fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
                 self.driver = ArduinoServo(device.fileno())
-                self.driver.max_values(self.max_current.value, self.max_controller_temp.value, self.max_motor_temp.value)
+                self.driver.max_values(self.max_current.value, self.max_controller_temp.value, self.max_motor_temp.value, self.min_rudder_pos.value, self.max_rudder_pos.value)
 
                 t0 = time.time()
                 if self.driver.initialize(device_path[1]):
@@ -519,7 +520,10 @@ class Servo(object):
         if result & ServoTelemetry.MOTOR_TEMP:
             self.motor_temp.set(self.driver.motor_temp)
         if result & ServoTelemetry.RUDDER_POS:
-            self.rudder_pos.set(self.driver.rudder_pos)
+            if math.isnan(self.driver.rudder_pos):
+                self.rudder_pos.update(False)
+            else:
+                self.rudder_pos.set(self.driver.rudder_pos)
         if result & ServoTelemetry.CURRENT:
             self.current.set(self.driver.current)
             # integrate power consumption

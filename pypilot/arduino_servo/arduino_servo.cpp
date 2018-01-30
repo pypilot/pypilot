@@ -15,7 +15,7 @@
 
 #include "arduino_servo.h"
 
-enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
+enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
 enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE = 0x8f};
 
 const unsigned char crc8_table[256]
@@ -85,7 +85,7 @@ bool ArduinoServo::initialize(int baud)
 {
     int cnt = 0;
     bool data = false;
-    while (!(flags & SYNC)) {
+    while (!(flags & SYNC) || out_sync < 20) {
         raw_command(0); // ensure we set the temp limits as well here
         stop();
         if(poll()>0) {
@@ -132,7 +132,10 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
         motor_temp = (int16_t)value / 100.0;
         return MOTOR_TEMP;
     case RUDDER_SENSE_CODE:
-        rudder_pos =  (int16_t)value;
+        if(value == 65535)
+            rudder_pos = NAN;
+        else
+            rudder_pos =  (uint16_t)value * 200 / 16368.0 - 100.0;
         return RUDDER_POS;
     case FLAGS_CODE:
         flags = value;
@@ -161,7 +164,8 @@ int ArduinoServo::poll()
     int ret = 0;
     while(in_buf_len >= 4) {
         uint8_t crc = crc8(in_buf, 3);
-        printf("input %x %x %x %x %x\n", in_buf[0], in_buf[1], in_buf[2], in_buf[3], crc);
+        //static int cnt;
+        //printf("input %d %x %x %x %x %x\n", cnt++, in_buf[0], in_buf[1], in_buf[2], in_buf[3], crc);
         if(crc == in_buf[3]) { // valid packet
             if(in_sync_count >= 1)
                 ret |= process_packet(in_buf);
@@ -184,14 +188,16 @@ int ArduinoServo::poll()
 
 bool ArduinoServo::fault()
 {
-    return flags & (OVERTEMP | OVERCURRENT | FAULTPIN);
+    return flags & OVERCURRENT;
 }
 
-void ArduinoServo::max_values(double current, double controller_temp, double motor_temp)
+void ArduinoServo::max_values(double current, double controller_temp, double motor_temp, double min_rudder_pos, double max_rudder_pos)
 {
     max_current_value = fmin(20, fmax(0, current));
     max_controller_temp_value = fmin(80, fmax(30, controller_temp));
     max_motor_temp_value = fmin(80, fmax(30, motor_temp));
+    min_rudder_pos_value = fmin(100, fmax(-100, min_rudder_pos));
+    max_rudder_pos_value = fmin(100, fmax(-100, max_rudder_pos));
 }
 
 void ArduinoServo::send_value(uint8_t command, uint16_t value)
@@ -205,19 +211,24 @@ void ArduinoServo::raw_command(uint16_t value)
 {
     // send max current and temp occasionally
     switch(out_sync) {
-    case 0: case 8: case 16: case 24:
+    case 0: case 8: case 16:
         send_value(MAX_CURRENT_CODE, max_current_value*100);
         break;
-    case 4:
+    case 6:
         send_value(MAX_CONTROLLER_TEMP_CODE, max_controller_temp_value*100);
         break;
     case 12:
         send_value(MAX_MOTOR_TEMP_CODE, max_motor_temp_value*100);
+        break;
+    case 18:
+        send_value(RUDDER_RANGE_CODE,
+                   ((int)((min_rudder_pos_value+100)*255/200) & 0xff) |
+                   ((int)((max_rudder_pos_value+100)*255/200) & 0xff) << 8);
     }
 
-//        printf("command %u\n", value);
+    //printf("command %u %d\n", value, out_sync);
     send_value(COMMAND_CODE, value);
-    if(++out_sync == 32)
+    if(++out_sync == 23)
         out_sync = 0;
 }
 
