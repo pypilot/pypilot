@@ -213,6 +213,7 @@ class Nmea(object):
 
         self.nmea_times = {}
         self.last_imu_time = time.time()
+        self.last_rudder_pos_time = time.time()
         self.starttime = time.time()
 
     def __del__(self):
@@ -337,6 +338,15 @@ class Nmea(object):
             self.send_nmea('APXDR,A,%.3f,D,ROLL' % self.server.values['imu.roll'].value)
             self.send_nmea('APHDM,%.3f,M' % self.server.values['imu.heading_lowpass'].value)
             self.last_imu_time = time.time()
+
+        dt = time.time() - self.last_rudder_pos_time
+        if self.process.sockets and (dt > .5 or dt < 0) and \
+           'servo.rudder_pos' in self.server.values:
+            value = self.server.values['servo.rudder_pos'].value
+            if value:
+                self.send_nmea('APRSA,%.3f,A,,' % value)
+            self.last_rudder_pos_time = time.time()
+            
         t5 = time.time()
         if t5 - t0 > .1:
             print 'nmea poll times', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4
@@ -464,7 +474,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
             data = line[7:len(line)-3].split(',')
             #if not self.last_values['ap.enabled']:
             #    self.client.set('ap.enabled', True)
-            if not self.last_values['ap.enabled']:
+            if self.last_values['ap.enabled']:
                 mode = 'compass' if data[11] == 'M' else 'gps'
                 if self.last_values['ap.mode'] != mode:
                     self.client.set('ap.mode', mode)
