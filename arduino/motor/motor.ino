@@ -228,9 +228,12 @@ void stop_rev()
 void disengauge()
 {
     stop();
-    delay(60); // ensure esc gets stop signal
-
     flags &= ~ENGAUGED;
+    timeout = 60; // detach in about 62ms
+}
+
+void detach()
+{
 #ifdef ARDUINO_SERVO
     myservo.detach();
 #else
@@ -239,9 +242,9 @@ void disengauge()
 //    DDRB&=~_BV(PB1);
     pinMode(9, INPUT);
 #endif
-
     TIMSK2 = 0;
-}
+    timeout = 64; // avoid overflow
+}    
 
 unsigned int range = 40000;
 
@@ -417,13 +420,15 @@ uint16_t TakeInternalTemp(uint8_t p)
 
 ISR(TIMER2_OVF_vect)
 {
-  if(++timeout == 60) // 1 second
-      disengauge();
+    timeout++;
+    if(timeout == 60)
+        disengauge();
+    if(timeout >= 64) // detach 60 ms later so esc gets stop
+        detach();
 }
 
 void process_packet()
 {
-    timeout = 0;
     flags |= SYNC;
     uint16_t value = in_bytes[1] | (in_bytes[2]<<8);
     switch(in_bytes[0]) {
@@ -439,6 +444,9 @@ void process_packet()
         flags &= ~OVERCURRENT;
         break;
     case COMMAND_CODE:
+        timeout = 0;
+        if(serialin < 12)
+            serialin+=4; // output at input rate
         if(value > 2000);
             // unused range, invalid!!!
             // ignored
@@ -475,8 +483,9 @@ void process_packet()
         max_rudder_pos = 256*in_bytes[2];
         break;
     case DISENGAUGE_CODE:
+        if(serialin < 12)
+            serialin+=4; // output at input rate
         disengauge();
-        //delay(60);
         break;
     }
 }
@@ -497,14 +506,11 @@ void loop()
     // wait for characters
     // boot powered down, wake on data
     if(!Serial.available())
-      set_sleep_mode(SLEEP_MODE_IDLE);
+        set_sleep_mode(SLEEP_MODE_IDLE);
 
     // serial input
     while(Serial.available()) {
       uint8_t c = Serial.read();
-      if(serialin < 12)
-        serialin++; // output at input rate
-
       if(sync_b < 3) {
           in_bytes[sync_b] = c;
           sync_b++;
@@ -515,6 +521,7 @@ void loop()
                   process_packet();
               } else
                   in_sync_count++;
+
               sync_b = 0;
               flags &= ~INVALID;
           } else {
@@ -606,7 +613,6 @@ void loop()
     // output 1 byte
     switch(out_sync_b) {
     case 0:
-        delay(1); // small dead time to be safe
         // match output rate to input rate
         if(serialin < 4)
             return;
@@ -622,14 +628,17 @@ void loop()
             code = FLAGS_CODE;
             break;
         case 1: case 4: case 7: case 10: case 13: case 16: case 19: case 22:
-            if(CountADC(CURRENT, 0) < 50)
+            if(CountADC(CURRENT, 0) < 50) {
+                out_sync_pos--; // remain at current measurement (avoid output overflow)
                 return;
+            }
             v = TakeAmps(0);
             code = CURRENT_CODE;
-            serialin-=4; // fix output rate to input rate
+            serialin-=4; // fix current output rate to input rate
+            delay(4); // small dead time to break serial transmission
             break;
         case 2: case 5: case 8: case 11: case 14: case 17: case 20: case 23:
-            if(CountADC(RUDDER, 0) < 10)
+            if(CountADC(RUDDER, 0) < 10 || (!rudder_sense && out_sync_pos > 3))
                 return;
             if(rudder_sense == 0)
                 v = 65535; // indicate invalid rudder measurement
@@ -668,8 +677,7 @@ void loop()
         crcbytes[1] = v;
         crcbytes[2] = v>>8;
         // fall through
-    case 1:
-    case 2:
+    case 1: case 2:
         // write next
         Serial.write(crcbytes[out_sync_b]);
         out_sync_b++;
