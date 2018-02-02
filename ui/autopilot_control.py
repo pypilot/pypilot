@@ -122,12 +122,18 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 return
                 
         command = self.sCommand.GetValue()
-        if self.enabled:
-            if command != 0:
+        if command != 0:
+            if self.enabled:
                 self.heading_command += self.apply_command(command)
                 self.client.set('ap.heading_command', self.heading_command)
-        else:
-            self.servo_command(-command / 20.0)
+                self.sCommand.SetValue(0)
+            else:
+                if command > 0:
+                    command -= 1
+                elif command < 0:
+                    command += 1
+                self.servo_command(-command / 100.0)
+                self.sCommand.SetValue(command)
 
         for gain in self.gains:
             if gain['need_update']:
@@ -138,7 +144,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                time.time() - gain['last_change'] > 1:
                 gain['slider'].SetValue(gain['sliderval'])
 
-        self.sCommand.SetValue(0)
 
         try:
             msgs = self.client.receive()
