@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include <sys/time.h>
+
 #include "arduino_servo.h"
 
 enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
@@ -85,6 +87,10 @@ bool ArduinoServo::initialize(int baud)
 {
     int cnt = 0;
     bool data = false;
+
+    // flush device data
+//    while(read(fd, in_buf, in_buf_len) > 0);
+
     while (!(flags & SYNC) || out_sync < 20) {
         raw_command(0); // ensure we set the temp limits as well here
         stop();
@@ -149,7 +155,15 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
 int ArduinoServo::poll()
 {
     if(in_buf_len < 4) {
-        int c = read(fd, in_buf + in_buf_len, sizeof in_buf - in_buf_len);
+        int c;
+        for(;;) {
+            int cnt = sizeof in_buf - in_buf_len;
+            c = read(fd, in_buf + in_buf_len, cnt);
+            if(c < cnt)
+                break;
+            in_buf_len = 0;
+            printf("arduino server buffer overflow\n");
+        }
         if(c<0) {
             if(errno != EAGAIN)
                 return -1;
@@ -162,8 +176,12 @@ int ArduinoServo::poll()
     int ret = 0;
     while(in_buf_len >= 4) {
         uint8_t crc = crc8(in_buf, 3);
-        //static int cnt;
-        //printf("input %d %x %x %x %x %x\n", cnt++, in_buf[0], in_buf[1], in_buf[2], in_buf[3], crc);
+#if 0
+        static int cnt;
+        struct timeval tv;
+        gettimeofday(&tv, 0);
+        printf("input %d %ld:%ld %x %x %x %x %x\n", cnt++, tv.tv_sec, tv.tv_usec, in_buf[0], in_buf[1], in_buf[2], in_buf[3], crc);
+#endif
         if(crc == in_buf[3]) { // valid packet
             if(in_sync_count >= 1)
                 ret |= process_packet(in_buf);
@@ -202,6 +220,11 @@ void ArduinoServo::send_value(uint8_t command, uint16_t value)
 {
     uint8_t code[4] = {command, (uint8_t)(value&0xff), (uint8_t)((value>>8)&0xff), 0};
     code[3] = crc8(code, 3);
+#if 0
+    struct timeval tv;
+    gettimeofday(&tv, 0);
+    printf("output %ld:%ld %x %x %x %x\n", tv.tv_sec, tv.tv_usec, code[0], code[1], code[2], code[3]);
+#endif
     write(fd, code, 4);
 }
 
