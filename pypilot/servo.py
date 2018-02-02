@@ -181,6 +181,7 @@ class Servo(object):
 
         self.min_speed = self.Register(RangeProperty, 'min_speed', .5, 0, 1, persistent=True)
         self.max_speed = self.Register(RangeProperty, 'max_speed', 1, 0, 1, persistent=True)
+
         brake_hack = 'brake_hack' in self.calibration.value and self.calibration.value['brake_hack']
         self.brake_hack = self.Register(BooleanProperty, 'brake_hack', brake_hack, persistent=True)
         self.brake_hack_state = 0
@@ -189,7 +190,7 @@ class Servo(object):
 
         # power usage
         self.command = self.Register(TimedProperty, 'command', 0)
-        self.timestamp = time.time()
+        self.current_timestamp = time.time()
         timestamp = server.TimeStamp('servo')
         self.voltage = self.Register(SensorValue, 'voltage', timestamp)
         self.current = self.Register(SensorValue, 'current', timestamp)
@@ -333,8 +334,9 @@ class Servo(object):
                 speed = min_speed if self.windup > 0 else -min_speed
         else:
             speed = 0
+
         # don't let windup overflow
-        self.windup = min(max(self.windup, -self.period.value), self.period.value)
+        self.windup = min(max(self.windup, -1.5*self.period.value), 1.5*self.period.value)
         #print 'windup', self.windup, dt, self.windup / dt, speed, self.speed
             
         if speed * self.speed.value <= 0: # switched direction or stopped?
@@ -413,7 +415,7 @@ class Servo(object):
             self.last_zero_command_time = t
         else:
             self.command_timeout = t
-                
+
         if self.driver:
             if self.disengauged: # keep sending disengauge to keep sync
                 self.driver.disengauge()
@@ -424,6 +426,17 @@ class Servo(object):
                     max_current *= 2
                 self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.min_rudder_pos.value, self.max_rudder_pos.value)
                 self.driver.command(command)
+
+                # detect driver timeout if commanded without measuring current
+                if self.current.value:
+                    self.flags.clearbit(ServoFlags.DRIVER_TIMEOUT)
+                    self.driver_timeout_start = 0
+                elif command:
+                    if self.driver_timeout_start:
+                        if time.time() - self.driver_timeout_start > 1:
+                            self.flags.setbit(ServoFlags.DRIVER_TIMEOUT)
+                    else:
+                        self.driver_timeout_start = time.time()
 
     def stop(self):
         if self.driver:
@@ -490,8 +503,8 @@ class Servo(object):
             elif d > 4:
                 print 'servo timeout', d
                 self.close_driver()
-            return
-        self.lastpolltime = time.time()
+        else:
+            self.lastpolltime = time.time()
 
         if self.fault():
             if not self.flags.value & ServoFlags.FWD_FAULT and \
@@ -510,9 +523,8 @@ class Servo(object):
 
             self.stop() # clear fault condition
 
-        lasttimestamp = self.timestamp
-        self.timestamp = time.time()
-        self.server.TimeStamp('servo', self.timestamp)
+        t = time.time()
+        self.server.TimeStamp('servo', t)
         if result & ServoTelemetry.VOLTAGE:
             self.voltage.set(self.driver.voltage)
         if result & ServoTelemetry.CONTROLLER_TEMP:
@@ -527,7 +539,9 @@ class Servo(object):
         if result & ServoTelemetry.CURRENT:
             self.current.set(self.driver.current)
             # integrate power consumption
-            dt = (self.timestamp-lasttimestamp)
+            dt = (t - self.current_timestamp)
+            #print 'have current', round(1/dt), dt
+            self.current_timestamp = t
             if self.current.value:
                 amphours = self.current.value*dt/3600
                 self.amphours.set(self.amphours.value + amphours)
@@ -537,16 +551,6 @@ class Servo(object):
             self.flags.updatedriver(self.driver.flags)
             self.engauged.update(not not self.driver.flags & ServoFlags.ENGAUGED)
 
-        if self.current.value:
-            self.flags.clearbit(ServoFlags.DRIVER_TIMEOUT)
-            self.driver_timeout_start = 0
-        else:
-            if self.command.value:
-                if self.driver_timeout_start:
-                    if time.time() - self.driver_timeout_start > 1:
-                        self.flags.setbit(ServoFlags.DRIVER_TIMEOUT)
-                else:
-                    self.driver_timeout_start = time.time()
         self.send_command()
 
     def fault(self):
@@ -577,6 +581,8 @@ if __name__ == '__main__':
     servo = Servo(server, serial_probe)
     servo.max_current.set(10)
 
+    period = .1
+    lastt = time.time()
     while True:
         servo.poll()
 
@@ -585,5 +591,10 @@ if __name__ == '__main__':
             #print servo.command.value, servo.speed.value, servo.windup
             pass
         server.HandleRequests()
-        time.sleep(.1)
 
+        dt = period - time.time() + lastt
+        if dt > 0 and dt < period:
+            time.sleep(dt)
+            lastt += period
+        else:
+            lastt = time.time()
