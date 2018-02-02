@@ -138,9 +138,9 @@ def FitPoints(points, initial, norm):
 
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
-    if point_max_dev < 7:
+    if point_max_dev < 9:
         if debug:
-            print '0d fit, insufficient data', point_dev, point_max_dev, '< 7'
+            print '0d fit, insufficient data', point_dev, point_max_dev, '< 9'
         return False
 
     line, plane = LinearFit(points)
@@ -448,7 +448,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
         if debug:
             print 'fit', fit
 
-        g_required_dev = .15 # must have more than this to allow 1d or 3d fit
+        g_required_dev = .2 # must have more than this to allow 1d or 3d fit
         avg, g_dev, g_max_dev = PointFit(gpoints)
         if debug:
             print 'gdev', g_dev, g_max_dev
