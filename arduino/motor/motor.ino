@@ -497,9 +497,9 @@ void loop()
     uint16_t c = TakeAmps(0);
     uint16_t t1 = TakeTemp(CONTROLLER_TEMP, 0);
     uint16_t t2 = TakeTemp(MOTOR_TEMP, 0);
-    //uint16_t t3 = TakeInternalTemp(0);
+    uint16_t t3 = TakeRudder(0);
 
-    debug("voltage %u current %u ct %u mt %u\r\n", v, c, t1, t2);
+    debug("voltage %u current %u ct %u mt %u %u\r\n", v, c, t1, t2, t3);
     delay(200); // small dead time to be safe
     return;
 #endif
