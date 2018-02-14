@@ -261,17 +261,14 @@ void read_anenometer()
     light = (light + 31*lastlight) / 32;
     lastlight = light;
 
-    int pwm = 255L*light / 600 - 120;
-    if(!lighton) {
-        if(pwm < 200)
+    if(lighton) {
+        if(light > 900)
+            lighton = 0;
+    } else {
+        if(light < 800)
             lighton = 1;
-        else
-            pwm = 255;
     }
-    if(pwm < 120) // limit backlight brightness
-        pwm = 120;
-    if(pwm > 220) 
-        pwm = 255, lighton = 0;
+    int pwm = lighton ? 120 : 255;
     #if 0
     Serial.print("light ");
     Serial.print(light);
