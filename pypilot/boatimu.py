@@ -42,12 +42,12 @@ def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
 
     s.CompassCalEllipsoidOffset = tuple(compass_cal[:3])  
     s.CompassCalEllipsoidValid = True
-    s.MPU9255AccelFsr = 0 # +- 2g
-    s.MPU9255GyroFsr = 0 # +- 250 deg/s
+    s.MPU925xAccelFsr = 0 # +- 2g
+    s.MPU925xGyroFsr = 0 # +- 250 deg/s
     # compass noise by rate 10=.043, 20=.033, 40=.024, 80=.017, 100=.015
     rate = 100
-    s.MPU9255GyroAccelSampleRate = rate
-    s.MPU9255CompassSampleRate = rate
+    s.MPU925xGyroAccelSampleRate = rate
+    s.MPU925xCompassSampleRate = rate
 
     s.GyroBiasValid = True
     if gyrobias:
