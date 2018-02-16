@@ -100,33 +100,16 @@ void PCD8544::begin(unsigned char width, unsigned char height, unsigned char mod
     delay(100);
     digitalWrite(this->pin_reset, HIGH);
 
-    // Set the LCD parameters...
-    this->send(PCD8544_CMD, 0x21);  // extended instruction set control (H=1)
-    this->send(PCD8544_CMD, 0x13);  // bias system (1:48)
-
-    if (this->model == CHIP_ST7576) {
-        this->send(PCD8544_CMD, 0xe0);  // higher Vop, too faint at default
-        this->send(PCD8544_CMD, 0x05);  // partial display mode
-    } else {
-        this->send(PCD8544_CMD, 0xc2);  // default Vop (3.06 + 66 * 0.06 = 7V)
-    }
-
-    this->send(PCD8544_CMD, 0x20);  // extended instruction set control (H=0)
-    this->send(PCD8544_CMD, 0x09);  // all display segments on
+    this->SetParameters();
+    delay(100);
 
     // Clear RAM contents...
     this->clear();
-
-    // Activate LCD...
-    this->send(PCD8544_CMD, 0x08);  // display blank
-    this->send(PCD8544_CMD, 0x0c);  // normal mode (0x0d = inverse mode)
-    delay(100);
 
     // Place the cursor at the origin...
     this->send(PCD8544_CMD, 0x80);
     this->send(PCD8544_CMD, 0x40);
 }
-
 
 void PCD8544::stop()
 {
@@ -266,6 +249,28 @@ void PCD8544::line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t color
 }
 
 
+void PCD8544::SetParameters()
+{
+    // Set the LCD parameters...
+    this->send(PCD8544_CMD, 0x21);  // extended instruction set control (H=1)
+    this->send(PCD8544_CMD, 0x13);  // bias system (1:48)
+
+    if (this->model == CHIP_ST7576) {
+        this->send(PCD8544_CMD, 0xe0);  // higher Vop, too faint at default
+        this->send(PCD8544_CMD, 0x05);  // partial display mode
+    } else {
+        this->send(PCD8544_CMD, 0xc2);  // default Vop (3.06 + 66 * 0.06 = 7V)
+    }
+
+    this->send(PCD8544_CMD, 0x20);  // extended instruction set control (H=0)
+    this->send(PCD8544_CMD, 0x09);  // all display segments on
+
+
+    // Activate LCD...
+    this->send(PCD8544_CMD, 0x08);  // display blank
+    this->send(PCD8544_CMD, 0x0c);  // normal mode (0x0d = inverse mode)
+}
+
 void PCD8544::setCursor(unsigned char column, unsigned char line)
 {
     column = (column % this->width);
@@ -352,7 +357,11 @@ void PCD8544::clear()
 }
 
 void PCD8544::refresh()
-{    
+{
+    this->SetParameters();
+//    delay(100);
+
+    
     setCursor(0, 0);
     digitalWrite(this->pin_dc, PCD8544_DATA);
     for(unsigned int i=0; i<sizeof framebuffer; i++) {
