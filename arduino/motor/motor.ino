@@ -176,6 +176,9 @@ void setup()
 
     ADCSRA |= _BV(ADSC); // start conversion
 
+    digitalWrite(9, LOW); /* enable internal pullups */
+    pinMode(9, OUTPUT);
+    
     pinMode(fwd_fault_pin, INPUT);
     digitalWrite(fwd_fault_pin, HIGH); /* enable internal pullups */
     pinMode(rev_fault_pin, INPUT);
@@ -248,7 +251,9 @@ void detach()
     TCCR1A=0;
     TCCR1B=0;
 //    DDRB&=~_BV(PB1);
-    pinMode(9, INPUT);
+    while(digitalRead(9)); // wait for end of pwm if pulse is high
+//    pinMode(9, INPUT);
+//    digitalWrite(9, LOW); // default output as zero
 #endif
     TIMSK2 = 0;
     timeout = 64; // avoid overflow
@@ -627,7 +632,7 @@ void loop()
     }
 
     const int rudder_react_count = 160; // approx 0.2 second reaction
-    if(CountADC(RUDDER, 1) > rudder_react_count) {
+    if(!shunt_resistance && CountADC(RUDDER, 1) > rudder_react_count) {
         uint16_t v = TakeRudder(1);
         if(rudder_sense) {
             if(v < min_rudder_pos) {
