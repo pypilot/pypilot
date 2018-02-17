@@ -126,6 +126,10 @@ $(document).ready(function() {
         last_poll_Tab = -1;
     });
 
+    socket.on('signalk_disconnect', function(msg) {
+        $('#connection').text('Disconnected')
+    });
+
     // we poll rather than watch some values to avoid excessive cpu in browser
     function poll_signalk() {
         setTimeout(poll_signalk, 1000)

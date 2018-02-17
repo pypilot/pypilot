@@ -44,19 +44,20 @@ class MyNamespace(Namespace):
     def connect_signalk(self):
         print 'connect...'
         connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        while True:
-            socketio.emit('flush') # unfortunately needed to awaken socket for client messages
-            try:
-                connection.connect(('localhost', DEFAULT_PORT))
-                break
-            except:
-                socketio.sleep(2)
-
+        socketio.emit('flush') # unfortunately needed to awaken socket for client messages
+        try:
+            connection.connect(('localhost', DEFAULT_PORT))
+        except:
+            socketio.sleep(2)
+            return
+        print 'connected'
 
         self.client = LineBufferedNonBlockingSocket(connection)
         self.client.send('{"method": "list"}\n')
         self.client.flush()
 
+        self.poller = select.poll()
+        self.poller.register(connection, select.POLLIN)
         t0 = time.time()
         self.list_values = {}
         while time.time() - t0 < 3:
@@ -64,25 +65,18 @@ class MyNamespace(Namespace):
             line = self.client.readline()
             if line:
                 self.list_values = line
+                return
+
+        self.client.socket.close()
+        self.client = False
 
     def background_thread(self):
         print 'processing clients'
         x = 0
         polls_sent = {}
         while True:
+            socketio.sleep(.25)
             if self.client:
-                line = self.client.readline()
-                if line:
-                    #print 'line', line
-                    try:
-                        #data = {'data': json.loads(line.rstrip())}
-                        #print 'data', data
-                        socketio.emit('signalk', line.rstrip())
-                    except:
-                        socketio.emit('log', line)
-                        print 'error: ', line.rstrip()
-                    continue
-
                 polls = {}
                 for sid in self.polls:
                     for poll in self.polls[sid]:
@@ -96,9 +90,40 @@ class MyNamespace(Namespace):
                         polls_sent[message] = t
                     
                 self.client.flush()
-                self.client.recv()
 
-            socketio.sleep(.25)
+                events = self.poller.poll(0)
+                if not events:
+                    continue
+                
+                event = events.pop()
+                fd, flag = event
+                if flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL) \
+                   or not self.client.recv():
+                    print 'disconnected'
+                    self.client.socket.close()
+                    socketio.emit('signalk_disconnect', self.list_values)
+                    self.client = False
+                    continue
+
+                while True:
+                    line = self.client.readline()
+                    if not line:
+                        break
+                    #print 'line', line
+                    try:
+                        #data = {'data': json.loads(line.rstrip())}
+                        #print 'data', data
+                        socketio.emit('signalk', line.rstrip())
+                    except:
+                        socketio.emit('log', line)
+                        print 'error: ', line.rstrip()
+                        break
+            else:
+                if self.polls:
+                    self.connect_signalk()
+                if self.client:
+                    socketio.emit('signalk_connect', self.list_values)
+
 
     def on_signalk(self, message):
         #print 'msg',  message
@@ -121,10 +146,9 @@ class MyNamespace(Namespace):
         #self.clients[request.sid] = Connection()
         #print('Client connected', request.sid, len(self.clients))
         print('Client connected', request.sid)
-        if not self.polls:
-            self.connect_signalk();
         self.polls[request.sid] = {}
-        socketio.emit('signalk_connect', self.list_values)
+        if self.client:
+            socketio.emit('signalk_connect', self.list_values)
 
     def on_disconnect(self):
         #client = self.clients[request.sid].client
