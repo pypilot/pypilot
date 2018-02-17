@@ -34,7 +34,7 @@ $(document).ready(function() {
     $('#power_consumption').text("N/A");
     $('#runtime').text("N/A");
 
-    var gains = ['P', 'I', 'D', 'P2', 'D2'];
+    var gains = ['P', 'I', 'D', 'PR', 'D2', 'FF'];
     var conf_names = [['servo.min_speed', 'min_speed',''],
                       ['servo.max_speed', 'max_speed',''],
                       ['servo.max_current', 'max_current','Amps'],
