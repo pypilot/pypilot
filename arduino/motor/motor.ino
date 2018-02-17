@@ -566,10 +566,10 @@ void loop()
     }
     flags |= faults;
     
-
     // test over temp
     const int temp_react_count = 200;
-    if(CountADC(CONTROLLER_TEMP, 1) > temp_react_count &&
+    if(!shunt_resistance &&
+       CountADC(CONTROLLER_TEMP, 1) > temp_react_count &&
        CountADC(MOTOR_TEMP, 1) > temp_react_count) {
         uint16_t controller_temp = TakeTemp(CONTROLLER_TEMP, 1);
         uint16_t motor_temp = TakeTemp(MOTOR_TEMP, 1);
