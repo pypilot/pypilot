@@ -173,7 +173,7 @@ class Servo(object):
     def __init__(self, server, serialprobe):
         self.server = server
         self.serialprobe = serialprobe
-        self.lastdirpos = False # doesn't matter
+        self.lastdir = 0 # doesn't matter
 
         self.servo_calibration = ServoCalibration(self)
         self.calibration = self.Register(JSONValue, 'calibration', {})
@@ -398,14 +398,15 @@ class Servo(object):
             if command < 0:
                 if self.mode != 'reverse':
                     self.mode.update('reverse')
-                    self.lastdirpos = False
+                    self.lastdir = -1
             else:
 #                if self.mode.value == 'idle':
 #                    return
                 self.mode.update('idle')
+                #self.lastdir = 0
         else:
             self.mode.update('forward')
-            self.lastdirpos = True
+            self.lastdir = 1
 
         t = time.time()
         if command == 0:
@@ -514,10 +515,10 @@ class Servo(object):
             # if overcurrent then fault in the direction traveled
             # this prevents moving further in this direction
             if self.flags.value & ServoFlags.OVERCURRENT:
-                if self.lastdirpos:
+                if self.lastdir > 0:
                     self.flags.fwd_fault()
                     self.position.set(1)
-                else:
+                elif self.lastdir < 0:
                     self.flags.rev_fault()
                     self.position.set(-1)
 
