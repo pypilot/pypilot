@@ -140,22 +140,30 @@ void delay_us(long us)
       _delay_us(1);
 }
 
-//ISR(WDT_vect)
-//{
-//    sync_b = 0, in_sync_count = 0;
-//    setup();
-//}
 uint8_t serialin;
 
 void setup() 
 {
+    // Disable all interrupts
+    cli();
+
+/* Clear MCU Status Register. Not really needed here as we don't need to know why the MCU got reset. page 44 of datasheet */
+    MCUSR = 0;
+
+/* Disable and clear all Watchdog settings. Nice to get a clean slate when dealing with interrupts */
+
+    WDTCSR = (1<<WDCE)|(1<<WDIE);
+    // interrupt in 4 second
+    WDTCSR = (1<<WDIE) | (1<<WDP3);
+
+// Enable all interrupts.
+    sei();
+
+
     serialin = 0;
     // set up Serial library
     Serial.begin(38400);
-            
-    wdt_reset();
-    wdt_disable();
-    //wdt_enable(WDTO_4S);
+
     set_sleep_mode(SLEEP_MODE_IDLE); // wait for serial
 
     // setup adc
@@ -187,7 +195,7 @@ uint8_t sync_b = 0, in_sync_count = 0;
 
 uint8_t out_sync_b = 0, out_sync_pos = 0;
 uint8_t crcbytes[3];
-uint16_t max_current = 1;
+uint16_t max_current = 2000;
 uint16_t max_controller_temp = 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
 uint16_t min_rudder_pos = 0, max_rudder_pos = 65472;
@@ -256,10 +264,10 @@ void engauge()
 #ifdef ARDUINO_SERVO
     myservo.attach(9);
 #else
+    TCNT1 = 0x1fff;
     //Configure TIMER1
     TCCR1A|=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
     TCCR1B|=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
-        
     ICR1=range-1;  //fPWM=50Hz (Period = 20ms Standard).
 
 //    DDRB|=_BV(PB1);   //PWM Pins as Out
@@ -418,6 +426,16 @@ uint16_t TakeInternalTemp(uint8_t p)
 }
 #endif
 
+ISR(WDT_vect)
+{
+    wdt_reset();
+    wdt_disable();
+    disengauge();
+    delay(50);
+    detach();
+    asm volatile ("ijmp" ::"z" (0x0000));
+}
+
 ISR(TIMER2_OVF_vect)
 {
     timeout++;
@@ -489,9 +507,10 @@ void process_packet()
         break;
     }
 }
-
+#include <avr/boot.h>
 void loop()
 {
+    wdt_reset(); // strobe watchdog
 #if 0 // debug
     uint16_t v = TakeVolts(0);
     uint16_t c = TakeAmps(0);
@@ -501,6 +520,27 @@ void loop()
 
     debug("voltage %u current %u ct %u mt %u %u\r\n", v, c, t1, t2, t3);
     delay(200); // small dead time to be safe
+
+
+
+    cli();
+    uint8_t lowBits      = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
+    uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
+    uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
+    uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
+    sei();
+
+    Serial.print("Low:  0x");
+    Serial.println(lowBits, HEX);
+    Serial.print("High: 0x");
+    Serial.println(highBits, HEX);
+    Serial.print("Ext:  0x");
+    Serial.println(extendedBits, HEX);
+    Serial.print("Lock: 0x");
+    Serial.println(lockBits, HEX);
+
+    delay(500);
+
     return;
 #endif
     // wait for characters
@@ -517,7 +557,6 @@ void loop()
       } else {
           if(c == crc8(in_bytes, 3)) {
               if(in_sync_count >= 1) { // if crc matches, we have a valid packet
-                  wdt_reset(); // strobe watchdog
                   process_packet();
               } else
                   in_sync_count++;
