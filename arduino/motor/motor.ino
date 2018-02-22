@@ -46,6 +46,8 @@ the command can be recognized.
 
 */
 
+//#define HIGH_CURRENT
+
 
 ////// CRC
 #include <avr/pgmspace.h>
@@ -188,7 +190,7 @@ void setup()
     digitalWrite(shunt_sense_pin, HIGH); /* enable internal pullups */    
 } 
 
-enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
+enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
 enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
 
 enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, MIN_RUDDER=256*1, MAX_RUDDER=256*2};
@@ -375,14 +377,19 @@ uint16_t TakeADC(uint8_t index, uint8_t p)
 
 uint16_t TakeAmps(uint8_t p)
 {
+    uint32_t v = TakeADC(CURRENT, p);
+#ifdef HIGH_CURRENT
+    // high curront controller has .0005 ohm with 50x gain
+    // 275/128 = 100.0/1023/.0005/50*1.1
+    return v * 275 / 128 / 16;
+#else
     // current units of 10mA
     // 275 / 128 = 100.0/1024/.05*1.1   for 0.05 ohm shunt
     // 1375 / 128 = 100.0/1024/.01*1.1   for 0.01 ohm shunt
-    uint32_t v = TakeADC(CURRENT, p);
-
     if(shunt_resistance)
         return v * 275 / 128 / 16;
     return v * 1375 / 128 / 16;
+#endif
 }
 
 uint16_t TakeVolts(uint8_t p)
@@ -461,8 +468,7 @@ void process_packet()
         asm volatile ("ijmp" ::"z" (0x3c00));
         //goto *0x3c00;
     } break;  
-    case STOP_CODE:
-        stop();
+    case RESET_CODE:
         // reset overcurrent flag
         flags &= ~OVERCURRENT;
         break;
@@ -487,8 +493,13 @@ void process_packet()
         }
         break;
     case MAX_CURRENT_CODE: // current in units of 10mA
+#ifdef HIGH_CURRENT
+        if(value > 4000) // maximum is 40 amps
+            value = 4000;
+#else
         if(value > 2000) // maximum is 20 amps
             value = 2000;
+#endif
         max_current = value;
         break;
     case MAX_CONTROLLER_TEMP_CODE:
