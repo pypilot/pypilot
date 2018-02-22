@@ -15,7 +15,7 @@ public:
 
     bool initialize(int baud);
     void command(double command);
-    void stop();
+    void reset();
     void disengauge();
     void reprogram();
     int poll();

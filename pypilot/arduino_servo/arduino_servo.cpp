@@ -17,7 +17,7 @@
 
 #include "arduino_servo.h"
 
-enum commands {COMMAND_CODE = 0xc7, STOP_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
+enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
 enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE = 0x8f};
 
 const unsigned char crc8_table[256]
@@ -93,7 +93,6 @@ bool ArduinoServo::initialize(int baud)
 
     while (!(flags & SYNC) || out_sync < 20) {
         raw_command(0); // ensure we set the temp limits as well here
-        stop();
         if(poll()>0) {
             while(poll());
             data = true;
@@ -253,9 +252,9 @@ void ArduinoServo::raw_command(uint16_t value)
         out_sync = 0;
 }
 
-void ArduinoServo::stop()
+void ArduinoServo::reset()
 {
-    send_value(STOP_CODE, 0);
+    send_value(RESET_CODE, 0);
 }
 
 void ArduinoServo::disengauge()

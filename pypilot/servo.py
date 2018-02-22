@@ -182,10 +182,6 @@ class Servo(object):
         self.min_speed = self.Register(RangeProperty, 'min_speed', .5, 0, 1, persistent=True)
         self.max_speed = self.Register(RangeProperty, 'max_speed', 1, 0, 1, persistent=True)
 
-        brake_hack = 'brake_hack' in self.calibration.value and self.calibration.value['brake_hack']
-        self.brake_hack = self.Register(BooleanProperty, 'brake_hack', brake_hack, persistent=True)
-        self.brake_hack_state = 0
-
         self.faults = self.Register(Property, 'faults', 0)
 
         # power usage
@@ -242,28 +238,21 @@ class Servo(object):
         return self.server.Register(_type(*(['servo.' + name] + list(args)), **kwargs))
 
     def send_command(self):
-        if self.fault():
-            return
-
         t = time.time()
-
-        def engauge():
-            if self.disengauged:
-                self.disengauged = False
                 
         if not self.disengauge_on_timeout.value:
-            engauge()
+            self.disengauged = False
 
         if self.servo_calibration.thread.is_alive():
             print 'cal thread'
             return
 
         timeout = 1 # command will expire after 1 second
-        if self.command.value:
+        if self.command.value and not self.fault():
             if time.time() - self.command.time > timeout:
                 print 'servo command timeout', time.time() - self.command.time
                 self.command.set(0)
-            engauge()
+            self.disengauged = False
             self.velocity_command(self.command.value)
         else:
             #print 'timeout', t - self.command_timeout
@@ -272,7 +261,7 @@ class Servo(object):
                t - self.command_timeout > self.period.value*3:
                 self.disengauged = True
             self.speed.set(0)
-            self.raw_command(0)            
+            self.raw_command(0)
 
     def velocity_command(self, speed):
         # complete integration from previous step
@@ -377,33 +366,12 @@ class Servo(object):
 
     def raw_command(self, command):
         self.rawcommand.set(command)
-        if self.brake_hack_state == 1:
-            if self.fault():
-                return
-
-            if self.driver:
-                self.driver.command(0)
-            self.mode.update('brake')
-            self.brake_hack_state = 0
-            return
-
         if command <= 0:
-            if self.brake_hack.value and self.mode.value == 'forward':
-                if not self.fault():
-                    if self.driver:
-                        self.driver.stop()
-                        self.driver.command(-.18)
-                    self.brake_hack_state = 1
-                return
             if command < 0:
-                if self.mode != 'reverse':
-                    self.mode.update('reverse')
-                    self.lastdir = -1
+                self.mode.update('reverse')
+                self.lastdir = -1
             else:
-#                if self.mode.value == 'idle':
-#                    return
                 self.mode.update('idle')
-                #self.lastdir = 0
         else:
             self.mode.update('forward')
             self.lastdir = 1
@@ -411,8 +379,8 @@ class Servo(object):
         t = time.time()
         if command == 0:
             # only send at .5 seconds when command is zero
-            #if t > self.command_timeout and t - self.last_zero_command_time < .5:
-            #    return
+            if t > self.command_timeout and t - self.last_zero_command_time < .5:
+                return
             self.last_zero_command_time = t
         else:
             self.command_timeout = t
@@ -439,17 +407,9 @@ class Servo(object):
                     else:
                         self.driver_timeout_start = time.time()
 
-    def stop(self):
+    def reset(self):
         if self.driver:
-            self.driver.stop()
-         
-        if self.brake_hack.value and self.mode.value == 'forward':
-            if self.driver:
-                self.driver.command(-.18)
-            self.brake_hack_state = 1
-
-        self.mode.set('stop')
-        self.speed.set(0)
+            self.driver.reset()
 
     def close_driver(self):
         print 'servo lost connection'
@@ -476,8 +436,6 @@ class Servo(object):
                     self.serialprobe.probe_success('servo')
                     self.controller.set('arduino')
 
-                    if self.brake_hack.value:
-                        self.driver.command(-.2) # flush any brake
                     self.driver.command(0)
                     self.lastpolltime = time.time()
                 else:
@@ -522,7 +480,7 @@ class Servo(object):
                     self.flags.rev_fault()
                     self.position.set(-1)
 
-            self.stop() # clear fault condition
+            self.reset() # clear fault condition
 
         t = time.time()
         self.server.TimeStamp('servo', t)
