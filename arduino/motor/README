@@ -1,0 +1,34 @@
+This motor controller monitor receives commands over a serial port.
+
+
+It monitors voltage, current, temperature and fault pins, and
+outputs PWM to command an ESC.
+
+The ESC may need to be reprogrammed to have forward and reverse,
+and brushed or brushless.
+
+
+Based on arduino nano.  The efuse byte should be set to enable the
+brown-out detector (BOD) not enabled by default.  This is critical
+to ensure flash pages are not corrupted.
+
+To enable, with one arduino programmed with arduinoisp
+Read:
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB1 -u -p m328 -U efuse:r:-:h
+Write:
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB1 -u -p m328p -U efuse:w:0x4:m
+
+
+
+If the ESC has the bootloader loaded:
+   The ESC can be programmed over the 1 wire interface.
+   The arduino script ArduinoUSBLinker must be loaded to the arduino.
+   The ESC can be programmed from the makefile commands in the brushed_tgy repository.
+   Once the ESC is programmed, the arduino can be reprogrammed back to motor.ino
+
+Without bootloader (requires soldering, or special tool)
+   arduinoisp script loaded to additional arduino.
+   The ESC can install the bootloader this way.
+   This arduino must be connected to the esc:
+   SCK MISO MOSI 5v GND - connected between both arduinos
+   RESET (esc) <-> D10 (arduino) connected 
