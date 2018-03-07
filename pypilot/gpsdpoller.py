@@ -87,3 +87,9 @@ class GpsdPoller(object):
 
         val = {'timestamp' : time.time(), 'track': fval('track'), 'speed': fval('speed')}
         self.nmea.handle_messages({'gps': val}, 'gpsd')
+
+if __name__ == '__main__':
+    gpsd = gps.gps(mode=gps.WATCH_ENABLE)
+    while True:
+        print gpsd.next()
+        print 'fix:', gpsd.fix.mode, gpsd.fix.track, gpsd.fix.speed
