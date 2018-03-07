@@ -18,7 +18,7 @@ def enumerate_devices(name, initial=False):
         devicesp = ['/dev/ttyAMA', '/dev/ttyS']
     else:
         devicesp = []
-
+        
     if os.path.exists(by_id):
         for device_path in os.listdir(by_id):
             devices.append(os.path.join(by_id, device_path))
@@ -29,13 +29,7 @@ def enumerate_devices(name, initial=False):
         for i in range(4): # ttyS0 through ttyS3
             device_path = devicep + '%d' % i
             devices.append(device_path)
-
-    existing_devices = []
-    for device in devices:
-        if os.path.exists(device):
-            existing_devices.append(device)
-            
-    return existing_devices
+    return devices
 
 class SerialProbe(object):
     def __init__(self):
@@ -43,6 +37,22 @@ class SerialProbe(object):
         self.lastworkingdevices = {}
         self.probes = {}
         self.devices = []
+
+        if os.path.exists(pypilot_dir + 'serial_ports'):
+            self.serial_ports = []
+
+            try:
+                f = open(pypilot_dir + 'serial_ports', 'r')
+                while True:
+                    device = f.readline()
+                    if not device:
+                        break
+                    self.serial_ports.append(device.strip())
+                f.close()
+                return
+            except:
+                pass
+        self.serial_ports = 'probe'
             
     def lastworkingdevice(self, name):
         if name in self.lastworkingdevices:
@@ -81,20 +91,27 @@ class SerialProbe(object):
             if device['bauds']:
                 return device['path'], device['bauds'][0]
 
-#        if not self.devices:
-#            self.devices = enumerate_devices(name)
-
         if probe['devices'] == 'initial' or probe['devices'] == 'done':
-            #t0 = time.time()
-            self.devices = enumerate_devices(name, probe['devices'] == 'initial')
-            #print 'time to enumerate serial devices', time.time() - t0
+            # if file serial_ports exists, we are limited to use only those devices
+            if self.serial_ports == 'probe':
+                devices = enumerate_devices(name, probe['devices'] == 'initial')
+            else:
+                devices = self.serial_ports
+            
+            self.devics = []
+            for device in devices:
+                if os.path.exists(device):
+                    self.devices.append(device)
             
             probe['devices'] = []
             lastdevice = self.lastworkingdevice(name)
             if lastdevice:
                 if lastdevice['path'] == 'none': # none disables this port and avoids probing
                     return False
-                probe['devices'].append(lastdevice.copy())
+                # always allow last working device if probing
+                if self.serial_ports == 'probe' or lastdevice['path'] in self.devices:
+                    probe['devices'].append(lastdevice.copy())
+
             for device in self.devices:
                 probe['devices'].append({'path': device, 'bauds': bauds})
 
