@@ -17,7 +17,7 @@ from signalk.pipeserver import NonBlockingPipe
 
 import numpy
 
-debug=False
+debug=True
 calibration_fit_period = 60  # run every 60 seconds
 
 def FitLeastSq(beta0, f, zpoints, dimensions=1):
@@ -126,26 +126,17 @@ def LinearFit(points):
     return line, plane
     
 
-def FitPoints(points, norm):
+def FitPoints(points, current, norm):
     if len(points) < 5:
         return False
+
+    # ensure current and norm are float
+    current = map(float, current)
+    norm = map(float, norm)
 
     zpoints = [[], [], [], [], [], []]
     for i in range(6):
         zpoints[i] = map(lambda x : x[i], points)
-
-    # initial guess average min and max for bias, and average range for radius
-    minc = [1000, 1000, 1000]
-    maxc = [-1000, -1000, -1000]
-    for p in points:
-        minc = map(min, p[:3], minc)
-        maxc = map(max, p[:3], maxc)
-
-    initial = map(lambda a, b : (a+b)/2, minc, maxc)
-    diff = map(lambda a, b : b-a, minc, maxc)
-    initial.append((diff[0]+diff[1]+diff[2])/3)
-    if debug:
-        print 'initial guess', initial
         
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
@@ -157,7 +148,26 @@ def FitPoints(points, norm):
     line, plane = LinearFit(points)
     line_fit, line_dev, line_max_dev = line
     plane_fit, plane_dev, plane_max_dev = plane
-    
+
+    # initial guess average min and max for bias, and average range for radius
+    minc = [1000, 1000, 1000]
+    maxc = [-1000, -1000, -1000]
+    for p in points:
+        minc = map(min, p[:3], minc)
+        maxc = map(max, p[:3], maxc)
+
+    guess = map(lambda a, b : (a+b)/2, minc, maxc)
+    diff = map(lambda a, b : b-a, minc, maxc)
+    guess.append((diff[0]+diff[1]+diff[2])/3)
+    if debug:
+        print 'initial guess', guess
+
+    # initial is the closest to guess on the uv plane containing current
+    initial = vector.add(current[:3], vector.project(vector.sub(guess[:3], current[:3]), norm))
+    initial.append(current[3])
+    if debug:
+        print 'initial 1d fit', initial
+
     # attempt 'normal' fit along normal vector
     '''
     def f_sphere1(beta, x):
@@ -188,7 +198,7 @@ def FitPoints(points, norm):
     if not new_sphere1d_fit or new_sphere1d_fit[1] < 0:
         if debug:
             print 'FitLeastSq new_sphere1 failed!!!! ', len(points)
-        new_sphere1d_fit = initial
+        new_sphere1d_fit = current
     else:
         new_sphere1d_fit = map(lambda x, a: x + new_sphere1d_fit[0]*a, initial[:3], norm) + new_sphere1d_fit[1:]
     new_sphere1d_fit = [new_sphere1d_fit, ComputeDeviation(points, new_sphere1d_fit), 1]
@@ -204,6 +214,13 @@ def FitPoints(points, norm):
     v = vector.cross(norm, u)
     u = vector.normalize(u)
     v = vector.normalize(v)
+
+    # initial is the closest to guess on the uv plane containing current
+    initial = vector.add(guess[:3], vector.project(vector.sub(current[:3], guess[:3]), norm))
+    initial.append(current[3])
+    if debug:
+        print 'initial 2d fit', initial
+    
     '''
     def f_sphere2(beta, x):
         bias = map(lambda x, a, b: x + beta[0]*a + beta[1]*b, initial[:3], u, v)
@@ -244,6 +261,8 @@ def FitPoints(points, norm):
             print 'plane fit found, 2D fit only', plane_fit, plane_dev, plane_max_dev
         return [new_sphere1d_fit, new_sphere2d_fit, False]
 
+    # ok to use best guess for 3d fit
+    initial = guess
     '''
     def f_sphere3(beta, x):
         bias = beta[:3]
@@ -389,7 +408,7 @@ def ComputeCoverage(sigma_points, bias):
         max_diff = max(max_diff, diff)
     return max_diff    
 
-def CalibrationProcess(points, norm_pipe, fit_output, initial):
+def CalibrationProcess(points, norm_pipe, fit_output, current):
     import os
     if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
       print 'warning, failed to make calibration process idle, trying renice'
@@ -453,7 +472,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
         for q in p:
             gpoints.append(q[3:])
             
-        fit = FitPoints(p, norm)
+        fit = FitPoints(p, current, norm)
         if not fit:
             continue
         if debug:
@@ -513,7 +532,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
         
         # if the bias has not sufficiently changed,
         # the fit didn't change much, so don't bother to report this update
-        if vector.dist2(c[0], initial) < .1:
+        if vector.dist2(c[0], current) < .1:
             if debug:
                 print 'insufficient change in bias, calibration ok'
             continue
@@ -521,12 +540,12 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
         if debug:
             print 'coverage', coverage, 'new fit:', c
         fit_output.send((c, map(lambda p : p.compass + p.down, cal.sigma_points)), False)
-        initial = c[0]
+        current = c[0]
                                  
 class MagnetometerAutomaticCalibration(object):
-    def __init__(self, cal_pipe, initial):
+    def __init__(self, cal_pipe, current):
         self.cal_pipe = cal_pipe
-        self.sphere_fit = initial
+        self.sphere_fit = current
         points, self.points = NonBlockingPipe('points pipe', True)
         norm_pipe, self.norm_pipe = NonBlockingPipe('norm pipe', True)
         self.fit_output, fit_output = NonBlockingPipe('fit output', True)
@@ -748,7 +767,7 @@ if __name__ == '__main__':
 
 
     points = [[31.856678574995396, -19.110010851406653, -23.227778930968057, -0.044954858773039195, 0.014261397282359421, 0.9988738098234344], [45.36924237823486, 12.89357043800354, -17.313498796081543, -0.03494668285649607, -0.010832904303733829, 0.9993236543456755], [33.53860821044983, 13.677184012840575, -18.642887292628476, -0.005327948669429728, -0.013765594043977387, 0.9998341360696099], [42.43835650024413, 13.533319935607908, -18.6760297416687, -0.013323788379354766, -0.018979047400241828, 0.9997128123729193], [48.053722447823695, 11.79256383175549, -21.138866290425916, -0.04049373850822631, -0.0051384237584227305, 0.9991594843666001], [24.452913957214356, 6.299588084793091, -20.050650617218018, -0.01647730106209738, -0.012505727983952998, 0.9997833432360643], [41.6558580001831, -22.303171157836914, -24.79455874328613, -0.008044559611816498, 0.0037128085913117107, 0.9999124433572276], [31.06587037877136, 13.0364176723439, -15.948232629932402, 0.004511228815120498, -0.01137922189297906, 0.9999119728977243], [26.006164919281005, -12.617410359191894, -19.656556502532958, 0.004686066131356285, -0.009050130500499484, 0.999946139001012], [53.105111146545404, -18.522180709075926, -27.961596428680423, -0.020358557072592504, 0.00467042315239639, 0.9997782198132329]]
-    fit = FitPoints(points, [0, 0, 1])
+    fit = FitPoints(points, [10,0,0,30], [0, 0, 1])
     print 'fit', fit
     
     #allpoints = [points1, points2, points3, points4, points5]

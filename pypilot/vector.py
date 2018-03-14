@@ -29,6 +29,15 @@ def dot(a, b):
 def sub(a, b):
     return map(lambda x, y : x - y, a, b)
 
+def add(a, b):
+    return map(lambda x, y : x + y, a, b)
+
+def scale(a, m):
+    return map(lambda x : x*m, a)
+
+def project(a, b):
+    return scale(b, dot(a, b)/dot(b, b))
+
 def dist(a, b):
     return norm(sub(a, b))
 
