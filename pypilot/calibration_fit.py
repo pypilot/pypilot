@@ -126,16 +126,27 @@ def LinearFit(points):
     return line, plane
     
 
-def FitPoints(points, initial, norm):
+def FitPoints(points, norm):
     if len(points) < 5:
         return False
 
-    if debug:
-        print 'fitpoints initial', initial
     zpoints = [[], [], [], [], [], []]
     for i in range(6):
         zpoints[i] = map(lambda x : x[i], points)
 
+    # initial guess average min and max for bias, and average range for radius
+    minc = [1000, 1000, 1000]
+    maxc = [-1000, -1000, -1000]
+    for p in points:
+        minc = map(min, p[:3], minc)
+        maxc = map(max, p[:3], maxc)
+
+    initial = map(lambda a, b : (a+b)/2, minc, maxc)
+    diff = map(lambda a, b : b-a, minc, maxc)
+    initial.append((diff[0]+diff[1]+diff[2])/3)
+    if debug:
+        print 'initial guess', initial
+        
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
     if point_max_dev < 9:
@@ -173,8 +184,8 @@ def FitPoints(points, initial, norm):
         fac = .03 # weight deviation as 1 degree ~ .03 mag
         r1 = map(lambda y, z : fac*beta[1]*(beta[2] - math.degrees(math.asin(vector.dot(y, z)/vector.norm(y)))), m, g)
         return r0 + r1
-    new_sphere1d_fit = FitLeastSq([0, initial[3], 90], f_new_sphere1, zpoints, 2)
-    if not new_sphere1d_fit or new_sphere1d_fit[2] < 0:
+    new_sphere1d_fit = FitLeastSq([0, initial[3], 0], f_new_sphere1, zpoints, 2)
+    if not new_sphere1d_fit or new_sphere1d_fit[1] < 0:
         if debug:
             print 'FitLeastSq new_sphere1 failed!!!! ', len(points)
         new_sphere1d_fit = initial
@@ -182,7 +193,7 @@ def FitPoints(points, initial, norm):
         new_sphere1d_fit = map(lambda x, a: x + new_sphere1d_fit[0]*a, initial[:3], norm) + new_sphere1d_fit[1:]
     new_sphere1d_fit = [new_sphere1d_fit, ComputeDeviation(points, new_sphere1d_fit), 1]
         #print 'new sphere1 fit', new_sphere1d_fit
-        
+
     if line_max_dev < 3:
         if debug:
             print 'line fit found, insufficient data', line_dev, line_max_dev
@@ -218,11 +229,12 @@ def FitPoints(points, initial, norm):
         fac = .03 # weight deviation as 1 degree ~ .03 mag
         r1 = map(lambda y, z : fac*beta[2]*(beta[3] - math.degrees(math.asin(vector.dot(y, z)/vector.norm(y)))), m, g)
         return r0 + r1
-    new_sphere2d_fit = FitLeastSq([0, 0, initial[3], 90], f_new_sphere2, zpoints, 2)
-    if not new_sphere2d_fit or new_sphere2d_fit[3] < 0:
+    new_sphere2d_fit = FitLeastSq([0, 0, initial[3], 0], f_new_sphere2, zpoints, 2)
+    if not new_sphere2d_fit or new_sphere2d_fit[2] < 0:
         if debug:
             print 'FitLeastSq sphere failed!!!! ', len(points)
         return False
+
     new_sphere2d_fit = map(lambda x, a, b: x + new_sphere2d_fit[0]*a + new_sphere2d_fit[1]*b, initial[:3], u, v) + new_sphere2d_fit[2:]
     new_sphere2d_fit = [new_sphere2d_fit, ComputeDeviation(points, new_sphere2d_fit), 2]
     #print 'new sphere2 fit', new_sphere2d_fit
@@ -254,7 +266,7 @@ def FitPoints(points, initial, norm):
         fac = .03 # weight deviation as 1 degree ~ .03 mag
         r1 = map(lambda y, z : fac*beta[3]*(beta[4] - math.degrees(math.asin(vector.dot(y, z)/vector.norm(y)))), m, g)
         return r0 + r1
-    new_sphere3d_fit = FitLeastSq(initial[:4] + [90], f_new_sphere3, zpoints, 2)
+    new_sphere3d_fit = FitLeastSq(initial[:4] + [0], f_new_sphere3, zpoints, 2)
     if not new_sphere3d_fit or new_sphere3d_fit[3] < 0:
         if debug:
             print 'FitLeastSq sphere failed!!!! ', len(points)
@@ -421,7 +433,6 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
 
         #inject
         if False:
-            p = [[17.075,-31.64,-45.076,-0.086,-0.991,-0.1],[21.847,-30.689,-48.462,-0.05,-0.99,-0.133],[16.051,-32.177,-44.571,-0.097,-0.991,-0.094],[13.457,-31.441,-42.311,-0.098,-0.991,-0.089],[25.293,-31.523,-47.56,-0.138,-0.986,-0.087],[30.506,-30.632,-46.143,-0.13,-0.989,-0.066],[15.105,-31.553,-44.026,-0.101,-0.99,-0.093],[19.94,-31.41,-46.694,-0.082,-0.991,-0.102],[33.701,-30.181,-44.632,-0.13,-0.989,-0.069],[32.759,-30.278,-47.585,-0.113,-0.988,-0.103],[26.59,-31.057,-48.531,-0.095,-0.991,-0.095],[13.113,-31.935,-40.363,-0.082,-0.991,-0.102],[23.999,-31.035,-48.444,-0.114,-0.988,-0.104],[11.351,-31.323,-39.761,-0.113,-0.99,-0.079],[11.104,-31.363,-37.824,-0.103,-0.991,-0.087],[8.841,-30.778,-33.896,-0.111,-0.991,-0.078],[8.186,-30.269,-29.92,-0.102,-0.992,-0.077],[8.429,-30.116,-26.976,-0.098,-0.992,-0.078]]
             cal.sigma_points = []
             for q in p:
                 cal.sigma_points.append(SigmaPoint(q[:3], q[3:6]))
@@ -432,7 +443,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
             p.append(sigma.compass + sigma.down)
 
         if debug:
-            print 'FitPoints', len(p), norm
+            print 'FitPoints', p, norm
 
         # for now, require at least 6 points to agree well for update
         if len(p) < 6:
@@ -442,7 +453,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, initial):
         for q in p:
             gpoints.append(q[3:])
             
-        fit = FitPoints(p, initial, norm)
+        fit = FitPoints(p, norm)
         if not fit:
             continue
         if debug:
@@ -734,7 +745,11 @@ if __name__ == '__main__':
     points = [[45.272,-31.058,-52.332,-0.052,-0.991,-0.125],[24.568,-32.022,-56.101,-0.071,-0.99,-0.121],[42.653,-29.042,-20.928,-0.05,-0.993,-0.107],[30.213,-29.224,-16.322,-0.071,-0.991,-0.111],[14.084,-29.238,-25.445,-0.064,-0.991,-0.115],[50.121,-30.268,-36.204,-0.046,-0.993,-0.112],[48.689,-31.376,-44.139,-0.071,-0.991,-0.111],[24.09,-29.268,-17.286,-0.062,-0.992,-0.112],[32.664,-32.406,-56.606,-0.031,-0.993,-0.116],[13.186,-30.979,-43.341,-0.062,-0.992,-0.106],[12.31,-30.229,-34.594,-0.043,-0.993,-0.113],[38.382,-29.641,-17.973,-0.05,-0.993,-0.11],[17.997,-31.383,-53.101,-0.077,-0.991,-0.107],[45.486,-31.693,-50.546,-0.061,-0.991,-0.118],[14.923,-31.307,-48.001,-0.068,-0.992,-0.107],[16.873,-29.398,-20.403,-0.051,-0.993,-0.104],[47.566,-29.815,-29.019,-0.063,-0.992,-0.108],[45.311,-29.207,-25.163,-0.07,-0.992,-0.108]]
 
     points = [[24.399,18.208,-69.99,0.065,-0.07,-0.995],[62.035,12.139,-71.774,0.072,-0.027,-0.997],[39.638,-9.873,-67.951,0.069,-0.076,-0.995],[55.201,24.424,-73.12,0.08,-0.079,-0.994],[43.593,-8.991,-67.82,0.063,-0.057,-0.996],[47.125,-9.127,-67.938,0.07,-0.087,-0.994],[61.677,5.153,-70.407,0.09,-0.109,-0.99],[54.685,-3.623,-69.439,0.085,-0.071,-0.994],[62.2,10.506,-71.378,0.078,-0.025,-0.997],[32.466,-10.595,-66.422,0.064,-0.082,-0.995],[29.802,21.995,-70.758,0.069,-0.113,-0.991],[61.92,7.391,-70.907,0.085,-0.128,-0.988],[32.16,24.8,-71.531,0.063,-0.074,-0.995],[43.171,27.456,-72.484,0.068,-0.099,-0.993],[21.07,12.538,-68.628,0.067,-0.077,-0.995],[20.503,0.553,-66.75,0.073,-0.088,-0.993],[22.263,-2.934,-66.945,0.073,-0.097,-0.993],[19.978,5.812,-67.76,0.07,-0.094,-0.993]]
-    FitPoints(points, [25, 14, 0, 30], [0, 0, 1])
+
+
+    points = [[31.856678574995396, -19.110010851406653, -23.227778930968057, -0.044954858773039195, 0.014261397282359421, 0.9988738098234344], [45.36924237823486, 12.89357043800354, -17.313498796081543, -0.03494668285649607, -0.010832904303733829, 0.9993236543456755], [33.53860821044983, 13.677184012840575, -18.642887292628476, -0.005327948669429728, -0.013765594043977387, 0.9998341360696099], [42.43835650024413, 13.533319935607908, -18.6760297416687, -0.013323788379354766, -0.018979047400241828, 0.9997128123729193], [48.053722447823695, 11.79256383175549, -21.138866290425916, -0.04049373850822631, -0.0051384237584227305, 0.9991594843666001], [24.452913957214356, 6.299588084793091, -20.050650617218018, -0.01647730106209738, -0.012505727983952998, 0.9997833432360643], [41.6558580001831, -22.303171157836914, -24.79455874328613, -0.008044559611816498, 0.0037128085913117107, 0.9999124433572276], [31.06587037877136, 13.0364176723439, -15.948232629932402, 0.004511228815120498, -0.01137922189297906, 0.9999119728977243], [26.006164919281005, -12.617410359191894, -19.656556502532958, 0.004686066131356285, -0.009050130500499484, 0.999946139001012], [53.105111146545404, -18.522180709075926, -27.961596428680423, -0.020358557072592504, 0.00467042315239639, 0.9997782198132329]]
+    fit = FitPoints(points, [0, 0, 1])
+    print 'fit', fit
     
     #allpoints = [points1, points2, points3, points4, points5]
     #for points in allpoints:
