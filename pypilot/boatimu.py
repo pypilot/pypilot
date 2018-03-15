@@ -258,7 +258,7 @@ class BoatIMU(object):
     self.headingrate_lowpass_constant = self.Register(RangeProperty, 'headingrate_lowpass_constant', .1, .01, 1)
     self.headingraterate_lowpass_constant = self.Register(RangeProperty, 'headingraterate_lowpass_constant', .1, .01, 1)
           
-    sensornames = ['fusionQPose', 'accel', 'gyro', 'compass', 'accelresiduals', 'pitch', 'roll']
+    sensornames = ['accel', 'gyro', 'compass', 'accelresiduals', 'pitch', 'roll']
 
     sensornames += ['pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']
     sensornames += ['headingrate_lowpass', 'headingraterate_lowpass']
@@ -270,6 +270,10 @@ class BoatIMU(object):
     for name in sensornames:
       self.SensorValues[name] = self.Register(SensorValue, name, timestamp, directional = name in directional_sensornames)
 
+    # quaternion needs to report many more decimal places than other sensors
+    sensornames += ['fusionQPose']
+    self.SensorValues['fusionQPose'] = self.Register(SensorValue, 'fusionQPose', timestamp, fmt='%.7f')
+      
     sensornames += ['gyrobias']
     self.SensorValues['gyrobias'] = self.Register(SensorValue, 'gyrobias', timestamp, persistent=True)
 

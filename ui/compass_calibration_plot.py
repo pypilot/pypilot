@@ -297,6 +297,7 @@ class CompassCalibrationPlot():
             q = [1, 0, 0, 0]
             if self.fusionQPose and self.alignmentQ:
                 q = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
+                q = quaternion.normalize(q) # correct possible rounding errors
             glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
 
             if self.mag_fit_new_bias:

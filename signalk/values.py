@@ -52,23 +52,24 @@ class JSONValue(Value):
         return '{"' + self.name + '": {"value": ' + json.dumps(self.value) + '}}'
 
 
-def round_value(value):
-  if type(value) == type([]):
-    ret = '['
-    if len(value):
-      ret += round_value(value[0])
-      for item in value[1:]:
-        ret += ', ' + round_value(item)
-    return ret + ']'
-  else:
-    return '%.3f' % value
+def round_value(value, fmt):
+    print 'round', fmt
+    if type(value) == type([]):
+        ret = '['
+        if len(value):
+            ret += round_value(value[0], fmt)
+            for item in value[1:]:
+                ret += ', ' + round_value(item, fmt)
+        return ret + ']'
+    else:
+        return fmt % value
 
 class RoundedValue(Value):
     def __init__(self, name, initial, **kwargs):
       super(RoundedValue, self).__init__(name, initial, **kwargs)
       
     def get_signalk(self):
-      return '{"' + self.name + '": {"value": ' + round_value(self.value) + '}}'
+      return '{"' + self.name + '": {"value": ' + round_value(self.value, '%.3f') + '}}'
 
 class StringValue(Value):
     def __init__(self, name, initial, **kwargs):
@@ -82,13 +83,14 @@ class StringValue(Value):
         return '{"' + self.name + '": {"value": ' + strvalue + '}}'
 
 class SensorValue(Value): # same as Value with added timestamp
-    def __init__(self, name, timestamp, initial=False, **kwargs):
+    def __init__(self, name, timestamp, initial=False, fmt='%.3f', **kwargs):
         super(SensorValue, self).__init__(name, initial, **kwargs)
         if type(timestamp) != type('') and \
            (type(timestamp) != type([]) or len(timestamp) != 2 or type(timestamp[1]) != type('')):
             print 'invalid timstamp', timestamp, 'for sensorvalue', name
         self.timestamp = timestamp
         self.directional = 'directional' in kwargs and kwargs['directional']
+        self.fmt = fmt # round to 3 places unless overrideen
 
     def type(self):
         if self.directional:
@@ -96,10 +98,11 @@ class SensorValue(Value): # same as Value with added timestamp
         return 'SensorValue'
 
     def get_signalk(self):
+        print 'getsigk', self.name, self.fmt
         value = self.value
         if type(value) == type(tuple()):
             value = list(value)
-        return '{"' + self.name + '": {"value": ' + round_value(value) + ', "timestamp": %.3f }}' % self.timestamp[0]
+        return '{"' + self.name + '": {"value": ' + round_value(value, self.fmt) + ', "timestamp": %.3f }}' % self.timestamp[0]
     
 # a value that may be modified by external clients
 class Property(Value):
