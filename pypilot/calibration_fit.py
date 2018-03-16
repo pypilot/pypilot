@@ -452,6 +452,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, current):
 
         #inject
         if False:
+            p =  [] # put points here
             cal.sigma_points = []
             for q in p:
                 cal.sigma_points.append(SigmaPoint(q[:3], q[3:6]))
