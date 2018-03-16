@@ -53,7 +53,6 @@ class JSONValue(Value):
 
 
 def round_value(value, fmt):
-    print 'round', fmt
     if type(value) == type([]):
         ret = '['
         if len(value):
@@ -98,7 +97,6 @@ class SensorValue(Value): # same as Value with added timestamp
         return 'SensorValue'
 
     def get_signalk(self):
-        print 'getsigk', self.name, self.fmt
         value = self.value
         if type(value) == type(tuple()):
             value = list(value)
