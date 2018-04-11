@@ -5,7 +5,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import os, math
+import os, math, sys
 import time, json
 
 from signalk.server import SignalKServer
@@ -531,8 +531,27 @@ class Servo(object):
         file = open(Servo.calibration_filename, 'w')
         file.write(json.dumps(self.calibration))
 
-
-if __name__ == '__main__':
+def test(device_path, baud):
+    from arduino_servo.arduino_servo import ArduinoServo
+    print 'probing arduino servo on', device_path
+    device = serial.Serial(device_path, baud)
+    device.timeout=0 #nonblocking
+    fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
+    driver = ArduinoServo(device.fileno())
+    t0 = time.time()
+    if driver.initialize(baud):
+        print 'arduino servo found'
+        exit(0)
+    exit(1)
+        
+def main():
+    for i in range(len(sys.argv)):
+        if sys.argv[i] == '-t':
+            if len(sys.argv) < i + 3:
+                print 'device and baud needed for option -t'
+                exit(1)
+            test(sys.argv[i+1], int(sys.argv[i+2]))
+    
     import serialprobe
     print 'Servo Server'
     server = SignalKServer()
@@ -541,7 +560,7 @@ if __name__ == '__main__':
     servo.max_current.set(10)
 
     period = .1
-    lastt = time.time()
+    start = lastt = time.time()
     while True:
         servo.poll()
 
@@ -557,3 +576,7 @@ if __name__ == '__main__':
             lastt += period
         else:
             lastt = time.time()
+
+
+if __name__ == '__main__':
+    main()
