@@ -74,6 +74,7 @@ setup (name = 'pypilot',
            'console_scripts': [
                'pypilot=pypilot.basic_autopilot:main',
                'pypilot_boatimu=pypilot.boatimu:main',
+               'pypilot_servo=pypilot.servo:main',
                'pypilot_webapp=webapp.webapp:main',
                'pypilot_lcdclient=lcd.client:main',
                'pypilot_control=ui.autopilot_control:main',
