@@ -28,12 +28,24 @@ class BoatPlot():
         self.obj = False
         self.texture_compass = True
 
+    def chdir(self):
+        # change working directory to directory of the
+        # source file to find data files
+        import os
+        path = os.path.dirname(__file__)
+        os.chdir(os.path.abspath(path))
+
     def display(self, fusionQPose):
         #fusionQPose = [1, 0, 0, 0]
         if not self.obj:
+            self.chdir()
             #self.obj = OBJ('Vagabond.obj', swapyz=True)
-            self.obj = pywavefront.Wavefront('Vagabond.obj')
-            pass
+            try:
+                self.obj = pywavefront.Wavefront('Vagabond.obj')
+            except:
+                print 'Vagabond.obj not found'
+                print 'Did you add the pypilot_data repository?'
+                return
 
         glClearColor(0, .2, .7, 0)
         glClearDepth(100)
@@ -119,8 +131,15 @@ class BoatPlot():
 
     def draw_texture_compass(self):
         if self.compasstex == 0:
+            self.chdir()
+            try:
+                img = Image.open('compass.png')
+            except:
+                print 'compass.png not found, texture compass cannot be used'
+                self.texture_compass = False
+                return
+
             self.compasstex = glGenTextures(1)
-            img = Image.open('compass.png')
 
             data = numpy.array(list(img.getdata()), numpy.int8)
             glBindTexture(GL_TEXTURE_2D, self.compasstex)

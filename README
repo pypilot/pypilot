@@ -48,6 +48,10 @@ sudo pip install PyOpenGL
 sudo apt-get install python-numpy python-scipy
 
 
+Clone the data repository and copy data
+git clone https://github.com/pypilot/pypilot_data
+cp -rv pypilot_data/* pypilot
+
 most of the scripts can be run individually as standalone
 or test programs, some function as clients, other as servers
 

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*- 
 
 ###########################################################################
-## Python code generated with wxFormBuilder (version Dec  3 2017)
+## Python code generated with wxFormBuilder (version Feb 20 2018)
 ## http://www.wxformbuilder.org/
 ##
-## PLEASE DO "NOT" EDIT THIS FILE!
+## PLEASE DO *NOT* EDIT THIS FILE!
 ###########################################################################
 
 import wx
@@ -20,7 +20,7 @@ class AutopilotControlBase ( wx.Frame ):
 	def __init__( self, parent ):
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Autopilot Control", pos = wx.DefaultPosition, size = wx.Size( -1,400 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
-		self.SetSizeHintsSz( wx.Size( -1,-1 ), wx.DefaultSize )
+		self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
 		
 		fgSizer5 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer5.AddGrowableCol( 0 )
@@ -34,7 +34,7 @@ class AutopilotControlBase ( wx.Frame ):
 		fgSizer4.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
 		self.tbAP = wx.ToggleButton( self, wx.ID_ANY, u"AP", wx.DefaultPosition, wx.Size( 80,80 ), 0 )
-		self.tbAP.SetFont( wx.Font( 36, 74, 90, 90, False, "Sans" ) )
+		self.tbAP.SetFont( wx.Font( 36, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Sans" ) )
 		
 		fgSizer4.Add( self.tbAP, 0, wx.ALL, 5 )
 		
@@ -79,13 +79,13 @@ class AutopilotControlBase ( wx.Frame ):
 		
 		self.stHeadingCommand = wx.StaticText( self, wx.ID_ANY, u" N/A ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stHeadingCommand.Wrap( -1 )
-		self.stHeadingCommand.SetFont( wx.Font( 36, 74, 90, 90, False, "Sans" ) )
+		self.stHeadingCommand.SetFont( wx.Font( 36, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Sans" ) )
 		
 		fgSizer8.Add( self.stHeadingCommand, 0, wx.ALIGN_RIGHT|wx.ALL|wx.EXPAND, 5 )
 		
 		self.stHeading = wx.StaticText( self, wx.ID_ANY, u" N/A ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stHeading.Wrap( -1 )
-		self.stHeading.SetFont( wx.Font( 36, 74, 90, 90, False, "Sans" ) )
+		self.stHeading.SetFont( wx.Font( 36, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Sans" ) )
 		
 		fgSizer8.Add( self.stHeading, 0, wx.ALIGN_RIGHT|wx.ALL|wx.EXPAND, 5 )
 		
@@ -220,7 +220,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 	def __init__( self, parent ):
 		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Calibration", pos = wx.DefaultPosition, size = wx.Size( 640,800 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
 		
-		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
+		self.SetSizeHints( -1, -1 )
 		
 		fgSizer7 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer7.AddGrowableCol( 0 )
@@ -303,7 +303,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel1.SetSizer( fgSizer8 )
 		self.m_panel1.Layout()
 		fgSizer8.Fit( self.m_panel1 )
-		self.m_notebook1.AddPage( self.m_panel1, u"compass", True )
+		self.m_notebook1.AddPage( self.m_panel1, u"compass", False )
 		self.m_panel3 = wx.Panel( self.m_notebook1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer12 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer12.AddGrowableCol( 0 )
@@ -421,7 +421,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_staticText25.Wrap( -1 )
 		fgSizer14.Add( self.m_staticText25, 0, wx.ALL, 5 )
 		
-		self.sHeadingOffset = wx.SpinCtrl( self.m_panel5, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, -180, 180, 0 )
+		self.sHeadingOffset = wx.SpinCtrl( self.m_panel5, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, -180, 180, -3 )
 		fgSizer14.Add( self.sHeadingOffset, 0, wx.ALL, 5 )
 		
 		
@@ -434,21 +434,11 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer23.SetFlexibleDirection( wx.BOTH )
 		fgSizer23.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
-		sbSizer3 = wx.StaticBoxSizer( wx.StaticBox( self.m_panel5, wx.ID_ANY, u"Model" ), wx.VERTICAL )
-		
-		cModelChoices = []
-		self.cModel = wx.Choice( self.m_panel5, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cModelChoices, 0 )
-		self.cModel.SetSelection( 0 )
-		sbSizer3.Add( self.cModel, 0, wx.ALL, 5 )
-		
-		
-		fgSizer23.Add( sbSizer3, 1, wx.EXPAND, 5 )
-		
 		sbSizer4 = wx.StaticBoxSizer( wx.StaticBox( self.m_panel5, wx.ID_ANY, u"Coords" ), wx.VERTICAL )
 		
 		cCoordsChoices = [ u"Sea", u"Boat", u"Compass" ]
-		self.cCoords = wx.Choice( self.m_panel5, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cCoordsChoices, 0 )
-		self.cCoords.SetSelection( 0 )
+		self.cCoords = wx.Choice( sbSizer4.GetStaticBox(), wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cCoordsChoices, 0 )
+		self.cCoords.SetSelection( 2 )
 		sbSizer4.Add( self.cCoords, 0, wx.ALL, 5 )
 		
 		
@@ -490,7 +480,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook1.AddPage( self.m_panel3, u"imu", False )
+		self.m_notebook1.AddPage( self.m_panel3, u"imu", True )
 		self.m_panel2 = wx.Panel( self.m_notebook1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer9 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer9.AddGrowableCol( 0 )
@@ -500,7 +490,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		
 		sbSizer1 = wx.StaticBoxSizer( wx.StaticBox( self.m_panel2, wx.ID_ANY, u"Calibration" ), wx.VERTICAL )
 		
-		self.stServoCalibration = wx.StaticText( self.m_panel2, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stServoCalibration = wx.StaticText( sbSizer1.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stServoCalibration.Wrap( 400 )
 		sbSizer1.Add( self.stServoCalibration, 0, wx.ALL|wx.EXPAND, 5 )
 		

@@ -23,6 +23,7 @@ from OpenGL.GLUT import *
 class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     ID_MESSAGES = 1000
     ID_CALIBRATE_SERVO = 1001
+    ID_HEADING_OFFSET = 1002
 
     def __init__(self):
         super(CalibrationDialog, self).__init__(None)
@@ -49,6 +50,9 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.timer.Start(50)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=self.ID_MESSAGES)
 
+        self.heading_offset_timer = wx.Timer(self, self.ID_HEADING_OFFSET)
+        self.Bind(wx.EVT_TIMER, lambda e : self.sHeadingOffset.SetValue(round3(self.signalk_heading_offset)), id = self.ID_HEADING_OFFSET)
+
         self.servo_timer = wx.Timer(self, self.ID_CALIBRATE_SERVO)
         self.Bind(wx.EVT_TIMER, self.calibrate_servo_timer, id=self.ID_CALIBRATE_SERVO)
         self.servoprocess = False
@@ -63,8 +67,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                      'imu.accel', 'imu.fusionQPose', 'imu.alignmentCounter', \
                      'imu.heading', \
                      'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', \
-                     'imu.heading_offset', 'servo.calibration', \
-                     'servo.max_current']
+                     'imu.heading_offset',
+                     'servo.calibration', 'servo.max_current']
         for name in watchlist:
             client.watch(name)
 
@@ -128,7 +132,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         elif name == 'imu.heading':
             self.stHeading.SetLabel(str(round3(value)))
         elif name == 'imu.heading_offset':
-            self.sHeadingOffset.SetValue(round3(value))
+            self.signalk_heading_offset = value
+            self.heading_offset_timer.Start(1000, True)
         elif name == 'servo.calibration':
             s = ''
             for name in value:
@@ -224,6 +229,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 	
     def onIMUHeadingOffset( self, event ):
         self.client.set('imu.heading_offset', self.sHeadingOffset.GetValue())
+        self.heading_offset_timer.Stop()
 
     def onKeyPressBoatPlot( self, event ):
         self.BoatPlot.SetFocus()
