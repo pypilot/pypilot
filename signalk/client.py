@@ -36,11 +36,12 @@ class SignalKClient(object):
         try:
             file = open(configfilename)
             config = kjson.loads(file.readline())
-
+            file.close()
             if 'host' in config and not host:
                 host = config['host']
-        except:
-            print 'failed to read config file:', configfilename
+                
+        except Exception as e:
+            print 'failed to read config file:', configfilename, e
 
         if not host:
             host = 'pypilot'
@@ -50,6 +51,7 @@ class SignalKClient(object):
             config['host'] = host
             file = open(configfilename, 'w')
             file.write(kjson.dumps(config) + '\n')
+            file.close()
         except IOError:
             print 'failed to write config file:', configfilename
 
