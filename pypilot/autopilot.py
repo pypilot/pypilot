@@ -110,7 +110,7 @@ class AutopilotBase(object):
     self.boatimu = BoatIMU(self.server)
     self.servo = servo.Servo(self.server, serial_probe)
     self.nmea = Nmea(self.server, serial_probe)
-    self.version = self.Register(JSONValue, 'version', name + ' ' + 'pypilot' + ' ' + str(0.1))
+    self.version = self.Register(JSONValue, 'version', name + ' ' + 'pypilot' + ' ' + str(0.2))
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
     self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
