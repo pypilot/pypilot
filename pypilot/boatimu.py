@@ -334,7 +334,8 @@ class BoatIMU(object):
     data['pitchrate'], data['rollrate'], data['headingrate'] = map(math.degrees, gyro_q)
 
     origfusionQPose = data['fusionQPose']
-    data['fusionQPose'] = quaternion.multiply(data['fusionQPose'], self.alignmentQ.value)
+    aligned = quaternion.multiply(data['fusionQPose'], self.alignmentQ.value)
+    data['fusionQPose'] = quaternion.normalize(aligned) # floating point precision errors
 
     data['roll'], data['pitch'], data['heading'] = map(math.degrees, quaternion.toeuler(data['fusionQPose']))
 
@@ -418,13 +419,14 @@ class BoatIMUServer():
   def __init__(self):
     # setup all processes to exit on any signal
     self.childpids = []
-    def cleanup(signal_number, frame):
+    def cleanup(signal_number, frame=None):
         print 'got signal', signal_number, 'cleaning up'
         while self.childpids:
             pid = self.childpids.pop()
             os.kill(pid, signal.SIGTERM) # get backtrace
         sys.stdout.flush()
-        raise KeyboardInterrupt # to get backtrace on all processes
+        if signal_number != 'atexit':
+          raise KeyboardInterrupt # to get backtrace on all processes
 
     # unfortunately we occasionally get this signal,
     # some sort of timing issue where python doesn't realize the pipe
@@ -446,6 +448,8 @@ class BoatIMUServer():
     self.childpids = [self.boatimu.imu_process.pid, self.boatimu.compass_auto_cal.process.pid,
                       self.server.process.pid]
     signal.signal(signal.SIGCHLD, cleanup)
+    import atexit
+    atexit.register(lambda : cleanup('atexit'))
     
     self.t00 = time.time()
 
