@@ -1,3 +1,15 @@
+cheapest arduino sometimes has wrong fuses set:
+
+load arduino isp sketch to arduino
+read fuses
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB1 -u -p m328p -U hfuse:r:-:h -U lfuse:r:-:h -U efuse:r:-:h
+
+0xda
+0xff
+0x5
+
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB1 -u -p m328p -U efuse:w:0x4:m
+
 pypilot can communicate with arduinos over serial port
 
 motor - motor controller   binary checksum 4 byte protocol (38400 baud)
