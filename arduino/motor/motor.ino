@@ -388,7 +388,13 @@ uint16_t TakeAmps(uint8_t p)
     // 1375 / 128 = 100.0/1024/.01*1.1   for 0.01 ohm shunt
     if(shunt_resistance)
         return v * 275 / 128 / 16;
-    return v * 1375 / 128 / 16;
+
+    // unfortunately there is a 550mA offset, compensate for it
+    // by adding 55 x 10mA
+    if(v > 10)
+        v = v * 1375 / 128 / 16 + 55;
+
+    return v;
 #endif
 }
 
