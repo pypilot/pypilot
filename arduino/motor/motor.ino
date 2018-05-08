@@ -1,4 +1,4 @@
-/* Copyright (C) 2016 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2018 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -190,7 +190,8 @@ void setup()
     digitalWrite(shunt_sense_pin, HIGH); /* enable internal pullups */    
 } 
 
-enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
+enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68, MAX_SLEW_CODE=0x71};
+
 enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
 
 enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, MIN_RUDDER=256*1, MAX_RUDDER=256*2};
@@ -203,6 +204,7 @@ uint8_t crcbytes[3];
 uint16_t max_current = 2000;
 uint16_t max_controller_temp = 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
+uint16_t max_slew_speed = 100, max_slew_slow = 150; // 200 is full power in 1/10th of a second
 uint16_t min_rudder_pos = 0, max_rudder_pos = 65472;
 
 uint16_t flags = 0, faults = 0;
@@ -221,9 +223,11 @@ void position(uint16_t value)
   lastpos = value;
 }
 
+uint16_t command_value = 1000;
 void stop()
 {
     position(1000);
+    command_value = 1000;
 }
 
 void stop_fwd()
@@ -236,6 +240,34 @@ void stop_rev()
 {
     if(lastpos < 1000)
        stop();
+}
+
+void update_command()
+{
+    int16_t speed_rate = max_slew_speed;
+     // value of 20 is 1 second full range at 50hz
+    int16_t slow_rate = max_slew_slow;
+    uint16_t cur_value = OCR1A * 2 / 3 - 1000;
+    int16_t diff = command_value - cur_value;
+
+    // limit motor speed change to stay within speed and slow slew rates
+    if(cur_value > 1000) {
+        if(diff > 0) {
+            if(diff > speed_rate)
+                diff = speed_rate;
+        } else
+            if(diff < -slow_rate)
+                diff = -slow_rate;
+    } else {
+        if(diff < 0) {
+            if(diff < -speed_rate)
+                diff = -speed_rate;
+        } else
+            if(diff > slow_rate)
+                diff = slow_rate;
+    }
+
+    position(cur_value + diff);
 }
 
 void disengauge()
@@ -256,6 +288,7 @@ void detach()
     while(digitalRead(9)); // wait for end of pwm if pulse is high
 //    pinMode(9, INPUT);
 //    digitalWrite(9, LOW); // default output as zero
+    TIMSK1 = 0;
 #endif
     TIMSK2 = 0;
     timeout = 64; // avoid overflow
@@ -277,6 +310,8 @@ void engauge()
     TCCR1B|=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
     ICR1=range-1;  //fPWM=50Hz (Period = 20ms Standard).
 
+    TIMSK1 = _BV(TOIE1);
+
 //    DDRB|=_BV(PB1);   //PWM Pins as Out
     pinMode(9, OUTPUT);
 #endif
@@ -287,6 +322,8 @@ void engauge()
     TIMSK2 = _BV(TOIE2);
 
     flags |= ENGAUGED;
+
+    update_command();
 }
 
 // set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
@@ -454,6 +491,11 @@ ISR(WDT_vect)
     asm volatile ("ijmp" ::"z" (0x0000));
 }
 
+ISR(TIMER1_OVF_vect)
+{
+    update_command();
+}
+
 ISR(TIMER2_OVF_vect)
 {
     timeout++;
@@ -494,7 +536,7 @@ void process_packet()
             stop();
             // no reverse command if fwd fault
         else {
-            position(value);
+            command_value = value;
             engauge();
         }
         break;
@@ -526,6 +568,22 @@ void process_packet()
         if(serialin < 12)
             serialin+=4; // output at input rate
         disengauge();
+        break;
+    case MAX_SLEW_CODE:
+        max_slew_speed = in_bytes[1];
+        max_slew_slow = in_bytes[2];
+
+        // if set at the end of range (up to 255)  no slew limit
+        if(max_slew_speed > 250)
+            max_slew_speed = 1000;
+        if(max_slew_slow > 250)
+            max_slew_slow = 1000;
+
+        // must have some slew
+        if(max_slew_speed < 1) 
+            max_slew_speed = 1;
+        if(max_slew_slow < 1) 
+            max_slew_slow = 1;
         break;
     }
 }

@@ -200,6 +200,8 @@ class Servo(object):
         self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 55, 30, 100, persistent=True)
         self.min_rudder_pos = self.Register(RangeProperty, 'min_rudder_pos', -100, -100, 100, persistent=True)
         self.max_rudder_pos = self.Register(RangeProperty, 'max_rudder_pos',  100, -100, 100, persistent=True)
+        self.max_slew_speed = self.Register(RangeProperty, 'max_slew_speed', 30, 0, 100, persistent=True)
+        self.max_slew_slow = self.Register(RangeProperty, 'max_slew_slow', 50, 0, 100, persistent=True)
         self.period = self.Register(RangeProperty, 'period', .7, .1, 3, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'compensate_voltage', False, persistent=True)
@@ -393,7 +395,7 @@ class Servo(object):
                 if self.flags.value & ServoFlags.FWD_FAULT or \
                    self.flags.value & ServoFlags.REV_FAULT: # allow more current to "unstuck" ram
                     max_current *= 2
-                self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.min_rudder_pos.value, self.max_rudder_pos.value)
+                self.send_driver_max_values(max_current)
                 self.driver.command(command)
 
                 # detect driver timeout if commanded without measuring current
@@ -417,6 +419,9 @@ class Servo(object):
         self.device.close()
         self.driver = False
 
+    def send_driver_max_values(self, max_current):
+        self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.min_rudder_pos.value, self.max_rudder_pos.value, self.max_slew_speed.value, self.max_slew_slow.value)
+
     def poll(self):
         if not self.driver:
             device_path = self.serialprobe.probe('servo', [38400], 1)
@@ -427,7 +432,7 @@ class Servo(object):
                 device.timeout=0 #nonblocking
                 fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
                 self.driver = ArduinoServo(device.fileno())
-                self.driver.max_values(self.max_current.value, self.max_controller_temp.value, self.max_motor_temp.value, self.min_rudder_pos.value, self.max_rudder_pos.value)
+                self.send_driver_max_values(self.max_current.value)
 
                 t0 = time.time()
                 if self.driver.initialize(device_path[1]):

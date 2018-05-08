@@ -20,7 +20,7 @@ public:
     void reprogram();
     int poll();
     bool fault();
-    void max_values(double current, double arduino_temp, double motor_temp, double min_rudder_pos, double max_rudder_pos);
+    void max_values(double current, double arduino_temp, double motor_temp, double min_rudder_pos, double max_rudder_pos, double max_slew_speed, double max_slew_slow);
 
     double voltage, current, controller_temp, motor_temp, rudder_pos;
     int flags;

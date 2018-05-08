@@ -13,7 +13,7 @@ public:
     void reprogram();
     int poll();
     bool fault();
-    void max_values(double current, double controller_temp, double motor_temp, double min_rudder_pos, double max_rudder_pos);
+    void max_values(double current, double controller_temp, double motor_temp, double min_rudder_pos, double max_rudder_pos, double max_slew_speed, double max_slew_slow);
 
     double voltage, current, controller_temp, motor_temp, rudder_pos;
     int flags;
@@ -29,4 +29,5 @@ private:
     int out_sync;
     double max_current_value, max_controller_temp_value, max_motor_temp_value;
     double min_rudder_pos_value, max_rudder_pos_value;
+    double max_slew_speed_value, max_slew_slow_value;
 };

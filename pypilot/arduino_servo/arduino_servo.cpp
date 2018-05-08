@@ -17,7 +17,7 @@
 
 #include "arduino_servo.h"
 
-enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68};
+enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68, MAX_SLEW_CODE=0x71};
 enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE = 0x8f};
 
 const unsigned char crc8_table[256]
@@ -206,13 +206,15 @@ bool ArduinoServo::fault()
     return flags & OVERCURRENT;
 }
 
-void ArduinoServo::max_values(double current, double controller_temp, double motor_temp, double min_rudder_pos, double max_rudder_pos)
+void ArduinoServo::max_values(double current, double controller_temp, double motor_temp, double min_rudder_pos, double max_rudder_pos, double max_slew_speed, double max_slew_slow)
 {
     max_current_value = fmin(20, fmax(0, current));
     max_controller_temp_value = fmin(80, fmax(30, controller_temp));
     max_motor_temp_value = fmin(80, fmax(30, motor_temp));
     min_rudder_pos_value = fmin(100, fmax(-100, min_rudder_pos));
     max_rudder_pos_value = fmin(100, fmax(-100, max_rudder_pos));
+    max_slew_speed_value = fmin(100, fmax(0, max_slew_speed));
+    max_slew_slow_value = fmin(100, fmax(0, max_slew_slow));
 }
 
 void ArduinoServo::send_value(uint8_t command, uint16_t value)
@@ -234,16 +236,22 @@ void ArduinoServo::raw_command(uint16_t value)
     case 0: case 8: case 16:
         send_value(MAX_CURRENT_CODE, max_current_value*100);
         break;
-    case 6:
+    case 4:
         send_value(MAX_CONTROLLER_TEMP_CODE, max_controller_temp_value*100);
         break;
-    case 12:
+    case 6:
         send_value(MAX_MOTOR_TEMP_CODE, max_motor_temp_value*100);
         break;
-    case 18:
+    case 12:
         send_value(RUDDER_RANGE_CODE,
                    ((int)((min_rudder_pos_value+100)*255/200) & 0xff) |
                    ((int)((max_rudder_pos_value+100)*255/200) & 0xff) << 8);
+        break;
+    case 18:
+        send_value(MAX_SLEW_CODE,
+                   ((int)(max_slew_speed_value * 255/100) & 0xff) |
+                   ((int)(max_slew_slow_value * 255/100) & 0xff) << 8);
+        break;
     }
 
     //printf("command %u %d\n", value, out_sync);
