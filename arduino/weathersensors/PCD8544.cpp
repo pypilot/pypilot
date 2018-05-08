@@ -297,7 +297,9 @@ size_t PCD8544::write(uint8_t chr)
     }
 
     struct font f;
-    memcpy_P(&f, fonts + curfont, sizeof f);
+    int cfont = curfont % 4;
+    int orient = curfont / 4;
+    memcpy_P(&f, fonts + cfont, sizeof f);
     struct font_character c;
     for(int i=0; i<f.n; i++) {
         memcpy_P(&c, f.characters + i, sizeof c);
@@ -310,21 +312,39 @@ found:
         unsigned char glyph[c.w*c.h];
         memcpy_P(glyph, c.data, c.w*c.h);
 
-    for(int y=0; y<c.h; y++) {
-        int yp = ypos + y;
-        if(yp < 0 || yp >= 84)
-            continue;
-        for(int x=0; x<c.w; x++) {
-            if(!glyph[y*c.w + x])
-                continue;
-
-            int xp = xpos + x;
-            if(xp < 0 || xp >= 48)
-                continue;
-            putpixel(xp, yp, 255);
+        if(orient) {
+            for(int x=0; x<c.w; x++) {
+                int yp = ypos + x;
+                if(yp < 0 || yp >= 84)
+                    continue;
+                for(int y=0; y<c.h; y++) {
+                    if(!glyph[y*c.w + x])
+                        continue;
+                    
+                    int xp = xpos + c.h - y;
+                    if(xp < 0 || xp >= 48)
+                        continue;
+                    putpixel(xp, yp, 255);
+                }
+            }
+            ypos += c.w + 1;
+        } else {
+            for(int y=0; y<c.h; y++) {
+                int yp = ypos + y;
+                if(yp < 0 || yp >= 84)
+                    continue;
+                for(int x=0; x<c.w; x++) {
+                    if(!glyph[y*c.w + x])
+                        continue;
+                    
+                    int xp = xpos + x;
+                    if(xp < 0 || xp >= 48)
+                        continue;
+                    putpixel(xp, yp, 255);
+                }
+            }
+            xpos += c.w + 1;
         }
-    }
-    xpos += c.w + 1;
     }
 
 #if ARDUINO >= 100

@@ -32,6 +32,8 @@ extern "C" {
   #include <twi.h>
 }
 
+//#define ANENOMETER
+
 #define LCD
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
@@ -148,10 +150,11 @@ void setup()
   Serial.begin(38400);  // start serial for output
   bmX280_setup();
 
+#ifdef ANENOMETER
   attachInterrupt(0, isr_anenometer_count, FALLING);
   pinMode(analogInPin, INPUT);
-  pinMode( analogLightPin, INPUT);
   pinMode(2, INPUT_PULLUP);
+#endif
 
   //analogRead(analogInPin); // select channel
   ADMUX = _BV(REFS0) | 6;
@@ -161,6 +164,7 @@ void setup()
 #ifdef LCD
     // PCD8544-compatible displays may have a different resolution...
   lcd.begin(84, 48);
+  pinMode( analogLightPin, INPUT);
 #endif
 }
 
@@ -170,11 +174,15 @@ static volatile int16_t adccount[2];
 
 ISR(ADC_vect)
 {
+#ifdef ANENOMETER
     adccount[adcchannel]++;
     if(adccount[adcchannel] > 0)
         adcval[adcchannel] += (int16_t)ADCW;
     if(adcchannel == 0 && adccount[adcchannel] == 1)
         ADMUX = _BV(REFS0) | 7, adcchannel = 1;
+#else
+    adcval[0] = (int16_t)ADCW;
+#endif
     ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
 }
 
@@ -236,16 +244,8 @@ void read_anenometer()
 //    lp = 1;
     // read the analog in value:
     float sensorValue = 0;
-#if 0
-    if (!(ADCSRA & _BV(ADSC)))
-        sensorValue = ADCW;
-    
-    ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
-    
-//  sensorValue = analogRead(analogInPin);
-#else
+
     cli();
-    int16_t light = adcval[0];
     uint32_t val = adcval[1];
     uint16_t count = adccount[1];
     // reset the adc
@@ -255,29 +255,6 @@ void read_anenometer()
     ADMUX = _BV(REFS0) | 6;
     sei();
     sensorValue = val / count;
-
-    // filter and map light value
-    static int lastlight, lighton;
-    light = (light + 31*lastlight) / 32;
-    lastlight = light;
-
-    if(lighton) {
-        if(light > 900)
-            lighton = 0;
-    } else {
-        if(light < 800)
-            lighton = 1;
-    }
-    int pwm = lighton ? 120 : 255;
-    #if 0
-    Serial.print("light ");
-    Serial.print(light);
-    Serial.print(" pwm ");
-    Serial.print(pwm);
-    Serial.println("");
-    #endif
-    analogWrite(analogBacklightPin, pwm);
-#endif
     
 //  float dir = sensorValue / 1024.0 * 360;
     // compensate 13 degree deadband in potentiometer
@@ -398,18 +375,47 @@ void read_pressure_temperature()
         snprintf(buf, sizeof buf, "ARMTA,%d.%02d,C", a, abs(r));
         send_nmea(buf);
 
-        lcd_update  = 1;
+        lcd_update = 1;
     }
 }
 
-void draw()
+void read_light()
+{
+    cli();
+    int16_t light = adcval[0];
+    sei();
+    // filter and map light value
+    static int lastlight, lighton;
+    light = (light + 31*lastlight) / 32;
+    lastlight = light;
+
+    if(lighton) {
+        if(light > 900)
+            lighton = 0;
+    } else {
+        if(light < 800)
+            lighton = 1;
+    }
+    int pwm = lighton ? 120 : 255;
+    #if 0
+    Serial.print("light ");
+    Serial.print(light);
+    Serial.print(" pwm ");
+    Serial.print(pwm);
+    Serial.println("");
+    #endif
+    analogWrite(analogBacklightPin, pwm);
+}
+
+static uint16_t last_lcd_updatetime, last_lcd_texttime;
+static char status_buf[4][16];
+void draw_anenometer()
 {
 #ifdef LCD
     if(!lcd_update)
         return;
 
     uint16_t time = millis();
-    static uint16_t last_lcd_updatetime, last_lcd_texttime;
     uint16_t dt = time - last_lcd_updatetime;
     if(dt < 100) // don't update faster than 2frames per second
         return;
@@ -418,14 +424,10 @@ void draw()
     
     lcd_update = 0;
 
-    static char status_buf[4][16];
-
     dt = time - last_lcd_texttime;
     if(dt > 700) { // don't update text so fast
+        int a, r;
         last_lcd_texttime = time;
-        int a = temperature_comp / 100;
-        int r = temperature_comp - a*100;
-        snprintf(status_buf[3], sizeof status_buf[3], "%d.%02dC", a, abs(r));
 
         snprintf(status_buf[0], sizeof status_buf[0], "%02d", (int) round(wind_dir));
         snprintf(status_buf[1], sizeof status_buf[1], "%02d", (int) round(wind_speed));
@@ -452,6 +454,10 @@ void draw()
         lcd.setpos(a*7+6, 61);
         lcd.print(status_buf[2]);
 
+        a = temperature_comp / 100;
+        r = temperature_comp - a*100;
+        snprintf(status_buf[3], sizeof status_buf[3], "%d.%02dC", a, abs(r));
+        
         lcd.setfont(0);
         lcd.setpos(1, 71);
         lcd.print(status_buf[3]);
@@ -488,11 +494,97 @@ void draw()
 #endif
 }
 
+static uint16_t baro_history[84];
+static uint8_t history_pos;
+static uint32_t baro_val, baro_count;
+static uint32_t last_baro_updatetime;
+void draw_barometer_graph()
+{
+#ifdef LCD
+    if(!lcd_update)
+        return;
+
+    uint16_t time = millis();
+    uint16_t dt = time - last_lcd_updatetime;
+    if(dt < 100) // don't update faster
+        return;
+
+    baro_val += pressure_comp;
+    baro_count++;
+
+    last_lcd_updatetime = time;
+    
+    lcd_update = 0;
+
+    dt = time - last_lcd_texttime;
+    if(dt > 700) { // don't update text so fast
+        int a, r;
+        last_lcd_texttime = time;
+
+        lcd.rectangle(0, 0, 10, 83, 0); // clear text
+
+#if 1
+        lcd.setfont(4);
+        lcd.setpos(0, 0);
+        a = pressure_comp/1e2, r = pressure_comp - a*1e2;
+        a = snprintf(status_buf[2], sizeof status_buf[2], "%d", a);
+        lcd.print(status_buf[2]);
+        lcd.rectangle(0, a*7+3, 0, a*7+4, 255); // draw decimal
+        snprintf(status_buf[2], sizeof status_buf[2], "%02d", r);
+        lcd.setpos(0, a*7+6);
+        lcd.print(status_buf[2]);
+#endif
+        
+        a = temperature_comp / 100;
+//        r = temperature_comp - a*100;
+        snprintf(status_buf[3], sizeof status_buf[3], "%dC", a);
+        
+        lcd.setfont(4);
+        lcd.setpos(0, 60);
+        lcd.print(status_buf[3]);
+    }
+
+    uint32_t dt32 = millis() - last_baro_updatetime;
+    
+    if(dt32 > 60000) { // once a minute
+        last_baro_updatetime += 60000;
+        int32_t val = baro_val / baro_count;
+        baro_val = baro_count = 0;
+    
+        int16_t bar = val - 80000;
+
+        baro_history[history_pos++] = bar;
+        if(history_pos == 84)
+            history_pos = 0;
+
+        lcd.rectangle(10, 0, 48, 84, 0); // clear graph
+
+        for(int i=0; i<84; i++) {
+            int p = (history_pos + i)%84;
+            int v = baro_history[p] - bar;
+            v /= 5;
+
+            v += 28;
+            if(v > 10)
+                lcd.putpixel(v, i, 255);
+        }
+    }
+    
+    lcd.refresh();
+#endif
+}
+
 void loop()
 {
-      set_sleep_mode(SLEEP_MODE_IDLE);
+    set_sleep_mode(SLEEP_MODE_IDLE);
     read_pressure_temperature();
+#ifdef LCD
+    read_light();
+#endif
+#ifdef ANENOMETER
     read_anenometer();
-
-    draw();
+    draw_anenometer();
+#else
+    draw_barometer_graph();
+#endif
 }
