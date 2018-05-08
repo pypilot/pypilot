@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2018 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import wx, sys, math, subprocess, os
-from client import SignalKClientFromArgs
+import wx, sys, math, subprocess, os, socket
+from client import SignalKClient, SignalKClientFromArgs, ConnectionLost
 
 def round3(value):
     if type(value) == type([]):
@@ -27,7 +27,9 @@ class MainFrame(wx.Frame):
 	wx.Frame.__init__(self, None, title="signalk client", size=(1000,600))
 
         self.value_list = []
-        self.client = SignalKClientFromArgs(sys.argv, True, self.Refresh)
+        self.client = SignalKClientFromArgs(sys.argv, True, self.on_con)
+        self.host_port = self.client.host_port
+        self.client.autoreconnect = False
 
         ssizer = wx.FlexGridSizer(0, 1, 0, 0)
         ssizer.AddGrowableRow( 0 )
@@ -124,9 +126,6 @@ class MainFrame(wx.Frame):
             else:
                 sizer.Add( wx.StaticText(self.scrolledWindow, wx.ID_ANY, ''))
 
-            if t != 'SensorValue':
-                self.client.watch(name)
-
         self.scrolledWindow.SetSizer(sizer)
         self.scrolledWindow.Layout()
 
@@ -161,13 +160,39 @@ class MainFrame(wx.Frame):
 
         self.Refresh()
         
-    def Refresh(self, *cargs):
+    def Refresh(self):
         for name in self.value_list:
             self.client.get(name)
+
+    def on_con(self, client):
+        self.SetTitle("signalk client - Connected")
+        for name in sorted(self.value_list):
+            t = self.value_list[name]['type']
+            if t != 'SensorValue':
+                self.client.watch(name)
+            else:
+                self.client.get(name)
         
     def receive_messages(self, event):
+        if not self.client:
+            try:
+                host, port = self.host_port
+                self.client = SignalKClient(self.on_con, host, port, autoreconnect=False)
+                self.timer.Start(100)
+            except socket.error:
+                self.timer.Start(1000)
+                return
+
         while True:
-            result = self.client.receive()
+            result = False
+            try:
+                result = self.client.receive()
+            except ConnectionLost:
+                self.SetTitle("signalk client - Disconnected")
+                self.client = False
+                return
+            except:
+                pass
             if not result:
                 break
 

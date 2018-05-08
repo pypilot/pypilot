@@ -31,29 +31,25 @@ class SignalKClient(object):
             os.makedirs(configfilepath)
         if not os.path.isdir(configfilepath):
             raise configfilepath + 'should be a directory'
-        configfilename = configfilepath + 'signalk.conf'
+        self.configfilename = configfilepath + 'signalk.conf'
+        self.write_config = False
 
         try:
-            file = open(configfilename)
+            file = open(self.configfilename)
             config = kjson.loads(file.readline())
             file.close()
             if 'host' in config and not host:
                 host = config['host']
+            elif config['host'] != host:
+                self.write_config = config
+                self.write_config['host'] = host
                 
         except Exception as e:
-            print 'failed to read config file:', configfilename, e
+            print 'failed to read config file:', self.configfilename, e
 
         if not host:
             host = 'pypilot'
             print 'host not specified using host', host
-
-        try:
-            config['host'] = host
-            file = open(configfilename, 'w')
-            file.write(kjson.dumps(config) + '\n')
-            file.close()
-        except IOError:
-            print 'failed to write config file:', configfilename
 
         if '/dev' in host: # serial port
             device, baud = host, port
@@ -83,6 +79,17 @@ class SignalKClient(object):
         self.onconnected(connection)
 
     def onconnected(self, connection):
+        if self.write_config:
+            try:
+                file = open(self.configfilename, 'w')
+                file.write(kjson.dumps(self.write_config) + '\n')
+                file.close()
+                self.write_config = False
+            except IOError:
+                print 'failed to write config file:', self.configfilename
+            except Exception as e:
+                print 'Exception writing config file:', self.configfilename, e
+
         self.socket = server.LineBufferedNonBlockingSocket(connection)
         self.values = []
         self.msg_queue = []
@@ -242,11 +249,9 @@ class SignalKClient(object):
                     result = result[:80 - len(name) - 7] + ' ...'
                 print name, '=', result
         return True
-            
 
-def SignalKClientFromArgs(argv, watch, *cargs):
-    host = False
-    port = False
+def SignalKClientFromArgs(argv, watch, f_con=False):
+    host = port = False
     watches = argv[1:]
     if len(argv) > 1:
         if ':' in argv[1]:
@@ -254,9 +259,11 @@ def SignalKClientFromArgs(argv, watch, *cargs):
             host = argv[1][:i]
             port = int(argv[1][i+1:])
             watches = watches[1:]
-        elif not '/' in argv[1]:
-            host = argv[1]
-            watches = watches[1:]
+        else:
+            c = argv[1].count('.')
+            if c == 0 or c == 3: # host or ip address
+                host = argv[1]
+                watches = watches[1:]
 
     def on_con(client):
         for arg in watches:
@@ -264,8 +271,8 @@ def SignalKClientFromArgs(argv, watch, *cargs):
                 client.watch(arg)
             else:
                 client.get(arg)
-        if len(cargs) == 1:
-            cargs[0](client)
+        if f_con:
+            f_con(client)
             
     return SignalKClient(on_con, host, port, autoreconnect=True, have_watches=watches)
 
