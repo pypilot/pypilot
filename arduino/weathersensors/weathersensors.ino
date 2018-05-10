@@ -32,7 +32,7 @@ extern "C" {
   #include <twi.h>
 }
 
-//#define ANENOMETER
+#define ANENOMETER
 
 #define LCD
 #ifdef LCD
