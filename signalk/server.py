@@ -116,6 +116,38 @@ class LineBufferedNonBlockingSocketPython(object):
             self.no_newline_pos += 1
         return ''
 
+def LoadPersistentData(persistent_path, server=True):
+    try:
+        file = open(persistent_path)
+        persistent_data = kjson.loads(file.readline())
+        file.close()
+    except Exception as e:
+        print 'failed to load', persistent_path, e
+        print 'WARNING Alignment and other data lost!!!!!!!!!'
+
+        if server:
+            # log failing to load persistent data
+            persist_fail = os.getenv('HOME') + '/.pypilot/persist_fail'
+            file = open(persist_fail, 'a')
+            file.write(str(time.time()) + '\n')
+            file.close()
+
+        try:
+            file = open(persistent_path + '.bak')
+            persistent_data = kjson.loads(file.readline())
+            file.close()
+            return persistent_data
+        except Exception as e:
+            print 'backup data failed as well', e
+        return {}
+
+    if server:
+        # backup persistent_data if it loaded with success
+        file = open(persistent_path + '.bak', 'w')
+        file.write(kjson.dumps(persistent_data)+'\n')
+        file.close()
+    return persistent_data
+    
 class SignalKServer(object):
     def __init__(self, port=DEFAULT_PORT, persistent_path=default_persistent_path):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -129,45 +161,35 @@ class SignalKServer(object):
         self.timestamps = {}
 
         self.persistent_path = persistent_path
-        self.persistent_timeout = 0
-        self.LoadPersistentValues()
+        self.persistent_timeout = time.time() + 300
+        self.persistent_data = LoadPersistentData(persistent_path)
 
     def __del__(self):
         self.StorePersistentValues()
         self.server_socket.close()
         for socket in self.sockets:
             socket.socket.close()
-
-    def LoadPersistentValues(self):
-        try:
-            file = open(self.persistent_path)
-            self.persistent_data = kjson.loads(file.readline())
-            file.close()
-        except:
-            print 'failed to load', self.persistent_path
-            self.persistent_data = {}
             
     def StorePersistentValues(self):
         self.persistent_timeout = time.time() + 600 # 10 minutes
-        persistent_data = {}
         need_store = False
         for name in self.values:
             value = self.values[name]
             if not value.persistent:
                 continue
-            if not name in self.persistent_data or self.values[name].value != self.persistent_data[name]:
+            if value.value != self.persistent_data[name]:
+                self.persistent_data[name] = value.value
                 need_store = True
-            persistent_data[name] = self.values[name].value
 
         if not need_store:
             return
                 
         try:
             file = open(self.persistent_path, 'w')
-            file.write(kjson.dumps(persistent_data)+'\n')
+            file.write(kjson.dumps(self.persistent_data)+'\n')
             file.close()
-        except:
-            print 'failed to write', self.persistent_path
+        except Exception as e:
+            print 'failed to write', self.persistent_path, e
 
     def Register(self, value):
         if value.persistent and value.name in self.persistent_data:
@@ -302,6 +324,7 @@ class SignalKServer(object):
           self.poller.register(self.server_socket, select.POLLIN)
         
       t1 = time.time()
+      #print 'store', t1 - self.persistent_timeout
       if t1 >= self.persistent_timeout:
           self.StorePersistentValues()
           if time.time() - t1 > .1:

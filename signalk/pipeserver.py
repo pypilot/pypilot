@@ -11,7 +11,7 @@
 # offload socket and parsing work to a separate process
 
 import time
-from server import SignalKServer, DEFAULT_PORT, default_persistent_path
+from server import SignalKServer, DEFAULT_PORT, default_persistent_path, LoadPersistentData
 from values import *
 import multiprocessing
 import select
@@ -160,28 +160,18 @@ def pipe_server_process(pipe, port, persistent_path):
 
 class SignalKPipeServer(object):
     def __init__(self, port=DEFAULT_PORT, persistent_path=default_persistent_path):
-        #self.pipe, process_pipe = multiprocessing.Pipe()
         self.pipe, process_pipe = NonBlockingPipe('signalkpipeserver', True)
     
-        self.process = multiprocessing.Process(target=pipe_server_process, args=(process_pipe, port, persistent_path))
-        self.process.start()
         self.values = {}
         self.sets = {}
         self.timestamps = {}
         self.last_recv = time.time()
-        
-        self.persistent_path = persistent_path
-        self.ResetPersistentState()
-        self.LoadPersistentValues()
 
-    def LoadPersistentValues(self): # unfortunately duplicated from server
-        try:
-            file = open(self.persistent_path)
-            self.persistent_data = json.loads(file.readline())
-            file.close()
-        except:
-            print 'failed to load', self.persistent_path
-            self.persistent_data = {}
+        self.persistent_data = LoadPersistentData(persistent_path, False)
+        self.ResetPersistentState()
+        
+        self.process = multiprocessing.Process(target=pipe_server_process, args=(process_pipe, port, persistent_path))
+        self.process.start()
           
     def __del__(self):
       # ensure persistent values get sent to server process
