@@ -481,6 +481,11 @@ class NmeaBridgeProcess(multiprocessing.Process):
                     self.client.set('ap.mode', mode)
 
             command = float(data[12])
+            xte = float(data[2])
+            xte = min(xte, 0.1) # maximum 1/10th mile
+            if data[3] == 'L':
+                xte = -xte
+            command += 200*xte; # 20 degrees for 1/10th mile
             if abs(self.last_values['ap.heading_command'] - command) > .1:
                 self.client.set('ap.heading_command', command)
 
