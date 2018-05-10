@@ -276,6 +276,21 @@ def SignalKClientFromArgs(argv, watch, f_con=False):
             
     return SignalKClient(on_con, host, port, autoreconnect=True, have_watches=watches)
 
+# ujson makes very ugly results like -0.28200000000000003
+# round all floating point to 8 places here
+def nice_str(value):
+    if type(value) == type([]):
+        s = '['
+        if len(value):
+            s += nice_str(value[0])
+        for v in value[1:]:
+            s += ', ' + nice_str(v)
+        s += ']'
+        return s
+    if type(value) == type(1.0):
+        return '%.8g' % value
+    return str(value)
+
 # this simple test client for an autopilot server
 # connects, enumerates the values, and then requests
 # each value, printing them
@@ -314,7 +329,7 @@ def main():
                     if info:
                         print kjson.dumps({r: result[r]})
                     else:
-                        print r, '=', result[r]['value']
+                        print r, '=', nice_str(result[r]['value'])
                 return
             if info:
                 print kjson.dumps(result)
@@ -325,7 +340,7 @@ def main():
                         first = False
                     else:
                         sys.stdout.write(', ')
-                    sys.stdout.write(r + ' = ' + str(result[r]['value']))
+                    sys.stdout.write(r + ' = ' + nice_str(result[r]['value']))
                 print ''
 
 if __name__ == '__main__':
