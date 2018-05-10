@@ -41,7 +41,7 @@ class SignalKScope(SignalKScopeBase):
         self.plot.init(self.value_list)
         self.watches = {}
 
-        watches = sys.argv[2:]
+        watches = sys.argv[1:]
         for name in sorted(self.value_list):
             if self.value_list[name]['type'] != 'SensorValue':
                 continue
