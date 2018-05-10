@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import os, time, json
+import os, time, kjson
 
 class Value(object):
     def __init__(self, name, initial, **kwargs):
@@ -49,7 +49,7 @@ class JSONValue(Value):
       super(JSONValue, self).__init__(name, initial, **kwargs)
 
     def get_signalk(self):
-        return '{"' + self.name + '": {"value": ' + json.dumps(self.value) + '}}'
+        return '{"' + self.name + '": {"value": ' + kjson.dumps(self.value) + '}}'
 
 
 def round_value(value, fmt):
