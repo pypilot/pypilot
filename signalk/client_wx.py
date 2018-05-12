@@ -49,6 +49,7 @@ class MainFrame(wx.Frame):
         self.controls = {}
         self.sliderrange = {}
         self.value_list = self.client.list_values()
+        self.on_con(self.client)
 
         for name in sorted(self.value_list):
             sizer.Add( wx.StaticText(self.scrolledWindow, wx.ID_ANY, name), 0, wx.ALL, 5 )
@@ -169,9 +170,9 @@ class MainFrame(wx.Frame):
         for name in sorted(self.value_list):
             t = self.value_list[name]['type']
             if t != 'SensorValue':
-                self.client.watch(name)
+                client.watch(name)
             else:
-                self.client.get(name)
+                client.get(name)
         
     def receive_messages(self, event):
         if not self.client:
