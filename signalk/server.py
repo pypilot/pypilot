@@ -177,7 +177,7 @@ class SignalKServer(object):
             value = self.values[name]
             if not value.persistent:
                 continue
-            if value.value != self.persistent_data[name]:
+            if not name in self.persistent_data or value.value != self.persistent_data[name]:
                 self.persistent_data[name] = value.value
                 need_store = True
 
