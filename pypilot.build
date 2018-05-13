@@ -59,6 +59,7 @@ rm -rf dist build
 
 # Build and Install
 
+python setup.py build # stupid script copies files before swigging!
 python setup.py bdist
 tar xvf dist/*tar.gz -C $TMPDIR
 
