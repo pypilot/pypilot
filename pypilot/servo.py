@@ -179,7 +179,7 @@ class Servo(object):
         self.calibration = self.Register(JSONValue, 'calibration', {})
         self.load_calibration()
 
-        self.min_speed = self.Register(RangeProperty, 'min_speed', .5, 0, 1, persistent=True)
+        self.min_speed = self.Register(RangeProperty, 'min_speed', 1, 0, 1, persistent=True)
         self.max_speed = self.Register(RangeProperty, 'max_speed', 1, 0, 1, persistent=True)
 
         self.faults = self.Register(Property, 'faults', 0)
