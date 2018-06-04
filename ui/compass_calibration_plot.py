@@ -285,19 +285,15 @@ class CompassCalibrationPlot():
             glPushMatrix()
             glLineWidth(1)
 
-            down = [0, 0, 1]
-            if self.fusionQPose and self.alignmentQ:
-                q = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
-                down = quaternion.rotvecquat(down, quaternion.conjugate(q))
-                #down =             self.accel
-
-
             glPushMatrix()
 
+            down = [0, 0, 1]
             q = [1, 0, 0, 0]
             if self.fusionQPose and self.alignmentQ:
                 q = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
                 q = quaternion.normalize(q) # correct possible rounding errors
+                down = quaternion.rotvecquat(down, quaternion.conjugate(q))
+
             glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
 
             if self.mag_fit_new_bias:

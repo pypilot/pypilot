@@ -183,6 +183,7 @@ class AgeValue(StringValue):
         super(AgeValue, self).__init__(name, time.time(), **kwargs)
         self.dt = time.time() - self.value
         self.lastupdate_value = -1
+        self.lastage = ''
 
     def reset(self):
         self.set(time.time())
@@ -237,7 +238,7 @@ class BoatIMU(object):
     self.uptime = self.Register(TimeValue, 'uptime')
     self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age', persistent=True)
 
-    self.compass_calibration = self.Register(RoundedValue, 'compass_calibration', [[0, 0, 0, 30, 0], [0, 0, 0, 30], [0, 0, 0, 30, 1, 1]], persistent=True)
+    self.compass_calibration = self.Register(RoundedValue, 'compass_calibration', [[0, 0, 0, 30, 0], [False, False], 0], persistent=True)
 
     self.compass_calibration_sigmapoints = self.Register(RoundedValue, 'compass_calibration_sigmapoints', False)
     self.compass_calibration_locked = self.Register(BooleanProperty, 'compass_calibration_locked', False, persistent=True)
