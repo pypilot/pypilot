@@ -62,12 +62,12 @@
       </div>
       <div class="w3-row">
         <div class="w3-col s6 m6 l6">
-          <button id="port10" class="button font-resizable1 button-resizable">&lt;&lt;</button>
-          <button id="port1" class="button font-resizable1 button-resizable">&lt;</button>
+          <button id="port10" class="button font-resizable1 button-resizable"><span id="port10"></span></button>
+          <button id="port2" class="button font-resizable1 button-resizable"><span id="port2"></button>
         </div>
         <div class="w3-col s6 m6 l6">
-          <button id="star10" class="button font-resizable1 button-resizable" style="float:right">&gt;&gt;</button>
-          <button id="star1" class="button font-resizable1 button-resizable" style="float:right">&gt;</button>
+          <button id="star10" class="button font-resizable1 button-resizable" style="float:right"><span id="star10"></button>
+          <button id="star2" class="button font-resizable1 button-resizable" style="float:right"><span id="star2"></button>
         </div>
       </div>
 
@@ -97,12 +97,14 @@
       <span id="amp_hours"></span>
       <button id="reset_amp_hours" class="button">reset</button>
       <br>Voltage <span id="voltage"></span>
+      <br>Controller temperature <span id="controller_temp"></span> C
       <br>Runtime <span id="runtime"></span>
       <br>Servo: <b><span id="servo_engauged"></span></b>
         <div id="log"></div>
     </div>
     <div style="position:fixed;bottom:-10">
       <br>SignalK Server: <b><span id="connection"></span></b>
+      <br>Servo Flags: <b><span id="servoflags"></span></b>
       <br>Autopilot Errors: <b><span id="aperrors0"></span> <span id="aperrors1"></span></b>
       <br>Web Server Latency: <b><span id="ping-pong"></span> ms</b>
     </div>

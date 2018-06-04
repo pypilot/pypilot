@@ -106,13 +106,10 @@ class MyNamespace(Namespace):
                     continue
 
                 while True:
-                    line = self.client.readline()
-                    if not line:
-                        break
-                    #print 'line', line
                     try:
-                        #data = {'data': json.loads(line.rstrip())}
-                        #print 'data', data
+                        line = self.client.readline()
+                        if not line:
+                            break
                         socketio.emit('signalk', line.rstrip())
                     except:
                         socketio.emit('log', line)
