@@ -25,6 +25,10 @@ cd scripts/debian
 sudo cp -r etc /
 cd ../..
 
+# ensure user has sudo access without pw
+# (needed to run lcdclient, and setting realtime priority)
+# default user is pypilot
+
 # this makes pypilot access point "pypilot"
 sudo systemctl enable pypilot
 sudo systemctl enable pypilot_lcdclient
