@@ -103,6 +103,12 @@ $(document).ready(function() {
         // calibration
         watch('imu.alignmentQ');
         watch('imu.alignmentCounter');
+        watch('imu.compass_calibration_locked');
+        $('#calibration_locked').change(function(event) {
+            check = $('#calibration_locked').prop('checked');
+            signalk_set('imu.compass_calibration_locked', check);
+            block_polling = 2;
+        });
 
         // configuration
         $('#configuration_container').text('')
@@ -283,6 +289,8 @@ $(document).ready(function() {
             $('#roll').text(data['imu.roll']['value']);
         if('imu.alignmentCounter' in data)
             $('.myBar').width((100-data['imu.alignmentCounter']['value'])+'%');
+        if('imu.compass_calibration_locked' in data)
+            $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']['value']);
 
         // configuration
         names = conf_names;

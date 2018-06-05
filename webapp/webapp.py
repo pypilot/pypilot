@@ -111,9 +111,9 @@ class MyNamespace(Namespace):
                         if not line:
                             break
                         socketio.emit('signalk', line.rstrip())
-                    except:
+                    except Exception as e:
                         socketio.emit('log', line)
-                        print 'error: ', line.rstrip()
+                        print 'error: ', e, line.rstrip()
                         break
             else:
                 if self.polls:
