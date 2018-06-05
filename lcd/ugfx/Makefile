@@ -1,12 +1,9 @@
-all: ugfx.py splash
-	python setup.py build
+all: splash
 
-install: ugfx.py ugfx.cpp ugfx_wrap.cxx
-	rm -rf build dist
-	sudo python setup.py install
+install: splash
+	sudo cp splash /usr/local/bin/pypilot_splash
+	strip /usr/local/bin/pypilot_splash
 
 splash: splash.cpp ugfx.cpp
-	g++ -Os -o splash splash.cpp ugfx.cpp -O0 -g -lwiringPi -lpthread
+	g++ -Os -o splash splash.cpp ugfx.cpp -g -lwiringPi -lpthread
 
-ugfx.py ugfx_wrap.cxx: ugfx.i
-	swig -c++ -python ugfx.i
