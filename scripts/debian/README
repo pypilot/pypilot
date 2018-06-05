@@ -1,0 +1,38 @@
+These configuration scripts can run pypilot as a standard service
+
+To install to a debian system:
+
+sudo apt-get install python-gps python-serial libpython-dev python-numpy python-scipy swig python-pil python-flask python-socketio python-pip python-pylirc
+
+First build RTIMULIB2:
+
+git clone ...
+cd RTIMULib2/Linux/python
+sudo python setup.py install
+
+Next ensure wiringpi or wiring orangepi zero installed, eg:
+git clone  https://github.com/xpertsavenue/WiringOP-Zero
+cd WiringOP-Zero
+sudo make install
+
+Now for pypilot:
+git clone https://github.com/pypilot/pypilot
+cd pypilot
+sudo python setup.py install
+
+
+cd scripts/debian
+sudo cp -r etc /
+cd ../..
+
+# this makes pypilot access point "pypilot"
+sudo systemctl enable pypilot
+sudo systemctl enable pypilot_lcdclient
+sudo systemctl enable pypilot_webapp
+
+sudo systemctl enable hostapd
+sudo systemctl enable dnsmasq
+
+
+# optional splash screen
+cp lcd/ugfx/splash /usr/local/bin
