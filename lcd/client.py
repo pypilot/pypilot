@@ -62,17 +62,21 @@ class LCDMenu():
         return self
 
     def display(self):
-        self.lcd.fittext(rectangle(0, 0, 1, .25), self.name)
-
-        firstitem = .25
+        fit = self.lcd.fittext(rectangle(0, 0, 1, .25), self.name)
+        firstitem = fit[1]
         y = firstitem
         for item in self.items:
             size = self.lcd.fittext(rectangle(0, y, 1, .15), item[0])[0] + .25
             if len(item) > 2:
-                sliderarea = rectangle(size, y+.05, (1-size), .07)
-                self.lcd.rectangle(sliderarea, .015)
-                sliderarea.width *= item[2]()
-                self.lcd.rectangle(sliderarea)
+                val = item[2]()
+                if type(val) == type(False):
+                    if val:
+                        self.lcd.invertrectangle(rectangle(.8, y+.07, .1, .07))
+                else:
+                    sliderarea = rectangle(size, y+.05, (1-size), .07)
+                    self.lcd.rectangle(sliderarea, .015)
+                    sliderarea.width *= val
+                    self.lcd.rectangle(sliderarea)
                 self.lcd.client.get(item[3])
             y += .15
 
@@ -293,6 +297,11 @@ class LCDClient():
             if value:
                 return name, thunk, lambda : (self.last_val(signalk_name)-min) / (max - min), signalk_name
             return name, thunk
+        def value_check(name, signalk_name):
+            def thunk():
+                self.client.set(signalk_name, not self.last_val(signalk_name))
+                return self.display_menu
+            return name, thunk, lambda : self.last_val(signalk_name), signalk_name
         def config_edit(name, desc, config_name, min, max, step):
             def thunk():
                 self.range_edit=RangeEdit(name, desc, config_name,
@@ -321,6 +330,7 @@ class LCDClient():
             self.menu = LCDMenu(self, _('Calibrate'),
                                 [(_('level'), level),
                                  value_edit(_('heading'), getheading, 'imu.heading_offset'),
+                                 value_check(_('lock'), 'imu.compass_calibration_locked'),
                                  (_('info'), lambda : self.display_calibrate_info)],
                                 self.menu)
             self.menu.display_hook = self.display_calibrate
@@ -503,7 +513,7 @@ class LCDClient():
         return float(size[0])/self.surface.width, float(size[1])/self.surface.height
 
     def line(self, x1, y1, x2, y2):
-        self.surface.line(x1, y1, x2, y2, black)
+        self.surface.line(x1, y1, x2, y2, white)
 
     def convbox(self, x1, y1, x2, y2):
         w, h = self.surface.width - 1, self.surface.height - 1
@@ -530,7 +540,8 @@ class LCDClient():
         
         watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
                      'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
-                     'imu.compass_calibration', 'imu.compass_calibration_sigmapoints', 'imu.alignmentQ']
+                     'imu.compass_calibration', 'imu.compass_calibration_sigmapoints',
+                     'imu.compass_calibration_locked', 'imu.alignmentQ']
         poll_list = ['ap.heading']
         self.last_msg = {}
         for name in ['gps.source', 'wind.source']:
@@ -740,7 +751,7 @@ class LCDClient():
     def display_calibrate(self):
         counter = self.last_val('imu.alignmentCounter')
         if counter:
-            r = rectangle(0, 0, 1, .25)
+            r = rectangle(0, 0, 1, .15)
             r.height = .2
             self.fittext(r, ' %d%%' % (100-counter), False, black)
             r.width = 1-float(counter)/100
@@ -1127,7 +1138,6 @@ class LCDClient():
                 break
 
             name, data = result
-            #print name, ' = ', data, 
 
             if 'value' in data:
                 self.last_msg[name] = data['value']
@@ -1151,9 +1161,10 @@ def main():
 
     if not screen:
         if use_glut:
-            screen = glut.screen((120, 210))
+            #screen = glut.screen((120, 210))
             #screen = glut.screen((64, 128))
-            #screen = glut.screen((48, 84))
+            screen = glut.screen((48, 84))
+            #screen = glut.screen((96, 168))
         else:
             screen = ugfx.screen("/dev/fb0")
             if screen.width == 416 and screen.height == 656:

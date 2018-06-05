@@ -12,7 +12,7 @@ from OpenGL.GLU import *
 from OpenGL.GL import *
 import numpy
 
-import ugfx
+from ugfx import ugfx
 
 class screen(ugfx.surface):
     def __init__(self, size):
@@ -21,7 +21,7 @@ class screen(ugfx.surface):
 
         glutInit(sys.argv)
         glutInitWindowPosition(250, 0)
-        glutInitWindowSize(800*size[0]/size[1], 800)
+        glutInitWindowSize(640*size[0]/size[1], 640)
         glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB)
         glutCreateWindow ("glutscreen")
 
