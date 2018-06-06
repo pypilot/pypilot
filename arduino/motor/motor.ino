@@ -12,18 +12,19 @@
 
 /*
 This program is meant to interface with pwm based
-motor controller either brushless or brushed, or
-a regular RC servo
+motor controller either brushless or brushed, or a regular RC servo
+
+You may need to modify the source code to support different hardware
 
 adc pin0 is a resistor divider to measure voltage
              allowing up to 20 volts (10k and 560 ohm, 1.1 volt reference)
-             
-adc pin1 goes to .1 ohm shunt to measure current
+adc pin1 goes to .01/.05 ohm shunt to measure current
 adc pin2 goes to 100k resistor to 5v and 10k NTC thermistor to gnd ctrl temp
 adc pin3 goes to 100k resistor to 5v and 10k NTC thermistor to gnd motor temp
 
-digital pin9 pwm output on arduino
+digital pin9 pwm output standard ESC (1-2 ms pulse every 20 ms)
 digital pin2 esc programming input/output (with arduinousblinker script)
+digital pin4 specifies .01 ohm resistor if wired to ground, otherwise .05 ohm
 
 optional:
 digital pin7 forward fault for optional switch to stop forward travel
@@ -46,7 +47,7 @@ the command can be recognized.
 
 */
 
-//#define HIGH_CURRENT
+//#define HIGH_CURRENT   // high current uses 300uohm resistor and 5x amplifier
 
 
 ////// CRC
@@ -118,10 +119,11 @@ Servo myservo;  // create servo object to control a servo
 
 #define fwd_fault_pin 7 // use pin 7 for optional fault
 #define rev_fault_pin 8 // use pin 7 for optional fault
-#define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
-uint8_t shunt_resistance = 1;
 // if switches pull this pin low, the motor is disengauged
 // and will be noticed by the control program
+
+#define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
+uint8_t shunt_resistance = 1;
 
 #include <stdarg.h>
 void debug(char *fmt, ... ){
