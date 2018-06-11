@@ -439,6 +439,10 @@ class Servo(object):
         print 'servo lost connection'
         self.controller.set('none')
         self.rudder.update(False)
+
+        # for unknown reasons setting timeout to 0 here (already 0)
+        # makes device.close() take only .001 seconds instead of .02 seconds
+        self.device.timeout=0
         self.device.close()
         self.driver = False
 
@@ -456,7 +460,7 @@ class Servo(object):
                     device.timeout=0 #nonblocking
                     fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
                 except Exception as e:
-                    print 'failed to open servo:', e
+                    print 'failed to open servo on:', device_path, e
                     return
                 self.driver = ArduinoServo(device.fileno(), device_path[1])
                 uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value)/ self.current.factor.value 
@@ -466,10 +470,10 @@ class Servo(object):
 
         if not self.driver:
             return
+
         self.servo_calibration.poll()
         result = self.driver.poll()
-        #print 'servo poll', result
-        
+
         if result == -1:
             print 'servo lost'
             self.close_driver()
@@ -486,6 +490,7 @@ class Servo(object):
             self.lastpolltime = time.time()
 
             if self.controller.value == 'none':
+                device_path = [self.device.port, self.device.baudrate]
                 print 'arduino servo found on', device_path
                 serialprobe.success('servo', device_path)
                 self.controller.set('arduino')
