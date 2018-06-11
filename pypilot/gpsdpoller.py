@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import gps, multiprocessing, time, socket
+import multiprocessing, time, socket
 from signalk.pipeserver import NonBlockingPipe
 import select
 
@@ -23,6 +23,7 @@ class GpsProcess(multiprocessing.Process):
     def connect(self):
         while True: # connection to gpsd loop
             try:
+                import gps
                 self.gpsd = gps.gps(mode=gps.WATCH_ENABLE) #starting the stream of info
                 self.gpsd.next() # flush initial message
                 print 'connected to gpsd'
@@ -89,6 +90,7 @@ class GpsdPoller(object):
         self.nmea.handle_messages({'gps': val}, 'gpsd')
 
 if __name__ == '__main__':
+    import gps
     gpsd = gps.gps(mode=gps.WATCH_ENABLE)
     while True:
         print gpsd.next()
