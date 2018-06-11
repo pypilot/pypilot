@@ -1,4 +1,4 @@
-/* Copyright (C) 2018 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -156,6 +156,7 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
             rudder_range = eeprom.get_rudder_range();
             rudder_offset = eeprom.get_rudder_offset();
             rudder_scale = eeprom.get_rudder_scale();
+            rudder_nonlinearity = eeprom.get_rudder_nonlinearity();
             max_slew_speed = eeprom.get_max_slew_speed();
             max_slew_slow = eeprom.get_max_slew_slow();
             current_factor = eeprom.get_current_factor();
@@ -258,7 +259,7 @@ bool ArduinoServo::fault()
     return flags & OVERCURRENT;
 }
 
-void ArduinoServo::params(double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_motor_speed, double _max_motor_speed, double _gain)
+void ArduinoServo::params(double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _rudder_nonlinearity,, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_motor_speed, double _max_motor_speed, double _gain)
 {
     max_current = fmin(40, fmax(0, _max_current));
     eeprom.set_max_current(max_current);
@@ -277,6 +278,9 @@ void ArduinoServo::params(double _max_current, double _max_controller_temp, doub
 
     rudder_scale = fmin(400, fmax(-400, _rudder_scale));
     eeprom.set_rudder_scale(rudder_scale);
+
+    rudder_nonlinearity = fmin(1, fmax(-1, _rudder_nonlinearity));
+    eeprom.set_rudder_nonlinearity(rudder_nonlinearity);
 
     max_slew_speed = fmin(100, fmax(0, _max_slew_speed));
     eeprom.set_max_slew_speed(max_slew_speed);
@@ -320,6 +324,14 @@ void ArduinoServo::send_value(uint8_t command, uint16_t value)
     write(fd, code, 4);
 }
 
+static double quad_sub(double a, double b, double c, double m)
+{
+    double dis = b*b - 4*a*c;
+    if(dis < 0)
+        return -1; // invalid in this case
+    return (-b + m*sqrt(dis)) / (2*a);
+}
+
 void ArduinoServo::send_params()
 {
     // send parameters occasionally, but only after parameters have been
@@ -337,15 +349,18 @@ void ArduinoServo::send_params()
             break;
         case 12:
         {
-            double n = rudder_range / fabs(rudder_scale);
-            double o = 0.5 - rudder_offset;
-
-            double min_rudder = fmin(1, fmax(0, o - n));
-            double max_rudder = fmin(1, fmax(0, o + n));
+            //  nonlinearity * raw**2 + scale * raw + offset - rudder_range
+            double min = 1, max = 0;
+            for(int i=0; i<4; i++) {
+                double x = quad_sub(rudder_nonlinearity, rudder_scale, rudder_offset + (i < 2 ? 1 : -1) * rudder_range, i%2 ? 1 : -1);
+                if(x > 0 && x < 1)
+                    min = fmin(min, x), max = fmax(max, x);
+            }
+            printf("min/max %f %f\n", min, max);
 
             send_value(RUDDER_RANGE_CODE,
-                       ((int)round(min_rudder*255) & 0xff) << 8 |
-                       ((int)round(max_rudder*255) & 0xff));
+                       ((int)round((min+.5)*255) & 0xff) << 8 |
+                       ((int)round((max+.5)*255) & 0xff));
         } break;
         case 18:
             send_value(MAX_SLEW_CODE,

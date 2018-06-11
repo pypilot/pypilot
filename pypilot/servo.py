@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 #
+#   Copyright (C) 2019 Sean D'Epagnier
+#
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
@@ -203,10 +205,11 @@ class Servo(object):
         self.rudder = self.Register(SensorValue, 'rudder', timestamp)
         self.rudder.last = 0
         self.rudder.last_time = time.time()
-        self.rudder.offset = self.Register(Value, 'rudder.offset', 0, -30, 30, persistent=True)
-        self.rudder.scale = self.Register(Value, 'rudder.scale',  60, -180, 180, persistent=True)
-        self.rudder.nonlinearity = self.Register(Value, 'rudder.nonlinearity',  0, -100, 100, persistent=True)
+        self.rudder.offset = self.Register(Value, 'rudder.offset', 0, persistent=True)
+        self.rudder.scale = self.Register(Value, 'rudder.scale', 60, persistent=True)
+        self.rudder.nonlinearity = self.Register(Value, 'rudder.nonlinearity',  0, persistent=True)
         self.rudder.calibration = self.Register(EnumProperty, 'rudder.calibration', 'idle', ['idle', 'centered', 'starboard range', 'port range'])
+        self.rudder.calibration.raw = {}
         self.rudder.range = self.Register(RangeProperty, 'rudder.range',  60, 10, 100, persistent=True)
         self.engaged = self.Register(BooleanValue, 'engaged', False)
         self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 60, persistent=True)
@@ -477,8 +480,8 @@ class Servo(object):
 
         rudder_range = self.rudder.range.value
         offset = self.rudder.offset
-        if self.rudder.calibration.raw['port'] != 'unknown' and \
-           self.rudder.calibration.raw['starboard'] != 'unknown':
+        if 'port' in self.rudder.calibration.raw and \
+           'starboard' in self.rudder.calibration.raw:
             # rudder = (nonlinearity * raw + scale) * raw + offset
 
             # rudder_range = nonlinearity * rudder_raw[0]**2 + scale * rudder_raw[0] + offset
@@ -490,6 +493,7 @@ class Servo(object):
             scale = (rudder_range*raw[1]**2 - offset*raw[1]**2/raw[0]**2 + offset + rudder_range) / (raw[0]*raw[1]**2 - raw[1])
             nonlinearity = (rudder_range - offset - scale * raw[0]) / raw[0]**2
 
+            print 'update', scale, nonlinearity
             self.rudder.scale.set(scale)
             self.rudder.nonlinearity.set(scale)
         else:
@@ -502,6 +506,7 @@ class Servo(object):
                 rudder_range = -rudder_range
 
             scale = (rudder_range - offset) / raw - nonlinearity * raw
+            print 'range', scale, nonlinearity
             self.rudder.scale.set(scale)
                         
     def reset(self):
@@ -524,7 +529,7 @@ class Servo(object):
         self.driver = False
 
     def send_driver_params(self, _max_current):
-        self.driver.params(_max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.rudder.range.value, self.rudder.offset.value, self.rudder.scale.value, self.max_slew_speed.value, self.max_slew_slow.value, self.current.factor.value, self.current.offset.value, self.voltage.factor.value, self.voltage.offset.value, self.min_speed.value, self.max_speed.value, self.gain.value)
+        self.driver.params(_max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.rudder.range.value, self.rudder.offset.value, self.rudder.scale.value, self.rudder.nonlinearity.value, self.max_slew_speed.value, self.max_slew_slow.value, self.current.factor.value, self.current.offset.value, self.voltage.factor.value, self.voltage.offset.value, self.min_speed.value, self.max_speed.value, self.gain.value)
 
     def poll(self):
         if not self.driver:
@@ -552,13 +557,14 @@ class Servo(object):
 
         if self.rudder.calibration.value != 'idle':
             if self.rudder.calibration.value == 'centered':
-                self.rudder.offset.set(self.rudder.offset.value + self.rudder.value)
+                print 'centered', self.rudder.offset.value, self.rudder.value
+                self.rudder.offset.set(self.rudder.offset.value - self.rudder.value)
             elif self.rudder.calibration.value == 'port range':
                 self.rudder_range_calibration('port')
             else:
                 self.rudder_range_calibration('starboard')
                 
-                self.rudder.calibration.set('idle')
+            self.rudder.calibration.set('idle')
                 
         result = self.driver.poll()
 
@@ -603,9 +609,9 @@ class Servo(object):
             else:
                 # rudder = (nonlinearity * raw + scale) * raw + offset
                 raw = self.driver.rudder - 0.5
-                self.rudder.set((self.rudder.nonlinearity * raw +
-                                self.rudder.scale.value) * raw +
-                                 self.rudder.offset.value))
+                self.rudder.set((self.rudder.nonlinearity.value * raw +
+                                 self.rudder.scale.value) * raw +
+                                self.rudder.offset.value)
 
                 self.position.set(self.rudder.value)
                 t = time.time()
@@ -660,6 +666,7 @@ class Servo(object):
             self.max_slew_speed.set(self.driver.max_slew_speed)
             self.max_slew_slow.set(self.driver.max_slew_slow)
             self.rudder.scale.set(self.driver.rudder_scale)
+            self.rudder.nonlinearity.set(self.driver.rudder_nonlinearity)
             self.rudder.offset.set(self.driver.rudder_offset)
             self.rudder.range.set(self.driver.rudder_range)
             self.current.factor.set(self.driver.current_factor)
