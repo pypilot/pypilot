@@ -456,13 +456,13 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.client.set('servo.gain', event.GetValue())
         
     def onRudderCentered( self, event ):
-        if self.rudder.calibration.set('centered')
+        self.rudder.calibration.set('centered')
 
-    def self.onRudderStarboardRange( self, event ):
-        if self.rudder.calibration.set('starboard range')
+    def onRudderStarboardRange( self, event ):
+        self.rudder.calibration.set('starboard range')
 
-    def self.onRudderPortRange( self, event ):
-        if self.rudder.calibration.set('port range')
+    def onRudderPortRange( self, event ):
+        self.rudder.calibration.set('port range')
 
 def main():
     glutInit(sys.argv)

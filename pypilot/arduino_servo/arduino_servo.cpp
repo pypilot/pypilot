@@ -166,6 +166,9 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
             min_motor_speed = eeprom.get_min_motor_speed();
             max_motor_speed = eeprom.get_max_motor_speed();
             gain = eeprom.get_gain();
+
+            // validate ranges
+            params(max_current, max_controller_temp, max_motor_temp, rudder_range, rudder_offset, rudder_scale, rudder_nonlinearity, max_slew_speed, max_slew_slow, current_factor, current_offset, voltage_factor, voltage_offset, min_motor_speed, max_motor_speed, gain);
             return EEPROM;
         }
     }
@@ -306,7 +309,12 @@ void ArduinoServo::params(double _max_current, double _max_controller_temp, doub
     max_motor_speed = fmin(1, fmax(0, _max_motor_speed));
     eeprom.set_max_motor_speed(max_motor_speed);
 
-    gain = fmin(10, fmax(.1, _gain));
+    gain = fmin(10, fmax(-10, _gain));
+    if(gain < 0)
+        gain = fmin(gain, -.5);
+    else
+        gain = fmax(gain, .5);
+            
     eeprom.set_gain(gain);
 
     params_set = 1;
@@ -361,6 +369,9 @@ void ArduinoServo::send_params()
                 if(x > -.5 && x < .5)
                     min = fmin(min, x), max = fmax(max, x);
             }
+
+            if(min > max) // invalid
+                min = -.5, max = .5; // allow movement, maybe not calibrated?
             //printf("min/max %f %f\n", min, max);
 
             send_value(RUDDER_RANGE_CODE,
