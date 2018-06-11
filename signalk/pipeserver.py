@@ -196,7 +196,7 @@ class SignalKPipeServer(object):
         
     def Register(self, value):
         if value.persistent and value.name in self.persistent_data:
-            value.value = self.persistent_data[value.name]
+            value.set(self.persistent_data[value.name])
       
         self.pipe.send({'_register': value})
         self.values[value.name] = value
