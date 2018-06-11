@@ -520,10 +520,15 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         try:
             self.poller.unregister(sock.socket)
+        except Exception as e:
+            print 'failed to unregister socket', e
+
+        try:
             fd = sock.socket.fileno()
             del self.fd_to_socket[fd]
-        except:
-            pass # Bad file descriptor, can't unregister
+        except Exception as e:
+            print 'failed to remove fd', e
+
         sock.close()
 
     def client_message(self, name, value):
