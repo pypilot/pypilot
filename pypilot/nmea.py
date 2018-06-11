@@ -62,7 +62,7 @@ def parse_nmea_gps(line):
     timestamp = float(data[0])
     speed = float(data[6])
     heading = float(data[7])
-                
+
     return 'gps', {'timestamp': timestamp, 'track': heading, 'speed': speed}
 
 
@@ -322,8 +322,8 @@ class Nmea(object):
             value = self.values[name]
             if value['source'].value == 'none':
                 continue
-            if t4 - value['lastupdate'] > 5:
-                print 'nmea timeout for', name, 'source', value['source'].value, time.time()
+            if t4 - value['lastupdate'] > 8:
+                print 'nmea timeout for', name, 'source', value['source'].value, time.time(), t4 - value['lastupdate']
                 value['source'].set('none')
 
         # send nmea messages to sockets
@@ -499,7 +499,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         sock = NMEASocket(connection)
         self.sockets.append(sock)
-        #print 'new connection: ', address
+        #print 'new nmea connection: ', address
         self.addresses[sock] = address
         fd = sock.socket.fileno()
         self.fd_to_socket[fd] = sock
@@ -523,7 +523,6 @@ class NmeaBridgeProcess(multiprocessing.Process):
             fd = sock.socket.fileno()
             del self.fd_to_socket[fd]
         except:
-            print 'bad file descriptor', fd
             pass # Bad file descriptor, can't unregister
         sock.close()
 
