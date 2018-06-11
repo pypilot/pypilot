@@ -360,16 +360,19 @@ class Nmea(object):
             self.send_nmea('APHDM,%.3f,M' % self.server.values['imu.heading_lowpass'].value)
             self.last_imu_time = time.time()
 
-        # limit to 5hz output of servo rudder
-        dt = time.time() - self.last_rudder_time
-        if (dt > .2 or dt < 0) and 'servo.rudder' in self.server.values:
-            # if the servo has rudder, output nmea rudder angle
+        # update rudder from servo
+        if 'servo.rudder' in self.server.values:
             value = self.server.values['servo.rudder'].value
             if value:
-                if self.process.sockets:
-                    self.send_nmea('APRSA,%.3f,A,,' % value)
                 self.handle_messages({'rudder': {'angle': value}}, 'servo')
-
+            
+        # limit to 5hz output of servo rudder
+        dt = time.time() - self.last_rudder_time
+        if self.process.sockets and (dt > .2 or dt < 0) and self.values['rudder']['source'].value == 'servo':
+            # if the servo has rudder, output nmea rudder angle
+            value = self.values['rudder']['angle'].value
+            if value:
+                self.send_nmea('APRSA,%.3f,A,,' % value)
             self.last_rudder_time = time.time()
             
         t5 = time.time()
