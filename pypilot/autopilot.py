@@ -139,9 +139,8 @@ class AutopilotBase(object):
     try:
         self.watchdog_device = open(device, 'w')
     except:
-        print 'failed to open special file', device, 'for writing:'
-        print 'autopilot cannot strobe the watchdog'
-
+        print 'warning: failed to open special file', device, 'for writing'
+        print '         cannot stroke the watchdog'
 
     if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
       print 'warning, failed to make autopilot process realtime'
@@ -149,7 +148,7 @@ class AutopilotBase(object):
     self.starttime = time.time()
     self.times = 4*[0]
 
-    self.childpids = [self.boatimu.imu_process.pid, self.boatimu.compass_auto_cal.process.pid,
+    self.childpids = [self.boatimu.imu_process.pid, self.boatimu.auto_cal.process.pid,
                  self.server.process.pid, self.nmea.process.pid, self.nmea.gpsdpoller.process.pid]
     signal.signal(signal.SIGCHLD, cleanup)
     import atexit

@@ -17,7 +17,7 @@ import time, math, multiprocessing, select
 from signalk.pipeserver import NonBlockingPipe
 
 import autopilot
-from calibration_fit import MagnetometerAutomaticCalibration
+from calibration_fit import IMUAutomaticCalibration
 import vector
 import quaternion
 from signalk.server import SignalKServer
@@ -29,7 +29,7 @@ try:
 except ImportError:
   print "RTIMU library not detected, please install it"
 
-def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
+def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias):
     #print 'imu on', os.getpid()
     if os.system('sudo chrt -pf 2 %d 2>&1 > /dev/null' % os.getpid()):
       print 'warning, failed to make imu process realtime'
@@ -48,6 +48,14 @@ def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
     rate = 100
     s.MPU925xGyroAccelSampleRate = rate
     s.MPU925xCompassSampleRate = rate
+
+    s.AccelCalValid = True
+    if accel_cal:
+      s.AccelCalMin = tuple(map(lambda x : x - accel_cal[3], accel_cal[:3]))
+      s.AccelCalMax = tuple(map(lambda x : x + accel_cal[3], accel_cal[:3]))
+    else:
+      s.AccelCalMin = (-1, -1, -1)
+      s.AccelCalMax = (1, 1, 1)
 
     s.GyroBiasValid = True
     if gyrobias:
@@ -100,10 +108,19 @@ def imu_process(pipe, cal_pipe, compass_cal, gyrobias):
           break # reinitialize imu
 
         if cal_poller.poll(0):
-          new_cal = cal_pipe.recv()
+          r = cal_pipe.recv()
+          
           #print '[imu process] new cal', new_cal
-          s.CompassCalEllipsoidValid = True
-          s.CompassCalEllipsoidOffset = new_cal
+          if r[0] == 'accel':
+            s.AccelCalValid = True
+            b = new_cal[:3]
+            r = new_cal[3]
+            s.AccelCalMin = b[0] - r, b[1] - r, b[2] - r
+            s.AccelCalMax = b[0] + r, b[1] + r, b[2] + r
+            print 'Accel Cal Min', s.AccelCalMin, s.AccelCalMax
+          elif r[0] == 'compass':
+            s.CompassCalEllipsoidValid = True
+            s.CompassCalEllipsoidOffset = r[1][0][:3]
           #rtimu.resetFusion()
         
         dt = time.time() - t0
@@ -237,12 +254,15 @@ class BoatIMU(object):
     self.last_alignmentCounter = False
 
     self.uptime = self.Register(TimeValue, 'uptime')
-    self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age', persistent=True)
+    
+    self.accel_calibration = self.Register(RoundedValue, 'accel_calibration', [0, 0, 0, 1], persistent=True)
+    self.accel_calibration_age = self.Register(AgeValue, 'accel_calibration_age', persistent=True)
 
     self.compass_calibration = self.Register(RoundedValue, 'compass_calibration', [[0, 0, 0, 30, 0], [False, False], 0], persistent=True)
-
+    self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age', persistent=True)
     self.compass_calibration_sigmapoints = self.Register(RoundedValue, 'compass_calibration_sigmapoints', False)
-    self.compass_calibration_locked = self.Register(BooleanProperty, 'compass_calibration_locked', False, persistent=True)
+
+    self.calibration_locked = self.Register(BooleanProperty, 'calibration_locked', False, persistent=True)
     
     self.imu_pipe, imu_pipe = NonBlockingPipe('imu_pipe')
     imu_cal_pipe = NonBlockingPipe('imu_cal_pipe')
@@ -250,7 +270,7 @@ class BoatIMU(object):
     self.poller = select.poll()
     self.poller.register(self.imu_pipe, select.POLLIN)
 
-    self.compass_auto_cal = MagnetometerAutomaticCalibration(imu_cal_pipe[1], self.compass_calibration.value[0])
+    self.auto_cal = IMUAutomaticCalibration(imu_cal_pipe[1], self.accel_calibration.value, self.compass_calibration.value[0])
 
     self.lastqpose = False
     self.FirstTimeStamp = False
@@ -275,11 +295,11 @@ class BoatIMU(object):
     # quaternion needs to report many more decimal places than other sensors
     sensornames += ['fusionQPose']
     self.SensorValues['fusionQPose'] = self.Register(SensorValue, 'fusionQPose', timestamp, fmt='%.7f')
-      
+    
     sensornames += ['gyrobias']
     self.SensorValues['gyrobias'] = self.Register(SensorValue, 'gyrobias', timestamp, persistent=True)
 
-    self.imu_process = multiprocessing.Process(target=imu_process, args=(imu_pipe,imu_cal_pipe[0], self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
+    self.imu_process = multiprocessing.Process(target=imu_process, args=(imu_pipe,imu_cal_pipe[0], self.accel_calibration.value, self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
     self.imu_process.start()
 
     self.last_imuread = time.time()
@@ -300,7 +320,7 @@ class BoatIMU(object):
     off = self.heading_off.value - heading_offset
     o = quaternion.angvec2quat(off*math.pi/180, [0, 0, 1])
     self.alignmentQ.update(quaternion.normalize(quaternion.multiply(q, o)))
-    self.compass_auto_cal.SetNorm(quaternion.rotvecquat([0, 0, 1], self.alignmentQ.value))
+    self.auto_cal.SetNorm(quaternion.rotvecquat([0, 0, 1], self.alignmentQ.value))
 
   def IMURead(self):    
     data = False
@@ -375,9 +395,10 @@ class BoatIMU(object):
     for name in self.SensorValues:
       self.SensorValues[name].set(data[name])
 
-    if not self.compass_calibration_locked.value:
+    if not self.calibration_locked.value:
       down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(origfusionQPose))
-      self.compass_auto_cal.AddPoint(list(data['compass']) + down)
+      #print 'd', down, list(data['accel']), vector.norm(list(data['accel']))
+      self.auto_cal.AddPoint(list(data['compass']) + down + list(data['accel']))
 
     self.uptime.update()
 
@@ -405,16 +426,22 @@ class BoatIMU(object):
       self.update_alignment(self.alignmentQ.value)
       self.last_heading_off = self.heading_off.value
 
-    result = self.compass_auto_cal.UpdatedCalibration()
+    result = self.auto_cal.UpdatedCalibration()
     
-    if result and not self.compass_calibration_locked.value:
-      #print '[boatimu] cal result', result[0]
-      self.compass_calibration_sigmapoints.set(result[1])
+    if result and not self.calibration_locked.value:
+      if result[0] == 'accel':
+        #print '[boatimu] cal result', result[0]
+        if result[1]:
+          self.accel_calibration_age.reset()
+          self.accel_calibration.set(result[1])
+      elif result[0] == 'compass':
+        #print '[boatimu] cal result', result[0]
+        self.compass_calibration_sigmapoints.set(result[2])
+        if result[1]:
+          self.compass_calibration_age.reset()
+          self.compass_calibration.set(result[1])
 
-      if result[0]:
-        self.compass_calibration_age.reset()
-        self.compass_calibration.set(result[0])
-
+    self.accel_calibration_age.update()
     self.compass_calibration_age.update()
     return data
 
@@ -448,7 +475,7 @@ class BoatIMUServer():
     self.server = SignalKPipeServer()
     self.boatimu = BoatIMU(self.server)
 
-    self.childpids = [self.boatimu.imu_process.pid, self.boatimu.compass_auto_cal.process.pid,
+    self.childpids = [self.boatimu.imu_process.pid, self.boatimu.auto_cal.process.pid,
                       self.server.process.pid]
     signal.signal(signal.SIGCHLD, cleanup)
     import atexit

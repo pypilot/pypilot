@@ -23,7 +23,7 @@ def debug(*args):
         sys.stdout.write(' ')
     sys.stdout.write('\n')
 
-calibration_fit_period = 60  # run every 60 seconds
+calibration_fit_period = 20  # run every 60 seconds
 
 def FitLeastSq(beta0, f, zpoints, dimensions=1):
     try:
@@ -42,15 +42,15 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
         print 'failed to load scientific library, cannot perform calibration update!'
         return False
 
-#    try:
-    if True:
+    try:
+#    if True:
         Model = scipy.odr.Model(f, implicit=1)
         Data = scipy.odr.RealData(zpoints, dimensions)
         Odr = scipy.odr.ODR(Data, Model, beta0, maxit = 1000)
         output = Odr.run()
         return list(output.beta)
-#    except:
-#        print 'exception running odr fit!'
+    except:
+        print 'exception running odr fit!'
         return False
 
 def ComputeDeviation(points, fit):
@@ -129,9 +129,40 @@ def LinearFit(points):
     line = [line_fit, line_dev**.5, max_line_dev**.5]
     plane = [plane_fit, plane_dev**.5, max_plane_dev**.5]
     return line, plane
-    
 
-def FitPoints(points, current, norm):
+def FitPointsAccel(points):
+    if len(points) < 5:
+        return False
+
+    # ensure current and norm are float
+    #current = map(float, current)
+    print 'fit points accel'
+
+    zpoints = [[], [], []]
+    for i in range(3):
+        zpoints[i] = map(lambda x : x[i+6], points)
+        
+    # determine if we have 0D, 1D, 2D, or 3D set of points
+    point_fit, point_dev, point_max_dev = PointFit(points)
+    if point_max_dev < 1:
+        debug('insufficient data for accel fit', point_dev, point_max_dev, '< 9')
+        return False
+
+    def f_sphere3(beta, x):
+        bias = beta[:3]
+        b = numpy.matrix(map(lambda a, b : a - b, x[:3], bias))
+        m = list(numpy.array(b.transpose()))
+        r0 = map(lambda y : beta[3] - vector.norm(y), m)
+        return r0
+
+    sphere3d_fit = FitLeastSq([0, 0, 0, 1], f_sphere3, zpoints)
+    if not sphere3d_fit or sphere3d_fit[3] < 0:
+        print 'FitLeastSq sphere failed!!!! ', len(points)
+        return False
+    debug('sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
+    return sphere3d_fit
+
+def FitPointsCompass(points, current, norm):
     if len(points) < 5:
         return False
 
@@ -311,17 +342,19 @@ def avg(fac, v0, v1):
     return map(lambda a, b : (1-fac)*a + fac*b, v0, v1)
 
 class SigmaPoint(object):
-    def __init__(self, compass, down):
+    def __init__(self, compass, down, accel):
         self.compass = compass
         self.down = down
+        self.accel = accel
         self.count = 1
         self.time = time.time()
 
-    def add_measurement(self, compass, down):
+    def add_measurement(self, compass, down, accel):
         self.count += 1
         fac = max(1/self.count, .01)
         self.compass = avg(fac, self.compass, compass)
         self.down = avg(fac, self.down, down)
+        self.accel = avg(fac, self.accel, accel)
         self.time = time.time()
 
 class SigmaPoints(object):
@@ -333,9 +366,9 @@ class SigmaPoints(object):
         self.sigma_points = []
         self.lastpoint = False
 
-    def AddPoint(self, compass, down):
+    def AddPoint(self, compass, down, accel):
         if not self.lastpoint:
-            self.lastpoint = SigmaPoint(compass, down)
+            self.lastpoint = SigmaPoint(compass, down, accel)
             return
 
         if vector.dist2(self.lastpoint.compass, compass) < SigmaPoints.sigma:
@@ -343,6 +376,7 @@ class SigmaPoints(object):
             for i in range(3):
                 self.lastpoint.compass[i] = fac*compass[i] + (1-fac)*self.lastpoint.compass[i]
                 self.lastpoint.down[i] += down[i]
+                self.lastpoint.accel[i] += accel[i]
             self.lastpoint.count += 1
             return
 
@@ -350,15 +384,16 @@ class SigmaPoints(object):
             self.lastpoint = False
             return
 
-        compass, down = self.lastpoint.compass, self.lastpoint.down
+        compass, down, accel = self.lastpoint.compass, self.lastpoint.down, self.lastpoint.accel
         for i in range(3):
             down[i] /= self.lastpoint.count
+            accel[i] /= self.lastpoint.count
         self.lastpoint = False
 
         ind = 0
         for point in self.sigma_points:
             if vector.dist2(point.compass, compass) < SigmaPoints.sigma:
-                point.add_measurement(compass, down)
+                point.add_measurement(compass, down, accel)
                 if ind > 0:
                     # put at front of list to speed up future tests
                     self.sigma_points = self.sigma_points[:ind-1] + [point] + \
@@ -367,7 +402,7 @@ class SigmaPoints(object):
             ind += 1
 
         index = len(self.sigma_points)
-        p = SigmaPoint(compass, down)
+        p = SigmaPoint(compass, down, accel)
         if index == SigmaPoints.max_sigma_points:
             # replace point that is closest to other points
             minweighti = 0
@@ -429,7 +464,7 @@ def ComputeCoverage(sigma_points, bias, norm):
         return 360
     return max_diff    
 
-def CalibrationProcess(points, norm_pipe, fit_output, current):
+def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass_calibration):
     import os
     if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
       print 'warning, failed to make calibration process idle, trying renice'
@@ -440,16 +475,12 @@ def CalibrationProcess(points, norm_pipe, fit_output, current):
     norm = [0, 0, 1]
 
     while True:
-        # each iteration remove oldest point if we have more than 12
-        #if len(cal.sigma_points) > 1:
-         #   cal.RemoveOldest()
-        
         t = time.time()
         addedpoint = False
         while time.time() - t < calibration_fit_period:
             p = points.recv(1)
             if p:
-                cal.AddPoint(p[:3], p[3:6])
+                cal.AddPoint(p[:3], p[3:6], p[6:9])
                 addedpoint = True
 
         while True:
@@ -482,24 +513,30 @@ def CalibrationProcess(points, norm_pipe, fit_output, current):
         # attempt to perform least squares fit
         p = []
         for sigma in cal.sigma_points:
-            p.append(sigma.compass + sigma.down)
-        
+            p.append(sigma.compass + sigma.down + sigma.accel)
+
+            #print 'p', p
+            
         # for now, require at least 6 points to agree well for update
         if len(p) < 6:
             continue
 
-        gpoints = []
-        for q in p:
-            gpoints.append(q[3:])
+        fit = FitPointsAccel(p)
+        print 'fit', fit, accel_calibration
+        if fit and vector.dist2(fit, accel_calibration) > .001:
+            fit_output.send(('accel', fit), False)
+            accel_calibration = fit
             
-        debug('FitPoints', p, current, norm)
-
-        fit = FitPoints(p, current, norm)
+        debug('FitPointsCompass', p, compass_calibration, norm)
+        fit = FitPointsCompass(p, compass_calibration, norm)
         if not fit:
             continue
         debug('fit', fit)
 
         g_required_dev = .15 # must have more than this to allow 1d or 3d fit
+        gpoints = []
+        for q in p:
+            gpoints.append(q[3:])
         avg, g_dev, g_max_dev = PointFit(gpoints)
         debug('gdev', g_dev, g_max_dev)
         c = fit[1] # use 2d fit
@@ -555,9 +592,9 @@ def CalibrationProcess(points, norm_pipe, fit_output, current):
         deviation = c[1]
         if deviation[0] > .15 or deviation[1] > 3:
             debug('bad fit:', deviation)
-            curdeviation = ComputeDeviation(p, current)
+            curdeviation = ComputeDeviation(p, compass_calibration)
             debug('cur dev', curdeviation)
-            # if current calibration is really terrible
+            # if compass_calibration calibration is really terrible
             if deviation[0] < curdeviation[0]/2 or curdeviation[0] > 1:
                 debug('allowing bad fit')
             else:
@@ -566,22 +603,21 @@ def CalibrationProcess(points, norm_pipe, fit_output, current):
         
         # if the bias has not sufficiently changed,
         # the fit didn't change much, so don't bother to report this update
-        if vector.dist2(c[0], current) < .1:
+        if vector.dist2(c[0], compass_calibration) < .1:
             debug('insufficient change in bias, calibration already ok')
             debug('coverage', coverage, 'new fit:', c)
 
-        fit_output.send((c, map(lambda p : p.compass + p.down, cal.sigma_points)), False)
-        current = c[0]
-                                 
-class MagnetometerAutomaticCalibration(object):
-    def __init__(self, cal_pipe, current):
+        fit_output.send(('compass', c, map(lambda p : p.compass + p.down, cal.sigma_points)), False)
+        compass_calibration = c[0]
+
+class IMUAutomaticCalibration(object):
+    def __init__(self, cal_pipe, accel_calibration, compass_calibration):
         self.cal_pipe = cal_pipe
-        self.sphere_fit = current
         points, self.points = NonBlockingPipe('points pipe', True)
         norm_pipe, self.norm_pipe = NonBlockingPipe('norm pipe', True)
         self.fit_output, fit_output = NonBlockingPipe('fit output', True)
 
-        self.process = multiprocessing.Process(target=CalibrationProcess, args=(points, norm_pipe, fit_output, self.sphere_fit))
+        self.process = multiprocessing.Process(target=CalibrationProcess, args=(points, norm_pipe, fit_output, accel_calibration, compass_calibration))
         #print 'start cal process'
         self.process.start()
 
@@ -597,11 +633,9 @@ class MagnetometerAutomaticCalibration(object):
     
     def UpdatedCalibration(self):
         result = self.fit_output.recv()
-        if not result:
-            return
-
         # use new bias fit
-        self.cal_pipe.send(tuple(result[0][0][:3]))
+        if result:
+            self.cal_pipe.send(result)
         return result
 
 def ExtraFit():
