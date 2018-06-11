@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2018 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -59,7 +59,7 @@ class Tack(object):
 
     # waiting to tack, update timeout
     if self.state.value == 'waiting':
-      remaining = self.delay.value - self.timeout + t
+      remaining = self.delay.value - self.timeout.value + t
       if remaining > 0:
         self.timeout.set(remaining)
       else:
