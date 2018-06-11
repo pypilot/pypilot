@@ -725,7 +725,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.cbTextureCompass.Bind( wx.EVT_CHECKBOX, self.onTextureCompass )
 		self.bIMUScope.Bind( wx.EVT_BUTTON, self.onIMUScope )
 		self.m_button11.Bind( wx.EVT_BUTTON, self.onRudderCentered )
-		self.m_button12.Bind( wx.EVT_BUTTON, self.OnRudderAEnd )
+		self.m_button12.Bind( wx.EVT_BUTTON, self.OnRudderEnd )
 	
 	def __del__( self ):
 		pass
