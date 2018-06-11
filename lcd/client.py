@@ -656,7 +656,7 @@ class LCDClient():
         if self.last_val('ap.heading') == 0: # if heading zero maybe failed
             self.get('imu.loopfreq')
             if self.last_val('imu.loopfreq') == 0:
-                r = rectangle(0, 0, 1, .8)
+                r = rectangle(0, 0, 1, .92)
                 self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
                 self.control['heading_command'] = 'no imu'
                 return
