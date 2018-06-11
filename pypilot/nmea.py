@@ -212,7 +212,7 @@ class Nmea(object):
 
         self.nmea_times = {}
         self.last_imu_time = time.time()
-        self.last_rudder_pos_time = time.time()
+        self.last_rudder_time = time.time()
         self.starttime = time.time()
 
     def __del__(self):
@@ -335,13 +335,13 @@ class Nmea(object):
             self.send_nmea('APHDM,%.3f,M' % self.server.values['imu.heading_lowpass'].value)
             self.last_imu_time = time.time()
 
-        dt = time.time() - self.last_rudder_pos_time
+        dt = time.time() - self.last_rudder_time
         if self.process.sockets and (dt > .2 or dt < 0) and \
-           'servo.rudder_pos' in self.server.values:
+           'servo.rudder' in self.server.values:
             value = self.server.values['servo.rudder'].value
             if value:
                 self.send_nmea('APRSA,%.3f,A,,' % value)
-            self.last_rudder_pos_time = time.time()
+            self.last_rudder_time = time.time()
             
         t5 = time.time()
         if t5 - t0 > .1:

@@ -422,9 +422,11 @@ class Servo(object):
 
     def send_driver_max_values(self, max_current):
         n = self.rudder_range.value / self.rudder_scale.value
-        o = self.rudder_offset.value + 0.5;
-        min_rudder, max_rudder = -n - o,  n - o
-        
+        o = 0.5 - self.rudder_offset.value;
+        min_rudder, max_rudder = o - n, o + n;
+
+        print 'min max', n, o, min_rudder, max_rudder
+
         self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value, min_rudder, max_rudder, self.max_slew_speed.value, self.max_slew_slow.value)
 
     def poll(self):
