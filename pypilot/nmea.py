@@ -613,6 +613,8 @@ class NmeaBridgeProcess(multiprocessing.Process):
                             if not line:
                                 break
                             self.receive_nmea(line, msgs)
+                else:
+                    print 'nmea bridge unhandled poll flag', flag
 
             t2 = time.time()
             if msgs:
