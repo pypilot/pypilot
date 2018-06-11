@@ -37,13 +37,13 @@ class BasicAutopilot(AutopilotBase):
     PosGain('D',  .1, 1.0)
     PosGain('DD',  .05, 1.0)
     
-    def PosGain2(name, default, max_val, other):
+    def PosGain2(name, default, max_val):
       def compute2(value):
-        return value * abs(value) * self.gains[name]['apgain'].value * self.gains[other]['apgain'].value
+        return value * abs(value) * self.gains[name]['apgain'].value
       Gain(name, default, 0, max_val, compute2)
 
     PosGain('PR',  0, .05)
-    PosGain2('D2', 0, 3, 'P')
+    PosGain2('D2', 0, .6)
 
     PosGain('FF',  .5, 3.0)
 
