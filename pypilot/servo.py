@@ -190,7 +190,7 @@ class Servo(object):
         self.min_speed = self.Register(RangeProperty, 'min_speed', 1, 0, 1, persistent=True)
         self.max_speed = self.Register(RangeProperty, 'max_speed', 1, 0, 1, persistent=True)
 
-        self.faults = self.Register(Property, 'faults', 0)
+        self.faults = self.Register(ResettableValue, 'faults', 0)
 
         # power usage
         self.command = self.Register(TimedProperty, 'command', 0)
