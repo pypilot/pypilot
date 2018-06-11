@@ -660,6 +660,7 @@ class LCDClient():
             r = rectangle(0, 0, 1, .8)
             self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
             self.control['heading_command'] = 'no imu'
+            return
         else:
             draw_big_number((0,0), self.last_val('ap.heading'), self.control['heading'])
             self.control['heading'] = self.last_val('ap.heading')
