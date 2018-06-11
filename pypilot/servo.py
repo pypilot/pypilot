@@ -208,7 +208,7 @@ class Servo(object):
         self.rudder.offset = self.Register(Value, 'rudder.offset', 0, persistent=True)
         self.rudder.scale = self.Register(Value, 'rudder.scale', 60, persistent=True)
         self.rudder.nonlinearity = self.Register(Value, 'rudder.nonlinearity',  0, persistent=True)
-        self.rudder.calibration = self.Register(EnumProperty, 'rudder.calibration', 'idle', ['idle', 'centered', 'starboard range', 'port range'])
+        self.rudder.calibration = self.Register(EnumProperty, 'rudder.calibration', 'idle', ['idle', 'centered', 'starboard range', 'port range', 'auto gain'])
         self.rudder.calibration.raw = {}
         self.rudder.range = self.Register(RangeProperty, 'rudder.range',  60, 10, 100, persistent=True)
         self.engaged = self.Register(BooleanValue, 'engaged', False)
@@ -475,39 +475,77 @@ class Servo(object):
                     else:
                         self.driver_timeout_start = time.time()
 
-    def rudder_range_calibration(self, port):
-        self.rudder.calibration.raw[port] = self.driver.rudder.value - 0.5
-
-        rudder_range = self.rudder.range.value
-        offset = self.rudder.offset
-        if 'port' in self.rudder.calibration.raw and \
-           'starboard' in self.rudder.calibration.raw:
-            # rudder = (nonlinearity * raw + scale) * raw + offset
-
-            # rudder_range = nonlinearity * rudder_raw[0]**2 + scale * rudder_raw[0] + offset
-            # -rudder_range = nonlinearity * rudder_raw[1]**2 + scale * rudder_raw[1] + offset
-
-            raw = self.rudder.calibration.raw['starboard'], self.rudder.calibration.raw['port']
-            offset = self.rudder.offset.value
-            
-            scale = (rudder_range*raw[1]**2 - offset*raw[1]**2/raw[0]**2 + offset + rudder_range) / (raw[0]*raw[1]**2 - raw[1])
-            nonlinearity = (rudder_range - offset - scale * raw[0]) / raw[0]**2
-
-            print 'update', scale, nonlinearity
-            self.rudder.scale.set(scale)
-            self.rudder.nonlinearity.set(scale)
+    def rudder_calibration(self, command):
+        if command == 'centered':
+            true_angle = 0
+        elif command == 'port range':
+            true_angle = -self.rudder.range.value
+        elif command == 'starboard range':
+            true_angle = self.rudder.range.value
         else:
-            # nonlinearity is unknown so adjust only scale
-            # rudder_range = nonlinearity * raw**2 + scale * raw + offset
-            nonlinearity = self.rudder.nonlinearity.value
-            raw = self.rudder.calibration.raw[port]
+            print 'unhandled rudder_calibration', command
+            return
+        
+            # raw range -.5 to .5
+        self.rudder.calibration.raw[command] = {'raw': self.driver.rudder - 0.5,
+                                                'rudder': true_angle}
+        offset = self.rudder.offset.value
+        scale = self.rudder.scale.value
+        nonlinearity = self.rudder.nonlinearity.value*scale
 
-            if port == 'port':
-                rudder_range = -rudder_range
+        # rudder = (nonlinearity * raw + scale) * raw + offset
+        p = []
+        for c in self.rudder.calibration.raw:
+            p.append(self.rudder.calibration.raw[c])
 
-            scale = (rudder_range - offset) / raw - nonlinearity * raw
-            print 'range', scale, nonlinearity
-            self.rudder.scale.set(scale)
+        l = len(p)
+        # 1 point, estimate offset
+        if l == 1:
+            rudder= p[0]['rudder']
+            raw = p[0]['raw']
+            offset = rudder - (nonlinearity * raw + scale) * raw
+
+        # 2 points, estimate scale and offset
+        elif l == 2:
+            rudder0, rudder1 = p[0]['rudder'], p[1]['rudder']
+            raw0, raw1 = p[0]['raw'], p[1]['raw']
+            if abs(raw1-raw0) > .001:
+                scale = (rudder1 - rudder0 + nonlinearity*(raw0**2 - raw1**2)) / (raw1 - raw0)
+            offset = rudder0 - (nonlinearity * raw0 + scale) * raw0
+
+            
+        # 3 points, estimate nonlinearity scale and offset
+        if l == 3:
+            rudder0, rudder1, rudder2 = p[0]['rudder'], p[1]['rudder'], p[2]['rudder']
+            raw0, raw1, raw2 = p[0]['raw'], p[1]['raw'], p[2]['raw']
+
+            # rudder0 = (nonlinearity*raw0 + scale)*raw0 + offset
+            # rudder1 = (nonlinearity*raw1 + scale)*raw1 + offset
+            # rudder2 = (nonlinearity*raw2 + scale)*raw2 + offset
+
+            # rudder1 = (nonlinearity*raw1 + scale)*raw1 + rudder0 - (nonlinearity*raw0 + scale)*raw0
+            # rudder2 = (nonlinearity*raw2 + scale)*raw2 + rudder0 - (nonlinearity*raw0 + scale)*raw0
+            # rudder1 - rudder0 = nonlinearity*(raw1^2 - raw0^2) + scale*(raw1 - raw0)
+            # rudder2 - rudder0 = nonlinearity*(raw2^2 - raw0^2) + scale*(raw2 - raw0)
+
+
+            # scale = (rudder1 - rudder0 - nonlinearity*(raw1^2 - raw0^2)) / (raw1 - raw0)
+            # A = (raw2 - raw0)/(raw1 - raw0)
+            # rudder2 - rudder0 + A*(rudder0 - rudder1) = nonlinearity*((raw2^2 - raw0^2) - (raw1^2 - raw0^2)*A) 
+
+            A = (raw2 - raw0)/(raw1 - raw0)
+            C = (rudder2 - rudder0 + (rudder0 - rudder1)*A)
+            D = ((raw2**2 - raw0**2) - (raw1**2 - raw0**2)*A)
+            if abs(D) > .001:
+                nonlinearity = C / D
+            if abs(raw1-raw0) > .001:
+                scale = (rudder1 - rudder0 - nonlinearity*(raw1**2 - raw0**2)) / (raw1 - raw0)
+            offset = rudder0 - (nonlinearity*raw0 + scale)*raw0
+
+        self.rudder.offset.update(offset)
+        self.rudder.scale.update(scale)
+        self.rudder.nonlinearity.update(nonlinearity/scale)
+
                         
     def reset(self):
         if self.driver:
@@ -556,15 +594,12 @@ class Servo(object):
         self.servo_calibration.poll()
 
         if self.rudder.calibration.value != 'idle':
-            if self.rudder.calibration.value == 'centered':
-                print 'centered', self.rudder.offset.value, self.rudder.value
-                self.rudder.offset.set(self.rudder.offset.value - self.rudder.value)
-            elif self.rudder.calibration.value == 'port range':
-                self.rudder_range_calibration('port')
-            else:
-                self.rudder_range_calibration('starboard')
-                
-            self.rudder.calibration.set('idle')
+            if self.rudder.calibration.value == 'auto gain':
+                pass
+                # drive rudder
+            else: # perform calibration
+                self.rudder_calibration(self.rudder.calibration.value)
+                self.rudder.calibration.set('idle')
                 
         result = self.driver.poll()
 
@@ -607,10 +642,10 @@ class Servo(object):
             if math.isnan(self.driver.rudder):
                 self.rudder.update(False)
             else:
-                # rudder = (nonlinearity * raw + scale) * raw + offset
+                # rudder = (nonlinearity*raw + 1)*scale*raw + offset
                 raw = self.driver.rudder - 0.5
-                self.rudder.set((self.rudder.nonlinearity.value * raw +
-                                 self.rudder.scale.value) * raw +
+                self.rudder.set((self.rudder.nonlinearity.value * raw + 1)*
+                                self.rudder.scale.value*raw +
                                 self.rudder.offset.value)
 
                 self.position.set(self.rudder.value)

@@ -18,7 +18,7 @@ arduino_servo_eeprom::arduino_servo_eeprom()
 {
     memset(&local, 0, sizeof local);
     memset(&verified, 0, sizeof verified);
-    memcpy(local.signature, "arsv22", 6); // change this if the format changes
+    memcpy(local.signature, "arsv23", 6); // change this if the format changes
 }
 
 double arduino_servo_eeprom::get_max_current()
@@ -82,15 +82,15 @@ void arduino_servo_eeprom::set_rudder_scale(double rudder_scale)
     local.rudder_scale = round(rudder_scale * 64);
 }
 
-// store nonlinearity from -1 to 1 for s.15 fixed point
+// store nonlinearity from -1 to 1 for s1.14 fixed point
 double arduino_servo_eeprom::get_rudder_nonlinearity()
 {
-    return arduino.rudder_nonlinearity/32768.0;
+    return arduino.rudder_nonlinearity/16384.0;
 }
 
 void arduino_servo_eeprom::set_rudder_nonlinearity(double rudder_nonlinearity)
 {
-    local.rudder_nonlinearity = round(rudder_nonlinearity * 32768);
+    local.rudder_nonlinearity = round(rudder_nonlinearity * 16384);
 }
 
 double arduino_servo_eeprom::get_max_slew_speed()
