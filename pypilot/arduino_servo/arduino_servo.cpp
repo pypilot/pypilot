@@ -259,7 +259,7 @@ bool ArduinoServo::fault()
     return flags & OVERCURRENT;
 }
 
-void ArduinoServo::params(double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _rudder_nonlinearity,, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_motor_speed, double _max_motor_speed, double _gain)
+void ArduinoServo::params(double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _rudder_nonlinearity, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_motor_speed, double _max_motor_speed, double _gain)
 {
     max_current = fmin(40, fmax(0, _max_current));
     eeprom.set_max_current(max_current);
@@ -279,7 +279,7 @@ void ArduinoServo::params(double _max_current, double _max_controller_temp, doub
     rudder_scale = fmin(400, fmax(-400, _rudder_scale));
     eeprom.set_rudder_scale(rudder_scale);
 
-    rudder_nonlinearity = fmin(1, fmax(-1, _rudder_nonlinearity));
+    rudder_nonlinearity = fmin(2, fmax(-2, _rudder_nonlinearity));
     eeprom.set_rudder_nonlinearity(rudder_nonlinearity);
 
     max_slew_speed = fmin(100, fmax(0, _max_slew_speed));
@@ -326,7 +326,11 @@ void ArduinoServo::send_value(uint8_t command, uint16_t value)
 
 static double quad_sub(double a, double b, double c, double m)
 {
+    if(fabs(a) < .0001) // in linear case
+        return -c/b;
+
     double dis = b*b - 4*a*c;
+    //printf("quadsub %f %f %f %f, %f\n", a, b,c, m, dis);
     if(dis < 0)
         return -1; // invalid in this case
     return (-b + m*sqrt(dis)) / (2*a);
@@ -353,10 +357,11 @@ void ArduinoServo::send_params()
             double min = 1, max = 0;
             for(int i=0; i<4; i++) {
                 double x = quad_sub(rudder_nonlinearity, rudder_scale, rudder_offset + (i < 2 ? 1 : -1) * rudder_range, i%2 ? 1 : -1);
-                if(x > 0 && x < 1)
+                //printf("suba %d %f\n", i , x);
+                if(x > -.5 && x < .5)
                     min = fmin(min, x), max = fmax(max, x);
             }
-            printf("min/max %f %f\n", min, max);
+            //printf("min/max %f %f\n", min, max);
 
             send_value(RUDDER_RANGE_CODE,
                        ((int)round((min+.5)*255) & 0xff) << 8 |
