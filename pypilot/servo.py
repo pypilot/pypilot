@@ -192,14 +192,16 @@ class Servo(object):
         self.current = self.Register(SensorValue, 'current', timestamp)
         self.controller_temp = self.Register(SensorValue, 'controller_temp', timestamp)
         self.motor_temp = self.Register(SensorValue, 'motor_temp', timestamp)
-        self.rudder_pos = self.Register(SensorValue, 'rudder_pos', timestamp)
-        
+
+        self.rudder_pos = self.Register(SensorValue, 'rudder', timestamp)
+        self.rudder_offset = self.Register(RangeProperty, 'rudder.offset', 0, -.5., .5, persistent=True)
+        self.rudder_scale = self.Register(RangeProperty, 'rudder.scale',  60, 10, 180, persistent=True)
+        self.rudder_max_degrees = self.Register(RangeProperty, 'rudder.max_degrees',  60, 0, 100, persistent=True)
         self.engaged = self.Register(BooleanValue, 'engaged', False)
         self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 20, persistent=True)
         self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 70, 45, 100, persistent=True)
         self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
-        self.min_rudder_pos = self.Register(RangeProperty, 'min_rudder_pos', -100, -100, 100, persistent=True)
-        self.max_rudder_pos = self.Register(RangeProperty, 'max_rudder_pos',  100, -100, 100, persistent=True)
+
         self.max_slew_speed = self.Register(RangeProperty, 'max_slew_speed', 30, 0, 100, persistent=True)
         self.max_slew_slow = self.Register(RangeProperty, 'max_slew_slow', 50, 0, 100, persistent=True)
         self.period = self.Register(RangeProperty, 'period', .7, .1, 3, persistent=True)
@@ -420,7 +422,12 @@ class Servo(object):
         self.driver = False
 
     def send_driver_max_values(self, max_current):
-        self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.min_rudder_pos.value, self.max_rudder_pos.value, self.max_slew_speed.value, self.max_slew_slow.value)
+        #max_degrees /scale - offset + 0.5 =  x
+        n = self.rudder_max_degrees.value / self.rudder_scale.value
+        o = self.rudder_offset.value + 0.5;
+        min_rudder, max_rudder = -n - o,  n - o
+        
+        self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value, min_rudder, max_rudder, self.max_slew_speed.value, self.max_slew_slow.value)
 
     def poll(self):
         if not self.driver:
@@ -503,7 +510,9 @@ class Servo(object):
             if math.isnan(self.driver.rudder_pos):
                 self.rudder_pos.update(False)
             else:
-                self.rudder_pos.set(self.driver.rudder_pos)
+                self.rudder_pos.set(self.rudder_scale.value *
+                                    (self.driver.rudder_pos +
+                                     self.rudder_offset.value - 0.5))
         if result & ServoTelemetry.CURRENT:
             self.current.set(self.driver.current)
             # integrate power consumption

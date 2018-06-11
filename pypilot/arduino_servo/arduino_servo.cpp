@@ -140,7 +140,7 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
         if(value == 65535)
             rudder_pos = NAN;
         else
-            rudder_pos = (uint16_t)value * 200 / 65472.0 - 100.0;
+            rudder_pos = (uint16_t)value / 65472.0;
         return RUDDER_POS;
     case FLAGS_CODE:
         flags = value;
@@ -211,8 +211,8 @@ void ArduinoServo::max_values(double current, double controller_temp, double mot
     max_current_value = fmin(20, fmax(0, current));
     max_controller_temp_value = fmin(80, fmax(30, controller_temp));
     max_motor_temp_value = fmin(80, fmax(30, motor_temp));
-    min_rudder_pos_value = fmin(100, fmax(-100, min_rudder_pos));
-    max_rudder_pos_value = fmin(100, fmax(-100, max_rudder_pos));
+    min_rudder_pos_value = fmin(1, fmax(0, min_rudder_pos));
+    max_rudder_pos_value = fmin(1, fmax(0, max_rudder_pos));
     max_slew_speed_value = fmin(100, fmax(0, max_slew_speed));
     max_slew_slow_value = fmin(100, fmax(0, max_slew_slow));
 }
@@ -244,8 +244,8 @@ void ArduinoServo::raw_command(uint16_t value)
         break;
     case 12:
         send_value(RUDDER_RANGE_CODE,
-                   ((int)((min_rudder_pos_value+100)*255/200) & 0xff) |
-                   ((int)((max_rudder_pos_value+100)*255/200) & 0xff) << 8);
+                   ((int)(min_rudder_pos_value*255) & 0xff) |
+                   ((int)(max_rudder_pos_value*255) & 0xff) << 8);
         break;
     case 18:
         send_value(MAX_SLEW_CODE,

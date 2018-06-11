@@ -68,6 +68,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias):
 
     while True:
       print("Using settings file " + SETTINGS_FILE + ".ini")
+      s.IMUType = 0 # always autodetect imu
       rtimu = RTIMU.RTIMU(s)
       if rtimu.IMUName() == 'Null IMU':
         print 'no IMU detected... try again'
@@ -113,7 +114,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias):
           #print '[imu process] new cal', new_cal
           if r[0] == 'accel':
             s.AccelCalValid = True
-            b, t = r[1][:3], r[1][3]
+            b, t = r[1][0][:3], r[1][0][3]
             s.AccelCalMin = b[0] - t, b[1] - t, b[2] - t
             s.AccelCalMax = b[0] + t, b[1] + t, b[2] + t
           elif r[0] == 'compass':
@@ -270,7 +271,7 @@ class BoatIMU(object):
     self.poller = select.poll()
     self.poller.register(self.imu_pipe, select.POLLIN)
 
-    self.auto_cal = IMUAutomaticCalibration(imu_cal_pipe[1], self.accel_calibration.value, self.compass_calibration.value[0])
+    self.auto_cal = IMUAutomaticCalibration(imu_cal_pipe[1], self.accel_calibration.value[0], self.compass_calibration.value[0])
 
     self.lastqpose = False
     self.FirstTimeStamp = False
@@ -299,7 +300,7 @@ class BoatIMU(object):
     sensornames += ['gyrobias']
     self.SensorValues['gyrobias'] = self.Register(SensorValue, 'gyrobias', timestamp, persistent=True)
 
-    self.imu_process = multiprocessing.Process(target=imu_process, args=(imu_pipe,imu_cal_pipe[0], self.accel_calibration.value, self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
+    self.imu_process = multiprocessing.Process(target=imu_process, args=(imu_pipe,imu_cal_pipe[0], self.accel_calibration.value[0], self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
     self.imu_process.start()
 
     self.last_imuread = time.time()
@@ -507,7 +508,13 @@ def main():
     boatimu.iteration()
     data = boatimu.data
     if data and not quiet:
-      print 'pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading']
+      def line(*args):
+        for a in args:
+          sys.stdout.write(str(a))
+          sys.stdout.write(' ')
+        sys.stdout.write('\r')
+        sys.stdout.flush()
+      line('pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading'])
 
 if __name__ == '__main__':
     main()

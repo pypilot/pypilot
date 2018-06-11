@@ -462,7 +462,7 @@ def ComputeCoverage(p, bias, norm):
             count += 1
     return count
 
-def FitAccel(accel_cal, accel_calibration):
+def FitAccel(accel_cal):
     p = accel_cal.Points()
     print 'accelfit count', len(p)
     if len(p) < 5:
@@ -473,23 +473,18 @@ def FitAccel(accel_cal, accel_calibration):
     diff = vector.sub(maxa[:3], mina[:3])
     #print 'accelfit', diff
 
-    if apply(min, diff) < 1:
+    if apply(min, diff) < 1.2:
         return # require sufficient range on all axes
-    if sum(diff) < 4:
-        return
+    if sum(diff) < 4.5:
+        return # require more spread
     fit = FitPointsAccel(p)
 
     if abs(1-fit[3]) > .1:
         debug('scale factor out of range', fit)
         return
 
-    dist = vector.dist(fit[:3], accel_calibration[:3])
-    if dist < .0015:
-        #debug('no change in accel calibration', dist)
-        return
-
-    debug('update accel cal', fit, dist)
-    return fit
+    dev = ComputeDeviation(p, fit)
+    return [fit, dev]
 
 def FitCompass(compass_cal, compass_calibration, norm):
     p = compass_cal.Points()
@@ -503,7 +498,7 @@ def FitCompass(compass_cal, compass_calibration, norm):
         return
     debug('compass fit', fit)
 
-    g_required_dev = .15 # must have more than this to allow 1d or 3d fit
+    g_required_dev = .5 # must have more than this to allow 1d or 3d fit
     gpoints = []
     for q in p:
         gpoints.append(q[3:])
@@ -523,7 +518,7 @@ def FitCompass(compass_cal, compass_calibration, norm):
         return
         
     coverage = ComputeCoverage(p, c[0][:3], norm)
-    if coverage < 9: # require 180 degrees
+    if coverage < 8: # require 180 degrees
         debug('calibration: not enough coverage:', coverage)
         if c == fit[1]: # must have had 3d fit to use 1d fit
             return
@@ -550,7 +545,7 @@ def FitCompass(compass_cal, compass_calibration, norm):
         curdeviation = ComputeDeviation(p, compass_calibration)
         debug('cur dev', curdeviation)
         # if compass_calibration calibration is really terrible
-        if deviation[0] < curdeviation[0]/2 or curdeviation[0] > 1:
+        if deviation[0]/curdeviation[0] + deviation[1]/curdeviation[1] < 2 or curdeviation[0] > .15 or curdeviation[1] > 10:
             debug('allowing bad fit')
         else:
             compass_cal.RemoveOldest()  # remove oldest point if too much deviation
@@ -572,7 +567,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
       if os.system("renice 20 %d" % os.getpid()):
           print 'warning, failed to renice calibration process'
 
-    accel_cal = SigmaPoints(.03**2, 12, 12)
+    accel_cal = SigmaPoints(.05**2, 12, 12)
     compass_cal = SigmaPoints(1**2, 18, 4)
     #down_sigma = .05 # distance between down vectors
 
@@ -604,11 +599,15 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
             continue
 
         accel_cal.RemoveOlder(10*60) # 10 minutes
-        fit = FitAccel(accel_cal, accel_calibration);
+        fit = FitAccel(accel_cal);
         if fit: # reset compass sigmapoints on accel cal
-            compass_cal.Reset()
-            accel_calibration = fit
-            fit_output.send(('accel', fit, map(lambda p : p.sensor, accel_cal.sigma_points)), False)
+            dist = vector.dist(fit[0][:3], accel_calibration[:3])
+            if dist > .01: # only update when bias changes more than this
+                if dist > .1: # reset compass cal from large change in accel bias
+                    compass_cal.Reset()
+                accel_calibration = fit[0]
+                fit_output.send(('accel', fit, map(lambda p : p.sensor, accel_cal.sigma_points)), False)
+
 
         compass_cal.RemoveOlder(60*60) # 60 minutes
 
