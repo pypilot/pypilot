@@ -129,6 +129,9 @@ $(document).ready(function() {
             });
         }
 
+        if(tinypilot)
+            $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>')
+
         watch('servo.controller');
         watch('servo.flags');
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -29,10 +29,59 @@ socketio = SocketIO(app, async_mode=async_mode)
 import select, socket, json
 DEFAULT_PORT = 21311
 
+# determine if we are on tinypilot if piCore is in uname -r
+import tempfile, subprocess, os
+temp = tempfile.mkstemp()
+p=subprocess.Popen(['uname', '-r'], stdout=temp[0], close_fds=True)
+p.wait()
+f = os.fdopen(temp[0], 'r')
+f.seek(0)
+kernel_release = f.readline().rstrip()
+f.close()
+#print 'kernel_release', kernel_release
+tinypilot = 'piCore' in kernel_release
+#print 'tinypilot', tinypilot
+# javascript uses lowercase bool, easier to use int
+tinypilot = 1 if tinypilot else 0
 
 @app.route('/')
 def index():
-    return render_template('index.html', async_mode=socketio.async_mode, pypilot_webapp_port=pypilot_webapp_port)
+    return render_template('index.html', async_mode=socketio.async_mode, pypilot_webapp_port=pypilot_webapp_port, tinypilot=tinypilot)
+
+if tinypilot:
+    @app.route('/wifi', methods=['GET', 'POST'])
+    def wifi():
+        networking = "/home/tc/.pypilot/networking.txt"
+
+        if request.method == 'POST':
+            try:
+                f = open(networking, 'w')
+                f.write('mode='+request.form['mode']+'\n')
+                f.write('ssid='+request.form['ssid']+'\n')
+                f.write('key='+request.form['key']+'\n')
+                f.close()
+            except Exception as e:
+                print 'exception!', e
+
+        mode, ssid, key = "Master", "pypilot", "" # defauls
+        try:
+            f = open(networking, 'r')
+            while True:
+                l = f.readline()
+                if not l:
+                    break
+                if l.startswith('mode='):
+                    mode = l[5:].strip()
+                elif l.startswith('ssid='):
+                    ssid = l[5:].strip()
+                elif l.startswith('key='):
+                    key = l[4:].strip()
+            f.close()
+        except:
+            pass
+        print 'home', mode
+        return render_template('wifi.html', async_mode=socketio.async_mode, wifi_mode=mode, wifi_ssid=ssid, wifi_key=key)
+
 
 class MyNamespace(Namespace):
     def __init__(self, name):
