@@ -262,7 +262,7 @@ def FitPoints(points, current, norm):
         ang = math.degrees(math.asin(vector.norm(vector.cross(plane_fit[1], norm))))
         
         debug('plane fit found, 2D fit only', ang, plane_fit, plane_dev, plane_max_dev)
-        if ang > 16: # is 16 degrees too much?
+        if ang > 30:
             debug('angle of plane not aligned to normal: no 2d fit')
             new_sphere2d_fit = False
 
@@ -492,7 +492,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, current):
         for q in p:
             gpoints.append(q[3:])
             
-            debug('FitPoints', p, current, norm)
+        debug('FitPoints', p, current, norm)
 
         fit = FitPoints(p, current, norm)
         if not fit:
@@ -502,11 +502,12 @@ def CalibrationProcess(points, norm_pipe, fit_output, current):
         g_required_dev = .15 # must have more than this to allow 1d or 3d fit
         avg, g_dev, g_max_dev = PointFit(gpoints)
         debug('gdev', g_dev, g_max_dev)
+        c = fit[1] # use 2d fit
         if g_max_dev < g_required_dev:
-            c = fit[1] # use 2d fit
             debug('sigmapoints flat, 2D fit only')
         else:
-            c = fit[2] # 3d fit
+            if fit[2]:
+                c = fit[2] # 3d fit
             # for now do not allow 1d fit
             ##if not c:
               ##  c = fit[0] # 1d fit only possible
@@ -522,9 +523,9 @@ def CalibrationProcess(points, norm_pipe, fit_output, current):
             debug('insufficient coverage, use 1d fit')
             continue # no 1d fit
             #c = fit[0] # 1d fit ok with insufficient coverage
-        if c == fit[2] and coverage < 240:
-            debug('not enough coverage for 3d fit')
-            continue
+        #if c == fit[2] and coverage < 240:
+         #   debug('not enough coverage for 3d fit')
+          #  continue
 
         # make sure the magnitude is sane
         mag = c[0][3]
@@ -554,8 +555,14 @@ def CalibrationProcess(points, norm_pipe, fit_output, current):
         deviation = c[1]
         if deviation[0] > .15 or deviation[1] > 3:
             debug('bad fit:', deviation)
-            cal.RemoveOldest()  # remove oldest point if too much deviation
-            continue # don't use this fit
+            curdeviation = ComputeDeviation(p, current)
+            debug('cur dev', curdeviation)
+            # if current calibration is really terrible
+            if deviation[0] < curdeviation[0]/2 or curdeviation[0] > 1:
+                debug('allowing bad fit')
+            else:
+                cal.RemoveOldest()  # remove oldest point if too much deviation
+                continue # don't use this fit
         
         # if the bias has not sufficiently changed,
         # the fit didn't change much, so don't bother to report this update
