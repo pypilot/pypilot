@@ -600,6 +600,7 @@ class Servo(object):
             self.max_motor_temp.set(self.driver.max_motor_temp)
             self.max_slew_speed.set(self.driver.max_slew_speed)
             self.max_slew_slow.set(self.driver.max_slew_slow)
+            print "GOT EEPROM", self.driver.rudder_scale, self.driver.rudder_offset, self.driver.rudder_range
             self.sensors.rudder.scale.set(self.driver.rudder_scale)
             self.sensors.rudder.nonlinearity.set(self.driver.rudder_nonlinearity)
             self.sensors.rudder.offset.set(self.driver.rudder_offset)

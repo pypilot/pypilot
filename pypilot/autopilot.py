@@ -21,8 +21,7 @@ from signalk.server import *
 from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 
-strversion = '0.9'
-
+from version import strversion
 from boatimu import *
 from resolv import *
 import tacking
