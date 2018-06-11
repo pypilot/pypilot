@@ -74,7 +74,7 @@ class GainTable(Value):
         d = b*GainTable.drange[1]-GainTable.drange[0]
         row.append(p*P + d*D)
       self.value.append(row)
-    print 'value', self.value
+    #print 'value', self.value
 
   def type(self):
     return 'GainTable'
@@ -111,7 +111,8 @@ class LearningPilot(AutopilotPilot):
     self.P = self.Register(AutopilotGain, 'P', .001, .0001, .01)
     self.D = self.Register(AutopilotGain, 'D', .03, .01, .1)
 
-    self.dt = self.Register(SensorValue, 'dt', 0)
+    timestamp = self.ap.server.TimeStamp('ap')
+    self.dt = self.Register(SensorValue, 'dt', timestamp)
 
     self.GainTable = self.Register(GainTable, 'GainTable')
 

@@ -419,7 +419,9 @@ class Autopilot(object):
           time.sleep(dt)
 
 
-if __name__ == '__main__':
+def main():
   ap = Autopilot()
   ap.run()
 
+if __name__ == '__main__':
+    main()
