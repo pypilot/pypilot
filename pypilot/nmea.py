@@ -216,9 +216,6 @@ class Nmea(object):
         self.starttime = time.time()
 
     def __del__(self):
-        if self.gps.process:
-            print 'terminate gps process'
-            self.gps.process.terminate()
         print 'terminate nmea process'
         self.process.terminate()
 

@@ -252,7 +252,7 @@ class Servo(object):
         timeout = 1 # command will expire after 1 second
         if self.command.value and not self.fault():
             if time.time() - self.command.time > timeout:
-                print 'servo command timeout', time.time() - self.command.time
+                #print 'servo command timeout', time.time() - self.command.time
                 self.command.set(0)
             self.disengauged = False
             self.velocity_command(self.command.value)
@@ -429,9 +429,13 @@ class Servo(object):
                 print 'probe ret', device_path
                 #from arduino_servo.arduino_servo_python import ArduinoServo
                 from arduino_servo.arduino_servo import ArduinoServo
-                device = serial.Serial(*device_path)
-                device.timeout=0 #nonblocking
-                fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
+                try:
+                    device = serial.Serial(*device_path)
+                    device.timeout=0 #nonblocking
+                    fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
+                except Exception as e:
+                    print 'failed to open servo:', e
+                    return
                 self.driver = ArduinoServo(device.fileno())
                 self.send_driver_max_values(self.max_current.value)
 
