@@ -10,28 +10,34 @@ import json
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 
-allowed_serial_ports = 'init'
-def read_allowed():
-    global allowed_serial_ports
-    if allowed_serial_ports != 'init':
-        return allowed_serial_ports
-    
-    # if 'serial_ports' file exists, then only those ports can be used
-    if os.path.exists(pypilot_dir + 'serial_ports'):
-        allowed_serial_ports = []
+def read_config(filename, fail):
+    devices = []
+    if os.path.exists(pypilot_dir + filename):
         try:
-            f = open(pypilot_dir + 'serial_ports', 'r')
+            f = open(pypilot_dir + filename, 'r')
             while True:
                 device = f.readline()
                 if not device:
                     break
-                allowed_serial_ports.append(os.path.realpath(device.strip()))
+                devices.append(os.path.realpath(device.strip()))
             f.close()
-            return
+            return devices
         except Exception as e:
             print 'error reading', pypilot_dir + 'serial_ports'
-    else:
-        allowed_serial_ports = 'any'
+    return fail
+
+blacklist_serial_ports = 'init'
+def read_blacklist():
+    global blacklist_serial_ports
+    if blacklist_serial_ports == 'init':
+        blacklist_serial_ports = read_config('blacklist_serial_ports', [])
+    return blacklist_serial_ports
+    
+allowed_serial_ports = 'init'
+def read_allowed():
+    global allowed_serial_ports
+    if allowed_serial_ports == 'init':
+        allowed_serial_ports = read_config('serial_ports', 'any')
     return allowed_serial_ports
 
 def scan_devices():
@@ -70,7 +76,12 @@ def scan_devices():
 
     allowed_devices = []
 
-    allowed_serial_ports = read_allowed()
+    blacklist_serial_ports  = read_blacklist()
+    for device in blacklist_serial_ports:
+        if device in devices:
+            devices.remove(device)
+    
+    allowed_serial_ports= read_allowed()
     if allowed_serial_ports == 'any':
         return devices
     
@@ -81,16 +92,24 @@ def scan_devices():
 
 devices = 'init'
 monitor = False
+starttime = False
 def enumerate_devices():
     global devices
     global monitor
+    global starttime
     if devices == 'init':
-        t0 = time.time()
+        starttime = time.time()
         devices = scan_devices()
+
+    # delay monitor slightly to ensure startup speed
+    if time.time() - starttime < 60 and not monitor:
         try:
+            #signal.signal(15, None)
+            #signal.signal(17, None)
             import pyudev
             context = pyudev.Context()
             monitor = pyudev.Monitor.from_netlink(context)
+            monitor.filter_by(subsystem='usb')
         except:
             print 'no pyudev! will scan usb devices every probe!'
     if monitor:
@@ -193,7 +212,7 @@ def probe(name, bauds, timeout=5):
         serial.Serial(*serial_device)
     except serial.serialutil.SerialException as err:
         arg = err.args[0]
-        if 'Errno ' in  arg:
+        if type(arg) == type('') and 'Errno ' in  arg:
             arg = int(arg[arg.index('Errno ')+6: arg.index(']')])
         if arg == 16: # device busy, retry later
             print 'busy, try again later', probe['device'], name
