@@ -99,7 +99,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias):
         
         if rtimu.IMURead():
           data = rtimu.getIMUData()
-          data['accelresiduals'] = list(rtimu.getAccelResiduals())
+          data['accel.residuals'] = list(rtimu.getAccelResiduals())
           data['gyrobias'] = s.GyroBias
           data['timestamp'] = t0 # imu timestamp is perfectly accurate
           pipe.send(data, False)
@@ -113,14 +113,12 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias):
           #print '[imu process] new cal', new_cal
           if r[0] == 'accel':
             s.AccelCalValid = True
-            b = new_cal[:3]
-            r = new_cal[3]
-            s.AccelCalMin = b[0] - r, b[1] - r, b[2] - r
-            s.AccelCalMax = b[0] + r, b[1] + r, b[2] + r
-            print 'Accel Cal Min', s.AccelCalMin, s.AccelCalMax
+            b, t = r[1][:3], r[1][3]
+            s.AccelCalMin = b[0] - t, b[1] - t, b[2] - t
+            s.AccelCalMax = b[0] + t, b[1] + t, b[2] + t
           elif r[0] == 'compass':
             s.CompassCalEllipsoidValid = True
-            s.CompassCalEllipsoidOffset = r[1][0][:3]
+            s.CompassCalEllipsoidOffset = tuple(r[1][0][:3])
           #rtimu.resetFusion()
         
         dt = time.time() - t0
@@ -254,15 +252,17 @@ class BoatIMU(object):
     self.last_alignmentCounter = False
 
     self.uptime = self.Register(TimeValue, 'uptime')
-    
-    self.accel_calibration = self.Register(RoundedValue, 'accel_calibration', [0, 0, 0, 1], persistent=True)
-    self.accel_calibration_age = self.Register(AgeValue, 'accel_calibration_age', persistent=True)
 
-    self.compass_calibration = self.Register(RoundedValue, 'compass_calibration', [[0, 0, 0, 30, 0], [False, False], 0], persistent=True)
-    self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age', persistent=True)
-    self.compass_calibration_sigmapoints = self.Register(RoundedValue, 'compass_calibration_sigmapoints', False)
+    def calibration(name, default):
+        calibration = self.Register(RoundedValue, name+'.calibration', default, persistent=True)
+        calibration.age = self.Register(AgeValue, name+'.calibration.age', persistent=True)
+        calibration.locked = self.Register(BooleanProperty, name+'.calibration.locked', False, persistent=True)
+        return calibration
 
-    self.calibration_locked = self.Register(BooleanProperty, 'calibration_locked', False, persistent=True)
+    self.accel_calibration = calibration('accel', [0, 0, 0, 1])
+    self.accel_calibration.sigmapoints = self.Register(RoundedValue, 'accel.calibration.sigmapoints', False)
+    self.compass_calibration = calibration('compass', [[0, 0, 0, 30, 0], [1, 1], 0])
+    self.compass_calibration.sigmapoints = self.Register(RoundedValue, 'compass.calibration.sigmapoints', False)
     
     self.imu_pipe, imu_pipe = NonBlockingPipe('imu_pipe')
     imu_cal_pipe = NonBlockingPipe('imu_cal_pipe')
@@ -280,7 +280,7 @@ class BoatIMU(object):
     self.headingrate_lowpass_constant = self.Register(RangeProperty, 'headingrate_lowpass_constant', .1, .01, 1)
     self.headingraterate_lowpass_constant = self.Register(RangeProperty, 'headingraterate_lowpass_constant', .1, .01, 1)
           
-    sensornames = ['accel', 'gyro', 'compass', 'accelresiduals', 'pitch', 'roll']
+    sensornames = ['accel', 'gyro', 'compass', 'accel.residuals', 'pitch', 'roll']
 
     sensornames += ['pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']
     sensornames += ['headingrate_lowpass', 'headingraterate_lowpass']
@@ -395,10 +395,14 @@ class BoatIMU(object):
     for name in self.SensorValues:
       self.SensorValues[name].set(data[name])
 
-    if not self.calibration_locked.value:
+    compass, accel, down = False, False, False
+    if not self.accel_calibration.locked.value:
+      accel = list(data['accel'])
+    if not self.compass_calibration.locked.value:
       down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(origfusionQPose))
-      #print 'd', down, list(data['accel']), vector.norm(list(data['accel']))
-      self.auto_cal.AddPoint(list(data['compass']) + down + list(data['accel']))
+      compass = list(data['compass']) + down
+    if accel or compass:
+      self.auto_cal.AddPoint((accel, compass, down))
 
     self.uptime.update()
 
@@ -428,21 +432,22 @@ class BoatIMU(object):
 
     result = self.auto_cal.UpdatedCalibration()
     
-    if result and not self.calibration_locked.value:
-      if result[0] == 'accel':
+    if result:
+      if result[0] == 'accel' and not self.accel_calibration.locked.value:
         #print '[boatimu] cal result', result[0]
+        self.accel_calibration.sigmapoints.set(result[2])
         if result[1]:
-          self.accel_calibration_age.reset()
+          self.accel_calibration.age.reset()
           self.accel_calibration.set(result[1])
-      elif result[0] == 'compass':
+      elif result[0] == 'compass' and not self.compass_calibration.locked.value:
         #print '[boatimu] cal result', result[0]
-        self.compass_calibration_sigmapoints.set(result[2])
+        self.compass_calibration.sigmapoints.set(result[2])
         if result[1]:
-          self.compass_calibration_age.reset()
+          self.compass_calibration.age.reset()
           self.compass_calibration.set(result[1])
 
-    self.accel_calibration_age.update()
-    self.compass_calibration_age.update()
+    self.accel_calibration.age.update()
+    self.compass_calibration.age.update()
     return data
 
 class BoatIMUServer():

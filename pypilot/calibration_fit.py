@@ -11,6 +11,7 @@ import sys
 import math
 import time
 import vector
+from resolv import resolv
 from quaternion import *
 import multiprocessing
 from signalk.pipeserver import NonBlockingPipe
@@ -131,21 +132,14 @@ def LinearFit(points):
     return line, plane
 
 def FitPointsAccel(points):
-    if len(points) < 5:
-        return False
-
-    # ensure current and norm are float
-    #current = map(float, current)
-    print 'fit points accel'
-
     zpoints = [[], [], []]
     for i in range(3):
-        zpoints[i] = map(lambda x : x[i+6], points)
+        zpoints[i] = map(lambda x : x[i], points)
         
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
-    if point_max_dev < 1:
-        debug('insufficient data for accel fit', point_dev, point_max_dev, '< 9')
+    if point_max_dev < .1:
+        debug('insufficient data for accel fit', point_dev, point_max_dev, '< 1')
         return False
 
     def f_sphere3(beta, x):
@@ -159,13 +153,10 @@ def FitPointsAccel(points):
     if not sphere3d_fit or sphere3d_fit[3] < 0:
         print 'FitLeastSq sphere failed!!!! ', len(points)
         return False
-    debug('sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
+    #debug('sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
     return sphere3d_fit
 
 def FitPointsCompass(points, current, norm):
-    if len(points) < 5:
-        return False
-
     # ensure current and norm are float
     current = map(float, current)
     norm = map(float, norm)
@@ -342,58 +333,63 @@ def avg(fac, v0, v1):
     return map(lambda a, b : (1-fac)*a + fac*b, v0, v1)
 
 class SigmaPoint(object):
-    def __init__(self, compass, down, accel):
-        self.compass = compass
+    def __init__(self, sensor, down):
+        self.sensor = sensor
         self.down = down
-        self.accel = accel
         self.count = 1
         self.time = time.time()
 
-    def add_measurement(self, compass, down, accel):
+    def add_measurement(self, sensor, down):
         self.count += 1
         fac = max(1/self.count, .01)
-        self.compass = avg(fac, self.compass, compass)
+        self.sensor = avg(fac, self.sensor, sensor)
         self.down = avg(fac, self.down, down)
-        self.accel = avg(fac, self.accel, accel)
         self.time = time.time()
 
+# store averaged sensore measurements over time for
+# calibration curve fitting
 class SigmaPoints(object):
-    sigma = 1.2**2 # distance between sigma points
-    #down_sigma = .05 # distance between down vectors
-    max_sigma_points = 18
+    def __init__(self, sigma, max_sigma_points, min_count):
+        self.sigma = sigma
+        self.max_sigma_points = max_sigma_points
+        self.min_count = min_count
+        self.Reset()
 
-    def __init__(self):
+    # forget all knowledge of stored sensor points
+    def Reset(self):
         self.sigma_points = []
         self.lastpoint = False
 
-    def AddPoint(self, compass, down, accel):
+    def Points(self):
+        p = []
+        for sigma in self.sigma_points:
+            p.append(sigma.sensor + sigma.down)
+        return p
+
+    # store a new sensor
+    def AddPoint(self, sensor, down):
         if not self.lastpoint:
-            self.lastpoint = SigmaPoint(compass, down, accel)
+            self.lastpoint = SigmaPoint(sensor, down)
             return
 
-        if vector.dist2(self.lastpoint.compass, compass) < SigmaPoints.sigma:
-            fac = .02
-            for i in range(3):
-                self.lastpoint.compass[i] = fac*compass[i] + (1-fac)*self.lastpoint.compass[i]
-                self.lastpoint.down[i] += down[i]
-                self.lastpoint.accel[i] += accel[i]
-            self.lastpoint.count += 1
-            return
-
-        if self.lastpoint.count < 3: # require 3 measurements
+        if self.lastpoint.count < self.min_count: # require x measurements
+            if vector.dist2(self.lastpoint.sensor, sensor) < self.sigma:
+                self.lastpoint.add_measurement(sensor, down)
+                return
+            
             self.lastpoint = False
             return
 
-        compass, down, accel = self.lastpoint.compass, self.lastpoint.down, self.lastpoint.accel
+        # use lastpoint as better sample
+        sensor, down = self.lastpoint.sensor, self.lastpoint.down
         for i in range(3):
             down[i] /= self.lastpoint.count
-            accel[i] /= self.lastpoint.count
         self.lastpoint = False
 
         ind = 0
         for point in self.sigma_points:
-            if vector.dist2(point.compass, compass) < SigmaPoints.sigma:
-                point.add_measurement(compass, down, accel)
+            if vector.dist2(point.sensor, sensor) < self.sigma:
+                point.add_measurement(sensor, down)
                 if ind > 0:
                     # put at front of list to speed up future tests
                     self.sigma_points = self.sigma_points[:ind-1] + [point] + \
@@ -402,8 +398,8 @@ class SigmaPoints(object):
             ind += 1
 
         index = len(self.sigma_points)
-        p = SigmaPoint(compass, down, accel)
-        if index == SigmaPoints.max_sigma_points:
+        p = SigmaPoint(sensor, down)
+        if index == self.max_sigma_points:
             # replace point that is closest to other points
             minweighti = 0
             minweight = 1e20
@@ -411,7 +407,7 @@ class SigmaPoints(object):
                 for j in range(len(self.sigma_points)):
                     if i == j:
                         continue
-                    dist = vector.dist(self.sigma_points[i].compass, self.sigma_points[j].compass)
+                    dist = vector.dist(self.sigma_points[i].sensor, self.sigma_points[j].sensor)
                     count = min(self.sigma_points[i].count, 100)
                     dt = time.time() - self.sigma_points[i].time
                     weight = dist * count**.2 * 1/dt**.1
@@ -422,8 +418,18 @@ class SigmaPoints(object):
 
             #print 'replace', minweighti, self.sigma_points[minweighti].count, time.time() - self.sigma_points[minweighti].time
             self.sigma_points[minweighti] = p
-        else:
-            self.sigma_points.append(p)
+            return
+
+        self.sigma_points.append(p)
+
+    def RemoveOlder(self, dt=3600):
+        # remove points older than 1 hour
+        p = []
+        for sigma in self.sigma_points:
+            # only use measurements in last hour
+            if time.time() - sigma.time < 3600:
+                p.append(sigma)
+        self.sigma_points = p
 
     def RemoveOldest(self):
         oldest_sigma = self.sigma_points[0]
@@ -436,33 +442,128 @@ class SigmaPoints(object):
 
 # calculate the largest angle in radians between any two measurements
 # for a given calibration bias and normal vector
-def ComputeCoverage(sigma_points, bias, norm):
+def ComputeCoverage(p, bias, norm):
     q = vec2vec2quat(norm, [0, 0, 1])
     def ang(p):
-        c = rotvecquat(vector.sub(p.compass, bias), q)
-        d = rotvecquat(p.down, q)
+        c = rotvecquat(vector.sub(p[:3], bias), q)
+        d = rotvecquat(p[3:6], q)
         v = rotvecquat(c, vec2vec2quat(d, [0, 0, 1]))
         v = vector.normalize(v)
-        return math.degrees(math.atan2(v[1], v[0])), abs(math.degrees(math.acos(v[2])))
+        return math.degrees(math.atan2(v[1], v[0]))
+    #, abs(math.degrees(math.acos(v[2])))
 
-    angles = []
-    for a in map(ang, sigma_points):
-        if True or a[1] > 10:  # only use points more than 10 degrees from magnetic vector
-            angles.append(a[0])
-    angles = sorted(angles)
-                    
-    max_diff = 0
-    for i in range(len(angles)):
-        diff = -angles[i]
-        j = i+1
-        if j == len(angles):
-            diff += 360
-            j = 0
-        diff += angles[j]
-        max_diff = max(max_diff, diff)
-    if max_diff == 0:
-        return 360
-    return max_diff    
+    spacing = 20 # 20 degrees
+    angles = [False] * (360 / spacing)
+    count = 0
+    for a in map(ang, p):
+        i = int(resolv(a, 180) / spacing)
+        if not angles[i]:
+            angles[i] = True
+            count += 1
+    return count
+
+def FitAccel(accel_cal, accel_calibration):
+    p = accel_cal.Points()
+    print 'accelfit count', len(p)
+    if len(p) < 5:
+        return False
+
+    mina = apply(lambda *x : map(min, *x), p)
+    maxa = apply(lambda *x : map(max, *x), p)
+    diff = vector.sub(maxa[:3], mina[:3])
+    #print 'accelfit', diff
+
+    if apply(min, diff) < 1:
+        return # require sufficient range on all axes
+    if sum(diff) < 4:
+        return
+    fit = FitPointsAccel(p)
+
+    if abs(1-fit[3]) > .1:
+        debug('scale factor out of range', fit)
+        return
+
+    dist = vector.dist(fit[:3], accel_calibration[:3])
+    if dist < .0015:
+        #debug('no change in accel calibration', dist)
+        return
+
+    debug('update accel cal', fit, dist)
+    return fit
+
+def FitCompass(compass_cal, compass_calibration, norm):
+    p = compass_cal.Points()
+    #print 'compassfit count', len(p)
+    if len(p) < 8:
+        return False
+
+    debug('FitPointsCompass', p, compass_calibration, norm)
+    fit = FitPointsCompass(p, compass_calibration, norm)
+    if not fit:
+        return
+    debug('compass fit', fit)
+
+    g_required_dev = .15 # must have more than this to allow 1d or 3d fit
+    gpoints = []
+    for q in p:
+        gpoints.append(q[3:])
+    avg, g_dev, g_max_dev = PointFit(gpoints)
+    debug('gdev', g_dev, g_max_dev)
+    c = fit[1] # use 2d fit
+    if g_max_dev < g_required_dev:
+        debug('sigmapoints flat, 2D fit only')
+    else:
+        if fit[2]:
+            c = fit[2] # 3d fit
+        # for now do not allow 1d fit
+        ##if not c:
+        ##  c = fit[0] # 1d fit only possible
+
+    if not c:
+        return
+        
+    coverage = ComputeCoverage(p, c[0][:3], norm)
+    if coverage < 9: # require 180 degrees
+        debug('calibration: not enough coverage:', coverage)
+        if c == fit[1]: # must have had 3d fit to use 1d fit
+            return
+        debug('insufficient coverage, use 1d fit')
+        return # no 1d fit
+
+    # make sure the magnitude is sane
+    mag = c[0][3]
+    if mag < 7 or mag > 120:
+        debug('fit found field outside of normal earth field strength', mag)
+        return
+
+    # require inclination less than 82 degrees, with so much inclination,
+    # the fit is inaccurate (near magnetic pole?)
+    inc = c[0][4]
+    if abs(inc) > 82:
+        debug('incline greater than 82 degrees, no fit',)
+        return
+
+    # test points for deviation, all must fall on a sphere
+    deviation = c[1]
+    if deviation[0] > .15 or deviation[1] > 3:
+        debug('bad fit:', deviation)
+        curdeviation = ComputeDeviation(p, compass_calibration)
+        debug('cur dev', curdeviation)
+        # if compass_calibration calibration is really terrible
+        if deviation[0] < curdeviation[0]/2 or curdeviation[0] > 1:
+            debug('allowing bad fit')
+        else:
+            compass_cal.RemoveOldest()  # remove oldest point if too much deviation
+            return # don't use this fit
+        
+    # if the bias has not sufficiently changed,
+    # the fit didn't change much, so don't bother to report this update
+    if vector.dist2(c[0], compass_calibration) < .1:
+        debug('insufficient change in bias, calibration already ok')
+        debug('coverage', coverage, 'new fit:', c)
+
+    return c
+
 
 def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass_calibration):
     import os
@@ -471,7 +572,10 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
       if os.system("renice 20 %d" % os.getpid()):
           print 'warning, failed to renice calibration process'
 
-    cal = SigmaPoints()
+    accel_cal = SigmaPoints(.03**2, 12, 12)
+    compass_cal = SigmaPoints(1**2, 18, 4)
+    #down_sigma = .05 # distance between down vectors
+
     norm = [0, 0, 1]
 
     while True:
@@ -480,7 +584,12 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
         while time.time() - t < calibration_fit_period:
             p = points.recv(1)
             if p:
-                cal.AddPoint(p[:3], p[3:6], p[6:9])
+                accel, compass, down = p
+                if accel:
+                    accel_cal.AddPoint(accel, list(accel))
+                    #print 'add', len(accel_cal.sigma_points)
+                if compass and down:
+                    compass_cal.AddPoint(compass, down)
                 addedpoint = True
 
         while True:
@@ -488,127 +597,25 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
             if not n:
                 break
             norm = n
-            cal.sigma_points = []
+            compass_cal.Reset()
             #print 'set norm', norm
 
         if not addedpoint: # don't bother to run fit if no new data
             continue
 
-        # remove points older than 1 hour
-        p = []
-        for sigma in cal.sigma_points:
-            # only use measurements in last hour
-            if time.time() - sigma.time < 3600:
-                p.append(sigma)
-        cal.sigma_points = p
-
-        #inject
-        if False:
-            p = [[99.61022395739637, -32.0896372233238, -46.19833893428187,0.9959545553521548, 0.01881086049517002,  -0.08709012682673913], [99.41269965838998,  -29.18933915381635, -50.87318433884822, 0.9959240391187345,  0.025598832598336896, -0.08624850966044939], [99.63371012917594, -30.564020033256263, -49.51652671143861,  0.9959725515496398, 0.021270918093455812,  -0.08636070074997991], [99.55269985551303,  -31.555431659129688, -48.67149985377176, 0.996239375494907,  0.008675418089256124, -0.08608916000100958], [99.85053925286313, -32.804657891397724, -43.07924450281722,  0.9958921542039714, 0.020566397536647005,  -0.08774229505974987], [99.09234339278912,  -33.6539144001473, -39.992952093580584, 0.9960624906154125,  0.012102753257664767, -0.08734126093468247], [99.36440514827613, -27.83050871518071, -23.86624704383829,  0.9961120564762204, 0.010738915365523884,  -0.08721644126707587], [99.27881542065676,  -31.07749102140572, -29.11323456675227, 0.9959733742690939,  0.018797671301392187, -0.08734021276986086], [98.66466785647648, -33.77910428722979, -35.88069749493785,  0.9960232490868438, 0.00878364968675116,  -0.08807145988954777], [98.25940791866283,  -33.38075607725948, -43.511240257178336, 0.9959494378584233,  0.008111556392145083, -0.08921317309205794], [99.23090625079405, -31.96668639422272, -31.79659116533928,  0.995697680058246, 0.021258988302123628,  -0.08989484314049596], [98.05279227664792,  -34.04676396012794, -38.32184662393996, 0.9959648038133849,  0.007050180604718743, -0.08913339420101368], [99.3094944746132, -33.063143800282035, -37.07277486136846,  0.9959314585521511, 0.021396914991636075,  -0.0870363232937691], [99.46857288800534, -25.70920675991828, -22.212079862195036, 0.9960765103312297, 0.022150356953854627, -0.0853784440140581], [98.06189470192125, -33.6074115180095, -33.95455487369483,  0.9959882312382028, 0.008958823339376289,  -0.08858464837243196], [97.91227795273693,  -31.233531578042207, -27.844580754671917,  0.9959462962950375, 0.009456129369926113,  -0.08901938128629384], [97.4962095079903,  -33.224780551340096, -31.15958596160746, 0.9959328787036706,  0.003916703460782957, -0.0896401065300612], [97.94596614832525, -32.33912173753667, -29.559069049234942,  0.9959474803084559, 0.007237095190038474,  -0.08914248460492485]]
-            norm = [0.9957405037490841, 0.010161766950568168, -0.09163835270214449]
-            cal.sigma_points = []
-            for q in p:
-                cal.sigma_points.append(SigmaPoint(q[:3], q[3:6]))
-
-        # attempt to perform least squares fit
-        p = []
-        for sigma in cal.sigma_points:
-            p.append(sigma.compass + sigma.down + sigma.accel)
-
-            #print 'p', p
-            
-        # for now, require at least 6 points to agree well for update
-        if len(p) < 6:
-            continue
-
-        fit = FitPointsAccel(p)
-        print 'fit', fit, accel_calibration
-        if fit and vector.dist2(fit, accel_calibration) > .001:
-            fit_output.send(('accel', fit), False)
+        accel_cal.RemoveOlder(10*60) # 10 minutes
+        fit = FitAccel(accel_cal, accel_calibration);
+        if fit: # reset compass sigmapoints on accel cal
+            compass_cal.Reset()
             accel_calibration = fit
-            
-        debug('FitPointsCompass', p, compass_calibration, norm)
-        fit = FitPointsCompass(p, compass_calibration, norm)
-        if not fit:
-            continue
-        debug('fit', fit)
+            fit_output.send(('accel', fit, map(lambda p : p.sensor, accel_cal.sigma_points)), False)
 
-        g_required_dev = .15 # must have more than this to allow 1d or 3d fit
-        gpoints = []
-        for q in p:
-            gpoints.append(q[3:])
-        avg, g_dev, g_max_dev = PointFit(gpoints)
-        debug('gdev', g_dev, g_max_dev)
-        c = fit[1] # use 2d fit
-        if g_max_dev < g_required_dev:
-            debug('sigmapoints flat, 2D fit only')
-        else:
-            if fit[2]:
-                c = fit[2] # 3d fit
-            # for now do not allow 1d fit
-            ##if not c:
-              ##  c = fit[0] # 1d fit only possible
+        compass_cal.RemoveOlder(60*60) # 60 minutes
 
-        if not c:
-            continue
-        
-        coverage = 360 - ComputeCoverage(cal.sigma_points, c[0][:3], norm)
-        if coverage < 180: # require 180 degrees
-            debug('calibration: not enough coverage', coverage, 'degrees')
-            if c == fit[1]: # must have had 3d fit to use 1d fit
-                continue
-            debug('insufficient coverage, use 1d fit')
-            continue # no 1d fit
-            #c = fit[0] # 1d fit ok with insufficient coverage
-        #if c == fit[2] and coverage < 240:
-         #   debug('not enough coverage for 3d fit')
-          #  continue
-
-        # make sure the magnitude is sane
-        mag = c[0][3]
-        if mag < 7 or mag > 120:
-            debug('fit found field outside of normal earth field strength', mag)
-            continue
-
-        # require inclination less than 82 degrees, with so much inclination,
-        # the fit is inaccurate (near magnetic pole?)
-        inc = c[0][4]
-        if abs(inc) > 82:
-            debug('incline greater than 82 degrees, no fit',)
-            continue
-        # sphere fit should basically agree with new bias
-        '''
-        sbd = 0
-        if fit[0] != fit[1]:
-            spherebias = fit[2][:3]
-            bias = fit[0][:3]
-            sbd = vector.norm(vector.sub(bias, spherebias))
-            if sbd > 6:
-        debug('sphere and newbias disagree', sbd)
-                    fit[0] = fit[1]
-        print 'sphere bias difference', sbd
-        '''
-        # test points for deviation, all must fall on a sphere
-        deviation = c[1]
-        if deviation[0] > .15 or deviation[1] > 3:
-            debug('bad fit:', deviation)
-            curdeviation = ComputeDeviation(p, compass_calibration)
-            debug('cur dev', curdeviation)
-            # if compass_calibration calibration is really terrible
-            if deviation[0] < curdeviation[0]/2 or curdeviation[0] > 1:
-                debug('allowing bad fit')
-            else:
-                cal.RemoveOldest()  # remove oldest point if too much deviation
-                continue # don't use this fit
-        
-        # if the bias has not sufficiently changed,
-        # the fit didn't change much, so don't bother to report this update
-        if vector.dist2(c[0], compass_calibration) < .1:
-            debug('insufficient change in bias, calibration already ok')
-            debug('coverage', coverage, 'new fit:', c)
-
-        fit_output.send(('compass', c, map(lambda p : p.compass + p.down, cal.sigma_points)), False)
-        compass_calibration = c[0]
+        fit = FitCompass(compass_cal, compass_calibration, norm);
+        if fit:
+            fit_output.send(('compass', fit, map(lambda p : p.sensor + p.down, compass_cal.sigma_points)), False)
+            compass_calibration = fit[0]
 
 class IMUAutomaticCalibration(object):
     def __init__(self, cal_pipe, accel_calibration, compass_calibration):

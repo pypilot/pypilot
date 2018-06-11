@@ -46,7 +46,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                           'gps.source', 'wind.source',
                           'ap.heading', 'servo.flags',
                           'servo.controller',
-                          'servo.mode', 'servo.engauged']
+                          'servo.mode', 'servo.engaged']
         value_list = client.list_values()
         self.gains = []
         for name in value_list:
@@ -216,8 +216,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'ap.heading':
                 self.stHeading.SetLabel('%.1f' % value)
                 self.heading = value
-            elif name == 'servo.engauged':
-                self.stEngauged.SetLabel('Engauged' if value else 'Disengauged')
+            elif name == 'servo.engaged':
+                self.stEngaged.SetLabel('Engaged' if value else 'Disengaged')
             elif name == 'servo.flags':
                 self.stStatus.SetLabel(value)
             elif name == 'servo.controller':

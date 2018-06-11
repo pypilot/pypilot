@@ -194,6 +194,7 @@ class SignalKServer(object):
     def Register(self, value):
         if value.persistent and value.name in self.persistent_data:
             value.value = self.persistent_data[value.name]
+            #print 'persist', value.name, ' = ', value.value
 
         if value.name in self.values:
             print 'warning, registering existing value:', value.name
@@ -337,6 +338,7 @@ if __name__ == '__main__':
     server = SignalKServer()
     print 'signalk demo server, try running signalk_client'
     clock = server.Register(Value('clock', 0))
+    test = server.Register(Property('test', 1234))
     while True:
         clock.set(clock.value + 1)
         server.HandleRequests()

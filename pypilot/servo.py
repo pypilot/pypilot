@@ -40,21 +40,21 @@ class RaspberryHWPWMServoDriver(object):
     def __init__(self):
         import wiringpi
         wiringpi.wiringPiSetup()
-        self.engauged = False
+        self.engaged = False
 
     def raw_command(self, command):
         if command == 0:
             stop()
             return
 
-        if not self.engauged:
+        if not self.engaged:
             wiringpi.pinMode(1, wiringpi.GPIO.PWM_OUTPUT)
             wiringpi.pwmSetMode( wiringpi.GPIO.PWM_MODE_MS )
 
             # fix this to make it higher resolution!!!
             wiringpi.pwmSetRange( 1000 )
             wiringpi.pwmSetClock( 400 )
-            self.engauged = True
+            self.engaged = True
             
         clockcmd = 60 + 30*command
         clockcmd = int(min(110, max(36, clockcmd)))
@@ -62,7 +62,7 @@ class RaspberryHWPWMServoDriver(object):
 
     def stop():
         wiringpi.pinMode(1, wiringpi.GPIO.PWM_INPUT)
-        self.engauged = False
+        self.engaged = False
         
     def fault(self):
         return wiringpi.digitalRead(self.fault_pin)
@@ -79,7 +79,7 @@ class ServoFlags(Value):
     SYNC = 1
     OVERTEMP = 2
     OVERCURRENT = 4
-    ENGAUGED = 8
+    ENGAGED = 8
 
     INVALID=16*1
     FWD_FAULTPIN=16*2
@@ -108,8 +108,8 @@ class ServoFlags(Value):
             ret += 'OVERTEMP '
         if self.value & self.OVERCURRENT:
             ret += 'OVERCURRENT '
-        if self.value & self.ENGAUGED:
-            ret += 'ENGAUGED '
+        if self.value & self.ENGAGED:
+            ret += 'ENGAGED '
         if self.value & self.INVALID:
             ret += 'INVALID '
         if self.value & self.FWD_FAULTPIN:
@@ -194,7 +194,7 @@ class Servo(object):
         self.motor_temp = self.Register(SensorValue, 'motor_temp', timestamp)
         self.rudder_pos = self.Register(SensorValue, 'rudder_pos', timestamp)
         
-        self.engauged = self.Register(BooleanValue, 'engauged', False)
+        self.engaged = self.Register(BooleanValue, 'engaged', False)
         self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 20, persistent=True)
         self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 70, 45, 100, persistent=True)
         self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
@@ -222,9 +222,9 @@ class Servo(object):
         self.windup = 0
         self.windup_change = 0
 
-        self.disengauged = True
+        self.disengaged = True
         self.disengauge_on_timeout = self.Register(BooleanValue, 'disengauge_on_timeout', True, persistent=True)
-        self.force_engauged = False
+        self.force_engaged = False
 
         self.last_zero_command_time = self.command_timeout = time.time()
         self.driver_timeout_start = 0
@@ -243,7 +243,7 @@ class Servo(object):
         t = time.time()
 
         if not self.disengauge_on_timeout.value:
-            self.disengauged = False
+            self.disengaged = False
 
         if self.servo_calibration.thread.is_alive():
             print 'cal thread'
@@ -254,14 +254,14 @@ class Servo(object):
             if time.time() - self.command.time > timeout:
                 #print 'servo command timeout', time.time() - self.command.time
                 self.command.set(0)
-            self.disengauged = False
+            self.disengaged = False
             self.velocity_command(self.command.value)
         else:
             #print 'timeout', t - self.command_timeout
             if self.disengauge_on_timeout.value and \
-               not self.force_engauged and \
+               not self.force_engaged and \
                t - self.command_timeout > self.period.value*3:
-                self.disengauged = True
+                self.disengaged = True
             self.speed.set(0)
             self.raw_command(0)
 
@@ -388,7 +388,7 @@ class Servo(object):
             self.command_timeout = t
 
         if self.driver:
-            if self.disengauged: # keep sending disengauge to keep sync
+            if self.disengaged: # keep sending disengauge to keep sync
                 self.driver.disengauge()
             else:
                 max_current = self.max_current.value
@@ -517,7 +517,7 @@ class Servo(object):
             self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
         if result & ServoTelemetry.FLAGS:
             self.flags.updatedriver(self.driver.flags)
-            self.engauged.update(not not self.driver.flags & ServoFlags.ENGAUGED)
+            self.engaged.update(not not self.driver.flags & ServoFlags.ENGAGED)
 
         self.send_command()
 
@@ -534,7 +534,7 @@ class Servo(object):
             self.calibration.set(json.loads(file.readline()))
         except:
             print 'WARNING: using default servo calibration!!'
-            self.calibration.set({'forward': [.2, .6], 'reverse': [.2, .6]})
+            self.calibration.set({'forward': [.2, .8], 'reverse': [.2, .8]})
 
     def save_calibration(self):
         file = open(Servo.calibration_filename, 'w')

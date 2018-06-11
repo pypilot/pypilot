@@ -180,7 +180,7 @@ $(document).ready(function() {
             poll('servo.voltage');
             poll('servo.controller_temp');
             poll('ap.runtime');
-            poll('servo.engauged');
+            poll('servo.engaged');
         }
     }
     
@@ -236,16 +236,16 @@ $(document).ready(function() {
         if('ap.enabled' in data) {
             if(data['ap.enabled']['value']) {
                 var w = $(window).width();
-                $('#tb_engauged button').css('left', w/12+"px");
-                $('#tb_engauged').addClass('toggle-button-selected');
+                $('#tb_engaged button').css('left', w/12+"px");
+                $('#tb_engaged').addClass('toggle-button-selected');
 
                 $('#port10').text('10');
                 $('#port2').text('2');
                 $('#star2').text('2');
                 $('#star10').text('10');
             } else {
-                $('#tb_engauged button').css('left', "0px")
-                $('#tb_engauged').removeClass('toggle-button-selected');
+                $('#tb_engaged button').css('left', "0px")
+                $('#tb_engaged').removeClass('toggle-button-selected');
 
                 $('#port10').text('<<');
                 $('#port2').text('<');
@@ -275,11 +275,11 @@ $(document).ready(function() {
             heading_command = data['ap.heading_command']['value'];
             $('#heading_command').text(Math.round(heading_command));
         }
-        if('servo.engauged' in data) {
-            if(data['servo.engauged']['value'])
-                $('#servo_engauged').text('Engauged');
+        if('servo.engaged' in data) {
+            if(data['servo.engaged']['value'])
+                $('#servo_engaged').text('Engaged');
             else
-                $('#servo_engauged').text('Disengauged');
+                $('#servo_engaged').text('Disengaged');
         }
 
         // calibration
@@ -350,8 +350,8 @@ $(document).ready(function() {
     });
     
     move = function(x) {
-        var engauged = $('#tb_engauged').hasClass('toggle-button-selected');
-        if(engauged) {
+        var engaged = $('#tb_engaged').hasClass('toggle-button-selected');
+        if(engaged) {
             if(new Date().getTime() - heading_set_time > 1000)
                 heading_local_command = heading_command;
             heading_set_time = new Date().getTime();

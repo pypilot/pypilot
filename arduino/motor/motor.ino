@@ -32,7 +32,7 @@ if RC pwm:
            pin2 esc programming input/output (with arduinousblinker script)
 if Hbridge
    digital pin2 and pin3 for low side, pin9 and pin10 for high side
-digital pin13 is led on when engauged
+digital pin13 is led on when engaged
 
 optional:
 digital pin7 forward fault for optional switch to stop forward travel
@@ -43,7 +43,7 @@ Pins 4 and 5 determine the current sense as folows:
 D4  D5
  1   1        .05 ohm, (or .001 ohm x 50 gain)
  0   1        .01 ohm
- 1   0        .0003 ohm x 50 gain
+ 1   0        .0005 ohm x 50 gain
  0   0        reserved
 
 
@@ -63,16 +63,17 @@ the command can be recognized.
 
 */
 
-//#define DIV_CLOCK // run at 4mhz instead of 16mhz to save power
+// run at 4mhz instead of 16mhz to save power,
+// and to be able to measure lower current from the shunt
+#define DIV_CLOCK
 
-//#define HIGH_CURRENT   // high current uses 300uohm resistor and 50x amplifier
+//#define HIGH_CURRENT   // high current uses 500uohm resistor and 50x amplifier
 //#define HIGH_CURRENT_OLD   // high current uses 500uohm resistor and 50x amplifier
 // otherwise using shunt without amplification
 
 #define rc_pwm_pin 6 // todo: use this pin to detect rc pwm
-#define RC_PWM  // remote control style servo
+uint8_t rc_pwm = 1;  // remote control style servo
 
-#ifndef RC_PWM
 // for direct mosfet mode, define how to turn on/off mosfets
 // do not use digitalWrite!
 #define a_top_on  PORTB |= _BV(PB1)
@@ -88,7 +89,6 @@ the command can be recognized.
 #define dead_time _delay_us(2) // this is quite a long dead time
 #else
 #define dead_time _delay_us(8) // this is quite a long dead time
-#endif
 #endif
 
 ////// CRC
@@ -153,7 +153,7 @@ uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
 
 #define fwd_fault_pin 7 // use pin 7 for optional fault
 #define rev_fault_pin 8 // use pin 7 for optional fault
-// if switches pull this pin low, the motor is disengauged
+// if switches pull this pin low, the motor is disengaged
 // and will be noticed by the control program
 
 #define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
@@ -172,7 +172,6 @@ void debug(char *fmt, ... ){
 #include <util/delay.h>
 
 uint8_t serialin;
-
 void setup() 
 {
 #ifdef DIV_CLOCK
@@ -228,24 +227,37 @@ void setup()
     pinMode(13, OUTPUT);
     digitalWrite(13, LOW);
     
-#ifdef RC_PWM
-    digitalWrite(9, LOW); /* enable internal pullups */
-    pinMode(9, OUTPUT);
-#endif
+    if(rc_pwm) {
+        digitalWrite(9, LOW); /* enable internal pullups */
+        pinMode(9, OUTPUT);
+    }
+    
     pinMode(fwd_fault_pin, INPUT);
     digitalWrite(fwd_fault_pin, HIGH); /* enable internal pullups */
     pinMode(rev_fault_pin, INPUT);
     digitalWrite(rev_fault_pin, HIGH); /* enable internal pullups */
 
-    pinMode(shunt_sense_pin, INPUT);
-    digitalWrite(shunt_sense_pin, HIGH); /* enable internal pullups */    
-} 
 
-enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68, MAX_SLEW_CODE=0x71};
+    pinMode(rc_pwm_pin, INPUT);
+    digitalWrite(rc_pwm_pin, HIGH); /* enable internal pullups */    
+    
+    pinMode(shunt_sense_pin, INPUT);
+    digitalWrite(shunt_sense_pin, HIGH); /* enable internal pullups */
+
+    _delay_us(100);
+
+    // test output type, pwm or h-bridge
+    rc_pwm = digitalRead(rc_pwm_pin);
+    
+    // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
+    shunt_resistance = digitalRead(shunt_sense_pin);
+}
+
+enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71};
 
 enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
 
-enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, MIN_RUDDER=256*1, MAX_RUDDER=256*2};
+enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, MIN_RUDDER=256*1, MAX_RUDDER=256*2};
 
 uint8_t in_bytes[3];
 uint8_t sync_b = 0, in_sync_count = 0;
@@ -266,37 +278,37 @@ uint8_t timeout, rudder_sense = 0;
 uint16_t lastpos = 1000;
 void position(uint16_t value)
 {
-#ifdef RC_PWM
+    if(rc_pwm)
 #ifdef DIV_CLOCK
-  OCR1A = 375 + value * 3 / 8;
+        OCR1A = 375 + value * 3 / 8;
 #else
-  OCR1A = 1500 + value * 3 / 2;
+        OCR1A = 1500 + value * 3 / 2;
 #endif
-#else
-  if(value > 1040) {
+    else {
+        if(value > 1040) {
 #ifdef DIV_CLOCK
-      OCR1A = (2022 - value) * 4;
+            OCR1A = (2022 - value) * 4;
 #else
-      OCR1A = (2016 - value) * 16;
+            OCR1A = (2016 - value) * 16;
 #endif
-      TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
-  } else if(value < 960) {
+            TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
+        } else if(value < 960) {
 #ifdef DIV_CLOCK
-      OCR1B = (22 + value) * 4;
+            OCR1B = (22 + value) * 4;
 #else
-      OCR1B = (16 + value) * 16;
+            OCR1B = (16 + value) * 16;
 #endif
-      TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);
-  } else {
-      TIMSK1 = _BV(TOIE1); // set brake
-      a_top_off;
-      b_top_off;
-      dead_time;
-      a_bottom_on;
-      b_bottom_on;
-  }
-#endif
-  lastpos = value;
+            TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);
+        } else {
+            TIMSK1 = _BV(TOIE1); // set brake
+            a_top_off;
+            b_top_off;
+            dead_time;
+            a_bottom_on;
+            b_bottom_on;
+        }
+    }
+    lastpos = value;
 }
 
 uint16_t command_value = 1000;
@@ -347,84 +359,84 @@ void update_command()
     position(cur_value + diff);
 }
 
-void disengauge()
+void disengage()
 {
     stop();
-    flags &= ~ENGAUGED;
+    flags &= ~ENGAGED;
     timeout = 60; // detach in about 62ms
     digitalWrite(13, LOW); // status LED
 }
 
 void detach()
 {
-#ifdef RC_PWM
-    TCCR1A=0;
-    TCCR1B=0;
-    while(digitalRead(9)); // wait for end of pwm if pulse is high
-    TIMSK1 = 0;
-#else
-    TCCR1A=0;
-    TCCR1B=0;
-    TIMSK1 = 0;
-    a_top_off;
-    a_bottom_off;
-    b_top_off;
-    b_bottom_off;
-#endif
+    if(rc_pwm) {
+        TCCR1A=0;
+        TCCR1B=0;
+        while(digitalRead(9)); // wait for end of pwm if pulse is high
+        TIMSK1 = 0;
+    } else {
+        TCCR1A=0;
+        TCCR1B=0;
+        TIMSK1 = 0;
+        a_top_off;
+        a_bottom_off;
+        b_top_off;
+        b_bottom_off;
+    }
     TIMSK2 = 0;
     timeout = 64; // avoid overflow
 }    
 
-void engauge()
+void engage()
 {
-    if(flags & ENGAUGED)
+    if(flags & ENGAGED)
         return;
 
-#ifdef RC_PWM
-    TCNT1 = 0x1fff;
-    //Configure TIMER1
-    TCCR1A|=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
-    TCCR1B|=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
+    if(rc_pwm) {
+        TCNT1 = 0x1fff;
+        //Configure TIMER1
+        TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
+        TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
 #ifdef DIV_CLOCK
-    ICR1=10000;  //fPWM=50Hz (Period = 20ms Standard).
+        ICR1=10000;  //fPWM=50Hz (Period = 20ms Standard).
 #else
-    ICR1=40000;  //fPWM=50Hz (Period = 20ms Standard).
+        ICR1=40000;  //fPWM=50Hz (Period = 20ms Standard).
 #endif
 
-    TIMSK1 = _BV(TOIE1);
+        TIMSK1 = _BV(TOIE1);
     //pinMode(9, OUTPUT);
-#else
-    //TCNT1 = 0x1fff;
-    //Configure TIMER1
-    TCCR1A=_BV(WGM11);        //NON Inverted PWM
-    TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS10); //PRESCALER=0 MODE 14(FAST PWM)
+    } else {
+        //TCNT1 = 0x1fff;
+        //Configure TIMER1
+        TCCR1A=_BV(WGM11);        //NON Inverted PWM
+        TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS10); //PRESCALER=0 MODE 14(FAST PWM)
 #ifdef DIV_CLOCK
-    ICR1=4000;  //fPWM=1khz
+        ICR1=4000;  //fPWM=1khz
 #else
-    ICR1=16000;  //fPWM=1khz
+        ICR1=16000;  //fPWM=1khz
 #endif
-    TIMSK1 = 0;
-    a_top_off;
-    a_bottom_off;
-    b_top_off;
-    b_bottom_off;
+        TIMSK1 = 0;
+        a_top_off;
+        a_bottom_off;
+        b_top_off;
+        b_bottom_off;
 
-    pinMode(2, OUTPUT);
-    pinMode(3, OUTPUT);
-    pinMode(9, OUTPUT);
-    pinMode(10, OUTPUT);
-#endif
+        pinMode(2, OUTPUT);
+        pinMode(3, OUTPUT);
+        pinMode(9, OUTPUT);
+        pinMode(10, OUTPUT);
+    }
 
 // use timer2 as timeout
     timeout = 0;
 #ifdef DIV_CLOCK
-    TCCR2B = _BV(CS22) | _BV(CS21); // divide 128
+    TCCR2B = _BV(CS22) | _BV(CS21); // divide 256
 #else
     TCCR2B = _BV(CS20) | _BV(CS21) | _BV(CS22); // divide 1024
 #endif
     TIMSK2 = _BV(TOIE2);
 
-    flags |= ENGAUGED;
+    flags |= ENGAGED;
 
     update_command();
     digitalWrite(13, HIGH); // status LED
@@ -452,11 +464,11 @@ uint8_t adc_cnt;
 // has 6862 samples/s
 ISR(ADC_vect)
 {
-#ifdef RC_PWM
-    ADCSRA |= _BV(ADSC); // enable conversion
-#else
-    sei(); // enable nested interrupts to ensure correct operation
-#endif
+    if(rc_pwm)
+        ADCSRA |= _BV(ADSC); // enable conversion
+    else
+        sei(); // enable nested interrupts to ensure correct operation
+
     uint16_t adcw = ADCW;
     if(++adc_cnt <= 3) // discard first few readings after changing channel
         goto ret;
@@ -484,9 +496,8 @@ ISR(ADC_vect)
         adc_counter=0;
     ADMUX = defmux | muxes[adc_counter];
 ret:;
-#ifndef RC_PWM
-    ADCSRA |= _BV(ADSC); // enable conversion
-#endif
+    if(!rc_pwm)
+        ADCSRA |= _BV(ADSC); // enable conversion
 }
 
 uint16_t CountADC(uint8_t index, uint8_t p)
@@ -529,14 +540,16 @@ uint16_t TakeADC(uint8_t index, uint8_t p)
 uint16_t TakeAmps(uint8_t p)
 {
     uint32_t v = TakeADC(CURRENT, p);
-#if defined(HIGH_CURRENT)
-    // high curront controller has .0003 ohm with 50x gain
+
+#if defined(HIGH_CURRENT) 
+   // high curront controller has .0005 ohm with 50x gain
     // 3663/511 = 100.0/1023/.0003/50*1.1
+    // 1200/279 = 100.0/1023/.0005/50*1.1
     if(v > 16)
 #ifdef DIV_CLOCK        
-        v = v * 3663 / 511 / 16 + 42; // 420mA offset
+        v = v * 1200 / 279 / 16; // 420mA offset
 #else
-        v = v * 3663 / 511 / 16 + 82; // 820mA offset
+        v = v * 1200 / 279 / 16 + 82; // 820mA offset
 #endif
     return v;
 #elif defined(HIGH_CURRENT_OLD)
@@ -547,14 +560,15 @@ uint16_t TakeAmps(uint8_t p)
     // current units of 10mA
     // 275 / 128 = 100.0/1024/.05*1.1   for 0.05 ohm shunt
     // 1375 / 128 = 100.0/1024/.01*1.1   for 0.01 ohm shunt
-    if(shunt_resistance)
+   if(shunt_resistance)
         return v * 275 / 128 / 16;
 
-    // unfortunately there is a 550mA offset, compensate for it
-    // by adding 55 x 10mA
     if(v > 16)
-        v = v * 1375 / 128 / 16 + 55;
-
+#ifdef DIV_CLOCK        
+        v = v * 1375 / 128 / 16 + 20; // 200mA minimum
+#else
+        v = v * 1375 / 128 / 16 + 55; // 550mA minimum
+#endif
     return v;
 #endif
 }
@@ -609,7 +623,7 @@ ISR(WDT_vect)
 {
     wdt_reset();
     wdt_disable();
-    disengauge();
+    disengage();
     delay(50);
     detach();
 
@@ -619,27 +633,26 @@ ISR(WDT_vect)
 static volatile uint8_t timer1_cnt;
 ISR(TIMER1_OVF_vect)
 {
-#ifdef RC_PWM
-    update_command();
-#else
-    if(lastpos > 1000) {
-        a_top_off;
-        dead_time;
-        a_bottom_on;
-    } else if(lastpos < 1000) {
-        b_top_off;
-        dead_time;
-        b_bottom_on;
-    }
-    sei();
-    if(++timer1_cnt == 20) { // update slew speeds at 50hz
+    if(rc_pwm)
         update_command();
-        timer1_cnt = 0;
+    else {
+        if(lastpos > 1000) {
+            a_top_off;
+            dead_time;
+            a_bottom_on;
+        } else if(lastpos < 1000) {
+            b_top_off;
+            dead_time;
+            b_bottom_on;
+        }
+        sei();
+        if(++timer1_cnt == 20) { // update slew speeds at 50hz
+            update_command();
+            timer1_cnt = 0;
+        }
     }
-#endif
 }
 
-#ifndef RC_PWM
 ISR(TIMER1_COMPA_vect)
 {
     a_bottom_off;
@@ -657,14 +670,13 @@ ISR(TIMER1_COMPB_vect)
     b_top_on;
     a_bottom_on;
 }
-#endif
 
 ISR(TIMER2_OVF_vect)
 {
     sei();
     timeout++;
     if(timeout == 60)
-        disengauge();
+        disengage();
     if(timeout >= 64) // detach 60 ms later so esc gets stop
         detach();
 }
@@ -701,7 +713,7 @@ void process_packet()
             // no reverse command if fwd fault
         else {
             command_value = value;
-            engauge();
+            engage();
         }
         break;
     case MAX_CURRENT_CODE: // current in units of 10mA
@@ -728,10 +740,10 @@ void process_packet()
         min_rudder_pos = 256*in_bytes[1];
         max_rudder_pos = 256*in_bytes[2];
         break;
-    case DISENGAUGE_CODE:
+    case DISENGAGE_CODE:
         if(serialin < 12)
             serialin+=4; // output at input rate
-        disengauge();
+        disengage();
         break;
     case MAX_SLEW_CODE:
         max_slew_speed = in_bytes[1];
@@ -783,7 +795,7 @@ void loop()
           } else {
               // invalid packet
               flags &= ~SYNC;
-              stop(); //disengauge();
+              stop(); //disengage();
               in_sync_count = 0;
               in_bytes[0] = in_bytes[1];
               in_bytes[1] = in_bytes[2];
@@ -806,13 +818,6 @@ void loop()
         flags |= REV_FAULTPIN;
     } else
       flags &= ~REV_FAULTPIN;
-
-    // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
-#ifdef HIGH_CURRENT
-    shunt_resistance =0;
-#else
-    shunt_resistance = digitalRead(shunt_sense_pin);
-#endif
     
     // test current
     const int react_count = 686; // need 686 readings for 0.1s reaction time
@@ -828,8 +833,7 @@ void loop()
     
     // test over temp
     const int temp_react_count = 200;
-    if(!shunt_resistance &&
-       CountADC(CONTROLLER_TEMP, 1) > temp_react_count &&
+    if(CountADC(CONTROLLER_TEMP, 1) > temp_react_count &&
        CountADC(MOTOR_TEMP, 1) > temp_react_count) {
         uint16_t controller_temp = TakeTemp(CONTROLLER_TEMP, 1);
         uint16_t motor_temp = TakeTemp(MOTOR_TEMP, 1);
@@ -848,7 +852,7 @@ void loop()
     }
 
     const int rudder_react_count = 160; // approx 0.2 second reaction
-    if(!shunt_resistance && CountADC(RUDDER, 1) > rudder_react_count) {
+    if(CountADC(RUDDER, 1) > rudder_react_count) {
         uint16_t v = TakeRudder(1);
         if(rudder_sense) {
             if(v < min_rudder_pos) {
@@ -913,14 +917,14 @@ void loop()
             code = VOLTAGE_CODE;
             break;
         case 6:
-            if(!shunt_resistance && CountADC(CONTROLLER_TEMP, 0)) {
+            if(CountADC(CONTROLLER_TEMP, 0)) {
                 v = TakeTemp(CONTROLLER_TEMP, 0);
                 code = CONTROLLER_TEMP_CODE;
                 break;
             }
             return;
         case 18:
-            if(!shunt_resistance && CountADC(MOTOR_TEMP, 0)) {
+            if(CountADC(MOTOR_TEMP, 0)) {
                 v = TakeTemp(MOTOR_TEMP, 0);
                 if(v > 1200) { // below 12C means no sensor connected, or too cold to care
                     code = MOTOR_TEMP_CODE;

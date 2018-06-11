@@ -20,7 +20,7 @@ class AutopilotControlBase ( wx.Frame ):
 	def __init__( self, parent ):
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Autopilot Control", pos = wx.DefaultPosition, size = wx.Size( -1,400 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
-		self.SetSizeHints( -1,-1 )
+		self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
 		
 		fgSizer5 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer5.AddGrowableCol( 0 )
@@ -55,9 +55,9 @@ class AutopilotControlBase ( wx.Frame ):
 		self.stController.Wrap( -1 )
 		fgSizer21.Add( self.stController, 0, wx.ALL, 5 )
 		
-		self.stEngauged = wx.StaticText( self, wx.ID_ANY, u"        N/A        ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stEngauged.Wrap( -1 )
-		fgSizer21.Add( self.stEngauged, 0, wx.ALL, 5 )
+		self.stEngaged = wx.StaticText( self, wx.ID_ANY, u"        N/A        ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stEngaged.Wrap( -1 )
+		fgSizer21.Add( self.stEngaged, 0, wx.ALL, 5 )
 		
 		self.stStatus = wx.StaticText( self, wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.Size( 100,-1 ), 0 )
 		self.stStatus.Wrap( -1 )
@@ -229,6 +229,73 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer7.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
 		self.m_notebook1 = wx.Notebook( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_panel7 = wx.Panel( self.m_notebook1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		fgSizer81 = wx.FlexGridSizer( 0, 1, 0, 0 )
+		fgSizer81.AddGrowableCol( 0 )
+		fgSizer81.AddGrowableRow( 0 )
+		fgSizer81.SetFlexibleDirection( wx.BOTH )
+		fgSizer81.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
+		self.AccelCalibration = wx.glcanvas.GLCanvas(self.m_panel7, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])
+		fgSizer81.Add( self.AccelCalibration, 0, wx.ALL|wx.EXPAND, 5 )
+		
+		fgSizer1911 = wx.FlexGridSizer( 0, 3, 0, 0 )
+		fgSizer1911.AddGrowableCol( 0 )
+		fgSizer1911.SetFlexibleDirection( wx.BOTH )
+		fgSizer1911.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
+		fgSizer101 = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgSizer101.AddGrowableCol( 1 )
+		fgSizer101.SetFlexibleDirection( wx.BOTH )
+		fgSizer101.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
+		self.m_staticText101 = wx.StaticText( self.m_panel7, wx.ID_ANY, u"Calibration", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText101.Wrap( -1 )
+		fgSizer101.Add( self.m_staticText101, 0, wx.ALL, 5 )
+		
+		self.stAccelCal = wx.StaticText( self.m_panel7, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stAccelCal.Wrap( -1 )
+		fgSizer101.Add( self.stAccelCal, 0, wx.ALL|wx.EXPAND, 5 )
+		
+		self.m_staticText141 = wx.StaticText( self.m_panel7, wx.ID_ANY, u"Calibration Age", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText141.Wrap( -1 )
+		fgSizer101.Add( self.m_staticText141, 0, wx.ALL, 5 )
+		
+		self.stAccelCalAge = wx.StaticText( self.m_panel7, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stAccelCalAge.Wrap( -1 )
+		fgSizer101.Add( self.stAccelCalAge, 0, wx.ALL|wx.EXPAND, 5 )
+		
+		
+		fgSizer1911.Add( fgSizer101, 1, wx.EXPAND, 5 )
+		
+		fgSizer271 = wx.FlexGridSizer( 0, 1, 0, 0 )
+		fgSizer271.SetFlexibleDirection( wx.BOTH )
+		fgSizer271.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
+		self.m_button101 = wx.Button( self.m_panel7, wx.ID_ANY, u"Clear", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer271.Add( self.m_button101, 0, wx.ALL, 5 )
+		
+		self.cbAccelCalibrationLocked = wx.CheckBox( self.m_panel7, wx.ID_ANY, u"calibratiion locked", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer271.Add( self.cbAccelCalibrationLocked, 0, wx.ALL, 5 )
+		
+		
+		fgSizer1911.Add( fgSizer271, 1, wx.EXPAND, 5 )
+		
+		m_sdbSizer11 = wx.StdDialogButtonSizer()
+		self.m_sdbSizer11OK = wx.Button( self.m_panel7, wx.ID_OK )
+		m_sdbSizer11.AddButton( self.m_sdbSizer11OK )
+		m_sdbSizer11.Realize();
+		
+		fgSizer1911.Add( m_sdbSizer11, 1, wx.EXPAND, 5 )
+		
+		
+		fgSizer81.Add( fgSizer1911, 1, wx.EXPAND, 5 )
+		
+		
+		self.m_panel7.SetSizer( fgSizer81 )
+		self.m_panel7.Layout()
+		fgSizer81.Fit( self.m_panel7 )
+		self.m_notebook1.AddPage( self.m_panel7, u"accel", True )
 		self.m_panel1 = wx.Panel( self.m_notebook1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer8 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer8.AddGrowableCol( 0 )
@@ -256,14 +323,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.stCompassCal = wx.StaticText( self.m_panel1, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stCompassCal.Wrap( -1 )
 		fgSizer10.Add( self.stCompassCal, 0, wx.ALL|wx.EXPAND, 5 )
-		
-		self.m_staticText12 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"Deviation", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText12.Wrap( -1 )
-		fgSizer10.Add( self.m_staticText12, 0, wx.ALL, 5 )
-		
-		self.stCompassCalDeviation = wx.StaticText( self.m_panel1, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stCompassCalDeviation.Wrap( -1 )
-		fgSizer10.Add( self.stCompassCalDeviation, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		self.m_staticText14 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"Calibration Age", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText14.Wrap( -1 )
@@ -480,7 +539,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook1.AddPage( self.m_panel3, u"imu", True )
+		self.m_notebook1.AddPage( self.m_panel3, u"imu", False )
 		self.m_panel2 = wx.Panel( self.m_notebook1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer9 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer9.AddGrowableCol( 0 )
@@ -576,6 +635,24 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.Centre( wx.BOTH )
 		
 		# Connect Events
+		self.AccelCalibration.Bind( wx.EVT_KEY_DOWN, self.onKeyPressAccel )
+		self.AccelCalibration.Bind( wx.EVT_LEFT_DOWN, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_LEFT_UP, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_MIDDLE_DOWN, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_MIDDLE_UP, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_RIGHT_DOWN, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_RIGHT_UP, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_MOTION, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_LEFT_DCLICK, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_MIDDLE_DCLICK, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_RIGHT_DCLICK, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_LEAVE_WINDOW, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_ENTER_WINDOW, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_MOUSEWHEEL, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_PAINT, self.onPaintGLAccel )
+		self.AccelCalibration.Bind( wx.EVT_SIZE, self.onSizeGLAccel )
+		self.m_button101.Bind( wx.EVT_BUTTON, self.onClearAccel )
+		self.cbAccelCalibrationLocked.Bind( wx.EVT_CHECKBOX, self.onAccelCalibrationLocked )
 		self.CompassCalibration.Bind( wx.EVT_KEY_DOWN, self.onKeyPressCompass )
 		self.CompassCalibration.Bind( wx.EVT_LEFT_DOWN, self.onMouseEventsCompass )
 		self.CompassCalibration.Bind( wx.EVT_LEFT_UP, self.onMouseEventsCompass )
@@ -622,11 +699,27 @@ class CalibrationDialogBase ( wx.Dialog ):
 	
 	
 	# Virtual event handlers, overide them in your derived class
-	def onKeyPressCompass( self, event ):
+	def onKeyPressAccel( self, event ):
 		event.Skip()
 	
 	def onMouseEventsCompass( self, event ):
 		event.Skip()
+	
+	def onPaintGLAccel( self, event ):
+		event.Skip()
+	
+	def onSizeGLAccel( self, event ):
+		event.Skip()
+	
+	def onClearAccel( self, event ):
+		event.Skip()
+	
+	def onAccelCalibrationLocked( self, event ):
+		event.Skip()
+	
+	def onKeyPressCompass( self, event ):
+		event.Skip()
+	
 	
 	def onPaintGLCompass( self, event ):
 		event.Skip()

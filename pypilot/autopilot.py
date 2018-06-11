@@ -21,16 +21,10 @@ from signalk.server import *
 from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 from boatimu import *
+from resolv import *
 
 from nmea import Nmea
 import servo
-
-def resolv(angle, offset=0):
-    while offset - angle > 180:
-        angle += 360
-    while offset - angle < -180:
-        angle -= 360
-    return angle
 
 def minmax(value, r):
   return min(max(value, -r), r)
@@ -306,7 +300,7 @@ class AutopilotBase(object):
       self.process_imu_data() # implementation specific process
 
       # servo can only disengauge under manual control
-      self.servo.force_engauged = self.enabled.value
+      self.servo.force_engaged = self.enabled.value
       self.lastmode = self.mode.value
 
       t1 = time.time()

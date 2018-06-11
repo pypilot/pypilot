@@ -10,7 +10,7 @@
 import tempfile, time, math, sys, subprocess, json, socket, os
 import wx, wx.glcanvas
 import autopilot_control_ui
-import compass_calibration_plot, pypilot.quaternion, boatplot
+import calibration_plot, pypilot.quaternion, boatplot
 import signalk.scope_wx
 from signalk.client import SignalKClient, ConnectionLost
 from signalk.client_wx import round3
@@ -33,7 +33,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.client = False
 
-        self.compass_calibration_plot = compass_calibration_plot.CompassCalibrationPlot()
+        self.accel_calibration_plot = calibration_plot.AccelCalibrationPlot()
+        self.accel_calibration_glContext =  wx.glcanvas.GLContext(self.AccelCalibration)
+
+        self.compass_calibration_plot = calibration_plot.CompassCalibrationPlot()
         self.compass_calibration_glContext =  wx.glcanvas.GLContext(self.CompassCalibration)
 
         self.boat_plot = boatplot.BoatPlot()
@@ -61,10 +64,13 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.fusionQPose = [1, 0, 0, 0]
 
     def on_con(self, client):
-        watchlist = ['imu.compass_calibration', 'imu.compass_calibration_age', \
-                     'imu.compass', 'imu.compass_calibration_sigmapoints', \
-                     'imu.compass_calibration_locked', \
-                     'imu.accel', 'imu.fusionQPose', 'imu.alignmentCounter', \
+        watchlist = ['imu.accel.calibration', 'imu.accel.calibration.age', \
+                     'imu.accel', 'imu.accel.calibration.sigmapoints', \
+                     'imu.accel.calibration.locked', \
+                     'imu.compass.calibration', 'imu.compass.calibration.age', \
+                     'imu.compass', 'imu.compass.calibration.sigmapoints', \
+                     'imu.compass.calibration.locked', \
+                     'imu.fusionQPose', 'imu.alignmentCounter', \
                      'imu.heading', \
                      'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', \
                      'imu.heading_offset',
@@ -92,18 +98,28 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         name, data = msg
         value = data['value']
 
+        self.accel_calibration_plot.read_data(msg)
+
+        if name == 'imu.accel':
+            self.AccelCalibration.Refresh()
+        elif name == 'imu.accel.calibration':
+            self.stAccelCal.SetLabel(str(round3(value[0])))
+        elif name == 'imu.accel.calibration.age':
+            self.stSensorsCalAge.SetLabel(str(value))
+        elif name == 'imu.accel.calibration.locked':
+            self.cbAccelCalibrationLocked.SetValue(value)
+        
         self.compass_calibration_plot.read_data(msg)
 
         if name == 'imu.compass':
             self.CompassCalibration.Refresh()
-        
-        if name == 'imu.compass_calibration':
+        elif name == 'imu.compass.calibration':
             self.stCompassCal.SetLabel(str(round3(value[0])))
-            self.stCompassCalDeviation.SetLabel('N/A')
-        elif name == 'imu.compass_calibration_age':
-            self.stCompassCalAge.SetLabel(str(value))
-        elif name == 'imu.compass_calibration_locked':
+        elif name == 'imu.compass.calibration.age':
+            self.stSensorsCalAge.SetLabel(str(value))
+        elif name == 'imu.compass.calibration.locked':
             self.cbCompassCalibrationLocked.SetValue(value)
+                
         elif name == 'imu.alignmentQ':
             self.alignmentQ = value
             self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(pypilot.quaternion.angle(self.alignmentQ))))
@@ -176,17 +192,38 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
             self.servoprocess = False
 
+    def onKeyPressAccel( self, event ):
+        self.onKeyPress(self.compass_calibration_plot)
+
     def onKeyPressCompass( self, event ):
-        signalk.scope_wx.wxglutkeypress(event, self.compass_calibration_plot.special, \
-                                     self.compass_calibration_plot.key)
+        self.onKeyPress(self.compass_calibration_plot)
+        
+    def onKeyPress( self, plot ):
+        signalk.scope_wx.wxglutkeypress(event, plot.special, plot.key)
+
+    def onClearAccel( self, event ):
+        self.accel_calibration_plot.points = []
 
     def onClearCompass( self, event ):
         self.compass_calibration_plot.points = []
 
-    def onCompassCalibrationLocked( self, event ):
-        self.client.set('imu.compass_calibration_locked', self.cbCompassCalibrationLocked.GetValue())
+        
+    def onAccelCalibrationLocked( self, event ):
+        self.client.set('imu.accel.calibration.locked', self.cbAccelCalibrationLocked.GetValue())
 
+    def onCompassCalibrationLocked( self, event ):
+        self.client.set('imu.compass.calibration.locked', self.cbCompassCalibrationLocked.GetValue())
+
+    def onCalibrationLocked( self, sensor, ctrl ):
+        self.client.set('imu.'+sensor+'.calibration.locked', self.ctrl.GetValue())
+
+    def onMouseEventsAccel( self, event ):
+        self.onMouseEvents( event, self.CompassCalibration, self.compass_calibration_plot )
+        
     def onMouseEventsCompass( self, event ):
+        self.onMouseEvents( event, self.CompassCalibration, self.compass_calibration_plot )
+        
+    def onMouseEvents( self, event, canvas, plot ):
         self.CompassCalibration.SetFocus()
 
         pos = event.GetPosition()
@@ -194,26 +231,35 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.lastmouse = pos
 
         if event.Dragging():
-            compass_calibration_plot.rotate_mouse(pos[0] - self.lastmouse[0], \
-                                                  pos[1] - self.lastmouse[1])
-            self.CompassCalibration.Refresh()
+            plot.rotate_mouse(pos[0] - self.lastmouse[0], \
+                              pos[1] - self.lastmouse[1])
+            canvas.Refresh()
             self.lastmouse = pos
 
         rotation = event.GetWheelRotation() / 60
         if rotation:
-            self.CompassCalibration.Refresh()
+            canvas.Refresh()
         while rotation > 0:
-            self.compass_calibration_plot.userscale /= .9
+            plot.userscale /= .9
             rotation -= 1
         while rotation < 0:
-            self.compass_calibration_plot.userscale *= .9
+            plot.userscale *= .9
             rotation += 1
 	
+    def onPaintGLAccel( self, event ):
+        self.onPaintGL( self.AccelCalibration, self.accel_calibration_plot, self.accel_calibration_glContext )
+
     def onPaintGLCompass( self, event ):
-        wx.PaintDC( self.CompassCalibration )
-        self.CompassCalibration.SetCurrent(self.compass_calibration_glContext)
-        self.compass_calibration_plot.display()
-        self.CompassCalibration.SwapBuffers()
+        self.onPaintGL( self.CompassCalibration, self.compass_calibration_plot, self.compass_calibration_glContext )
+
+    def onPaintGL( self, canvas, plot, context ):
+        wx.PaintDC( canvas )
+        canvas.SetCurrent(context)
+        plot.display()
+        canvas.SwapBuffers()
+
+    def onSizeGLAccel( self, event ):
+        self.accel_calibration_plot.reshape(event.GetSize().x, event.GetSize().y)
 
     def onSizeGLCompass( self, event ):
         self.compass_calibration_plot.reshape(event.GetSize().x, event.GetSize().y)
@@ -264,7 +310,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             rotation += 1
             
     def onPaintGLBoatPlot( self, event ):
-        wx.PaintDC( self.CompassCalibration )
+        wx.PaintDC( self.BoatPlot )
         self.BoatPlot.SetCurrent(self.boat_plot_glContext)
 
         # stupid hack

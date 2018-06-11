@@ -94,6 +94,7 @@ class SignalKPipeServerClient(SignalKServer):
             self.gets[name].append(socket)
             self.pipe.send(data)
         elif method == 'set':
+            data['value'] # throw exception if there is no value field
             self.pipe.send(data)
         elif method == 'watch':
           super(SignalKPipeServerClient, self).HandleNamedRequest(socket, data)

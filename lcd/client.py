@@ -330,7 +330,7 @@ class LCDClient():
             self.menu = LCDMenu(self, _('Calibrate'),
                                 [(_('level'), level),
                                  value_edit(_('heading'), getheading, 'imu.heading_offset'),
-                                 value_check(_('lock'), 'imu.compass_calibration_locked'),
+                                 value_check(_('lock'), 'imu.compass.calibration.locked'),
                                  (_('info'), lambda : self.display_calibrate_info)],
                                 self.menu)
             self.menu.display_hook = self.display_calibrate
@@ -540,8 +540,8 @@ class LCDClient():
         
         watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
                      'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
-                     'imu.compass_calibration', 'imu.compass_calibration_sigmapoints',
-                     'imu.compass_calibration_locked', 'imu.alignmentQ']
+                     'imu.compass.calibration', 'imu.compass.calibration.sigmapoints',
+                     'imu.compass.calibration.locked', 'imu.alignmentQ']
         poll_list = ['ap.heading']
         self.last_msg = {}
         for name in ['gps.source', 'wind.source']:
@@ -707,7 +707,7 @@ class LCDClient():
         warning = False
         if mode == 'compass':
             warning = False
-            cal = self.last_val('imu.compass_calibration')
+            cal = self.last_val('imu.compass.calibration')
             if cal == 'N/A':
                 ndeviation = 0
             else:
@@ -844,7 +844,7 @@ class LCDClient():
             deviationstr = _('N/A')
             dim = '?'
             try:
-                cal = self.last_val('imu.compass_calibration')
+                cal = self.last_val('imu.compass.calibration')
                 deviation = ['%.2f' % cal[1][0], '%.2f' % cal[1][1]]
                 dim = str(int(cal[2]))
                 #print ndeviation
@@ -860,13 +860,13 @@ class LCDClient():
             self.fittext(rectangle(0, .3, 1, .15), _('compass'))
             self.fittext(rectangle(0, .42, 1, .23), deviationstr)
             self.fittext(rectangle(0, .66, 1, .14), deviation[0] + ' ' + dim + 'd')
-            self.fittext(rectangle(0, .8, 1, .2), self.last_val('imu.compass_calibration_age')[:7])
+            self.fittext(rectangle(0, .8, 1, .2), self.last_val('imu.compass.calibration.age')[:7])
             
-            self.get('imu.compass_calibration_age')
+            self.get('imu.compass.calibration.age')
 
         elif self.info_page == 1:
             try:
-                cal = self.last_val('imu.compass_calibration')
+                cal = self.last_val('imu.compass.calibration')
                 raw = ''
                 for c in cal[0]:
                     raw += '%.1f\n' % c
@@ -877,13 +877,13 @@ class LCDClient():
         else:
             mod = int(time.time()%11)/3
             self.fittext(rectangle(0, .24, 1, .15), 'sigma plot')
-            cal = self.last_val('imu.compass_calibration')[0]
+            cal = self.last_val('imu.compass.calibration')[0]
             m = cal[3]
             dip = math.radians(cal[4])
             if mod == 1:
                 m *= math.cos(dip)
             try:
-                p = self.last_val('imu.compass_calibration_sigmapoints')
+                p = self.last_val('imu.compass.calibration.sigmapoints')
                 q = self.last_val('imu.alignmentQ')
                 p = map(lambda p0 : map(lambda x0, c : (x0 - c) / m, p0[:3], cal[:3]), p)
                 x, y, r = 24, 56, 20
