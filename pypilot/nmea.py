@@ -362,14 +362,13 @@ class Nmea(object):
 
         # limit to 5hz output of servo rudder
         dt = time.time() - self.last_rudder_time
-        if self.process.sockets and (dt > .2 or dt < 0) and \
-           'servo.rudder' in self.server.values:
+        if (dt > .2 or dt < 0) and 'servo.rudder' in self.server.values:
+            # if the servo has rudder, output nmea rudder angle
             value = self.server.values['servo.rudder'].value
             if value:
-                self.send_nmea('APRSA,%.3f,A,,' % value)
-                self.rudder.source.update('servo')
-                self.rudder.angle.update(value)
-                self.handle_messages({'rudder': val}, 'servo')
+                if self.process.sockets:
+                    self.send_nmea('APRSA,%.3f,A,,' % value)
+                self.handle_messages({'rudder': {'angle': value}}, 'servo')
 
             self.last_rudder_time = time.time()
             
