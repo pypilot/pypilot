@@ -47,8 +47,26 @@ the command can be recognized.
 
 */
 
-//#define HIGH_CURRENT   // high current uses 300uohm resistor and 5x amplifier
+#define HIGH_CURRENT   // high current uses 300uohm resistor and 50x amplifier
+//#define HIGH_CURRENT_OLD   // high current uses 500uohm resistor and 50x amplifier
+// otherwise using shunt without amplification
 
+//#define RC_PWM  // remote control style servo
+
+#ifndef RC_PWM
+// for direct mosfet mode, define how to turn on/off mosfets
+// do not use digitalWrite!
+#define a_top_on  PORTB |= _BV(PB1)
+#define a_top_off PORTB &= ~_BV(PB1)
+#define a_bottom_on PORTD |= _BV(PD2)
+#define a_bottom_off PORTD &= ~_BV(PD2)
+#define b_top_on  PORTB |= _BV(PB2)
+#define b_top_off PORTB &= ~_BV(PB2)
+#define b_bottom_on PORTD |= _BV(PD3)
+#define b_bottom_off PORTD &= ~_BV(PD3)
+
+#define dead_time _delay_us(10) // this is quite a long dead time
+#endif
 
 ////// CRC
 #include <avr/pgmspace.h>
@@ -110,13 +128,6 @@ uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 
-//#define ARDUINO_SERVO
-
-#ifdef ARDUINO_SERVO // crappy resolution software servo
-#include <Servo.h>
-Servo myservo;  // create servo object to control a servo 
-#endif
-
 #define fwd_fault_pin 7 // use pin 7 for optional fault
 #define rev_fault_pin 8 // use pin 7 for optional fault
 // if switches pull this pin low, the motor is disengauged
@@ -163,13 +174,11 @@ void setup()
 // Enable all interrupts.
     sei();
 
-
     serialin = 0;
     // set up Serial library
     Serial.begin(38400);
 
     set_sleep_mode(SLEEP_MODE_IDLE); // wait for serial
-
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
 //    ADMUX = _BV(REFS0); // external 5v
@@ -180,9 +189,10 @@ void setup()
 
     ADCSRA |= _BV(ADSC); // start conversion
 
+#ifdef RC_PWM
     digitalWrite(9, LOW); /* enable internal pullups */
     pinMode(9, OUTPUT);
-    
+#endif
     pinMode(fwd_fault_pin, INPUT);
     digitalWrite(fwd_fault_pin, HIGH); /* enable internal pullups */
     pinMode(rev_fault_pin, INPUT);
@@ -217,10 +227,23 @@ uint8_t timeout, rudder_sense = 0;
 uint16_t lastpos = 1000;
 void position(uint16_t value)
 {
-#ifdef ARDUINO_SERVO
-    myservo.write(value * 9 / 100 - 12);
-#else
+#ifdef RC_PWM
   OCR1A = 1500 + value * 3 / 2;
+#else
+  if(value > 1020) {
+      OCR1A = (2020 - value) * 16;
+      TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
+  } else if(value < 980) {
+      OCR1B = (20 + value) * 16;
+      TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);
+  } else {
+      TIMSK1 = _BV(TOIE1); // set brake
+      a_top_off;
+      b_top_off;
+      dead_time;
+      a_bottom_on;
+      b_bottom_on;
+  }
 #endif
   lastpos = value;
 }
@@ -230,6 +253,7 @@ void stop()
 {
     position(1000);
     command_value = 1000;
+    lastpos = 1000;
 }
 
 void stop_fwd()
@@ -247,9 +271,10 @@ void stop_rev()
 void update_command()
 {
     int16_t speed_rate = max_slew_speed;
-     // value of 20 is 1 second full range at 50hz
+    // value of 20 is 1 second full range at 50hz
     int16_t slow_rate = max_slew_slow;
-    uint16_t cur_value = OCR1A * 2 / 3 - 1000;
+    //uint16_t cur_value = OCR1A * 2 / 3 - 1000;
+    uint16_t cur_value = lastpos;
     int16_t diff = command_value - cur_value;
 
     // limit motor speed change to stay within speed and slow slew rates
@@ -268,7 +293,6 @@ void update_command()
             if(diff > slow_rate)
                 diff = slow_rate;
     }
-
     position(cur_value + diff);
 }
 
@@ -281,41 +305,55 @@ void disengauge()
 
 void detach()
 {
-#ifdef ARDUINO_SERVO
-    myservo.detach();
+#ifdef RC_PWM
+    TCCR1A=0;
+    TCCR1B=0;
+    while(digitalRead(9)); // wait for end of pwm if pulse is high
+    TIMSK1 = 0;
 #else
     TCCR1A=0;
     TCCR1B=0;
-//    DDRB&=~_BV(PB1);
-    while(digitalRead(9)); // wait for end of pwm if pulse is high
-//    pinMode(9, INPUT);
-//    digitalWrite(9, LOW); // default output as zero
     TIMSK1 = 0;
+    a_top_off;
+    a_bottom_off;
+    b_top_off;
+    b_bottom_off;
 #endif
     TIMSK2 = 0;
     timeout = 64; // avoid overflow
 }    
-
-unsigned int range = 40000;
 
 void engauge()
 {
     if(flags & ENGAUGED)
         return;
 
-#ifdef ARDUINO_SERVO
-    myservo.attach(9);
-#else
+#ifdef RC_PWM
     TCNT1 = 0x1fff;
     //Configure TIMER1
     TCCR1A|=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
     TCCR1B|=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
-    ICR1=range-1;  //fPWM=50Hz (Period = 20ms Standard).
+    ICR1=40000-1;  //fPWM=50Hz (Period = 20ms Standard).
 
     TIMSK1 = _BV(TOIE1);
+    //pinMode(9, OUTPUT);
+#else
+    //TCNT1 = 0x1fff;
+    //Configure TIMER1
+    TCCR1A=_BV(WGM11);        //NON Inverted PWM
+    TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS10); //PRESCALER=0 MODE 14(FAST PWM)
+    ICR1=16000-1;  //fPWM=1khz
 
-//    DDRB|=_BV(PB1);   //PWM Pins as Out
+    TIMSK1 = 0;
+    a_top_off;
+    a_bottom_off;
+    b_top_off;
+    b_bottom_off;
+
+    pinMode(2, OUTPUT);
+    pinMode(3, OUTPUT);
     pinMode(9, OUTPUT);
+    pinMode(10, OUTPUT);
 #endif
 
 // use timer2 as timeout
@@ -350,10 +388,14 @@ uint8_t adc_cnt;
 // has 6862 samples/s
 ISR(ADC_vect)
 {
-    uint16_t adcw = ADCW;
+#ifdef RC_PWM
     ADCSRA |= _BV(ADSC); // enable conversion
+#else
+    sei(); // enable nested interrupts to ensure correct operation
+#endif
+    uint16_t adcw = ADCW;
     if(++adc_cnt <= 3) // discard first few readings after changing channel
-        return;
+        goto ret;
 
     for(int i=0; i<2; i++) {
         if(adc_results[adc_counter][i].count < 4000) {
@@ -364,19 +406,23 @@ ISR(ADC_vect)
     
     if(adc_counter == CURRENT) { // take more current measurements
         if(adc_cnt < 50)
-            return;
+            goto ret;
     } else if(adc_counter == VOLTAGE) {
         if(adc_cnt < 7)
-            return;
+            goto ret;
     } else if(adc_counter == RUDDER && rudder_sense)
         if(adc_cnt < 10) // take more samples for rudder, if sampled
-            return;
+            goto ret;
     
     // advance to next channel
     adc_cnt = 0;
     if(++adc_counter >= CHANNEL_COUNT)
         adc_counter=0;
     ADMUX = defmux | muxes[adc_counter];
+ret:;
+#ifndef RC_PWM
+    ADCSRA |= _BV(ADSC); // enable conversion
+#endif
 }
 
 uint16_t CountADC(uint8_t index, uint8_t p)
@@ -417,9 +463,15 @@ uint16_t TakeADC(uint8_t index, uint8_t p)
 uint16_t TakeAmps(uint8_t p)
 {
     uint32_t v = TakeADC(CURRENT, p);
-#ifdef HIGH_CURRENT
-    // high curront controller has .0005 ohm with 50x gain
-    // 275/128 = 100.0/1023/.0005/50*1.1
+#if defined(HIGH_CURRENT)
+    // high curront controller has .0003 ohm with 50x gain
+    // 3663/511 = 100.0/1023/.0003/50*1.1
+    if(v > 5)
+       v = v * 3663 / 511 / 16 + 82;
+    return v;
+#elif defined(HIGH_CURRENT_OLD)
+    // high curront controller has .001 ohm with 50x gain
+    // 275/128 = 100.0/1023/.001/50*1.1
     return v * 275 / 128 / 16;
 #else
     // current units of 10mA
@@ -493,10 +545,48 @@ ISR(WDT_vect)
     asm volatile ("ijmp" ::"z" (0x0000));
 }
 
+static volatile uint8_t timer1_cnt;
 ISR(TIMER1_OVF_vect)
 {
+#ifdef RC_PWM
     update_command();
+#else
+    if(lastpos > 1000) {
+        a_top_off;
+        dead_time;
+        a_bottom_on;
+    } else if(lastpos < 1000) {
+        b_top_off;
+        dead_time;
+        b_bottom_on;
+    }
+    if(++timer1_cnt == 20) { // update slew speeds at 50hz
+        sei();
+        update_command();
+        timer1_cnt = 0;
+    }
+#endif
 }
+
+#ifndef RC_PWM
+ISR(TIMER1_COMPA_vect)
+{
+    a_bottom_off;
+    b_top_off;
+    dead_time;
+    a_top_on;
+    b_bottom_on;
+}
+
+ISR(TIMER1_COMPB_vect)
+{
+    b_bottom_off;
+    a_top_off;
+    dead_time;
+    b_top_on;
+    a_bottom_on;
+}
+#endif
 
 ISR(TIMER2_OVF_vect)
 {
@@ -543,7 +633,7 @@ void process_packet()
         }
         break;
     case MAX_CURRENT_CODE: // current in units of 10mA
-#ifdef HIGH_CURRENT
+#if defined(HIGH_CURRENT) || defined(HIGH_CURRENT_OLD)
         if(value > 4000) // maximum is 40 amps
             value = 4000;
 #else
@@ -673,7 +763,11 @@ void loop()
       flags &= ~REV_FAULTPIN;
 
     // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
+#ifdef HIGH_CURRENT
+    shunt_resistance =0;
+#else
     shunt_resistance = digitalRead(shunt_sense_pin);
+#endif
     
     // test current
     const int react_count = 686; // need 686 readings for 0.1s reaction time
