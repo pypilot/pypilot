@@ -68,10 +68,9 @@ public:
     uint8_t data(uint8_t addr) { return ((uint8_t*)&local)[addr]; }
 
     arduino_servo_data local; // local version of servo data
+    bool initial_read; // false until all data read from arduino
     
 private:
     arduino_servo_data arduino; // data retrieved from arduino
     uint8_t verified[sizeof arduino]; // boolean for if data is valid
-
-    bool initial_read; // false until all data read from arduino
 };

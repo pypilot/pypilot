@@ -1234,6 +1234,7 @@ void loop()
                     break;
                 }
                 eeprom_read_addr++; // skip for now
+                out_sync_pos--; // fast eeprom read
             }
             return;
         default:
