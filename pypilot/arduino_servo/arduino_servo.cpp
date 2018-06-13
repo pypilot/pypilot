@@ -92,7 +92,7 @@ bool ArduinoServo::initialize(int baud)
 //    while(read(fd, in_buf, in_buf_len) > 0);
 
     while (!(flags & SYNC) || out_sync < 20) {
-        raw_command(0); // ensure we set the temp limits as well here
+        raw_command(1000); // ensure we set the temp limits as well here
         if(poll()>0) {
             while(poll());
             data = true;
