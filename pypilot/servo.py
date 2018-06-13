@@ -241,7 +241,7 @@ class Servo(object):
 
     def send_command(self):
         t = time.time()
-                
+
         if not self.disengauge_on_timeout.value:
             self.disengauged = False
 
@@ -380,8 +380,8 @@ class Servo(object):
 
         t = time.time()
         if command == 0:
-            # only send at .5 seconds when command is zero
-            if t > self.command_timeout and t - self.last_zero_command_time < .5:
+            # only send at .5 seconds when command is zero for more than a second
+            if t > self.command_timeout + 1 and t - self.last_zero_command_time < .5:
                 return
             self.last_zero_command_time = t
         else:
