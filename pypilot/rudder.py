@@ -189,9 +189,9 @@ class Rudder(Sensor):
             return
 
         # rudder = (nonlinearity*self.raw + 1)*scale*self.raw + offset
-        self.angle.set((self.nonlinearity.value*self.raw + 1)*
-                       self.scale.value*self.raw +
-                       self.offset.value)
+        angle = (self.nonlinearity.value*self.raw + 1)*self.scale.value*self.raw + self.offset.value
+        angle = round(angle, 2) # 2 decimal for rudder angle is enough
+        self.angle.set(angle)
 
         t = time.time()
         dt = t - self.last_time
