@@ -30,10 +30,12 @@ class autogain(object):
         self.search = [ \
                        #{'name': 'ap.I', 'min': 0, 'max': .006, 'step': .003},
                        #{'name': 'ap.P2', 'min': 0, 'max': .006, 'step': .006},
-                       {'name': 'ap.P', 'min': .0015, 'max': .0025, 'step': .00025},
-                       {'name': 'ap.D', 'min': .03, 'max': .05, 'step': .005}]
+                       #{'name': 'ap.P', 'min': .0015, 'max': .0025, 'step': .00025},
+                        {'name': 'ap.D', 'min': .07, 'max': .12, 'step': .001}
+                        #{'name': 'ap.DD', 'min': 0, 'max': .1, 'step': .01}
+        ]
         self.variables = ['ap.heading_error', 'servo.watts']
-        self.settle_period = 30
+        self.settle_period = 20
         self.period = 120
 
         self.watchlist = ['ap.enabled']
@@ -135,12 +137,13 @@ class autogain(object):
         
     def print_results(self, results, search, vals):
         l = len(search)
-        if l < 2:
-            print 'error, need at least 2 search variables'
-            exit(1)
-
         s = search[0]
-        if l > 2:
+        if l < 2:
+            print s['name']
+            for val in self.result_range(results, s['name']):
+                vals[s['name']] = val
+                print val, self.result_value(results, vals)
+        elif l > 2:
             for val in self.result_range(results, s['name']):
                 print s['name'], '=', val
                 vals[s['name']] = val
