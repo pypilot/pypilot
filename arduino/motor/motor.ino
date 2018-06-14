@@ -21,15 +21,31 @@ adc pin0 is a resistor divider to measure voltage
 adc pin1 goes to .01/.05 ohm shunt to measure current
 adc pin2 goes to 100k resistor to 5v and 10k NTC thermistor to gnd ctrl temp
 adc pin3 goes to 100k resistor to 5v and 10k NTC thermistor to gnd motor temp
+adc pin6 rudder sense
 
-digital pin9 pwm output standard ESC (1-2 ms pulse every 20 ms)
-digital pin2 esc programming input/output (with arduinousblinker script)
+unused analog pins should be grounded
+
 digital pin4 specifies .01 ohm resistor if wired to ground, otherwise .05 ohm
+digital pin6 determines RC pwm if 1, or Hbridge if 0.
+if RC pwm:
+   digital pin9 pwm output standard ESC (1-2 ms pulse every 20 ms)
+           pin2 esc programming input/output (with arduinousblinker script)
+if Hbridge
+   digital pin2 and pin3 for low side, pin9 and pin10 for high side
+digital pin13 is led on when engauged
 
 optional:
 digital pin7 forward fault for optional switch to stop forward travel
 digital pin8 reverse fault for optional switch to stop reverse travel
-adc pin6 rudder sense
+
+Pins 4 and 5 determine the current sense as folows:
+
+D4  D5
+ 1   1        .05 ohm, (or .001 ohm x 50 gain)
+ 0   1        .01 ohm
+ 1   0        .0003 ohm x 50 gain
+ 0   0        reserved
+
 
 The program uses a simple protocol to ensure only
 correct data can be received and to ensure that
