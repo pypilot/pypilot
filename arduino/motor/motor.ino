@@ -47,11 +47,14 @@ the command can be recognized.
 
 */
 
-#define HIGH_CURRENT   // high current uses 300uohm resistor and 50x amplifier
+//#define DIV_CLOCK // run at 4mhz instead of 16mhz to save power
+
+//#define HIGH_CURRENT   // high current uses 300uohm resistor and 50x amplifier
 //#define HIGH_CURRENT_OLD   // high current uses 500uohm resistor and 50x amplifier
 // otherwise using shunt without amplification
 
-//#define RC_PWM  // remote control style servo
+#define rc_pwm_pin 6 // todo: use this pin to detect rc pwm
+#define RC_PWM  // remote control style servo
 
 #ifndef RC_PWM
 // for direct mosfet mode, define how to turn on/off mosfets
@@ -65,7 +68,11 @@ the command can be recognized.
 #define b_bottom_on PORTD |= _BV(PD3)
 #define b_bottom_off PORTD &= ~_BV(PD3)
 
-#define dead_time _delay_us(10) // this is quite a long dead time
+#ifdef DIV_CLOCK
+#define dead_time _delay_us(2) // this is quite a long dead time
+#else
+#define dead_time _delay_us(8) // this is quite a long dead time
+#endif
 #endif
 
 ////// CRC
@@ -148,17 +155,14 @@ void debug(char *fmt, ... ){
 
 #include <util/delay.h>
 
-void delay_us(long us)
-{
-    long i;
-    for(i=0; i<us; i++)
-      _delay_us(1);
-}
-
 uint8_t serialin;
 
 void setup() 
 {
+#ifdef DIV_CLOCK
+    CLKPR = _BV(CLKPCE);
+    CLKPR = _BV(CLKPS1); // divide by 4
+#endif
     // Disable all interrupts
     cli();
 
@@ -167,28 +171,47 @@ void setup()
 
 /* Disable and clear all Watchdog settings. Nice to get a clean slate when dealing with interrupts */
 
-    WDTCSR = (1<<WDCE)|(1<<WDIE);
-    // interrupt in 4 second
-    WDTCSR = (1<<WDIE) | (1<<WDP3);
+    WDTCSR = (1<<WDCE)|(1<<WDE);
+
+    // interrupt in 1/4th second
+    WDTCSR = (1<<WDIE) | (1<<WDP2);
 
 // Enable all interrupts.
     sei();
 
+    // enable pullup on unused pins (saves .5 mA)
+    pinMode(4, INPUT_PULLUP);
+    pinMode(5, INPUT_PULLUP);
+    pinMode(6, INPUT_PULLUP);
+    pinMode(11, INPUT_PULLUP);
+    pinMode(12, INPUT_PULLUP);
+    
     serialin = 0;
     // set up Serial library
+#ifdef DIV_CLOCK
+    Serial.begin(38400*4);
+#else
     Serial.begin(38400);
+#endif
 
     set_sleep_mode(SLEEP_MODE_IDLE); // wait for serial
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
 //    ADMUX = _BV(REFS0); // external 5v
     ADMUX = _BV(REFS0)| _BV(REFS1) | _BV(MUX0); // 1.1v
-
     ADCSRA = _BV(ADEN) | _BV(ADIE); // enable adc with interrupts 
+#ifdef DIV_CLOCK
+    ADCSRA |= _BV(ADPS2) | _BV(ADPS1); // divide clock by 64
+//    ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
+#else
     ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
-
+#endif
     ADCSRA |= _BV(ADSC); // start conversion
 
+    // status LED
+    pinMode(13, OUTPUT);
+    digitalWrite(13, LOW);
+    
 #ifdef RC_PWM
     digitalWrite(9, LOW); /* enable internal pullups */
     pinMode(9, OUTPUT);
@@ -228,13 +251,25 @@ uint16_t lastpos = 1000;
 void position(uint16_t value)
 {
 #ifdef RC_PWM
-  OCR1A = 1500 + value * 3 / 2;
+#ifdef DIV_CLOCK
+  OCR1A = 375 + value * 3 / 8;
 #else
-  if(value > 1020) {
-      OCR1A = (2020 - value) * 16;
+  OCR1A = 1500 + value * 3 / 2;
+#endif
+#else
+  if(value > 1040) {
+#ifdef DIV_CLOCK
+      OCR1A = (2022 - value) * 4;
+#else
+      OCR1A = (2016 - value) * 16;
+#endif
       TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
-  } else if(value < 980) {
-      OCR1B = (20 + value) * 16;
+  } else if(value < 960) {
+#ifdef DIV_CLOCK
+      OCR1B = (22 + value) * 4;
+#else
+      OCR1B = (16 + value) * 16;
+#endif
       TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);
   } else {
       TIMSK1 = _BV(TOIE1); // set brake
@@ -301,6 +336,7 @@ void disengauge()
     stop();
     flags &= ~ENGAUGED;
     timeout = 60; // detach in about 62ms
+    digitalWrite(13, LOW); // status LED
 }
 
 void detach()
@@ -333,7 +369,11 @@ void engauge()
     //Configure TIMER1
     TCCR1A|=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
     TCCR1B|=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
-    ICR1=40000-1;  //fPWM=50Hz (Period = 20ms Standard).
+#ifdef DIV_CLOCK
+    ICR1=10000;  //fPWM=50Hz (Period = 20ms Standard).
+#else
+    ICR1=40000;  //fPWM=50Hz (Period = 20ms Standard).
+#endif
 
     TIMSK1 = _BV(TOIE1);
     //pinMode(9, OUTPUT);
@@ -342,8 +382,11 @@ void engauge()
     //Configure TIMER1
     TCCR1A=_BV(WGM11);        //NON Inverted PWM
     TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS10); //PRESCALER=0 MODE 14(FAST PWM)
-    ICR1=16000-1;  //fPWM=1khz
-
+#ifdef DIV_CLOCK
+    ICR1=4000;  //fPWM=1khz
+#else
+    ICR1=16000;  //fPWM=1khz
+#endif
     TIMSK1 = 0;
     a_top_off;
     a_bottom_off;
@@ -358,12 +401,17 @@ void engauge()
 
 // use timer2 as timeout
     timeout = 0;
-    TCCR2B = _BV(CS20) | _BV(CS21) | _BV(CS22);
+#ifdef DIV_CLOCK
+    TCCR2B = _BV(CS22) | _BV(CS21); // divide 128
+#else
+    TCCR2B = _BV(CS20) | _BV(CS21) | _BV(CS22); // divide 1024
+#endif
     TIMSK2 = _BV(TOIE2);
 
     flags |= ENGAUGED;
 
     update_command();
+    digitalWrite(13, HIGH); // status LED
 }
 
 // set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
@@ -427,6 +475,8 @@ ret:;
 
 uint16_t CountADC(uint8_t index, uint8_t p)
 {
+//    if(index == CURRENT)
+//        adc_results[index][p].count++;
     return adc_results[index][p].count;
 }
 
@@ -466,8 +516,12 @@ uint16_t TakeAmps(uint8_t p)
 #if defined(HIGH_CURRENT)
     // high curront controller has .0003 ohm with 50x gain
     // 3663/511 = 100.0/1023/.0003/50*1.1
-    if(v > 5)
-       v = v * 3663 / 511 / 16 + 82;
+    if(v > 16)
+#ifdef DIV_CLOCK        
+        v = v * 3663 / 511 / 16 + 42; // 420mA offset
+#else
+        v = v * 3663 / 511 / 16 + 82; // 820mA offset
+#endif
     return v;
 #elif defined(HIGH_CURRENT_OLD)
     // high curront controller has .001 ohm with 50x gain
@@ -482,7 +536,7 @@ uint16_t TakeAmps(uint8_t p)
 
     // unfortunately there is a 550mA offset, compensate for it
     // by adding 55 x 10mA
-    if(v > 10)
+    if(v > 16)
         v = v * 1375 / 128 / 16 + 55;
 
     return v;
@@ -542,6 +596,7 @@ ISR(WDT_vect)
     disengauge();
     delay(50);
     detach();
+
     asm volatile ("ijmp" ::"z" (0x0000));
 }
 
@@ -560,8 +615,8 @@ ISR(TIMER1_OVF_vect)
         dead_time;
         b_bottom_on;
     }
+    sei();
     if(++timer1_cnt == 20) { // update slew speeds at 50hz
-        sei();
         update_command();
         timer1_cnt = 0;
     }
@@ -590,6 +645,7 @@ ISR(TIMER1_COMPB_vect)
 
 ISR(TIMER2_OVF_vect)
 {
+    sei();
     timeout++;
     if(timeout == 60)
         disengauge();
@@ -679,47 +735,20 @@ void process_packet()
         break;
     }
 }
-#include <avr/boot.h>
+
 void loop()
 {
     wdt_reset(); // strobe watchdog
-#if 0 // debug
-    uint16_t v = TakeVolts(0);
-    uint16_t c = TakeAmps(0);
-    uint16_t t1 = TakeTemp(CONTROLLER_TEMP, 0);
-    uint16_t t2 = TakeTemp(MOTOR_TEMP, 0);
-    uint16_t t3 = TakeRudder(0);
 
-    debug("voltage %u current %u ct %u mt %u %u\r\n", v, c, t1, t2, t3);
-    delay(200); // small dead time to be safe
-
-
-
-    cli();
-    uint8_t lowBits      = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
-    uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
-    uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
-    uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
-    sei();
-
-    Serial.print("Low:  0x");
-    Serial.println(lowBits, HEX);
-    Serial.print("High: 0x");
-    Serial.println(highBits, HEX);
-    Serial.print("Ext:  0x");
-    Serial.println(extendedBits, HEX);
-    Serial.print("Lock: 0x");
-    Serial.println(lockBits, HEX);
-
-    delay(500);
-
-    return;
-#endif
     // wait for characters
     // boot powered down, wake on data
-    if(!Serial.available())
+#if 0 // hardly worth it
+    if(!Serial.available()) {
         set_sleep_mode(SLEEP_MODE_IDLE);
-
+        sleep_enable();
+        sleep_cpu();
+    }
+#endif    
     // serial input
     while(Serial.available()) {
       uint8_t c = Serial.read();
@@ -844,13 +873,13 @@ void loop()
             break;
         case 1: case 4: case 7: case 10: case 13: case 16: case 19: case 22:
             if(CountADC(CURRENT, 0) < 50) {
-                out_sync_pos--; // remain at current measurement (avoid output overflow)
+//                out_sync_pos--; // remain at current measurement (avoid output overflow)
                 return;
             }
             v = TakeAmps(0);
             code = CURRENT_CODE;
             serialin-=4; // fix current output rate to input rate
-            delay(4); // small dead time to break serial transmission
+            delay(1); // small dead time to break serial transmission
             break;
         case 2: case 5: case 8: case 11: case 14: case 17: case 20: case 23:
             if(CountADC(RUDDER, 0) < 10 || (!rudder_sense && out_sync_pos > 3))
