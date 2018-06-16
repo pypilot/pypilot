@@ -21,8 +21,8 @@ from signalk.server import *
 from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 from boatimu import *
-
 import serialprobe
+
 from nmea import Nmea
 import servo
 
@@ -79,6 +79,7 @@ class AutopilotGain(RangeProperty):
 class AutopilotBase(object):
   def __init__(self, name):
     super(AutopilotBase, self).__init__()
+    serialprobe.enumerate_devices() # before signal handlers
 
     # setup all processes to exit on any signal
     self.childpids = []
@@ -105,12 +106,11 @@ class AutopilotBase(object):
         elif s != 9:
             signal.signal(s, cleanup)
 
-    serial_probe = serialprobe.SerialProbe()
 #    self.server = SignalKServer()
     self.server = SignalKPipeServer()
     self.boatimu = BoatIMU(self.server)
-    self.servo = servo.Servo(self.server, serial_probe)
-    self.nmea = Nmea(self.server, serial_probe)
+    self.servo = servo.Servo(self.server)
+    self.nmea = Nmea(self.server)
     self.version = self.Register(JSONValue, 'version', name + ' ' + 'pypilot' + ' ' + str(0.2))
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)

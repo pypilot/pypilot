@@ -12,6 +12,7 @@ from signalk.pipeserver import NonBlockingPipe
 import select
 
 from signalk.values import *
+import serialprobe
 
 class GpsProcess(multiprocessing.Process):
     def __init__(self):
@@ -67,7 +68,6 @@ class GpsdPoller(object):
 
         self.process = False
         self.devices = []
-        nmea.serialprobe.gpsdevices = self.devices
 
         self.process = GpsProcess()
         self.process.start()
@@ -79,7 +79,7 @@ class GpsdPoller(object):
         fix = self.process.pipe.recv()
 
         if 'device' in fix:
-            self.devices.append(fix['device'])
+            serialprobe.reserve(fix['device'])
             return
 
         def fval(name):

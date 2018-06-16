@@ -28,7 +28,7 @@ from signalk.client import SignalKClient
 from signalk.server import SignalKServer
 from signalk.values import *
 from signalk.pipeserver import NonBlockingPipe
-from serialprobe import SerialProbe
+import serialprobe
 from gpsdpoller import GpsdPoller
 
 import fcntl
@@ -180,7 +180,7 @@ class NMEASocket(object):
 
     
 class Nmea(object):
-    def __init__(self, server, serialprobe):
+    def __init__(self, server):
         self.server = server
         self.values = {'gps': {}, 'wind': {}}
 
@@ -195,7 +195,6 @@ class Nmea(object):
         make_source('gps', 'track')
         make_source('wind', 'direction')
 
-        self.serialprobe = serialprobe
         self.devices = []
         self.devices_lastmsg = {}
         self.probedevice = None
@@ -358,7 +357,7 @@ class Nmea(object):
                 self.probeindex = self.devices.index(False)
             except:
                 self.probeindex = len(self.devices)
-            self.probedevicepath = self.serialprobe.probe('nmea%d' % self.probeindex, [38400, 4800])
+            self.probedevicepath = serialprobe.probe('nmea%d' % self.probeindex, [38400, 4800])
             if self.probedevicepath:
                 try:
                     self.probedevice = NMEASerialDevice(self.probedevicepath)
@@ -374,7 +373,7 @@ class Nmea(object):
             if self.probedevice:
                 if self.probedevice.readline():
                     print 'new nmea device', self.probedevicepath
-                    self.serialprobe.probe_success('nmea%d' % self.probeindex)
+                    serialprobe.success('nmea%d' % self.probeindex, self.probedevicepath)
                     if self.probeindex < len(self.devices):
                         self.devices[self.probeindex] = self.probedevice
                     else:
@@ -643,8 +642,7 @@ if __name__ == '__main__':
     if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
       print 'warning, failed to make nmea process realtime'
     server = SignalKServer()
-    serialprobe = SerialProbe()
-    nmea = Nmea(server, serialprobe)
+    nmea = Nmea(server)
 
     while True:
         nmea.poll()

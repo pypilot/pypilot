@@ -14,6 +14,7 @@ import autopilot
 import select
 import serial
 from servo_calibration import *
+import serialprobe
 
 import fcntl
 # these are not defined in python module
@@ -170,9 +171,8 @@ class TimedProperty(Property):
 class Servo(object):
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
 
-    def __init__(self, server, serialprobe):
+    def __init__(self, server):
         self.server = server
-        self.serialprobe = serialprobe
         self.lastdir = 0 # doesn't matter
 
         self.servo_calibration = ServoCalibration(self)
@@ -424,8 +424,9 @@ class Servo(object):
 
     def poll(self):
         if not self.driver:
-            device_path = self.serialprobe.probe('servo', [38400], 1)
+            device_path = serialprobe.probe('servo', [38400], 1)
             if device_path:
+                print 'probe ret', device_path
                 #from arduino_servo.arduino_servo_python import ArduinoServo
                 from arduino_servo.arduino_servo import ArduinoServo
                 device = serial.Serial(*device_path)
@@ -438,7 +439,7 @@ class Servo(object):
                 if self.driver.initialize(device_path[1]):
                     self.device = device
                     print 'arduino servo found on', device_path
-                    self.serialprobe.probe_success('servo')
+                    serialprobe.success('servo', device_path)
                     self.controller.set('arduino')
 
                     self.driver.command(0)
@@ -557,11 +558,9 @@ def main():
                 exit(1)
             test(sys.argv[i+1], int(sys.argv[i+2]))
     
-    import serialprobe
     print 'Servo Server'
     server = SignalKServer()
-    serial_probe = serialprobe.SerialProbe()
-    servo = Servo(server, serial_probe)
+    servo = Servo(server)
     servo.max_current.set(10)
 
     period = .1
