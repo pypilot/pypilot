@@ -17,8 +17,13 @@ from signalk.pipeserver import NonBlockingPipe
 
 import numpy
 
-debug=True
-calibration_fit_period = 10  # run every 60 seconds
+def debug(*args):
+    for a in args:
+        sys.stdout.write(str(a))
+        sys.stdout.write(' ')
+    sys.stdout.write('\n')
+
+calibration_fit_period = 60  # run every 60 seconds
 
 def FitLeastSq(beta0, f, zpoints, dimensions=1):
     try:
@@ -141,8 +146,7 @@ def FitPoints(points, current, norm):
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
     if point_max_dev < 9:
-        if debug:
-            print '0d fit, insufficient data', point_dev, point_max_dev, '< 9'
+        debug('0d fit, insufficient data', point_dev, point_max_dev, '< 9')
         return False
 
     line, plane = LinearFit(points)
@@ -159,14 +163,12 @@ def FitPoints(points, current, norm):
     guess = map(lambda a, b : (a+b)/2, minc, maxc)
     diff = map(lambda a, b : b-a, minc, maxc)
     guess.append((diff[0]+diff[1]+diff[2])/3)
-    if debug:
-        print 'initial guess', guess
+    debug('initial guess', guess)
 
     # initial is the closest to guess on the uv plane containing current
     initial = vector.add(current[:3], vector.project(vector.sub(guess[:3], current[:3]), norm))
     initial.append(current[3])
-    if debug:
-        print 'initial 1d fit', initial
+    debug('initial 1d fit', initial)
 
     # attempt 'normal' fit along normal vector
     '''
@@ -181,8 +183,7 @@ def FitPoints(points, current, norm):
         print 'FitLeastSq sphere1d failed!!!! ', len(points)
         return False
     sphere1d_fit = map(lambda x, n: x + sphere1d_fit[0]*n, initial[:3], norm) + [sphere1d_fit[1]]
-    if debug:
-        print 'sphere1 fit', sphere1d_fit, ComputeDeviation(points, sphere1d_fit)
+    debug('sphere1 fit', sphere1d_fit, ComputeDeviation(points, sphere1d_fit))
     '''
 
     def f_new_sphere1(beta, x):
@@ -198,9 +199,8 @@ def FitPoints(points, current, norm):
         r1 = map(lambda y, z : fac*beta[1]*(beta[2]-dip(y, z)), m, g)
         return r0 + r1
     new_sphere1d_fit = FitLeastSq([0, initial[3], 0], f_new_sphere1, zpoints, 2)
-    if not new_sphere1d_fit or new_sphere1d_fit[1] < 0:
-        if debug:
-            print 'FitLeastSq new_sphere1 failed!!!! ', len(points)
+    if not new_sphere1d_fit or new_sphere1d_fit[1] < 0 or abs(new_sphere1d_fit[2]) > 1:
+        debug('FitLeastSq new_sphere1 failed!!!! ', len(points), new_sphere1d_fit)
         new_sphere1d_fit = current
     else:
         new_sphere1d_fit = map(lambda x, a: x + new_sphere1d_fit[0]*a, initial[:3], norm) + [new_sphere1d_fit[1], math.degrees(math.asin(new_sphere1d_fit[2]))]
@@ -208,8 +208,7 @@ def FitPoints(points, current, norm):
         #print 'new sphere1 fit', new_sphere1d_fit
 
     if line_max_dev < 2:
-        if debug:
-            print 'line fit found, insufficient data', line_dev, line_max_dev
+        debug('line fit found, insufficient data', line_dev, line_max_dev)
         return False
     
     # 2d sphere fit across normal vector
@@ -221,8 +220,7 @@ def FitPoints(points, current, norm):
     # initial is the closest to guess on the uv plane containing current
     initial = vector.add(guess[:3], vector.project(vector.sub(current[:3], guess[:3]), norm))
     initial.append(current[3])
-    if debug:
-        print 'initial 2d fit', initial
+    debug('initial 2d fit', initial)
     
     '''
     def f_sphere2(beta, x):
@@ -237,8 +235,7 @@ def FitPoints(points, current, norm):
         new_sphere2d_fit = initial
     else:
         sphere2d_fit = map(lambda x, a, b: x + sphere2d_fit[0]*a + sphere2d_fit[1]*b, initial[:3], u, v) + [sphere2d_fit[2]]
-    if debug:
-        print 'sphere2 fit', sphere2d_fit, ComputeDeviation(points, sphere2d_fit)
+    debug('sphere2 fit', sphere2d_fit, ComputeDeviation(points, sphere2d_fit))
     '''
 
     def f_new_sphere2(beta, x):
@@ -255,9 +252,8 @@ def FitPoints(points, current, norm):
         r1 = map(lambda y, z : fac*beta[2]*(beta[3]-dip(y, z)), m, g)
         return r0 + r1
     new_sphere2d_fit = FitLeastSq([0, 0, initial[3], 0], f_new_sphere2, zpoints, 2)
-    if not new_sphere2d_fit or new_sphere2d_fit[2] < 0:
-        if debug:
-            print 'FitLeastSq sphere2 failed!!!! ', len(points)
+    if not new_sphere2d_fit or new_sphere2d_fit[2] < 0 or abs(new_sphere2d_fit[3]) >= 1:
+        debug('FitLeastSq sphere2 failed!!!! ', len(points), new_sphere2d_fit[3])
         return False
     new_sphere2d_fit = map(lambda x, a, b: x + new_sphere2d_fit[0]*a + new_sphere2d_fit[1]*b, initial[:3], u, v) + [new_sphere2d_fit[2], math.degrees(math.asin(new_sphere2d_fit[3]))]
     new_sphere2d_fit = [new_sphere2d_fit, ComputeDeviation(points, new_sphere2d_fit), 2]
@@ -265,11 +261,9 @@ def FitPoints(points, current, norm):
     if plane_max_dev < 1.2:
         ang = math.degrees(math.asin(vector.norm(vector.cross(plane_fit[1], norm))))
         
-        if debug:
-            print 'plane fit found, 2D fit only', ang, plane_fit, plane_dev, plane_max_dev
-        if ang > 16: # is 15 degrees too much?
-            if debug:
-                print 'angle of plane not aligned to normal: no 2d fit'
+        debug('plane fit found, 2D fit only', ang, plane_fit, plane_dev, plane_max_dev)
+        if ang > 16: # is 16 degrees too much?
+            debug('angle of plane not aligned to normal: no 2d fit')
             new_sphere2d_fit = False
 
         return [new_sphere1d_fit, new_sphere2d_fit, False]
@@ -287,8 +281,7 @@ def FitPoints(points, current, norm):
     if not sphere3d_fit or sphere3d_fit[3] < 0:
         print 'FitLeastSq sphere failed!!!! ', len(points)
         return False
-    if debug:
-        print 'sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit)
+    debug('sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
     '''
     def f_new_sphere3(beta, x):
         b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
@@ -305,13 +298,11 @@ def FitPoints(points, current, norm):
         return r0 + r1
     new_sphere3d_fit = FitLeastSq(initial[:4] + [0], f_new_sphere3, zpoints, 2)
     if not new_sphere3d_fit or new_sphere3d_fit[3] < 0 or abs(new_sphere3d_fit[4]) >= 1:
-        if debug:
-            print 'FitLeastSq sphere3 failed!!!! ', len(points)
+        debug('FitLeastSq sphere3 failed!!!! ', len(points))
         return False
     new_sphere3d_fit[4] = math.degrees(math.asin(new_sphere3d_fit[4]))
     new_sphere3d_fit = [new_sphere3d_fit, ComputeDeviation(points, new_sphere3d_fit), 3]
-    #if debug:
-     #   print 'new sphere3 fit', new_sphere3d_fit
+    debug('new sphere3 fit', new_sphere3d_fit)
     
     return [new_sphere1d_fit, new_sphere2d_fit, new_sphere3d_fit]
 
@@ -447,7 +438,6 @@ def CalibrationProcess(points, norm_pipe, fit_output, current):
 
     cal = SigmaPoints()
     norm = [0, 0, 1]
-    lastp = []
 
     while True:
         # each iteration remove oldest point if we have more than 12
@@ -502,72 +492,51 @@ def CalibrationProcess(points, norm_pipe, fit_output, current):
         for q in p:
             gpoints.append(q[3:])
             
-        if debug:
-            print 'FitPoints', p, current, norm
+            debug('FitPoints', p, current, norm)
 
         fit = FitPoints(p, current, norm)
         if not fit:
             continue
-        if debug:
-            print 'fit', fit
+        debug('fit', fit)
 
         g_required_dev = .15 # must have more than this to allow 1d or 3d fit
         avg, g_dev, g_max_dev = PointFit(gpoints)
-        if debug:
-            print 'gdev', g_dev, g_max_dev
+        debug('gdev', g_dev, g_max_dev)
         if g_max_dev < g_required_dev:
             c = fit[1] # use 2d fit
-            if debug:
-                print 'sigmapoints flat, 2D fit only'
+            debug('sigmapoints flat, 2D fit only')
         else:
             c = fit[2] # 3d fit
-            if not c:
-                c = fit[0] # 1d fit only possible
+            # for now do not allow 1d fit
+            ##if not c:
+              ##  c = fit[0] # 1d fit only possible
 
         if not c:
             continue
-
         
         coverage = 360 - ComputeCoverage(cal.sigma_points, c[0][:3], norm)
-        if coverage < 20: # require 120 degrees
-            if debug:
-                print 'calibration: not enough coverage', coverage, 'degrees'
+        if coverage < 180: # require 180 degrees
+            debug('calibration: not enough coverage', coverage, 'degrees')
             if c == fit[1]: # must have had 3d fit to use 1d fit
                 continue
-            if debug:
-                print 'insufficient coverage, use 1d fit'
-            c = fit[0] # 1d fit ok with insufficient coverage
-
-        if c == fit[0]: # 1d fit must be upgraded
-            if not lastp:
-                if debug:
-                    print 'no previous cal, no fit'
-                continue
-            fit2 = FitPoints(p+lastp, current, norm)
-            if debug:
-                print 'upgraded was fit', fit[0]
-            if not fit2:
-                continue
-            if debug:
-                print 'upgraded fit to', fit2[0]
-            c = fit2[0]
-            if not c:
-                continue
-            c[2] = 'u' # mark as upgraded fit
+            debug('insufficient coverage, use 1d fit')
+            continue # no 1d fit
+            #c = fit[0] # 1d fit ok with insufficient coverage
+        if c == fit[2] and coverage < 240:
+            debug('not enough coverage for 3d fit')
+            continue
 
         # make sure the magnitude is sane
         mag = c[0][3]
-        if mag < 7 or mag > 180:
-            if debug:
-                print 'fit found field outside of normal earth field strength', mag
+        if mag < 7 or mag > 120:
+            debug('fit found field outside of normal earth field strength', mag)
             continue
 
         # require inclination less than 82 degrees, with so much inclination,
         # the fit is inaccurate (near magnetic pole?)
         inc = c[0][4]
         if abs(inc) > 82:
-            if debug:
-                print 'incline greater than 82 degrees, no fit',
+            debug('incline greater than 82 degrees, no fit',)
             continue
         # sphere fit should basically agree with new bias
         '''
@@ -577,30 +546,23 @@ def CalibrationProcess(points, norm_pipe, fit_output, current):
             bias = fit[0][:3]
             sbd = vector.norm(vector.sub(bias, spherebias))
             if sbd > 6:
-                if debug:
-                    print 'sphere and newbias disagree', sbd
+        debug('sphere and newbias disagree', sbd)
                     fit[0] = fit[1]
         print 'sphere bias difference', sbd
         '''
         # test points for deviation, all must fall on a sphere
         deviation = c[1]
         if deviation[0] > .15 or deviation[1] > 3:
-            if debug:
-                print 'bad fit:', deviation
-            cal.RemoveOldest()            # remove oldest point if too much deviation
+            debug('bad fit:', deviation)
+            cal.RemoveOldest()  # remove oldest point if too much deviation
             continue # don't use this fit
         
         # if the bias has not sufficiently changed,
         # the fit didn't change much, so don't bother to report this update
         if vector.dist2(c[0], current) < .1:
-            if debug:
-                print 'insufficient change in bias, calibration already ok'
-            #continue
+            debug('insufficient change in bias, calibration already ok')
+            debug('coverage', coverage, 'new fit:', c)
 
-        if debug:
-            print 'coverage', coverage, 'new fit:', c
-        if c[2] != 'u': # save working points for future 1d fit update
-            lastp = p
         fit_output.send((c, map(lambda p : p.compass + p.down, cal.sigma_points)), False)
         current = c[0]
                                  
@@ -780,10 +742,8 @@ def ExtraFit():
     
 
 if __name__ == '__main__':
-    
     r = 38.0
     s = math.sin(math.pi/4) * r
-    debug = True
     points = [[ r, 0, 0, 0, 0, 1],
               [ s*1.1, s, 0, 0, 0, 1],
               [ 0, r, 0, 0, 0, 1],
