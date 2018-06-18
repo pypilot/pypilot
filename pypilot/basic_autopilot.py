@@ -83,11 +83,14 @@ class BasicAutopilot(AutopilotBase):
     command = 0
     headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = self.boatimu.SensorValues['headingraterate_lowpass'].value
+    feedforward_value = self.heading_command_rate.value
+    if not 'wind' in self.mode.value:
+      feedforward_value = -feedforward_value
     gain_values = {'P': self.heading_error.value,
                    'I': self.heading_error_int.value,
                    'D': headingrate,      
                    'DD': headingraterate,
-                   'FF': -self.heading_command_rate.value}
+                   'FF': feedforward_value}
     PR = math.sqrt(abs(gain_values['D']))
     if gain_values['P'] < 0:
       PR = -PR
