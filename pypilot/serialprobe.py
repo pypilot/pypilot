@@ -91,17 +91,12 @@ def scan_devices():
     return allowed_devices
 
 devices = 'init'
+pyudev = 'init'
 monitor = False
 starttime = False
-try:
-    import pyudev
-    context = pyudev.Context()
-    monitor = pyudev.Monitor.from_netlink(context)
-    monitor.filter_by(subsystem='usb')
-except Exception as e:
-    print 'no pyudev! will scan usb devices every probe!', e
 
 def enumerate_devices():
+    global pyudev
     global devices
     global monitor
     global starttime
@@ -110,9 +105,22 @@ def enumerate_devices():
         devices = scan_devices()
 
     # delay monitor slightly to ensure startup speed
-    #if pyudev:
-        #signal.signal(15, None)
-        #signal.signal(17, None)
+    if time.time() > starttime and pyudev == 'init':
+        try:
+            import signal
+            # need to temporary disable sigchld while loading pyudev
+            cursigchld_handler = signal.getsignal(signal.SIGCHLD)
+            signal.signal(signal.SIGCHLD, signal.SIG_IGN)
+            import pyudev
+            context = pyudev.Context()
+            signal.signal(signal.SIGCHLD, cursigchld_handler)
+            monitor = pyudev.Monitor.from_netlink(context)
+            monitor.filter_by(subsystem='usb')
+        except Exception as e:
+            print 'no pyudev! will scan usb devices every probe!', e
+            starttime = time.time() + 20 # try pyudev again in 20 seconds
+            #pyudev = False
+
     if monitor:
         t1 = time.time()
         if monitor.poll(0):
@@ -173,6 +181,10 @@ def probe(name, bauds, timeout=5):
         probe['probe last'] = False # next time probe new devices
         last = lastworkingdevice(name)
         if last:
+            if 'USB' in last[0] or 'ACM' in last[0]:
+                if not os.path.exists(last[0]):
+                    lastworkingdevices[name] = False
+                    return False
             probe['device'], probe['bauds'] = last
             return probe['device'], probe['bauds'][0]
     probe['probe last'] = True # next time try last working device if this fails

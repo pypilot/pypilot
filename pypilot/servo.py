@@ -426,7 +426,6 @@ class Servo(object):
         if not self.driver:
             device_path = serialprobe.probe('servo', [38400], 1)
             if device_path:
-                print 'probe ret', device_path
                 #from arduino_servo.arduino_servo_python import ArduinoServo
                 from arduino_servo.arduino_servo import ArduinoServo
                 try:
