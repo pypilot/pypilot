@@ -480,23 +480,6 @@ class Servo(object):
         else:
             self.lastpolltime = time.time()
 
-        if self.fault():
-            if not self.flags.value & ServoFlags.FWD_FAULT and \
-               not self.flags.value & ServoFlags.REV_FAULT:
-                self.faults.set(self.faults.value + 1)
-            
-            # if overcurrent then fault in the direction traveled
-            # this prevents moving further in this direction
-            if self.flags.value & ServoFlags.OVERCURRENT:
-                if self.lastdir > 0:
-                    self.flags.fwd_fault()
-                    self.position.set(1)
-                elif self.lastdir < 0:
-                    self.flags.rev_fault()
-                    self.position.set(-1)
-
-            self.reset() # clear fault condition
-
         t = time.time()
         self.server.TimeStamp('servo', t)
         if result & ServoTelemetry.VOLTAGE:
@@ -527,6 +510,23 @@ class Servo(object):
             self.max_current.set_max(60 if self.driver.flags & ServoFlags.CURRENT_RANGE else 20)
             self.flags.update(self.flags.value & ~ServoFlags.DRIVER_MASK | self.driver.flags)
             self.engaged.update(not not self.driver.flags & ServoFlags.ENGAGED)
+
+        if self.fault():
+            if not self.flags.value & ServoFlags.FWD_FAULT and \
+               not self.flags.value & ServoFlags.REV_FAULT:
+                self.faults.set(self.faults.value + 1)
+            
+            # if overcurrent then fault in the direction traveled
+            # this prevents moving further in this direction
+            if self.flags.value & ServoFlags.OVERCURRENT:
+                if self.lastdir > 0:
+                    self.flags.fwd_fault()
+                    self.position.set(1)
+                elif self.lastdir < 0:
+                    self.flags.rev_fault()
+                    self.position.set(-1)
+
+            self.reset() # clear fault condition
 
         self.send_command()
 
