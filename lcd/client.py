@@ -1095,6 +1095,8 @@ class LCDClient():
                 code = LIRC.nextcode(1)
                 if not code:
                     break
+                print 'LIRC code', code # tracking strange bug...
+                sys.stdout.flush() # update log so timestamp is accurate
                 repeat = code[0]['repeat']
 
                 lirc_mapping = {'up': UP, 'down': DOWN, 'left': LEFT, 'right': RIGHT,
