@@ -197,7 +197,7 @@ class TimeValue(StringValue):
 class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
         super(AgeValue, self).__init__(name, time.time(), **kwargs)
-        self.dt = time.time() - self.value
+        self.dt = max(0, time.time() - self.value)
         self.lastupdate_value = -1
         self.lastage = ''
 
@@ -211,7 +211,7 @@ class AgeValue(StringValue):
           self.send()
 
     def get_signalk(self):
-        dt = time.time() - self.value
+        dt = max(0, time.time() - self.value)
         if abs(dt - self.dt) > 1:
             self.dt = dt
             self.lastage = readable_timespan(dt)
@@ -258,12 +258,11 @@ class BoatIMU(object):
         calibration = self.Register(RoundedValue, name+'.calibration', default, persistent=True)
         calibration.age = self.Register(AgeValue, name+'.calibration.age', persistent=True)
         calibration.locked = self.Register(BooleanProperty, name+'.calibration.locked', False, persistent=True)
+        calibration.sigmapoints = self.Register(RoundedValue, name+'.calibration.sigmapoints', False)
         return calibration
 
     self.accel_calibration = calibration('accel', [[0, 0, 0, 1], 1])
-    self.accel_calibration.sigmapoints = self.Register(RoundedValue, 'accel.calibration.sigmapoints', False)
     self.compass_calibration = calibration('compass', [[0, 0, 0, 30, 0], [1, 1], 0])
-    self.compass_calibration.sigmapoints = self.Register(RoundedValue, 'compass.calibration.sigmapoints', False)
     
     self.imu_pipe, imu_pipe = NonBlockingPipe('imu_pipe')
     imu_cal_pipe = NonBlockingPipe('imu_cal_pipe')

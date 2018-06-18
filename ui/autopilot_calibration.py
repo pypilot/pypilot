@@ -140,7 +140,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
             enable = value == 0
             self.bLevel.Enable(enable)
-
         elif name == 'imu.pitch':
             self.stPitch.SetLabel(str(round3(value)))
         elif name == 'imu.roll':
@@ -152,9 +151,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         elif name == 'imu.heading_offset':
             self.signalk_heading_offset = value
             self.heading_offset_timer.Start(1000, True)
-
         elif name == 'servo.rudder':
-            print 'val', value
             self.stRudderAngle.SetLabel(str(round3(value)))
             self.rudder = value
         elif name == 'servo.rudder.offset':

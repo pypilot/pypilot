@@ -68,6 +68,19 @@ class AutopilotGain(RangeProperty):
       d = super(AutopilotGain, self).type()
       d['AutopilotGain'] = True
       return d
+    
+class ModeProperty(EnumProperty):
+      def __init__(self, name):
+        self.ap = False
+        super(ModeProperty, self).__init__(name, 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
+
+      def set(self, value):
+        # update the last mode when the user changes the mode
+        # it should only revert to the last mode if the mode was lost
+        if self.ap:
+          self.ap.lastmode = value
+          self.ap.lost_mode.update(False)
+        super(ModeProperty, self).set(value)    
 
 class AutopilotBase(object):
   def __init__(self, name):
@@ -103,10 +116,17 @@ class AutopilotBase(object):
     self.boatimu = BoatIMU(self.server)
     self.servo = servo.Servo(self.server)
     self.nmea = Nmea(self.server)
-    self.version = self.Register(JSONValue, 'version', name + ' ' + 'pypilot' + ' ' + str(0.2))
+    self.version = self.Register(JSONValue, 'version', name + ' ' + 'pypilot' + ' ' + str(0.3))
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
-    self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
+
+    self.lost_mode = self.Register(BooleanValue, 'lost_mode', False)
+
+    self.mode = self.Register(ModeProperty, 'mode')
+    self.mode.ap = self
+
+    self.lastmode = self.mode.value
+                              
     self.lastmode = False
     self.last_heading = False
     self.last_heading_off = self.boatimu.heading_off.value
@@ -170,6 +190,14 @@ class AutopilotBase(object):
       while True:
           self.iteration()
 
+  def mode_lost(self, newmode):
+    self.mode.update(newmode)
+    self.lost_mode.update(True)
+
+  def mode_found(self):
+    self.mode.set(self.lastmode)
+    self.lost_mode.set(False)
+          
   def iteration(self):
       data = False
       t00 = time.time()
@@ -188,6 +216,11 @@ class AutopilotBase(object):
       self.server.TimeStamp('ap', time.time()-self.starttime)
       compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
       headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
+
+      #switch back to the last mode if possible
+      if self.lost_mode.value and self.lastmode in self.nmea.values and \
+         self.nmea.values[self.lastmode]['source'].value != 'none':
+        mode_found()
 
       #update wind and gps offsets
       if self.nmea.values['gps']['source'].value != 'none':
@@ -215,16 +248,16 @@ class AutopilotBase(object):
       if self.mode.value == 'true wind':
           # for true wind, we must have both wind and gps
           if self.nmea.values['wind']['source'].value == 'none':
-              self.mode.set('gps')
+              self.mode_lost('gps')
           elif self.nmea.values['gps']['source'].value == 'none':
-              self.mode.set('wind')
+              self.mode_lost('wind')
 
           wind_speed = self.wind_speed.value
-          if wind_speed < 3: # below 3 knots wind speed, not reliable
-              self.mode.set('gps')
+          if wind_speed < 1: # below 1 knots wind speed, not reliable
+              self.mode_lost('gps')
           gps_speed = self.gps_speed.value
           if gps_speed < 1:
-              self.mode.set('wind')
+              self.mode_lost('wind')
 
           rd = math.radians(self.wind_direction.value)
           windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
@@ -239,14 +272,14 @@ class AutopilotBase(object):
       if self.mode.value == 'wind':
           # if wind sensor drops out, switch to compass
           if self.nmea.values['wind']['source'].value == 'none':
-              self.mode.set('compass')
+              self.mode_lost('compass')
           wind_direction = resolv(self.wind_compass_offset.value - compass_heading, 180)
           self.heading.set(wind_direction)
 
       if self.mode.value == 'gps':
           # if gps drops out switch to compass
           if self.nmea.values['gps']['source'].value == 'none':
-              self.mode.set('compass')
+              self.mode_lost('compass')
           gps_heading = resolv(compass_heading + self.gps_compass_offset.value, 180)
           self.heading.set(gps_heading)
 
@@ -296,7 +329,6 @@ class AutopilotBase(object):
       # int error +- 1, from 0 to 1500 deg/s
       self.heading_error_int.set(minmax(self.heading_error_int.value + \
                                         (self.heading_error.value/1500)*dt, 1))
-      self.server.TimeStamp('ap', t)
       self.process_imu_data() # implementation specific process
 
       # servo can only disengauge under manual control

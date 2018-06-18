@@ -21,7 +21,7 @@ adc pin0 is a resistor divider to measure voltage
 adc pin1 goes to .01/.05 ohm shunt to measure current
 adc pin2 goes to 100k resistor to 5v and 10k NTC thermistor to gnd ctrl temp
 adc pin3 goes to 100k resistor to 5v and 10k NTC thermistor to gnd motor temp
-adc pin6 rudder sense
+adc pin4 rudder sense
 
 unused analog pins should be grounded
 
@@ -39,6 +39,8 @@ digital pin7 forward fault for optional switch to stop forward travel
 digital pin8 reverse fault for optional switch to stop reverse travel
 
 Pins 4 and 5 determine the current sense as folows:
+pin 4 determines range
+pin 5 determines high/low current  (20A or 60A max)
 
 D4  D5
  1   1        .05 ohm, (or .001 ohm x 50 gain)
@@ -46,6 +48,13 @@ D4  D5
  1   0        .0005 ohm x 50 gain
  0   0        reserved
 
+If Pin 12 has 560 ohm resistor to A0, then 24 volts is supported,
+this allows for measuring voltage up to 40.4 volts, without losing
+resolution if operating below 20 volts
+
+D12
+ 1    0-20.75 volts (560 and 10k resistor)  resolution 0.02 volts
+ 0    0-40.4  volts (560 and 20k resistor)  resolution 0.04 volts
 
 The program uses a simple protocol to ensure only
 correct data can be received and to ensure that
@@ -67,8 +76,6 @@ the command can be recognized.
 // and to be able to measure lower current from the shunt
 #define DIV_CLOCK
 
-//#define HIGH_CURRENT   // high current uses 500uohm resistor and 50x amplifier
-                         // 60amp range
 //#define HIGH_CURRENT_OLD   // high current uses 500uohm resistor and 50x amplifier
 // otherwise using shunt without amplification
 
@@ -85,6 +92,9 @@ uint8_t rc_pwm = 1;  // remote control style servo
 #define b_top_off PORTB &= ~_BV(PB2)
 #define b_bottom_on PORTD |= _BV(PD3)
 #define b_bottom_off PORTD &= ~_BV(PD3)
+
+#define clutch_on PORTB |= _BV(PB3)
+#define clutch_off PORTB &= ~_BV(PB3)
 
 #ifdef DIV_CLOCK
 #define dead_time _delay_us(2) // this is quite a long dead time
@@ -151,6 +161,8 @@ uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
 
 #include <avr/wdt.h>
 #include <avr/sleep.h>
+#include <avr/boot.h>
+#include <util/delay.h>
 
 #define fwd_fault_pin 7 // use pin 7 for optional fault
 #define rev_fault_pin 8 // use pin 7 for optional fault
@@ -159,6 +171,14 @@ uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
 
 #define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
 uint8_t shunt_resistance = 1;
+
+#define low_current_pin 5 // use pin 5 to specify low current (no amplifier)
+uint8_t low_current = 1;
+
+#define voltage_sense_pin 12
+uint8_t voltage_sense = 1;
+uint8_t voltage_mode = 0;  // 0 = 12 volts, 1 = 24 volts
+uint16_t max_voltage = 1800; // 18 volts max by default
 
 #include <stdarg.h>
 void debug(char *fmt, ... ){
@@ -170,9 +190,16 @@ void debug(char *fmt, ... ){
     Serial.print(buf);
 }
 
-#include <util/delay.h>
+enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71};
 
+enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
+
+enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, BADVOLTAGE=16*8, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4, BAD_FUSES=256*8};
+
+uint16_t flags = 0, faults = 0;
 uint8_t serialin;
+uint16_t max_current;
+
 void setup() 
 {
 #ifdef DIV_CLOCK
@@ -192,10 +219,21 @@ void setup()
     // interrupt in 1/4th second
     WDTCSR = (1<<WDIE) | (1<<WDP2);
 
-// Enable all interrupts.
-    sei();
+    // read fuses, and report this as flag if they are wrong
+    uint8_t lowBits      = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
+    uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
+    uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
+    uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
+    if(lowBits != 0xFF || highBits != 0xda ||
+       (extendedBits != 0xFD && extendedBits != 0xFC) || lockBits != 0xCF)
+        flags |= BAD_FUSES;
 
+    sei(); // Enable all interrupts.
+    
     // enable pullup on unused pins (saves .5 mA)
+    pinMode(A4, INPUT);
+    digitalWrite(A4, LOW);
+
     pinMode(4, INPUT_PULLUP);
     pinMode(5, INPUT_PULLUP);
     pinMode(6, INPUT_PULLUP);
@@ -211,7 +249,15 @@ void setup()
 #endif
 
     set_sleep_mode(SLEEP_MODE_IDLE); // wait for serial
-    // setup adc
+
+    digitalWrite(A0, LOW);
+    pinMode(A0, OUTPUT);
+    voltage_sense = digitalRead(voltage_sense_pin);
+    if(!voltage_sense)
+        pinMode(12, INPUT); // if attached, turn off pullup
+    pinMode(A0, INPUT);
+    
+    // setup adcp
     DIDR0 = 0x3f; // disable all digital io on analog pins
 //    ADMUX = _BV(REFS0); // external 5v
     ADMUX = _BV(REFS0)| _BV(REFS1) | _BV(MUX0); // 1.1v
@@ -224,9 +270,11 @@ void setup()
 #endif
     ADCSRA |= _BV(ADSC); // start conversion
 
-    // status LED
-    pinMode(13, OUTPUT);
+    digitalWrite(11, LOW);
+    pinMode(11, OUTPUT); // clutch
+    
     digitalWrite(13, LOW);
+    pinMode(13, OUTPUT); // status LED
     
     if(rc_pwm) {
         digitalWrite(9, LOW); /* enable internal pullups */
@@ -238,12 +286,14 @@ void setup()
     pinMode(rev_fault_pin, INPUT);
     digitalWrite(rev_fault_pin, HIGH); /* enable internal pullups */
 
-
     pinMode(rc_pwm_pin, INPUT);
     digitalWrite(rc_pwm_pin, HIGH); /* enable internal pullups */    
     
     pinMode(shunt_sense_pin, INPUT);
     digitalWrite(shunt_sense_pin, HIGH); /* enable internal pullups */
+
+    pinMode(low_current_pin, INPUT);
+    digitalWrite(low_current_pin, HIGH); /* enable internal pullups */
 
     _delay_us(100);
 
@@ -252,30 +302,25 @@ void setup()
     
     // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
     shunt_resistance = digitalRead(shunt_sense_pin);
+
+    // test current
+    low_current = digitalRead(low_current_pin);
+    if(low_current)
+        max_current = 2000; // 20 amps
+    else
+        max_current = 6000; // 60 amps
 }
-
-enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71};
-
-enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
-
-enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4};
 
 uint8_t in_bytes[3];
 uint8_t sync_b = 0, in_sync_count = 0;
 
 uint8_t out_sync_b = 0, out_sync_pos = 0;
 uint8_t crcbytes[3];
-#if defined(HIGH_CURRENT) 
-uint16_t max_current = 6000;
-#else
-uint16_t max_current = 2000;
-#endif
+
 uint16_t max_controller_temp = 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
-uint16_t max_slew_speed = 100, max_slew_slow = 150; // 200 is full power in 1/10th of a second
+uint16_t max_slew_speed = 15, max_slew_slow = 35; // 200 is full power in 1/10th of a second
 uint16_t min_rudder_pos = 0, max_rudder_pos = 65472;
-
-uint16_t flags = 0, faults = 0;
 
 uint8_t timeout, rudder_sense = 0;
 
@@ -369,6 +414,7 @@ void disengage()
     stop();
     flags &= ~ENGAGED;
     timeout = 60; // detach in about 62ms
+    digitalWrite(11, LOW); // clutch
     digitalWrite(13, LOW); // status LED
 }
 
@@ -444,19 +490,14 @@ void engage()
     flags |= ENGAGED;
 
     update_command();
+    digitalWrite(11, HIGH); // clutch
     digitalWrite(13, HIGH); // status LED
 }
 
 // set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
 
-enum {CURRENT, VOLTAGE, CONTROLLER_TEMP, MOTOR_TEMP, /*INTERNAL_TEMP, */RUDDER, CHANNEL_COUNT};
-const uint8_t muxes[] = {_BV(MUX0), 0, _BV(MUX1), _BV(MUX0) | _BV(MUX1), /*_BV(MUX3),*/
-#if defined(HIGH_CURRENT) 
-                         _BV(MUX2)
-#else
-                         _BV(MUX1) | _BV(MUX2)
-#endif                         
-};
+enum {CURRENT, VOLTAGE, CONTROLLER_TEMP, MOTOR_TEMP, RUDDER, CHANNEL_COUNT};
+const uint8_t muxes[] = {_BV(MUX0), 0, _BV(MUX1), _BV(MUX0) | _BV(MUX1), _BV(MUX2)};
 
 volatile struct adc_results_t {
     uint32_t total;
@@ -495,10 +536,10 @@ ISR(ADC_vect)
         if(adc_cnt < 50)
             goto ret;
     } else if(adc_counter == VOLTAGE) {
-        if(adc_cnt < 7)
+        if(adc_cnt < 8)
             goto ret;
     } else if(adc_counter == RUDDER && rudder_sense)
-        if(adc_cnt < 10) // take more samples for rudder, if sampled
+        if(adc_cnt < 16) // take more samples for rudder, if sampled
             goto ret;
     
     // advance to next channel
@@ -552,44 +593,51 @@ uint16_t TakeAmps(uint8_t p)
 {
     uint32_t v = TakeADC(CURRENT, p);
 
-#if defined(HIGH_CURRENT) 
-   // high curront controller has .0005 ohm with 50x gain
-    // 3663/511 = 100.0/1023/.0003/50*1.1
-    // 1200/279 = 100.0/1023/.0005/50*1.1
-    if(v > 16)
-#ifdef DIV_CLOCK        
-        v = v * 1200 / 279 / 16; // 420mA offset
-#else
-        v = v * 1200 / 279 / 16 + 82; // 820mA offset
-#endif
-    return v;
-#elif defined(HIGH_CURRENT_OLD)
-    // high curront controller has .001 ohm with 50x gain
-    // 275/128 = 100.0/1023/.001/50*1.1
-    return v * 275 / 128 / 16;
-#else
+    if(low_current) {
     // current units of 10mA
     // 275 / 128 = 100.0/1024/.05*1.1   for 0.05 ohm shunt
     // 1375 / 128 = 100.0/1024/.01*1.1   for 0.01 ohm shunt
-   if(shunt_resistance)
-        return v * 275 / 128 / 16;
+        if(shunt_resistance)
+            return v * 275 / 128 / 16;
 
-    if(v > 16)
+        if(v > 16)
 #ifdef DIV_CLOCK        
-        v = v * 1375 / 128 / 16 + 18; // 200mA minimum
+            v = v * 1375 / 128 / 16; // 200mA minimum
 #else
         v = v * 1375 / 128 / 16 + 55; // 550mA minimum
 #endif
-    return v;
+        else
+            v = 0;
+        return v;
+    } else { // high current
+        // high curront controller has .0005 ohm with 50x gain
+        // 3663/511 = 100.0/1023/.0003/50*1.1
+        // 1200/279 = 100.0/1023/.0005/50*1.1
+#if defined(HIGH_CURRENT_OLD)
+        // high curront controller has .001 ohm with 50x gain
+        // 275/128 = 100.0/1023/.001/50*1.1
+        return v * 275 / 128 / 16;
+#else
+        if(v > 16)
+#ifdef DIV_CLOCK        
+            v = v * 1200 / 279 / 16; // 420mA offset
+#else
+            v = v * 1200 / 279 / 16 + 82; // 820mA offset
 #endif
+#endif
+        return v;
+    }        
 }
 
 uint16_t TakeVolts(uint8_t p)
 {
-    // voltage in 10mV increments 1.1ref, 560 and 10k resistors
-    // 1815 / 896 = 100.0/1024*10560/560*1.1  cli();
+    // voltage in 10mV increments 1.1ref, 560 and 10k resistors    
     uint32_t v = TakeADC(VOLTAGE, p);
-    return v * 1815 / 896 / 16 + 40;
+    if(voltage_mode)
+        // 28545 / 7161 = 100.0/1023*10280/280*1.1        
+        return v * 28545 / 7161 / 16 + 15;
+    // 1815 / 896 = 100.0/1024*10560/560*1.1
+    return v * 14520 / 7161 / 16 + 55;
 }
 
 uint16_t TakeTemp(uint8_t index, uint8_t p)
@@ -727,16 +775,12 @@ void process_packet()
             engage();
         }
         break;
-    case MAX_CURRENT_CODE: // current in units of 10mA
-#if defined(HIGH_CURRENT) || defined(HIGH_CURRENT_OLD)
-        if(value > 6000) // maximum is 60 amps
-            value = 6000;
-#else
-        if(value > 2000) // maximum is 20 amps
-            value = 2000;
-#endif
+    case MAX_CURRENT_CODE: { // current in units of 10mA
+        unsigned int max_max_current = low_current ? 2000 : 6000;
+        if(value > max_max_current) // maximum is 20 amps
+            value = max_max_current;
         max_current = value;
-        break;
+    } break;
     case MAX_CONTROLLER_TEMP_CODE:
         if(value > 10000) // maximum is 100C
             value = 10000;
@@ -840,6 +884,27 @@ void loop()
         } else
             faults &= ~OVERCURRENT;
     }
+
+    if(CountADC(VOLTAGE, 1) > react_count) {
+        uint16_t volts = TakeVolts(1);
+        if(volts >= 1800 && !voltage_mode && !voltage_sense) {
+            // switch to higher voltage
+            voltage_mode = 1; // higher voltage
+            pinMode(voltage_sense_pin, OUTPUT);
+            digitalWrite(voltage_sense_pin, LOW);
+            max_voltage = 3600; // 36 v max
+            delay(2);
+            TakeVolts(0); // clear readings
+            TakeVolts(1);
+        } else
+        /* voltage must be between 6 and 18 volts */
+        if(volts <= 600 || volts >= max_voltage) {
+            stop();
+            faults |= BADVOLTAGE;
+        } else
+            faults &= ~BADVOLTAGE;
+    }
+    
     flags |= faults;
     
     // test over temp
@@ -899,9 +964,9 @@ void loop()
         //0   1 2 3 4 5  6 7 8 9 10 11  12   13 14 15 16 17 18 19 20 21 22 23    
         switch(out_sync_pos++) {
         case 0: case 12:
-#if defined(HIGH_CURRENT) 
-            flags |= CURRENT_RANGE;
-#endif
+            if(!low_current)
+                flags |= CURRENT_RANGE;
+
             v = flags;
             code = FLAGS_CODE;
             break;

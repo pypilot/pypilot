@@ -43,7 +43,7 @@ class BasicAutopilot(AutopilotBase):
       Gain(name, default, 0, max_val, compute2)
 
     PosGain('PR',  0, .05)
-    PosGain2('D2', 0, 1, 'P')
+    PosGain2('D2', 0, 3, 'P')
 
     PosGain('FF',  .5, 3.0)
 

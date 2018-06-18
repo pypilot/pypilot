@@ -129,7 +129,7 @@ def LoadPersistentData(persistent_path, server=True):
             # log failing to load persistent data
             persist_fail = os.getenv('HOME') + '/.pypilot/persist_fail'
             file = open(persist_fail, 'a')
-            file.write(str(time.time()) + '\n')
+            file.write(str(time.time()) + ' ' + str(e) + '\n')
             file.close()
 
         try:
@@ -171,7 +171,7 @@ class SignalKServer(object):
             socket.socket.close()
             
     def StorePersistentValues(self):
-        self.persistent_timeout = time.time() + 600 # 10 minutes
+        self.persistent_timeout = time.time() + 300 # 5 minutes
         need_store = False
         for name in self.values:
             value = self.values[name]
@@ -301,8 +301,8 @@ class SignalKServer(object):
                         break
                     try:
                         self.HandleRequest(socket, line)
-                    except:
-                        print 'invalid request from socket', line
+                    except Exception as e:
+                        print 'invalid request from socket', line, e
                         socket.send('invalid request: ' + line + '\n')
 
         # flush all sockets

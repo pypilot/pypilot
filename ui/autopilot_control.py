@@ -25,9 +25,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         self.client = False
 
-        self.gps_heading_offset = 0
-
-
         self.enabled = False
         self.mode = 'compass'
         self.heading_command = 0

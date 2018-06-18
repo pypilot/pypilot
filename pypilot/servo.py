@@ -84,16 +84,19 @@ class ServoFlags(Value):
     INVALID=16*1
     FWD_FAULTPIN=16*2
     REV_FAULTPIN=16*4
+    BADVOLTAGE=16*8
 
     MIN_RUDDER=256*1
     MAX_RUDDER=256*2
     CURRENT_RANGE=256*4
+    BAD_FUSES=256*8
 
     DRIVER_MASK = 4095 # bits used for driver flags
 
     FWD_FAULT=4096*1 # overcurrent faults
     REV_FAULT=4096*2
     DRIVER_TIMEOUT = 4096*4
+    SATURATED = 4096*8
 
     def __init__(self, name):
         super(ServoFlags, self).__init__(name, 0)
@@ -114,16 +117,22 @@ class ServoFlags(Value):
             ret += 'FWD_FAULTPIN '
         if self.value & self.REV_FAULTPIN:
             ret += 'REV_FAULTPIN '
+        if self.value & self.BADVOLTAGE:
+            ret += 'BADVOLTAGE '
         if self.value & self.MIN_RUDDER:
             ret += 'MIN_RUDDER '
         if self.value & self.MAX_RUDDER:
             ret += 'MAX_RUDDER '
+        if self.value & self.BAD_FUSES:
+            ret += 'BAD_FUSES '
         if self.value & self.FWD_FAULT:
             ret += 'FWD_FAULT '
         if self.value & self.REV_FAULT:
             ret += 'REV_FAULT '
         if self.value & self.DRIVER_TIMEOUT:
             ret += 'DRIVER_TIMEOUT '
+        if self.value & self.SATURATED:
+            ret += 'SATURATED '
         return ret
 
     def setbit(self, bit, t=True):
@@ -284,9 +293,9 @@ class Servo(object):
         position = self.position.value + self.speed.value * dt / 10 # remove when speed is correct
         self.position.set(min(max(position, 0), 1))
         #print 'integrate pos', self.position, self.speed, speed, dt, self.fwd_fault, self.rev_fault
-        if self.position.value < .9:
+        if self.position.value < .95:
             self.flags.clearbit(ServoFlags.FWD_FAULT)
-        if self.position.value > .1:
+        if self.position.value > .05:
             self.flags.clearbit(ServoFlags.REV_FAULT)
 
         if False: # don't keep moving really long in same direction.....
@@ -327,7 +336,11 @@ class Servo(object):
             speed = 0
 
         # don't let windup overflow
-        self.windup = min(max(self.windup, -1.5*self.period.value), 1.5*self.period.value)
+        if abs(self.windup) > 1.5*self.period.value:
+            self.flags.setbit(ServoFlags.SATURATED)
+            self.windup = 1.5*self.period.value*sign(self.windup)
+        else:
+            self.flags.clearbit(ServoFlags.SATURATED)
         #print 'windup', self.windup, dt, self.windup / dt, speed, self.speed
             
         if speed * self.speed.value <= 0: # switched direction or stopped?
@@ -380,8 +393,8 @@ class Servo(object):
 
         t = time.time()
         if command == 0:
-            # only send at .5 seconds when command is zero for more than a second
-            if t > self.command_timeout + 1 and t - self.last_zero_command_time < .5:
+            # only send at .2  seconds when command is zero for more than a second
+            if t > self.command_timeout + 1 and t - self.last_zero_command_time < .2:
                 return
             self.last_zero_command_time = t
         else:

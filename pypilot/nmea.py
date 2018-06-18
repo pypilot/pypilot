@@ -58,10 +58,13 @@ def parse_nmea_gps(line):
     if line[:6] != '$GPRMC':
         return False
 
-    data = line[7:len(line)-3].split(',')
-    timestamp = float(data[0])
-    speed = float(data[6])
-    heading = float(data[7])
+    try:
+        data = line[7:len(line)-3].split(',')
+        timestamp = float(data[0])
+        speed = float(data[6])
+        heading = float(data[7])
+    except:
+        return False
 
     return 'gps', {'timestamp': timestamp, 'track': heading, 'speed': speed}
 
@@ -234,9 +237,9 @@ class Nmea(object):
             return
         if self.process.sockets:
             nmea_name = line[:6]
-            # do not output nmea data over tcp faster than 4hz
+            # do not output nmea data over tcp faster than 5hz
             # for each message time
-            if not nmea_name in self.nmea_times or t-self.nmea_times[nmea_name]>.25:
+            if not nmea_name in self.nmea_times or t-self.nmea_times[nmea_name]>.2:
                 self.process.pipe.send(line, False)
                 self.nmea_times[nmea_name] = t
 
@@ -475,10 +478,10 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
             command = float(data[12])
             xte = float(data[2])
-            xte = min(xte, 0.1) # maximum 1/10th mile
+            xte = min(xte, 0.15) # maximum 0.15 miles
             if data[3] == 'L':
                 xte = -xte
-            command += 200*xte; # 20 degrees for 1/10th mile
+            command += 300*xte; # 30 degrees for 1/10th mile
             if abs(self.last_values['ap.heading_command'] - command) > .1:
                 self.client.set('ap.heading_command', command)
             return True
