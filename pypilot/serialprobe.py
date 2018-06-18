@@ -116,6 +116,7 @@ def enumerate_devices():
             signal.signal(signal.SIGCHLD, cursigchld_handler)
             monitor = pyudev.Monitor.from_netlink(context)
             monitor.filter_by(subsystem='usb')
+            devices = scan_devices()
         except Exception as e:
             print 'no pyudev! will scan usb devices every probe!', e
             starttime = time.time() + 20 # try pyudev again in 20 seconds
@@ -259,7 +260,10 @@ def reserve(device):
     i = 0
     while 'reserved%d' % i in probes:
         i+=1
-    probes['reserved%d' % i] = {'device': os.path.realpath(device)}
+    for dev in devices:
+        if os.path.realpath(dev) == os.path.realpath(device):
+            probes['reserved%d' % i] = {'device': device}
+            break
 
 # called to record the working serial device
 def success(name, device):
