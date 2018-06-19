@@ -104,31 +104,31 @@ def enumerate_devices():
         starttime = time.time()
         devices = scan_devices()
 
-    # delay monitor slightly to ensure startup speed
-    if time.time() > starttime and pyudev == 'init':
-        try:
-            import signal
-            # need to temporary disable sigchld while loading pyudev
-            cursigchld_handler = signal.getsignal(signal.SIGCHLD)
-            signal.signal(signal.SIGCHLD, signal.SIG_IGN)
-            import pyudev
-            context = pyudev.Context()
-            signal.signal(signal.SIGCHLD, cursigchld_handler)
-            monitor = pyudev.Monitor.from_netlink(context)
-            monitor.filter_by(subsystem='usb')
-            devices = scan_devices()
-        except Exception as e:
-            print 'no pyudev! will scan usb devices every probe!', e
-            starttime = time.time() + 20 # try pyudev again in 20 seconds
-            #pyudev = False
-
     if monitor:
+        import signal
         t1 = time.time()
         if monitor.poll(0):
             while monitor.poll(0): # flush events
                 pass
             devices = scan_devices()
     else:
+        # delay monitor slightly to ensure startup speed
+        if time.time() > starttime and pyudev == 'init':
+            import signal
+            try:
+                import signal
+                # need to temporary disable sigchld while loading pyudev
+                cursigchld_handler = signal.getsignal(signal.SIGCHLD)
+                signal.signal(signal.SIGCHLD, 0)
+                import pyudev
+                context = pyudev.Context()
+                signal.signal(signal.SIGCHLD, cursigchld_handler)
+                monitor = pyudev.Monitor.from_netlink(context)
+                monitor.filter_by(subsystem='usb')
+            except Exception as e:
+                print 'no pyudev! will scan usb devices every probe!', e
+                starttime = time.time() + 20 # try pyudev again in 20 seconds
+                #pyudev = False
         devices = scan_devices()
     return devices
 
