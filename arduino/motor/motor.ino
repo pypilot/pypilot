@@ -63,7 +63,9 @@ the command can be recognized.
 
 */
 
-//#define DIV_CLOCK // run at 4mhz instead of 16mhz to save power
+// run at 4mhz instead of 16mhz to save power,
+// and to be able to measure lower current from the shunt
+#define DIV_CLOCK
 
 //#define HIGH_CURRENT   // high current uses 300uohm resistor and 50x amplifier
 //#define HIGH_CURRENT_OLD   // high current uses 500uohm resistor and 50x amplifier
@@ -550,11 +552,12 @@ uint16_t TakeAmps(uint8_t p)
     if(shunt_resistance)
         return v * 275 / 128 / 16;
 
-    // unfortunately there is a 550mA offset, compensate for it
-    // by adding 55 x 10mA
     if(v > 16)
-        v = v * 1375 / 128 / 16 + 55;
-
+#ifdef DIV_CLOCK        
+        v = v * 1375 / 128 / 16 + 20; // 200mA minimum
+#else
+        v = v * 1375 / 128 / 16 + 55; // 550mA minimum
+#endif
     return v;
 #endif
 }
