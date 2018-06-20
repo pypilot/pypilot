@@ -42,8 +42,8 @@ class LineBufferedNonBlockingSocket(object):
             return
         try:
             if not self.pollout.poll(0):
-                if sendfail_cnt >= sendfail_msg:
-                    print('signalk socket failed to send', sendfail_cnt)
+                if self.sendfail_cnt >= self.sendfail_msg:
+                    print('signalk socket failed to send', self.sendfail_cnt)
                     self.sendfail_msg *= 10
                 self.sendfail_cnt += 1
                 return

@@ -21,7 +21,7 @@ from signalk.server import *
 from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 
-strversion = "0.7"
+strversion = '0.9'
 
 from boatimu import *
 from resolv import *
@@ -177,7 +177,7 @@ class Autopilot(object):
     for pilot_type in pilots.default:
       self.pilots.append(pilot_type(self))
 
-    self.pilot = self.Register(EnumProperty, 'pilot', 'basic', ['simple', 'basic', 'learning'])
+    self.pilot = self.Register(EnumProperty, 'pilot', 'basic', ['simple', 'basic', 'learning', 'wind'])
 
     timestamp = self.server.TimeStamp('ap')
     self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)

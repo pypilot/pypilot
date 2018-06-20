@@ -203,3 +203,6 @@ class Rudder(Sensor):
             self.last_time = t
             self.last = self.angle.value
             self.speed.set(.9*self.speed.value + .1*speed)
+
+    def reset(self):
+        self.angle.set(False)
