@@ -63,6 +63,9 @@ class Sensor(object):
         
         return True
 
+    def reset(self):
+        raise 'reset should be overloaded'
+
     def update(self, data):
         raise 'update should be overloaded'
 
@@ -82,6 +85,10 @@ class Wind(Sensor):
         self.direction.set(resolv(data['direction'] + self.offset.value, 180))
         if 'speed' in data:
             self.speed.set(data['speed'])
+
+    def reset(self):
+        self.direction.set(False)
+        self.speed.set(False)
         
 class Sensors(object):
     def __init__(self, server):
@@ -109,11 +116,14 @@ class Sensors(object):
             if sensor.source.value == 'none':
                 continue
             if t - sensor.lastupdate > 8:
-                print 'sensor timeout for', name, 'source', sensor.source.value
-                sensor.source.set('none')
-                sensor.device = None
-                break
+                self.lost_sensor(sensor);
 
+    def lost_sensor(self, sensor):
+        print 'sensor', sensor.name, 'lost', sensor.device, 'source', sensor.source.value
+        sensor.source.set('none')
+        sensor.reset()
+        sensor.device = None
+            
     def write(self, sensor, data, source):
         if not sensor in self.sensors:
             print 'unknown data parsed!', sensor
@@ -127,6 +137,4 @@ class Sensors(object):
         for name in self.sensors:
             sensor = self.sensors[name]
             if sensor.device and sensor.device[2:] == device:
-                print 'sensor lost device', sensor.device
-                sensor.source.set('none')
-                sensor.device = None
+                lost_sensor(sensor)

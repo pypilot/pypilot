@@ -677,6 +677,7 @@ def main():
     print 'Servo Server'
     server = SignalKServer()
 
+    from sensors import Sensors
     sensors = Sensors(server)
     servo = Servo(server, sensors)
     servo.max_current.set(10)
