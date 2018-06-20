@@ -103,6 +103,7 @@ class ModeProperty(EnumProperty):
           if self.ap.enabled.value:
             self.ap.lastmode = value
           self.ap.lost_mode.update(False)
+          self.ap.switch_mode(value)
         super(ModeProperty, self).set(value)    
 
 class AutopilotPilot(object):
@@ -114,6 +115,15 @@ class AutopilotPilot(object):
   def Register(self, _type, name, *args, **kwargs):
     return self.ap.server.Register(_type(*(['ap.pilot.' + self.name + '.' + name] + list(args)), **kwargs))
 
+
+class CompassOffset(object):
+  def __init__(self):
+    self.value = 0
+
+  def update(self, offset, d):
+      offset = resolv(offset, self.value)
+      self.value = resolv(d*offset + (1-d)*self.value)
+  
 import pilots
 class Autopilot(object):
   def __init__(self):
@@ -177,11 +187,11 @@ class Autopilot(object):
 
     self.tack = tacking.Tack(self)
 
-    self.gps_compass_offset = self.Register(SensorValue, 'gps_offset', timestamp, directional=True)
+    self.gps_compass_offset = CompassOffset()
     self.gps_speed = self.Register(SensorValue, 'gps_speed', timestamp)
 
-    self.wind_compass_offset = self.Register(SensorValue, 'wind_offset', timestamp, directional=True)
-    self.true_wind_compass_offset = self.Register(SensorValue, 'true_wind_offset', timestamp, directional=True)
+    self.wind_compass_offset = CompassOffset()
+    self.true_wind_compass_offset = CompassOffset()
     
     self.wind_direction = self.Register(SensorValue, 'wind_direction', timestamp, directional=True)
     self.wind_speed = self.Register(SensorValue, 'wind_speed', timestamp)
@@ -231,13 +241,20 @@ class Autopilot(object):
       while True:
           self.iteration()
 
+          
+  def switch_mode(self, newmode):
+    command = self.heading_command.value
+    mode_offsets = {'compass': 0,
+                    'gps':  self.gps_compass_offset.value,
+                    'wind': self.wind_compass_offset.value,
+                    'true wind': self.true_wind_compass_offset.value}
+    command -= mode_offsets[self.mode.value]
+    command += mode_offsets[newmode]
+    self.heading_command.set(command)
+          
   def mode_lost(self, newmode):
     self.mode.update(newmode)
     self.lost_mode.update(True)
-
-  def mode_found(self):
-    self.mode.set(self.lastmode)
-    self.lost_mode.set(False)
 
   def iteration(self):
       data = False
@@ -250,6 +267,7 @@ class Autopilot(object):
 
       if not data and self.lastdata:
           print 'autopilot failed to read imu at time:', time.time()
+
       self.lastdata = data;
       t0 = time.time()
       dt = t0 - self.lasttime
@@ -262,7 +280,8 @@ class Autopilot(object):
       #switch back to the lost mode if possible
       if self.lost_mode.value and self.lastmode in self.sensors.sensors and \
          self.sensors.sensors[self.lastmode].source.value != 'none':
-        self.mode_found()
+        self.mode.set(self.lastmode)
+        self.lost_mode.set(False)
 
       #update wind and gps offsets
       if self.sensors.gps.source.value != 'none':
@@ -272,20 +291,51 @@ class Autopilot(object):
           if gps_speed > 1: # don't update gps offset below 1 knot
               # weight gps compass offset higher with more gps speed
               d = .005*math.log(gps_speed + 1)
-              gps_compass_offset = resolv(self.sensors.gps.track.value - compass_heading, self.gps_compass_offset.value)
-              self.gps_compass_offset.set(resolv(d*gps_compass_offset + (1-d)*self.gps_compass_offset.value))
+              self.gps_compass_offset.update(self.sensors.gps.track.value - compass_heading, d)
+
       if self.sensors.wind.source.value != 'none':
           d = .005
           wind_speed = self.sensors.wind.speed.value
           self.wind_speed.set((1-d)*self.wind_speed.value + d*wind_speed)
           # weight wind direction more with higher wind speed
           d = .05*math.log(wind_speed/5.0 + 1.2)
-          if d > 0: # below 4 knots of wind, can't even use it
-              wind_direction = resolv(self.sensors.wind.direction.value, self.wind_direction.value)
-              wind_direction = (1-d)*self.wind_direction.value + d*wind_direction
-              self.wind_direction.set(resolv(wind_direction, 180))
-              offset = resolv(wind_direction + compass_heading, self.wind_compass_offset.value)
-              self.wind_compass_offset.set(resolv(d*offset + (1-d)*self.wind_compass_offset.value))
+          wind_direction = resolv(self.sensors.wind.direction.value, self.wind_direction.value)
+          wind_direction = (1-d)*self.wind_direction.value + d*wind_direction
+          self.wind_direction.set(resolv(wind_direction, 180))
+          self.wind_compass_offset.update(wind_direction + compass_heading, d)
+
+          if self.sensors.gps.source.value != 'none':
+              wind_speed = self.wind_speed.value
+              gps_speed = self.gps_speed.value
+
+              rd = math.radians(self.wind_direction.value)
+              windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
+              truewindd = math.degrees(math.atan2(windv[0], windv[1] - gps_speed))
+              #print 'truewindd', truewindd
+
+              offset = resolv(truewindd + compass_heading, self.true_wind_compass_offset.value)
+              d = .05
+              self.true_wind_compass_offset.update(offset, d)
+
+      compass_change = 0
+      if data:
+        if 'calupdate' in data and self.last_heading:
+          # with compass calibration updates, adjust the autopilot heading_command
+          # to prevent actual course change
+          last_heading = resolv(self.last_heading, data['heading'])
+          compass_change += data['heading'] - headingrate*dt - last_heading
+          self.last_heading = data['heading']
+
+      # if heading offset alignment changed, keep same course
+      if self.last_heading_off != self.boatimu.heading_off.value:
+          self.last_heading_off = resolv(self.last_heading_off, self.boatimu.heading_off.value)
+          compass_change += self.boatimu.heading_off.value - self.last_heading_off
+          self.last_heading_off = self.boatimu.heading_off.value
+
+      if compass_change:
+          self.gps_compass_offset.value -= compass_change
+          self.wind_compass_offset.value += compass_change
+          self.true_wind_compass_offset.value += compass_change
 
       if self.mode.value == 'true wind':
           # for true wind, we must have both wind and gps
@@ -293,50 +343,26 @@ class Autopilot(object):
               self.mode_lost('gps')
           elif self.sensors.gps.source.value == 'none':
               self.mode_lost('wind')
-
-          wind_speed = self.wind_speed.value
-          gps_speed = self.gps_speed.value
-
-          rd = math.radians(self.wind_direction.value)
-          windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
-          truewindd = math.degrees(math.atan2(windv[0], windv[1] - gps_speed))
-          print 'truewindd', truewindd
-
-          offset = resolv(truewindd + compass_heading, self.true_wind_compass_offset.value)
-          d = .005
-          self.true_wind_compass_offset.set(resolv(d*offset + (1-d)*self.true_wind_compass_offset.value))
           true_wind = resolv(self.true_wind_compass_offset.value - compass_heading, 180)
           self.heading.set(true_wind)
-
+          
       if self.mode.value == 'wind':
           # if wind sensor drops out, switch to compass
           if self.sensors.wind.source.value == 'none':
               self.mode_lost('compass')
-          wind_direction = resolv(self.wind_compass_offset.value - compass_heading, 180)
-          self.heading.set(wind_direction)
+          wind = resolv(self.wind_compass_offset.value - compass_heading, 180)
+          self.heading.set(wind)
 
       if self.mode.value == 'gps':
           # if gps drops out switch to compass
           if self.sensors.gps.source.value == 'none':
               self.mode_lost('compass')
-          gps_heading = resolv(compass_heading + self.gps_compass_offset.value, 180)
-          self.heading.set(gps_heading)
-
+          gps = resolv(compass_heading + self.gps_compass_offset.value, 180)
+          self.heading.set(gps)
+          
       if self.mode.value == 'compass':
-          if data:
-              if 'calupdate' in data and self.last_heading:
-                  # with compass calibration updates, adjust the autopilot heading_command
-                  # to prevent actual course change
-                  self.last_heading = resolv(self.last_heading, data['heading'])
-                  heading_off = data['heading'] - headingrate*dt - self.last_heading
-                  self.heading_command.set(resolv(self.heading_command.value + heading_off, 180))
-              self.last_heading = data['heading']
-          # if heading offset alignment changed, keep same course
-          if self.last_heading_off != self.boatimu.heading_off.value:
-              self.last_heading_off = resolv(self.last_heading_off, self.boatimu.heading_off.value)
-              heading_off = self.boatimu.heading_off.value - self.last_heading_off
-              self.heading_command.set(resolv(self.heading_command.value + heading_off, 180))
-              self.last_heading_off = self.boatimu.heading_off.value
+          if compass_change:
+            self.heading_command.set(resolv(self.heading_command.value + compass_change, 180))
           self.heading.set(compass_heading)
 
       if self.enabled.value:
