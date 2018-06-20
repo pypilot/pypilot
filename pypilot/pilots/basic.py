@@ -56,6 +56,7 @@ class BasicPilot(AutopilotPilot):
 
     self.reactive_value = self.Register(SensorValue, 'reactive_value', timestamp)
                                     
+    self.last_heading_mode = False
     self.lastenabled = False
 
   def process_imu_data(self):
@@ -65,15 +66,15 @@ class BasicPilot(AutopilotPilot):
       self.lastenabled = ap.enabled.value
       if ap.enabled.value:
         ap.heading_error_int.set(0) # reset integral
-        # reset feed-forward gain
-        self.last_heading_command = ap.heading_command.value
         self.heading_command_rate.set(0)
+        # reset feed-forward gain
+        self.last_heading_mode = False
 
     # reset feed-forward error if mode changed, or last command is older than 1 second
-    if ap.mode.value != ap.lastmode or t - self.heading_command_rate.time > 1:
+    if self.last_heading_mode != ap.mode.value or t - self.heading_command_rate.time > 1:
       self.last_heading_command = ap.heading_command.value
     
-    # if disabled, only bother to compute if a client cares
+    # if disabled, only compute if a client cares
     if not ap.enabled.value: 
       compute = False
       for gain in self.gains:
@@ -86,6 +87,7 @@ class BasicPilot(AutopilotPilot):
     # filter the heading command to compute feed-forward gain
     heading_command_diff = resolv(ap.heading_command.value - self.last_heading_command)
     self.last_heading_command = ap.heading_command.value
+    self.last_heading_mode = ap.mode.value
     self.heading_command_rate.time = t;
     lp = .1
     command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
