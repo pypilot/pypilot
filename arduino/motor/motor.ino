@@ -420,7 +420,7 @@ void engauge()
 // use timer2 as timeout
     timeout = 0;
 #ifdef DIV_CLOCK
-    TCCR2B = _BV(CS22) | _BV(CS21); // divide 128
+    TCCR2B = _BV(CS22) | _BV(CS21); // divide 256
 #else
     TCCR2B = _BV(CS20) | _BV(CS21) | _BV(CS22); // divide 1024
 #endif

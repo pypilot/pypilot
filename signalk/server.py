@@ -337,6 +337,7 @@ if __name__ == '__main__':
     server = SignalKServer()
     print 'signalk demo server, try running signalk_client'
     clock = server.Register(Value('clock', 0))
+    test = server.Register(Property('test', 1234))
     while True:
         clock.set(clock.value + 1)
         server.HandleRequests()
