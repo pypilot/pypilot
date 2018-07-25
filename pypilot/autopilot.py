@@ -307,7 +307,7 @@ class AutopilotBase(object):
       self.process_imu_data() # implementation specific process
 
       # servo can only disengauge under manual control
-      self.servo.force_engauged = self.enabled.value
+      self.servo.force_engaged = self.enabled.value
       self.lastmode = self.mode.value
 
       t1 = time.time()

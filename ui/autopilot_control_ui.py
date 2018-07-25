@@ -55,9 +55,9 @@ class AutopilotControlBase ( wx.Frame ):
 		self.stController.Wrap( -1 )
 		fgSizer21.Add( self.stController, 0, wx.ALL, 5 )
 		
-		self.stEngauged = wx.StaticText( self, wx.ID_ANY, u"        N/A        ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stEngauged.Wrap( -1 )
-		fgSizer21.Add( self.stEngauged, 0, wx.ALL, 5 )
+		self.stEngaged = wx.StaticText( self, wx.ID_ANY, u"        N/A        ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stEngaged.Wrap( -1 )
+		fgSizer21.Add( self.stEngaged, 0, wx.ALL, 5 )
 		
 		self.stStatus = wx.StaticText( self, wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.Size( 100,-1 ), 0 )
 		self.stStatus.Wrap( -1 )

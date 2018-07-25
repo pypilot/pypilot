@@ -32,7 +32,7 @@ if RC pwm:
            pin2 esc programming input/output (with arduinousblinker script)
 if Hbridge
    digital pin2 and pin3 for low side, pin9 and pin10 for high side
-digital pin13 is led on when engauged
+digital pin13 is led on when engaged
 
 optional:
 digital pin7 forward fault for optional switch to stop forward travel
@@ -153,7 +153,7 @@ uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
 
 #define fwd_fault_pin 7 // use pin 7 for optional fault
 #define rev_fault_pin 8 // use pin 7 for optional fault
-// if switches pull this pin low, the motor is disengauged
+// if switches pull this pin low, the motor is disengaged
 // and will be noticed by the control program
 
 #define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
@@ -258,7 +258,7 @@ enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, 
 
 enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
 
-enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAUGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, MIN_RUDDER=256*1, MAX_RUDDER=256*2};
+enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, MIN_RUDDER=256*1, MAX_RUDDER=256*2};
 
 uint8_t in_bytes[3];
 uint8_t sync_b = 0, in_sync_count = 0;
@@ -363,7 +363,7 @@ void update_command()
 void disengauge()
 {
     stop();
-    flags &= ~ENGAUGED;
+    flags &= ~ENGAGED;
     timeout = 60; // detach in about 62ms
     digitalWrite(13, LOW); // status LED
 }
@@ -390,7 +390,7 @@ void detach()
 
 void engauge()
 {
-    if(flags & ENGAUGED)
+    if(flags & ENGAGED)
         return;
 
     if(rc_pwm) {
@@ -437,7 +437,7 @@ void engauge()
 #endif
     TIMSK2 = _BV(TOIE2);
 
-    flags |= ENGAUGED;
+    flags |= ENGAGED;
 
     update_command();
     digitalWrite(13, HIGH); // status LED
