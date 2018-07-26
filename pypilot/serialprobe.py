@@ -86,7 +86,7 @@ def scan_devices():
         return devices
     
     for device in devices:
-        if os.path.realpath(devices) in allowed_serial_ports:
+        if os.path.realpath(device) in allowed_serial_ports:
             allowed_devices.append(device)
     return allowed_devices
 
