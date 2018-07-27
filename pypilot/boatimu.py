@@ -237,12 +237,12 @@ class BoatIMU(object):
     self.last_alignmentCounter = False
 
     self.uptime = self.Register(TimeValue, 'uptime')
-    self.compass_calibration_age = self.Register(AgeValue, 'compass_calibration_age', persistent=True)
+    self.compass_calibration_age = self.Register(AgeValue, 'compass.calibration.age', persistent=True)
 
-    self.compass_calibration = self.Register(RoundedValue, 'compass_calibration', [[0, 0, 0, 30, 0], [False, False], 0], persistent=True)
+    self.compass_calibration = self.Register(RoundedValue, 'compass.calibration', [[0, 0, 0, 30, 0], [False, False], 0], persistent=True)
 
-    self.compass_calibration_sigmapoints = self.Register(RoundedValue, 'compass_calibration_sigmapoints', False)
-    self.compass_calibration_locked = self.Register(BooleanProperty, 'compass_calibration_locked', False, persistent=True)
+    self.compass_calibration_sigmapoints = self.Register(RoundedValue, 'compass.calibration.sigmapoints', False)
+    self.compass_calibration_locked = self.Register(BooleanProperty, 'compass.calibration.locked', False, persistent=True)
     
     self.imu_pipe, imu_pipe = NonBlockingPipe('imu_pipe')
     imu_cal_pipe = NonBlockingPipe('imu_cal_pipe')
