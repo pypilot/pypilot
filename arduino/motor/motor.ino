@@ -172,7 +172,6 @@ void debug(char *fmt, ... ){
 #include <util/delay.h>
 
 uint8_t serialin;
-
 void setup() 
 {
 #ifdef DIV_CLOCK
@@ -252,9 +251,9 @@ void setup()
     
     // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
     shunt_resistance = digitalRead(shunt_sense_pin);
-} 
+}
 
-enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68, MAX_SLEW_CODE=0x71};
+enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71};
 
 enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
 
@@ -360,7 +359,7 @@ void update_command()
     position(cur_value + diff);
 }
 
-void disengauge()
+void disengage()
 {
     stop();
     flags &= ~ENGAGED;
@@ -388,7 +387,7 @@ void detach()
     timeout = 64; // avoid overflow
 }    
 
-void engauge()
+void engage()
 {
     if(flags & ENGAGED)
         return;
@@ -396,8 +395,8 @@ void engauge()
     if(rc_pwm) {
         TCNT1 = 0x1fff;
         //Configure TIMER1
-        TCCR1A|=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
-        TCCR1B|=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
+        TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
+        TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
 #ifdef DIV_CLOCK
         ICR1=10000;  //fPWM=50Hz (Period = 20ms Standard).
 #else
@@ -624,7 +623,7 @@ ISR(WDT_vect)
 {
     wdt_reset();
     wdt_disable();
-    disengauge();
+    disengage();
     delay(50);
     detach();
 
@@ -677,7 +676,7 @@ ISR(TIMER2_OVF_vect)
     sei();
     timeout++;
     if(timeout == 60)
-        disengauge();
+        disengage();
     if(timeout >= 64) // detach 60 ms later so esc gets stop
         detach();
 }
@@ -714,7 +713,7 @@ void process_packet()
             // no reverse command if fwd fault
         else {
             command_value = value;
-            engauge();
+            engage();
         }
         break;
     case MAX_CURRENT_CODE: // current in units of 10mA
@@ -741,10 +740,10 @@ void process_packet()
         min_rudder_pos = 256*in_bytes[1];
         max_rudder_pos = 256*in_bytes[2];
         break;
-    case DISENGAUGE_CODE:
+    case DISENGAGE_CODE:
         if(serialin < 12)
             serialin+=4; // output at input rate
-        disengauge();
+        disengage();
         break;
     case MAX_SLEW_CODE:
         max_slew_speed = in_bytes[1];
@@ -796,7 +795,7 @@ void loop()
           } else {
               // invalid packet
               flags &= ~SYNC;
-              stop(); //disengauge();
+              stop(); //disengage();
               in_sync_count = 0;
               in_bytes[0] = in_bytes[1];
               in_bytes[1] = in_bytes[2];
