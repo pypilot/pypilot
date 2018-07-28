@@ -2023,7 +2023,7 @@
                                             <event name="OnMiddleDown"></event>
                                             <event name="OnMiddleUp"></event>
                                             <event name="OnMotion"></event>
-                                            <event name="OnMouseEvents">onMouseEventsCompass</event>
+                                            <event name="OnMouseEvents">onMouseEventsAccel</event>
                                             <event name="OnMouseWheel"></event>
                                             <event name="OnPaint">onPaintGLAccel</event>
                                             <event name="OnRightDClick"></event>

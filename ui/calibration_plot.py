@@ -22,14 +22,30 @@ recent_point_count=20
 
 from shape import *
 
+def TranslateAfter(x, y, z):
+    m = glGetFloatv(GL_MODELVIEW_MATRIX)
+    glLoadIdentity()
+    glTranslatef(x, y, z)
+    glMultMatrixf(m)
+
+def RotateAfter(ang, x, y, z):
+    m = glGetFloatv(GL_MODELVIEW_MATRIX)
+    glLoadIdentity()
+    glRotatef(ang, x, y, z)
+    glMultMatrixf(m)
+
+def rotate_mouse(dx, dy):
+    RotateAfter((dx**2 + dy**2)**.1, dy, dx, 0)
+
 class CalibrationPlot(object):
-    def __init__(self):
-        self.userscale = .005
+    def __init__(self, name):
+        self.name = name
         self.points = []
         self.recent_points = []
         self.mode = GL_LINE
         self.fusionQPose = [1, 0, 0, 0]
         self.alignmentQ = [1, 0, 0, 0]
+        self.sigmapoints = False
         
     def add_point(self, value):
         if not value:
@@ -53,6 +69,10 @@ class CalibrationPlot(object):
             self.fusionQPose = data['value']
         elif name == 'imu.alignmentQ':
             self.alignmentQ = data['value']
+        elif name == 'imu.'+self.name:
+            self.add_point(data['value'])
+        elif name == 'imu.'+self.name+'.calibration.sigmapoints':
+            self.sigmapoints = data['value']
                 
     def display_setup(self):
         width, height = self.dim
@@ -86,6 +106,7 @@ class CalibrationPlot(object):
         down = quaternion.rotvecquat(down, quaternion.conjugate(q))
             
         glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
+        return down
 
     def draw_points(self):
         glPointSize(4)
@@ -102,6 +123,17 @@ class CalibrationPlot(object):
         for i in xrange(len(self.points)):
             glVertex3fv(self.points[i])
         glEnd()
+
+        if self.sigmapoints:
+            glColor3f(1, 1, 0)
+            glPointSize(6)
+            glBegin(GL_POINTS)
+            for p in self.sigmapoints:
+                glVertex3fv(p[:3])
+            glEnd()
+                                
+        glPopMatrix()
+        
         
     def special(self, key, x, y):
         step = 5
@@ -147,39 +179,37 @@ class CalibrationPlot(object):
 class AccelCalibrationPlot(CalibrationPlot):
     default_radius = 1
     def __init__(self):
-        super(AccelCalibrationPlot, self).__init__()
+        super(AccelCalibrationPlot, self).__init__('accel')
+        self.userscale = .3
         self.cal_sphere = [0, 0, 0, 1]
         self.fit_sphere = False
 
     def read_data(self, msg):
         self.read_data_plot(msg)
         name, data = msg
-        if name == 'imu.accel':
-            self.add_point(data['value'])
-        elif name == 'imu.accel.calibration' and data['value']:
+        if name == 'imu.accel.calibration' and data['value']:
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
             self.cal_sphere = data['value']
-            self.fit_sphere = Spherical(self.accel_cal_sphere, fsphere,  32, 16);
+            self.fit_sphere = Spherical(self.cal_sphere, fsphere,  32, 16);
 
     def display(self):
         self.display_setup();
         cal_sphere = self.cal_sphere
         
         if self.fit_sphere:
-            glColor3f(1, 0, 0)
+            glColor3f(0, .3, .8)
             self.fit_sphere.draw()
 
         glPopMatrix()
-        glTranslatef(-cal_sphere[0], -cal_sphere[1], -cal_sphere[2])
-        
+        glTranslatef(-cal_sphere[0], -cal_sphere[1], -cal_sphere[2])        
         self.draw_points()
 
-        
 class CompassCalibrationPlot(CalibrationPlot):
     default_radius = 30
     def __init__(self):
-        super(CompassCalibrationPlot, self).__init__()
+        super(CompassCalibrationPlot, self).__init__('compass')
+        self.userscale = .005
         self.unit_sphere = Spherical([0, 0, 0, 1], lambda beta, x: x, 32, 16)
         self.mag_fit_new_bias = self.mag_fit_new_sphere = False
         self.mag_fit_sphere = self.mag_fit_cone = False
@@ -190,7 +220,6 @@ class CompassCalibrationPlot(CalibrationPlot):
         self.accel = [0, 0, 0]
 
         self.heading = 0
-        self.sigmapoints = False
 
         self.apoints = []
         self.avg = [0, 0, 0]
@@ -202,10 +231,6 @@ class CompassCalibrationPlot(CalibrationPlot):
             self.accel = data['value']
         elif name == 'imu.heading':
             self.heading = data['value']
-        elif name == 'imu.compass':
-            self.add_point(data['value'])                    
-        elif name == 'imu.compass.calibration.sigmapoints':
-            self.sigmapoints = data['value']
         elif name == 'imu.compass.calibration' and data['value']:
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
@@ -214,7 +239,7 @@ class CompassCalibrationPlot(CalibrationPlot):
             self.mag_fit_cone = Conical(self.mag_cal_sphere, 32, 16);
         
     def display(self):
-        self.display_setup()
+        down = self.display_setup()
         cal_new_bias = self.mag_cal_new_bias
         cal_new_sphere = self.mag_cal_new_sphere
         cal_sphere = self.mag_cal_sphere
@@ -238,29 +263,18 @@ class CompassCalibrationPlot(CalibrationPlot):
         glPopMatrix()
         glTranslatef(-cal_sphere[0], -cal_sphere[1], -cal_sphere[2])
 
+        glColor3f(1,1,1)
+        glLineWidth(3.8)
+        glBegin(GL_LINES)
+
+        try:
+            glColor3f(.8, .8, .8)
+            glVertex3fv(map(lambda x, y :-x*cal_sphere[3]+y, down, cal_sphere[:3]))
+            glVertex3fv(map(lambda x, y : x*cal_sphere[3]+y, down, cal_sphere[:3]))
+        except:
+            print 'ERROR!!!!!!!!!!!!!!', self.accel, cal_sphere
+        glEnd()
         self.draw_points()
-
-        if self.sigmapoints:
-            glColor3f(1, 1, 0)
-            glPointSize(6)
-            glBegin(GL_POINTS)
-            for p in self.sigmapoints:
-                glVertex3fv(p[:3])
-            glEnd()
-                
-            glColor3f(1,1,1)
-            glLineWidth(3.8)
-            glBegin(GL_LINES)
-
-            try:
-                glColor3f(.8, .8, .8)
-                glVertex3fv(map(lambda x,y :-x*cal_sphere[3]+y, down, cal_sphere[:3]))
-                glVertex3fv(map(lambda x,y : x*cal_sphere[3]+y, down, cal_sphere[:3]))
-            except:
-                print 'ERROR!!!!!!!!!!!!!!', self.accel, cal_sphere
-            glEnd()
-                
-        glPopMatrix()
 
 if __name__ == '__main__':
     host = ''

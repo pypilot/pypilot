@@ -103,9 +103,9 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         if name == 'imu.accel':
             self.AccelCalibration.Refresh()
         elif name == 'imu.accel.calibration':
-            self.stAccelCal.SetLabel(str(round3(value[0])))
+            self.stAccelCal.SetLabel(str(round3(value)))
         elif name == 'imu.accel.calibration.age':
-            self.stSensorsCalAge.SetLabel(str(value))
+            self.stAccelCalAge.SetLabel(str(value))
         elif name == 'imu.accel.calibration.locked':
             self.cbAccelCalibrationLocked.SetValue(value)
         
@@ -116,7 +116,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         elif name == 'imu.compass.calibration':
             self.stCompassCal.SetLabel(str(round3(value[0])))
         elif name == 'imu.compass.calibration.age':
-            self.stSensorsCalAge.SetLabel(str(value))
+            self.stCompassCalAge.SetLabel(str(value))
         elif name == 'imu.compass.calibration.locked':
             self.cbCompassCalibrationLocked.SetValue(value)
                 
@@ -193,12 +193,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.servoprocess = False
 
     def onKeyPressAccel( self, event ):
-        self.onKeyPress(self.compass_calibration_plot)
+        self.onKeyPress(event, self.compass_calibration_plot)
 
     def onKeyPressCompass( self, event ):
-        self.onKeyPress(self.compass_calibration_plot)
+        self.onKeyPress(event, self.compass_calibration_plot)
         
-    def onKeyPress( self, plot ):
+    def onKeyPress( self, event, plot ):
         signalk.scope_wx.wxglutkeypress(event, plot.special, plot.key)
 
     def onClearAccel( self, event ):
@@ -206,7 +206,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onClearCompass( self, event ):
         self.compass_calibration_plot.points = []
-
         
     def onAccelCalibrationLocked( self, event ):
         self.client.set('imu.accel.calibration.locked', self.cbAccelCalibrationLocked.GetValue())
@@ -218,21 +217,21 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.client.set('imu.'+sensor+'.calibration.locked', self.ctrl.GetValue())
 
     def onMouseEventsAccel( self, event ):
-        self.onMouseEvents( event, self.CompassCalibration, self.compass_calibration_plot )
+        self.AccelCalibration.SetFocus()
+        self.onMouseEvents( event, self.AccelCalibration, self.accel_calibration_plot )
         
     def onMouseEventsCompass( self, event ):
+        self.CompassCalibration.SetFocus()
         self.onMouseEvents( event, self.CompassCalibration, self.compass_calibration_plot )
         
     def onMouseEvents( self, event, canvas, plot ):
-        self.CompassCalibration.SetFocus()
-
         pos = event.GetPosition()
         if event.LeftDown():
             self.lastmouse = pos
 
         if event.Dragging():
-            plot.rotate_mouse(pos[0] - self.lastmouse[0], \
-                              pos[1] - self.lastmouse[1])
+            calibration_plot.rotate_mouse(pos[0] - self.lastmouse[0], \
+                                          pos[1] - self.lastmouse[1])
             canvas.Refresh()
             self.lastmouse = pos
 

@@ -636,19 +636,19 @@ class CalibrationDialogBase ( wx.Dialog ):
 		
 		# Connect Events
 		self.AccelCalibration.Bind( wx.EVT_KEY_DOWN, self.onKeyPressAccel )
-		self.AccelCalibration.Bind( wx.EVT_LEFT_DOWN, self.onMouseEventsCompass )
-		self.AccelCalibration.Bind( wx.EVT_LEFT_UP, self.onMouseEventsCompass )
-		self.AccelCalibration.Bind( wx.EVT_MIDDLE_DOWN, self.onMouseEventsCompass )
-		self.AccelCalibration.Bind( wx.EVT_MIDDLE_UP, self.onMouseEventsCompass )
-		self.AccelCalibration.Bind( wx.EVT_RIGHT_DOWN, self.onMouseEventsCompass )
-		self.AccelCalibration.Bind( wx.EVT_RIGHT_UP, self.onMouseEventsCompass )
-		self.AccelCalibration.Bind( wx.EVT_MOTION, self.onMouseEventsCompass )
-		self.AccelCalibration.Bind( wx.EVT_LEFT_DCLICK, self.onMouseEventsCompass )
-		self.AccelCalibration.Bind( wx.EVT_MIDDLE_DCLICK, self.onMouseEventsCompass )
-		self.AccelCalibration.Bind( wx.EVT_RIGHT_DCLICK, self.onMouseEventsCompass )
-		self.AccelCalibration.Bind( wx.EVT_LEAVE_WINDOW, self.onMouseEventsCompass )
-		self.AccelCalibration.Bind( wx.EVT_ENTER_WINDOW, self.onMouseEventsCompass )
-		self.AccelCalibration.Bind( wx.EVT_MOUSEWHEEL, self.onMouseEventsCompass )
+		self.AccelCalibration.Bind( wx.EVT_LEFT_DOWN, self.onMouseEventsAccel )
+		self.AccelCalibration.Bind( wx.EVT_LEFT_UP, self.onMouseEventsAccel )
+		self.AccelCalibration.Bind( wx.EVT_MIDDLE_DOWN, self.onMouseEventsAccel )
+		self.AccelCalibration.Bind( wx.EVT_MIDDLE_UP, self.onMouseEventsAccel )
+		self.AccelCalibration.Bind( wx.EVT_RIGHT_DOWN, self.onMouseEventsAccel )
+		self.AccelCalibration.Bind( wx.EVT_RIGHT_UP, self.onMouseEventsAccel )
+		self.AccelCalibration.Bind( wx.EVT_MOTION, self.onMouseEventsAccel )
+		self.AccelCalibration.Bind( wx.EVT_LEFT_DCLICK, self.onMouseEventsAccel )
+		self.AccelCalibration.Bind( wx.EVT_MIDDLE_DCLICK, self.onMouseEventsAccel )
+		self.AccelCalibration.Bind( wx.EVT_RIGHT_DCLICK, self.onMouseEventsAccel )
+		self.AccelCalibration.Bind( wx.EVT_LEAVE_WINDOW, self.onMouseEventsAccel )
+		self.AccelCalibration.Bind( wx.EVT_ENTER_WINDOW, self.onMouseEventsAccel )
+		self.AccelCalibration.Bind( wx.EVT_MOUSEWHEEL, self.onMouseEventsAccel )
 		self.AccelCalibration.Bind( wx.EVT_PAINT, self.onPaintGLAccel )
 		self.AccelCalibration.Bind( wx.EVT_SIZE, self.onSizeGLAccel )
 		self.m_button101.Bind( wx.EVT_BUTTON, self.onClearAccel )
@@ -702,7 +702,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 	def onKeyPressAccel( self, event ):
 		event.Skip()
 	
-	def onMouseEventsCompass( self, event ):
+	def onMouseEventsAccel( self, event ):
 		event.Skip()
 	
 	def onPaintGLAccel( self, event ):
@@ -720,6 +720,8 @@ class CalibrationDialogBase ( wx.Dialog ):
 	def onKeyPressCompass( self, event ):
 		event.Skip()
 	
+	def onMouseEventsCompass( self, event ):
+		event.Skip()
 	
 	def onPaintGLCompass( self, event ):
 		event.Skip()
