@@ -143,6 +143,11 @@ class RangeProperty(Property):
         if value >= self.min_value and value <= self.max_value:
             super(RangeProperty, self).set(value)
 
+    def set_max(self, max_value):
+        if self.value > max_value:
+            self.value = max_value
+        self.max_value = max_value
+
 class HeadingProperty(RangeProperty):
     def __init__(self, name, initial):
         super(HeadingProperty, self).__init__(name, initial, 0, 360)

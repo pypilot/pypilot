@@ -86,20 +86,18 @@ class ServoFlags(Value):
     REV_FAULTPIN=16*4
 
     MIN_RUDDER=256*1
-    MAX_RUDDER=256*2    
+    MAX_RUDDER=256*2
+    CURRENT_RANGE=256*4
 
-    DRIVER_MASK = 2047 # bits used for driver flags
+    DRIVER_MASK = 4095 # bits used for driver flags
 
-    FWD_FAULT=2048*1 # overcurrent faults
-    REV_FAULT=2048*2
-    DRIVER_TIMEOUT = 2048*4
+    FWD_FAULT=4096*1 # overcurrent faults
+    REV_FAULT=4096*2
+    DRIVER_TIMEOUT = 4096*4
 
     def __init__(self, name):
         super(ServoFlags, self).__init__(name, 0)
-
-    def updatedriver(self, driverflags):
-        self.update(self.value & ~self.DRIVER_MASK | driverflags)
-            
+          
     def strvalue(self):
         ret = ''
         if self.value & self.SYNC:
@@ -195,7 +193,7 @@ class Servo(object):
         self.rudder_pos = self.Register(SensorValue, 'rudder_pos', timestamp)
         
         self.engaged = self.Register(BooleanValue, 'engaged', False)
-        self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 20, persistent=True)
+        self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 60, persistent=True)
         self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 70, 45, 100, persistent=True)
         self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
         self.min_rudder_pos = self.Register(RangeProperty, 'min_rudder_pos', -100, -100, 100, persistent=True)
@@ -516,7 +514,8 @@ class Servo(object):
             lp = .003*dt # 5 minute time constant to average wattage
             self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
         if result & ServoTelemetry.FLAGS:
-            self.flags.updatedriver(self.driver.flags)
+            self.max_current.set_max(60 if self.driver.flags & ServoFlags.CURRENT_RANGE else 20)
+            self.flags.update(self.flags.value & ~ServoFlags.DRIVER_MASK | self.driver.flags)
             self.engaged.update(not not self.driver.flags & ServoFlags.ENGAGED)
 
         self.send_command()

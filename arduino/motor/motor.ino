@@ -67,7 +67,8 @@ the command can be recognized.
 // and to be able to measure lower current from the shunt
 #define DIV_CLOCK
 
-//#define HIGH_CURRENT   // high current uses 500uohm resistor and 50x amplifier
+#define HIGH_CURRENT   // high current uses 500uohm resistor and 50x amplifier
+                         // 60amp range
 //#define HIGH_CURRENT_OLD   // high current uses 500uohm resistor and 50x amplifier
 // otherwise using shunt without amplification
 
@@ -257,14 +258,16 @@ enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, 
 
 enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
 
-enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, MIN_RUDDER=256*1, MAX_RUDDER=256*2};
+enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4};
 
 uint8_t in_bytes[3];
 uint8_t sync_b = 0, in_sync_count = 0;
 
 uint8_t out_sync_b = 0, out_sync_pos = 0;
 uint8_t crcbytes[3];
-uint16_t max_current = 2000;
+#if defined(HIGH_CURRENT) 
+uint16_t max_current = 6000;
+#endif
 uint16_t max_controller_temp = 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
 uint16_t max_slew_speed = 100, max_slew_slow = 150; // 200 is full power in 1/10th of a second
@@ -445,7 +448,13 @@ void engage()
 // set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
 
 enum {CURRENT, VOLTAGE, CONTROLLER_TEMP, MOTOR_TEMP, /*INTERNAL_TEMP, */RUDDER, CHANNEL_COUNT};
-const uint8_t muxes[] = {_BV(MUX0), 0, _BV(MUX1), _BV(MUX0) | _BV(MUX1), /*_BV(MUX3),*/ _BV(MUX1) | _BV(MUX2)};
+const uint8_t muxes[] = {_BV(MUX0), 0, _BV(MUX1), _BV(MUX0) | _BV(MUX1), /*_BV(MUX3),*/
+#if defined(HIGH_CURRENT) 
+                         _BV(MUX2)
+#else
+                         _BV(MUX1) | _BV(MUX2)
+#endif                         
+};
 
 volatile struct adc_results_t {
     uint32_t total;
@@ -888,6 +897,9 @@ void loop()
         //0   1 2 3 4 5  6 7 8 9 10 11  12   13 14 15 16 17 18 19 20 21 22 23    
         switch(out_sync_pos++) {
         case 0: case 12:
+#if defined(HIGH_CURRENT) 
+            flags |= CURRENT_RANGE;
+#endif
             v = flags;
             code = FLAGS_CODE;
             break;
