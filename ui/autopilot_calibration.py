@@ -74,6 +74,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                      'imu.heading', \
                      'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', \
                      'imu.heading_offset',
+                     'servo.rudder', 'servo.rudder.offset',
+                     'servo.rudder.scale', 'servo.rudder.range',
                      'servo.calibration', 'servo.max_current']
         for name in watchlist:
             client.watch(name)
@@ -150,6 +152,16 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         elif name == 'imu.heading_offset':
             self.signalk_heading_offset = value
             self.heading_offset_timer.Start(1000, True)
+
+        elif name == 'servo.rudder':
+            self.stRudderAngle.SetLabel(str(round3(value)))
+            self.rudder = value
+        elif name == 'servo.rudder.offset':
+            self.rudder_offset = value
+        elif name == 'servo.rudder.scale':
+            self.rudder_scale = value
+        elif name == 'servo.rudder.range':
+            self.sRudderRange.SetValue(value)
         elif name == 'servo.calibration':
             s = ''
             for name in value:
@@ -343,6 +355,16 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onMaxCurrent( self, event ):
         self.client.set('servo.max_current', event.GetValue())
+
+    def onRudderCentered( self, event ):
+        rudder_pos = self.rudder / self.rudder_scale - self.rudder_offset + .5
+        self.client.set('servo.rudder.offset', .5 - rudder_pos)
+
+    def onRudderEnd( self, event ):
+        range = self.sRudderRange.GetValue()
+        scale = range * self.rudder_scale / self.rudder
+        self.client.set('servo.rudder.scale', scale)
+        self.client.set('servo.rudder.range', range)
 
 def main():
     glutInit(sys.argv)

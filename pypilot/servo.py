@@ -194,7 +194,7 @@ class Servo(object):
         self.rudder_pos = self.Register(SensorValue, 'rudder', timestamp)
         self.rudder_offset = self.Register(RangeProperty, 'rudder.offset', 0, -.5, .5, persistent=True)
         self.rudder_scale = self.Register(RangeProperty, 'rudder.scale',  60, 10, 180, persistent=True)
-        self.rudder_max_degrees = self.Register(RangeProperty, 'rudder.range',  60, 0, 100, persistent=True)
+        self.rudder_range = self.Register(RangeProperty, 'rudder.range',  60, 0, 100, persistent=True)
         self.engaged = self.Register(BooleanValue, 'engaged', False)
         self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 60, persistent=True)
         self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 70, 45, 100, persistent=True)
