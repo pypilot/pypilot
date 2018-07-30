@@ -154,7 +154,7 @@ class ServoTelemetry(object):
     POSITION = 16
     CONTROLLER_TEMP = 32
     MOTOR_TEMP = 64
-    RUDDER_POS = 128
+    RUDDER = 128
 
 # a property which records the time when it is updated
 class TimedProperty(Property):
@@ -191,7 +191,7 @@ class Servo(object):
         self.controller_temp = self.Register(SensorValue, 'controller_temp', timestamp)
         self.motor_temp = self.Register(SensorValue, 'motor_temp', timestamp)
 
-        self.rudder_pos = self.Register(SensorValue, 'rudder', timestamp)
+        self.rudder = self.Register(SensorValue, 'rudder', timestamp)
         self.rudder_offset = self.Register(RangeProperty, 'rudder.offset', 0, -.5, .5, persistent=True)
         self.rudder_scale = self.Register(RangeProperty, 'rudder.scale',  60, 10, 180, persistent=True)
         self.rudder_range = self.Register(RangeProperty, 'rudder.range',  60, 0, 100, persistent=True)
@@ -416,11 +416,12 @@ class Servo(object):
     def close_driver(self):
         print 'servo lost connection'
         self.controller.set('none')
+        self.rudder.update(False);
         self.device.close()
         self.driver = False
 
     def send_driver_max_values(self, max_current):
-        n = self.rudder_max_degrees.value / self.rudder_scale.value
+        n = self.rudder_range.value / self.rudder_scale.value
         o = self.rudder_offset.value + 0.5;
         min_rudder, max_rudder = -n - o,  n - o
         
@@ -503,12 +504,12 @@ class Servo(object):
             self.controller_temp.set(self.driver.controller_temp)
         if result & ServoTelemetry.MOTOR_TEMP:
             self.motor_temp.set(self.driver.motor_temp)
-        if result & ServoTelemetry.RUDDER_POS:
-            if math.isnan(self.driver.rudder_pos):
-                self.rudder_pos.update(False)
+        if result & ServoTelemetry.RUDDER:
+            if math.isnan(self.driver.rudder):
+                self.rudder.update(False)
             else:
-                self.rudder_pos.set(self.rudder_scale.value *
-                                    (self.driver.rudder_pos +
+                self.rudder.set(self.rudder_scale.value *
+                                    (self.driver.rudder +
                                      self.rudder_offset.value - 0.5))
         if result & ServoTelemetry.CURRENT:
             self.current.set(self.driver.current)
@@ -579,7 +580,7 @@ def main():
         servo.poll()
 
         if servo.driver:
-            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', servo.rudder_pos.value, 'flags', servo.flags.strvalue()
+            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', servo.rudder.value, 'flags', servo.flags.strvalue()
             #print servo.command.value, servo.speed.value, servo.windup
             pass
         server.HandleRequests()

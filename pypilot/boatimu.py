@@ -260,7 +260,7 @@ class BoatIMU(object):
         calibration.locked = self.Register(BooleanProperty, name+'.calibration.locked', False, persistent=True)
         return calibration
 
-    self.accel_calibration = calibration('accel', [0, 0, 0, 1])
+    self.accel_calibration = calibration('accel', [[0, 0, 0, 1], 1])
     self.accel_calibration.sigmapoints = self.Register(RoundedValue, 'accel.calibration.sigmapoints', False)
     self.compass_calibration = calibration('compass', [[0, 0, 0, 30, 0], [1, 1], 0])
     self.compass_calibration.sigmapoints = self.Register(RoundedValue, 'compass.calibration.sigmapoints', False)

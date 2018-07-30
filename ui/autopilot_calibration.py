@@ -154,6 +154,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.heading_offset_timer.Start(1000, True)
 
         elif name == 'servo.rudder':
+            print 'val', value
             self.stRudderAngle.SetLabel(str(round3(value)))
             self.rudder = value
         elif name == 'servo.rudder.offset':

@@ -60,8 +60,11 @@ def round_value(value, fmt):
             for item in value[1:]:
                 ret += ', ' + round_value(item, fmt)
         return ret + ']'
-    else:
-        return fmt % value
+    elif type(value) == type(False):
+        if value:
+            return 'true'
+        return 'false'
+    return fmt % value
 
 class RoundedValue(Value):
     def __init__(self, name, initial, **kwargs):

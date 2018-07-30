@@ -20,7 +20,7 @@ class AutopilotControlBase ( wx.Frame ):
 	def __init__( self, parent ):
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Autopilot Control", pos = wx.DefaultPosition, size = wx.Size( -1,400 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
-		#self.SetSizeHints( -1, -1, wx.DefaultSize )
+		self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
 		
 		fgSizer5 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer5.AddGrowableCol( 0 )
@@ -220,7 +220,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 	def __init__( self, parent ):
 		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Calibration", pos = wx.DefaultPosition, size = wx.Size( 640,800 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
 		
-		self.SetSizeHints( -1, -1 )
+		#self.SetSizeHints( -1, -1, wx.DefaultSize )
 		
 		fgSizer7 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer7.AddGrowableCol( 0 )
@@ -543,7 +543,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel2 = wx.Panel( self.m_notebook1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer9 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer9.AddGrowableCol( 0 )
-		fgSizer9.AddGrowableRow( 1 )
 		fgSizer9.SetFlexibleDirection( wx.BOTH )
 		fgSizer9.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
@@ -556,46 +555,79 @@ class CalibrationDialogBase ( wx.Dialog ):
 		
 		fgSizer9.Add( sbSizer1, 1, wx.EXPAND, 5 )
 		
-		self.m_scrolledWindow1 = wx.ScrolledWindow( self.m_panel2, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.HSCROLL|wx.VSCROLL )
-		self.m_scrolledWindow1.SetScrollRate( 5, 5 )
-		fgSizer16 = wx.FlexGridSizer( 0, 2, 0, 0 )
-		fgSizer16.AddGrowableCol( 0 )
-		fgSizer16.AddGrowableRow( 0 )
-		fgSizer16.SetFlexibleDirection( wx.BOTH )
-		fgSizer16.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		sbSizer3 = wx.StaticBoxSizer( wx.StaticBox( self.m_panel2, wx.ID_ANY, u"Rudder Feedback" ), wx.VERTICAL )
 		
-		self.stServoCalibrationConsole = wx.StaticText( self.m_scrolledWindow1, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stServoCalibrationConsole.Wrap( -1 )
-		fgSizer16.Add( self.stServoCalibrationConsole, 0, wx.ALL|wx.EXPAND, 5 )
+		fgSizer35 = wx.FlexGridSizer( 0, 1, 0, 0 )
+		fgSizer35.SetFlexibleDirection( wx.BOTH )
+		fgSizer35.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
+		fgSizer36 = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgSizer36.SetFlexibleDirection( wx.BOTH )
+		fgSizer36.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
-		self.m_scrolledWindow1.SetSizer( fgSizer16 )
-		self.m_scrolledWindow1.Layout()
-		fgSizer16.Fit( self.m_scrolledWindow1 )
-		fgSizer9.Add( self.m_scrolledWindow1, 1, wx.EXPAND |wx.ALL, 5 )
-		
-		fgSizer17 = wx.FlexGridSizer( 0, 2, 0, 0 )
-		fgSizer17.AddGrowableCol( 1 )
-		fgSizer17.SetFlexibleDirection( wx.BOTH )
-		fgSizer17.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-		
-		self.m_staticText36 = wx.StaticText( self.m_panel2, wx.ID_ANY, u"Calibration Mode", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText36.Wrap( -1 )
-		fgSizer17.Add( self.m_staticText36, 0, wx.ALL, 5 )
-		
-		self.stServoCalibrationMode = wx.StaticText( self.m_panel2, wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stServoCalibrationMode.Wrap( -1 )
-		fgSizer17.Add( self.stServoCalibrationMode, 0, wx.ALL|wx.EXPAND, 5 )
+		self.m_staticText41 = wx.StaticText( sbSizer3.GetStaticBox(), wx.ID_ANY, u"To calibrate the rudder, you must press both buttons with the rudder in position", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText41.Wrap( 400 )
+		fgSizer36.Add( self.m_staticText41, 0, wx.ALL, 5 )
 		
 		
-		fgSizer9.Add( fgSizer17, 1, wx.EXPAND, 5 )
+		fgSizer35.Add( fgSizer36, 1, wx.EXPAND, 5 )
+		
+		fgSizer32 = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgSizer32.AddGrowableCol( 1 )
+		fgSizer32.SetFlexibleDirection( wx.BOTH )
+		fgSizer32.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
+		self.m_staticText38 = wx.StaticText( sbSizer3.GetStaticBox(), wx.ID_ANY, u"Rudder", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText38.Wrap( -1 )
+		fgSizer32.Add( self.m_staticText38, 0, wx.ALL, 5 )
+		
+		self.stRudderAngle = wx.StaticText( sbSizer3.GetStaticBox(), wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stRudderAngle.Wrap( -1 )
+		fgSizer32.Add( self.stRudderAngle, 0, wx.ALL, 5 )
+		
+		
+		fgSizer35.Add( fgSizer32, 1, wx.EXPAND, 5 )
+		
+		fgSizer33 = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgSizer33.SetFlexibleDirection( wx.BOTH )
+		fgSizer33.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
+		self.m_button11 = wx.Button( sbSizer3.GetStaticBox(), wx.ID_ANY, u"Rudder Is Centered", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer33.Add( self.m_button11, 0, wx.ALL, 5 )
+		
+		
+		fgSizer35.Add( fgSizer33, 1, wx.EXPAND, 5 )
+		
+		fgSizer34 = wx.FlexGridSizer( 0, 3, 0, 0 )
+		fgSizer34.SetFlexibleDirection( wx.BOTH )
+		fgSizer34.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
+		self.m_button12 = wx.Button( sbSizer3.GetStaticBox(), wx.ID_ANY, u"Rudder End", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer34.Add( self.m_button12, 0, wx.ALL, 5 )
+		
+		self.m_staticText42 = wx.StaticText( sbSizer3.GetStaticBox(), wx.ID_ANY, u"at", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText42.Wrap( -1 )
+		fgSizer34.Add( self.m_staticText42, 0, wx.ALL, 5 )
+		
+		self.sRudderRange = wx.SpinCtrl( sbSizer3.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 10, 90, 20 )
+		fgSizer34.Add( self.sRudderRange, 0, wx.ALL, 5 )
+		
+		self.m_staticText40 = wx.StaticText( sbSizer3.GetStaticBox(), wx.ID_ANY, u"degrees", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText40.Wrap( -1 )
+		fgSizer34.Add( self.m_staticText40, 0, wx.ALL, 5 )
+		
+		
+		fgSizer35.Add( fgSizer34, 1, wx.EXPAND, 5 )
+		
+		
+		sbSizer3.Add( fgSizer35, 1, wx.EXPAND, 5 )
+		
+		
+		fgSizer9.Add( sbSizer3, 1, wx.EXPAND, 5 )
 		
 		fgSizer15 = wx.FlexGridSizer( 1, 0, 0, 0 )
 		fgSizer15.SetFlexibleDirection( wx.BOTH )
 		fgSizer15.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-		
-		self.bCalibrateServo = wx.Button( self.m_panel2, wx.ID_ANY, u"Calibrate Servo", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer15.Add( self.bCalibrateServo, 0, wx.ALL, 5 )
 		
 		self.m_staticText30 = wx.StaticText( self.m_panel2, wx.ID_ANY, u"Max Current", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText30.Wrap( -1 )
@@ -692,7 +724,8 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.sHeadingOffset.Bind( wx.EVT_SPINCTRL, self.onIMUHeadingOffset )
 		self.cbTextureCompass.Bind( wx.EVT_CHECKBOX, self.onTextureCompass )
 		self.bIMUScope.Bind( wx.EVT_BUTTON, self.onIMUScope )
-		self.bCalibrateServo.Bind( wx.EVT_BUTTON, self.onCalibrateServo )
+		self.m_button11.Bind( wx.EVT_BUTTON, self.onRudderCentered )
+		self.m_button12.Bind( wx.EVT_BUTTON, self.OnRudderAEnd )
 	
 	def __del__( self ):
 		pass
@@ -762,7 +795,10 @@ class CalibrationDialogBase ( wx.Dialog ):
 	def onIMUScope( self, event ):
 		event.Skip()
 	
-	def onCalibrateServo( self, event ):
+	def onRudderCentered( self, event ):
+		event.Skip()
+	
+	def OnRudderAEnd( self, event ):
 		event.Skip()
 	
 

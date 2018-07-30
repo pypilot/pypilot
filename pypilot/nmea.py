@@ -336,9 +336,9 @@ class Nmea(object):
             self.last_imu_time = time.time()
 
         dt = time.time() - self.last_rudder_pos_time
-        if self.process.sockets and (dt > .5 or dt < 0) and \
+        if self.process.sockets and (dt > .2 or dt < 0) and \
            'servo.rudder_pos' in self.server.values:
-            value = self.server.values['servo.rudder_pos'].value
+            value = self.server.values['servo.rudder'].value
             if value:
                 self.send_nmea('APRSA,%.3f,A,,' % value)
             self.last_rudder_pos_time = time.time()
