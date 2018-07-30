@@ -190,7 +190,7 @@ class AccelCalibrationPlot(CalibrationPlot):
         if name == 'imu.accel.calibration' and data['value']:
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
-            self.cal_sphere = data['value']
+            self.cal_sphere = data['value'][0]
             self.fit_sphere = Spherical(self.cal_sphere, fsphere,  32, 16);
 
     def display(self):
