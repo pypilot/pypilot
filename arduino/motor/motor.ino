@@ -67,7 +67,7 @@ the command can be recognized.
 // and to be able to measure lower current from the shunt
 #define DIV_CLOCK
 
-#define HIGH_CURRENT   // high current uses 500uohm resistor and 50x amplifier
+//#define HIGH_CURRENT   // high current uses 500uohm resistor and 50x amplifier
                          // 60amp range
 //#define HIGH_CURRENT_OLD   // high current uses 500uohm resistor and 50x amplifier
 // otherwise using shunt without amplification
@@ -267,6 +267,8 @@ uint8_t out_sync_b = 0, out_sync_pos = 0;
 uint8_t crcbytes[3];
 #if defined(HIGH_CURRENT) 
 uint16_t max_current = 6000;
+#else
+uint16_t max_current = 2000;
 #endif
 uint16_t max_controller_temp = 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
@@ -574,7 +576,7 @@ uint16_t TakeAmps(uint8_t p)
 
     if(v > 16)
 #ifdef DIV_CLOCK        
-        v = v * 1375 / 128 / 16 + 20; // 200mA minimum
+        v = v * 1375 / 128 / 16 + 18; // 200mA minimum
 #else
         v = v * 1375 / 128 / 16 + 55; // 550mA minimum
 #endif
@@ -587,7 +589,7 @@ uint16_t TakeVolts(uint8_t p)
     // voltage in 10mV increments 1.1ref, 560 and 10k resistors
     // 1815 / 896 = 100.0/1024*10560/560*1.1  cli();
     uint32_t v = TakeADC(VOLTAGE, p);
-    return v * 1815 / 896 / 16;
+    return v * 1815 / 896 / 16 + 40;
 }
 
 uint16_t TakeTemp(uint8_t index, uint8_t p)
@@ -727,8 +729,8 @@ void process_packet()
         break;
     case MAX_CURRENT_CODE: // current in units of 10mA
 #if defined(HIGH_CURRENT) || defined(HIGH_CURRENT_OLD)
-        if(value > 4000) // maximum is 40 amps
-            value = 4000;
+        if(value > 6000) // maximum is 60 amps
+            value = 6000;
 #else
         if(value > 2000) // maximum is 20 amps
             value = 2000;
