@@ -655,11 +655,11 @@ class LCDClient():
 
         if self.last_val('ap.heading') == 0: # if heading zero maybe failed
             self.get('imu.loopfreq')
-
-        if self.last_val('imu.loopfreq') == 0:
-            r = rectangle(0, 0, 1, .8)
-            self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
-            self.control['heading_command'] = 'no imu'
+            if self.last_val('imu.loopfreq') == 0:
+                r = rectangle(0, 0, 1, .92)
+                self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
+                self.control['heading_command'] = 'no imu'
+                return
         else:
             draw_big_number((0,0), self.last_val('ap.heading'), self.control['heading'])
             self.control['heading'] = self.last_val('ap.heading')
