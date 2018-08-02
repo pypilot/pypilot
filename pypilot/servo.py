@@ -192,7 +192,7 @@ class Servo(object):
         self.motor_temp = self.Register(SensorValue, 'motor_temp', timestamp)
 
         self.rudder = self.Register(SensorValue, 'rudder', timestamp)
-        self.rudder_offset = self.Register(RangeProperty, 'rudder.offset', 0, -90, 90, persistent=True)
+        self.rudder_offset = self.Register(RangeProperty, 'rudder.offset', 0, -1, 1, persistent=True)
         self.rudder_scale = self.Register(RangeProperty, 'rudder.scale',  60, -400, 400, persistent=True)
         self.rudder_range = self.Register(RangeProperty, 'rudder.range',  60, 10, 100, persistent=True)
         self.engaged = self.Register(BooleanValue, 'engaged', False)
@@ -290,7 +290,7 @@ class Servo(object):
             self.flags.clearbit(ServoFlags.REV_FAULT)
 
         if False: # don't keep moving really long in same direction.....
-            rng = 5;
+            rng = 5
             if self.position.value > 1 + rng:
                 self.flags.fwd_fault()
             if self.position.value < -rng:
@@ -416,14 +416,13 @@ class Servo(object):
     def close_driver(self):
         print 'servo lost connection'
         self.controller.set('none')
-        self.rudder.update(False);
+        self.rudder.update(False)
         self.device.close()
         self.driver = False
 
     def send_driver_max_values(self, max_current):
-        s = abs(self.rudder_scale.value)
-        n = self.rudder_range.value / s
-        o = 0.5 - self.rudder_offset.value / s
+        n = self.rudder_range.value / abs(self.rudder_scale.value)
+        o = 0.5 - self.rudder_offset.value
 
         min_rudder, max_rudder = o - n, o + n
 
@@ -511,8 +510,8 @@ class Servo(object):
                 self.rudder.update(False)
             else:
                 self.rudder.set(self.rudder_scale.value *
-                                    (self.driver.rudder - 0.5)
-                                + self.rudder_offset.value)
+                                (self.driver.rudder +
+                                 self.rudder_offset.value - 0.5))
         if result & ServoTelemetry.CURRENT:
             self.current.set(self.driver.current)
             # integrate power consumption

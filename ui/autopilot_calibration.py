@@ -162,16 +162,13 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         elif name == 'servo.rudder.scale':
             self.rudder_scale = value
         elif name == 'servo.rudder.range':
-            self.sRudderRange.SetValue(value)
+            self.rudder_range = value
         elif name == 'servo.calibration':
             s = ''
             for name in value:
                 s += name + ' = ' + str(value[name]) + '\n'
             self.stServoCalibration.SetLabel(s)
             self.SetSize(wx.Size(self.GetSize().x+1, self.GetSize().y))
-
-        elif name == 'servo.calibration/console':
-            self.stServoCalibrationConsole.SetLabel(self.stServoCalibrationConsole.GetLabel() + value)
         elif name == 'servo.max_current':
             self.dsServoMaxCurrent.SetValue(round3(value))
 
@@ -358,15 +355,15 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.client.set('servo.max_current', event.GetValue())
 
     def onRudderCentered( self, event ):
-        self.client.set('servo.rudder.offset', self.rudder_offset + self.rudder)
+        rudder_pos = self.rudder / self.rudder_scale - self.rudder_offset + .5
+        self.client.set('servo.rudder.offset', .5 - rudder_pos)
 
-    def onRudderEnd( self, event ):
-        offset = self.rudder_offset
-        range = self.sRudderRange.GetValue()
-        scale = self.rudder_scale * (range - offset)/(self.rudder - offset)
-
+    def onRudderAtRange( self, event ):
+        scale = self.rudder_range * self.rudder_scale / self.rudder
         self.client.set('servo.rudder.scale', scale)
-        self.client.set('servo.rudder.range', range)
+
+    def onRudderRange( self, event ):
+        self.client.set('servo.rudder.range', self.sRudderRange.GetValue())
 
 def main():
     glutInit(sys.argv)
