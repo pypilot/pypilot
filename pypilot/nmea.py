@@ -184,7 +184,6 @@ class Nmea(object):
         self.server = server
         self.values = {'gps': {}, 'wind': {}}
 
-
         def make_source(name, dirname):
             timestamp = server.TimeStamp(name)
             self.values[name][dirname] = server.Register(SensorValue(name + '.' + dirname, timestamp, directional=True))
@@ -431,8 +430,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
             if result:
                 name, msg = result
                 msgs[name] = msg
-                break
+                return
 
+    def receive_apb(self, line, msgs):
         # also allow ap commands (should we allow via serial too??)
         '''
    ** APB - Autopilot Sentence "B"
@@ -468,9 +468,6 @@ class NmeaBridgeProcess(multiprocessing.Process):
         if line[3:6] == 'APB' and time.time() - self.last_apb_time > 1:
             self.last_apb_time = time.time()
             data = line[7:len(line)-3].split(',')
-            #if not self.last_values['ap.enabled']:
-            #    self.client.set('ap.enabled', True)
-            #print 'apb', data
             if self.last_values['ap.enabled']:
                 mode = 'compass' if data[13] == 'M' else 'gps'
                 if self.last_values['ap.mode'] != mode:
@@ -484,6 +481,8 @@ class NmeaBridgeProcess(multiprocessing.Process):
             command += 200*xte; # 20 degrees for 1/10th mile
             if abs(self.last_values['ap.heading_command'] - command) > .1:
                 self.client.set('ap.heading_command', command)
+            return True
+        return False
 
     def new_socket_connection(self, server):
         connection, address = server.accept()
@@ -563,7 +562,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         server.listen(5)
 
-        self.last_values = {'ap.enabled': False, 'ap.mode': 'N/A', 'ap.heading_command' : 1000, 'gps.source' : 'none', 'wind.source' : 'none'}
+        self.last_values = {'ap.enabled': False, 'ap.mode': 'N/A',
+                            'ap.heading_command' : 1000,
+                            'gps.source' : 'none', 'wind.source' : 'none'}
         self.addresses = {}
         cnt = 0
 
@@ -597,9 +598,10 @@ class NmeaBridgeProcess(multiprocessing.Process):
                         msg = self.pipe.recv()
                         if not msg:
                             break
-                        msg += '\r\n'
-                        for sock in self.sockets:
-                            sock.send(msg)
+                        if not self.receive_apb(msg, msgs):
+                            msg += '\r\n'
+                            for sock in self.sockets:
+                                sock.send(msg)
                 elif flag & select.POLLIN:
                     if not sock.recv():
                         self.socket_lost(sock)
@@ -608,11 +610,12 @@ class NmeaBridgeProcess(multiprocessing.Process):
                             line = sock.readline()
                             if not line:
                                 break
-                            self.receive_nmea(line, msgs)
+                            if not self.receive_apb(line, msgs):
+                                self.receive_nmea(line, msgs)
 
             t2 = time.time()
             if msgs:
-                if self.pipe.send(msgs):
+                if self.pipe.send(msgs): ## try , False
                     msgs = {}
 
             t3 = time.time()
