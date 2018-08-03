@@ -19,11 +19,14 @@ from signalk.pipeserver import NonBlockingPipe
 import numpy
 
 def debug(*args):
+    pass
+'''
+def debug(*args):
     for a in args:
         sys.stdout.write(str(a))
         sys.stdout.write(' ')
     sys.stdout.write('\n')
-
+'''
 calibration_fit_period = 20  # run every 60 seconds
 
 def FitLeastSq(beta0, f, zpoints, dimensions=1):
@@ -464,7 +467,7 @@ def ComputeCoverage(p, bias, norm):
 
 def FitAccel(accel_cal):
     p = accel_cal.Points()
-    print 'accelfit count', len(p)
+    debug('accelfit count', len(p))
     if len(p) < 5:
         return False
 
