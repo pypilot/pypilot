@@ -495,10 +495,10 @@ ISR(ADC_vect)
         if(adc_cnt < 50)
             goto ret;
     } else if(adc_counter == VOLTAGE) {
-        if(adc_cnt < 7)
+        if(adc_cnt < 8)
             goto ret;
     } else if(adc_counter == RUDDER && rudder_sense)
-        if(adc_cnt < 10) // take more samples for rudder, if sampled
+        if(adc_cnt < 16) // take more samples for rudder, if sampled
             goto ret;
     
     // advance to next channel
