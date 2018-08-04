@@ -332,7 +332,7 @@ class AutopilotBase(object):
 
       while True:
           dt = BoatIMU.period - (time.time() - t00)
-          if dt <= 0:
+          if dt <= 0 or dt >= BoatIMU.period:
               break
           time.sleep(dt)
 
