@@ -301,8 +301,8 @@ class SignalKServer(object):
                         break
                     try:
                         self.HandleRequest(socket, line)
-                    except:
-                        print 'invalid request from socket', line
+                    except Exception as e:
+                        print 'invalid request from socket', line, e
                         socket.send('invalid request: ' + line + '\n')
 
         # flush all sockets
