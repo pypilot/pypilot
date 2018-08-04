@@ -637,12 +637,13 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 sock.flush()
             t5 = time.time()
 
-            dt = t5 - t0
-            if dt < .1:
-                time.sleep(.1 - dt)
+            if t5-t1 > .1:
+                print 'nmea process loop too slow:', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4
             else:
-                if t5-t1 > .1:
-                    print 'nmea process loop too slow:', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4
+                dt = .1 - (t5 - t0)
+                if dt > 0 and dt < .1:
+                    time.sleep(dt)
+
 
 if __name__ == '__main__':
     if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):

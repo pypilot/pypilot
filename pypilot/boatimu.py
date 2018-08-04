@@ -125,7 +125,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias):
         dt = time.time() - t0
         t = BoatIMU.period - dt # 10hz
 
-        if t > 0:
+        if t > 0 and t < BoatIMU.period:
           time.sleep(t)
         else:
           print 'imu process failed to keep time'
@@ -495,7 +495,7 @@ class BoatIMUServer():
 
     while True:
       dt = BoatIMU.period - (time.time() - self.t00)
-      if dt <= 0:
+      if dt <= 0 or dt >= BoatIMU.period:
         break
       time.sleep(dt)
     self.t00 = time.time()
