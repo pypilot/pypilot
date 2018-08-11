@@ -39,6 +39,7 @@ digital pin7 forward fault for optional switch to stop forward travel
 digital pin8 reverse fault for optional switch to stop reverse travel
 
 Pins 4 and 5 determine the current sense as folows:
+pin 5 determines high/low power  (20A or 60A max)
 
 D4  D5
  1   1        .05 ohm, (or .001 ohm x 50 gain)

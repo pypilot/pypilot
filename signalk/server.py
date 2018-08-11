@@ -129,7 +129,7 @@ def LoadPersistentData(persistent_path, server=True):
             # log failing to load persistent data
             persist_fail = os.getenv('HOME') + '/.pypilot/persist_fail'
             file = open(persist_fail, 'a')
-            file.write(str(time.time()) + '\n')
+            file.write(str(time.time()) + ' ' + str(e) + '\n')
             file.close()
 
         try:
