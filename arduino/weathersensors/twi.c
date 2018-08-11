@@ -25,6 +25,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <compat/twi.h>
+#include <util/delay.h>
 #include "Arduino.h" // for digitalWrite
 
 #ifndef cbi
@@ -67,6 +68,21 @@ static volatile uint8_t twi_error;
  */
 void twi_init(void)
 {
+ twi_state = 0;
+ twi_slarw = 0;
+ twi_sendStop = 0;			// should the transaction end with a stop
+ twi_inRepStart = 0;			// in the middle of a repeated start
+
+ twi_masterBufferIndex = 0;
+ twi_masterBufferLength = 0;
+
+ twi_txBufferIndex = 0;
+ twi_txBufferLength = 0;
+
+ twi_rxBufferIndex = 0;
+
+ twi_error = 0;
+    
   // initialize state
   twi_state = TWI_READY;
   twi_sendStop = true;		// default value
@@ -350,8 +366,11 @@ void twi_stop(void)
 
   // wait for stop condition to be exectued on bus
   // TWINT is not set after a stop condition!
+  int timeout = 0;
   while(TWCR & _BV(TWSTO)){
-    continue;
+      if(timeout++ == 10000)
+          sei(); // allow watchdog interrupt
+      _delay_us(1);
   }
 
   // update twi state
