@@ -234,9 +234,9 @@ class Nmea(object):
             return
         if self.process.sockets:
             nmea_name = line[:6]
-            # do not output nmea data over tcp faster than 4hz
+            # do not output nmea data over tcp faster than 5hz
             # for each message time
-            if not nmea_name in self.nmea_times or t-self.nmea_times[nmea_name]>.25:
+            if not nmea_name in self.nmea_times or t-self.nmea_times[nmea_name]>.2:
                 self.process.pipe.send(line, False)
                 self.nmea_times[nmea_name] = t
 

@@ -380,8 +380,8 @@ class Servo(object):
 
         t = time.time()
         if command == 0:
-            # only send at .5 seconds when command is zero for more than a second
-            if t > self.command_timeout + 1 and t - self.last_zero_command_time < .5:
+            # only send at .2  seconds when command is zero for more than a second
+            if t > self.command_timeout + 1 and t - self.last_zero_command_time < .2:
                 return
             self.last_zero_command_time = t
         else:
