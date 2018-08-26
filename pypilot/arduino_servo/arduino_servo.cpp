@@ -208,7 +208,7 @@ bool ArduinoServo::fault()
 
 void ArduinoServo::max_values(double current, double controller_temp, double motor_temp, double min_rudder, double max_rudder, double max_slew_speed, double max_slew_slow)
 {
-    max_current_value = fmin(20, fmax(0, current));
+    max_current_value = fmin(60, fmax(0, current));
     max_controller_temp_value = fmin(80, fmax(30, controller_temp));
     max_motor_temp_value = fmin(80, fmax(30, motor_temp));
     min_rudder_value = fmin(1, fmax(0, min_rudder));
