@@ -259,7 +259,7 @@ enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, 
 
 enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
 
-enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4};
+enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, OVERVOLTAGE=16*8, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4};
 
 uint8_t in_bytes[3];
 uint8_t sync_b = 0, in_sync_count = 0;
@@ -841,6 +841,16 @@ void loop()
         } else
             faults &= ~OVERCURRENT;
     }
+
+    if(CountADC(VOLTAGE, 1) > react_count) {
+        uint16_t volts = TakeVolts(1);
+        if(volts >= 1800) { /* maximum of 18 volts allowed */
+            stop();
+            faults |= OVERVOLTAGE;
+        } else
+            faults &= ~OVERVOLTAGE;
+    }
+    
     flags |= faults;
     
     // test over temp
