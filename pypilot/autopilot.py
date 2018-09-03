@@ -70,15 +70,16 @@ class AutopilotGain(RangeProperty):
       return d
     
 class ModeProperty(EnumProperty):
-      def __init__(self, ap):
-        self.ap = ap
-        super(ModeProperty, self).__init__('mode', 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
+      def __init__(self, name):
+        self.ap = False
+        super(ModeProperty, self).__init__(name, 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
 
       def set(self, value):
         # update the last mode when the user changes the mode
         # it should only revert to the last mode if the mode was lost
-        ap.lastmode = value
-        ap.lost_mode.update(False)
+        if self.ap:
+          self.ap.lastmode = value
+          self.ap.lost_mode.update(False)
         super(ModeProperty, self).set(value)    
 
 class AutopilotBase(object):
@@ -119,9 +120,12 @@ class AutopilotBase(object):
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
 
-    self.mode = self.Register(ModeProperty, self)
-    self.lastmode = self.mode.value
     self.lost_mode = self.Register(BooleanValue, 'lost_mode', False)
+
+    self.mode = self.Register(ModeProperty, 'mode')
+    self.mode.ap = self
+
+    self.lastmode = self.mode.value
                               
     self.lastmode = False
     self.last_heading = False
