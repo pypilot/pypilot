@@ -89,6 +89,7 @@ class ServoFlags(Value):
     MIN_RUDDER=256*1
     MAX_RUDDER=256*2
     CURRENT_RANGE=256*4
+    BAD_FUSES=256*8
 
     DRIVER_MASK = 4095 # bits used for driver flags
 
@@ -122,6 +123,8 @@ class ServoFlags(Value):
             ret += 'MIN_RUDDER '
         if self.value & self.MAX_RUDDER:
             ret += 'MAX_RUDDER '
+        if self.value & self.BAD_FUSES:
+            ret += 'BAD_FUSES '
         if self.value & self.FWD_FAULT:
             ret += 'FWD_FAULT '
         if self.value & self.REV_FAULT:
@@ -290,9 +293,9 @@ class Servo(object):
         position = self.position.value + self.speed.value * dt / 10 # remove when speed is correct
         self.position.set(min(max(position, 0), 1))
         #print 'integrate pos', self.position, self.speed, speed, dt, self.fwd_fault, self.rev_fault
-        if self.position.value < .9:
+        if self.position.value < .95:
             self.flags.clearbit(ServoFlags.FWD_FAULT)
-        if self.position.value > .1:
+        if self.position.value > .05:
             self.flags.clearbit(ServoFlags.REV_FAULT)
 
         if False: # don't keep moving really long in same direction.....

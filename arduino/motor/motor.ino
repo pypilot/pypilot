@@ -152,6 +152,8 @@ uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
 
 #include <avr/wdt.h>
 #include <avr/sleep.h>
+#include <avr/boot.h>
+#include <util/delay.h>
 
 #define fwd_fault_pin 7 // use pin 7 for optional fault
 #define rev_fault_pin 8 // use pin 7 for optional fault
@@ -171,8 +173,13 @@ void debug(char *fmt, ... ){
     Serial.print(buf);
 }
 
-#include <util/delay.h>
+enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71};
 
+enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
+
+enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, OVERVOLTAGE=16*8, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4, BAD_FUSES=256*8};
+
+uint16_t flags = 0, faults = 0;
 uint8_t serialin;
 void setup() 
 {
@@ -193,10 +200,22 @@ void setup()
     // interrupt in 1/4th second
     WDTCSR = (1<<WDIE) | (1<<WDP2);
 
-// Enable all interrupts.
-    sei();
+    // read fuses, and report this as flag if they are wrong
+    uint8_t lowBits      = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
+    uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
+    uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
+    uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
+    if(lowBits != 0xFF || highBits != 0xda ||
+       extendedBits != 0xFD || lockBits != 0xCF)
+        flags |= BAD_FUSES;
 
+    sei(); // Enable all interrupts.
+    
     // enable pullup on unused pins (saves .5 mA)
+    pinMode(A4, INPUT);
+    digitalWrite(A4, LOW);
+
+
     pinMode(4, INPUT_PULLUP);
     pinMode(5, INPUT_PULLUP);
     pinMode(6, INPUT_PULLUP);
@@ -255,12 +274,6 @@ void setup()
     shunt_resistance = digitalRead(shunt_sense_pin);
 }
 
-enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71};
-
-enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
-
-enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, OVERVOLTAGE=16*8, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4};
-
 uint8_t in_bytes[3];
 uint8_t sync_b = 0, in_sync_count = 0;
 
@@ -275,8 +288,6 @@ uint16_t max_controller_temp = 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
 uint16_t max_slew_speed = 100, max_slew_slow = 150; // 200 is full power in 1/10th of a second
 uint16_t min_rudder_pos = 0, max_rudder_pos = 65472;
-
-uint16_t flags = 0, faults = 0;
 
 uint8_t timeout, rudder_sense = 0;
 
@@ -452,7 +463,7 @@ void engage()
 
 enum {CURRENT, VOLTAGE, CONTROLLER_TEMP, MOTOR_TEMP, /*INTERNAL_TEMP, */RUDDER, CHANNEL_COUNT};
 const uint8_t muxes[] = {_BV(MUX0), 0, _BV(MUX1), _BV(MUX0) | _BV(MUX1), /*_BV(MUX3),*/
-#if defined(HIGH_CURRENT) 
+#if defined(HIGH_CURRENT)  || 1
                          _BV(MUX2)
 #else
                          _BV(MUX1) | _BV(MUX2)
@@ -577,10 +588,12 @@ uint16_t TakeAmps(uint8_t p)
 
     if(v > 16)
 #ifdef DIV_CLOCK        
-        v = v * 1375 / 128 / 16 + 18; // 200mA minimum
+        v = v * 1375 / 128 / 16 + 5; // 200mA minimum
 #else
         v = v * 1375 / 128 / 16 + 55; // 550mA minimum
 #endif
+    else
+        v = 0;
     return v;
 #endif
 }
@@ -590,7 +603,7 @@ uint16_t TakeVolts(uint8_t p)
     // voltage in 10mV increments 1.1ref, 560 and 10k resistors
     // 1815 / 896 = 100.0/1024*10560/560*1.1  cli();
     uint32_t v = TakeADC(VOLTAGE, p);
-    return v * 1815 / 896 / 16 + 40;
+    return v * 1815 / 896 / 16 - 5;
 }
 
 uint16_t TakeTemp(uint8_t index, uint8_t p)
