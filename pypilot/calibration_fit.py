@@ -521,7 +521,7 @@ def FitCompass(compass_cal, compass_calibration, norm):
         return
         
     coverage = ComputeCoverage(p, c[0][:3], norm)
-    if coverage < 8: # require 180 degrees
+    if coverage < 12: # require 240 degrees
         debug('calibration: not enough coverage:', coverage)
         if c == fit[1]: # must have had 3d fit to use 1d fit
             return
