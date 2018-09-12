@@ -240,8 +240,8 @@ def heading_filter(lp, a, b):
     return result
 
 class BoatIMU(object):
-  #period = .1 # 10hz
-  period = .04; # 25hz
+  period = .1 # 10hz
+  #period = .04; # 25hz
   def __init__(self, server, *args, **keywords):
     self.server = server
 
