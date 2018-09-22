@@ -9,10 +9,6 @@
 
 import sys, os, time, math
 
-use_glut = 'DISPLAY' in os.environ
-if use_glut:
-    import glut
-
 import gettext
 import json
 _ = lambda x : x # initially no translation
@@ -1155,15 +1151,21 @@ class LCDClient():
 
 def main():
     print 'init...'
+
+    use_glut = True
     screen = None
     for arg in sys.argv:
         if 'nokia5110' in arg:
             sys.argv.remove(arg)
             print 'using nokia5110'
             screen = ugfx.nokia5110screen()
+            use_glut = False
 
     if not screen:
+        use_glut = 'DISPLAY' in os.environ
+        
         if use_glut:
+            import glut
             #screen = glut.screen((120, 210))
             #screen = glut.screen((64, 128))
             screen = glut.screen((48, 84))

@@ -56,7 +56,7 @@ def draw(surface, pos, text, size, bw, crop=False):
 
             #print 'ord', ord(c), filename
             font[c] = ugfx.surface(filename)
-            if font[c].bypp == 0:
+            if font[c].bypp != surface.bypp:
                 font[c] = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
                 font[c].store_grey(filename)
 
