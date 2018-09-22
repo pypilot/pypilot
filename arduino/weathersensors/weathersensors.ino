@@ -32,9 +32,9 @@ extern "C" {
   #include <twi.h>
 }
 
-//#define ANENOMETER
+#define ANENOMETER
 
-#define LCD
+//#define LCD
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
 #endif
