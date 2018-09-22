@@ -21,7 +21,7 @@ adc pin0 is a resistor divider to measure voltage
 adc pin1 goes to .01/.05 ohm shunt to measure current
 adc pin2 goes to 100k resistor to 5v and 10k NTC thermistor to gnd ctrl temp
 adc pin3 goes to 100k resistor to 5v and 10k NTC thermistor to gnd motor temp
-adc pin6 rudder sense
+adc pin4 rudder sense
 
 unused analog pins should be grounded
 
@@ -48,6 +48,13 @@ D4  D5
  1   0        .0005 ohm x 50 gain
  0   0        reserved
 
+If Pin 12 has 560 ohm resistor to A0, then 24 volts is supported,
+this allows for measuring voltage up to 40.4 volts, without losing
+resolution if operating below 20 volts
+
+D12
+ 1    0-20.75 volts (560 and 10k resistor)  resolution 0.02 volts
+ 0    0-40.4  volts (560 and 20k resistor)  resolution 0.04 volts
 
 The program uses a simple protocol to ensure only
 correct data can be received and to ensure that
@@ -168,6 +175,11 @@ uint8_t shunt_resistance = 1;
 #define low_current_pin 5 // use pin 5 to specify low current (no amplifier)
 uint8_t low_current = 1;
 
+#define voltage_sense_pin 12
+uint8_t voltage_sense = 1;
+uint8_t voltage_mode = 0;  // 0 = 12 volts, 1 = 24 volts
+uint16_t max_voltage = 1800; // 18 volts max by default
+
 #include <stdarg.h>
 void debug(char *fmt, ... ){
     char buf[128]; // resulting string limited to 128 chars
@@ -178,11 +190,11 @@ void debug(char *fmt, ... ){
     Serial.print(buf);
 }
 
-enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71};
+enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71};
 
-enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
+enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
 
-enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, OVERVOLTAGE=16*8, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4, BAD_FUSES=256*8};
+enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, BADVOLTAGE=16*8, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4, BAD_FUSES=256*8};
 
 uint16_t flags = 0, faults = 0;
 uint8_t serialin;
@@ -213,7 +225,7 @@ void setup()
     uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
     uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
     if(lowBits != 0xFF || highBits != 0xda ||
-       extendedBits != 0xFD || lockBits != 0xCF)
+       (extendedBits != 0xFD && extendedBits != 0xFC) || lockBits != 0xCF)
         flags |= BAD_FUSES;
 
     sei(); // Enable all interrupts.
@@ -237,7 +249,15 @@ void setup()
 #endif
 
     set_sleep_mode(SLEEP_MODE_IDLE); // wait for serial
-    // setup adc
+
+    digitalWrite(A0, LOW);
+    pinMode(A0, OUTPUT);
+    voltage_sense = digitalRead(voltage_sense_pin);
+    if(!voltage_sense)
+        pinMode(12, INPUT); // if attached, turn off pullup
+    pinMode(A0, INPUT);
+    
+    // setup adcp
     DIDR0 = 0x3f; // disable all digital io on analog pins
 //    ADMUX = _BV(REFS0); // external 5v
     ADMUX = _BV(REFS0)| _BV(REFS1) | _BV(MUX0); // 1.1v
@@ -476,7 +496,7 @@ void engage()
 
 // set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
 
-enum {CURRENT, VOLTAGE, CONTROLLER_TEMP, MOTOR_TEMP, /*INTERNAL_TEMP, */RUDDER, CHANNEL_COUNT};
+enum {CURRENT, VOLTAGE, CONTROLLER_TEMP, MOTOR_TEMP, RUDDER, CHANNEL_COUNT};
 const uint8_t muxes[] = {_BV(MUX0), 0, _BV(MUX1), _BV(MUX0) | _BV(MUX1), _BV(MUX2)};
 
 volatile struct adc_results_t {
@@ -582,7 +602,7 @@ uint16_t TakeAmps(uint8_t p)
 
         if(v > 16)
 #ifdef DIV_CLOCK        
-            v = v * 1375 / 128 / 16 + 5; // 200mA minimum
+            v = v * 1375 / 128 / 16; // 200mA minimum
 #else
         v = v * 1375 / 128 / 16 + 55; // 550mA minimum
 #endif
@@ -611,10 +631,13 @@ uint16_t TakeAmps(uint8_t p)
 
 uint16_t TakeVolts(uint8_t p)
 {
-    // voltage in 10mV increments 1.1ref, 560 and 10k resistors
-    // 1815 / 896 = 100.0/1024*10560/560*1.1  cli();
+    // voltage in 10mV increments 1.1ref, 560 and 10k resistors    
     uint32_t v = TakeADC(VOLTAGE, p);
-    return v * 1815 / 896 / 16 + 30;
+    if(voltage_mode)
+        // 28545 / 7161 = 100.0/1023*10280/280*1.1        
+        return v * 28545 / 7161 / 16 + 15;
+    // 1815 / 896 = 100.0/1024*10560/560*1.1
+    return v * 14520 / 7161 / 16 + 55;
 }
 
 uint16_t TakeTemp(uint8_t index, uint8_t p)
@@ -864,11 +887,22 @@ void loop()
 
     if(CountADC(VOLTAGE, 1) > react_count) {
         uint16_t volts = TakeVolts(1);
-        if(volts >= 1800) { /* maximum of 18 volts allowed */
-            stop();
-            faults |= OVERVOLTAGE;
+        if(volts >= 1800 && !voltage_mode && !voltage_sense) {
+            // switch to higher voltage
+            voltage_mode = 1; // higher voltage
+            pinMode(voltage_sense_pin, OUTPUT);
+            digitalWrite(voltage_sense_pin, LOW);
+            max_voltage = 3600; // 36 v max
+            delay(2);
+            TakeVolts(0); // clear readings
+            TakeVolts(1);
         } else
-            faults &= ~OVERVOLTAGE;
+        /* voltage must be between 6 and 18 volts */
+        if(volts <= 600 || volts >= max_voltage) {
+            stop();
+            faults |= BADVOLTAGE;
+        } else
+            faults &= ~BADVOLTAGE;
     }
     
     flags |= faults;

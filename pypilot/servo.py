@@ -84,7 +84,7 @@ class ServoFlags(Value):
     INVALID=16*1
     FWD_FAULTPIN=16*2
     REV_FAULTPIN=16*4
-    OVERVOLTAGE=16*8
+    BADVOLTAGE=16*8
 
     MIN_RUDDER=256*1
     MAX_RUDDER=256*2
@@ -117,8 +117,8 @@ class ServoFlags(Value):
             ret += 'FWD_FAULTPIN '
         if self.value & self.REV_FAULTPIN:
             ret += 'REV_FAULTPIN '
-        if self.value & self.OVERVOLTAGE:
-            ret += 'OVERVOLTAGE '
+        if self.value & self.BADVOLTAGE:
+            ret += 'BADVOLTAGE '
         if self.value & self.MIN_RUDDER:
             ret += 'MIN_RUDDER '
         if self.value & self.MAX_RUDDER:
