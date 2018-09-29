@@ -349,7 +349,7 @@ def main():
                 first = False
             else:
                 sys.stdout.write(', ')
-                sys.stdout.write(name + ' = ' + nice_str(value['value']))
+            sys.stdout.write(name + ' = ' + nice_str(value['value']))
             print ''
 
 if __name__ == '__main__':
