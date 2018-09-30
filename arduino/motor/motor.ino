@@ -319,7 +319,7 @@ uint8_t crcbytes[3];
 
 uint16_t max_controller_temp = 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
-uint16_t max_slew_speed = 100, max_slew_slow = 150; // 200 is full power in 1/10th of a second
+uint16_t max_slew_speed = 15, max_slew_slow = 35; // 200 is full power in 1/10th of a second
 uint16_t min_rudder_pos = 0, max_rudder_pos = 65472;
 
 uint8_t timeout, rudder_sense = 0;
