@@ -58,10 +58,13 @@ def parse_nmea_gps(line):
     if line[:6] != '$GPRMC':
         return False
 
-    data = line[7:len(line)-3].split(',')
-    timestamp = float(data[0])
-    speed = float(data[6])
-    heading = float(data[7])
+    try:
+        data = line[7:len(line)-3].split(',')
+        timestamp = float(data[0])
+        speed = float(data[6])
+        heading = float(data[7])
+    except:
+        return False
 
     return 'gps', {'timestamp': timestamp, 'track': heading, 'speed': speed}
 
