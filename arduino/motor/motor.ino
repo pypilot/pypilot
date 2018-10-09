@@ -54,7 +54,7 @@ resolution if operating below 20 volts
 
 D12
  1    0-20.75 volts (560 and 10k resistor)  resolution 0.02 volts
- 0    0-40.4  volts (560 and 20k resistor)  resolution 0.04 volts
+ 0    0-40.4  volts (280 and 10k resistor)  resolution 0.04 volts
 
 The program uses a simple protocol to ensure only
 correct data can be received and to ensure that
