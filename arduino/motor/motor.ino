@@ -9,6 +9,10 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include <HardwareSerial.h>
+#include <avr/wdt.h>
+#include <avr/sleep.h>
+#include <avr/boot.h>
+#include <util/delay.h>
 
 /*
 This program is meant to interface with pwm based
@@ -22,23 +26,9 @@ adc pin1 goes to .01/.05 ohm shunt to measure current
 adc pin2 goes to 100k resistor to 5v and 10k NTC thermistor to gnd ctrl temp
 adc pin3 goes to 100k resistor to 5v and 10k NTC thermistor to gnd motor temp
 adc pin4 rudder sense
-
 unused analog pins should be grounded
 
-digital pin4 specifies .01 ohm resistor if wired to ground, otherwise .05 ohm
-digital pin6 determines RC pwm if 1, or Hbridge if 0.
-if RC pwm:
-   digital pin9 pwm output standard ESC (1-2 ms pulse every 20 ms)
-           pin2 esc programming input/output (with arduinousblinker script)
-if Hbridge
-   digital pin2 and pin3 for low side, pin9 and pin10 for high side
-digital pin13 is led on when engaged
-
-optional:
-digital pin7 forward fault for optional switch to stop forward travel
-digital pin8 reverse fault for optional switch to stop reverse travel
-
-Pins 4 and 5 determine the current sense as folows:
+digital pins 4 and 5 determine the current sense as folows:
 pin 4 determines range
 pin 5 determines high/low current  (20A or 60A max)
 
@@ -48,13 +38,27 @@ D4  D5
  1   0        .0005 ohm x 50 gain
  0   0        reserved
 
+digital pin6 determines RC pwm if 1, or Hbridge if 0.
+if RC pwm:
+   digital pin9 pwm output standard ESC (1-2 ms pulse every 20 ms)
+           pin2 esc programming input/output (with arduinousblinker script)
+if Hbridge
+   digital pin2 and pin3 for low side, pin9 and pin10 for high side
+
+
+optional:
+digital pin7 forward fault for optional switch to stop forward travel
+digital pin8 reverse fault for optional switch to stop reverse travel
+
 If Pin 12 has 560 ohm resistor to A0, then 24 volts is supported,
 this allows for measuring voltage up to 40.4 volts, without losing
 resolution if operating below 20 volts
 
 D12
  1    0-20.75 volts (560 and 10k resistor)  resolution 0.02 volts
- 0    0-40.4  volts (560 and 20k resistor)  resolution 0.04 volts
+ 0    0-40.4  volts (280 and 10k resistor)  resolution 0.04 volts
+
+digital pin13 is led on when engaged
 
 The program uses a simple protocol to ensure only
 correct data can be received and to ensure that
@@ -76,11 +80,35 @@ the command can be recognized.
 // and to be able to measure lower current from the shunt
 #define DIV_CLOCK
 
+#ifdef DIV_CLOCK
+#define dead_time _delay_us(2) // this is quite a long dead time
+#else
+#define dead_time _delay_us(8) // this is quite a long dead time
+#endif
+
 //#define HIGH_CURRENT_OLD   // high current uses 500uohm resistor and 50x amplifier
 // otherwise using shunt without amplification
 
-#define rc_pwm_pin 6 // todo: use this pin to detect rc pwm
+#define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
+uint8_t shunt_resistance = 1;
+
+#define low_current_pin 5 // use pin 5 to specify low current (no amplifier)
+uint8_t low_current = 1;
+
+#define rc_pwm_pin 6
 uint8_t rc_pwm = 1;  // remote control style servo
+
+#define fwd_fault_pin 7 // use pin 7 for optional fault
+#define rev_fault_pin 8 // use pin 7 for optional fault
+// if switches pull this pin low, the motor is disengaged
+// and will be noticed by the control program
+
+#define pwm_output_pin 9
+
+#define hbridge_a_bottom_pin 2
+#define hbridge_b_bottom_pin 3
+#define hbridge_a_top_pin 9
+#define hbridge_b_top_pin 10
 
 // for direct mosfet mode, define how to turn on/off mosfets
 // do not use digitalWrite!
@@ -93,14 +121,37 @@ uint8_t rc_pwm = 1;  // remote control style servo
 #define b_bottom_on PORTD |= _BV(PD3)
 #define b_bottom_off PORTD &= ~_BV(PD3)
 
+#define clutch_pin 11 // use pin 11 to engage clutch
+
 #define clutch_on PORTB |= _BV(PB3)
 #define clutch_off PORTB &= ~_BV(PB3)
 
-#ifdef DIV_CLOCK
-#define dead_time _delay_us(2) // this is quite a long dead time
-#else
-#define dead_time _delay_us(8) // this is quite a long dead time
-#endif
+#define voltage_sense_pin 12
+uint8_t voltage_sense = 1;
+uint8_t voltage_mode = 0;  // 0 = 12 volts, 1 = 24 volts
+uint16_t max_voltage = 1800; // 18 volts max by default
+
+#define led_pin 13 // led is on when engaged
+
+#include <stdarg.h>
+void debug(char *fmt, ... ){
+    char buf[128]; // resulting string limited to 128 chars
+    va_list args;
+    va_start (args, fmt );
+    vsnprintf(buf, 128, fmt, args);
+    va_end (args);
+    Serial.print(buf);
+}
+
+enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71};
+
+enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
+
+enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, BADVOLTAGE=16*8, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4, BAD_FUSES=256*8};
+
+uint16_t flags = 0, faults = 0;
+uint8_t serialin;
+uint16_t max_current;
 
 ////// CRC
 #include <avr/pgmspace.h>
@@ -156,51 +207,9 @@ uint8_t crc8_with_init(uint8_t init_value, uint8_t *pcBlock, uint8_t len)
 uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
     return crc8_with_init(0xFF, pcBlock, len);
 }
-
 ////// ENDCRC
 
-#include <avr/wdt.h>
-#include <avr/sleep.h>
-#include <avr/boot.h>
-#include <util/delay.h>
-
-#define fwd_fault_pin 7 // use pin 7 for optional fault
-#define rev_fault_pin 8 // use pin 7 for optional fault
-// if switches pull this pin low, the motor is disengaged
-// and will be noticed by the control program
-
-#define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
-uint8_t shunt_resistance = 1;
-
-#define low_current_pin 5 // use pin 5 to specify low current (no amplifier)
-uint8_t low_current = 1;
-
-#define voltage_sense_pin 12
-uint8_t voltage_sense = 1;
-uint8_t voltage_mode = 0;  // 0 = 12 volts, 1 = 24 volts
-uint16_t max_voltage = 1800; // 18 volts max by default
-
-#include <stdarg.h>
-void debug(char *fmt, ... ){
-    char buf[128]; // resulting string limited to 128 chars
-    va_list args;
-    va_start (args, fmt );
-    vsnprintf(buf, 128, fmt, args);
-    va_end (args);
-    Serial.print(buf);
-}
-
-enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71};
-
-enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
-
-enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, BADVOLTAGE=16*8, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4, BAD_FUSES=256*8};
-
-uint16_t flags = 0, faults = 0;
-uint8_t serialin;
-uint16_t max_current;
-
-void setup() 
+void setup()
 {
 #ifdef DIV_CLOCK
     CLKPR = _BV(CLKPCE);
@@ -229,17 +238,17 @@ void setup()
         flags |= BAD_FUSES;
 
     sei(); // Enable all interrupts.
-    
+
     // enable pullup on unused pins (saves .5 mA)
     pinMode(A4, INPUT);
     digitalWrite(A4, LOW);
 
-    pinMode(4, INPUT_PULLUP);
-    pinMode(5, INPUT_PULLUP);
-    pinMode(6, INPUT_PULLUP);
-    pinMode(11, INPUT_PULLUP);
-    pinMode(12, INPUT_PULLUP);
-    
+    pinMode(shunt_sense_pin, INPUT_PULLUP);
+    pinMode(low_current_pin, INPUT_PULLUP);
+    pinMode(rc_pwm_pin, INPUT_PULLUP);
+    pinMode(clutch_pin, INPUT_PULLUP);
+    pinMode(voltage_sense_pin, INPUT_PULLUP);
+
     serialin = 0;
     // set up Serial library
 #ifdef DIV_CLOCK
@@ -254,14 +263,14 @@ void setup()
     pinMode(A0, OUTPUT);
     voltage_sense = digitalRead(voltage_sense_pin);
     if(!voltage_sense)
-        pinMode(12, INPUT); // if attached, turn off pullup
+        pinMode(voltage_sense_pin, INPUT); // if attached, turn off pullup
     pinMode(A0, INPUT);
-    
+
     // setup adcp
     DIDR0 = 0x3f; // disable all digital io on analog pins
 //    ADMUX = _BV(REFS0); // external 5v
     ADMUX = _BV(REFS0)| _BV(REFS1) | _BV(MUX0); // 1.1v
-    ADCSRA = _BV(ADEN) | _BV(ADIE); // enable adc with interrupts 
+    ADCSRA = _BV(ADEN) | _BV(ADIE); // enable adc with interrupts
 #ifdef DIV_CLOCK
     ADCSRA |= _BV(ADPS2) | _BV(ADPS1); // divide clock by 64
 //    ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
@@ -270,25 +279,25 @@ void setup()
 #endif
     ADCSRA |= _BV(ADSC); // start conversion
 
-    digitalWrite(11, LOW);
-    pinMode(11, OUTPUT); // clutch
-    
-    digitalWrite(13, LOW);
-    pinMode(13, OUTPUT); // status LED
-    
+    digitalWrite(clutch_pin, LOW);
+    pinMode(clutch_pin, OUTPUT); // clutch
+
+    digitalWrite(led_pin, LOW);
+    pinMode(led_pin, OUTPUT); // status LED
+
     if(rc_pwm) {
-        digitalWrite(9, LOW); /* enable internal pullups */
-        pinMode(9, OUTPUT);
+        digitalWrite(pwm_output_pin, LOW); /* enable internal pullups */
+        pinMode(pwm_output_pin, OUTPUT);
     }
-    
+
     pinMode(fwd_fault_pin, INPUT);
     digitalWrite(fwd_fault_pin, HIGH); /* enable internal pullups */
     pinMode(rev_fault_pin, INPUT);
     digitalWrite(rev_fault_pin, HIGH); /* enable internal pullups */
 
     pinMode(rc_pwm_pin, INPUT);
-    digitalWrite(rc_pwm_pin, HIGH); /* enable internal pullups */    
-    
+    digitalWrite(rc_pwm_pin, HIGH); /* enable internal pullups */
+
     pinMode(shunt_sense_pin, INPUT);
     digitalWrite(shunt_sense_pin, HIGH); /* enable internal pullups */
 
@@ -299,7 +308,7 @@ void setup()
 
     // test output type, pwm or h-bridge
     rc_pwm = digitalRead(rc_pwm_pin);
-    
+
     // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
     shunt_resistance = digitalRead(shunt_sense_pin);
 
@@ -414,8 +423,8 @@ void disengage()
     stop();
     flags &= ~ENGAGED;
     timeout = 60; // detach in about 62ms
-    digitalWrite(11, LOW); // clutch
-    digitalWrite(13, LOW); // status LED
+    digitalWrite(clutch_pin, LOW); // clutch
+    digitalWrite(led_pin, LOW); // status LED
 }
 
 void detach()
@@ -423,7 +432,7 @@ void detach()
     if(rc_pwm) {
         TCCR1A=0;
         TCCR1B=0;
-        while(digitalRead(9)); // wait for end of pwm if pulse is high
+        while(digitalRead(pwm_output_pin)); // wait for end of pwm if pulse is high
         TIMSK1 = 0;
     } else {
         TCCR1A=0;
@@ -436,7 +445,7 @@ void detach()
     }
     TIMSK2 = 0;
     timeout = 64; // avoid overflow
-}    
+}
 
 void engage()
 {
@@ -455,7 +464,7 @@ void engage()
 #endif
 
         TIMSK1 = _BV(TOIE1);
-    //pinMode(9, OUTPUT);
+    //pinMode(pwm_output_pin, OUTPUT);
     } else {
         //TCNT1 = 0x1fff;
         //Configure TIMER1
@@ -472,10 +481,10 @@ void engage()
         b_top_off;
         b_bottom_off;
 
-        pinMode(2, OUTPUT);
-        pinMode(3, OUTPUT);
-        pinMode(9, OUTPUT);
-        pinMode(10, OUTPUT);
+        pinMode(hbridge_a_bottom_pin, OUTPUT);
+        pinMode(hbridge_b_bottom_pin, OUTPUT);
+        pinMode(hbridge_a_top_pin, OUTPUT);
+        pinMode(hbridge_b_top_pin, OUTPUT);
     }
 
 // use timer2 as timeout
@@ -490,8 +499,8 @@ void engage()
     flags |= ENGAGED;
 
     update_command();
-    digitalWrite(11, HIGH); // clutch
-    digitalWrite(13, HIGH); // status LED
+    digitalWrite(clutch_pin, HIGH); // clutch
+    digitalWrite(led_pin, HIGH); // status LED
 }
 
 // set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
@@ -531,7 +540,7 @@ ISR(ADC_vect)
             adc_results[adc_counter][i].count++;
         }
     }
-    
+
     if(adc_counter == CURRENT) { // take more current measurements
         if(adc_cnt < 50)
             goto ret;
@@ -541,7 +550,7 @@ ISR(ADC_vect)
     } else if(adc_counter == RUDDER && rudder_sense)
         if(adc_cnt < 16) // take more samples for rudder, if sampled
             goto ret;
-    
+
     // advance to next channel
     adc_cnt = 0;
     if(++adc_counter >= CHANNEL_COUNT)
@@ -601,7 +610,7 @@ uint16_t TakeAmps(uint8_t p)
             return v * 275 / 128 / 16;
 
         if(v > 16)
-#ifdef DIV_CLOCK        
+#ifdef DIV_CLOCK
             v = v * 1375 / 128 / 16; // 200mA minimum
 #else
         v = v * 1375 / 128 / 16 + 55; // 550mA minimum
@@ -611,33 +620,32 @@ uint16_t TakeAmps(uint8_t p)
         return v;
     } else { // high current
         // high curront controller has .0005 ohm with 50x gain
-        // 3663/511 = 100.0/1023/.0003/50*1.1
-        // 1200/279 = 100.0/1023/.0005/50*1.1
+        // 275/64 = 100.0/1024/.0005/50*1.1
 #if defined(HIGH_CURRENT_OLD)
         // high curront controller has .001 ohm with 50x gain
-        // 275/128 = 100.0/1023/.001/50*1.1
+        // 275/128 = 100.0/1024/.001/50*1.1
         return v * 275 / 128 / 16;
 #else
         if(v > 16)
-#ifdef DIV_CLOCK        
-            v = v * 1200 / 279 / 16; // 420mA offset
+#ifdef DIV_CLOCK
+            v = v * 275 / 64 / 16; // 420mA offset
 #else
-            v = v * 1200 / 279 / 16 + 82; // 820mA offset
+            v = v * 275 / 64 / 16 + 82; // 820mA offset
 #endif
 #endif
         return v;
-    }        
+    }
 }
 
 uint16_t TakeVolts(uint8_t p)
 {
-    // voltage in 10mV increments 1.1ref, 560 and 10k resistors    
+    // voltage in 10mV increments 1.1ref, 560 and 10k resistors
     uint32_t v = TakeADC(VOLTAGE, p);
     if(voltage_mode)
-        // 28545 / 7161 = 100.0/1023*10280/280*1.1        
-        return v * 28545 / 7161 / 16 + 15;
+        // 14135 / 3584 = 100.0/1024*10280/280*1.1
+        return v * 14135 / 3584 / 16 + 15;
     // 1815 / 896 = 100.0/1024*10560/560*1.1
-    return v * 14520 / 7161 / 16 + 55;
+    return v * 1815 / 896 / 16 + 55;
 }
 
 uint16_t TakeTemp(uint8_t index, uint8_t p)
@@ -652,7 +660,7 @@ uint16_t TakeTemp(uint8_t index, uint8_t p)
     // T0 = 298, B = 3905, R0 = 10000
     // T = 1 / (1 / T0 + 1/B * ln(R/R0))
     // T = 1.0 / (1.0 / 298.0 + 1/3905.0 * math.log(R/10000.0)) - 273.0
-    
+
     // a reasonable approximation to avoid floating point math over our range:
     // within 2 degrees from 30C to 80C
     // T = 300000/(R+2600) + 2
@@ -750,7 +758,7 @@ void process_packet()
         // jump to bootloader
         asm volatile ("ijmp" ::"z" (0x3c00));
         //goto *0x3c00;
-    } break;  
+    } break;
     case RESET_CODE:
         // reset overcurrent flag
         flags &= ~OVERCURRENT;
@@ -811,9 +819,9 @@ void process_packet()
             max_slew_slow = 1000;
 
         // must have some slew
-        if(max_slew_speed < 1) 
+        if(max_slew_speed < 1)
             max_slew_speed = 1;
-        if(max_slew_slow < 1) 
+        if(max_slew_slow < 1)
             max_slew_slow = 1;
         break;
     }
@@ -831,7 +839,7 @@ void loop()
         sleep_enable();
         sleep_cpu();
     }
-#endif    
+#endif
     // serial input
     while(Serial.available()) {
       uint8_t c = Serial.read();
@@ -873,7 +881,7 @@ void loop()
         flags |= REV_FAULTPIN;
     } else
       flags &= ~REV_FAULTPIN;
-    
+
     // test current
     const int react_count = 686; // need 686 readings for 0.1s reaction time
     if(CountADC(CURRENT, 1) > react_count) {
@@ -904,9 +912,9 @@ void loop()
         } else
             faults &= ~BADVOLTAGE;
     }
-    
+
     flags |= faults;
-    
+
     // test over temp
     const int temp_react_count = 200;
     if(CountADC(CONTROLLER_TEMP, 1) > temp_react_count &&
@@ -949,19 +957,19 @@ void loop()
             flags &= ~(MIN_RUDDER | MAX_RUDDER);
         }
     }
-      
+
     // output 1 byte
     switch(out_sync_b) {
     case 0:
         // match output rate to input rate
         if(serialin < 4)
             return;
-        
+
         uint16_t v;
         uint8_t code;
 
         //flg C R V C R ct C R V C  R  flags  C  R  V  C  R mt  C  R  V  C  R
-        //0   1 2 3 4 5  6 7 8 9 10 11  12   13 14 15 16 17 18 19 20 21 22 23    
+        //0   1 2 3 4 5  6 7 8 9 10 11  12   13 14 15 16 17 18 19 20 21 22 23
         switch(out_sync_pos++) {
         case 0: case 12:
             if(!low_current)
