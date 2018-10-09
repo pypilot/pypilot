@@ -611,18 +611,17 @@ uint16_t TakeAmps(uint8_t p)
         return v;
     } else { // high current
         // high curront controller has .0005 ohm with 50x gain
-        // 3663/511 = 100.0/1023/.0003/50*1.1
-        // 1200/279 = 100.0/1023/.0005/50*1.1
+        // 275/64 = 100.0/1024/.0005/50*1.1
 #if defined(HIGH_CURRENT_OLD)
         // high curront controller has .001 ohm with 50x gain
-        // 275/128 = 100.0/1023/.001/50*1.1
+        // 275/128 = 100.0/1024/.001/50*1.1
         return v * 275 / 128 / 16;
 #else
         if(v > 16)
 #ifdef DIV_CLOCK        
-            v = v * 1200 / 279 / 16; // 420mA offset
+            v = v * 275 / 64 / 16; // 420mA offset
 #else
-            v = v * 1200 / 279 / 16 + 82; // 820mA offset
+            v = v * 275 / 64 / 16 + 82; // 820mA offset
 #endif
 #endif
         return v;
@@ -634,10 +633,10 @@ uint16_t TakeVolts(uint8_t p)
     // voltage in 10mV increments 1.1ref, 560 and 10k resistors    
     uint32_t v = TakeADC(VOLTAGE, p);
     if(voltage_mode)
-        // 28545 / 7161 = 100.0/1023*10280/280*1.1        
-        return v * 28545 / 7161 / 16 + 15;
+        // 14135 / 3584 = 100.0/1024*10280/280*1.1
+        return v * 14135 / 3584 / 16 + 15;
     // 1815 / 896 = 100.0/1024*10560/560*1.1
-    return v * 14520 / 7161 / 16 + 55;
+    return v * 1815 / 896 / 16 + 55;
 }
 
 uint16_t TakeTemp(uint8_t index, uint8_t p)
