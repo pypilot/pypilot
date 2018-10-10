@@ -16,7 +16,7 @@ CXX = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-g++
 OBJCOPY = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-objcopy
 
 
-CXXFLAGS = -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=16000000L -DUSB_VID=null -DUSB_PID=null -DARDUINO=105 -D__PROG_TYPES_COMPAT__ -I$(ARDUINO_PATH)/hardware/arduino/cores/arduino -I$(ARDUINO_PATH)/hardware/arduino/variants/standard
+CXXFLAGS = -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=16000000L -DUSB_VID=null -DUSB_PID=null -DARDUINO=105 -D__PROG_TYPES_COMPAT__ -I$(ARDUINO_PATH)/hardware/arduino/cores/arduino -I$(ARDUINO_PATH)/hardware/arduino/variants/standard -I$(ARDUINO_PATH)/libraries/EEPROM
 LDFLAGS = -Os -Wl,--gc-sections -lm
 
 
@@ -36,6 +36,7 @@ $(ARDUINO_PATH)/hardware/arduino/cores/arduino/Print.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/HardwareSerial.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/WMath.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/main.cpp \
+$(ARDUINO_PATH)/libraries/EEPROM/EEPROM.cpp
 
 SRCS = $(ARDUINO_SRCS)
 
