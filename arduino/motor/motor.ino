@@ -9,6 +9,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include <HardwareSerial.h>
+#include <EEPROM.h>
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 #include <avr/boot.h>
@@ -195,7 +196,7 @@ void debug(char *fmt, ... ){
     Serial.print(buf);
 }
 
-enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71};
+enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, VOLTAGE_CORRECTION_CODE=0xdb, CURRENT_CORRECTION_CODE=0x4e};
 
 enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
 
@@ -205,7 +206,21 @@ uint16_t flags = 0, faults = 0;
 uint8_t serialin;
 uint16_t max_current;
 
-#include "../crc.h"
+#include "crc.h"
+
+#define eeprom_read(i) ((EEPROM.read(i) << 8) | EEPROM.read((i) + 1))
+#define eeprom_write(i, x) { EEPROM.write(i, (x) >> 8); EEPROM.write((i) + 1, (x) & 0xff); }
+uint16_t max_controller_temp = 7000; // 70C
+uint16_t max_motor_temp = 7000; // 70C
+uint16_t max_slew_speed = 15, max_slew_slow = 35; // 200 is full power in 1/10th of a second
+uint16_t min_rudder_pos = 0, max_rudder_pos = 65472;
+int16_t voltage_offset = 0; // can be negative !
+uint16_t voltage_factor = 125; // 0.8 + 125 * 0.0016 = 1
+int16_t current_offset = 0; // can be negative !
+uint16_t current_factor = 125;
+
+
+#include <avr/pgmspace.h>
 
 void setup()
 {
@@ -319,6 +334,37 @@ void setup()
 #endif
     ADCSRA |= _BV(ADSC); // start conversion
 #endif    
+
+    // test signature = 'pypilot' and version '0'
+    if (EEPROM.read(0) != 'p' || EEPROM.read(1) != 'y' ||
+        EEPROM.read(2) != 'p' || EEPROM.read(3) != 'i' ||
+        EEPROM.read(4) != 'l' || EEPROM.read(5) != 'o' ||
+        EEPROM.read(6) != 't' || EEPROM.read(7) != '0') {
+        EEPROM.write(0, 'p'); EEPROM.write(1, 'y');
+        EEPROM.write(2, 'p'); EEPROM.write(3, 'i');
+        EEPROM.write(4, 'l'); EEPROM.write(5, 'o');
+        EEPROM.write(6, 't'); EEPROM.write(7, '0');
+        eeprom_write(8, max_controller_temp);
+        eeprom_write(10, max_motor_temp);
+        eeprom_write(12, max_slew_speed);
+        eeprom_write(14, max_slew_slow);
+        eeprom_write(16, min_rudder_pos);
+        eeprom_write(18, max_rudder_pos);
+        eeprom_write(20, (voltage_offset << 8) | voltage_factor);
+        eeprom_write(22, (current_offset << 8) | current_factor);
+    }
+    max_controller_temp = eeprom_read(8);
+    max_motor_temp = eeprom_read(10);
+    max_slew_speed = eeprom_read(12);
+    max_slew_slow = eeprom_read(14);
+    min_rudder_pos = eeprom_read(16);
+    max_rudder_pos = eeprom_read(18);
+    voltage_offset = eeprom_read(20);
+    voltage_factor = voltage_offset & 0xff;
+    voltage_offset >>= 8;
+    current_offset = eeprom_read(22);
+    current_factor = current_offset & 0xff;
+    current_offset >>= 8;
 }
 
 uint8_t in_bytes[3];
@@ -326,11 +372,6 @@ uint8_t sync_b = 0, in_sync_count = 0;
 
 uint8_t out_sync_b = 0, out_sync_pos = 0;
 uint8_t crcbytes[3];
-
-uint16_t max_controller_temp = 7000; // 70C
-uint16_t max_motor_temp = 7000; // 70C
-uint16_t max_slew_speed = 15, max_slew_slow = 35; // 200 is full power in 1/10th of a second
-uint16_t min_rudder_pos = 0, max_rudder_pos = 65472;
 
 uint8_t timeout;
 uint8_t rudder_sense = 0;
@@ -684,6 +725,13 @@ uint16_t TakeAmps(uint8_t p)
     if(pwm_style == 2) // VNH2SP30
         return v * 9 / 34 / 16;
     
+    // apply correction
+    // factor in steps of 0.0016 from 0.8 to 1.2
+    v = v * 4 / 5 + v * current_factor / 625;
+    if (current_offset < 0 && v < (uint32_t)-current_offset)
+        return 0;
+    v += current_offset;
+
     if(low_current) {
     // current units of 10mA
     // 275 / 128 = 100.0/1024/.05*1.1   for 0.05 ohm shunt
@@ -715,11 +763,19 @@ uint16_t TakeVolts(uint8_t p)
 {
     // voltage in 10mV increments 1.1ref, 560 and 10k resistors
     uint32_t v = TakeADC(VOLTAGE, p);
+
+    // apply correction
+    // factor in steps of 0.0008 from 0.9 to 1.1
+    v = v * 4 / 5 + v * voltage_factor / 625;
+    if (voltage_offset < 0 && v < (uint32_t)-voltage_offset)
+        return 0;
+    v += voltage_offset;
+
     if(voltage_mode)
         // 14135 / 3584 = 100.0/1024*10280/280*1.1
-        return v * 14135 / 3584 / 16 + 15;
+        return v * 14135 / 3584 / 16;
     // 1815 / 896 = 100.0/1024*10560/560*1.1
-    return v * 1815 / 896 / 16 + 54;
+    return v * 1815 / 896 / 16;
 }
 
 uint16_t TakeTemp(uint8_t index, uint8_t p)
@@ -859,25 +915,37 @@ void process_packet()
     case MAX_CONTROLLER_TEMP_CODE:
         if(value > 10000) // maximum is 100C
             value = 10000;
-        max_controller_temp = value;
+        if (max_controller_temp != value) {
+            max_controller_temp = value;
+            eeprom_write(8, max_controller_temp);
+        }
         break;
     case MAX_MOTOR_TEMP_CODE:
         if(value > 10000) // maximum is 100C
             value = 10000;
-        max_motor_temp = value;
+        if (max_motor_temp != value) {
+            max_motor_temp = value;
+            eeprom_write(10, max_motor_temp);
+        }
         break;
     case RUDDER_RANGE_CODE:
-        min_rudder_pos = 256*in_bytes[1];
-        max_rudder_pos = 256*in_bytes[2];
+        if (min_rudder_pos != 256*in_bytes[1] ||
+            max_rudder_pos != 256*in_bytes[2]) {
+            min_rudder_pos = 256*in_bytes[1];
+            max_rudder_pos = 256*in_bytes[2];
+            eeprom_write(16, min_rudder_pos);
+            eeprom_write(18, max_rudder_pos);
+        }
         break;
     case DISENGAGE_CODE:
         if(serialin < 12)
             serialin+=4; // output at input rate
         disengage();
         break;
-    case MAX_SLEW_CODE:
-        max_slew_speed = in_bytes[1];
-        max_slew_slow = in_bytes[2];
+    case MAX_SLEW_CODE: {
+        uint16_t new_max_slew_speed, new_max_slew_slow;
+        new_max_slew_speed = in_bytes[1];
+        new_max_slew_slow = in_bytes[2];
 
         // if set at the end of range (up to 255)  no slew limit
         if(max_slew_speed > 250)
@@ -886,10 +954,32 @@ void process_packet()
             max_slew_slow = 250;
 
         // must have some slew
-        if(max_slew_speed < 1)
-            max_slew_speed = 1;
-        if(max_slew_slow < 1)
-            max_slew_slow = 1;
+        if(new_max_slew_speed < 1)
+            new_max_slew_speed = 1;
+        if(new_max_slew_slow < 1)
+            new_max_slew_slow = 1;
+        if (max_slew_speed != new_max_slew_speed ||
+            max_slew_slow != new_max_slew_slow) {
+            max_slew_speed = new_max_slew_speed;
+            max_slew_slow = new_max_slew_slow;
+            eeprom_write(12, max_slew_speed);
+            eeprom_write(14, max_slew_slow);
+        }
+        }
+        break;
+    case VOLTAGE_CORRECTION_CODE:
+        if (((voltage_offset << 8) | voltage_factor) != value) {
+            voltage_offset = value >> 8;
+            voltage_factor = value & 0xff;
+            eeprom_write(20, value);
+        }
+        break;
+    case CURRENT_CORRECTION_CODE:
+        if (((current_offset << 8) | current_factor) != value) {
+            current_offset = value >> 8;
+            current_factor = value & 0xff;
+            eeprom_write(22, value);
+        }
         break;
     }
 }
