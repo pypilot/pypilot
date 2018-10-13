@@ -27,14 +27,15 @@ black  - d2  - pin 2 -                         reed switch B
 #include <avr/sleep.h>
 #include <HardwareSerial.h>
 #include "PCD8544.h"
+#include <avr/boot.h>
 
 extern "C" {
   #include <twi.h>
 }
 
-#define ANENOMETER
+//#define ANENOMETER   // comment to show only baro graph
+#define LCD
 
-//#define LCD
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
 #endif
@@ -158,6 +159,14 @@ void setup()
   
   Serial.begin(38400);  // start serial for output
 
+  // read fuses, and report this as flag if they are wrong
+    uint8_t lowBits      = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
+    uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
+    uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
+    uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
+    if(lowBits != 0xFF || highBits != 0xda ||
+       (extendedBits != 0xFD && extendedBits != 0xFC) || lockBits != 0xCF)
+        Serial.print("Warning, fuses set wrong, flash may become corrupted");
 
   bmX280_setup();
 
