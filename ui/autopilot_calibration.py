@@ -46,6 +46,20 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.dsServoMaxCurrent.SetDigits(1)
         self.dsServoMaxCurrent.Bind( wx.EVT_SPINCTRLDOUBLE, self.onMaxCurrent )
 
+        self.dsServoCurrentFactor.SetIncrement(.0016);
+        self.dsServoCurrentFactor.SetDigits(4);
+        self.dsServoCurrentFactor.Bind( wx.EVT_SPINCTRLDOUBLE, self.onCurrentFactor );
+
+        self.dsServoCurrentOffset.SetRange(-128, 127);
+        self.dsServoCurrentOffset.Bind( wx.EVT_SPINCTRL, self.onCurrentOffset );
+
+        self.dsServoVoltageFactor.SetIncrement(.0016);
+        self.dsServoVoltageFactor.SetDigits(4);
+        self.dsServoVoltageFactor.Bind( wx.EVT_SPINCTRLDOUBLE, self.onVoltageFactor );
+
+        self.dsServoVoltageOffset.SetRange(-128, 127);
+        self.dsServoVoltageOffset.Bind( wx.EVT_SPINCTRL, self.onVoltageOffset );
+
         self.lastmouse = False
         self.alignment_count = 0
 
@@ -64,19 +78,21 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.fusionQPose = [1, 0, 0, 0]
 
     def on_con(self, client):
-        watchlist = ['imu.accel.calibration', 'imu.accel.calibration.age', \
-                     'imu.accel', 'imu.accel.calibration.sigmapoints', \
-                     'imu.accel.calibration.locked', \
-                     'imu.compass.calibration', 'imu.compass.calibration.age', \
-                     'imu.compass', 'imu.compass.calibration.sigmapoints', \
-                     'imu.compass.calibration.locked', \
-                     'imu.fusionQPose', 'imu.alignmentCounter', \
-                     'imu.heading', \
-                     'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', \
+        watchlist = ['imu.accel.calibration', 'imu.accel.calibration.age',
+                     'imu.accel', 'imu.accel.calibration.sigmapoints',
+                     'imu.accel.calibration.locked',
+                     'imu.compass.calibration', 'imu.compass.calibration.age',
+                     'imu.compass', 'imu.compass.calibration.sigmapoints',
+                     'imu.compass.calibration.locked',
+                     'imu.fusionQPose', 'imu.alignmentCounter',
+                     'imu.heading',
+                     'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel',
                      'imu.heading_offset',
                      'servo.rudder', 'servo.rudder.offset',
                      'servo.rudder.scale', 'servo.rudder.range',
-                     'servo.calibration', 'servo.max_current']
+                     'servo.calibration', 'servo.max_current',
+                     'servo.current_factor', 'servo.current_offset',
+                     'servo.voltage_factor', 'servo.voltage_offset']
         for name in watchlist:
             client.watch(name)
 
@@ -168,6 +184,14 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.SetSize(wx.Size(self.GetSize().x+1, self.GetSize().y))
         elif name == 'servo.max_current':
             self.dsServoMaxCurrent.SetValue(round3(value))
+        elif name == 'servo.current_factor':
+            self.dsServoCurrentFactor.SetValue(round(value, 4))
+        elif name == 'servo.current_offset':
+            self.dsServoCurrentOffset.SetValue(value)
+        elif name == 'servo.voltage_factor':
+            self.dsServoVoltageFactor.SetValue(round(value, 4))
+        elif name == 'servo.voltage_offset':
+            self.dsServoVoltageOffset.SetValue(value)
 
 
     def servo_console(self, text):
@@ -350,6 +374,18 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onMaxCurrent( self, event ):
         self.client.set('servo.max_current', event.GetValue())
+
+    def onCurrentFactor( self, event ):
+        self.client.set('servo.current_factor', event.GetValue())
+
+    def onCurrentOffset( self, event ):
+        self.client.set('servo.current_offset', event.GetValue())
+
+    def onVoltageFactor( self, event ):
+        self.client.set('servo.voltage_factor', event.GetValue())
+
+    def onVoltageOffset( self, event ):
+        self.client.set('servo.voltage_offset', event.GetValue())
 
     def onRudderCentered( self, event ):
         rudder_pos = self.rudder / self.rudder_scale - self.rudder_offset + .5
