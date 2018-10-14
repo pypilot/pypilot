@@ -144,9 +144,9 @@ void debug(char *fmt, ... ){
     Serial.print(buf);
 }
 
-enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, VOLTAGE_CORRECTION_CODE=0xdb, CURRENT_CORRECTION_CODE=0x4e};
+enum commands {COMMAND_CCODE=0xc7, RESET_CCODE=0xe7, MAX_CURRENT_CCODE=0x1e, MAX_CONTROLLER_TEMP_CCODE=0xa4, MAX_MOTOR_TEMP_CCODE=0x5a, RUDDER_RANGE_CCODE=0xb6, REPROGRAM_CCODE=0x19, DISENGAGE_CCODE=0x68, MAX_SLEW_CCODE=0x71, CURRENT_CORRECTION_CCODE=0xdb, VOLTAGE_CORRECTION_CCODE=0x4e};
 
-enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f};
+enum results {CURRENT_RCODE=0x1c, VOLTAGE_RCODE=0xb3, CONTROLLER_TEMP_RCODE=0xf9, MOTOR_TEMP_RCODE=0x48, RUDDER_SENSE_RCODE=0xa7, FLAGS_RCODE=0x8f, CURRENT_CORRECTION_RCODE=0xdb, VOLTAGE_CORRECTION_RCODE=0x4e};
 
 enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, BADVOLTAGE=16*8, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4, BAD_FUSES=256*8};
 
@@ -806,17 +806,17 @@ void process_packet()
     flags |= SYNC;
     uint16_t value = in_bytes[1] | (in_bytes[2]<<8);
     switch(in_bytes[0]) {
-    case REPROGRAM_CODE:
+    case REPROGRAM_CCODE:
     {
         // jump to bootloader
         asm volatile ("ijmp" ::"z" (0x3c00));
         //goto *0x3c00;
     } break;
-    case RESET_CODE:
+    case RESET_CCODE:
         // reset overcurrent flag
         flags &= ~OVERCURRENT;
         break;
-    case COMMAND_CODE:
+    case COMMAND_CCODE:
         timeout = 0;
         if(serialin < 12)
             serialin+=4; // output at input rate
@@ -836,13 +836,13 @@ void process_packet()
             engage();
         }
         break;
-    case MAX_CURRENT_CODE: { // current in units of 10mA
+    case MAX_CURRENT_CCODE: { // current in units of 10mA
         unsigned int max_max_current = low_current ? 2000 : 6000;
         if(value > max_max_current) // maximum is 20 amps
             value = max_max_current;
         max_current = value;
     } break;
-    case MAX_CONTROLLER_TEMP_CODE:
+    case MAX_CONTROLLER_TEMP_CCODE:
         if(value > 10000) // maximum is 100C
             value = 10000;
         if (max_controller_temp != value) {
@@ -850,7 +850,7 @@ void process_packet()
             eeprom_write(8, max_controller_temp);
         }
         break;
-    case MAX_MOTOR_TEMP_CODE:
+    case MAX_MOTOR_TEMP_CCODE:
         if(value > 10000) // maximum is 100C
             value = 10000;
         if (max_motor_temp != value) {
@@ -858,7 +858,7 @@ void process_packet()
             eeprom_write(10, max_motor_temp);
         }
         break;
-    case RUDDER_RANGE_CODE:
+    case RUDDER_RANGE_CCODE:
         if (min_rudder_pos != 256*in_bytes[1] ||
             max_rudder_pos != 256*in_bytes[2]) {
             min_rudder_pos = 256*in_bytes[1];
@@ -867,12 +867,12 @@ void process_packet()
             eeprom_write(18, max_rudder_pos);
         }
         break;
-    case DISENGAGE_CODE:
+    case DISENGAGE_CCODE:
         if(serialin < 12)
             serialin+=4; // output at input rate
         disengage();
         break;
-    case MAX_SLEW_CODE: {
+    case MAX_SLEW_CCODE: {
         uint16_t new_max_slew_speed, new_max_slew_slow;
         new_max_slew_speed = in_bytes[1];
         new_max_slew_slow = in_bytes[2];
@@ -897,16 +897,16 @@ void process_packet()
         }
         }
         break;
-    case VOLTAGE_CORRECTION_CODE:
+    case VOLTAGE_CORRECTION_CCODE:
         if (((voltage_offset << 8) | voltage_factor) != value) {
-            voltage_offset = value >> 8;
+            voltage_offset = (int8_t)(value >> 8);
             voltage_factor = value & 0xff;
             eeprom_write(20, value);
         }
         break;
-    case CURRENT_CORRECTION_CODE:
+    case CURRENT_CORRECTION_CCODE:
         if (((current_offset << 8) | current_factor) != value) {
-            current_offset = value >> 8;
+            current_offset = (int8_t)(value >> 8);
             current_factor = value & 0xff;
             eeprom_write(22, value);
         }
@@ -1055,7 +1055,7 @@ void loop()
         uint16_t v;
         uint8_t code;
 
-        //flg C R V C R ct C R V C  R  flags  C  R  V  C  R mt  C  R  V  C  R
+        //flg C R V C R ct C R V C  R  flags  C  R  V  C  R mt  C  R  V cc vc
         //0   1 2 3 4 5  6 7 8 9 10 11  12   13 14 15 16 17 18 19 20 21 22 23
         switch(out_sync_pos++) {
         case 0: case 12:
@@ -1063,37 +1063,37 @@ void loop()
                 flags |= CURRENT_RANGE;
 
             v = flags;
-            code = FLAGS_CODE;
+            code = FLAGS_RCODE;
             break;
-        case 1: case 4: case 7: case 10: case 13: case 16: case 19: case 22:
+        case 1: case 4: case 7: case 10: case 13: case 16: case 19:
             if(CountADC(CURRENT, 0) < 50) {
 //                out_sync_pos--; // remain at current measurement (avoid output overflow)
                 return;
             }
             v = TakeAmps(0);
-            code = CURRENT_CODE;
+            code = CURRENT_RCODE;
             serialin-=4; // fix current output rate to input rate
             delay(1); // small dead time to break serial transmission
             break;
-        case 2: case 5: case 8: case 11: case 14: case 17: case 20: case 23:
+        case 2: case 5: case 8: case 11: case 14: case 17: case 20:
             if(CountADC(RUDDER, 0) < 10 || (!rudder_sense && out_sync_pos > 3))
                 return;
             if(rudder_sense == 0)
                 v = 65535; // indicate invalid rudder measurement
             else
                 v = TakeRudder(0);
-            code = RUDDER_SENSE_CODE;
+            code = RUDDER_SENSE_RCODE;
             break;
         case 3: case 9: case 15: case 21:
             if(CountADC(VOLTAGE, 0) < 2)
                 return;
             v = TakeVolts(0);
-            code = VOLTAGE_CODE;
+            code = VOLTAGE_RCODE;
             break;
         case 6:
             if(CountADC(CONTROLLER_TEMP, 0)) {
                 v = TakeTemp(CONTROLLER_TEMP, 0);
-                code = CONTROLLER_TEMP_CODE;
+                code = CONTROLLER_TEMP_RCODE;
                 break;
             }
             return;
@@ -1101,11 +1101,19 @@ void loop()
             if(CountADC(MOTOR_TEMP, 0)) {
                 v = TakeTemp(MOTOR_TEMP, 0);
                 if(v > 1200) { // below 12C means no sensor connected, or too cold to care
-                    code = MOTOR_TEMP_CODE;
+                    code = MOTOR_TEMP_RCODE;
                     break;
                 }
             }
             return;
+	case 22:
+            v = (current_offset << 8) | current_factor;
+            code = CURRENT_CORRECTION_RCODE;
+	    break;
+	case 23:
+            v = (voltage_offset << 8) | voltage_factor;
+            code = VOLTAGE_CORRECTION_RCODE;
+	    break;
         default:
             out_sync_pos = 0;
             return;

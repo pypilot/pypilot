@@ -17,8 +17,8 @@
 
 #include "arduino_servo.h"
 
-enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAGE_CODE = 0x68, MAX_SLEW_CODE = 0x71, VOLTAGE_CORRECTION_CODE = 0xdb, CURRENT_CORRECTION_CODE = 0x4e};
-enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE = 0x8f};
+enum commands {COMMAND_CCODE = 0xc7, RESET_CCODE = 0xe7, MAX_CURRENT_CCODE = 0x1e, MAX_CONTROLLER_TEMP_CCODE = 0xa4, MAX_MOTOR_TEMP_CCODE = 0x5a, RUDDER_RANGE_CCODE = 0xb6, REPROGRAM_CCODE = 0x19, DISENGAUGE_CCODE = 0x68, MAX_SLEW_CCODE = 0x71, CURRENT_CORRECTION_CCODE = 0xdb, VOLTAGE_CORRECTION_CCODE = 0x4e};
+enum results {CURRENT_RCODE = 0x1c, VOLTAGE_RCODE = 0xb3, CONTROLLER_TEMP_RCODE=0xf9, MOTOR_TEMP_RCODE=0x48, RUDDER_SENSE_RCODE=0xa7, FLAGS_RCODE = 0x8f,  CURRENT_CORRECTION_RCODE = 0xdb, VOLTAGE_CORRECTION_RCODE = 0x4e};
 
 const unsigned char crc8_table[256]
 = {
@@ -79,6 +79,7 @@ ArduinoServo::ArduinoServo(int _fd)
     out_sync = 0;
     in_buf_len = 0;
     max_current_value = 0;
+    params_set = 0;
 
     flags = 0;
 }
@@ -121,28 +122,36 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
 {
     uint16_t value = in_buf[1] + (in_buf[2]<<8);
     switch(in_buf[0]) {
-    case CURRENT_CODE:
+    case CURRENT_RCODE:
         current = value / 100.0;
         //printf("servo current  %f\n", current);
         return CURRENT;
-    case VOLTAGE_CODE:
+    case VOLTAGE_RCODE:
         voltage = value / 100.0;
         //printf("servo voltage  %f\n", voltage);
         return VOLTAGE;
-    case CONTROLLER_TEMP_CODE:
+    case CONTROLLER_TEMP_RCODE:
         controller_temp = (int16_t)value / 100.0;
         //printf("servo temp  %f\n", controller_temp);
         return CONTROLLER_TEMP;
-    case MOTOR_TEMP_CODE:
+    case MOTOR_TEMP_RCODE:
         motor_temp = (int16_t)value / 100.0;
         return MOTOR_TEMP;
-    case RUDDER_SENSE_CODE:
+    case RUDDER_SENSE_RCODE:
         if(value == 65535)
             rudder = NAN;
         else
             rudder = (uint16_t)value / 65472.0;
         return RUDDER;
-    case FLAGS_CODE:
+    case CURRENT_CORRECTION_RCODE:
+        current_factor = 0.8 + (value & 0xff) * 0.0016;
+        current_offset = (int8_t)(value >> 8);
+        return CURRENT_CORRECTION;
+    case VOLTAGE_CORRECTION_RCODE:
+        voltage_factor = 0.8 + (value & 0xff) * 0.0016;
+        voltage_offset = (int8_t)(value >> 8);
+        return VOLTAGE_CORRECTION;
+    case FLAGS_RCODE:
         flags = value;
         if(flags & INVALID)
             printf("servo received invalid packet (check serial connection)\n");
@@ -217,6 +226,15 @@ void ArduinoServo::max_values(double current, double controller_temp, double mot
     max_slew_slow_value = fmin(100, fmax(0, max_slew_slow));
 }
 
+void ArduinoServo::params(double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset)
+{
+    current_factor = fmin(1.2, fmax(0.8, _current_factor));
+    current_offset = fmin(127, fmax(-128, _current_offset));
+    voltage_factor = fmin(1.2, fmax(0.8, _voltage_factor));
+    voltage_offset = fmin(127, fmax(-128, _voltage_offset));
+    params_set = 1;
+}
+
 void ArduinoServo::send_value(uint8_t command, uint16_t value)
 {
     uint8_t code[4] = {command, (uint8_t)(value&0xff), (uint8_t)((value>>8)&0xff), 0};
@@ -234,43 +252,55 @@ void ArduinoServo::raw_command(uint16_t value)
     // send max current and temp occasionally
     switch(out_sync) {
     case 0: case 8: case 16:
-        send_value(MAX_CURRENT_CODE, max_current_value*100);
+        send_value(MAX_CURRENT_CCODE, max_current_value*100);
         break;
     case 4:
-        send_value(MAX_CONTROLLER_TEMP_CODE, max_controller_temp_value*100);
+        send_value(MAX_CONTROLLER_TEMP_CCODE, max_controller_temp_value*100);
         break;
     case 6:
-        send_value(MAX_MOTOR_TEMP_CODE, max_motor_temp_value*100);
+        send_value(MAX_MOTOR_TEMP_CCODE, max_motor_temp_value*100);
         break;
     case 12:
-        send_value(RUDDER_RANGE_CODE,
+        send_value(RUDDER_RANGE_CCODE,
                    ((int)(min_rudder_value*255) & 0xff) |
                    ((int)(max_rudder_value*255) & 0xff) << 8);
         break;
     case 18:
-        send_value(MAX_SLEW_CODE,
+        send_value(MAX_SLEW_CCODE,
                    ((int)(max_slew_speed_value * 255/100) & 0xff) |
                    ((int)(max_slew_slow_value * 255/100) & 0xff) << 8);
+        break;
+    case 20:
+        if (params_set)
+            send_value(CURRENT_CORRECTION_CCODE,
+                       ((int)((current_factor - 0.8) / 0.0016) & 0xff) |
+                       ((int)current_offset & 0xff) << 8);
+        break;
+    case 22:
+        if (params_set)
+            send_value(VOLTAGE_CORRECTION_CCODE,
+                       ((int)((voltage_factor - 0.8) / 0.0016) & 0xff) |
+                       ((int)voltage_offset & 0xff) << 8);
         break;
     }
 
     //printf("command %u %d\n", value, out_sync);
-    send_value(COMMAND_CODE, value);
+    send_value(COMMAND_CCODE, value);
     if(++out_sync == 23)
         out_sync = 0;
 }
 
 void ArduinoServo::reset()
 {
-    send_value(RESET_CODE, 0);
+    send_value(RESET_CCODE, 0);
 }
 
 void ArduinoServo::disengauge()
 {
-    send_value(DISENGAUGE_CODE, 0);
+    send_value(DISENGAUGE_CCODE, 0);
 }
 
 void ArduinoServo::reprogram()
 {
-    send_value(REPROGRAM_CODE, 0);
+    send_value(REPROGRAM_CCODE, 0);
 }

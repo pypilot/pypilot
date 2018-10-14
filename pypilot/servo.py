@@ -164,6 +164,8 @@ class ServoTelemetry(object):
     CONTROLLER_TEMP = 32
     MOTOR_TEMP = 64
     RUDDER = 128
+    CURRENT_CORRECTION = 256
+    VOLTAGE_CORRECTION = 512
 
 # a property which records the time when it is updated
 class TimedProperty(Property):
@@ -206,6 +208,10 @@ class Servo(object):
         self.rudder_range = self.Register(RangeProperty, 'rudder.range',  60, 10, 100, persistent=True)
         self.engaged = self.Register(BooleanValue, 'engaged', False)
         self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 60, persistent=True)
+        self.current_factor = self.Register(RangeProperty, 'current_factor', 1, 0.8, 1.2, persistent=True)
+        self.current_offset = self.Register(RangeProperty, 'current_offset', 0, -128, 127, persistent=True)
+        self.voltage_factor = self.Register(RangeProperty, 'voltage_factor', 1, 0.8, 1.2, persistent=True)
+        self.voltage_offset = self.Register(RangeProperty, 'voltage_offset', 0, -128, 127, persistent=True)
         self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 70, 45, 100, persistent=True)
         self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
 
@@ -224,6 +230,9 @@ class Servo(object):
         self.position.set(.5)
 
         self.rawcommand = self.Register(SensorValue, 'raw_command', timestamp)
+
+        self.current_correction_received = False
+        self.voltage_correction_received = False
 
         self.lastpositiontime = time.time()
         self.lastpositionamphours = 0
@@ -409,6 +418,7 @@ class Servo(object):
                    self.flags.value & ServoFlags.REV_FAULT: # allow more current to "unstuck" ram
                     max_current *= 2
                 self.send_driver_max_values(max_current)
+                self.send_driver_params()
                 self.driver.command(command)
 
                 # detect driver timeout if commanded without measuring current
@@ -441,6 +451,12 @@ class Servo(object):
 
         self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value, min_rudder, max_rudder, self.max_slew_speed.value, self.max_slew_slow.value)
 
+    def send_driver_params(self):
+        # do not send parameters before retrieving the one saved to controller's flash
+        if not self.current_correction_received or not self.voltage_correction_received:
+            return
+        self.driver.params(self.current_factor.value, self.current_offset.value, self.voltage_factor.value, self.voltage_offset.value)
+
     def poll(self):
         if not self.driver:
             device_path = serialprobe.probe('servo', [38400], 1)
@@ -456,6 +472,7 @@ class Servo(object):
                     return
                 self.driver = ArduinoServo(device.fileno())
                 self.send_driver_max_values(self.max_current.value)
+                self.send_driver_params()
 
                 t0 = time.time()
                 if self.driver.initialize(device_path[1]):
@@ -519,6 +536,19 @@ class Servo(object):
                 self.amphours.set(self.amphours.value + amphours)
             lp = .003*dt # 5 minute time constant to average wattage
             self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
+        if result & ServoTelemetry.CURRENT_CORRECTION:
+            # retrieve the correction saved in controller's flash only once,
+            # at startup, and ignore all later updates since the controller
+            # will not be modifying the value by itself
+            if not self.current_correction_received:
+                self.current_factor.set(self.driver.current_factor)
+                self.current_offset.set(self.driver.current_offset)
+                self.current_correction_received = True
+        if result & ServoTelemetry.VOLTAGE_CORRECTION:
+            if not self.voltage_correction_received:
+                self.voltage_factor.set(self.driver.voltage_factor)
+                self.voltage_offset.set(self.driver.voltage_offset)
+                self.voltage_correction_received = True
         if result & ServoTelemetry.FLAGS:
             self.max_current.set_max(60 if self.driver.flags & ServoFlags.CURRENT_RANGE else 20)
             self.flags.update(self.flags.value & ~ServoFlags.DRIVER_MASK | self.driver.flags)
