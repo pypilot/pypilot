@@ -645,7 +645,7 @@ uint16_t TakeVolts(uint8_t p)
         // 14135 / 3584 = 100.0/1024*10280/280*1.1
         return v * 14135 / 3584 / 16 + 15;
     // 1815 / 896 = 100.0/1024*10560/560*1.1
-    return v * 1815 / 896 / 16 + 55;
+    return v * 1815 / 896 / 16 + 54;
 }
 
 uint16_t TakeTemp(uint8_t index, uint8_t p)

@@ -655,7 +655,7 @@ nokia5110screen::nokia5110screen()
     : surface(48, 84, 1, NULL)
 {
     disp = new PCD8544();
-    contrast = 50;
+    contrast = 60;
     disp->begin(contrast);
 }
 

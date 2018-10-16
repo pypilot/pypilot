@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2018 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -22,6 +22,7 @@ from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 from boatimu import *
 from resolv import *
+import tacking
 
 from nmea import Nmea
 import servo
@@ -136,6 +137,8 @@ class AutopilotBase(object):
     self.heading_error = self.Register(SensorValue, 'heading_error', timestamp)
     self.heading_error_int = self.Register(SensorValue, 'heading_error_int', timestamp)
     self.heading_error_int_time = time.time()
+
+    self.tack = tacking.Tack(self)
 
     self.gps_compass_offset = self.Register(SensorValue, 'gps_offset', timestamp, directional=True)
     self.gps_speed = self.Register(SensorValue, 'gps_speed', timestamp)
@@ -329,7 +332,9 @@ class AutopilotBase(object):
       # int error +- 1, from 0 to 1500 deg/s
       self.heading_error_int.set(minmax(self.heading_error_int.value + \
                                         (self.heading_error.value/1500)*dt, 1))
-      self.process_imu_data() # implementation specific process
+
+      if not self.tack.process():
+        self.process_imu_data() # implementation specific process
 
       # servo can only disengauge under manual control
       self.servo.force_engaged = self.enabled.value
