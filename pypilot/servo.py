@@ -164,8 +164,13 @@ class ServoTelemetry(object):
     CONTROLLER_TEMP = 32
     MOTOR_TEMP = 64
     RUDDER = 128
-    CURRENT_CORRECTION = 256
-    VOLTAGE_CORRECTION = 512
+    MAX_CURRENT = 256
+    MAX_CONTROLLER_TEMP = 512
+    MAX_MOTOR_TEMP = 1024
+    RUDDER_RANGE = 2048
+    MAX_SLEW = 4096
+    CURRENT_CORRECTION = 8192
+    VOLTAGE_CORRECTION = 16384
 
 # a property which records the time when it is updated
 class TimedProperty(Property):
@@ -231,6 +236,11 @@ class Servo(object):
 
         self.rawcommand = self.Register(SensorValue, 'raw_command', timestamp)
 
+        self.max_current_received = False
+        self.max_controller_temp_received = False
+        self.max_motor_temp_received = False
+        self.rudder_range_received = False
+        self.max_slew_received = False
         self.current_correction_received = False
         self.voltage_correction_received = False
 
@@ -412,13 +422,13 @@ class Servo(object):
         if self.driver:
             if self.disengaged: # keep sending disengauge to keep sync
                 self.driver.disengauge()
+                self.send_driver_params(self.max_current.value)
             else:
                 max_current = self.max_current.value
                 if self.flags.value & ServoFlags.FWD_FAULT or \
                    self.flags.value & ServoFlags.REV_FAULT: # allow more current to "unstuck" ram
                     max_current *= 2
-                self.send_driver_max_values(max_current)
-                self.send_driver_params()
+                self.send_driver_params(max_current)
                 self.driver.command(command)
 
                 # detect driver timeout if commanded without measuring current
@@ -443,19 +453,23 @@ class Servo(object):
         self.device.close()
         self.driver = False
 
-    def send_driver_max_values(self, max_current):
+    def send_driver_params(self, _max_current):
+        # do not send parameters before retrieving the one saved to controller's flash
+        if not self.max_current_received or \
+           not self.max_controller_temp_received or \
+           not self.max_motor_temp_received or \
+           not self.rudder_range_received or \
+           not self.max_slew_received or \
+           not self.current_correction_received or \
+           not self.voltage_correction_received:
+            return
+
         n = self.rudder_range.value / abs(self.rudder_scale.value)
         o = 0.5 - self.rudder_offset.value
 
         min_rudder, max_rudder = o - n, o + n
 
-        self.driver.max_values(max_current, self.max_controller_temp.value, self.max_motor_temp.value, min_rudder, max_rudder, self.max_slew_speed.value, self.max_slew_slow.value)
-
-    def send_driver_params(self):
-        # do not send parameters before retrieving the one saved to controller's flash
-        if not self.current_correction_received or not self.voltage_correction_received:
-            return
-        self.driver.params(self.current_factor.value, self.current_offset.value, self.voltage_factor.value, self.voltage_offset.value)
+        self.driver.params(_max_current, self.max_controller_temp.value, self.max_motor_temp.value, min_rudder, max_rudder, self.max_slew_speed.value, self.max_slew_slow.value, self.current_factor.value, self.current_offset.value, self.voltage_factor.value, self.voltage_offset.value)
 
     def poll(self):
         if not self.driver:
@@ -471,8 +485,7 @@ class Servo(object):
                     print 'failed to open servo:', e
                     return
                 self.driver = ArduinoServo(device.fileno())
-                self.send_driver_max_values(self.max_current.value)
-                self.send_driver_params()
+                self.send_driver_params(self.max_current.value)
 
                 t0 = time.time()
                 if self.driver.initialize(device_path[1]):
@@ -536,10 +549,32 @@ class Servo(object):
                 self.amphours.set(self.amphours.value + amphours)
             lp = .003*dt # 5 minute time constant to average wattage
             self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
-        if result & ServoTelemetry.CURRENT_CORRECTION:
+        if result & ServoTelemetry.MAX_CURRENT:
             # retrieve the correction saved in controller's flash only once,
             # at startup, and ignore all later updates since the controller
             # will not be modifying the value by itself
+            if not self.max_current_received:
+                self.max_current.set(self.driver.max_current)
+                self.max_current_received = True
+        if result & ServoTelemetry.MAX_CONTROLLER_TEMP:
+            if not self.max_controller_temp_received:
+                self.max_controller_temp.set(self.driver.max_controller_temp)
+                self.max_controller_temp_received = True
+        if result & ServoTelemetry.MAX_MOTOR_TEMP:
+            if not self.max_motor_temp_received:
+                self.max_motor_temp.set(self.driver.max_motor_temp)
+                self.max_motor_temp_received = True
+        if result & ServoTelemetry.RUDDER_RANGE:
+            if not self.rudder_range_received:
+                self.rudder_range.set((self.driver.max_rudder - self.driver.min_rudder) * abs(self.rudder_scale.value) / 2)
+                self.rudder_offset.set((1 - (self.driver.min_rudder + self.driver.max_rudder)) / 2)
+                self.rudder_range_received = True
+        if result & ServoTelemetry.MAX_SLEW:
+            if not self.max_slew_received:
+               self.max_slew_speed.set(self.driver.max_slew_speed)
+               self.max_slew_slow.set(self.driver.max_slew_slow)
+               self.max_slew_received = True
+        if result & ServoTelemetry.CURRENT_CORRECTION:
             if not self.current_correction_received:
                 self.current_factor.set(self.driver.current_factor)
                 self.current_offset.set(self.driver.current_offset)
