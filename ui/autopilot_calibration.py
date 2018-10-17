@@ -46,6 +46,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.dsServoMaxCurrent.SetDigits(1)
         self.dsServoMaxCurrent.Bind( wx.EVT_SPINCTRLDOUBLE, self.onMaxCurrent )
 
+        self.dsServoMaxControllerTemp.SetRange(45, 100);
+        self.dsServoMaxControllerTemp.Bind( wx.EVT_SPINCTRL, self.onMaxControllerTemp );
+
+        self.dsServoMaxMotorTemp.SetRange(30, 100);
+        self.dsServoMaxMotorTemp.Bind( wx.EVT_SPINCTRL, self.onMaxMotorTemp );
+
         self.dsServoCurrentFactor.SetIncrement(.0016);
         self.dsServoCurrentFactor.SetDigits(4);
         self.dsServoCurrentFactor.Bind( wx.EVT_SPINCTRLDOUBLE, self.onCurrentFactor );
@@ -59,6 +65,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.dsServoVoltageOffset.SetRange(-128, 127);
         self.dsServoVoltageOffset.Bind( wx.EVT_SPINCTRL, self.onVoltageOffset );
+
+        self.dsServoMaxSlewSpeed.SetRange(0, 100);
+        self.dsServoMaxSlewSpeed.Bind( wx.EVT_SPINCTRL, self.onMaxSlewSpeed );
+
+        self.dsServoMaxSlewSlow.SetRange(0, 100);
+        self.dsServoMaxSlewSlow.Bind( wx.EVT_SPINCTRL, self.onMaxSlewSlow );
 
         self.lastmouse = False
         self.alignment_count = 0
@@ -91,8 +103,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                      'servo.rudder', 'servo.rudder.offset',
                      'servo.rudder.scale', 'servo.rudder.range',
                      'servo.calibration', 'servo.max_current',
+                     'servo.max_controller_temp', 'servo.max_motor_temp',
                      'servo.current_factor', 'servo.current_offset',
-                     'servo.voltage_factor', 'servo.voltage_offset']
+                     'servo.voltage_factor', 'servo.voltage_offset',
+                     'servo.max_slew_speed', 'servo.max_slew_slow']
         for name in watchlist:
             client.watch(name)
 
@@ -184,6 +198,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.SetSize(wx.Size(self.GetSize().x+1, self.GetSize().y))
         elif name == 'servo.max_current':
             self.dsServoMaxCurrent.SetValue(round3(value))
+        elif name == 'servo.max_controller_temp':
+            self.dsServoMaxControllerTemp.SetValue(value)
+        elif name == 'servo.max_motor_temp':
+            self.dsServoMaxMotorTemp.SetValue(value)
         elif name == 'servo.current_factor':
             self.dsServoCurrentFactor.SetValue(round(value, 4))
         elif name == 'servo.current_offset':
@@ -192,7 +210,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.dsServoVoltageFactor.SetValue(round(value, 4))
         elif name == 'servo.voltage_offset':
             self.dsServoVoltageOffset.SetValue(value)
-
+        elif name == 'servo.max_slew_speed':
+            self.dsServoMaxSlewSpeed.SetValue(value)
+        elif name == 'servo.max_slew_slow':
+            self.dsServoMaxSlewSlow.SetValue(value)
 
     def servo_console(self, text):
         self.stServoCalibrationConsole.SetLabel(self.stServoCalibrationConsole.GetLabel() + text + '\n')
@@ -275,7 +296,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         while rotation < 0:
             plot.userscale *= .9
             rotation += 1
-	
+        
     def onPaintGLAccel( self, event ):
         self.onPaintGL( self.AccelCalibration, self.accel_calibration_plot, self.accel_calibration_glContext )
 
@@ -302,7 +323,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onLevel( self, event ):
         self.StartAlignment()
-	
+        
     def onIMUHeadingOffset( self, event ):
         self.client.set('imu.heading_offset', self.sHeadingOffset.GetValue())
         self.heading_offset_timer.Stop()
@@ -362,10 +383,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         args = ['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/scope_wx.py', host + ':' + str(port),
                 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading']
         subprocess.Popen(args)
-	
+        
     def onCalibrateServo( self, event ):
         try:
-	    self.servoprocess = subprocess.Popen(['python', 'servo_calibration.py', sys.argv[1]], stdout=subprocess.PIPE)
+            self.servoprocess = subprocess.Popen(['python', 'servo_calibration.py', sys.argv[1]], stdout=subprocess.PIPE)
             self.servo_console('executed servo_calibration.py...')
             self.servo_timer.Start(150, True)
             self.bCalibrateServo.Disable()
@@ -374,6 +395,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onMaxCurrent( self, event ):
         self.client.set('servo.max_current', event.GetValue())
+
+    def onMaxControllerTemp( self, event ):
+        self.client.set('servo.max_controller_temp', event.GetValue())
+
+    def onMaxMotorTemp( self, event ):
+        self.client.set('servo.max_motor_temp', event.GetValue())
 
     def onCurrentFactor( self, event ):
         self.client.set('servo.current_factor', event.GetValue())
@@ -386,6 +413,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onVoltageOffset( self, event ):
         self.client.set('servo.voltage_offset', event.GetValue())
+
+    def onMaxSlewSpeed( self, event ):
+        self.client.set('servo.max_slew_speed', event.GetValue())
+
+    def onMaxSlewSlow( self, event ):
+        self.client.set('servo.max_slew_slow', event.GetValue())
 
     def onRudderCentered( self, event ):
         rudder_pos = self.rudder / self.rudder_scale - self.rudder_offset + .5
