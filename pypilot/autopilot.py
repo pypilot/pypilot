@@ -79,7 +79,8 @@ class ModeProperty(EnumProperty):
         # update the last mode when the user changes the mode
         # it should only revert to the last mode if the mode was lost
         if self.ap:
-          self.ap.lastmode = value
+          if self.ap.enabled.value:
+            self.ap.lastmode = value
           self.ap.lost_mode.update(False)
         super(ModeProperty, self).set(value)    
 
@@ -117,7 +118,7 @@ class AutopilotBase(object):
     self.boatimu = BoatIMU(self.server)
     self.servo = servo.Servo(self.server)
     self.nmea = Nmea(self.server)
-    self.version = self.Register(JSONValue, 'version', name + ' ' + 'pypilot' + ' ' + str(0.3))
+    self.version = self.Register(JSONValue, 'version', name + ' ' + 'pypilot' + ' ' + str(0.4))
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
 
@@ -125,10 +126,8 @@ class AutopilotBase(object):
 
     self.mode = self.Register(ModeProperty, 'mode')
     self.mode.ap = self
-
-    self.lastmode = self.mode.value
-                              
     self.lastmode = False
+
     self.last_heading = False
     self.last_heading_off = self.boatimu.heading_off.value
 
@@ -200,7 +199,7 @@ class AutopilotBase(object):
   def mode_found(self):
     self.mode.set(self.lastmode)
     self.lost_mode.set(False)
-          
+
   def iteration(self):
       data = False
       t00 = time.time()
@@ -305,14 +304,18 @@ class AutopilotBase(object):
 
       if self.enabled.value:
           if self.mode.value != self.lastmode: # mode changed?
+            if self.lastmode:
               err = self.heading_error.value
               if 'wind' in self.mode.value:
                   err = -err
-              self.heading_command.set(resolv(self.heading.value - err, 180))
+            else:
+              err = 0 # no error if enabling
+            self.heading_command.set(resolv(self.heading.value - err, 180))
           self.runtime.update()
           self.servo.servo_calibration.stop()
       else:
           self.runtime.stop()
+          self.lastmode = False
 
       # filter the incoming heading and gyro heading
       # error +- 60 degrees
