@@ -127,14 +127,11 @@ class SignalKPipeServerClient(SignalKServer):
         # send values once all potential timestamps are received
         # TODO: benchmark without timestamp
         for name in values:
-          if False:
-            self.values[name].set(values[name])
-            
-          else:
-            value = self.values[name]
-            value.value = values[name]
-            self.values[name].send()
+          value = self.values[name]
+          value.value = values[name]
+          self.values[name].send() # send to watching clients
 
+          # send to any clients who requested this value (get request)
           if self.gets[name]:
               response = self.values[name].get_signalk() + '\n'
               for socket in self.gets[name]:
