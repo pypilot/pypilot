@@ -85,8 +85,13 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.GetSizer().Fit(self)
         self.SetSize(wx.Size(500, 580))
 
+        # add continuous value to avoid timeout
+        if not 'ap.heading' in value_list:
+            self.watchlist.append('servo.voltage')
+        
         for name in self.watchlist:
-            client.watch(name)
+            if name in value_list:
+                client.watch(name)
 
     def servo_command(self, command):
         if self.lastcommand != command or command != 0:
@@ -117,7 +122,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             except socket.error:
                 self.timer.Start(5000)
                 return
-                
+            
         command = self.sCommand.GetValue()
         if command != 0:
             if self.enabled:
@@ -221,6 +226,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.stController.SetLabel(value)
             elif name == 'servo.mode':
                 self.stMode.SetLabel(value)
+            elif name == 'servo.voltage':
+                pass # timeout value to know we are receiving
             else:
                 print 'warning: unhandled message "%s"' % name
 
