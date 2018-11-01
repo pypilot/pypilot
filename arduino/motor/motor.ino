@@ -387,7 +387,6 @@ void stop()
 {
     position(1000);
     command_value = 1000;
-    lastpos = 1000;
 }
 
 void stop_fwd()
@@ -409,23 +408,24 @@ void update_command()
     int16_t slow_rate = max_slew_slow;
     //uint16_t cur_value = OCR1A * 2 / 3 - 1000;
     uint16_t cur_value = lastpos;
+
     int16_t diff = (int)command_value - (int)cur_value;
 
     // limit motor speed change to stay within speed and slow slew rates
-    if(cur_value > 1000) {
-        if(diff > 0) {
+    if(diff > 0) {
+        if(cur_value < 1000) {
+            if(diff > slow_rate)
+               diff = slow_rate;
+        } else
             if(diff > speed_rate)
                 diff = speed_rate;
-        } else
+    } else {
+        if(cur_value > 1000) {
             if(diff < -slow_rate)
                 diff = -slow_rate;
-    } else {
-        if(diff < 0) {
+        } else
             if(diff < -speed_rate)
                 diff = -speed_rate;
-        } else
-            if(diff > slow_rate)
-                diff = slow_rate;
     }
 
     position(cur_value + diff);
@@ -506,10 +506,11 @@ void engage()
         digitalWrite(enable_pin, HIGH);
     } else {
         //Configure TIMER1
+        TCNT1 = 16000;
         TCCR1A=_BV(WGM11);        //NON Inverted PWM
         TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS10); //PRESCALER=0 MODE 14(FAST PWM)
 #ifdef DIV_CLOCK
-        ICR1=64000;  //fPWM=62.5hz
+        ICR1=4000;  //fPWM=62.5hz
 #else
         ICR1=64000;  //fPWM=62.5hz
 #endif
@@ -536,7 +537,7 @@ void engage()
 
     flags |= ENGAGED;
 
-    update_command();
+    position(1000);
     digitalWrite(clutch_pin, HIGH); // clutch
     digitalWrite(led_pin, HIGH); // status LED
 }
@@ -878,7 +879,7 @@ void process_packet()
         disengage();
         break;
     case MAX_SLEW_CODE:
-//        max_slew_speed = in_bytes[1];
+        max_slew_speed = in_bytes[1];
         max_slew_slow = in_bytes[2];
 
         // if set at the end of range (up to 255)  no slew limit
