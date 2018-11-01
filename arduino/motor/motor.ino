@@ -76,12 +76,43 @@ the command can be recognized.
 
 */
 
+/* vnh2sp30 is supported, but warning, I received 3 boards:
+-  reverse is half power making chip very hot
+-  reverse does not work
+-  current sense does not work
+
+So in some way, 3 out of 3 were defective and I cannot recommend
+this part at all unfortunately.
+
+vnh2sp30  <->  arduino <->  CPC5001
++5V              5v
+GND              GND
+EN               D10
+CS               A1
+INA              D2
+INB              D3
+PWM              D9
+
+If used with optical isolation (strongly recommended)
+PWR+             VIN
+                 5v         vcc
+                 tx         rx
+                 rx         tx
+                 gnd        gnd
+*/
+
+//#define VNH2SP30 // defined if this board is used
+//#define DISABLE_TEMP_SENSE    // if no temp sensors avoid errors
+//#define DISABLE_VOLTAGE_SENSE // if no voltage sense
+//#define DISABLE_RUDDER_SENSE  // if no rudder sense
+
+
 // run at 4mhz instead of 16mhz to save power,
 // and to be able to measure lower current from the shunt
 #define DIV_CLOCK
 
 #ifdef DIV_CLOCK
-#define dead_time _delay_us(2) // this is quite a long dead time
+#define dead_time _delay_us(1) // this is quite a long dead time, 1 seems safe
 #else
 #define dead_time _delay_us(8) // this is quite a long dead time
 #endif
@@ -95,8 +126,9 @@ uint8_t shunt_resistance = 1;
 #define low_current_pin 5 // use pin 5 to specify low current (no amplifier)
 uint8_t low_current = 1;
 
-#define rc_pwm_pin 6
-uint8_t rc_pwm = 1;  // remote control style servo
+#define pwm_style_pin 6
+// pwm style, 0 = hbridge, 1 = rc pwm, 2 = vnh2sp30
+uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 2
 
 #define fwd_fault_pin 7 // use pin 7 for optional fault
 #define rev_fault_pin 8 // use pin 7 for optional fault
@@ -109,6 +141,7 @@ uint8_t rc_pwm = 1;  // remote control style servo
 #define hbridge_b_bottom_pin 3
 #define hbridge_a_top_pin 9
 #define hbridge_b_top_pin 10
+#define enable_pin 10 // for vnh2sp30
 
 // for direct mosfet mode, define how to turn on/off mosfets
 // do not use digitalWrite!
@@ -153,61 +186,7 @@ uint16_t flags = 0, faults = 0;
 uint8_t serialin;
 uint16_t max_current;
 
-////// CRC
-#include <avr/pgmspace.h>
-
-const unsigned char crc8_table[256] PROGMEM
-= {
-    0x00, 0x31, 0x62, 0x53, 0xC4, 0xF5, 0xA6, 0x97,
-    0xB9, 0x88, 0xDB, 0xEA, 0x7D, 0x4C, 0x1F, 0x2E,
-    0x43, 0x72, 0x21, 0x10, 0x87, 0xB6, 0xE5, 0xD4,
-    0xFA, 0xCB, 0x98, 0xA9, 0x3E, 0x0F, 0x5C, 0x6D,
-    0x86, 0xB7, 0xE4, 0xD5, 0x42, 0x73, 0x20, 0x11,
-    0x3F, 0x0E, 0x5D, 0x6C, 0xFB, 0xCA, 0x99, 0xA8,
-    0xC5, 0xF4, 0xA7, 0x96, 0x01, 0x30, 0x63, 0x52,
-    0x7C, 0x4D, 0x1E, 0x2F, 0xB8, 0x89, 0xDA, 0xEB,
-    0x3D, 0x0C, 0x5F, 0x6E, 0xF9, 0xC8, 0x9B, 0xAA,
-    0x84, 0xB5, 0xE6, 0xD7, 0x40, 0x71, 0x22, 0x13,
-    0x7E, 0x4F, 0x1C, 0x2D, 0xBA, 0x8B, 0xD8, 0xE9,
-    0xC7, 0xF6, 0xA5, 0x94, 0x03, 0x32, 0x61, 0x50,
-    0xBB, 0x8A, 0xD9, 0xE8, 0x7F, 0x4E, 0x1D, 0x2C,
-    0x02, 0x33, 0x60, 0x51, 0xC6, 0xF7, 0xA4, 0x95,
-    0xF8, 0xC9, 0x9A, 0xAB, 0x3C, 0x0D, 0x5E, 0x6F,
-    0x41, 0x70, 0x23, 0x12, 0x85, 0xB4, 0xE7, 0xD6,
-    0x7A, 0x4B, 0x18, 0x29, 0xBE, 0x8F, 0xDC, 0xED,
-    0xC3, 0xF2, 0xA1, 0x90, 0x07, 0x36, 0x65, 0x54,
-    0x39, 0x08, 0x5B, 0x6A, 0xFD, 0xCC, 0x9F, 0xAE,
-    0x80, 0xB1, 0xE2, 0xD3, 0x44, 0x75, 0x26, 0x17,
-    0xFC, 0xCD, 0x9E, 0xAF, 0x38, 0x09, 0x5A, 0x6B,
-    0x45, 0x74, 0x27, 0x16, 0x81, 0xB0, 0xE3, 0xD2,
-    0xBF, 0x8E, 0xDD, 0xEC, 0x7B, 0x4A, 0x19, 0x28,
-    0x06, 0x37, 0x64, 0x55, 0xC2, 0xF3, 0xA0, 0x91,
-    0x47, 0x76, 0x25, 0x14, 0x83, 0xB2, 0xE1, 0xD0,
-    0xFE, 0xCF, 0x9C, 0xAD, 0x3A, 0x0B, 0x58, 0x69,
-    0x04, 0x35, 0x66, 0x57, 0xC0, 0xF1, 0xA2, 0x93,
-    0xBD, 0x8C, 0xDF, 0xEE, 0x79, 0x48, 0x1B, 0x2A,
-    0xC1, 0xF0, 0xA3, 0x92, 0x05, 0x34, 0x67, 0x56,
-    0x78, 0x49, 0x1A, 0x2B, 0xBC, 0x8D, 0xDE, 0xEF,
-    0x82, 0xB3, 0xE0, 0xD1, 0x46, 0x77, 0x24, 0x15,
-    0x3B, 0x0A, 0x59, 0x68, 0xFF, 0xCE, 0x9D, 0xAC
-};
-
-uint8_t crc8_byte(uint8_t old_crc, uint8_t byte){
-    return pgm_read_byte(&crc8_table[old_crc ^ byte]);
-}
-
-uint8_t crc8_with_init(uint8_t init_value, uint8_t *pcBlock, uint8_t len)
-{
-    uint8_t crc = init_value;
-    while (len--)
-        crc = crc8_byte(crc, *pcBlock++);
-    return crc;
-}
-
-uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
-    return crc8_with_init(0xFF, pcBlock, len);
-}
-////// ENDCRC
+#include "../crc.h"
 
 void setup()
 {
@@ -245,7 +224,7 @@ void setup()
 
     pinMode(shunt_sense_pin, INPUT_PULLUP);
     pinMode(low_current_pin, INPUT_PULLUP);
-    pinMode(rc_pwm_pin, INPUT_PULLUP);
+    pinMode(pwm_style_pin, INPUT_PULLUP);
     pinMode(clutch_pin, INPUT_PULLUP);
     pinMode(voltage_sense_pin, INPUT_PULLUP);
 
@@ -266,37 +245,19 @@ void setup()
         pinMode(voltage_sense_pin, INPUT); // if attached, turn off pullup
     pinMode(A0, INPUT);
 
-    // setup adcp
-    DIDR0 = 0x3f; // disable all digital io on analog pins
-//    ADMUX = _BV(REFS0); // external 5v
-    ADMUX = _BV(REFS0)| _BV(REFS1) | _BV(MUX0); // 1.1v
-    ADCSRA = _BV(ADEN) | _BV(ADIE); // enable adc with interrupts
-#ifdef DIV_CLOCK
-    ADCSRA |= _BV(ADPS2) | _BV(ADPS1); // divide clock by 64
-//    ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
-#else
-    ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
-#endif
-    ADCSRA |= _BV(ADSC); // start conversion
-
     digitalWrite(clutch_pin, LOW);
     pinMode(clutch_pin, OUTPUT); // clutch
 
     digitalWrite(led_pin, LOW);
     pinMode(led_pin, OUTPUT); // status LED
 
-    if(rc_pwm) {
-        digitalWrite(pwm_output_pin, LOW); /* enable internal pullups */
-        pinMode(pwm_output_pin, OUTPUT);
-    }
-
     pinMode(fwd_fault_pin, INPUT);
     digitalWrite(fwd_fault_pin, HIGH); /* enable internal pullups */
     pinMode(rev_fault_pin, INPUT);
     digitalWrite(rev_fault_pin, HIGH); /* enable internal pullups */
 
-    pinMode(rc_pwm_pin, INPUT);
-    digitalWrite(rc_pwm_pin, HIGH); /* enable internal pullups */
+    pinMode(pwm_style_pin, INPUT);
+    digitalWrite(pwm_style_pin, HIGH); /* enable internal pullups */
 
     pinMode(shunt_sense_pin, INPUT);
     digitalWrite(shunt_sense_pin, HIGH); /* enable internal pullups */
@@ -304,11 +265,16 @@ void setup()
     pinMode(low_current_pin, INPUT);
     digitalWrite(low_current_pin, HIGH); /* enable internal pullups */
 
-    _delay_us(100);
+    _delay_us(100); // time to settle
 
     // test output type, pwm or h-bridge
-    rc_pwm = digitalRead(rc_pwm_pin);
-
+#ifndef VNH2SP30
+    pwm_style = digitalRead(pwm_style_pin);
+#endif
+    if(pwm_style) {
+        digitalWrite(pwm_output_pin, LOW); /* enable internal pullups */
+        pinMode(pwm_output_pin, OUTPUT);
+    }
     // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
     shunt_resistance = digitalRead(shunt_sense_pin);
 
@@ -318,6 +284,22 @@ void setup()
         max_current = 2000; // 20 amps
     else
         max_current = 6000; // 60 amps
+
+    // setup adc
+    DIDR0 = 0x3f; // disable all digital io on analog pins
+    if(pwm_style == 2)
+        ADMUX = _BV(REFS0) | _BV(MUX0); // 5v
+    else
+        ADMUX = _BV(REFS0)| _BV(REFS1) | _BV(MUX0); // 1.1v
+    ADCSRA = _BV(ADEN) | _BV(ADIE); // enable adc with interrupts
+#ifdef DIV_CLOCK
+    ADCSRA |= _BV(ADPS2) | _BV(ADPS1); // divide clock by 64
+//    ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
+#else
+    ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
+#endif
+    ADCSRA |= _BV(ADSC); // start conversion
+    
 }
 
 uint8_t in_bytes[3];
@@ -337,25 +319,55 @@ uint8_t timeout, rudder_sense = 0;
 uint16_t lastpos = 1000;
 void position(uint16_t value)
 {
-    if(rc_pwm)
+    if(pwm_style == 1)
 #ifdef DIV_CLOCK
         OCR1A = 375 + value * 3 / 8;
 #else
         OCR1A = 1500 + value * 3 / 2;
 #endif
-    else {
+    else if(pwm_style == 2) {
+#ifdef DIV_CLOCK
+        OCR1A = abs((int)value - 1000) * 4;
+#else
+        OCR1A = abs((int)value - 1000) * 4 / 5;
+#endif
+        if(value > 1040) {
+            a_bottom_off;
+            b_bottom_on;
+        } else if(value < 960) {
+            b_bottom_off;
+            a_bottom_on;
+        } else { // low, set pwm for brake
+            a_bottom_off;
+            b_bottom_off;
+        }            
+    } else {
+        // use 62.5 hz at full power to reduce losses
+        // some cycling is required to refresh the bootstrap capacitor
         if(value > 1040) {
 #ifdef DIV_CLOCK
-            OCR1A = (2022 - value) * 4;
+            if(value > 1980) {
+                ICR1=64000;  //fPWM=62.5hz
+                OCR1A = 120 + (2000 - value) * 64;
+            } else {
+                ICR1=4000;  //fPWM=1khz
+                OCR1A = 120 + (2000 - value) * 4;
+            }
 #else
-            OCR1A = (2016 - value) * 16;
+            OCR1A = 120 + (2000 - value) * 64;
 #endif
             TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
         } else if(value < 960) {
 #ifdef DIV_CLOCK
-            OCR1B = (22 + value) * 4;
+            if(value < 20) {
+                ICR1=64000;  //fPWM=62.5hz
+                OCR1B = 120 + (value) * 64;
+            } else {
+                ICR1=4000;  //fPWM=1khz
+                OCR1B = 120 + (value) * 4;
+            }
 #else
-            OCR1B = (16 + value) * 16;
+            OCR1B = 120 + (value) * 64;
 #endif
             TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);
         } else {
@@ -397,7 +409,7 @@ void update_command()
     int16_t slow_rate = max_slew_slow;
     //uint16_t cur_value = OCR1A * 2 / 3 - 1000;
     uint16_t cur_value = lastpos;
-    int16_t diff = command_value - cur_value;
+    int16_t diff = (int)command_value - (int)cur_value;
 
     // limit motor speed change to stay within speed and slow slew rates
     if(cur_value > 1000) {
@@ -415,6 +427,7 @@ void update_command()
             if(diff > slow_rate)
                 diff = slow_rate;
     }
+
     position(cur_value + diff);
 }
 
@@ -429,11 +442,16 @@ void disengage()
 
 void detach()
 {
-    if(rc_pwm) {
+    if(pwm_style) {
         TCCR1A=0;
         TCCR1B=0;
         while(digitalRead(pwm_output_pin)); // wait for end of pwm if pulse is high
         TIMSK1 = 0;
+        if(pwm_style == 2) {
+            a_bottom_off;
+            b_bottom_off;
+            digitalWrite(enable_pin, LOW);
+        }
     } else {
         TCCR1A=0;
         TCCR1B=0;
@@ -452,7 +470,7 @@ void engage()
     if(flags & ENGAGED)
         return;
 
-    if(rc_pwm) {
+    if(pwm_style == 1) {
         TCNT1 = 0x1fff;
         //Configure TIMER1
         TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
@@ -462,18 +480,38 @@ void engage()
 #else
         ICR1=40000;  //fPWM=50Hz (Period = 20ms Standard).
 #endif
-
         TIMSK1 = _BV(TOIE1);
-    //pinMode(pwm_output_pin, OUTPUT);
+    } else if(pwm_style == 2) {
+        TCNT1 = 16000;
+        TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
+        TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS10); //PRESCALER=0 MODE 14(FAST PWM)
+#ifdef DIV_CLOCK
+        // use 1khz safe at all speeds.   20khz is nice to avoid
+        // audible sound, but you need to set minimum speed to 20-30%
+        // or it will overheat the part at very low speeds.
+        ICR1=4000;  //fPWM=1khz
+#else
+        ICR1=800;  //fPWM=20khz
+#endif
+        TIMSK1 = _BV(TOIE1);
+
+        digitalWrite(hbridge_a_bottom_pin, LOW);
+        digitalWrite(hbridge_b_bottom_pin, LOW);
+        digitalWrite(enable_pin, LOW);
+
+        pinMode(hbridge_a_bottom_pin, OUTPUT);
+        pinMode(hbridge_b_bottom_pin, OUTPUT);
+        pinMode(enable_pin, INPUT);
+
+        digitalWrite(enable_pin, HIGH);
     } else {
-        //TCNT1 = 0x1fff;
         //Configure TIMER1
         TCCR1A=_BV(WGM11);        //NON Inverted PWM
         TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS10); //PRESCALER=0 MODE 14(FAST PWM)
 #ifdef DIV_CLOCK
-        ICR1=4000;  //fPWM=1khz
+        ICR1=64000;  //fPWM=62.5hz
 #else
-        ICR1=16000;  //fPWM=1khz
+        ICR1=64000;  //fPWM=62.5hz
 #endif
         TIMSK1 = 0;
         a_top_off;
@@ -525,7 +563,7 @@ uint8_t adc_cnt;
 // has 6862 samples/s
 ISR(ADC_vect)
 {
-    if(rc_pwm)
+    if(pwm_style)
         ADCSRA |= _BV(ADSC); // enable conversion
     else
         sei(); // enable nested interrupts to ensure correct operation
@@ -553,18 +591,41 @@ ISR(ADC_vect)
 
     // advance to next channel
     adc_cnt = 0;
+    
     if(++adc_counter >= CHANNEL_COUNT)
         adc_counter=0;
+#ifdef DISABLE_VOLTAGE_SENSE
+    if(adc_counter == VOLTAGE)
+        adc_counter++;
+#endif
+#ifdef DISABLE_TEMP_SENSE
+    if(adc_counter == CONTROLLER_TEMP)
+        adc_counter+=2;
+#endif
+#ifdef DISABLE_RUDDER
+    if(adc_counter == RUDDER)
+        adc_counter=0;
+#endif
     ADMUX = defmux | muxes[adc_counter];
 ret:;
-    if(!rc_pwm)
+    if(!pwm_style)
         ADCSRA |= _BV(ADSC); // enable conversion
 }
 
 uint16_t CountADC(uint8_t index, uint8_t p)
 {
-//    if(index == CURRENT)
-//        adc_results[index][p].count++;
+#ifdef DISABLE_VOLTAGE_SENSE
+    if(index == VOLTAGE)
+        return 0;
+#endif
+#ifdef DISABLE_TEMP_SENSE
+    if(index == CONTROLLER_TEMP || index == MOTOR_TEMP)
+        return 0;
+#endif
+#ifdef DISABLE_RUDDER_SENSE
+    if(index == RUDDER)
+        return 0;
+#endif
     return adc_results[index][p].count;
 }
 
@@ -602,6 +663,9 @@ uint16_t TakeAmps(uint8_t p)
 {
     uint32_t v = TakeADC(CURRENT, p);
 
+    if(pwm_style == 2) // VNH2SP30
+        return v * 9 / 34 / 16;
+    
     if(low_current) {
     // current units of 10mA
     // 275 / 128 = 100.0/1024/.05*1.1   for 0.05 ohm shunt
@@ -697,12 +761,17 @@ ISR(WDT_vect)
     asm volatile ("ijmp" ::"z" (0x0000));
 }
 
-static volatile uint8_t timer1_cnt;
+static volatile uint8_t timer1_cnt = 0;
 ISR(TIMER1_OVF_vect)
 {
-    if(rc_pwm)
+    if(pwm_style) {
+        if(pwm_style == 2) {
+            if(++timer1_cnt < 20)
+                return; // update slew speeds at 50hz
+            timer1_cnt = 0;
+        }
         update_command();
-    else {
+    } else {
         if(lastpos > 1000) {
             a_top_off;
             dead_time;
@@ -809,7 +878,7 @@ void process_packet()
         disengage();
         break;
     case MAX_SLEW_CODE:
-        max_slew_speed = in_bytes[1];
+//        max_slew_speed = in_bytes[1];
         max_slew_slow = in_bytes[2];
 
         // if set at the end of range (up to 255)  no slew limit
@@ -931,7 +1000,7 @@ void loop()
         // 110C indicates software fault
         if(controller_temp > 11000) {
             stop();
-            asm volatile ("ijmp" ::"z" (0x0000));
+            asm volatile ("ijmp" ::"z" (0x0000)); // attempt soft reset
         }
     }
 
