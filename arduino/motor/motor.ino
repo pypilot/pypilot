@@ -109,12 +109,31 @@ PWR+             VIN
 
 // run at 4mhz instead of 16mhz to save power,
 // and to be able to measure lower current from the shunt
-#define DIV_CLOCK
 
-#ifdef DIV_CLOCK
-#define dead_time _delay_us(1) // this is quite a long dead time, 1 seems safe
+#define DIV_CLOCK 4  // 1 for 16mhz, 2 for 8mhz, 4 for 4mhz
+#define QUIET  // don't use 1khz
+
+#if DIV_CLOCK==4
+#define dead_time \
+    asm volatile ("nop"); \
+    asm volatile ("nop");
+#elif DIV_CLOCK==2
+#define dead_time \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
+    asm volatile ("nop");
+#elif DIV_CLOCK==1
+#define dead_time \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
+    asm volatile ("nop");
 #else
-#define dead_time _delay_us(8) // this is quite a long dead time
+#error "invalid DIV_CLOCK"
 #endif
 
 //#define HIGH_CURRENT_OLD   // high current uses 500uohm resistor and 50x amplifier
@@ -190,9 +209,12 @@ uint16_t max_current;
 
 void setup()
 {
-#ifdef DIV_CLOCK
+#if DIV_CLOCK==4
     CLKPR = _BV(CLKPCE);
     CLKPR = _BV(CLKPS1); // divide by 4
+#elif DIV_CLOCK==2
+    CLKPR = _BV(CLKPCE);
+    CLKPR = _BV(CLKPS0); // divide by 2
 #endif
     // Disable all interrupts
     cli();
@@ -230,11 +252,7 @@ void setup()
 
     serialin = 0;
     // set up Serial library
-#ifdef DIV_CLOCK
-    Serial.begin(38400*4);
-#else
-    Serial.begin(38400);
-#endif
+    Serial.begin(38400*DIV_CLOCK);
 
     set_sleep_mode(SLEEP_MODE_IDLE); // wait for serial
 
@@ -285,6 +303,7 @@ void setup()
     else
         max_current = 6000; // 60 amps
 
+#if 1
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
     if(pwm_style == 2)
@@ -292,14 +311,14 @@ void setup()
     else
         ADMUX = _BV(REFS0)| _BV(REFS1) | _BV(MUX0); // 1.1v
     ADCSRA = _BV(ADEN) | _BV(ADIE); // enable adc with interrupts
-#ifdef DIV_CLOCK
+#if DIV_CLOCK==4
     ADCSRA |= _BV(ADPS2) | _BV(ADPS1); // divide clock by 64
 //    ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
 #else
     ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
 #endif
     ADCSRA |= _BV(ADSC); // start conversion
-    
+#endif    
 }
 
 uint8_t in_bytes[3];
@@ -313,24 +332,19 @@ uint16_t max_motor_temp = 7000; // 70C
 uint16_t max_slew_speed = 15, max_slew_slow = 35; // 200 is full power in 1/10th of a second
 uint16_t min_rudder_pos = 0, max_rudder_pos = 65472;
 
-uint8_t timeout, rudder_sense = 0;
+uint8_t timeout;
+uint8_t rudder_sense = 0;
 
 // command is from 0 to 2000 with 1000 being neutral
 uint16_t lastpos = 1000;
 void position(uint16_t value)
 {
+    uint16_t OCR1A_u = 16000, OCR1B_u = 16000, ICR1_u = 1000;
+    lastpos = value;
     if(pwm_style == 1)
-#ifdef DIV_CLOCK
-        OCR1A = 375 + value * 3 / 8;
-#else
-        OCR1A = 1500 + value * 3 / 2;
-#endif
+        OCR1A_u = 1500/DIV_CLOCK + value * 3 / 4;
     else if(pwm_style == 2) {
-#ifdef DIV_CLOCK
-        OCR1A = abs((int)value - 1000) * 4;
-#else
-        OCR1A = abs((int)value - 1000) * 4 / 5;
-#endif
+        OCR1A_u = abs((int)value - 1000) * DIV_CLOCK;
         if(value > 1040) {
             a_bottom_off;
             b_bottom_on;
@@ -344,42 +358,57 @@ void position(uint16_t value)
     } else {
         // use 62.5 hz at full power to reduce losses
         // some cycling is required to refresh the bootstrap capacitor
-        if(value > 1040) {
-#ifdef DIV_CLOCK
-            if(value > 1980) {
-                ICR1=64000;  //fPWM=62.5hz
-                OCR1A = 120 + (2000 - value) * 64;
-            } else {
-                ICR1=4000;  //fPWM=1khz
-                OCR1A = 120 + (2000 - value) * 4;
-            }
-#else
-            OCR1A = 120 + (2000 - value) * 64;
+        // but the current through the motor remains continuous
+        if(value > 1100) {
+            if(value > 1900) {
+                ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
+                OCR1A_u = 120; // 99.8125% duty cycle
+#ifndef QUIET                
+            } else if(value > 1900) {
+                ICR1_u=16000/DIV_CLOCK;  //fPWM=1khz
+                OCR1A_u = 20 + (1900 - value)*(16/DIV_CLOCK);
 #endif
+            } else {
+                ICR1_u=1000/DIV_CLOCK;  //fPWM=16khz
+                OCR1A_u = 20 + (2000 - value)/DIV_CLOCK;
+            }
             TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
-        } else if(value < 960) {
-#ifdef DIV_CLOCK
-            if(value < 20) {
-                ICR1=64000;  //fPWM=62.5hz
-                OCR1B = 120 + (value) * 64;
-            } else {
-                ICR1=4000;  //fPWM=1khz
-                OCR1B = 120 + (value) * 4;
-            }
-#else
-            OCR1B = 120 + (value) * 64;
+        } else if(value < 900) {
+            if(value < 100) {
+                ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
+                OCR1B_u = 120;
+#ifndef QUIET                
+            } else if(value < 100) {
+                ICR1_u=16000/DIV_CLOCK;  //fPWM=1khz
+                OCR1B_u = 20 + (value-100)*16/DIV_CLOCK;
 #endif
+            } else {
+                ICR1_u=1000/DIV_CLOCK;  //fPWM=16khz
+                OCR1B_u = 20 + (value)/DIV_CLOCK;
+            }
             TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);
         } else {
-            TIMSK1 = _BV(TOIE1); // set brake
+            TIMSK1 = 0;//_BV(TOIE1);
             a_top_off;
             b_top_off;
             dead_time;
-            a_bottom_on;
-            b_bottom_on;
+//            a_bottom_on;  // set brake
+//            b_bottom_on;
+            a_bottom_off;
+            b_bottom_off;
+        }
+
+        if(TIMSK1) {
+            OCR1A = OCR1A_u;
+            OCR1B = OCR1B_u;
+            if(ICR1 != ICR1_u) {
+                cli();
+                ICR1 = ICR1_u;
+                TCNT1 = ICR1_u - 40; // ensure timer is before new end
+                sei();
+            }
         }
     }
-    lastpos = value;
 }
 
 uint16_t command_value = 1000;
@@ -435,7 +464,7 @@ void disengage()
 {
     stop();
     flags &= ~ENGAGED;
-    timeout = 60; // detach in about 62ms
+    timeout = 120/DIV_CLOCK+1; // detach in about 62ms
     digitalWrite(clutch_pin, LOW); // clutch
     digitalWrite(led_pin, LOW); // status LED
 }
@@ -462,38 +491,33 @@ void detach()
         b_bottom_off;
     }
     TIMSK2 = 0;
-    timeout = 64; // avoid overflow
+    timeout = 128/DIV_CLOCK; // avoid overflow
 }
 
 void engage()
 {
-    if(flags & ENGAGED)
+    if(flags & ENGAGED) {
+        //update_command(); // 30hz
         return;
+    }
 
     if(pwm_style == 1) {
         TCNT1 = 0x1fff;
         //Configure TIMER1
         TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
         TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
-#ifdef DIV_CLOCK
-        ICR1=10000;  //fPWM=50Hz (Period = 20ms Standard).
-#else
-        ICR1=40000;  //fPWM=50Hz (Period = 20ms Standard).
-#endif
-        TIMSK1 = _BV(TOIE1);
+        ICR1=40000/DIV_CLOCK;  //fPWM=50Hz (Period = 20ms Standard).
+        TIMSK1 = 0;
     } else if(pwm_style == 2) {
-        TCNT1 = 16000;
+        TCNT1 = 0;
         TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
         TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS10); //PRESCALER=0 MODE 14(FAST PWM)
-#ifdef DIV_CLOCK
+
         // use 1khz safe at all speeds.   20khz is nice to avoid
         // audible sound, but you need to set minimum speed to 20-30%
         // or it will overheat the part at very low speeds.
-        ICR1=4000;  //fPWM=1khz
-#else
-        ICR1=800;  //fPWM=20khz
-#endif
-        TIMSK1 = _BV(TOIE1);
+        ICR1=16000/DIV_CLOCK;  //fPWM=1khz
+        TIMSK1 = 0;
 
         digitalWrite(hbridge_a_bottom_pin, LOW);
         digitalWrite(hbridge_b_bottom_pin, LOW);
@@ -506,15 +530,12 @@ void engage()
         digitalWrite(enable_pin, HIGH);
     } else {
         //Configure TIMER1
-        TCNT1 = 16000;
+        TIMSK1 = 0;
+        TCNT1 = 0;
         TCCR1A=_BV(WGM11);        //NON Inverted PWM
         TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS10); //PRESCALER=0 MODE 14(FAST PWM)
-#ifdef DIV_CLOCK
-        ICR1=4000;  //fPWM=62.5hz
-#else
-        ICR1=64000;  //fPWM=62.5hz
-#endif
-        TIMSK1 = 0;
+        ICR1=16000/DIV_CLOCK;  //fPWM=1khz
+
         a_top_off;
         a_bottom_off;
         b_top_off;
@@ -526,20 +547,16 @@ void engage()
         pinMode(hbridge_b_top_pin, OUTPUT);
     }
 
-// use timer2 as timeout
-    timeout = 0;
-#ifdef DIV_CLOCK
-    TCCR2B = _BV(CS22) | _BV(CS21); // divide 256
-#else
-    TCCR2B = _BV(CS20) | _BV(CS21) | _BV(CS22); // divide 1024
-#endif
-    TIMSK2 = _BV(TOIE2);
-
-    flags |= ENGAGED;
-
     position(1000);
     digitalWrite(clutch_pin, HIGH); // clutch
     digitalWrite(led_pin, HIGH); // status LED
+
+// use timer2 as timeout
+    timeout = 0;
+    TCNT2 = 0;
+    TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20); // divide 1024
+
+    flags |= ENGAGED;
 }
 
 // set hardware pwm to period of "(1500 + 1.5*value)/2" or "750 + .75*value" microseconds
@@ -675,11 +692,7 @@ uint16_t TakeAmps(uint8_t p)
             return v * 275 / 128 / 16;
 
         if(v > 16)
-#ifdef DIV_CLOCK
-            v = v * 1375 / 128 / 16; // 200mA minimum
-#else
-        v = v * 1375 / 128 / 16 + 55; // 550mA minimum
-#endif
+            v = v * 1375 / 128 / 16; // 550mA minimum
         else
             v = 0;
         return v;
@@ -692,11 +705,7 @@ uint16_t TakeAmps(uint8_t p)
         return v * 275 / 128 / 16;
 #else
         if(v > 16)
-#ifdef DIV_CLOCK
-            v = v * 275 / 64 / 16; // 420mA offset
-#else
             v = v * 275 / 64 / 16 + 82; // 820mA offset
-#endif
 #endif
         return v;
     }
@@ -762,43 +771,40 @@ ISR(WDT_vect)
     asm volatile ("ijmp" ::"z" (0x0000));
 }
 
-static volatile uint8_t timer1_cnt = 0;
+//ISR(TIMER1_OVF_vect) __attribute__((naked));
 ISR(TIMER1_OVF_vect)
 {
-    if(pwm_style) {
-        if(pwm_style == 2) {
-            if(++timer1_cnt < 20)
-                return; // update slew speeds at 50hz
-            timer1_cnt = 0;
-        }
-        update_command();
-    } else {
-        if(lastpos > 1000) {
+//        asm volatile ("push r24");
+
+        if(TIMSK1 & _BV(OCIE1A)) {
             a_top_off;
             dead_time;
             a_bottom_on;
-        } else if(lastpos < 1000) {
+//            asm volatile ("reti");
+        } else if(TIMSK1 & _BV(OCIE1B)) {
             b_top_off;
             dead_time;
             b_bottom_on;
         }
-        sei();
-        if(++timer1_cnt == 20) { // update slew speeds at 50hz
-            update_command();
-            timer1_cnt = 0;
-        }
-    }
+//    asm volatile ("pop r24");
+//    asm volatile ("reti");
 }
 
+// use naked interrupts for maximum reaction
+// this improves the upper range especially at
+// 16khz with only 4mhz clock
+ISR(TIMER1_COMPA_vect) __attribute__((naked));
 ISR(TIMER1_COMPA_vect)
 {
     a_bottom_off;
     b_top_off;
-    dead_time;
+    dead_time
     a_top_on;
     b_bottom_on;
+    asm volatile ("reti");
 }
 
+ISR(TIMER1_COMPB_vect) __attribute__((naked));
 ISR(TIMER1_COMPB_vect)
 {
     b_bottom_off;
@@ -806,16 +812,7 @@ ISR(TIMER1_COMPB_vect)
     dead_time;
     b_top_on;
     a_bottom_on;
-}
-
-ISR(TIMER2_OVF_vect)
-{
-    sei();
-    timeout++;
-    if(timeout == 60)
-        disengage();
-    if(timeout >= 64) // detach 60 ms later so esc gets stop
-        detach();
+    asm volatile ("reti");
 }
 
 void process_packet()
@@ -884,9 +881,9 @@ void process_packet()
 
         // if set at the end of range (up to 255)  no slew limit
         if(max_slew_speed > 250)
-            max_slew_speed = 1000;
+            max_slew_speed = 250;
         if(max_slew_slow > 250)
-            max_slew_slow = 1000;
+            max_slew_slow = 250;
 
         // must have some slew
         if(max_slew_speed < 1)
@@ -900,6 +897,27 @@ void process_packet()
 void loop()
 {
     wdt_reset(); // strobe watchdog
+
+    // did timer2 pass 78?
+    // Timer2 ticks at 3906hz (4mhz), so this is ~50hz
+    if(TCNT2 > 78) {
+        if(flags & ENGAGED) {
+            static uint8_t update_d;
+            if(++update_d >= 4/DIV_CLOCK) {
+                update_command(); // 30hz
+                update_d = 0;
+            }
+        }
+
+        timeout++;
+        TCNT2 -= 78;
+    }
+
+    if(timeout == 120/DIV_CLOCK)
+        disengage();
+
+    if(timeout >= 128/DIV_CLOCK) // detach 60 ms later so esc gets stop
+        detach();
 
     // wait for characters
     // boot powered down, wake on data
