@@ -25,7 +25,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         self.client = False
 
-        self.enabled = False
         self.mode = 'compass'
         self.heading_command = 0
         self.heading = 0
@@ -87,7 +86,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         # add continuous value to avoid timeout
         if not 'ap.heading' in value_list:
-            self.watchlist.append('servo.voltage')
+            self.watchlist.append('servo.current')
         
         for name in self.watchlist:
             if name in value_list:
@@ -106,7 +105,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def set_mode_color(self):
         modecolors = {'compass': wx.GREEN, 'gps': wx.YELLOW,
                       'wind': wx.BLUE, 'true wind': wx.CYAN}
-        if self.enabled and self.mode in modecolors:
+        if self.tbAP.GetValue() and self.mode in modecolors:
             color = modecolors[self.mode]
         else:
             color = wx.RED
@@ -119,13 +118,16 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.client = SignalKClient(self.on_con, self.host, autoreconnect=False)
                 self.timer.Start(100)
                 self.lastmsgtime = time.time()
+
+                self.tbAP.SetValue(False)
+                self.set_mode_color()
             except socket.error:
                 self.timer.Start(5000)
                 return
             
         command = self.sCommand.GetValue()
         if command != 0:
-            if self.enabled:
+            if self.tbAP.GetValue():
                 self.heading_command += self.apply_command(command)
                 self.client.set('ap.heading_command', self.heading_command)
                 self.sCommand.SetValue(0)
@@ -193,12 +195,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
             if found:
                 pass
-            elif name == 'servo.raw_command':
-                self.tbAP.SetValue(False)
-                self.tbAP.SetForegroundColour(wx.RED)
+#            elif name == 'servo.raw_command':
+#                self.tbAP.SetValue(False)
+#                self.tbAP.SetForegroundColour(wx.RED)
             elif name == 'ap.enabled':
                 self.tbAP.SetValue(value)
-                self.enabled = value
                 self.set_mode_color()
             elif name == 'ap.mode':
                 rb = {'compass': self.rbCompass, 'gps': self.rbGPS, 'wind': self.rbWind, 'true wind': self.rbTrueWind}
@@ -226,7 +227,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.stController.SetLabel(value)
             elif name == 'servo.mode':
                 self.stMode.SetLabel(value)
-            elif name == 'servo.voltage':
+            elif name == 'servo.current':
                 pass # timeout value to know we are receiving
             else:
                 print 'warning: unhandled message "%s"' % name
