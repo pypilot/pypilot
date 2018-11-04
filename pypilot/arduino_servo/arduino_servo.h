@@ -23,7 +23,7 @@ private:
     void raw_command(uint16_t value);
     int process_packet(uint8_t *in_buf);
     int in_sync_count;
-    uint8_t in_buf[64];
+    uint8_t in_buf[256];
     int in_buf_len;
     int fd;
     int out_sync;
