@@ -297,7 +297,6 @@ void ArduinoServo::send_params()
             break;
         }
 
-    send_value(COMMAND_CODE, value);
     if(++out_sync == 23)
         out_sync = 0;
 }
