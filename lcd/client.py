@@ -654,7 +654,7 @@ class LCDClient():
             if self.last_val('imu.loopfreq') == 0:
                 r = rectangle(0, 0, 1, .92)
                 self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
-                self.control['heading_command'] = 'no imu'
+                self.control['heading'] = 'no imu'
                 return
         else:
             draw_big_number((0,0), self.last_val('ap.heading'), self.control['heading'])
@@ -1095,6 +1095,8 @@ class LCDClient():
                 code = LIRC.nextcode(1)
                 if not code:
                     break
+                print 'LIRC code', code # tracking strange bug...
+                sys.stdout.flush() # update log so timestamp is accurate
                 repeat = code[0]['repeat']
 
                 lirc_mapping = {'up': UP, 'down': DOWN, 'left': LEFT, 'right': RIGHT,

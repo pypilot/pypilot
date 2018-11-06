@@ -187,7 +187,7 @@ int ArduinoServo::poll()
             if(c < cnt)
                 break;
             in_buf_len = 0;
-            printf("arduino server buffer overflow\n");
+            printf("arduino servo buffer overflow\n");
         }
         if(c<0) {
             if(errno != EAGAIN)
@@ -297,6 +297,7 @@ void ArduinoServo::send_params()
             break;
         }
 
+    send_value(COMMAND_CODE, value);
     if(++out_sync == 23)
         out_sync = 0;
 }

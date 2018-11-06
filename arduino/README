@@ -1,18 +1,25 @@
-cheapest arduino sometimes has wrong fuses set:
-
-load arduino isp sketch to arduino
-read fuses
-avrdude -c avrisp -b 19200 -P /dev/ttyUSB1 -u -p m328p -U hfuse:r:-:h -U lfuse:r:-:h -U efuse:r:-:h
-
-0xda
-0xff
-0x5
-
-avrdude -c avrisp -b 19200 -P /dev/ttyUSB1 -u -p m328p -U efuse:w:0x4:m
-
 pypilot can communicate with arduinos over serial port
 
 motor - motor controller   binary checksum 4 byte protocol (38400 baud)
         used by pypilot to control motor
 weather sensors - nmea0183 wind, presure and air temp (38400 baud)
+
+
+
+NOTE, if BAD_FUSES flag is raised, it because the
+cheapest arduino clones sometimes has wrong fuses set:
+
+load arduino isp sketch to one arduino to program another, connect 6 wires as described in arduinoisp sketch
+
+read fuses
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB1 -u -p m328p -U hfuse:r:-:h -U lfuse:r:-:h -U efuse:r:-:h -U lock:r:-:h
+
+0xda
+0xff
+0x5
+0xf
+
+If you get different values, you must correct them such as:
+
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB1 -u -p m328p -U efuse:w:0x4:m
 

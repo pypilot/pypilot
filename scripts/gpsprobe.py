@@ -23,16 +23,13 @@ class GpsProbe():
                 self.gpsd = gps.gps(mode=gps.WATCH_ENABLE) #starting the stream of info
                 self.gpsd.next() # flush initial message
                 self.gpsd.activated = False
-                print 'GPS connected to gpsd'
                 return
 
             except socket.error:
                 time.sleep(3)
 
     def probe(self):
-        print 'GPS probing gpsd...'
-
-        if not os.system('timeout -s KILL -t 5 gpsctl'):
+        if not os.system('timeout -s KILL -t 5 gpsctl 2> /dev/null'):
             return True
 
         # try to probe all possible usb devices
@@ -45,8 +42,7 @@ class GpsProbe():
         for device in devices:
             if not os.path.exists(device):
                 continue
-            print 'GPS probing:', device
-            if not os.system('timeout -s KILL -t 5 gpsctl -f ' + device):
+            if not os.system('timeout -s KILL -t 5 gpsctl -f ' + device + ' 2> /dev/null'):
                 os.environ['GPSD_SOCKET'] = '/tmp/gpsd.sock'
                 os.system('gpsdctl add ' + device)
                 print 'GPS found: ' + device
@@ -75,8 +71,6 @@ class GpsProbe():
             if self.probe():
                 self.gpsd.activated = True
                 print 'GPS probe success'
-            else:
-                print 'GPS probe failed'
 
         activated = self.gpsd.activated
         del self.gpsd

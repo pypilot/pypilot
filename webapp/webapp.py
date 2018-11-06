@@ -42,7 +42,7 @@ class MyNamespace(Namespace):
         self.polls = {}
 
     def connect_signalk(self):
-        print 'connect...'
+        print 'connect signalk...'
         connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socketio.emit('flush') # unfortunately needed to awaken socket for client messages
         try:
@@ -50,7 +50,7 @@ class MyNamespace(Namespace):
         except:
             socketio.sleep(2)
             return
-        print 'connected'
+        print 'connected to pypilot signalk'
 
         self.client = LineBufferedNonBlockingSocket(connection)
         self.client.send('{"method": "list"}\n')
@@ -76,6 +76,7 @@ class MyNamespace(Namespace):
         polls_sent = {}
         while True:
             socketio.sleep(.25)
+            sys.stdout.flush() # update log
             if self.client:
                 polls = {}
                 for sid in self.polls:
@@ -99,7 +100,7 @@ class MyNamespace(Namespace):
                 fd, flag = event
                 if flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL) \
                    or not self.client.recv():
-                    print 'disconnected'
+                    print 'client disconnected'
                     self.client.socket.close()
                     socketio.emit('signalk_disconnect', self.list_values)
                     self.client = False
@@ -124,7 +125,8 @@ class MyNamespace(Namespace):
 
     def on_signalk(self, message):
         #print 'msg',  message
-        self.client.send(message + '\n')
+        if self.client:
+            self.client.send(message + '\n')
 
     def on_signalk_poll(self, message):
         #print 'message', message
@@ -153,9 +155,10 @@ class MyNamespace(Namespace):
         #    client.socket.close()
         del self.polls[request.sid]
         if not self.polls:
-            self.client.socket.close()
-            self.client = False
-            print 'closed signalk client'
+            if self.client:
+                self.client.socket.close()
+                self.client = False
+                print 'closed signalk client'
         print('Client disconnected', request.sid, len(self.polls))
 
 socketio.on_namespace(MyNamespace(''))

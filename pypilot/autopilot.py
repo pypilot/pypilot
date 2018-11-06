@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2018 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -22,6 +22,7 @@ from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 from boatimu import *
 from resolv import *
+import tacking
 
 from nmea import Nmea
 import servo
@@ -78,7 +79,8 @@ class ModeProperty(EnumProperty):
         # update the last mode when the user changes the mode
         # it should only revert to the last mode if the mode was lost
         if self.ap:
-          self.ap.lastmode = value
+          if self.ap.enabled.value:
+            self.ap.lastmode = value
           self.ap.lost_mode.update(False)
         super(ModeProperty, self).set(value)    
 
@@ -116,7 +118,7 @@ class AutopilotBase(object):
     self.boatimu = BoatIMU(self.server)
     self.servo = servo.Servo(self.server)
     self.nmea = Nmea(self.server)
-    self.version = self.Register(JSONValue, 'version', name + ' ' + 'pypilot' + ' ' + str(0.3))
+    self.version = self.Register(JSONValue, 'version', name + ' ' + 'pypilot' + ' ' + str(0.4))
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
 
@@ -124,10 +126,8 @@ class AutopilotBase(object):
 
     self.mode = self.Register(ModeProperty, 'mode')
     self.mode.ap = self
-
-    self.lastmode = self.mode.value
-                              
     self.lastmode = False
+
     self.last_heading = False
     self.last_heading_off = self.boatimu.heading_off.value
 
@@ -136,6 +136,8 @@ class AutopilotBase(object):
     self.heading_error = self.Register(SensorValue, 'heading_error', timestamp)
     self.heading_error_int = self.Register(SensorValue, 'heading_error_int', timestamp)
     self.heading_error_int_time = time.time()
+
+    self.tack = tacking.Tack(self)
 
     self.gps_compass_offset = self.Register(SensorValue, 'gps_offset', timestamp, directional=True)
     self.gps_speed = self.Register(SensorValue, 'gps_speed', timestamp)
@@ -197,7 +199,7 @@ class AutopilotBase(object):
   def mode_found(self):
     self.mode.set(self.lastmode)
     self.lost_mode.set(False)
-          
+
   def iteration(self):
       data = False
       t00 = time.time()
@@ -302,14 +304,18 @@ class AutopilotBase(object):
 
       if self.enabled.value:
           if self.mode.value != self.lastmode: # mode changed?
+            if self.lastmode:
               err = self.heading_error.value
               if 'wind' in self.mode.value:
                   err = -err
-              self.heading_command.set(resolv(self.heading.value - err, 180))
+            else:
+              err = 0 # no error if enabling
+            self.heading_command.set(resolv(self.heading.value - err, 180))
           self.runtime.update()
           self.servo.servo_calibration.stop()
       else:
           self.runtime.stop()
+          self.lastmode = False
 
       # filter the incoming heading and gyro heading
       # error +- 60 degrees
@@ -329,7 +335,9 @@ class AutopilotBase(object):
       # int error +- 1, from 0 to 1500 deg/s
       self.heading_error_int.set(minmax(self.heading_error_int.value + \
                                         (self.heading_error.value/1500)*dt, 1))
-      self.process_imu_data() # implementation specific process
+
+      if not self.tack.process():
+        self.process_imu_data() # implementation specific process
 
       # servo can only disengauge under manual control
       self.servo.force_engaged = self.enabled.value
