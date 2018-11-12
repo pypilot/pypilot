@@ -33,8 +33,8 @@ extern "C" {
   #include <twi.h>
 }
 
-//#define ANENOMETER   // comment to show only baro graph
-#define LCD
+#define ANENOMETER   // comment to show only baro graph
+//#define LCD
 
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
