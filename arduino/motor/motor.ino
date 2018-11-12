@@ -9,7 +9,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include <HardwareSerial.h>
-#include <EEPROM.h>
+
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 #include <avr/boot.h>
@@ -208,8 +208,20 @@ uint16_t max_current;
 
 #include "crc.h"
 
-#define eeprom_read(i) ((EEPROM.read(i) << 8) | EEPROM.read((i) + 1))
-#define eeprom_write(i, x) { EEPROM.write(i, (x) >> 8); EEPROM.write((i) + 1, (x) & 0xff); }
+#include <avr/eeprom.h>
+
+uint8_t eeprom_read_8(int address)
+{
+    return eeprom_read_byte((unsigned char *) address);
+}
+
+void eeprom_write_8(int address, uint8_t value)
+{
+    eeprom_update_byte((unsigned char *) address, value);
+}
+
+#define eeprom_read(i) ((eeprom_read_8(i) << 8) | eeprom_read_8(i + 1))
+#define eeprom_write(i, x) { eeprom_write_8(i, (x) >> 8); eeprom_write_8((i) + 1, (x) & 0xff); }
 uint16_t max_controller_temp = 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
 uint16_t max_slew_speed = 15, max_slew_slow = 35; // 200 is full power in 1/10th of a second
@@ -336,14 +348,15 @@ void setup()
 #endif    
 
     // test signature = 'pypilot' and version '0'
-    if (EEPROM.read(0) != 'p' || EEPROM.read(1) != 'y' ||
-        EEPROM.read(2) != 'p' || EEPROM.read(3) != 'i' ||
-        EEPROM.read(4) != 'l' || EEPROM.read(5) != 'o' ||
-        EEPROM.read(6) != 't' || EEPROM.read(7) != '0') {
-        EEPROM.write(0, 'p'); EEPROM.write(1, 'y');
-        EEPROM.write(2, 'p'); EEPROM.write(3, 'i');
-        EEPROM.write(4, 'l'); EEPROM.write(5, 'o');
-        EEPROM.write(6, 't'); EEPROM.write(7, '0');
+    const char *signature="pypilot0";
+    uint8_t len = (sizeof signature) / (sizeof *signature), i;
+    for(i=0; i<len; i++)
+        if(eeprom_read_8(i) != signature[i])
+            break;
+    if(i < len) {
+        for(uint8_t i=0; i<len; i++)
+            eeprom_write_8(i, signature[i]);
+
         eeprom_write(8, max_controller_temp);
         eeprom_write(10, max_motor_temp);
         eeprom_write(12, max_slew_speed);
