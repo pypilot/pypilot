@@ -20,6 +20,9 @@ import os.path
 from signalk.server import *
 from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
+
+strversion = "0.5"
+
 from boatimu import *
 from resolv import *
 import tacking
@@ -29,6 +32,24 @@ import servo
 
 def minmax(value, r):
   return min(max(value, -r), r)
+
+class TimedQueue(object):
+  def __init__(self, length):
+    self.data = []
+
+  def add(self, data):
+    t = time.time()
+    while self.data and self.data[0][1] < t-length:
+      self.data = self.data[1:]
+    self.data.append((data, t))
+
+  def take(self, t):
+    while self.data:
+      if self.data[0][1] < t:
+        self.data = self.data[:1]
+    if self.data:
+      return self.data[0]
+    return False
 
 class Filter(object):
     def __init__(self,filtered, lowpass):
@@ -84,9 +105,19 @@ class ModeProperty(EnumProperty):
           self.ap.lost_mode.update(False)
         super(ModeProperty, self).set(value)    
 
-class AutopilotBase(object):
-  def __init__(self, name):
-    super(AutopilotBase, self).__init__()
+class AutopilotPilot(object):
+  def __init__(self, name, ap):
+    super(AutopilotPilot, self).__init__()
+    self.name = name
+    self.ap = ap
+
+  def Register(self, _type, name, *args, **kwargs):
+    return self.ap.server.Register(_type(*(['ap.pilot.' + self.name + '.' + name] + list(args)), **kwargs))
+
+import pilots
+class Autopilot(object):
+  def __init__(self):
+    super(Autopilot, self).__init__()
 
     # setup all processes to exit on any signal
     self.childpids = []
@@ -118,7 +149,7 @@ class AutopilotBase(object):
     self.boatimu = BoatIMU(self.server)
     self.servo = servo.Servo(self.server)
     self.nmea = Nmea(self.server)
-    self.version = self.Register(JSONValue, 'version', name + ' ' + 'pypilot' + ' ' + str(0.4))
+    self.version = self.Register(JSONValue, 'version', 'pypilot' + ' ' + strversion)
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
 
@@ -130,6 +161,13 @@ class AutopilotBase(object):
 
     self.last_heading = False
     self.last_heading_off = self.boatimu.heading_off.value
+
+    self.pilots = []
+    for pilot_type in pilots.default:
+      self.pilots.append(pilot_type(self))
+
+    #names = map(lambda pilot : pilot.name, self.pilots)
+    self.pilot = self.Register(EnumProperty, 'pilot', 'basic', ['simple', 'basic', 'learning'])
 
     timestamp = self.server.TimeStamp('ap')
     self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)
@@ -337,7 +375,11 @@ class AutopilotBase(object):
                                         (self.heading_error.value/1500)*dt, 1))
 
       if not self.tack.process():
-        self.process_imu_data() # implementation specific process
+        pass
+        #for pilot in self.pilots:
+          #if pilot.name == self.pilot.value:
+            #pilot.process_imu_data() # implementation specific process
+         #   break
 
       # servo can only disengauge under manual control
       self.servo.force_engaged = self.enabled.value
@@ -378,4 +420,6 @@ class AutopilotBase(object):
 
 
 if __name__ == '__main__':
-  print 'You must run an actual autopilot implementation, eg: simple_autopilot.py'
+  ap = Autopilot()
+  ap.run()
+
