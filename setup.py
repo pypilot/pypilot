@@ -73,7 +73,7 @@ setup (name = 'pypilot',
 #       install_requires	= ['Adafruit-Nokia-LCD>=0.1.0'],
        entry_points={
            'console_scripts': [
-               'pypilot=pypilot.basic_autopilot:main',
+               'pypilot=pypilot.autopilot:main',
                'pypilot_boatimu=pypilot.boatimu:main',
                'pypilot_servo=pypilot.servo:main',
                'pypilot_webapp=webapp.webapp:main',

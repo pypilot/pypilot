@@ -8,17 +8,19 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from autopilot import *
-import servo
 
-class BasicAutopilot(AutopilotBase):
-  def __init__(self, *args, **keywords):
-    super(BasicAutopilot, self).__init__('Basic')
+global default_pilots
+
+class BasicPilot(AutopilotPilot):
+  def __init__(self, ap):
+    super(BasicPilot, self).__init__('basic', ap)
 
     # create filters
-    timestamp = self.server.TimeStamp('ap')
+    timestamp = self.ap.server.TimeStamp('ap')
 
     self.heading_command_rate = self.Register(SensorValue, 'heading_command_rate', timestamp)
-    
+    self.headingrate_queue = TimedQueue(6)
+
     # create simple pid filter
     self.gains = {}
 
@@ -47,23 +49,26 @@ class BasicAutopilot(AutopilotBase):
 
     PosGain('FF',  .5, 3.0)
 
+    PosGain('R',  .1, 1.0)
+
     self.lastenabled = False
 
   def process_imu_data(self):
-    if self.enabled.value != self.lastenabled:
-      self.lastenabled = self.enabled.value
-      if self.enabled.value:
-        self.heading_error_int.set(0) # reset integral
+    ap = self.ap
+    if ap.enabled.value != self.lastenabled:
+      self.lastenabled = ap.enabled.value
+      if ap.enabled.value:
+        ap.heading_error_int.set(0) # reset integral
         # reset feed-forward gain
         self.last_heading_command = self.heading_command.value
         self.heading_command_rate.set(0)
 
     # reset feed-forward error if mode changed
-    if self.mode.value != self.lastmode:
-      self.last_heading_command = self.heading_command.value
+    if ap.mode.value != ap.lastmode:
+      self.last_heading_command = ap.heading_command.value
     
     # if disabled, only bother to compute if a client cares        
-    if not self.enabled.value: 
+    if not ap.enabled.value: 
       compute = False
       for gain in self.gains:
         if self.gains[gain]['sensor'].watchers:
@@ -73,24 +78,27 @@ class BasicAutopilot(AutopilotBase):
         return
     
     # filter the heading command to compute feed-forward gain
-    heading_command_diff = resolv(self.heading_command.value - self.last_heading_command)
-    self.last_heading_command = self.heading_command.value
+    heading_command_diff = resolv(ap.heading_command.value - self.last_heading_command)
+    self.last_heading_command = ap.heading_command.value
     lp = .1
     command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
     self.heading_command_rate.set(command_rate)
 
     # compute command
     command = 0
-    headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
-    headingraterate = self.boatimu.SensorValues['headingraterate_lowpass'].value
+    headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
+    headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
     feedforward_value = self.heading_command_rate.value
-    if not 'wind' in self.mode.value:
+    self.headingrate_queue.add(headingrate)
+    reactive_value = self.headingrate_queue.take(time.time() - ap.servo.period.value*6)
+    if not 'wind' in ap.mode.value:
       feedforward_value = -feedforward_value
-    gain_values = {'P': self.heading_error.value,
-                   'I': self.heading_error_int.value,
+    gain_values = {'P': ap.heading_error.value,
+                   'I': ap.heading_error_int.value,
                    'D': headingrate,      
                    'DD': headingraterate,
-                   'FF': feedforward_value}
+                   'FF': feedforward_value,
+                   'R': reactive_value}
     PR = math.sqrt(abs(gain_values['D']))
     if gain_values['P'] < 0:
       PR = -PR
@@ -103,12 +111,5 @@ class BasicAutopilot(AutopilotBase):
       gains['sensor'].set(gains['compute'](value))
       command += gains['sensor'].value
 
-    if self.enabled.value:
-      self.servo.command.set(command)
-
-def main():
-  ap = BasicAutopilot()
-  ap.run()
-
-if __name__ == '__main__':
-  main()
+    if ap.enabled.value:
+      ap.servo.command.set(command)

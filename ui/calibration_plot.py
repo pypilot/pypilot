@@ -151,6 +151,9 @@ class CalibrationPlot(object):
             self.userscale *= .9
         elif key == GLUT_KEY_INSERT:
             RotateAfter(step, 0, 0, 1)
+        else:
+            return
+        glutPostRedisplay()
 
     def key(self, k, x, y):
         step = 5
