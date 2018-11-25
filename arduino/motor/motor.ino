@@ -196,9 +196,9 @@ void debug(char *fmt, ... ){
     Serial.print(buf);
 }
 
-enum commands {COMMAND_CCODE=0xc7, RESET_CCODE=0xe7, MAX_CURRENT_CCODE=0x1e, MAX_CONTROLLER_TEMP_CCODE=0xa4, MAX_MOTOR_TEMP_CCODE=0x5a, RUDDER_RANGE_CCODE=0xb6, REPROGRAM_CCODE=0x19, DISENGAGE_CCODE=0x68, MAX_SLEW_CCODE=0x71, CURRENT_CORRECTION_CCODE=0xdb, VOLTAGE_CORRECTION_CCODE=0x4e};
+enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53};
 
-enum results {CURRENT_RCODE=0x1c, VOLTAGE_RCODE=0xb3, CONTROLLER_TEMP_RCODE=0xf9, MOTOR_TEMP_RCODE=0x48, RUDDER_SENSE_RCODE=0xa7, FLAGS_RCODE=0x8f, MAX_CURRENT_RCODE=0x1e, MAX_CONTROLLER_TEMP_RCODE=0xa4, MAX_MOTOR_TEMP_RCODE=0x5a, RUDDER_RANGE_RCODE=0xb6, MAX_SLEW_RCODE=0x71, CURRENT_CORRECTION_RCODE=0xdb, VOLTAGE_CORRECTION_RCODE=0x4e};
+enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f, EEPROM_VALUE_CODE=0x9a};
 
 enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, BADVOLTAGE=16*8, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4, BAD_FUSES=256*8};
 
@@ -207,85 +207,77 @@ uint8_t serialin, packet_count = 0;
 
 #include <avr/eeprom.h>
 
-uint8_t eeprom_read_8(int address)
+// we need these to be atomic for 16 bytes
+
+uint16_t eeprom_read_16(int address)
 {
-    return eeprom_read_byte((unsigned char *) address);
+    // ensure atomic update of 16 bits with 3 banks
+    uint16_t v[3];
+    for(int i=0; i<3; i++) {
+        int addr = i*256 + address;
+        v[i] = eeprom_read_word((uint16_t*)addr);
+        //eeprom_read_byte((unsigned char *)addr) | eeprom_read_byte((unsigned char *)addr+1)<<8;
+    }
+
+    if(v[1] == v[2])
+        return v[2];
+
+    return v[0];
 }
 
-void eeprom_write_8(int address, uint8_t value)
+void eeprom_update_16(int address, uint16_t value)
 {
-    eeprom_update_byte((unsigned char *) address, value);
+    // write in 3 locations
+    for(int i=0; i<3; i++) {
+        int addr = i*256 + address;
+        eeprom_update_word((uint16_t*)addr, value);
+//        eeprom_update_byte((unsigned char*)addr, value&0xff);
+//        eeprom_update_byte((unsigned char*)addr+1, value>>8);
+    }
 }
 
-#define eeprom_read(i) ((eeprom_read_8(i) << 8) | eeprom_read_8(i + 1))
-#define eeprom_write(i, x) { eeprom_write_8(i, (x) >> 8); eeprom_write_8((i) + 1, (x) & 0xff); }
-
-struct persistent_value
+uint8_t eeprom_read_8(int address, uint8_t &value)
 {
-    static uint8_t addr;
-    persistent_value(uint16_t initial_value) {
-        init(initial_value);
+    static uint8_t lastvalue, lastaddress=255;
+    if(address & 1) { // odd
+        if(address == lastaddress+1) {
+            value = lastvalue;
+            return 1;
+        } else
+            return 0;
     }
 
-    persistent_value(int8_t offset, uint8_t factor) {
-        init(uint8_t(offset) | (factor<<8));
+    // even
+    uint16_t v = eeprom_read_16(address);
+    value = v&0xff;
+    lastvalue = v >> 8;
+    lastaddress = address;
+    return 1;
+}
+
+void eeprom_update_8(int address, uint8_t value)
+{
+    static uint8_t lastvalue, lastaddress=255;
+    if(address & 1) { // odd
+        if(address == lastaddress+1)
+            eeprom_update_16(lastaddress, lastvalue | value<<8);
+    } else {
+        lastvalue = value;
+        lastaddress = address;
     }
+}
 
-    uint16_t ee_value() { return eeprom_read(eeprom_address); }
-    
-    void init(uint16_t initial_value) {
-        eeprom_address = addr;
-        addr += 2;
-        uint16_t eeval = ee_value();
-        if(eeval == 0) {
-            eeprom_write(eeprom_address, initial_value);
-            eeval = initial_value;
-        }
-        value = write_value = eeval;
-        write_count = 0;
-    }
-
-    void write(uint16_t val) {        
-        value = val;
-        if(packet_count < 255)
-            write_count = 0; // reset count at resync
-        if(write_value != value) {
-            write_count = 0;
-            write_value = value;
-        } else if(write_count >= 10) { // require 10 successive writes to update eeprom
-            write_count = 0;
-            eeprom_write(eeprom_address, value);
-        }
-        write_count++;
-    }
-
-    int8_t offset() { return value & 0xff; }
-    uint8_t factor() { return value >> 8; }
-
-    uint8_t min_value() { return value & 0xff; }
-    uint8_t max_value() { return factor(); }
-
-    uint8_t speed() { return min_value(); }
-    uint8_t slow() {return max_value(); }
-    
-    uint8_t eeprom_address, write_count;
-    uint16_t value, write_value;
-};
 
 #include "crc.h"
 
+uint16_t max_current = 2000; // 20 Amps
+uint16_t max_controller_temp= 7000; // 70C
+uint16_t max_motor_temp = 7000; // 70C
+uint8_t max_slew_speed = 15, max_slew_slow = 35; // 200 is full power in 1/10th of a second
+uint8_t rudder_min = 0, rudder_max = 255;
 
-const char *signature="pypilot0";
-const uint8_t signature_len = (sizeof signature) / (sizeof *signature);
-uint8_t persistent_value::addr = signature_len;
-
-persistent_value max_current(2000);
-persistent_value max_controller_temp(7000); // 70C
-persistent_value max_motor_temp(7000); // 70C
-persistent_value max_slew(15, 35); // 200 is full power in 1/10th of a second
-persistent_value rudder_range(0, 255);
-persistent_value voltage(0, 125);
-persistent_value current(0, 125);
+uint8_t eeprom_read_addr = 0;
+uint8_t eeprom_read_end = 0;
 
 #include <avr/pgmspace.h>
 
@@ -397,20 +389,6 @@ void setup()
 #endif
     ADCSRA |= _BV(ADSC); // start conversion
 #endif    
-
-    // test signature = 'pypilot' and version '0'
-    uint8_t i;
-    for(i=0; i<signature_len; i++)
-        if(eeprom_read_8(i) != signature[i])
-            break;
-    if(i < signature_len) {
-        uint8_t i;
-        for(i=0; i<signature_len; i++)
-            eeprom_write_8(i, signature[i]);
-
-        for(;i < persistent_value::addr; i++)
-            eeprom_write_8(i, 0);
-    }
 }
 
 uint8_t in_bytes[3];
@@ -447,32 +425,36 @@ void position(uint16_t value)
         // some cycling is required to refresh the bootstrap capacitor
         // but the current through the motor remains continuous
         if(value > 1100) {
+#ifndef QUIET                
+            ICR1_u=16000/DIV_CLOCK;  //fPWM=1khz
+            if(value > 1980)
+                value = 1980;
+            OCR1A_u = 20 + (2000 - value)*(16/DIV_CLOCK);
+#else
             if(value > 1900) {
                 ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
                 OCR1A_u = 120; // 99.8125% duty cycle
-#ifndef QUIET                
-            } else if(value > 1900) {
-                ICR1_u=16000/DIV_CLOCK;  //fPWM=1khz
-                OCR1A_u = 20 + (1900 - value)*(16/DIV_CLOCK);
-#endif
             } else {
                 ICR1_u=1000/DIV_CLOCK;  //fPWM=16khz
                 OCR1A_u = 20 + (2000 - value)/DIV_CLOCK;
             }
+#endif
             TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
         } else if(value < 900) {
+#ifndef QUIET                
+            ICR1_u=16000/DIV_CLOCK;  //fPWM=1khz
+            if(value < 20)
+                value = 20;
+            OCR1B_u = 20 + (value)*16/DIV_CLOCK;
+#else
             if(value < 100) {
                 ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
                 OCR1B_u = 120;
-#ifndef QUIET                
-            } else if(value < 100) {
-                ICR1_u=16000/DIV_CLOCK;  //fPWM=1khz
-                OCR1B_u = 20 + (value-100)*16/DIV_CLOCK;
-#endif
             } else {
                 ICR1_u=1000/DIV_CLOCK;  //fPWM=16khz
                 OCR1B_u = 20 + (value)/DIV_CLOCK;
             }
+#endif
             TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);
         } else {
             TIMSK1 = 0;//_BV(TOIE1);
@@ -519,9 +501,10 @@ void stop_rev()
 
 void update_command()
 {
-    int16_t speed_rate = max_slew.speed();
+    int16_t speed_rate = max_slew_speed;
     // value of 20 is 1 second full range at 50hz
-    int16_t slow_rate = max_slew.slow();
+    int16_t slow_rate = max_slew_slow;
+
     //uint16_t cur_value = OCR1A * 2 / 3 - 1000;
     uint16_t cur_value = lastpos;
 
@@ -771,13 +754,6 @@ uint16_t TakeAmps(uint8_t p)
     if(pwm_style == 2) // VNH2SP30
         return v * 9 / 34 / 16;
     
-    // apply correction
-    // factor in steps of 0.0016 from 0.8 to 1.2
-    v = v * 4 / 5 + v * current.factor() / 625;
-    uint8_t offset = current.offset();
-    if (offset < 0 && v < (uint32_t)-offset)
-        return 0;
-
     if(low_current) {
     // current units of 10mA
     // 275 / 128 = 100.0/1024/.05*1.1   for 0.05 ohm shunt
@@ -806,20 +782,13 @@ uint16_t TakeAmps(uint8_t p)
     if(v == 0)
         return 0;
 
-    return v + offset;
+    return v;
 }
 
 uint16_t TakeVolts(uint8_t p)
 {
     // voltage in 10mV increments 1.1ref, 560 and 10k resistors
     uint32_t v = TakeADC(VOLTAGE, p);
-
-    // apply correction
-    // factor in steps of 0.0008 from 0.9 to 1.1
-    uint8_t offset = voltage.offset();
-    v = v * 4 / 5 + v * voltage.factor() / 625;
-    if (offset < 0 && v < (uint32_t)-offset)
-        return 0;
 
     if(voltage_mode)
         // 14135 / 3584 = 100.0/1024*10280/280*1.1
@@ -828,7 +797,7 @@ uint16_t TakeVolts(uint8_t p)
         // 1815 / 896 = 100.0/1024*10560/560*1.1
         v = v * 1815 / 896 / 16;
 
-    return v + offset;
+    return v;
 }
 
 uint16_t TakeTemp(uint8_t index, uint8_t p)
@@ -929,17 +898,17 @@ void process_packet()
     flags |= SYNC;
     uint16_t value = in_bytes[1] | in_bytes[2]<<8;
     switch(in_bytes[0]) {
-    case REPROGRAM_CCODE:
+    case REPROGRAM_CODE:
     {
         // jump to bootloader
         asm volatile ("ijmp" ::"z" (0x3c00));
         //goto *0x3c00;
     } break;
-    case RESET_CCODE:
+    case RESET_CODE:
         // reset overcurrent flag
         flags &= ~OVERCURRENT;
         break;
-    case COMMAND_CCODE:
+    case COMMAND_CODE:
         timeout = 0;
         if(serialin < 12)
             serialin+=4; // output at input rate
@@ -959,33 +928,33 @@ void process_packet()
             engage();
         }
         break;
-    case MAX_CURRENT_CCODE: { // current in units of 10mA
+    case MAX_CURRENT_CODE: { // current in units of 10mA
         unsigned int max_max_current = low_current ? 2000 : 6000;
         if(value > max_max_current) // maximum is 20 amps
             value = max_max_current;
 
-        max_current.write(value);
+        max_current = value;
     } break;
-    case MAX_CONTROLLER_TEMP_CCODE:
+    case MAX_CONTROLLER_TEMP_CODE:
         if(value > 10000) // maximum is 100C
             value = 10000;
-        max_controller_temp.write(value);
+        max_controller_temp = value;
         break;
-    case MAX_MOTOR_TEMP_CCODE:
+    case MAX_MOTOR_TEMP_CODE:
         if(value > 10000) // maximum is 100C
             value = 10000;
-        max_motor_temp.write(value);
+        max_motor_temp = value;
         break;
-    case RUDDER_RANGE_CCODE:
-        rudder_range.write(value);
+    case RUDDER_RANGE_CODE:
+        rudder_max = in_bytes[1];
+        rudder_min = in_bytes[2];
         break;
-    case DISENGAGE_CCODE:
+    case DISENGAGE_CODE:
         if(serialin < 12)
             serialin+=4; // output at input rate
         disengage();
         break;
-    case MAX_SLEW_CCODE: {
-        uint8_t max_slew_speed, max_slew_slow;
+    case MAX_SLEW_CODE: {
         max_slew_speed = in_bytes[1];
         max_slew_slow = in_bytes[2];
 
@@ -1000,15 +969,18 @@ void process_packet()
             max_slew_speed = 1;
         if(max_slew_slow < 1)
             max_slew_slow = 1;
-
-        max_slew.write(max_slew_speed | max_slew_slow<<8);
     } break;
-    case VOLTAGE_CORRECTION_CCODE:
-        voltage.write(value);
-        break;
-    case CURRENT_CORRECTION_CCODE:
-        current.write(value);
-        break;
+
+    case EEPROM_READ_CODE:
+        if(eeprom_read_addr == eeprom_read_end) {
+            eeprom_read_addr = in_bytes[1];
+            eeprom_read_end = in_bytes[2];
+        }        
+    break;
+
+    case EEPROM_WRITE_CODE:
+        eeprom_update_8(in_bytes[1], in_bytes[2]);
+    break;
     }
 }
 
@@ -1093,7 +1065,7 @@ void loop()
     const int react_count = 686; // need 686 readings for 0.1s reaction time
     if(CountADC(CURRENT, 1) > react_count) {
         uint16_t amps = TakeAmps(1);
-        if(amps >= max_current.value) {
+        if(amps >= max_current) {
             stop();
             faults |= OVERCURRENT;
         } else
@@ -1128,7 +1100,7 @@ void loop()
        CountADC(MOTOR_TEMP, 1) > temp_react_count) {
         uint16_t controller_temp = TakeTemp(CONTROLLER_TEMP, 1);
         uint16_t motor_temp = TakeTemp(MOTOR_TEMP, 1);
-        if(controller_temp >= max_controller_temp.value || motor_temp > max_motor_temp.value) {
+        if(controller_temp >= max_controller_temp || motor_temp > max_motor_temp) {
             stop();
             flags |= OVERTEMP;
         } else
@@ -1146,12 +1118,12 @@ void loop()
     if(CountADC(RUDDER, 1) > rudder_react_count) {
         uint16_t v = TakeRudder(1);
         if(rudder_sense) {
-            if(v < rudder_range.min_value()) {
+            if(v < rudder_min) {
                 stop_rev();
                 flags |= MIN_RUDDER;
             } else
                 flags &= ~MIN_RUDDER;
-            if(v > rudder_range.max_value()) {
+            if(v > rudder_max) {
                 stop_fwd();
                 flags |= MAX_RUDDER;
             } else
@@ -1175,22 +1147,22 @@ void loop()
         uint16_t v;
         uint8_t code;
 
-        //flags C R V C R ct C R mt flags  C  R  V  C  R mc  C  R mct flags  C  R  V  C  R mmt  C  R rr flags  C  R  V  C  R ms  C  R cc  C  R vc
-        //    0 1 2 3 4 5  6 7 8  9    10 11 12 13 14 15 16 17 18  19    20 21 22 23 24 25  26 27 28 29    30 31 32 33 34 35 36 37 38 39 40 41 42
+        //  flags C R V C R ct C R mt flags  C  R  V  C  R EE  C  R mct flags  C  R  V  C  R  EE  C  R rr flags  C  R  V  C  R EE  C  R cc  C  R vc
+        //  0     1 2 3 4 5  6 7 8  9    10 11 12 13 14 15 16 17 18  19    20 21 22 23 24 25  26 27 28 29    30 31 32 33 34 35 36 37 38 39 40 41 42
         switch(out_sync_pos++) {
         case 0: case 10: case 20: case 30:
             if(!low_current)
                 flags |= CURRENT_RANGE;
 
             v = flags;
-            code = FLAGS_RCODE;
+            code = FLAGS_CODE;
             break;
         case 1: case 4: case 7: case 11: case 14: case 17: case 21: case 24: case 27: case 31: case 34: case 37: case 40:
             if(CountADC(CURRENT, 0) < 50)
                 return;
 
             v = TakeAmps(0);
-            code = CURRENT_RCODE;
+            code = CURRENT_CODE;
             serialin-=4; // fix current output rate to input rate
             delay(1); // small dead time to break serial transmission
             if(packet_count < 255)
@@ -1203,18 +1175,18 @@ void loop()
                 v = 65535; // indicate invalid rudder measurement
             else
                 v = TakeRudder(0);
-            code = RUDDER_SENSE_RCODE;
+            code = RUDDER_SENSE_CODE;
             break;
         case 3: case 13: case 23: case 33:
             if(CountADC(VOLTAGE, 0) < 2)
                 return;
             v = TakeVolts(0);
-            code = VOLTAGE_RCODE;
+            code = VOLTAGE_CODE;
             break;
         case 6:
             if(CountADC(CONTROLLER_TEMP, 0)) {
                 v = TakeTemp(CONTROLLER_TEMP, 0);
-                code = CONTROLLER_TEMP_RCODE;
+                code = CONTROLLER_TEMP_CODE;
                 break;
             }
             return;
@@ -1222,49 +1194,26 @@ void loop()
             if(CountADC(MOTOR_TEMP, 0)) {
                 v = TakeTemp(MOTOR_TEMP, 0);
                 if(v > 1200) { // below 12C means no sensor connected, or too cold to care
-                    code = MOTOR_TEMP_RCODE;
+                    code = MOTOR_TEMP_CODE;
                     break;
                 }
             }
-        default:
-            if(out_sync_pos > 42)
-                out_sync_pos = 0;
-
-            if(packet_count == 255) // don't report these anymore after sending 255 packets
-                return;
-            switch(out_sync_pos) {
-            case 16:
-                v = max_current.ee_value();
-                code = MAX_CURRENT_RCODE;
-                break;
-            case 19:
-                v = max_controller_temp.ee_value();
-                code = MAX_CONTROLLER_TEMP_RCODE;
-                break;
-            case 26:
-                v = max_motor_temp.ee_value();
-                code = MAX_MOTOR_TEMP_RCODE;
-                break;
-            case 29:
-                v = rudder_range.ee_value();
-                code = RUDDER_RANGE_RCODE;
-                break;
-            case 36:
-                v = max_slew.ee_value();
-                code = MAX_SLEW_RCODE;
-                break;
-            case 39:
-                v = current.ee_value();
-                code = CURRENT_CORRECTION_RCODE;
-                break;
-            case 42:
-                v = voltage.ee_value();
-                code = VOLTAGE_CORRECTION_RCODE;
-                break;
-            default:
-                out_sync_pos = 0;
             return;
+
+        case 16: case 26: case 36: /* eeprom reads */
+            if(eeprom_read_addr != eeprom_read_end) {
+                uint8_t value;
+                if(eeprom_read_8(eeprom_read_addr, value)) {
+                    v = value << 8 | eeprom_read_addr;
+                    eeprom_read_addr++;
+                    code = EEPROM_VALUE_CODE;
+                    break;
+                }
+                eeprom_read_addr++; // skip for now
             }
+            return;
+        default:
+            return;
         }
 
         crcbytes[0] = code;

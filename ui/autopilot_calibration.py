@@ -24,6 +24,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     ID_MESSAGES = 1000
     ID_CALIBRATE_SERVO = 1001
     ID_HEADING_OFFSET = 1002
+    ID_REQUEST_MSG = 1003
 
     def __init__(self):
         super(CalibrationDialog, self).__init__(None)
@@ -46,31 +47,37 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.dsServoMaxCurrent.SetDigits(1)
         self.dsServoMaxCurrent.Bind( wx.EVT_SPINCTRLDOUBLE, self.onMaxCurrent )
 
-        self.dsServoMaxControllerTemp.SetRange(45, 100);
-        self.dsServoMaxControllerTemp.Bind( wx.EVT_SPINCTRL, self.onMaxControllerTemp );
+        self.dsServoMaxControllerTemp.SetRange(45, 100)
+        self.dsServoMaxControllerTemp.Bind( wx.EVT_SPINCTRL, self.onMaxControllerTemp )
 
-        self.dsServoMaxMotorTemp.SetRange(30, 100);
-        self.dsServoMaxMotorTemp.Bind( wx.EVT_SPINCTRL, self.onMaxMotorTemp );
+        self.dsServoMaxMotorTemp.SetRange(30, 100)
+        self.dsServoMaxMotorTemp.Bind( wx.EVT_SPINCTRL, self.onMaxMotorTemp )
 
-        self.dsServoCurrentFactor.SetIncrement(.0016);
-        self.dsServoCurrentFactor.SetDigits(4);
-        self.dsServoCurrentFactor.Bind( wx.EVT_SPINCTRLDOUBLE, self.onCurrentFactor );
+        self.dsServoCurrentFactor.SetRange(.8, 1.2)
+        self.dsServoCurrentFactor.SetIncrement(.0016)
+        self.dsServoCurrentFactor.SetDigits(4)
+        self.dsServoCurrentFactor.Bind( wx.EVT_SPINCTRLDOUBLE, self.onCurrentFactor )
 
-        self.dsServoCurrentOffset.SetRange(-128, 127);
-        self.dsServoCurrentOffset.Bind( wx.EVT_SPINCTRL, self.onCurrentOffset );
+        self.dsServoCurrentOffset.SetRange(-1.2, 1.2)
+        self.dsServoCurrentOffset.SetIncrement(.01)
+        self.dsServoCurrentOffset.SetDigits(2)
+        self.dsServoCurrentOffset.Bind( wx.EVT_SPINCTRLDOUBLE, self.onCurrentOffset )
 
-        self.dsServoVoltageFactor.SetIncrement(.0016);
-        self.dsServoVoltageFactor.SetDigits(4);
-        self.dsServoVoltageFactor.Bind( wx.EVT_SPINCTRLDOUBLE, self.onVoltageFactor );
+        self.dsServoVoltageFactor.SetRange(.8, 1.2)
+        self.dsServoVoltageFactor.SetIncrement(.0016)
+        self.dsServoVoltageFactor.SetDigits(4)
+        self.dsServoVoltageFactor.Bind( wx.EVT_SPINCTRLDOUBLE, self.onVoltageFactor )
 
-        self.dsServoVoltageOffset.SetRange(-128, 127);
-        self.dsServoVoltageOffset.Bind( wx.EVT_SPINCTRL, self.onVoltageOffset );
+        self.dsServoVoltageOffset.SetRange(-1.2, 1.2)
+        self.dsServoVoltageOffset.SetIncrement(.01)
+        self.dsServoVoltageOffset.SetDigits(2)
+        self.dsServoVoltageOffset.Bind( wx.EVT_SPINCTRLDOUBLE, self.onVoltageOffset )
 
-        self.dsServoMaxSlewSpeed.SetRange(0, 100);
-        self.dsServoMaxSlewSpeed.Bind( wx.EVT_SPINCTRL, self.onMaxSlewSpeed );
+        self.dsServoMaxSlewSpeed.SetRange(0, 100)
+        self.dsServoMaxSlewSpeed.Bind( wx.EVT_SPINCTRL, self.onMaxSlewSpeed )
 
-        self.dsServoMaxSlewSlow.SetRange(0, 100);
-        self.dsServoMaxSlewSlow.Bind( wx.EVT_SPINCTRL, self.onMaxSlewSlow );
+        self.dsServoMaxSlewSlow.SetRange(0, 100)
+        self.dsServoMaxSlewSlow.Bind( wx.EVT_SPINCTRL, self.onMaxSlewSlow )
 
         self.lastmouse = False
         self.alignment_count = 0
@@ -84,6 +91,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.servo_timer = wx.Timer(self, self.ID_CALIBRATE_SERVO)
         self.Bind(wx.EVT_TIMER, self.calibrate_servo_timer, id=self.ID_CALIBRATE_SERVO)
+
+        self.request_msg_timer = wx.Timer(self, self.ID_REQUEST_MSG)
+        self.Bind(wx.EVT_TIMER, self.request_msg, id=self.ID_REQUEST_MSG)
+        self.request_msg_timer.Start(200)
+        
         self.servoprocess = False
 
         self.alignmentQ = [1, 0, 0, 0]
@@ -100,12 +112,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                      'imu.heading',
                      'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel',
                      'imu.heading_offset',
-                     'servo.rudder', 'servo.rudder.offset',
+                     'servo.rudder.offset',
                      'servo.rudder.scale', 'servo.rudder.range',
                      'servo.calibration', 'servo.max_current',
                      'servo.max_controller_temp', 'servo.max_motor_temp',
-                     'servo.current_factor', 'servo.current_offset',
-                     'servo.voltage_factor', 'servo.voltage_offset',
+                     'servo.current.factor', 'servo.current.offset',
+                     'servo.voltage.factor', 'servo.voltage.offset',
                      'servo.max_slew_speed', 'servo.max_slew_slow']
         for name in watchlist:
             client.watch(name)
@@ -126,6 +138,14 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         except ConnectionLost:
             self.client = False
 
+    def request_msg(self, event):
+        if not self.client:
+            return
+        if self.m_notebook.GetSelection() == 3: # servo
+            msgs = ['servo.rudder', 'servo.voltage', 'servo.current']
+            for name in msgs:
+                self.client.get(name)
+            
     def receive_message(self, msg):
         name, data = msg
         value = data['value']
@@ -202,18 +222,22 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.dsServoMaxControllerTemp.SetValue(value)
         elif name == 'servo.max_motor_temp':
             self.dsServoMaxMotorTemp.SetValue(value)
-        elif name == 'servo.current_factor':
+        elif name == 'servo.current.factor':
             self.dsServoCurrentFactor.SetValue(round(value, 4))
-        elif name == 'servo.current_offset':
+        elif name == 'servo.current.offset':
             self.dsServoCurrentOffset.SetValue(value)
-        elif name == 'servo.voltage_factor':
+        elif name == 'servo.voltage.factor':
             self.dsServoVoltageFactor.SetValue(round(value, 4))
-        elif name == 'servo.voltage_offset':
+        elif name == 'servo.voltage.offset':
             self.dsServoVoltageOffset.SetValue(value)
         elif name == 'servo.max_slew_speed':
             self.dsServoMaxSlewSpeed.SetValue(value)
         elif name == 'servo.max_slew_slow':
             self.dsServoMaxSlewSlow.SetValue(value)
+        elif name == 'servo.voltage':
+            self.m_stServoVoltage.SetLabel(str(round3(value)))
+        elif name == 'servo.current':
+            self.m_stServoCurrent.SetLabel(str(round3(value)))
 
     def servo_console(self, text):
         self.stServoCalibrationConsole.SetLabel(self.stServoCalibrationConsole.GetLabel() + text + '\n')
@@ -403,16 +427,16 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.client.set('servo.max_motor_temp', event.GetValue())
 
     def onCurrentFactor( self, event ):
-        self.client.set('servo.current_factor', event.GetValue())
+        self.client.set('servo.current.factor', event.GetValue())
 
     def onCurrentOffset( self, event ):
-        self.client.set('servo.current_offset', event.GetValue())
+        self.client.set('servo.current.offset', event.GetValue())
 
     def onVoltageFactor( self, event ):
-        self.client.set('servo.voltage_factor', event.GetValue())
+        self.client.set('servo.voltage.factor', event.GetValue())
 
     def onVoltageOffset( self, event ):
-        self.client.set('servo.voltage_offset', event.GetValue())
+        self.client.set('servo.voltage.offset', event.GetValue())
 
     def onMaxSlewSpeed( self, event ):
         self.client.set('servo.max_slew_speed', event.GetValue())

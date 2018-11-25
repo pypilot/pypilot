@@ -19,7 +19,7 @@ linebuffer_module = Extension('_linebuffer',
 )
 
 arduino_servo_module = Extension('_arduino_servo',
-                        sources=['pypilot/arduino_servo/arduino_servo.cpp', 'pypilot/arduino_servo/arduino_servo.i'],
+                        sources=['pypilot/arduino_servo/arduino_servo.cpp', 'pypilot/arduino_servo/arduino_servo_eeprom.cpp', 'pypilot/arduino_servo/arduino_servo.i'],
                         extra_compile_args=['-Wno-unused-result'],
                         swig_opts=['-c++']
 )
