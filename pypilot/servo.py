@@ -164,13 +164,7 @@ class ServoTelemetry(object):
     CONTROLLER_TEMP = 32
     MOTOR_TEMP = 64
     RUDDER = 128
-    MAX_CURRENT = 256
-    MAX_CONTROLLER_TEMP = 512
-    MAX_MOTOR_TEMP = 1024
-    RUDDER_RANGE = 2048
-    MAX_SLEW = 4096
-    CURRENT_CORRECTION = 8192
-    VOLTAGE_CORRECTION = 16384
+    EEPROM = 256
 
 # a property which records the time when it is updated
 class TimedProperty(Property):
@@ -213,10 +207,10 @@ class Servo(object):
         self.rudder_range = self.Register(RangeProperty, 'rudder.range',  60, 10, 100, persistent=True)
         self.engaged = self.Register(BooleanValue, 'engaged', False)
         self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 60, persistent=True)
-        self.current_factor = self.Register(RangeProperty, 'current_factor', 1, 0.8, 1.2, persistent=True)
-        self.current_offset = self.Register(RangeProperty, 'current_offset', 0, -128, 127, persistent=True)
-        self.voltage_factor = self.Register(RangeProperty, 'voltage_factor', 1, 0.8, 1.2, persistent=True)
-        self.voltage_offset = self.Register(RangeProperty, 'voltage_offset', 0, -128, 127, persistent=True)
+        self.current.factor = self.Register(RangeProperty, 'current.factor', 1, 0.8, 1.2, persistent=True)
+        self.current.offset = self.Register(RangeProperty, 'current.offset', 0, -1.2, 1.2, persistent=True)
+        self.voltage.factor = self.Register(RangeProperty, 'voltage.factor', 1, 0.8, 1.2, persistent=True)
+        self.voltage.offset = self.Register(RangeProperty, 'voltage.offset', 0, -1.2, 1.2, persistent=True)
         self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 70, 45, 100, persistent=True)
         self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
 
@@ -420,11 +414,12 @@ class Servo(object):
             self.command_timeout = t
 
         if self.driver:
+            uncorrected_max_current = (self.max_current.value - self.current.offset.value)/ self.current.factor.value 
             if self.disengaged: # keep sending disengauge to keep sync
                 self.driver.disengauge()
-                self.send_driver_params(self.max_current.value)
+                self.send_driver_params(uncorrected_max_current)
             else:
-                max_current = self.max_current.value
+                max_current = uncorrected_max_current
                 if self.flags.value & ServoFlags.FWD_FAULT or \
                    self.flags.value & ServoFlags.REV_FAULT: # allow more current to "unstuck" ram
                     max_current *= 2
@@ -454,12 +449,7 @@ class Servo(object):
         self.driver = False
 
     def send_driver_params(self, _max_current):
-        n = self.rudder_range.value / abs(self.rudder_scale.value)
-        o = 0.5 - self.rudder_offset.value
-
-        min_rudder, max_rudder = o - n, o + n
-
-        self.driver.params(_max_current, self.max_controller_temp.value, self.max_motor_temp.value, min_rudder, max_rudder, self.max_slew_speed.value, self.max_slew_slow.value, self.current_factor.value, self.current_offset.value, self.voltage_factor.value, self.voltage_offset.value)
+        self.driver.params(_max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.rudder_range.value, self.rudder_offset.value, self.rudder_scale.value, self.max_slew_speed.value, self.max_slew_slow.value, self.current.factor.value, self.current.offset.value, self.voltage.factor.value, self.voltage.offset.value, self.min_speed.value, self.max_speed.value)
 
     def poll(self):
         if not self.driver:
@@ -475,7 +465,8 @@ class Servo(object):
                     print 'failed to open servo:', e
                     return
                 self.driver = ArduinoServo(device.fileno())
-                self.send_driver_params(self.max_current.value)
+                uncorrected_max_current = (self.max_current.value - self.current.offset.value)/ self.current.factor.value 
+                self.send_driver_params(uncorrected_max_current)
 
                 t0 = time.time()
                 if self.driver.initialize(device_path[1]):
@@ -516,7 +507,11 @@ class Servo(object):
         t = time.time()
         self.server.TimeStamp('servo', t)
         if result & ServoTelemetry.VOLTAGE:
-            self.voltage.set(self.driver.voltage)
+            # apply correction
+            corrected_voltage = self.voltage.factor.value*self.driver.voltage;
+            corrected_voltage += self.voltage.offset.value
+            self.voltage.set(round(corrected_voltage, 3))
+
         if result & ServoTelemetry.CONTROLLER_TEMP:
             self.controller_temp.set(self.driver.controller_temp)
         if result & ServoTelemetry.MOTOR_TEMP:
@@ -529,7 +524,10 @@ class Servo(object):
                                 (self.driver.rudder +
                                  self.rudder_offset.value - 0.5))
         if result & ServoTelemetry.CURRENT:
-            self.current.set(self.driver.current)
+            # apply correction
+            corrected_current = self.current.factor.value*self.driver.current;
+            corrected_current += self.current.offset.value
+            self.current.set(round(corrected_current, 3))
             # integrate power consumption
             dt = (t - self.current_timestamp)
             #print 'have current', round(1/dt), dt
@@ -539,45 +537,26 @@ class Servo(object):
                 self.amphours.set(self.amphours.value + amphours)
             lp = .003*dt # 5 minute time constant to average wattage
             self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
-        if result & ServoTelemetry.MAX_CURRENT:
-            # retrieve the correction saved in controller's flash only once,
-            # at startup, and ignore all later updates since the controller
-            # will not be modifying the value by itself
-            if not self.max_current_received:
-                self.max_current.set(self.driver.max_current)
-                self.max_current_received = True
-        if result & ServoTelemetry.MAX_CONTROLLER_TEMP:
-            if not self.max_controller_temp_received:
-                self.max_controller_temp.set(self.driver.max_controller_temp)
-                self.max_controller_temp_received = True
-        if result & ServoTelemetry.MAX_MOTOR_TEMP:
-            if not self.max_motor_temp_received:
-                self.max_motor_temp.set(self.driver.max_motor_temp)
-                self.max_motor_temp_received = True
-        if result & ServoTelemetry.RUDDER_RANGE:
-            if not self.rudder_range_received:
-                self.rudder_range.set((self.driver.max_rudder - self.driver.min_rudder) * abs(self.rudder_scale.value) / 2)
-                self.rudder_offset.set((1 - (self.driver.min_rudder + self.driver.max_rudder)) / 2)
-                self.rudder_range_received = True
-        if result & ServoTelemetry.MAX_SLEW:
-            if not self.max_slew_received:
-               self.max_slew_speed.set(self.driver.max_slew_speed)
-               self.max_slew_slow.set(self.driver.max_slew_slow)
-               self.max_slew_received = True
-        if result & ServoTelemetry.CURRENT_CORRECTION:
-            if not self.current_correction_received:
-                self.current_factor.set(self.driver.current_factor)
-                self.current_offset.set(self.driver.current_offset)
-                self.current_correction_received = True
-        if result & ServoTelemetry.VOLTAGE_CORRECTION:
-            if not self.voltage_correction_received:
-                self.voltage_factor.set(self.driver.voltage_factor)
-                self.voltage_offset.set(self.driver.voltage_offset)
-                self.voltage_correction_received = True
         if result & ServoTelemetry.FLAGS:
             self.max_current.set_max(60 if self.driver.flags & ServoFlags.CURRENT_RANGE else 20)
             self.flags.update(self.flags.value & ~ServoFlags.DRIVER_MASK | self.driver.flags)
             self.engaged.update(not not self.driver.flags & ServoFlags.ENGAGED)
+
+        if result & ServoTelemetry.EEPROM: # occurs only once after connecting
+            self.max_current.set(self.driver.max_current)
+            self.max_controller_temp.set(self.driver.max_controller_temp)
+            self.max_motor_temp.set(self.driver.max_motor_temp)
+            self.max_slew_speed.set(self.driver.max_slew_speed)
+            self.max_slew_slow.set(self.driver.max_slew_slow)
+            self.rudder_scale.set(self.driver.rudder_scale)
+            self.rudder_offset.set(self.driver.rudder_offset)
+            self.rudder_range.set(self.driver.rudder_range)
+            self.current.factor.set(self.driver.current_factor)
+            self.current.offset.set(self.driver.current_offset)
+            self.voltage.factor.set(self.driver.voltage_factor)
+            self.voltage.offset.set(self.driver.voltage_offset)
+            self.min_speed.set(self.driver.min_motor_speed);
+            self.max_speed.set(self.driver.max_motor_speed);
 
         if self.fault():
             if not self.flags.value & ServoFlags.FWD_FAULT and \
