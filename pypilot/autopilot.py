@@ -36,20 +36,20 @@ def minmax(value, r):
 class TimedQueue(object):
   def __init__(self, length):
     self.data = []
+    self.length = length
 
   def add(self, data):
     t = time.time()
-    while self.data and self.data[0][1] < t-length:
+    while self.data and self.data[0][1] < t-self.length:
       self.data = self.data[1:]
     self.data.append((data, t))
 
   def take(self, t):
-    while self.data:
-      if self.data[0][1] < t:
-        self.data = self.data[:1]
+    while self.data and self.data[0][1] < t:
+        self.data = self.data[1:]
     if self.data:
-      return self.data[0]
-    return False
+      return self.data[0][0]
+    return 0
 
 class Filter(object):
     def __init__(self,filtered, lowpass):
@@ -376,10 +376,10 @@ class Autopilot(object):
 
       if not self.tack.process():
         pass
-        #for pilot in self.pilots:
-          #if pilot.name == self.pilot.value:
-            #pilot.process_imu_data() # implementation specific process
-         #   break
+        for pilot in self.pilots:
+          if pilot.name == self.pilot.value:
+            pilot.process_imu_data() # implementation specific process
+            break
 
       # servo can only disengauge under manual control
       self.servo.force_engaged = self.enabled.value

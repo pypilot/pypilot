@@ -24,10 +24,11 @@ class SimplePilot(AutopilotPilot):
     Gain('D', .15, .5)
 
   def process_imu_data(self):
+    ap = self.ap
     command = 0
-    headingrate = self.boatimu.SensorValues['headingrate'].value
-    gain_values = {'P': self.heading_error.value,
-                   'I': self.heading_error_int.value,
+    headingrate = ap.boatimu.SensorValues['headingrate'].value
+    gain_values = {'P': ap.heading_error.value,
+                   'I': ap.heading_error_int.value,
                    'D': headingrate}
 
     for gain in self.gains:
@@ -36,4 +37,5 @@ class SimplePilot(AutopilotPilot):
       gains[1].set(gains[0].value*value)
       command += gains[1].value
 
-    self.ap.servo.command.set(command)
+    if ap.enabled.value:
+      ap.servo.command.set(command)

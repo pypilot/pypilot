@@ -102,6 +102,15 @@ class AutopilotControlBase ( wx.Frame ):
 		fgSizer26.SetFlexibleDirection( wx.BOTH )
 		fgSizer26.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
+		self.m_staticText52 = wx.StaticText( self, wx.ID_ANY, u"Pilot", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText52.Wrap( -1 )
+		fgSizer26.Add( self.m_staticText52, 0, wx.ALL, 5 )
+		
+		cPilotChoices = []
+		self.cPilot = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cPilotChoices, 0 )
+		self.cPilot.SetSelection( 0 )
+		fgSizer26.Add( self.cPilot, 0, wx.ALL, 5 )
+		
 		self.rbCompass = wx.RadioButton( self, wx.ID_ANY, u"Compass", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer26.Add( self.rbCompass, 0, wx.ALL, 5 )
 		
@@ -167,6 +176,7 @@ class AutopilotControlBase ( wx.Frame ):
 		
 		# Connect Events
 		self.tbAP.Bind( wx.EVT_TOGGLEBUTTON, self.onAP )
+		self.cPilot.Bind( wx.EVT_CHOICE, self.onPilot )
 		self.rbCompass.Bind( wx.EVT_RADIOBUTTON, self.onMode )
 		self.rbGPS.Bind( wx.EVT_RADIOBUTTON, self.onMode )
 		self.rbWind.Bind( wx.EVT_RADIOBUTTON, self.onMode )
@@ -184,6 +194,9 @@ class AutopilotControlBase ( wx.Frame ):
 	
 	# Virtual event handlers, overide them in your derived class
 	def onAP( self, event ):
+		event.Skip()
+	
+	def onPilot( self, event ):
 		event.Skip()
 	
 	def onMode( self, event ):
@@ -220,7 +233,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 	def __init__( self, parent ):
 		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Calibration", pos = wx.DefaultPosition, size = wx.Size( 640,850 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
 		
-#		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 		
 		fgSizer7 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer7.AddGrowableCol( 0 )
