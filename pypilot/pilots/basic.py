@@ -19,7 +19,7 @@ class BasicPilot(AutopilotPilot):
     timestamp = self.ap.server.TimeStamp('ap')
 
     self.heading_command_rate = self.Register(SensorValue, 'heading_command_rate', timestamp)
-    self.headingrate_queue = TimedQueue(6)
+    self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
 
     # create simple pid filter
     self.gains = {}
@@ -34,23 +34,24 @@ class BasicPilot(AutopilotPilot):
     def PosGain(name, default, max_val):
       Gain(name, default, 0, max_val)
         
-    PosGain('P', .003, .02)
-    PosGain('I', 0, .1)
-    PosGain('D',  .1, 1.0)
-    PosGain('DD',  .05, 1.0)
+    PosGain('P', .003, .02)  # position (heading error)
+    PosGain('I', 0, .1)      # integral
+    PosGain('D',  .1, 1.0)   # derivative (gyro)
+    PosGain('DD',  .05, 1.0) # rate of derivative
     
     def PosGain2(name, default, max_val):
       def compute2(value):
         return value * abs(value) * self.gains[name]['apgain'].value
       Gain(name, default, 0, max_val, compute2)
 
-    PosGain('PR',  0, .05)
-    PosGain2('D2', 0, .05)
+    PosGain('PR',  0, .05)  # position root
+    PosGain2('D2', 0, .05)  # derivative squared
+    PosGain('FF',  .5, 3.0) # feed forward
+    PosGain('R',  .1, 1.0)  # reactive
+    self.reactive_time = self.Register(RangeProperty, 'Rtime', 1, 0, 3)
 
-    PosGain('FF',  .5, 3.0)
-
-    PosGain('R',  .1, 1.0)
-
+    self.reactive_value = self.Register(SensorValue, 'reactive_value', timestamp)
+                                    
     self.lastenabled = False
 
   def process_imu_data(self):
@@ -60,14 +61,14 @@ class BasicPilot(AutopilotPilot):
       if ap.enabled.value:
         ap.heading_error_int.set(0) # reset integral
         # reset feed-forward gain
-        self.last_heading_command = self.heading_command.value
+        self.last_heading_command = ap.heading_command.value
         self.heading_command_rate.set(0)
 
     # reset feed-forward error if mode changed
     if ap.mode.value != ap.lastmode:
       self.last_heading_command = ap.heading_command.value
     
-    # if disabled, only bother to compute if a client cares        
+    # if disabled, only bother to compute if a client cares
     if not ap.enabled.value: 
       compute = False
       for gain in self.gains:
@@ -76,7 +77,7 @@ class BasicPilot(AutopilotPilot):
           break
       if not compute:
         return
-    
+
     # filter the heading command to compute feed-forward gain
     heading_command_diff = resolv(ap.heading_command.value - self.last_heading_command)
     self.last_heading_command = ap.heading_command.value
@@ -89,8 +90,9 @@ class BasicPilot(AutopilotPilot):
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
     feedforward_value = self.heading_command_rate.value
-    self.headingrate_queue.add(headingrate)
-    reactive_value = self.headingrate_queue.take(time.time() - ap.servo.period.value*6)
+    reactive_value = self.servocommand_queue.take(time.time() - self.reactive_time.value)
+    self.reactive_value.set(reactive_value)
+    
     if not 'wind' in ap.mode.value:
       feedforward_value = -feedforward_value
     gain_values = {'P': ap.heading_error.value,
@@ -98,18 +100,24 @@ class BasicPilot(AutopilotPilot):
                    'D': headingrate,      
                    'DD': headingraterate,
                    'FF': feedforward_value,
-                   'R': reactive_value}
+                   'R': -reactive_value}
     PR = math.sqrt(abs(gain_values['D']))
     if gain_values['P'] < 0:
       PR = -PR
     gain_values['PR'] = PR
     gain_values['D2'] = gain_values['D']
 
+    rval = 0
     for gain in self.gains:
       value = gain_values[gain]
       gains = self.gains[gain]
       gains['sensor'].set(gains['compute'](value))
+      if gain == 'R':
+        rval = gains['sensor'].value
       command += gains['sensor'].value
 
+    # don't include R contribution to command
+    self.servocommand_queue.add(command - rval)
+    
     if ap.enabled.value:
       ap.servo.command.set(command)

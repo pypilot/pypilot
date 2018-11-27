@@ -202,7 +202,7 @@ class SignalKClient(object):
 
     def set(self, name, value):
         # quote strings
-        if type(value) == type(''):
+        if type(value) == type('') or type(value) == type(u''):
             value = '"' + value + '"'
         elif type(value) == type(True):
             value = 'true' if value else 'false'
