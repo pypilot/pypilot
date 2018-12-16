@@ -18,7 +18,11 @@ from OpenGL.GLU import *
 from OpenGL.GL import *
 
 #from objloader import *
-import pywavefront
+pywavefront = False
+try:
+    import pywavefront
+except:
+    print 'failed to load pywavefront, no boat model rendered'
 
 from pypilot import quaternion
 
@@ -41,6 +45,9 @@ class BoatPlot():
 
     def display(self, fusionQPose):
         #fusionQPose = [1, 0, 0, 0]
+        if not pywavefront:
+            return
+
         if not self.obj:
             self.chdir()
             #self.obj = OBJ('Vagabond.obj', swapyz=True)
