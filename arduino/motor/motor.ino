@@ -404,12 +404,13 @@ uint8_t rudder_sense = 0;
 uint16_t lastpos = 1000;
 void position(uint16_t value)
 {
-    uint16_t OCR1A_u = 16000, OCR1B_u = 16000, ICR1_u = 1000;
     lastpos = value;
     if(pwm_style == 1)
-        OCR1A_u = 1500/DIV_CLOCK + value * 3 / 4;
+//        OCR1A = 1200/DIV_CLOCK + value * 6 / 5 / DIV_CLOCK;
+        OCR1A = 1500/DIV_CLOCK + value * 3 / 2 / DIV_CLOCK;
+    //OCR1A = 1350/DIV_CLOCK + value * 27 / 20 / DIV_CLOCK;
     else if(pwm_style == 2) {
-        OCR1A_u = abs((int)value - 1000) * DIV_CLOCK;
+        OCR1A = abs((int)value - 1000) * DIV_CLOCK;
         if(value > 1040) {
             a_bottom_off;
             b_bottom_on;
@@ -421,6 +422,7 @@ void position(uint16_t value)
             b_bottom_off;
         }            
     } else {
+        uint16_t OCR1A_u = 16000, OCR1B_u = 16000, ICR1_u = 1000;
         // use 62.5 hz at full power to reduce losses
         // some cycling is required to refresh the bootstrap capacitor
         // but the current through the motor remains continuous
@@ -432,7 +434,10 @@ void position(uint16_t value)
             OCR1A_u = 20 + (2000 - value)*(16/DIV_CLOCK);
 #else
             if(value > 1900) {
-                ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
+                if(low_current)
+                    ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
+                else
+                    ICR1_u=16000;  //faster frequency for high current board
                 OCR1A_u = 120; // 99.8125% duty cycle
             } else {
                 ICR1_u=1000/DIV_CLOCK;  //fPWM=16khz
@@ -448,7 +453,10 @@ void position(uint16_t value)
             OCR1B_u = 20 + (value)*16/DIV_CLOCK;
 #else
             if(value < 100) {
-                ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
+                if(low_current)
+                    ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
+                else
+                    ICR1_u=16000;  //faster frequency for high current board
                 OCR1B_u = 120;
             } else {
                 ICR1_u=1000/DIV_CLOCK;  //fPWM=16khz
@@ -795,7 +803,7 @@ uint16_t TakeVolts(uint8_t p)
         v = v * 14135 / 3584 / 16;
     else
         // 1815 / 896 = 100.0/1024*10560/560*1.1
-        v = v * 1815 / 896 / 16;
+        v = v * 1815 / 896 / 16 + 40;
 
     return v;
 }
@@ -1128,10 +1136,10 @@ void loop()
                 flags |= MAX_RUDDER;
             } else
                 flags &= ~MAX_RUDDER;
-            if(v < 256 || v > 65472 - 256)
+            if(v < 512 || v > 65472 - 512)
                 rudder_sense = 0;
         } else {
-            if(v > 256 && v < 65472 - 256)
+            if(v > 1024 && v < 65472 - 1024)
                 rudder_sense = 1;
             flags &= ~(MIN_RUDDER | MAX_RUDDER);
         }
