@@ -7,7 +7,11 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import math, json, Image, numpy
+import math, json, numpy
+try:
+    import Image
+except:
+    from PIL import Image
 
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
