@@ -202,7 +202,7 @@ class SignalKClient(object):
 
     def set(self, name, value):
         # quote strings
-        if type(value) == type(''):
+        if type(value) == type('') or type(value) == type(u''):
             value = '"' + value + '"'
         elif type(value) == type(True):
             value = 'true' if value else 'false'
@@ -230,14 +230,20 @@ class SignalKClient(object):
             if names:
                 self.get(names.pop())
             else:
-                time.sleep(.05)
+                time.sleep(.1)
 
             if time.time()-t0 >= timeout:
                 return False
-            msgs = self.receive()
-            for name in msgs:
+            while True:
+                msg = self.receive_single()
+                if not msg:
+                    break
+                name, value = msg
+                if name in results:
+                    break
                 count+=1
-                results[name] = msgs[name]
+                
+                results[name] = value
 
         for name in sorted(results):
             if info:
@@ -268,6 +274,7 @@ def SignalKClientFromArgs(argv, watch, f_con=False):
     def on_con(client):
         for arg in watches:
             if watch:
+                print 'watch', arg
                 client.watch(arg)
             else:
                 client.get(arg)
@@ -321,27 +328,29 @@ def main():
         exit()
 
     while True:
-        result = client.receive(1000)
-        if result:
-            if not continuous:
-                # split on separate lines if not continuous
-                for r in result:
-                    if info:
-                        print kjson.dumps({r: result[r]})
-                    else:
-                        print r, '=', nice_str(result[r]['value'])
-                return
+        msg = client.receive_single(.1)
+        if not msg:
+            continue
+        
+        if not continuous:
+            # split on separate lines if not continuous
+            name, value = msg
             if info:
-                print kjson.dumps(result)
+                print kjson.dumps({name: value})
             else:
-                first = True
-                for r in result:
-                    if first:
-                        first = False
-                    else:
-                        sys.stdout.write(', ')
-                    sys.stdout.write(r + ' = ' + nice_str(result[r]['value']))
-                print ''
+                print name, '=', nice_str(value['value'])
+            return
+        if info:
+            print kjson.dumps(msg)
+        else:
+            first = True
+            name, value = msg
+            if first:
+                first = False
+            else:
+                sys.stdout.write(', ')
+            sys.stdout.write(name + ' = ' + nice_str(value['value']))
+            print ''
 
 if __name__ == '__main__':
     main()

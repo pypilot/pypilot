@@ -34,7 +34,6 @@ $(document).ready(function() {
     $('#power_consumption').text("N/A");
     $('#runtime').text("N/A");
 
-    var gains = ['P', 'I', 'D', 'PR', 'D2', 'FF'];
     var conf_names = [['servo.min_speed', 'min_speed',''],
                       ['servo.max_speed', 'max_speed',''],
                       ['servo.max_current', 'max_current','Amps'],
@@ -70,6 +69,7 @@ $(document).ready(function() {
     var block_polling = 0;
 
     var servo_command = 0, servo_command_timeout=0;
+    var gains = [];
     socket.on('signalk_connect', function(msg) {
         $('#connection').text('Connected')
         $('#aperrors0').text("");
@@ -83,6 +83,11 @@ $(document).ready(function() {
         // gain
         $('#gain_container').text('')
         var list_values = JSON.parse(msg)
+        gains = [];
+        for (var name in list_values)
+            if('AutopilotGain' in list_values[name] && name.substr(0, 3) == 'ap.')
+                gains.push(name.substr(3)); // remove ap.
+
         for (var i = 0; i<gains.length; i++) {
             var w = $(window).width();
             var info = list_values['ap.' + gains[i]]
@@ -98,6 +103,12 @@ $(document).ready(function() {
         // calibration
         watch('imu.alignmentQ');
         watch('imu.alignmentCounter');
+        watch('imu.compass_calibration_locked');
+        $('#calibration_locked').change(function(event) {
+            check = $('#calibration_locked').prop('checked');
+            signalk_set('imu.compass_calibration_locked', check);
+            block_polling = 2;
+        });
 
         // configuration
         $('#configuration_container').text('')
@@ -119,6 +130,7 @@ $(document).ready(function() {
         }
 
         watch('servo.controller');
+        watch('servo.flags');
 
         setTimeout(poll_signalk, 1000)
 
@@ -166,8 +178,9 @@ $(document).ready(function() {
         } else if(tab == 'Statistics') {
             poll('servo.amp_hours');
             poll('servo.voltage');
+            poll('servo.controller_temp');
             poll('ap.runtime');
-            poll('servo.engauged');
+            poll('servo.engaged');
         }
     }
     
@@ -202,6 +215,8 @@ $(document).ready(function() {
     
     var heading = 0;
     var heading_command = 0;
+    var heading_set_time = new Date().getTime();
+    var heading_local_command;
     socket.on('signalk', function(msg) {
         if(block_polling > 0) {
             return;
@@ -221,11 +236,21 @@ $(document).ready(function() {
         if('ap.enabled' in data) {
             if(data['ap.enabled']['value']) {
                 var w = $(window).width();
-                $('#tb_engauged button').css('left', w/12+"px");
-                $('#tb_engauged').addClass('toggle-button-selected');
+                $('#tb_engaged button').css('left', w/12+"px");
+                $('#tb_engaged').addClass('toggle-button-selected');
+
+                $('#port10').text('10');
+                $('#port2').text('2');
+                $('#star2').text('2');
+                $('#star10').text('10');
             } else {
-                $('#tb_engauged button').css('left', "0px")
-                $('#tb_engauged').removeClass('toggle-button-selected');
+                $('#tb_engaged button').css('left', "0px")
+                $('#tb_engaged').removeClass('toggle-button-selected');
+
+                $('#port10').text('<<');
+                $('#port2').text('<');
+                $('#star2').text('>');
+                $('#star10').text('>>');
             }
         }
         if('ap.mode' in data) {
@@ -250,11 +275,11 @@ $(document).ready(function() {
             heading_command = data['ap.heading_command']['value'];
             $('#heading_command').text(Math.round(heading_command));
         }
-        if('servo.engauged' in data) {
-            if(data['servo.engauged']['value'])
-                $('#servo_engauged').text('Engauged');
+        if('servo.engaged' in data) {
+            if(data['servo.engaged']['value'])
+                $('#servo_engaged').text('Engaged');
             else
-                $('#servo_engauged').text('Disengauged');
+                $('#servo_engaged').text('Disengaged');
         }
 
         // calibration
@@ -264,6 +289,8 @@ $(document).ready(function() {
             $('#roll').text(data['imu.roll']['value']);
         if('imu.alignmentCounter' in data)
             $('.myBar').width((100-data['imu.alignmentCounter']['value'])+'%');
+        if('imu.compass_calibration_locked' in data)
+            $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']['value']);
 
         // configuration
         names = conf_names;
@@ -286,6 +313,11 @@ $(document).ready(function() {
             $('#voltage').text(Math.round(1e3*value)/1e3);
         }
         
+        if('servo.controller_temp' in data) {
+            value = data['servo.controller_temp']['value'];
+            $('#controller_temp').text(value);
+        }
+
         if('ap.runtime' in data) {
             value = data['ap.runtime']['value'];
             $('#runtime').text(value);
@@ -298,7 +330,9 @@ $(document).ready(function() {
             else
                 $('#aperrors1').text('');
         }
-            
+
+        if('servo.flags' in data)
+            $('#servoflags').text(data['servo.flags']['value']);
     });
     
     signalk_set = function(name, value) {
@@ -316,14 +350,18 @@ $(document).ready(function() {
     });
     
     move = function(x) {
-        var engauged = $('#tb_engauged').hasClass('toggle-button-selected');
-        if(engauged) {
-            signalk_set('ap.heading_command', heading_command + x)
+        var engaged = $('#tb_engaged').hasClass('toggle-button-selected');
+        if(engaged) {
+            if(new Date().getTime() - heading_set_time > 1000)
+                heading_local_command = heading_command;
+            heading_set_time = new Date().getTime();
+            heading_local_command += x;
+            signalk_set('ap.heading_command', heading_local_command);
         } else {
             if(x != 0) {
                 sign = x > 0 ? 1 : -1;
                 servo_command = -sign;
-                servo_command_timeout = Math.pow(Math.abs(x),.7);
+                servo_command_timeout = Math.abs(x) > 5 ? 3 : 1;
             }
         }
     }
@@ -333,8 +371,8 @@ $(document).ready(function() {
     });
     
     $('#port10').click(function(event) { move(-10); });
-    $('#port1').click(function(event) { move(-1); });
-    $('#star1').click(function(event) { move(1); });
+    $('#port2').click(function(event) { move(-2); });
+    $('#star2').click(function(event) { move(2); });
     $('#star10').click(function(event) { move(10); });
 
     // Gain

@@ -407,12 +407,12 @@ class ServoCalibration(object):
 
         def fault(self):
             return (ServoFlags.OVERCURRENT | ServoFlags.FALTPIN) & self.servo.flags.value or \
-                not self.servo.engauged.value
+                not self.servo.engaged.value
     
     def poll(self):
         if not self.thread.is_alive():
             if self.run.value: # calibration should start
-                self.force_engauged = True
+                self.force_engaged = True
                 self.command = self.servo.command.value
                 self.raw_command = self.servo.raw_command.value
                 self.servo.brake_hack.set(False)

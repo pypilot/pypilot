@@ -1,4 +1,4 @@
-/* Copyright (C) 2017 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2018 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -17,8 +17,9 @@
 
 #include "arduino_servo.h"
 
-enum commands {COMMAND_CODE = 0xc7, RESET_CODE = 0xe7, MAX_CURRENT_CODE = 0x1e, MAX_CONTROLLER_TEMP_CODE = 0xa4, MAX_MOTOR_TEMP_CODE = 0x5a, RUDDER_RANGE_CODE = 0xb6, REPROGRAM_CODE = 0x19, DISENGAUGE_CODE=0x68, MAX_SLEW_CODE=0x71};
-enum results {CURRENT_CODE = 0x1c, VOLTAGE_CODE = 0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE = 0x8f};
+enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53};
+
+enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f, EEPROM_VALUE_CODE=0x9a};
 
 const unsigned char crc8_table[256]
 = {
@@ -72,14 +73,15 @@ static uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
     return crc8_with_init(0xFF, pcBlock, len);
 }
 
+
 ArduinoServo::ArduinoServo(int _fd)
     : fd(_fd)
 {
     in_sync_count = 0;
     out_sync = 0;
     in_buf_len = 0;
-    max_current_value = 0;
-
+    max_current = 0;
+    params_set = 0;
     flags = 0;
 }
 
@@ -91,8 +93,12 @@ bool ArduinoServo::initialize(int baud)
     // flush device data
 //    while(read(fd, in_buf, in_buf_len) > 0);
 
+    // force unsync
+    char reset_code[] = {0xff, 0xff, 0xff, 0xff};
+    write(fd, reset_code, sizeof reset_code);
+    
     while (!(flags & SYNC) || out_sync < 20) {
-        raw_command(0); // ensure we set the temp limits as well here
+        raw_command(1000); // ensure we set the temp limits as well here
         if(poll()>0) {
             while(poll());
             data = true;
@@ -119,7 +125,10 @@ void ArduinoServo::command(double command)
 
 int ArduinoServo::process_packet(uint8_t *in_buf)
 {
+    if(packet_count < 255)
+        packet_count++;
     uint16_t value = in_buf[1] + (in_buf[2]<<8);
+//    printf("buf %x %x %x\n", in_buf[0], in_buf[1], in_buf[2]);
     switch(in_buf[0]) {
     case CURRENT_CODE:
         current = value / 100.0;
@@ -138,15 +147,50 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
         return MOTOR_TEMP;
     case RUDDER_SENSE_CODE:
         if(value == 65535)
-            rudder_pos = NAN;
+            rudder = NAN;
         else
-            rudder_pos = (uint16_t)value * 200 / 65472.0 - 100.0;
-        return RUDDER_POS;
+            rudder = (uint16_t)value / 65472.0;
+        return RUDDER;
     case FLAGS_CODE:
         flags = value;
         if(flags & INVALID)
             printf("servo received invalid packet (check serial connection)\n");
         return FLAGS;
+        
+    case EEPROM_VALUE_CODE:
+    {
+        //printf("EEPROM VALUE %d %d\n", in_buf[1], in_buf[2]);
+        uint8_t addr = in_buf[1], val = in_buf[2];
+        static uint8_t lastaddr, lastvalue;
+        if(addr&1) {
+            if(addr == lastaddr+1) {
+                eeprom.value(lastaddr, lastvalue);
+                eeprom.value(addr, val);
+            }
+        } else {
+            lastaddr = addr;
+            lastvalue = val;
+        }
+
+        // only report eeprom on initial read for all data
+        if(eeprom.initial()) {
+            max_current = eeprom.get_max_current();
+            max_controller_temp = eeprom.get_max_controller_temp();
+            max_motor_temp = eeprom.get_max_motor_temp();
+            rudder_range = eeprom.get_rudder_range();
+            rudder_offset = eeprom.get_rudder_offset();
+            rudder_scale = eeprom.get_rudder_scale();
+            max_slew_speed = eeprom.get_max_slew_speed();
+            max_slew_slow = eeprom.get_max_slew_slow();
+            current_factor = eeprom.get_current_factor();
+            current_offset = eeprom.get_current_offset();
+            voltage_factor = eeprom.get_voltage_factor();
+            voltage_offset = eeprom.get_voltage_offset();
+            min_motor_speed = eeprom.get_min_motor_speed();
+            max_motor_speed = eeprom.get_max_motor_speed();
+            return EEPROM;
+        }
+    }
     }
     return 0;
 }    
@@ -161,7 +205,7 @@ int ArduinoServo::poll()
             if(c < cnt)
                 break;
             in_buf_len = 0;
-            printf("arduino server buffer overflow\n");
+            printf("arduino servo buffer overflow\n");
         }
         if(c<0) {
             if(errno != EAGAIN)
@@ -182,7 +226,7 @@ int ArduinoServo::poll()
         printf("input %d %ld:%ld %x %x %x %x %x\n", cnt++, tv.tv_sec, tv.tv_usec, in_buf[0], in_buf[1], in_buf[2], in_buf[3], crc);
 #endif
         if(crc == in_buf[3]) { // valid packet
-            if(in_sync_count >= 1)
+            if(in_sync_count >= 2)
                 ret |= process_packet(in_buf);
             else
                 in_sync_count++;
@@ -206,15 +250,51 @@ bool ArduinoServo::fault()
     return flags & OVERCURRENT;
 }
 
-void ArduinoServo::max_values(double current, double controller_temp, double motor_temp, double min_rudder_pos, double max_rudder_pos, double max_slew_speed, double max_slew_slow)
+void ArduinoServo::params(double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_motor_speed, double _max_motor_speed)
 {
-    max_current_value = fmin(20, fmax(0, current));
-    max_controller_temp_value = fmin(80, fmax(30, controller_temp));
-    max_motor_temp_value = fmin(80, fmax(30, motor_temp));
-    min_rudder_pos_value = fmin(100, fmax(-100, min_rudder_pos));
-    max_rudder_pos_value = fmin(100, fmax(-100, max_rudder_pos));
-    max_slew_speed_value = fmin(100, fmax(0, max_slew_speed));
-    max_slew_slow_value = fmin(100, fmax(0, max_slew_slow));
+    max_current = fmin(60, fmax(0, _max_current));
+    eeprom.set_max_current(max_current);
+
+    max_controller_temp = fmin(80, fmax(30, _max_controller_temp));
+    eeprom.set_max_controller_temp(max_controller_temp);
+
+    max_motor_temp = fmin(80, fmax(30, _max_motor_temp));
+    eeprom.set_max_motor_temp(max_motor_temp);
+
+    rudder_range = fmin(120, fmax(0, _rudder_range));
+    eeprom.set_rudder_range(rudder_range);
+
+    rudder_offset = fmin(60, fmax(-60, _rudder_offset));
+    eeprom.set_rudder_offset(rudder_offset);
+
+    rudder_scale = fmin(400, fmax(-400, _rudder_scale));
+    eeprom.set_rudder_scale(rudder_scale);
+
+    max_slew_speed = fmin(100, fmax(0, _max_slew_speed));
+    eeprom.set_max_slew_speed(max_slew_speed);
+
+    max_slew_slow = fmin(100, fmax(0, _max_slew_slow));
+    eeprom.set_max_slew_slow(max_slew_slow);
+
+    current_factor = fmin(1.2, fmax(.8, _current_factor));
+    eeprom.set_current_factor(current_factor);
+
+    current_offset = fmin(1.2, fmax(-1.2, _current_offset));
+    eeprom.set_current_offset(current_offset);
+
+    voltage_factor = fmin(1.2, fmax(.8, _voltage_factor));
+    eeprom.set_voltage_factor(voltage_factor);
+
+    voltage_offset = fmin(1.2, fmax(-1.2, _voltage_offset));
+    eeprom.set_voltage_offset(voltage_offset);
+
+    min_motor_speed = fmin(1, fmax(0, _min_motor_speed));
+    eeprom.set_min_motor_speed(min_motor_speed);
+    
+    max_motor_speed = fmax(1, fmax(0, _max_motor_speed));
+    eeprom.set_max_motor_speed(max_motor_speed);
+
+    params_set = 1;
 }
 
 void ArduinoServo::send_value(uint8_t command, uint16_t value)
@@ -229,35 +309,70 @@ void ArduinoServo::send_value(uint8_t command, uint16_t value)
     write(fd, code, 4);
 }
 
-void ArduinoServo::raw_command(uint16_t value)
+void ArduinoServo::send_params()
 {
-    // send max current and temp occasionally
-    switch(out_sync) {
-    case 0: case 8: case 16:
-        send_value(MAX_CURRENT_CODE, max_current_value*100);
-        break;
-    case 4:
-        send_value(MAX_CONTROLLER_TEMP_CODE, max_controller_temp_value*100);
-        break;
-    case 6:
-        send_value(MAX_MOTOR_TEMP_CODE, max_motor_temp_value*100);
-        break;
-    case 12:
-        send_value(RUDDER_RANGE_CODE,
-                   ((int)((min_rudder_pos_value+100)*255/200) & 0xff) |
-                   ((int)((max_rudder_pos_value+100)*255/200) & 0xff) << 8);
-        break;
-    case 18:
-        send_value(MAX_SLEW_CODE,
-                   ((int)(max_slew_speed_value * 255/100) & 0xff) |
-                   ((int)(max_slew_slow_value * 255/100) & 0xff) << 8);
-        break;
+    // send parameters occasionally, but only after parameters have been
+    // initialized by the upper level
+    if (params_set)
+        switch(out_sync) {
+        case 0: case 8: case 16:
+            send_value(MAX_CURRENT_CODE, eeprom.local.max_current);
+            break;
+        case 4:
+            send_value(MAX_CONTROLLER_TEMP_CODE, eeprom.local.max_controller_temp);
+            break;
+        case 6:
+            send_value(MAX_MOTOR_TEMP_CODE, eeprom.local.max_motor_temp);
+            break;
+        case 12:
+        {
+            double n = rudder_range / fabs(rudder_scale);
+            double o = 0.5 - rudder_offset;
+
+            double min_rudder = fmin(1, fmax(0, o - n));
+            double max_rudder = fmin(1, fmax(0, o + n));
+
+            send_value(RUDDER_RANGE_CODE,
+                       ((int)round(min_rudder*255) & 0xff) << 8 |
+                       ((int)round(max_rudder*255) & 0xff));
+        } break;
+        case 18:
+            send_value(MAX_SLEW_CODE,
+                       eeprom.local.max_slew_speed << 8 |
+                       eeprom.local.max_slew_slow);
+            break;
+#if 1
+        case 20:
+        {
+            uint8_t end;
+            int addr = eeprom.need_read(&end);
+            if(addr >= 0 && end > addr) {
+                send_value(EEPROM_READ_CODE, addr | end<<8);
+                //printf("EEPROM_READ %d %d\n", addr, end);
+            }
+        } break;
+        case 22:
+        {
+            int addr = eeprom.need_write();
+            if(addr >= 0) {
+                //printf("EEPROM_WRITE %d %d %d\n", addr, eeprom.data(addr), eeprom.data(addr+1));
+                // send two packets, always write 16 bits atomically
+                send_value(EEPROM_WRITE_CODE, addr | eeprom.data(addr)<<8);
+                addr++;
+                send_value(EEPROM_WRITE_CODE, addr | eeprom.data(addr)<<8);
+            }
+        }
+#endif
     }
 
-    //printf("command %u %d\n", value, out_sync);
-    send_value(COMMAND_CODE, value);
     if(++out_sync == 23)
         out_sync = 0;
+}
+
+void ArduinoServo::raw_command(uint16_t value)
+{
+    send_params();
+    send_value(COMMAND_CODE, value);
 }
 
 void ArduinoServo::reset()
@@ -267,7 +382,8 @@ void ArduinoServo::reset()
 
 void ArduinoServo::disengauge()
 {
-    send_value(DISENGAUGE_CODE, 0);
+    send_params();
+    send_value(DISENGAGE_CODE, 0);
 }
 
 void ArduinoServo::reprogram()

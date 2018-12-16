@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2018 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -25,10 +25,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         self.client = False
 
-        self.gps_heading_offset = 0
-
-
-        self.enabled = False
         self.mode = 'compass'
         self.heading_command = 0
         self.heading = 0
@@ -45,66 +41,97 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
                           'gps.source', 'wind.source',
                           'ap.heading', 'servo.flags',
+                          'ap.pilot',
                           'servo.controller',
-                          'servo.mode', 'servo.engauged']
+                          'servo.mode', 'servo.engaged']
         value_list = client.list_values()
-        self.gains = []
+        self.gains = {}
+        pilots = {}
         for name in value_list:
+            sname = name.split('.')
+            if len(sname) > 2 and sname[0] == 'ap' and sname[1] == 'pilot':
+                pilots[sname[2]] = True
+                
             if 'AutopilotGain' in value_list[name]:
                 sizer = wx.FlexGridSizer( 0, 1, 0, 0 )
-		sizer.AddGrowableRow( 2 )
-		sizer.SetFlexibleDirection( wx.VERTICAL )
+                sizer.AddGrowableRow( 2 )
+                sizer.SetFlexibleDirection( wx.VERTICAL )
+        
+                self.watch(name)
+                self.watch(name+'gain')
 
-                self.watchlist.append(name)
-                self.watchlist.append(name+'gain')
-                stname = wx.StaticText( self.swGains, wx.ID_ANY, name)
+                lname = name
+                sname = name.split('.')
+                if len(sname) > 3 and sname[0] == 'ap' and sname[1] == 'pilot':
+                    lname = sname[3]
+                stname = wx.StaticText( self.swGains, wx.ID_ANY, lname)
                 sizer.Add( stname, 0, wx.ALL, 5 )
                 stvalue = wx.StaticText( self.swGains, wx.ID_ANY, '   N/A   ')
                 sizer.Add( stvalue, 0, wx.ALL, 5 )
-
+        
                 hsizer = wx.FlexGridSizer( 1, 0, 0, 0 )
-		hsizer.AddGrowableRow( 0 )
-		hsizer.SetFlexibleDirection( wx.VERTICAL )
-                
+                hsizer.AddGrowableRow( 0 )
+                hsizer.SetFlexibleDirection( wx.VERTICAL )
+        
                 gauge = wx.Gauge( self.swGains, wx.ID_ANY, 1000, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_VERTICAL )
                 hsizer.Add( gauge, 0, wx.ALL|wx.EXPAND, 5 )
                 slider = wx.Slider( self.swGains, wx.ID_ANY, 0, 0, 1000, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_VERTICAL| wx.SL_INVERSE)
                 hsizer.Add( slider, 0, wx.ALL|wx.EXPAND, 5 )
-
+        
                 sizer.Add( hsizer, 1, wx.EXPAND, 5 )
-                
+
                 min_val, max_val = value_list[name]['min'], value_list[name]['max']
-                gain = {'stname': stname, 'stvalue': stvalue, 'gauge': gauge, 'slider': slider, 'min': min_val, 'max': max_val, 'need_update': False, 'last_change': 0, 'sliderval': 0}
-                self.gains.append(gain)
+                gain = {'stname': stname, 'stvalue': stvalue, 'gauge': gauge, 'slider': slider, 'min': min_val, 'max': max_val, 'need_update': False, 'last_change': 0, 'sliderval': 0, 'sizer': sizer}
+                self.gains[name] = gain
                 def make_ongain(gain):
                     def do_gain(event):
                         gain['need_update'] = True
                         gain['last_change'] = time.time()
                     return do_gain
                 slider.Bind( wx.EVT_SCROLL, make_ongain(gain) )
+                
+        self.enumerate_gains()
 
-                self.fgGains.Add( sizer, 1, wx.EXPAND, 5 )
-
+        self.cPilot.Clear()
+        for pilot in pilots:
+            self.cPilot.Append(pilot)
+                
         self.GetSizer().Fit(self)
         self.SetSize(wx.Size(500, 580))
 
+        # add continuous value to avoid timeout
+        if not 'ap.heading' in value_list:
+            self.watchlist.append('servo.current')
+        
         for name in self.watchlist:
-            client.watch(name)
+            if name in value_list:
+                client.watch(name)
 
+    def watch(self, name):
+        if not name in self.watchlist:
+            self.watchlist.append(name)
+        if self.client:
+            self.client.watch(name)
+
+    def unwatch(self, name):
+        if name in self.watchlist:
+            self.watchlist.remove(name)
+        if self.client:
+            self.client.watch(name, False)
+                
     def servo_command(self, command):
         if self.lastcommand != command or command != 0:
             self.lastcommand = command
             self.client.set('servo.command', command)
 
-    def send_gain(self, gain):
-        name = gain['stname'].GetLabel()
+    def send_gain(self, name, gain):
         slidervalue = gain['slider'].GetValue() / 1000.0 * (gain['max'] - gain['min']) + gain['min']
         self.client.set(name, slidervalue)
 
     def set_mode_color(self):
         modecolors = {'compass': wx.GREEN, 'gps': wx.YELLOW,
                       'wind': wx.BLUE, 'true wind': wx.CYAN}
-        if self.enabled and self.mode in modecolors:
+        if self.tbAP.GetValue() and self.mode in modecolors:
             color = modecolors[self.mode]
         else:
             color = wx.RED
@@ -117,13 +144,16 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.client = SignalKClient(self.on_con, self.host, autoreconnect=False)
                 self.timer.Start(100)
                 self.lastmsgtime = time.time()
+
+                self.tbAP.SetValue(False)
+                self.set_mode_color()
             except socket.error:
                 self.timer.Start(5000)
                 return
-                
+            
         command = self.sCommand.GetValue()
         if command != 0:
-            if self.enabled:
+            if self.tbAP.GetValue():
                 self.heading_command += self.apply_command(command)
                 self.client.set('ap.heading_command', self.heading_command)
                 self.sCommand.SetValue(0)
@@ -135,9 +165,10 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.servo_command(-command / 100.0)
                 self.sCommand.SetValue(command)
 
-        for gain in self.gains:
+        for gain_name in self.gains:
+            gain = self.gains[gain_name]
             if gain['need_update']:
-                self.send_gain(gain)
+                self.send_gain(gain_name, gain)
                 gain['need_update'] = False
                 
             if gain['slider'].GetValue() != gain['sliderval'] and \
@@ -168,12 +199,14 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             self.recv[name] = True
 
             found = False
-            for gain in self.gains:
-                if name == gain['stname'].GetLabel():
+
+            for gain_name in self.gains:
+                gain = self.gains[gain_name]
+                if name == gain_name:
                     gain['stvalue'].SetLabel('%.5f' % value)
                     gain['sliderval'] = (value-gain['min'])*1000/(gain['max'] - gain['min'])
                     found = True
-                elif name == gain['stname'].GetLabel() + 'gain':
+                elif name == gain_name + 'gain':
                     v = abs(value) * 1000.0
                     if v < gain['gauge'].GetRange():
                         gain['gauge'].SetValue(v)
@@ -191,12 +224,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
             if found:
                 pass
-            elif name == 'servo.raw_command':
-                self.tbAP.SetValue(False)
-                self.tbAP.SetForegroundColour(wx.RED)
+#            elif name == 'servo.raw_command':
+#                self.tbAP.SetValue(False)
+#                self.tbAP.SetForegroundColour(wx.RED)
             elif name == 'ap.enabled':
                 self.tbAP.SetValue(value)
-                self.enabled = value
                 self.set_mode_color()
             elif name == 'ap.mode':
                 rb = {'compass': self.rbCompass, 'gps': self.rbGPS, 'wind': self.rbWind, 'true wind': self.rbTrueWind}
@@ -207,6 +239,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.stHeadingCommand.SetLabel('%.1f' % value)
                 if command == 0:
                     self.heading_command = value
+            elif name == 'ap.pilot':
+                self.cPilot.SetStringSelection(value)
+                self.enumerate_gains()
             elif name == 'gps.source':
                 self.rbGPS.Enable(value != 'none')
                 self.rbTrueWind.Enable(value != 'none' and self.rbWind.IsEnabled())
@@ -216,14 +251,18 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'ap.heading':
                 self.stHeading.SetLabel('%.1f' % value)
                 self.heading = value
-            elif name == 'servo.engauged':
-                self.stEngauged.SetLabel('Engauged' if value else 'Disengauged')
+            elif name == 'servo.engaged':
+                self.stEngaged.SetLabel('Engaged' if value else 'Disengaged')
             elif name == 'servo.flags':
                 self.stStatus.SetLabel(value)
             elif name == 'servo.controller':
                 self.stController.SetLabel(value)
             elif name == 'servo.mode':
                 self.stMode.SetLabel(value)
+            elif name == 'servo.current':
+                pass # timeout value to know we are receiving
+            elif 'ap.pilot.' in name:
+                pass
             else:
                 print 'warning: unhandled message "%s"' % name
 
@@ -247,6 +286,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             mode = 'compass'
         self.client.set('ap.mode', mode)
 
+    def onPilot(self, event):
+        self.client.set('ap.pilot', self.cPilot.GetStringSelection())
+
     def onPaintControlSlider( self, event ):
         dc = wx.PaintDC( self.sCommand )
         
@@ -267,6 +309,22 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             dc.DrawLine(x, 0, x, s.y)
             x += s.x / (len(self.sliderlabels) - 1)
 
+    def enumerate_gains(self):
+        while not self.fgGains.IsEmpty():
+            self.fgGains.Detach(0)
+
+        pilot = self.cPilot.GetStringSelection()
+        for name in self.gains:
+            if pilot in name or not 'ap.pilot.' in name:
+                self.gains[name]['sizer'].ShowItems(True)
+                self.fgGains.Add( self.gains[name]['sizer'], 1, wx.EXPAND, 5 )
+            else:
+                self.gains[name]['sizer'].ShowItems(False)
+
+        s = self.GetSize()
+        self.Fit()
+        self.SetSize(s)
+                
     def apply_command(self, command):
         r = self.sCommand.GetMax() - self.sCommand.GetMin() + 1.0
         p = (len(self.sliderlabels) - 1) * (command - self.sCommand.GetMin()) / r
@@ -274,8 +332,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         l1 = self.sliderlabels[int(p)+1]
         v = (p - int(p)) * (l1 - l0) + l0
         #print 'a', command, r, p, l0, l1, v
-        return v
-            
+        return v        
+    
     def onCommand( self, event ):
         if wx.GetMouseState().LeftIsDown():
             x = self.sCommand.ScreenToClient(wx.GetMousePosition()).x

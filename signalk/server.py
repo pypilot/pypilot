@@ -129,7 +129,7 @@ def LoadPersistentData(persistent_path, server=True):
             # log failing to load persistent data
             persist_fail = os.getenv('HOME') + '/.pypilot/persist_fail'
             file = open(persist_fail, 'a')
-            file.write(str(time.time()) + '\n')
+            file.write(str(time.time()) + ' ' + str(e) + '\n')
             file.close()
 
         try:
@@ -171,7 +171,7 @@ class SignalKServer(object):
             socket.socket.close()
             
     def StorePersistentValues(self):
-        self.persistent_timeout = time.time() + 600 # 10 minutes
+        self.persistent_timeout = time.time() + 300 # 5 minutes
         need_store = False
         for name in self.values:
             value = self.values[name]
@@ -194,6 +194,7 @@ class SignalKServer(object):
     def Register(self, value):
         if value.persistent and value.name in self.persistent_data:
             value.value = self.persistent_data[value.name]
+            #print 'persist', value.name, ' = ', value.value
 
         if value.name in self.values:
             print 'warning, registering existing value:', value.name
@@ -300,8 +301,8 @@ class SignalKServer(object):
                         break
                     try:
                         self.HandleRequest(socket, line)
-                    except:
-                        print 'invalid request from socket', line
+                    except Exception as e:
+                        print 'invalid request from socket', line, e
                         socket.send('invalid request: ' + line + '\n')
 
         # flush all sockets
@@ -337,6 +338,7 @@ if __name__ == '__main__':
     server = SignalKServer()
     print 'signalk demo server, try running signalk_client'
     clock = server.Register(Value('clock', 0))
+    test = server.Register(Property('test', 1234))
     while True:
         clock.set(clock.value + 1)
         server.HandleRequests()

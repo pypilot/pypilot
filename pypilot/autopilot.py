@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2018 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -20,21 +20,36 @@ import os.path
 from signalk.server import *
 from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
-from boatimu import *
 
-import serialprobe
+strversion = "0.5"
+
+from boatimu import *
+from resolv import *
+import tacking
+
 from nmea import Nmea
 import servo
 
-def resolv(angle, offset=0):
-    while offset - angle > 180:
-        angle += 360
-    while offset - angle < -180:
-        angle -= 360
-    return angle
-
 def minmax(value, r):
   return min(max(value, -r), r)
+
+class TimedQueue(object):
+  def __init__(self, length):
+    self.data = []
+    self.length = length
+
+  def add(self, data):
+    t = time.time()
+    while self.data and self.data[0][1] < t-self.length:
+      self.data = self.data[1:]
+    self.data.append((data, t))
+
+  def take(self, t):
+    while self.data and self.data[0][1] < t:
+        self.data = self.data[1:]
+    if self.data:
+      return self.data[0][0]
+    return 0
 
 class Filter(object):
     def __init__(self,filtered, lowpass):
@@ -75,10 +90,34 @@ class AutopilotGain(RangeProperty):
       d = super(AutopilotGain, self).type()
       d['AutopilotGain'] = True
       return d
+    
+class ModeProperty(EnumProperty):
+      def __init__(self, name):
+        self.ap = False
+        super(ModeProperty, self).__init__(name, 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
 
-class AutopilotBase(object):
-  def __init__(self, name):
-    super(AutopilotBase, self).__init__()
+      def set(self, value):
+        # update the last mode when the user changes the mode
+        # it should only revert to the last mode if the mode was lost
+        if self.ap:
+          if self.ap.enabled.value:
+            self.ap.lastmode = value
+          self.ap.lost_mode.update(False)
+        super(ModeProperty, self).set(value)    
+
+class AutopilotPilot(object):
+  def __init__(self, name, ap):
+    super(AutopilotPilot, self).__init__()
+    self.name = name
+    self.ap = ap
+
+  def Register(self, _type, name, *args, **kwargs):
+    return self.ap.server.Register(_type(*(['ap.pilot.' + self.name + '.' + name] + list(args)), **kwargs))
+
+import pilots
+class Autopilot(object):
+  def __init__(self):
+    super(Autopilot, self).__init__()
 
     # setup all processes to exit on any signal
     self.childpids = []
@@ -105,25 +144,38 @@ class AutopilotBase(object):
         elif s != 9:
             signal.signal(s, cleanup)
 
-    serial_probe = serialprobe.SerialProbe()
 #    self.server = SignalKServer()
     self.server = SignalKPipeServer()
     self.boatimu = BoatIMU(self.server)
-    self.servo = servo.Servo(self.server, serial_probe)
-    self.nmea = Nmea(self.server, serial_probe)
-    self.version = self.Register(JSONValue, 'version', name + ' ' + 'pypilot' + ' ' + str(0.2))
+    self.servo = servo.Servo(self.server)
+    self.nmea = Nmea(self.server)
+    self.version = self.Register(JSONValue, 'version', 'pypilot' + ' ' + strversion)
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
-    self.mode = self.Register(EnumProperty, 'mode', 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
+
+    self.lost_mode = self.Register(BooleanValue, 'lost_mode', False)
+
+    self.mode = self.Register(ModeProperty, 'mode')
+    self.mode.ap = self
     self.lastmode = False
+
     self.last_heading = False
     self.last_heading_off = self.boatimu.heading_off.value
+
+    self.pilots = []
+    for pilot_type in pilots.default:
+      self.pilots.append(pilot_type(self))
+
+    #names = map(lambda pilot : pilot.name, self.pilots)
+    self.pilot = self.Register(EnumProperty, 'pilot', 'basic', ['simple', 'basic', 'learning'])
 
     timestamp = self.server.TimeStamp('ap')
     self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)
     self.heading_error = self.Register(SensorValue, 'heading_error', timestamp)
     self.heading_error_int = self.Register(SensorValue, 'heading_error_int', timestamp)
     self.heading_error_int_time = time.time()
+
+    self.tack = tacking.Tack(self)
 
     self.gps_compass_offset = self.Register(SensorValue, 'gps_offset', timestamp, directional=True)
     self.gps_speed = self.Register(SensorValue, 'gps_speed', timestamp)
@@ -141,9 +193,8 @@ class AutopilotBase(object):
     try:
         self.watchdog_device = open(device, 'w')
     except:
-        print 'failed to open special file', device, 'for writing:'
-        print 'autopilot cannot strobe the watchdog'
-
+        print 'warning: failed to open special file', device, 'for writing'
+        print '         cannot stroke the watchdog'
 
     if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
       print 'warning, failed to make autopilot process realtime'
@@ -151,7 +202,7 @@ class AutopilotBase(object):
     self.starttime = time.time()
     self.times = 4*[0]
 
-    self.childpids = [self.boatimu.imu_process.pid, self.boatimu.compass_auto_cal.process.pid,
+    self.childpids = [self.boatimu.imu_process.pid, self.boatimu.auto_cal.process.pid,
                  self.server.process.pid, self.nmea.process.pid, self.nmea.gpsdpoller.process.pid]
     signal.signal(signal.SIGCHLD, cleanup)
     import atexit
@@ -179,6 +230,14 @@ class AutopilotBase(object):
       while True:
           self.iteration()
 
+  def mode_lost(self, newmode):
+    self.mode.update(newmode)
+    self.lost_mode.update(True)
+
+  def mode_found(self):
+    self.mode.set(self.lastmode)
+    self.lost_mode.set(False)
+
   def iteration(self):
       data = False
       t00 = time.time()
@@ -197,6 +256,11 @@ class AutopilotBase(object):
       self.server.TimeStamp('ap', time.time()-self.starttime)
       compass_heading = self.boatimu.SensorValues['heading_lowpass'].value
       headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
+
+      #switch back to the last mode if possible
+      if self.lost_mode.value and self.lastmode in self.nmea.values and \
+         self.nmea.values[self.lastmode]['source'].value != 'none':
+        mode_found()
 
       #update wind and gps offsets
       if self.nmea.values['gps']['source'].value != 'none':
@@ -224,16 +288,16 @@ class AutopilotBase(object):
       if self.mode.value == 'true wind':
           # for true wind, we must have both wind and gps
           if self.nmea.values['wind']['source'].value == 'none':
-              self.mode.set('gps')
+              self.mode_lost('gps')
           elif self.nmea.values['gps']['source'].value == 'none':
-              self.mode.set('wind')
+              self.mode_lost('wind')
 
           wind_speed = self.wind_speed.value
-          if wind_speed < 3: # below 3 knots wind speed, not reliable
-              self.mode.set('gps')
+          if wind_speed < 1: # below 1 knots wind speed, not reliable
+              self.mode_lost('gps')
           gps_speed = self.gps_speed.value
           if gps_speed < 1:
-              self.mode.set('wind')
+              self.mode_lost('wind')
 
           rd = math.radians(self.wind_direction.value)
           windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
@@ -248,14 +312,14 @@ class AutopilotBase(object):
       if self.mode.value == 'wind':
           # if wind sensor drops out, switch to compass
           if self.nmea.values['wind']['source'].value == 'none':
-              self.mode.set('compass')
+              self.mode_lost('compass')
           wind_direction = resolv(self.wind_compass_offset.value - compass_heading, 180)
           self.heading.set(wind_direction)
 
       if self.mode.value == 'gps':
           # if gps drops out switch to compass
           if self.nmea.values['gps']['source'].value == 'none':
-              self.mode.set('compass')
+              self.mode_lost('compass')
           gps_heading = resolv(compass_heading + self.gps_compass_offset.value, 180)
           self.heading.set(gps_heading)
 
@@ -278,14 +342,18 @@ class AutopilotBase(object):
 
       if self.enabled.value:
           if self.mode.value != self.lastmode: # mode changed?
+            if self.lastmode:
               err = self.heading_error.value
               if 'wind' in self.mode.value:
                   err = -err
-              self.heading_command.set(resolv(self.heading.value - err, 180))
+            else:
+              err = 0 # no error if enabling
+            self.heading_command.set(resolv(self.heading.value - err, 180))
           self.runtime.update()
           self.servo.servo_calibration.stop()
       else:
           self.runtime.stop()
+          self.lastmode = False
 
       # filter the incoming heading and gyro heading
       # error +- 60 degrees
@@ -305,11 +373,16 @@ class AutopilotBase(object):
       # int error +- 1, from 0 to 1500 deg/s
       self.heading_error_int.set(minmax(self.heading_error_int.value + \
                                         (self.heading_error.value/1500)*dt, 1))
-      self.server.TimeStamp('ap', t)
-      self.process_imu_data() # implementation specific process
+
+      if not self.tack.process():
+        pass
+        for pilot in self.pilots:
+          if pilot.name == self.pilot.value:
+            pilot.process_imu_data() # implementation specific process
+            break
 
       # servo can only disengauge under manual control
-      self.servo.force_engauged = self.enabled.value
+      self.servo.force_engaged = self.enabled.value
       self.lastmode = self.mode.value
 
       t1 = time.time()
@@ -341,10 +414,12 @@ class AutopilotBase(object):
 
       while True:
           dt = BoatIMU.period - (time.time() - t00)
-          if dt <= 0:
+          if dt <= 0 or dt >= BoatIMU.period:
               break
           time.sleep(dt)
 
 
 if __name__ == '__main__':
-  print 'You must run an actual autopilot implementation, eg: simple_autopilot.py'
+  ap = Autopilot()
+  ap.run()
+

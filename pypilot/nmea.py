@@ -28,7 +28,7 @@ from signalk.client import SignalKClient
 from signalk.server import SignalKServer
 from signalk.values import *
 from signalk.pipeserver import NonBlockingPipe
-from serialprobe import SerialProbe
+import serialprobe
 from gpsdpoller import GpsdPoller
 
 import fcntl
@@ -58,11 +58,14 @@ def parse_nmea_gps(line):
     if line[:6] != '$GPRMC':
         return False
 
-    data = line[7:len(line)-3].split(',')
-    timestamp = float(data[0])
-    speed = float(data[6])
-    heading = float(data[7])
-                
+    try:
+        data = line[7:len(line)-3].split(',')
+        timestamp = float(data[0])
+        speed = float(data[6])
+        heading = float(data[7])
+    except:
+        return False
+
     return 'gps', {'timestamp': timestamp, 'track': heading, 'speed': speed}
 
 
@@ -180,10 +183,9 @@ class NMEASocket(object):
 
     
 class Nmea(object):
-    def __init__(self, server, serialprobe):
+    def __init__(self, server):
         self.server = server
         self.values = {'gps': {}, 'wind': {}}
-
 
         def make_source(name, dirname):
             timestamp = server.TimeStamp(name)
@@ -195,7 +197,6 @@ class Nmea(object):
         make_source('gps', 'track')
         make_source('wind', 'direction')
 
-        self.serialprobe = serialprobe
         self.devices = []
         self.devices_lastmsg = {}
         self.probedevice = None
@@ -213,13 +214,10 @@ class Nmea(object):
 
         self.nmea_times = {}
         self.last_imu_time = time.time()
-        self.last_rudder_pos_time = time.time()
+        self.last_rudder_time = time.time()
         self.starttime = time.time()
 
     def __del__(self):
-        if self.gps.process:
-            print 'terminate gps process'
-            self.gps.process.terminate()
         print 'terminate nmea process'
         self.process.terminate()
 
@@ -239,9 +237,9 @@ class Nmea(object):
             return
         if self.process.sockets:
             nmea_name = line[:6]
-            # do not output nmea data over tcp faster than 2hz
+            # do not output nmea data over tcp faster than 5hz
             # for each message time
-            if not nmea_name in self.nmea_times or t-self.nmea_times[nmea_name]>.5:
+            if not nmea_name in self.nmea_times or t-self.nmea_times[nmea_name]>.2:
                 self.process.pipe.send(line, False)
                 self.nmea_times[nmea_name] = t
 
@@ -326,8 +324,8 @@ class Nmea(object):
             value = self.values[name]
             if value['source'].value == 'none':
                 continue
-            if t4 - value['lastupdate'] > 5:
-                print 'nmea timeout for', name, 'source', value['source'].value, time.time()
+            if t4 - value['lastupdate'] > 8:
+                print 'nmea timeout for', name, 'source', value['source'].value, time.time(), t4 - value['lastupdate']
                 value['source'].set('none')
 
         # send nmea messages to sockets
@@ -339,13 +337,13 @@ class Nmea(object):
             self.send_nmea('APHDM,%.3f,M' % self.server.values['imu.heading_lowpass'].value)
             self.last_imu_time = time.time()
 
-        dt = time.time() - self.last_rudder_pos_time
-        if self.process.sockets and (dt > .5 or dt < 0) and \
-           'servo.rudder_pos' in self.server.values:
-            value = self.server.values['servo.rudder_pos'].value
+        dt = time.time() - self.last_rudder_time
+        if self.process.sockets and (dt > .2 or dt < 0) and \
+           'servo.rudder' in self.server.values:
+            value = self.server.values['servo.rudder'].value
             if value:
                 self.send_nmea('APRSA,%.3f,A,,' % value)
-            self.last_rudder_pos_time = time.time()
+            self.last_rudder_time = time.time()
             
         t5 = time.time()
         if t5 - t0 > .1:
@@ -358,7 +356,7 @@ class Nmea(object):
                 self.probeindex = self.devices.index(False)
             except:
                 self.probeindex = len(self.devices)
-            self.probedevicepath = self.serialprobe.probe('nmea%d' % self.probeindex, [38400, 4800])
+            self.probedevicepath = serialprobe.probe('nmea%d' % self.probeindex, [38400, 4800])
             if self.probedevicepath:
                 try:
                     self.probedevice = NMEASerialDevice(self.probedevicepath)
@@ -374,7 +372,7 @@ class Nmea(object):
             if self.probedevice:
                 if self.probedevice.readline():
                     print 'new nmea device', self.probedevicepath
-                    self.serialprobe.probe_success('nmea%d' % self.probeindex)
+                    serialprobe.success('nmea%d' % self.probeindex, self.probedevicepath)
                     if self.probeindex < len(self.devices):
                         self.devices[self.probeindex] = self.probedevice
                     else:
@@ -435,8 +433,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
             if result:
                 name, msg = result
                 msgs[name] = msg
-                break
+                return
 
+    def receive_apb(self, line, msgs):
         # also allow ap commands (should we allow via serial too??)
         '''
    ** APB - Autopilot Sentence "B"
@@ -472,9 +471,6 @@ class NmeaBridgeProcess(multiprocessing.Process):
         if line[3:6] == 'APB' and time.time() - self.last_apb_time > 1:
             self.last_apb_time = time.time()
             data = line[7:len(line)-3].split(',')
-            #if not self.last_values['ap.enabled']:
-            #    self.client.set('ap.enabled', True)
-            #print 'apb', data
             if self.last_values['ap.enabled']:
                 mode = 'compass' if data[13] == 'M' else 'gps'
                 if self.last_values['ap.mode'] != mode:
@@ -482,12 +478,14 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
             command = float(data[12])
             xte = float(data[2])
-            xte = min(xte, 0.1) # maximum 1/10th mile
+            xte = min(xte, 0.15) # maximum 0.15 miles
             if data[3] == 'L':
                 xte = -xte
-            command += 200*xte; # 20 degrees for 1/10th mile
+            command += 300*xte; # 30 degrees for 1/10th mile
             if abs(self.last_values['ap.heading_command'] - command) > .1:
                 self.client.set('ap.heading_command', command)
+            return True
+        return False
 
     def new_socket_connection(self, server):
         connection, address = server.accept()
@@ -503,7 +501,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         sock = NMEASocket(connection)
         self.sockets.append(sock)
-        #print 'new connection: ', address
+        #print 'new nmea connection: ', address
         self.addresses[sock] = address
         fd = sock.socket.fileno()
         self.fd_to_socket[fd] = sock
@@ -524,11 +522,15 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         try:
             self.poller.unregister(sock.socket)
+        except Exception as e:
+            print 'failed to unregister socket', e
+
+        try:
             fd = sock.socket.fileno()
             del self.fd_to_socket[fd]
-        except:
-            print 'bad file descriptor', fd
-            pass # Bad file descriptor, can't unregister
+        except Exception as e:
+            print 'failed to remove fd', e
+
         sock.close()
 
     def client_message(self, name, value):
@@ -567,7 +569,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         server.listen(5)
 
-        self.last_values = {'ap.enabled': False, 'ap.mode': 'N/A', 'ap.heading_command' : 1000, 'gps.source' : 'none', 'wind.source' : 'none'}
+        self.last_values = {'ap.enabled': False, 'ap.mode': 'N/A',
+                            'ap.heading_command' : 1000,
+                            'gps.source' : 'none', 'wind.source' : 'none'}
         self.addresses = {}
         cnt = 0
 
@@ -601,9 +605,10 @@ class NmeaBridgeProcess(multiprocessing.Process):
                         msg = self.pipe.recv()
                         if not msg:
                             break
-                        msg += '\r\n'
-                        for sock in self.sockets:
-                            sock.send(msg)
+                        if not self.receive_apb(msg, msgs):
+                            msg += '\r\n'
+                            for sock in self.sockets:
+                                sock.send(msg)
                 elif flag & select.POLLIN:
                     if not sock.recv():
                         self.socket_lost(sock)
@@ -612,11 +617,14 @@ class NmeaBridgeProcess(multiprocessing.Process):
                             line = sock.readline()
                             if not line:
                                 break
-                            self.receive_nmea(line, msgs)
+                            if not self.receive_apb(line, msgs):
+                                self.receive_nmea(line, msgs)
+                else:
+                    print 'nmea bridge unhandled poll flag', flag
 
             t2 = time.time()
             if msgs:
-                if self.pipe.send(msgs):
+                if self.pipe.send(msgs): ## try , False
                     msgs = {}
 
             t3 = time.time()
@@ -632,19 +640,19 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 sock.flush()
             t5 = time.time()
 
-            dt = t5 - t0
-            if dt < .1:
-                time.sleep(.1 - dt)
+            if t5-t1 > .1:
+                print 'nmea process loop too slow:', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4
             else:
-                if t5-t1 > .1:
-                    print 'nmea process loop too slow:', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4
+                dt = .1 - (t5 - t0)
+                if dt > 0 and dt < .1:
+                    time.sleep(dt)
+
 
 if __name__ == '__main__':
     if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
       print 'warning, failed to make nmea process realtime'
     server = SignalKServer()
-    serialprobe = SerialProbe()
-    nmea = Nmea(server, serialprobe)
+    nmea = Nmea(server)
 
     while True:
         nmea.poll()

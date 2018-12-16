@@ -60,8 +60,11 @@ def round_value(value, fmt):
             for item in value[1:]:
                 ret += ', ' + round_value(item, fmt)
         return ret + ']'
-    else:
-        return fmt % value
+    elif type(value) == type(False):
+        if value:
+            return 'true'
+        return 'false'
+    return fmt % value
 
 class RoundedValue(Value):
     def __init__(self, name, initial, **kwargs):
@@ -142,6 +145,11 @@ class RangeProperty(Property):
     def set(self, value):
         if value >= self.min_value and value <= self.max_value:
             super(RangeProperty, self).set(value)
+
+    def set_max(self, max_value):
+        if self.value > max_value:
+            self.value = max_value
+        self.max_value = max_value
 
 class HeadingProperty(RangeProperty):
     def __init__(self, name, initial):
