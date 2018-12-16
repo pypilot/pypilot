@@ -291,7 +291,7 @@ void ArduinoServo::params(double _max_current, double _max_controller_temp, doub
     min_motor_speed = fmin(1, fmax(0, _min_motor_speed));
     eeprom.set_min_motor_speed(min_motor_speed);
     
-    max_motor_speed = fmax(1, fmax(0, _max_motor_speed));
+    max_motor_speed = fmin(1, fmax(0, _max_motor_speed));
     eeprom.set_max_motor_speed(max_motor_speed);
 
     params_set = 1;
@@ -355,6 +355,14 @@ void ArduinoServo::send_params()
         {
             int addr = eeprom.need_write();
             if(addr >= 0) {
+
+#if 0
+                printf("\nEEPROM local:\n");
+                for(unsigned int i=0; i< sizeof eeprom.local; i+=2) {
+                    printf("%d %x %x\n", i, ((uint8_t*)&eeprom.local)[i], ((uint8_t*)&eeprom.local)[i+1]);
+                }
+#endif
+                
                 //printf("EEPROM_WRITE %d %d %d\n", addr, eeprom.data(addr), eeprom.data(addr+1));
                 // send two packets, always write 16 bits atomically
                 send_value(EEPROM_WRITE_CODE, addr | eeprom.data(addr)<<8);
