@@ -30,11 +30,13 @@ class autogain(object):
         self.search = [ \
                        #{'name': 'ap.I', 'min': 0, 'max': .006, 'step': .003},
                        #{'name': 'ap.P2', 'min': 0, 'max': .006, 'step': .006},
-                       {'name': 'ap.P', 'min': .002, 'max': .006, 'step': .001},
-                       {'name': 'ap.D', 'min': .06, 'max': .12, 'step': .01}]
-        self.variables = ['ap.heading_error', 'servo.Watts', 'servo.current', 'gps.speed']
-        self.settle_period = 2
-        self.period = 5
+                       #{'name': 'ap.P', 'min': .0015, 'max': .0025, 'step': .00025},
+                        {'name': 'ap.D', 'min': .07, 'max': .12, 'step': .001}
+                        #{'name': 'ap.DD', 'min': 0, 'max': .1, 'step': .01}
+        ]
+        self.variables = ['ap.heading_error', 'servo.watts']
+        self.settle_period = 20
+        self.period = 120
 
         self.watchlist = ['ap.enabled']
         for var in self.search:
@@ -70,13 +72,13 @@ class autogain(object):
                 if name == var:
                     name = name[3:]
                     if abs(value - self.gains[name].value) > 1e-8:
-                        print 'external program adjusting search variable!!, abrort', name, value
+                        print 'external program adjusting search variable!!, abort', name, value
                         exit(0)
 
             if log:
                 for var in self.variables:
                     if name == var:
-                        self.total[name]['total'] += value
+                        self.total[name]['total'] += abs(value)
                         self.total[name]['count'] += 1
             if name == 'ap.enabled' and not value:
                 #print 'autopilot disabled!!'
@@ -130,17 +132,18 @@ class autogain(object):
             if vars == vals:
                 values.append(val)
         if len(values) == 1:
-            return '%.3f' % values[0]
+            return '%.4f' % values[0]
         return values
         
     def print_results(self, results, search, vals):
         l = len(search)
-        if l < 2:
-            print 'error, need at least 2 search variables'
-            exit(1)
-
         s = search[0]
-        if l > 2:
+        if l < 2:
+            print s['name']
+            for val in self.result_range(results, s['name']):
+                vals[s['name']] = val
+                print val, self.result_value(results, vals)
+        elif l > 2:
             for val in self.result_range(results, s['name']):
                 print s['name'], '=', val
                 vals[s['name']] = val
@@ -152,10 +155,10 @@ class autogain(object):
             line = '\t'
             s_range = self.result_range(results, s['name'])
             for val0 in s_range:
-                line += '%.3f\t' % val0
+                line += '%.4f\t' % val0
             print line
             for val1 in self.result_range(results, t['name']):
-                line = '%.3f\t' % val1
+                line = '%.4f\t' % val1
                 vals[t['name']] = val1
                 for val0 in s_range:
                     vals[s['name']] = val0

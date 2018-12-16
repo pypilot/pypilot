@@ -27,14 +27,15 @@ black  - d2  - pin 2 -                         reed switch B
 #include <avr/sleep.h>
 #include <HardwareSerial.h>
 #include "PCD8544.h"
+#include <avr/boot.h>
 
 extern "C" {
   #include <twi.h>
 }
 
-#define ANENOMETER
+#define ANENOMETER   // comment to show only baro graph
+//#define LCD
 
-#define LCD
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
 #endif
@@ -77,9 +78,10 @@ void bmX280_setup()
       Serial.print("bmp280 not found: ");
       Serial.println(d[0]);
       // attempt reset command
-      d[0] = 0xe0;
-      d[1] = 0xb6;
-      twi_writeTo(0x76, d, 2, 1, 1);
+      //d[0] = 0xe0;
+      //d[1] = 0xb6;
+      //twi_writeTo(0x76, d, 2, 1, 1);
+      TWCR &= ~(_BV(TWEN));
       return;
   }
 
@@ -145,9 +147,27 @@ void isr_anenometer_count()
     rotation_count++;
 }
 
+#include <avr/wdt.h>
+
 void setup()
 {
+  cli();
+  MCUSR = 0;
+  WDTCSR = (1<<WDCE) | (1<<WDE);
+  WDTCSR = (1<<WDIE) | (1<<WDP2) | (1<<WDP1); // interrupt in 1 second
+  sei();
+  
   Serial.begin(38400);  // start serial for output
+
+  // read fuses, and report this as flag if they are wrong
+    uint8_t lowBits      = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
+    uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
+    uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
+    uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
+    if(lowBits != 0xFF || highBits != 0xda ||
+       (extendedBits != 0xFD && extendedBits != 0xFC) || lockBits != 0xCF)
+        Serial.print("Warning, fuses set wrong, flash may become corrupted");
+
   bmX280_setup();
 
 #ifdef ANENOMETER
@@ -166,6 +186,14 @@ void setup()
   lcd.begin(84, 48);
   pinMode( analogLightPin, INPUT);
 #endif
+}
+
+ISR(WDT_vect)
+{
+    wdt_reset();
+    wdt_disable();
+    delay(1);
+    asm volatile ("ijmp" ::"z" (0x0000));
 }
 
 static volatile uint8_t adcchannel;
@@ -321,6 +349,7 @@ void read_pressure_temperature()
 {
     if(!bmX280_tries)
         return;
+
     uint8_t buf[6] = {0};
     buf[0] = 0xf7;
     uint8_t r = twi_writeTo(0x76, buf, 1, 1, 1);
@@ -348,7 +377,16 @@ void read_pressure_temperature()
     pressure += p >> 2;
     temperature += t >> 2;
     bmp280_count++;
-   
+
+    if(!have_bmp280) {
+        if(bmp280_count == 256) {
+            bmp280_count = 0;
+            /* only re-run setup when count elapse */
+            bmX280_setup();
+        }
+        return;
+    }
+
     if(bmp280_count == 1024) {
         bmp280_count = 0;
         pressure >>= 12;
@@ -357,12 +395,6 @@ void read_pressure_temperature()
         temperature_comp = bmp280_compensate_T_int32(temperature);
         pressure_comp = bmp280_compensate_P_int64(pressure) >> 8;
         pressure = temperature = 0;
-
-        if(!have_bmp280) {
-            /* only re-run setup when count elapse */
-            bmX280_setup();
-            return;
-        }
   
         char buf[128];
         int ap = pressure_comp/100000;
@@ -494,13 +526,13 @@ void draw_anenometer()
 #endif
 }
 
-static uint16_t baro_history[84];
-static uint8_t history_pos;
-static uint32_t baro_val, baro_count;
-static uint32_t last_baro_updatetime;
 void draw_barometer_graph()
 {
 #ifdef LCD
+    static uint16_t baro_history[84];
+    static uint8_t history_pos;
+    static uint32_t baro_val, baro_count;
+    static uint32_t last_baro_updatetime;
     if(!lcd_update)
         return;
 
@@ -577,7 +609,13 @@ void draw_barometer_graph()
 void loop()
 {
     set_sleep_mode(SLEEP_MODE_IDLE);
+    sleep_enable();
+    sleep_cpu();
+
+    wdt_reset();
+
     read_pressure_temperature();
+
 #ifdef LCD
     read_light();
 #endif

@@ -8,15 +8,14 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from autopilot import *
-import servo
 
-class SimpleAutopilot(AutopilotBase):
-  def __init__(self, *args, **keywords):
-    super(SimpleAutopilot, self).__init__('Simple')
+class SimplePilot(AutopilotPilot):
+  def __init__(self, ap):
+    super(SimplePilot, self).__init__('simple', ap)
 
     # create simple pid filter
     self.gains = {}
-    timestamp = self.server.TimeStamp('ap')
+    timestamp = self.ap.server.TimeStamp('ap')
     def Gain(name, default, max_val):
       self.gains[name] = (self.Register(AutopilotGain, name, default, 0, max_val),
                           self.Register(SensorValue, name+'gain', timestamp))
@@ -25,10 +24,11 @@ class SimpleAutopilot(AutopilotBase):
     Gain('D', .15, .5)
 
   def process_imu_data(self):
+    ap = self.ap
     command = 0
-    headingrate = self.boatimu.SensorValues['headingrate'].value
-    gain_values = {'P': self.heading_error.value,
-                   'I': self.heading_error_int.value,
+    headingrate = ap.boatimu.SensorValues['headingrate'].value
+    gain_values = {'P': ap.heading_error.value,
+                   'I': ap.heading_error_int.value,
                    'D': headingrate}
 
     for gain in self.gains:
@@ -37,11 +37,5 @@ class SimpleAutopilot(AutopilotBase):
       gains[1].set(gains[0].value*value)
       command += gains[1].value
 
-    self.servo.command.set(command)
-
-def main():
-  ap = SimpleAutopilot()
-  ap.run()
-
-if __name__ == '__main__':
-  main()
+    if ap.enabled.value:
+      ap.servo.command.set(command)

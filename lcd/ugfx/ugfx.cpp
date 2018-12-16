@@ -600,7 +600,7 @@ public:
         pinMode(DC, OUTPUT);
 
 	for(int port=0; port<2; port++)
-	    if((spifd = wiringPiSPISetup(port, 4000000)) != -1)
+	    if((spifd = wiringPiSPISetup(port, 400000)) != -1)
 		break;
 	  
 	if(spifd == -1) {
@@ -634,7 +634,7 @@ public:
 
     void reset() {
         digitalWrite (RST, LOW);
-        usleep(100000);
+        usleep(200000);
         digitalWrite (RST, HIGH);
     }
     
@@ -655,7 +655,7 @@ nokia5110screen::nokia5110screen()
     : surface(48, 84, 1, NULL)
 {
     disp = new PCD8544();
-    contrast = 50;
+    contrast = 60;
     disp->begin(contrast);
 }
 
