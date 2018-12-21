@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2018 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -156,7 +156,6 @@ class rectangle():
 
 AUTO, MENU, UP, DOWN, SELECT, LEFT, RIGHT = range(7)
 keynames = {'auto': AUTO, 'menu': MENU, 'up': UP, 'down': DOWN, 'select': SELECT, 'left': LEFT, 'right': RIGHT}
-gains = ['ap.P', 'ap.DD', 'ap.D', 'ap.FF']
 
 class LCDClient():
     def __init__(self, screen):
@@ -204,7 +203,7 @@ class LCDClient():
                       'true wind': self.have_true_wind};
         self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
 
-        self.initial_gets = gains + ['servo.min_speed', 'servo.max_speed', 'servo.max_current', 'servo.period', 'imu.alignmentCounter']
+        self.initial_gets = ['servo.min_speed', 'servo.max_speed', 'servo.max_current', 'servo.period', 'imu.alignmentCounter']
 
         self.have_select = False
         self.create_mainmenu()
@@ -305,10 +304,33 @@ class LCDClient():
                 return self.range_edit.display
             return name, thunk
 
+        def pilot():
+            selection = 0
+            index = 0
+
+            for pilot in self.pilots:
+                if pilot == self.last_val('ap.pilot'):
+                    selection = index
+                index+=1
+
+            self.menu = LCDMenu(self, _('Pilot'), pilots, self.menu)
+            self.menu.selection = selection
+
+            return self.display_menu
+
+        def curgains():
+            ret = []
+            for g in self.gains:
+                if self.last_val('ap.pilot') in g:
+                    ret += g
+            return ret
+        
         def gain():
             self.menu = LCDMenu(self, _('Gain'),
+                                [(_('pilot'), pilot)] +
                                 map(lambda gain : value_edit(gain[gain.find('.')+1:],
-                                                             gain, gain, True), gains), self.menu)
+                                                             gain, gain, True), curgains()),
+                                 self.menu)
             return self.display_menu
 
         def level():
@@ -534,12 +556,13 @@ class LCDClient():
     def connect(self):
         self.display_page = self.display_connecting
         
-        watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
+        watchlist = ['ap.enabled', 'ap.mode', 'ap.pilot', 'ap.heading_command',
                      'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
                      'imu.compass.calibration', 'imu.compass.calibration.sigmapoints',
                      'imu.compass.calibration.locked', 'imu.alignmentQ']
         poll_list = ['ap.heading']
         self.last_msg = {}
+        self.pilots = {}
         for name in ['gps.source', 'wind.source']:
             self.last_msg[name] = 'none'
         self.last_msg['ap.heading_command'] = 0
@@ -558,6 +581,10 @@ class LCDClient():
 
         try:
             self.client = SignalKClient(on_con, host)
+            self.value_list = self.client.list_values(10)
+
+                            
+                                
             self.display_page = self.display_control
             print 'connected'
 
