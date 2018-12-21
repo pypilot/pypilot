@@ -94,7 +94,7 @@ bool ArduinoServo::initialize(int baud)
 //    while(read(fd, in_buf, in_buf_len) > 0);
 
     // force unsync
-    char reset_code[] = {0xff, 0xff, 0xff, 0xff};
+    uint8_t reset_code[] = {0xff, 0xff, 0xff, 0xff};
     write(fd, reset_code, sizeof reset_code);
     
     while (!(flags & SYNC) || out_sync < 20) {

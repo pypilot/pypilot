@@ -208,6 +208,7 @@ class Autopilot(object):
     import atexit
     atexit.register(lambda : cleanup('atexit'))
     
+    self.lastdata = False
     self.lasttime = time.time()
 
     # read initial value from imu as this takes time
@@ -247,8 +248,9 @@ class Autopilot(object):
               break
           time.sleep(BoatIMU.period/10)
 
-      if not data:
+      if not data and self.lastdata:
           print 'autopilot failed to read imu at time:', time.time()
+      self.lastdata = data;
       t0 = time.time()
       dt = t0 - self.lasttime
       self.lasttime = t0
