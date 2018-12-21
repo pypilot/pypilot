@@ -290,11 +290,14 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.client.set('ap.pilot', self.cPilot.GetStringSelection())
 
     def onPaintControlSlider( self, event ):
-        dc = wx.PaintDC( self.sCommand )
+        # gtk3 is a bit broken
+        if 'gtk3' in wx.version():
+            return
         
+        dc = wx.PaintDC( self.sCommand )        
         s = self.sCommand.GetSize()
 
-        dc.SetTextForeground(wx.BLACK);
+        #dc.SetTextForeground(wx.BLACK);
         dc.SetPen(wx.Pen(wx.BLACK));
         dc.SetBrush(wx.TRANSPARENT_BRUSH);
         y = 10
