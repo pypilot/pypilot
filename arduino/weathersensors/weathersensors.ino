@@ -34,7 +34,7 @@ extern "C" {
 }
 
 #define ANENOMETER   // comment to show only baro graph
-//#define LCD
+#define LCD
 
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
@@ -283,10 +283,30 @@ void read_anenometer()
     ADMUX = _BV(REFS0) | 6;
     sei();
     sensorValue = val / count;
-    
+
+
+    static uint32_t minreading = 300, maxreading = 650;
+
+    if(sensorValue < minreading / 2 && minreading > 20)
+        sensorValue = minreading; // invalid
+        
+    if(sensorValue < minreading - 10)
+        minreading = sensorValue + 10;
+    else if(sensorValue < minreading)
+        sensorValue = minreading;
+
+    if(sensorValue > maxreading + 10)
+        maxreading = sensorValue - 10;
+    else if(sensorValue > maxreading)
+        sensorValue = maxreading;
+
 //  float dir = sensorValue / 1024.0 * 360;
     // compensate 13 degree deadband in potentiometer
+#ifdef _DEADZONE
     float dir = (sensorValue + 13) * .34;
+#else
+    float dir = (sensorValue - minreading) / (maxreading - minreading) * 360.0;
+#endif
     
     if(lpdir - dir > 180)
         dir += 360;
@@ -295,6 +315,7 @@ void read_anenometer()
     
     lpdir = lp*dir + (1-lp)*lpdir;
 //    lpdir = dir;
+
     
     if(lpdir >= 360)
         lpdir -= 360;
