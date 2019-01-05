@@ -1126,12 +1126,13 @@ void loop()
     if(CountADC(RUDDER, 1) > rudder_react_count) {
         uint16_t v = TakeRudder(1);
         if(rudder_sense) {
-            if(v < rudder_min) {
+            uint16_t w = v >> 8;
+            if(w < rudder_min) {
                 stop_rev();
                 flags |= MIN_RUDDER;
             } else
                 flags &= ~MIN_RUDDER;
-            if(v > rudder_max) {
+            if(w > rudder_max) {
                 stop_fwd();
                 flags |= MAX_RUDDER;
             } else
