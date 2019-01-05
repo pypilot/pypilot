@@ -414,7 +414,7 @@ class Servo(object):
             self.command_timeout = t
 
         if self.driver:
-            uncorrected_max_current = (self.max_current.value - self.current.offset.value)/ self.current.factor.value 
+            uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value)/ self.current.factor.value 
             if self.disengaged: # keep sending disengauge to keep sync
                 self.driver.disengauge()
                 self.send_driver_params(uncorrected_max_current)
@@ -465,7 +465,7 @@ class Servo(object):
                     print 'failed to open servo:', e
                     return
                 self.driver = ArduinoServo(device.fileno())
-                uncorrected_max_current = (self.max_current.value - self.current.offset.value)/ self.current.factor.value 
+                uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value)/ self.current.factor.value 
                 self.send_driver_params(uncorrected_max_current)
 
                 t0 = time.time()
