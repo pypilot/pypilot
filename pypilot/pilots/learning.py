@@ -8,7 +8,11 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from signalk.values import Value
-from autopilot import *
+
+try:
+  from autopilot import *
+except:
+  from pypilot.autopilot import *
 
 def FindOffset(queue):
   mindt = 0
