@@ -7,7 +7,10 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from autopilot import *
+try:
+  from autopilot import *
+except:
+  from pypilot.autopilot import *
 
 global default_pilots
 
