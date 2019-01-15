@@ -288,39 +288,37 @@ void read_anenometer()
     static uint32_t minreading = 300, maxreading = 650;
 
     if(sensorValue < minreading / 2 && minreading > 20)
-        sensorValue = minreading; // invalid
-        
-    if(sensorValue < minreading - 10)
-        minreading = sensorValue + 10;
-    else if(sensorValue < minreading)
-        sensorValue = minreading;
-
-    if(sensorValue > maxreading + 10)
-        maxreading = sensorValue - 10;
-    else if(sensorValue > maxreading)
-        sensorValue = maxreading;
+        lpdir = -1; // invalid
+    else {
+        if(sensorValue < minreading - 10)
+            minreading = sensorValue + 10;
+        else if(sensorValue < minreading)
+            sensorValue = minreading;
+        else if(sensorValue > maxreading + 10)
+            maxreading = sensorValue - 10;
+        else if(sensorValue > maxreading)
+            sensorValue = maxreading;
 
 //  float dir = sensorValue / 1024.0 * 360;
-    // compensate 13 degree deadband in potentiometer
+        // compensate 13 degree deadband in potentiometer
 #ifdef _DEADZONE
-    float dir = (sensorValue + 13) * .34;
+        float dir = (sensorValue + 13) * .34;
 #else
-    float dir = (sensorValue - minreading) / (maxreading - minreading) * 360.0;
+        float dir = (sensorValue - minreading) / (maxreading - minreading) * 360.0;
 #endif
-    
-    if(lpdir - dir > 180)
-        dir += 360;
-    else if(dir - lpdir > 180)
-        dir -= 360;
-    
-    lpdir = lp*dir + (1-lp)*lpdir;
-//    lpdir = dir;
+        
+        if(lpdir - dir > 180)
+            dir += 360;
+        else if(dir - lpdir > 180)
+            dir -= 360;
+        
+        lpdir = lp*dir + (1-lp)*lpdir;
 
-    
-    if(lpdir >= 360)
-        lpdir -= 360;
-    else if(lpdir < 0)
-        lpdir += 360;
+        if(lpdir >= 360)
+            lpdir -= 360;
+        else if(lpdir < 0)
+            lpdir += 360;
+    }
 
     uint16_t time = millis();
     static uint16_t last_time;
@@ -350,7 +348,10 @@ void read_anenometer()
         }
 
         char buf[128];
-        snprintf(buf, sizeof buf, "ARMWV,%d.%02d,R,%d.%02d,N,A", (int)lpdir, (uint16_t)(lpdir*100.0)%100U, (int)knots, (int)(knots*100)%100);
+        if(lpdir >= 0)
+            snprintf(buf, sizeof buf, "ARMWV,%d.%02d,R,%d.%02d,N,A", (int)lpdir, (uint16_t)(lpdir*100.0)%100U, (int)knots, (int)(knots*100)%100);
+        else // invalid wind direction (no magnet?)
+            snprintf(buf, sizeof buf, "ARMWV,,R,%d.%02d,N,A", (int)knots, (int)(knots*100)%100);
         //        Serial.println(lpdir*100);
         //        Serial.println((int)(uint16_t)(lpdir*100.0)%100U);
 
@@ -482,7 +483,9 @@ void draw_anenometer()
         int a, r;
         last_lcd_texttime = time;
 
-        snprintf(status_buf[0], sizeof status_buf[0], "%02d", (int) round(wind_dir));
+        if(wind_dir>=0)
+            snprintf(status_buf[0], sizeof status_buf[0], "%02d", (int) round(wind_dir));
+
         snprintf(status_buf[1], sizeof status_buf[1], "%02d", (int) round(wind_speed));
 
         lcd.rectangle(0, 46, 48, 83, 0); // clear text
@@ -519,8 +522,9 @@ void draw_anenometer()
     lcd.rectangle(0, 0, 48, 45, 0); // clear compass
     // draw direction dial for wind
     lcd.circle(24, 22, 22, 255);
-    float wind_rad = wind_dir/180.0*M_PI;
-    {
+
+    if(wind_dir >= 0) {
+        float wind_rad = wind_dir/180.0*M_PI;
         int r = 22;
         int x = r*sin(wind_rad);
         int y = -r*cos(wind_rad);
@@ -530,18 +534,19 @@ void draw_anenometer()
             lcd.line(24+xp, 22+yp, 24+x, 22+y, 255);
             lcd.line(24-xp, 22-yp, 24+x, 22+y, 255);
         }
+
+        // print the heading under the dial
+        lcd.setfont(1);
+        int xp, yp;
+        xp = -11.0*sin(wind_rad), yp = 10.0*cos(wind_rad);
+        static float nxp = 0, nyp = 0;
+        nxp = (xp + 31*nxp)/32;
+        nyp = (yp + 31*nyp)/32;
+        xp = 24+nxp-12, yp = 22+nyp-8; 
+        lcd.rectangle(xp-1, yp+3, xp+22, yp+14, 0); // clear heading text area
+        lcd.setpos(xp, yp);
+        lcd.print(status_buf[0]);
     }
-    // print the heading under the dial
-    lcd.setfont(1);
-    int xp, yp;
-    xp = -11.0*sin(wind_rad), yp = 10.0*cos(wind_rad);
-    static float nxp = 0, nyp = 0;
-    nxp = (xp + 31*nxp)/32;
-    nyp = (yp + 31*nyp)/32;
-    xp = 24+nxp-12, yp = 22+nyp-8; 
-    lcd.rectangle(xp-1, yp+3, xp+22, yp+14, 0); // clear heading text area
-    lcd.setpos(xp, yp);
-    lcd.print(status_buf[0]);
     
     lcd.refresh();
 #endif
