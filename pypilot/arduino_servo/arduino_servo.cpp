@@ -74,8 +74,8 @@ static uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
 }
 
 
-ArduinoServo::ArduinoServo(int _fd)
-    : fd(_fd)
+ArduinoServo::ArduinoServo(int _fd, int _baud)
+    : fd(_fd), baud(_baud)
 {
     in_sync_count = 0;
     out_sync = 0;
@@ -83,38 +83,14 @@ ArduinoServo::ArduinoServo(int _fd)
     max_current = 0;
     params_set = 0;
     flags = 0;
-}
-
-bool ArduinoServo::initialize(int baud)
-{
-    int cnt = 0;
-    bool data = false;
-
-    // flush device data
-//    while(read(fd, in_buf, in_buf_len) > 0);
 
     // force unsync
     uint8_t reset_code[] = {0xff, 0xff, 0xff, 0xff};
     write(fd, reset_code, sizeof reset_code);
-    
-    while (!(flags & SYNC) || out_sync < 20) {
-        raw_command(1000); // ensure we set the temp limits as well here
-        if(poll()>0) {
-            while(poll());
-            data = true;
-        } else
-            usleep(1e6 * 120 / baud);
-        cnt++;
-        if(cnt >= 400 && !data) {
-            printf("arduino servo fail no data\n");
-            return false;
-        }
-        if(cnt == 1000) {
-            printf("arduino servo fail sync\n");
-            return false;
-        }
-    }
-    return true;
+    // flush device data
+//    while(read(fd, in_buf, in_buf_len) > 0);
+    nosync_count = 0;
+    nosync_data = 0;
 }
 
 void ArduinoServo::command(double command)
@@ -188,6 +164,7 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
             voltage_offset = eeprom.get_voltage_offset();
             min_motor_speed = eeprom.get_min_motor_speed();
             max_motor_speed = eeprom.get_max_motor_speed();
+            gain = eeprom.get_gain();
             return EEPROM;
         }
     }
@@ -197,6 +174,31 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
 
 int ArduinoServo::poll()
 {
+    if (!(flags & SYNC)) {
+#if 0
+        gettimeofday(&tv, 0);
+        double dt = 0;
+        while(dt < .01) { 
+            gettimeofday(&tv2, 0);
+            double dt = tv2.tv_sec - tv.tv_sec + (tv2.tv_usec - tv.tv_usec) / 1e6.
+        }
+#endif
+        raw_command(1000); // ensure we set the temp limits as well here
+        nosync_count++;
+        if(nosync_count >= 400 && !nosync_data) {
+            printf("arduino servo fail no data\n");
+            return -1;
+        }
+        if(nosync_count >= 1000) {
+            printf("arduino servo fail sync\n");
+            return -1;
+        }
+    } else {
+        // reset incase we need to reinitialize
+        nosync_count = 0;
+        nosync_data = 0;
+    }
+
     if(in_buf_len < 4) {
         int c;
         for(;;) {
@@ -242,7 +244,13 @@ int ArduinoServo::poll()
         }
     }
 
-    return ret;
+    if (flags & SYNC)
+        return ret;
+
+    if (ret)
+        nosync_data = 1;
+    
+    return 0;
 }
 
 bool ArduinoServo::fault()
@@ -250,7 +258,7 @@ bool ArduinoServo::fault()
     return flags & OVERCURRENT;
 }
 
-void ArduinoServo::params(double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_motor_speed, double _max_motor_speed)
+void ArduinoServo::params(double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_motor_speed, double _max_motor_speed, double _gain)
 {
     max_current = fmin(60, fmax(0, _max_current));
     eeprom.set_max_current(max_current);
@@ -293,6 +301,9 @@ void ArduinoServo::params(double _max_current, double _max_controller_temp, doub
     
     max_motor_speed = fmin(1, fmax(0, _max_motor_speed));
     eeprom.set_max_motor_speed(max_motor_speed);
+
+    gain = fmin(10, fmax(.1, _gain));
+    eeprom.set_gain(gain);
 
     params_set = 1;
 }

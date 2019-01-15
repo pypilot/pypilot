@@ -16,6 +16,7 @@ struct arduino_servo_data /*__attribute__(("packed"))*/ {
     uint8_t current_factor, voltage_factor;
     int8_t current_offset, voltage_offset;
     uint8_t min_motor_speed, max_motor_speed;
+    uint16_t gain;
 };
 
 class arduino_servo_eeprom
@@ -54,6 +55,9 @@ public:
     void set_min_motor_speed(double min_motor_speed);
     double get_max_motor_speed();
     void set_max_motor_speed(double max_motor_speed);
+
+    double get_gain();
+    void set_gain(double gain);
     
     int need_read(uint8_t *end=0);
     int need_write();
