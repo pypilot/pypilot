@@ -216,6 +216,7 @@ class Servo(object):
 
         self.max_slew_speed = self.Register(RangeProperty, 'max_slew_speed', 30, 0, 100, persistent=True)
         self.max_slew_slow = self.Register(RangeProperty, 'max_slew_slow', 50, 0, 100, persistent=True)
+        self.gain = self.Register(RangeProperty, 'gain', 1, .1, 10, persistent=True)
         self.period = self.Register(RangeProperty, 'period', .7, .1, 3, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'compensate_voltage', False, persistent=True)
@@ -277,7 +278,7 @@ class Servo(object):
                 #print 'servo command timeout', time.time() - self.command.time
                 self.command.set(0)
             self.disengaged = False
-            self.velocity_command(self.command.value)
+            self.velocity_command(self.command.value * self.gain.value)
         else:
             #print 'timeout', t - self.command_timeout
             if self.disengauge_on_timeout.value and \
@@ -310,13 +311,6 @@ class Servo(object):
             self.flags.clearbit(ServoFlags.FWD_FAULT)
         if self.position.value > .05:
             self.flags.clearbit(ServoFlags.REV_FAULT)
-
-        if False: # don't keep moving really long in same direction.....
-            rng = 5
-            if self.position.value > 1 + rng:
-                self.flags.fwd_fault()
-            if self.position.value < -rng:
-                self.flags.rev_fault()
             
         if self.compensate_voltage.value:
             speed *= 12 / self.voltage.value
@@ -449,7 +443,7 @@ class Servo(object):
         self.driver = False
 
     def send_driver_params(self, _max_current):
-        self.driver.params(_max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.rudder_range.value, self.rudder_offset.value, self.rudder_scale.value, self.max_slew_speed.value, self.max_slew_slow.value, self.current.factor.value, self.current.offset.value, self.voltage.factor.value, self.voltage.offset.value, self.min_speed.value, self.max_speed.value)
+        self.driver.params(_max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.rudder_range.value, self.rudder_offset.value, self.rudder_scale.value, self.max_slew_speed.value, self.max_slew_slow.value, self.current.factor.value, self.current.offset.value, self.voltage.factor.value, self.voltage.offset.value, self.min_speed.value, self.max_speed.value, self.gain.value)
 
     def poll(self):
         if not self.driver:
@@ -464,33 +458,20 @@ class Servo(object):
                 except Exception as e:
                     print 'failed to open servo:', e
                     return
-                self.driver = ArduinoServo(device.fileno())
+                self.driver = ArduinoServo(device.fileno(), device_path[1])
                 uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value)/ self.current.factor.value 
                 self.send_driver_params(uncorrected_max_current)
-
-                t0 = time.time()
-                if self.driver.initialize(device_path[1]):
-                    self.device = device
-                    print 'arduino servo found on', device_path
-                    serialprobe.success('servo', device_path)
-                    self.controller.set('arduino')
-
-                    self.driver.command(0)
-                    self.lastpolltime = time.time()
-                else:
-                    print 'failed in ', time.time()-t0
-                    device.close()
-                    self.driver = False
-                    print 'failed to initialize servo on', device
+                self.device = device
+                self.lastpolltime = time.time()
 
         if not self.driver:
             return
         self.servo_calibration.poll()
         result = self.driver.poll()
         #print 'servo poll', result
-
+        
         if result == -1:
-            print 'servo poll -1'
+            print 'servo lost'
             self.close_driver()
             return
 
@@ -503,6 +484,13 @@ class Servo(object):
                 self.close_driver()
         else:
             self.lastpolltime = time.time()
+
+            if self.controller.value == 'none':
+                print 'arduino servo found on', device_path
+                serialprobe.success('servo', device_path)
+                self.controller.set('arduino')
+                self.driver.command(0)
+
 
         t = time.time()
         self.server.TimeStamp('servo', t)
@@ -557,6 +545,7 @@ class Servo(object):
             self.voltage.offset.set(self.driver.voltage_offset)
             self.min_speed.set(self.driver.min_motor_speed);
             self.max_speed.set(self.driver.max_motor_speed);
+            self.gain.set(self.driver.gain);
 
         if self.fault():
             if not self.flags.value & ServoFlags.FWD_FAULT and \

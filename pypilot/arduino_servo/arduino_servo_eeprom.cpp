@@ -18,7 +18,7 @@ arduino_servo_eeprom::arduino_servo_eeprom()
 {
     memset(&local, 0, sizeof local);
     memset(&verified, 0, sizeof verified);
-    memcpy(local.signature, "arsv19", 6); // change this if the format changes
+    memcpy(local.signature, "arsv20", 6); // change this if the format changes
 }
 
 double arduino_servo_eeprom::get_max_current()
@@ -69,7 +69,6 @@ double arduino_servo_eeprom::get_rudder_offset()
 void arduino_servo_eeprom::set_rudder_offset(double rudder_offset)
 {
     local.rudder_offset = round(rudder_offset * 2); // from 0 to 120
-
 }
 
 // store rudder scale from -512 to 512 for s9.6 fixed point
@@ -161,6 +160,17 @@ double arduino_servo_eeprom::get_max_motor_speed()
 void arduino_servo_eeprom::set_max_motor_speed(double max_motor_speed)
 {
     local.max_motor_speed = round(max_motor_speed*200.0);
+}
+
+
+double arduino_servo_eeprom::get_gain()
+{
+    return arduino.gain/1000.0;
+}
+
+void arduino_servo_eeprom::set_gain(double gain)
+{
+    local.gain = round(gain*1000.0);
 }
 
 int arduino_servo_eeprom::need_read(uint8_t *end)

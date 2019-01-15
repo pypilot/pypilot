@@ -11,16 +11,15 @@ class ArduinoServo
     enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4};
 
 public:
-    ArduinoServo(int _fd);
+    ArduinoServo(int _fd, int _baud);
 
-    bool initialize(int baud);
     void command(double command);
     void reset();
     void disengauge();
     void reprogram();
     int poll();
     bool fault();
-    void params(double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_motor_speed, double _max_motor_speed);
+    void params(double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_motor_speed, double _max_motor_speed, double _gain);
 
     double voltage, current, controller_temp, motor_temp, rudder;
 
@@ -29,6 +28,7 @@ public:
     double max_slew_speed, max_slew_slow;
     double current_factor, current_offset, voltage_factor, voltage_offset;
     double min_motor_speed, max_motor_speed;
+    double gain;
 
     int flags;
 };
