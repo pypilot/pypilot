@@ -274,7 +274,7 @@ def SignalKClientFromArgs(argv, watch, f_con=False):
     def on_con(client):
         for arg in watches:
             if watch:
-                print 'watch', arg
+                #print 'watch', arg
                 client.watch(arg)
             else:
                 client.get(arg)
