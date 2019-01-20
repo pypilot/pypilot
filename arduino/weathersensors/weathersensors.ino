@@ -148,6 +148,12 @@ void isr_anenometer_count()
 }
 
 #include <avr/wdt.h>
+#include <avr/eeprom.h>
+
+struct eeprom_data_struct {
+    char signature[6];
+    uint16_t wind_min_reading, wind_max_reading;
+} eeprom_data;
 
 void setup()
 {
@@ -156,6 +162,20 @@ void setup()
   WDTCSR = (1<<WDCE) | (1<<WDE);
   WDTCSR = (1<<WDIE) | (1<<WDP2) | (1<<WDP1); // interrupt in 1 second
   sei();
+
+  // default values
+  char signature[] =  "arws10";
+  memcpy(eeprom_data.signature, signature, sizeof eeprom_data.signature);
+  eeprom_data.wind_min_reading = 300;
+  eeprom_data.wind_max_reading = 650;
+  
+  // read eeprom and determine if it is valid
+  struct eeprom_data_struct ram_eeprom;
+  eeprom_read_block(&ram_eeprom, 0, sizeof ram_eeprom);
+  if(memcmp(ram_eeprom.signature, signature, sizeof ram_eeprom.signature) != 0)
+      eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
+  else
+      memcpy(&eeprom_data, &ram_eeprom, sizeof eeprom_data);
   
   Serial.begin(38400);  // start serial for output
 
@@ -265,6 +285,7 @@ void send_nmea(const char *buf)
 
 int lcd_update;
 float wind_dir, wind_speed, wind_speed_30;
+
 void read_anenometer()
 {
     static float lpdir;
@@ -284,28 +305,30 @@ void read_anenometer()
     sei();
     sensorValue = val / count;
 
-
-    static uint32_t minreading = 300, maxreading = 650;
-
-    if(sensorValue < minreading / 2 && minreading > 20)
+    if(sensorValue < eeprom_data.wind_min_reading / 2 && eeprom_data.wind_min_reading > 20)
         lpdir = -1; // invalid
     else {
-        if(sensorValue < minreading - 10)
-            minreading = sensorValue + 10;
-        else if(sensorValue < minreading)
-            sensorValue = minreading;
-        else if(sensorValue > maxreading + 10)
-            maxreading = sensorValue - 10;
-        else if(sensorValue > maxreading)
-            sensorValue = maxreading;
+        int noise = 5;
+        if(sensorValue < eeprom_data.wind_min_reading - noise) {
+            // new minimum
+            eeprom_data.wind_min_reading = sensorValue + noise;
+            eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
+        } else if(sensorValue < eeprom_data.wind_min_reading)
+            sensorValue = eeprom_data.wind_min_reading;
+        else if(sensorValue > eeprom_data.wind_max_reading + noise) {
+            eeprom_data.wind_max_reading = sensorValue - noise;
+            eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
+        }
+        else if(sensorValue > eeprom_data.wind_max_reading)
+            sensorValue = eeprom_data.wind_max_reading;
 
-//  float dir = sensorValue / 1024.0 * 360;
         // compensate 13 degree deadband in potentiometer
-#ifdef _DEADZONE
-        float dir = (sensorValue + 13) * .34;
-#else
-        float dir = (sensorValue - minreading) / (maxreading - minreading) * 360.0;
-#endif
+        float dir;
+        if(eeprom_data.wind_min_reading < 20 && eeprom_data.wind_max_reading > 1000)
+            dir = (sensorValue + 13) * .34;
+        else
+            dir = (sensorValue - eeprom_data.wind_min_reading)
+                / (eeprom_data.wind_max_reading - eeprom_data.wind_min_reading) * 360.0;
         
         if(lpdir - dir > 180)
             dir += 360;
