@@ -171,7 +171,7 @@ class EnumProperty(Property):
         return {'type' : 'EnumProperty', 'choices' : self.choices}
 
     def get_signalk(self):
-        return '{"' + self.name + '": {"value": "' + self.value + '"}}'
+        return '{"' + self.name + '": {"value": "' + str(self.value) + '"}}'
 
     def set(self, value):
         for choice in self.choices:

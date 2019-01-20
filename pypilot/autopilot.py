@@ -246,7 +246,7 @@ class Autopilot(object):
           data = self.boatimu.IMURead()
           if data:
               break
-          time.sleep(BoatIMU.period/10)
+          time.sleep(self.boatimu.period/10)
 
       if not data and self.lastdata:
           print 'autopilot failed to read imu at time:', time.time()
@@ -388,23 +388,23 @@ class Autopilot(object):
       self.lastmode = self.mode.value
 
       t1 = time.time()
-      if t1-t0 > BoatIMU.period/2:
+      if t1-t0 > self.boatimu.period/2:
           print 'Autopilot routine is running too _slowly_', t1-t0, BoatIMU.period/2
 
       self.servo.poll()
       t2 = time.time()
-      if t2-t1 > BoatIMU.period/2:
+      if t2-t1 > self.boatimu.period/2:
           print 'servo is running too _slowly_', t2-t1
 
       self.nmea.poll()
 
       t4 = time.time()
-      if t4 - t2 > BoatIMU.period/2:
+      if t4 - t2 > self.boatimu.period/2:
           print 'nmea is running too _slowly_', t4-t2
 
       self.server.HandleRequests()
       t5 = time.time()
-      if t5 - t4 > BoatIMU.period/2:
+      if t5 - t4 > self.boatimu.period/2:
           print 'server is running too _slowly_', t5-t4
 
       times = t1-t0, t2-t1, t4-t2
@@ -415,8 +415,8 @@ class Autopilot(object):
           self.watchdog_device.write('c')
 
       while True:
-          dt = BoatIMU.period - (time.time() - t00)
-          if dt <= 0 or dt >= BoatIMU.period:
+          dt = self.boatimu.period - (time.time() - t00)
+          if dt <= 0 or dt >= self.boatimu.period:
               break
           time.sleep(dt)
 
