@@ -30,7 +30,7 @@ except ImportError:
   RTIMU = False
   print "RTIMU library not detected, please install it"
 
-def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias):
+def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
     if not RTIMU:
       while True:
         time.sleep(10)
@@ -128,9 +128,9 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias):
           #rtimu.resetFusion()
         
         dt = time.time() - t0
-        t = BoatIMU.period - dt # 10hz
+        t = period - dt # 10hz
 
-        if t > 0 and t < BoatIMU.period:
+        if t > 0 and t < period:
           time.sleep(t)
         else:
           print 'imu process failed to keep time'
@@ -245,10 +245,11 @@ def heading_filter(lp, a, b):
     return result
 
 class BoatIMU(object):
-  #period = .1 # 10hz
-  period = .04; # 25hz
   def __init__(self, server, *args, **keywords):
     self.server = server
+
+    self.rate = self.Register(EnumProperty, 'rate', 10, [10, 25], persistent=True)
+    self.period = 1.0/self.rate.value
 
     self.loopfreq = self.Register(LoopFreqValue, 'loopfreq', 0)
     self.alignmentQ = self.Register(QuaternionValue, 'alignmentQ', [1, 0, 0, 0], persistent=True)
@@ -304,7 +305,7 @@ class BoatIMU(object):
     sensornames += ['gyrobias']
     self.SensorValues['gyrobias'] = self.Register(SensorValue, 'gyrobias', timestamp, persistent=True)
 
-    self.imu_process = multiprocessing.Process(target=imu_process, args=(imu_pipe,imu_cal_pipe[0], self.accel_calibration.value[0], self.compass_calibration.value[0], self.SensorValues['gyrobias'].value))
+    self.imu_process = multiprocessing.Process(target=imu_process, args=(imu_pipe,imu_cal_pipe[0], self.accel_calibration.value[0], self.compass_calibration.value[0], self.SensorValues['gyrobias'].value, self.period))
     self.imu_process.start()
 
     self.last_imuread = time.time()
@@ -498,8 +499,8 @@ class BoatIMUServer():
     self.data = self.boatimu.IMURead()
 
     while True:
-      dt = BoatIMU.period - (time.time() - self.t00)
-      if dt <= 0 or dt >= BoatIMU.period:
+      dt = self.period - (time.time() - self.t00)
+      if dt <= 0 or dt >= self.period:
         break
       time.sleep(dt)
     self.t00 = time.time()

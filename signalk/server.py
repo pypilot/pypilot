@@ -193,7 +193,8 @@ class SignalKServer(object):
 
     def Register(self, value):
         if value.persistent and value.name in self.persistent_data:
-            value.value = self.persistent_data[value.name]
+            #value.value = self.persistent_data[value.name]
+            value.set(self.persistent_data[value.name])
             #print 'persist', value.name, ' = ', value.value
 
         if value.name in self.values:
