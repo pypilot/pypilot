@@ -9,7 +9,9 @@
 
 import kjson, socket, select, sys, os, time
 from values import *
-from signalk.bufferedsocket import LineBufferedNonBlockingSocket
+from bufferedsocket import LineBufferedNonBlockingSocket
+
+
 
 DEFAULT_PORT = 21311
 
