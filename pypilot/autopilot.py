@@ -375,9 +375,7 @@ class Autopilot(object):
       # int error +- 1, from 0 to 1500 deg/s
       self.heading_error_int.set(minmax(self.heading_error_int.value + \
                                         (self.heading_error.value/1500)*dt, 1))
-
       if not self.tack.process():
-        pass
         for pilot in self.pilots:
           if pilot.name == self.pilot.value:
             pilot.process_imu_data() # implementation specific process
