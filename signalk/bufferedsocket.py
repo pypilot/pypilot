@@ -7,7 +7,9 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+import time, select
 from signalk.linebuffer import linebuffer
+
 #class LineBufferedNonBlockingSocket(linebuffer.LineBuffer):
 class LineBufferedNonBlockingSocket(object):
     def __init__(self, connection):
