@@ -19,7 +19,7 @@
 import sys, select, time, socket
 import multiprocessing
 from signalk.client import SignalKClient
-from signalk.server import LineBufferedNonBlockingSocket
+from signalk.bufferedsocket import LineBufferedNonBlockingSocket
 _
 
 # nmea uses a simple xor checksum

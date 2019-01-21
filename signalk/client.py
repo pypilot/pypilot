@@ -9,7 +9,9 @@
 
 import kjson, socket, select, sys, os, time
 from values import *
-import server
+from signalk.bufferedsocket import LineBufferedNonBlockingSocket
+
+DEFAULT_PORT = 21311
 
 try:
     import serial
@@ -66,7 +68,7 @@ class SignalKClient(object):
                     host = host[:i]
                     port = host[i+1:]
                 else:
-                    port = server.DEFAULT_PORT
+                    port = DEFAULT_PORT
             try:
                 connection = socket.create_connection((host, port), 1)
             except:
@@ -90,7 +92,7 @@ class SignalKClient(object):
             except Exception as e:
                 print 'Exception writing config file:', self.configfilename, e
 
-        self.socket = server.LineBufferedNonBlockingSocket(connection)
+        self.socket = LineBufferedNonBlockingSocket(connection)
         self.values = []
         self.msg_queue = []
         self.poller = select.poll()
