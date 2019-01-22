@@ -24,7 +24,7 @@ def round3(value):
 
 class MainFrame(wx.Frame):
     def __init__(self):
-	wx.Frame.__init__(self, None, title="signalk client", size=(1000,600))
+	wx.Frame.__init__(self, None, title="signalk client", size=(1000, 600))
 
         self.value_list = []
         self.client = SignalKClientFromArgs(sys.argv, True, self.on_con)
@@ -63,6 +63,7 @@ class MainFrame(wx.Frame):
                 tb = wx.TextCtrl(self.scrolledWindow, wx.ID_ANY)
                 sizer.Add( tb )
                 self.controls[name] = tb
+
             elif t == 'BooleanProperty':
                 def proc(): # encapsulate to fix scope
                     cb = wx.CheckBox(self.scrolledWindow, wx.ID_ANY, '')
@@ -74,7 +75,7 @@ class MainFrame(wx.Frame):
                         self.client.set(cbname, cb.GetValue() )
                     cb.Bind( wx.EVT_CHECKBOX, oncheck )
                 proc()
-                
+
             elif t == 'RangeProperty':
                 useSlider = True
                 def proc():
@@ -107,7 +108,7 @@ class MainFrame(wx.Frame):
                 def proc():
                     c = wx.Choice(self.scrolledWindow, wx.ID_ANY)
                     for choice in self.value_list[name]['choices']:
-                        c.Append(choice)
+                        c.Append(str(choice))
                     sizer.Add( c, 0, wx.EXPAND)
                     self.controls[name] = c
                     cname = name
@@ -115,6 +116,7 @@ class MainFrame(wx.Frame):
                         self.client.set(cname, str(c.GetStringSelection()) )
                     c.Bind( wx.EVT_CHOICE, onchoice )
                 proc()
+
             elif t == 'ResettableValue':
                 def proc():
                     b = wx.Button(self.scrolledWindow, wx.ID_ANY, 'Reset')
@@ -124,6 +126,7 @@ class MainFrame(wx.Frame):
                         self.client.set(bname, 0)
                     b.Bind( wx.EVT_BUTTON, onclick)
                 proc()
+
             else:
                 sizer.Add( wx.StaticText(self.scrolledWindow, wx.ID_ANY, ''))
 
