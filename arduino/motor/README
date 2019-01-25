@@ -9,15 +9,22 @@ and brushed or brushless.
 
 
 Based on arduino nano.  The efuse byte should be set to enable the
-brown-out detector (BOD) not enabled by default.  This is critical
-to ensure flash pages are not corrupted.
+brown-out detector (BOD) not always enabled by default.  This is critical
+to ensure flash pages are not corrupted.   Also, often nano clones
+don't set the lock bits correctly.  If the BAD_FUSES flag is reported it
+the fuses should be programmed correctly
 
-To enable, with one arduino programmed with arduinoisp
-Read:
-avrdude -c avrisp -b 19200 -P /dev/ttyUSB1 -u -p m328 -U efuse:r:-:h
-Write:
-avrdude -c avrisp -b 19200 -P /dev/ttyUSB1 -u -p m328p -U efuse:w:0x4:m
+To enable, with one arduino programmed with arduinoisp Read: avrdude
+-c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U efuse:r:-:h Write:
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U efuse:w:0x4:m
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U lock:w:0xcf:m
 
+
+NOTE:  Sometimes this fails with avrdude: stk500_disable(): unknown response=0x12
+despite correct connections. a simple workaround is to use 38400 baud rate one time:
+avrdude -c avrisp -b 38400 -P /dev/ttyUSB0 -u -p m328p -U efuse:r:-:h
+resuling in: avrdude: stk500_getsync() attempt 1 of 10: not in sync: resp=0x00 etc..
+yes, it fails, then try again with the correct baud rate this somehow fixes it
 
 
 If the ESC has the bootloader loaded:
