@@ -625,7 +625,7 @@ def main():
     while True:
         servo.poll()
 
-        if servo.driver:
+        if servo.controller.value != 'none':
             print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', servo.rudder.value, 'flags', servo.flags.strvalue()
             #print servo.command.value, servo.speed.value, servo.windup
             pass
@@ -641,3 +641,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
