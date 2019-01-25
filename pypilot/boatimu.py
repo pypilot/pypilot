@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -228,7 +228,9 @@ class QuaternionValue(ResettableValue):
 
 
     def set(self, value):
-      super(QuaternionValue, self).set(quaternion.normalize(value))
+      if value:
+        value = quaternion.normalize(value)
+      super(QuaternionValue, self).set(value)
 
 def heading_filter(lp, a, b):
     if not a:
@@ -499,8 +501,8 @@ class BoatIMUServer():
     self.data = self.boatimu.IMURead()
 
     while True:
-      dt = self.period - (time.time() - self.t00)
-      if dt <= 0 or dt >= self.period:
+      dt = self.boatimu.period - (time.time() - self.t00)
+      if dt <= 0 or dt >= self.boatimu.period:
         break
       time.sleep(dt)
     self.t00 = time.time()

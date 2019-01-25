@@ -175,9 +175,10 @@ class EnumProperty(Property):
 
     def set(self, value):
         for choice in self.choices:
-            if choice == value:
+            if str(choice) == str(value):
                 super(EnumProperty, self).set(value)
                 return
+        print 'set', self.name, 'to invalid enum value', value
 
 class BooleanValue(Value):
     def __init__(self, name, initial, **kwargs):
