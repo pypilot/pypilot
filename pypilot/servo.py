@@ -442,7 +442,11 @@ class Servo(object):
 
         # for unknown reasons setting timeout to 0 here (already 0)
         # makes device.close() take only .001 seconds instead of .02 seconds
-        self.device.timeout=0
+        # but it throws an exception for usb serial ports which we can ignore
+        try:
+            self.device.timeout=0
+        except:
+            pass
         self.device.close()
         self.driver = False
 
