@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -27,7 +27,7 @@ from kivy.animation import Animation
 #from kivy.lang import Builder
 from kivy.clock import Clock
 
-#from signalk.client import SignalKClient
+from client import SignalKClient
 
 class AutopilotControl(TabbedPanel):
     pass
@@ -54,14 +54,13 @@ class AutopilotControlApp(App):
         if self.client:
             return
         
-        watchlist = ['ap/enabled', 'ap/mode', 'ap/heading', 'ap/heading_command']
+        watchlist = ['ap.enabled', 'ap.mode', 'ap.heading', 'ap.heading_command']
         def on_con(client):
             for name in watchlist:
                 client.watch(name)
 
-        return
         try:
-            #self.client = SignalKClient(on_con, 'pypilot', autoreconnect=True)
+            self.client = SignalKClient(on_con, autoreconnect=True)
             pass
         except:
             return
@@ -74,8 +73,8 @@ class AutopilotControlApp(App):
         for msg in result:
             value = result[msg]['value']
 
-            if msg == 'ap/enabled' or msg == 'ap/mode':
-                if msg == 'ap/enabled':
+            if msg == 'ap.enabled' or msg == 'ap.mode':
+                if msg == 'ap.enabled':
                     self.enabled = value
                 else:
                     self.mode = value
@@ -87,13 +86,12 @@ class AutopilotControlApp(App):
                     
                 self.control.ap.text = '[color=' + color + ']AP'
                 
-            elif msg == 'ap/heading':
+            elif msg == 'ap.heading':
                 self.control.heading_label.text = str(value)
                 self.control.compass.heading = value
 
                 #self.control.compass.canvas.needs_redraw = 1
-                print 'self.heading', self.heading
-            elif msg == 'ap/heading_command':
+            elif msg == 'ap.heading_command':
                 self.control.heading_command_label.text = str(value)
                 self.heading_command = value
 
@@ -101,13 +99,13 @@ class AutopilotControlApp(App):
         if not self.client:
             return
 
-        self.client.set('servo/raw_command', False)
+        self.client.set('servo.raw_command', False)
         if self.enabled:
-            self.client.set('ap/heading_command', self.heading)
-            self.client.set('ap/enabled', True)
+            self.client.set('ap.heading_command', self.heading)
+            self.client.set('ap.enabled', True)
         else:
-            self.client.set('servo/command', 0)
-            self.client.set('ap/enabled', False)
+            self.client.set('servo.command', 0)
+            self.client.set('ap.enabled', False)
             
 if __name__ == '__main__':
     AutopilotControlApp().run()
