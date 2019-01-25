@@ -79,6 +79,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.dsServoMaxSlewSlow.SetRange(0, 100)
         self.dsServoMaxSlewSlow.Bind( wx.EVT_SPINCTRL, self.onMaxSlewSlow )
 
+        self.dsServoGain.SetIncrement(.1)
+        self.dsServoGain.SetDigits(1)
+        self.dsServoGain.Bind( wx.EVT_SPINCTRLDOUBLE, self.onServoGain )
+        
         self.lastmouse = False
         self.alignment_count = 0
 
@@ -443,6 +447,9 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onMaxSlewSlow( self, event ):
         self.client.set('servo.max_slew_slow', event.GetValue())
+
+    def onServoGain( self, event ):
+        self.client.set('servo.gain', event.GetValue())
 
     def onRudderCentered( self, event ):
         rudder_pos = self.rudder / self.rudder_scale - self.rudder_offset + .5

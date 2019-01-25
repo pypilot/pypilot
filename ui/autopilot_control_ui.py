@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- 
 
 ###########################################################################
-## Python code generated with wxFormBuilder (version Feb 20 2018)
+## Python code generated with wxFormBuilder (version May 19 2018)
 ## http://www.wxformbuilder.org/
 ##
 ## PLEASE DO *NOT* EDIT THIS FILE!
@@ -418,7 +418,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook.AddPage( self.m_panel3, u"imu", False )
+		self.m_notebook.AddPage( self.m_panel3, u"imu", True )
 		self.m_panel7 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer81 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer81.AddGrowableCol( 0 )
@@ -658,6 +658,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer351.Add( sbSizer3, 1, wx.EXPAND, 5 )
 		
 		fgSizer15 = wx.FlexGridSizer( 0, 3, 0, 0 )
+		fgSizer15.AddGrowableCol( 1 )
 		fgSizer15.SetFlexibleDirection( wx.BOTH )
 		fgSizer15.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
@@ -668,7 +669,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.dsServoMaxCurrent = wx.SpinCtrlDouble(self.m_swservo)
 		self.dsServoMaxCurrent.SetMinSize( wx.Size( 60,30 ) )
 		
-		fgSizer15.Add( self.dsServoMaxCurrent, 0, wx.ALL, 5 )
+		fgSizer15.Add( self.dsServoMaxCurrent, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		self.m_staticText32 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Amps", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText32.Wrap( -1 )
@@ -681,7 +682,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.dsServoMaxControllerTemp = wx.SpinCtrl(self.m_swservo)
 		self.dsServoMaxControllerTemp.SetMinSize( wx.Size( 60,30 ) )
 		
-		fgSizer15.Add( self.dsServoMaxControllerTemp, 0, wx.ALL, 5 )
+		fgSizer15.Add( self.dsServoMaxControllerTemp, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		self.m_staticText325 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"°C", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText325.Wrap( -1 )
@@ -694,7 +695,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.dsServoMaxMotorTemp = wx.SpinCtrl(self.m_swservo)
 		self.dsServoMaxMotorTemp.SetMinSize( wx.Size( 60,30 ) )
 		
-		fgSizer15.Add( self.dsServoMaxMotorTemp, 0, wx.ALL, 5 )
+		fgSizer15.Add( self.dsServoMaxMotorTemp, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		self.m_staticText3251 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"°C", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText3251.Wrap( -1 )
@@ -707,7 +708,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.dsServoMaxSlewSpeed = wx.SpinCtrl(self.m_swservo)
 		self.dsServoMaxSlewSpeed.SetMinSize( wx.Size( 100,30 ) )
 		
-		fgSizer15.Add( self.dsServoMaxSlewSpeed, 0, wx.ALL, 5 )
+		fgSizer15.Add( self.dsServoMaxSlewSpeed, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		self.m_staticText324 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"steps", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText324.Wrap( -1 )
@@ -720,11 +721,24 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.dsServoMaxSlewSlow = wx.SpinCtrl(self.m_swservo)
 		self.dsServoMaxSlewSlow.SetMinSize( wx.Size( 100,30 ) )
 		
-		fgSizer15.Add( self.dsServoMaxSlewSlow, 0, wx.ALL, 5 )
+		fgSizer15.Add( self.dsServoMaxSlewSlow, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		self.m_staticText3241 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"steps", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText3241.Wrap( -1 )
 		fgSizer15.Add( self.m_staticText3241, 0, wx.ALL, 5 )
+		
+		self.m_staticText53 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Gain", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText53.Wrap( -1 )
+		fgSizer15.Add( self.m_staticText53, 0, wx.ALL, 5 )
+		
+		self.dsServoGain = wx.SpinCtrlDouble(self.m_swservo)
+		self.dsServoGain.SetMinSize( wx.Size( 100,30 ) )
+		
+		fgSizer15.Add( self.dsServoGain, 0, wx.ALL|wx.EXPAND, 5 )
+		
+		self.m_staticText32411 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"factor", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText32411.Wrap( -1 )
+		fgSizer15.Add( self.m_staticText32411, 0, wx.ALL, 5 )
 		
 		
 		fgSizer351.Add( fgSizer15, 1, wx.EXPAND, 5 )
@@ -812,7 +826,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel2.SetSizer( fgSizer9 )
 		self.m_panel2.Layout()
 		fgSizer9.Fit( self.m_panel2 )
-		self.m_notebook.AddPage( self.m_panel2, u"servo", True )
+		self.m_notebook.AddPage( self.m_panel2, u"servo", False )
 		
 		fgSizer7.Add( self.m_notebook, 1, wx.EXPAND |wx.ALL, 5 )
 		
