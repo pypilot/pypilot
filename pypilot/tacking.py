@@ -13,7 +13,7 @@ from resolv import *
 class Tack(object):
   def __init__(self, ap):
     self.ap = ap
-    self.state = self.Register(EnumProperty, 'state', 'done', ['done', 'start', 'waiting', 'tacking', 'finishing'])
+    self.state = self.Register(EnumProperty, 'state', '', ['', 'begin', 'waiting', 'tacking', 'finishing'])
     self.timeout = self.Register(Value, 'timeout', 0)
     self.wait_real_time = 0
     self.delay = self.Register(RangeProperty, 'delay', 0, 0, 60)
@@ -35,7 +35,7 @@ class Tack(object):
     # simple lowpass heel
     self.direction_heel = self.ap.boatimu.heel * .1 + self.direction_heel * .9
 
-    if self.state.value == 'done':
+    if self.state.value == '': # not tacking
       # if we have wind data, use it to determine the tacking direction
       if self.ap.nmea.values['wind']['source'].value != 'none':
         if self.ap.nmea.values['wind']['direction'].value < 180:
@@ -51,7 +51,7 @@ class Tack(object):
             self.direction.update('port')
 
     # tacking initiated, enter waiting state
-    if self.state.value == 'start':
+    if self.state.value == 'begin':
       self.timeout.set(self.delay.value)
       self.wait_real_time = t
       self.current_direction = self.direction.value
@@ -87,7 +87,7 @@ class Tack(object):
       if mul*resolv(self.ap.boatimu.heading - self.ap.command.value) > 0:
           self.ap.servo.command(-mul*self.speed)
       else:
-          self.state.set('done')
+          self.state.set('')
           self.tacks.set(self.tacks.value + 1)
 
     # in these two states, take over servo control
