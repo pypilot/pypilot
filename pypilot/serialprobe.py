@@ -95,6 +95,7 @@ devices = 'init'
 pyudev = 'init'
 monitor = False
 starttime = False
+pyudevwarning = False
 
 def enumerate_devices():
     global pyudev
@@ -127,8 +128,12 @@ def enumerate_devices():
                 monitor = pyudev.Monitor.from_netlink(context)
                 monitor.filter_by(subsystem='usb')
             except Exception as e:
-                print 'no pyudev! will scan usb devices every probe!', e
-                starttime = time.time() + 20 # try pyudev again in 20 seconds
+                global pyudevwarning
+                if not pyudevwarning:
+                    print 'no pyudev module! will scan usb devices every probe!', e
+                    pyudevwarning = True
+                # try pyudev again in 20 seconds if it is delayed loading
+                starttime = time.time() + 20
                 #pyudev = False
         devices = scan_devices()
     return devices
