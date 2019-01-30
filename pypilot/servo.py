@@ -418,6 +418,7 @@ class Servo(object):
                    self.flags.value & ServoFlags.REV_FAULT: # allow more current to "unstuck" ram
                     max_current *= 2
                 self.send_driver_params(max_current)
+
                 self.driver.command(command)
 
                 # detect driver timeout if commanded without measuring current
@@ -523,7 +524,8 @@ class Servo(object):
         if result & ServoTelemetry.CURRENT:
             # apply correction
             corrected_current = self.current.factor.value*self.driver.current;
-            corrected_current += self.current.offset.value
+            corrected_current = max(0, corrected_current + self.current.offset.value)
+            
             self.current.set(round(corrected_current, 3))
             # integrate power consumption
             dt = (t - self.current_timestamp)
