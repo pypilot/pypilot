@@ -857,23 +857,29 @@ ISR(WDT_vect)
     asm volatile ("ijmp" ::"z" (0x0000));
 }
 
-//ISR(TIMER1_OVF_vect) __attribute__((naked));
+ISR(TIMER1_OVF_vect) __attribute__((naked));
 ISR(TIMER1_OVF_vect)
 {
-//        asm volatile ("push r24");
+    asm volatile ("push r24"); // this register used to read TIMSK1
 
+    if(TIMSK1 & _BV(TOIE1)) {
         if(TIMSK1 & _BV(OCIE1A)) {
+            asm volatile ("nop"); // balance 2 cycle delay of rjmp
+            asm volatile ("nop"); // to get symmetric drive times
             a_top_off;
             dead_time;
             a_bottom_on;
-//            asm volatile ("reti");
-        } else if(TIMSK1 & _BV(OCIE1B)) {
+            asm volatile ("pop r24");  // no need to rjmp
+            asm volatile ("reti");
+        } else {
             b_top_off;
             dead_time;
             b_bottom_on;
         }
-//    asm volatile ("pop r24");
-//    asm volatile ("reti");
+    }
+    
+    asm volatile ("pop r24");
+    asm volatile ("reti");
 }
 
 // use naked interrupts for maximum reaction
@@ -884,7 +890,7 @@ ISR(TIMER1_COMPA_vect)
 {
     a_bottom_off;
     b_top_off;
-    dead_time
+    dead_time;
     a_top_on;
     b_bottom_on;
     asm volatile ("reti");
