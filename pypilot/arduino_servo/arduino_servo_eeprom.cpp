@@ -18,7 +18,7 @@ arduino_servo_eeprom::arduino_servo_eeprom()
 {
     memset(&local, 0, sizeof local);
     memset(&verified, 0, sizeof verified);
-    memcpy(local.signature, "arsv20", 6); // change this if the format changes
+    memcpy(local.signature, "arsv21", 6); // change this if the format changes
 }
 
 double arduino_servo_eeprom::get_max_current()
@@ -109,7 +109,7 @@ double arduino_servo_eeprom::get_current_factor()
 
 void arduino_servo_eeprom::set_current_factor(double current_factor)
 {
-    local.current_factor = (current_factor - .8)/.0016;
+    local.current_factor = round((current_factor - .8)/.0016);
 }
 
 double arduino_servo_eeprom::get_current_offset()
@@ -129,7 +129,7 @@ double arduino_servo_eeprom::get_voltage_factor()
 
 void arduino_servo_eeprom::set_voltage_factor(double voltage_factor)
 {
-    local.voltage_factor = (voltage_factor - .8)/.0016;
+    local.voltage_factor = round((voltage_factor - .8)/.0016);
 }
 
 double arduino_servo_eeprom::get_voltage_offset()
@@ -221,7 +221,7 @@ bool arduino_servo_eeprom::initial()
         printf("Arudino EEPROM Signature FAILED!\n");
         return false;
     }
-    // printf("EEPROM SIGNATURE ok\n");
+    //sprintf("EEPROM SIGNATURE ok\n");
 
     return true;
 }
