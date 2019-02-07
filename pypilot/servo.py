@@ -537,7 +537,7 @@ class Servo(object):
             lp = .003*dt # 5 minute time constant to average wattage
             self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
         if result & ServoTelemetry.FLAGS:
-            self.max_current.set_max(60 if self.driver.flags & ServoFlags.CURRENT_RANGE else 20)
+            self.max_current.set_max(40 if self.driver.flags & ServoFlags.CURRENT_RANGE else 20)
             self.flags.update(self.flags.value & ~ServoFlags.DRIVER_MASK | self.driver.flags)
             self.engaged.update(not not self.driver.flags & ServoFlags.ENGAGED)
 

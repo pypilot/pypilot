@@ -1,4 +1,4 @@
-/* Copyright (C) 2018 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -770,7 +770,7 @@ uint16_t TakeAmps(uint8_t p)
             v = v * 275 / 128 / 16;
 
         if(v > 16)
-            v = v * 1375 / 128 / 16; // 550mA minimum
+            v = v * 1375 / 128 / 16 + 16; // 550mA minimum
         else
             v = 0;
     } else { // high current
@@ -782,7 +782,7 @@ uint16_t TakeAmps(uint8_t p)
         v = v * 275 / 128 / 16;
 #else
         if(v > 16)
-            v = v * 275 / 64 / 16 + 82; // 820mA offset
+            v = v * 275 / 64 / 16; // 820mA offset
         else
             v = 0;
 #endif        
@@ -803,7 +803,7 @@ uint16_t TakeVolts(uint8_t p)
         v = v * 14135 / 3584 / 16;
     else
         // 1815 / 896 = 100.0/1024*10560/560*1.1
-        v = v * 1815 / 896 / 16 + 40;
+        v = v * 1815 / 896 / 16;
 
     return v;
 }
@@ -943,8 +943,8 @@ void process_packet()
         }
         break;
     case MAX_CURRENT_CODE: { // current in units of 10mA
-        unsigned int max_max_current = low_current ? 2000 : 6000;
-        if(value > max_max_current) // maximum is 20 amps
+        unsigned int max_max_current = low_current ? 2000 : 4000;
+        if(value > max_max_current) // maximum is 20 or 40 amps
             value = max_max_current;
 
         max_current = value;
