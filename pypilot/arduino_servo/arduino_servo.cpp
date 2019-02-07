@@ -260,7 +260,7 @@ bool ArduinoServo::fault()
 
 void ArduinoServo::params(double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_motor_speed, double _max_motor_speed, double _gain)
 {
-    max_current = fmin(60, fmax(0, _max_current));
+    max_current = fmin(40, fmax(0, _max_current));
     eeprom.set_max_current(max_current);
 
     max_controller_temp = fmin(80, fmax(30, _max_controller_temp));
