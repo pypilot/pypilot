@@ -36,6 +36,8 @@ extern "C" {
 #define ANENOMETER   // comment to show only baro graph
 #define LCD
 
+#define LCD_BL_HIGH  // if backlight pin is high rather than gnd
+
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
 #endif
@@ -473,7 +475,12 @@ void read_light()
         if(light < 800)
             lighton = 1;
     }
+#ifdef LCD_BL_HIGH
+    int pwm = lighton ? 90 : 0; // backlight expects 3v3 but we have 5v!
+                                // do not set above 160 or may damage backlight!!
+#else
     int pwm = lighton ? 120 : 255;
+#endif
     #if 0
     Serial.print("light ");
     Serial.print(light);
@@ -650,7 +657,7 @@ void draw_barometer_graph()
                 lcd.putpixel(v, i, 255);
         }
     }
-    
+
     lcd.refresh();
 #endif
 }

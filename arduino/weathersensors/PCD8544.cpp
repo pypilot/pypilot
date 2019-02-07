@@ -92,6 +92,8 @@ void PCD8544::begin(unsigned char width, unsigned char height, unsigned char mod
 
 #ifdef HWSPI
     SPI.begin();
+    // slower clock speed is more reliable with crappy parts
+    SPI.setClockDivider(SPI_CLOCK_DIV64);
 #endif
     // Reset the controller state...
     digitalWrite(this->pin_reset, HIGH);
