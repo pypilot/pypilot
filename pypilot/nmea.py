@@ -88,13 +88,19 @@ def parse_nmea_wind(line):
         return False
 
     data = line.split(',')
-    speed = float(data[3])
+    try:
+        direction = float(data[1])
+        speed = float(data[3])
+    except:
+        direction = 0 # should it be 'N/A' ??
+        speed = 0
+        
     speedunit = data[4]
     if speedunit == 'K': # km/h
         speed *= .53995
     elif speedunit == 'M': # m/s
         speed *= 1.94384
-    return 'wind', {'direction': float(data[1]), 'speed': speed}
+    return 'wind', {'direction': direction, 'speed': speed}
 
 # because serial.readline() is very slow
 class LineBufferedSerialDevice(object):
