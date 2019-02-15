@@ -14,8 +14,12 @@ to ensure flash pages are not corrupted.   Also, often nano clones
 don't set the lock bits correctly.  If the BAD_FUSES flag is reported it
 the fuses should be programmed correctly
 
-To enable, with one arduino programmed with arduinoisp Read: avrdude
--c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U efuse:r:-:h Write:
+To enable, with one arduino programmed with arduinoisp
+
+Read:
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U efuse:r:-:h
+
+Write:
 avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U efuse:w:0x4:m
 avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U lock:w:0xcf:m
 
