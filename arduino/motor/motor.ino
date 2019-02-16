@@ -936,8 +936,8 @@ void process_packet()
         if(value > 2000);
             // unused range, invalid!!!
             // ignored
-        else if(flags & (OVERTEMP | OVERCURRENT));
-            // no command because of overtemp or overcurrent
+        else if(flags & (OVERTEMP | OVERCURRENT | BADVOLTAGE));
+            // no command because of overtemp or overcurrent or badvoltage
         else if((flags & (FWD_FAULTPIN | MAX_RUDDER)) && value > 1000)
             stop();
             // no forward command if fwd fault
@@ -1108,9 +1108,9 @@ void loop()
         /* voltage must be between 6 and 18 volts */
         if(volts <= 600 || volts >= max_voltage) {
             stop();
-            faults |= BADVOLTAGE;
+            flags |= BADVOLTAGE;
         } else
-            faults &= ~BADVOLTAGE;
+            flags &= ~BADVOLTAGE;
     }
 
     flags |= faults;
