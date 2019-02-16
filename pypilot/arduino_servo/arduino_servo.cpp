@@ -349,8 +349,8 @@ void ArduinoServo::send_params()
         } break;
         case 18:
             send_value(MAX_SLEW_CODE,
-                       eeprom.local.max_slew_speed << 8 |
-                       eeprom.local.max_slew_slow);
+                       eeprom.local.max_slew_slow << 8 |
+                       eeprom.local.max_slew_speed);
             break;
 #if 1
         case 20:
