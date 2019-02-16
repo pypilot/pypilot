@@ -116,7 +116,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                      'imu.heading',
                      'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel',
                      'imu.heading_offset',
-                     'servo.rudder.offset',
+                     'servo.flags', 'servo.rudder.offset',
                      'servo.rudder.scale', 'servo.rudder.range',
                      'servo.calibration', 'servo.max_current',
                      'servo.max_controller_temp', 'servo.max_motor_temp',
@@ -208,11 +208,15 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         elif name == 'servo.rudder':
             self.stRudderAngle.SetLabel(str(round3(value)))
             self.rudder = value
+        elif name == 'servo.flags':
+            self.stServoFlags.SetLabel(value)
         elif name == 'servo.rudder.offset':
+            self.stRudderOffset.SetLabel(str(round3(value)))
             self.rudder_offset = value
         elif name == 'servo.rudder.scale':
             self.rudder_scale = value
         elif name == 'servo.rudder.range':
+            self.sRudderRange.SetValue(value);
             self.rudder_range = value
         elif name == 'servo.calibration':
             s = ''
