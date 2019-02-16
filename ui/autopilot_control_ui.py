@@ -418,7 +418,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook.AddPage( self.m_panel3, u"imu", True )
+		self.m_notebook.AddPage( self.m_panel3, u"imu", False )
 		self.m_panel7 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer81 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer81.AddGrowableCol( 0 )
@@ -596,8 +596,9 @@ class CalibrationDialogBase ( wx.Dialog ):
 		
 		fgSizer35.Add( fgSizer36, 1, wx.EXPAND, 5 )
 		
-		fgSizer32 = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgSizer32 = wx.FlexGridSizer( 1, 0, 0, 0 )
 		fgSizer32.AddGrowableCol( 1 )
+		fgSizer32.AddGrowableCol( 2 )
 		fgSizer32.SetFlexibleDirection( wx.BOTH )
 		fgSizer32.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
@@ -608,6 +609,10 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.stRudderAngle = wx.StaticText( sbSizer3.GetStaticBox(), wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stRudderAngle.Wrap( -1 )
 		fgSizer32.Add( self.stRudderAngle, 0, wx.ALL, 5 )
+		
+		self.stServoFlags = wx.StaticText( sbSizer3.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stServoFlags.Wrap( -1 )
+		fgSizer32.Add( self.stServoFlags, 0, wx.ALL, 5 )
 		
 		
 		fgSizer35.Add( fgSizer32, 1, wx.EXPAND, 5 )
@@ -623,9 +628,9 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_staticText341.Wrap( -1 )
 		fgSizer33.Add( self.m_staticText341, 0, wx.ALL, 5 )
 		
-		self.m_staticText35 = wx.StaticText( sbSizer3.GetStaticBox(), wx.ID_ANY, u"-----", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText35.Wrap( -1 )
-		fgSizer33.Add( self.m_staticText35, 0, wx.ALL, 5 )
+		self.stRudderOffset = wx.StaticText( sbSizer3.GetStaticBox(), wx.ID_ANY, u"-----", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stRudderOffset.Wrap( -1 )
+		fgSizer33.Add( self.stRudderOffset, 0, wx.ALL, 5 )
 		
 		
 		fgSizer35.Add( fgSizer33, 1, wx.EXPAND, 5 )
@@ -826,7 +831,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel2.SetSizer( fgSizer9 )
 		self.m_panel2.Layout()
 		fgSizer9.Fit( self.m_panel2 )
-		self.m_notebook.AddPage( self.m_panel2, u"servo", False )
+		self.m_notebook.AddPage( self.m_panel2, u"servo", True )
 		
 		fgSizer7.Add( self.m_notebook, 1, wx.EXPAND |wx.ALL, 5 )
 		
@@ -894,9 +899,9 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.CompassCalibration.Bind( wx.EVT_SIZE, self.onSizeGLCompass )
 		self.m_button10.Bind( wx.EVT_BUTTON, self.onClearCompass )
 		self.cbCompassCalibrationLocked.Bind( wx.EVT_CHECKBOX, self.onCompassCalibrationLocked )
-		self.m_button11.Bind( wx.EVT_BUTTON, self.OnRudderCentered )
-		self.m_button12.Bind( wx.EVT_BUTTON, self.OnRudderAtRange )
-		self.sRudderRange.Bind( wx.EVT_SPINCTRL, self.OnRudderRange )
+		self.m_button11.Bind( wx.EVT_BUTTON, self.onRudderCentered )
+		self.m_button12.Bind( wx.EVT_BUTTON, self.onRudderAtRange )
+		self.sRudderRange.Bind( wx.EVT_SPINCTRL, self.onRudderRange )
 	
 	def __del__( self ):
 		pass
@@ -966,13 +971,13 @@ class CalibrationDialogBase ( wx.Dialog ):
 	def onCompassCalibrationLocked( self, event ):
 		event.Skip()
 	
-	def OnRudderCentered( self, event ):
+	def onRudderCentered( self, event ):
 		event.Skip()
 	
-	def OnRudderAtRange( self, event ):
+	def onRudderAtRange( self, event ):
 		event.Skip()
 	
-	def OnRudderRange( self, event ):
+	def onRudderRange( self, event ):
 		event.Skip()
 	
 
