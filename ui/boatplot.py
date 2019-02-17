@@ -18,11 +18,12 @@ from OpenGL.GLU import *
 from OpenGL.GL import *
 
 #from objloader import *
-pywavefront = False
 try:
     import pywavefront
-except:
-    print 'failed to load pywavefront, no boat model rendered'
+    from pywavefront import visualization
+except Exception as e:
+    print 'failed to load pywavefront:', e
+    pywavefront = False
 
 from pypilot import quaternion
 
@@ -44,20 +45,6 @@ class BoatPlot():
         os.chdir(os.path.abspath(path))
 
     def display(self, fusionQPose):
-        #fusionQPose = [1, 0, 0, 0]
-        if not pywavefront:
-            return
-
-        if not self.obj:
-            self.chdir()
-            #self.obj = OBJ('Vagabond.obj', swapyz=True)
-            try:
-                self.obj = pywavefront.Wavefront('Vagabond.obj')
-            except:
-                print 'Vagabond.obj not found'
-                print 'Did you add the pypilot_data repository?'
-                return
-
         glClearColor(0, .2, .7, 0)
         glClearDepth(100)
         
@@ -76,27 +63,36 @@ class BoatPlot():
         glScalef(self.Scale, self.Scale, self.Scale)
         glRotateQ(self.Q)
 
-        glPushMatrix()
-        #q = quaternion.multiply(fusionQPose, quaternion.angvec2quat(-math.pi/2, [1, 0, 0]))
-        q = fusionQPose
-        glRotateQ(q)
-        #OAglTranslatef(0, 0, -.7)
+        if self.obj:
+            glPushMatrix()
+            #q = quaternion.multiply(fusionQPose, quaternion.angvec2quat(-math.pi/2, [1, 0, 0]))
+            q = fusionQPose
+            glRotateQ(q)
+            #OAglTranslatef(0, 0, -.7)
 
 
-        s = .2
-        glScalef(s,s,s)
-#        glTranslated(0, 0, -3)
-        glRotatef(90, 0, 0, -1)
-        glRotatef(90, -1, 0, 0)
-        glEnable(GL_LIGHTING)
-        
-        lightfv = ctypes.c_float * 4
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, lightfv(1.0, 1.0, 1.0, 1.0))
-        glEnable(GL_LIGHT0)
-        self.obj.draw()
-        glDisable(GL_LIGHTING)
+            s = .2
+            glScalef(s,s,s)
+            #        glTranslated(0, 0, -3)
+            glRotatef(90, 0, 0, -1)
+            glRotatef(90, -1, 0, 0)
+            glEnable(GL_LIGHTING)
+            
+            lightfv = ctypes.c_float * 4
+            glLightfv(GL_LIGHT0, GL_DIFFUSE, lightfv(1.0, 1.0, 1.0, 1.0))
+            glEnable(GL_LIGHT0)
+            visualization.draw(self.obj)
+            glDisable(GL_LIGHTING)
 
-        glPopMatrix()
+            glPopMatrix()
+
+        elif pywavefront:
+            self.chdir()
+            try:
+                self.obj = pywavefront.Wavefront('Vagabond.obj')
+            except Exception as e:
+                print 'Vagabond.obj failed to load', e
+                print 'Did you add the pypilot_data repository?'
 
         glEnable(GL_DEPTH_TEST)
         if self.texture_compass:
