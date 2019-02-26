@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -37,8 +37,7 @@ TIOCEXCL = 0x540C
 TIOCNXCL = 0x540D
 
 # favor lower priority sources
-source_priority = {'gpsd' : 1, 'serial' : 2, 'tcp' : 3, 'none' : 4}
-
+source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'none' : 4}
 
 # nmea uses a simple xor checksum
 def nmea_cksum(msg):
@@ -101,6 +100,19 @@ def parse_nmea_wind(line):
     elif speedunit == 'M': # m/s
         speed *= 1.94384
     return 'wind', {'direction': direction, 'speed': speed}
+
+def parse_nmea_rudder(line):
+    if line[3:6] != 'RSA':
+        return False
+
+    data = line.split(',')
+    try:
+        angle = float(data[1])
+    except:
+        angle = False
+
+    return 'rudder', {'angle': angle}
+
 
 # because serial.readline() is very slow
 class LineBufferedSerialDevice(object):
@@ -191,22 +203,24 @@ class NMEASocket(object):
 class Nmea(object):
     def __init__(self, server):
         self.server = server
-        self.values = {'gps': {}, 'wind': {}}
+        self.values = {'gps': {}, 'wind': {}, 'rudder': {}}
 
-        def make_source(name, dirname):
+        def make_source(name, dirname, speed=True):
             timestamp = server.TimeStamp(name)
             self.values[name][dirname] = server.Register(SensorValue(name + '.' + dirname, timestamp, directional=True))
-            self.values[name]['speed'] = server.Register(SensorValue(name + '.speed', timestamp))
+            if speed:
+                self.values[name]['speed'] = server.Register(SensorValue(name + '.speed', timestamp))
             self.values[name]['source'] = server.Register(StringValue(name + '.source', 'none'))
             self.values[name]['lastupdate'] = 0
 
         make_source('gps', 'track')
         make_source('wind', 'direction')
+        make_source('rudder', 'angle')
 
         self.devices = []
         self.devices_lastmsg = {}
         self.probedevice = None
-        self.primarydevices = {'gps': None, 'wind': None}
+        self.primarydevices = {'gps': None, 'wind': None, 'rudder': None}
         self.gpsdpoller = GpsdPoller(self)
 
         self.process = NmeaBridgeProcess()
@@ -256,6 +270,9 @@ class Nmea(object):
         if self.values['gps']['source'] != 'gpsd' and \
            (not self.primarydevices['gps'] or self.primarydevices['gps'] == device):
             parsers.append(parse_nmea_gps)
+        if self.values['rudder']['source'] != 'servo' and \
+           (not self.primarydevices['rudder'] or self.primarydevices['rudder'] == device):
+            parsers.append(parse_nmea_rudder)
                 
         for parser in parsers:
             result = parser(line)
@@ -343,12 +360,17 @@ class Nmea(object):
             self.send_nmea('APHDM,%.3f,M' % self.server.values['imu.heading_lowpass'].value)
             self.last_imu_time = time.time()
 
+        # limit to 5hz output of servo rudder
         dt = time.time() - self.last_rudder_time
         if self.process.sockets and (dt > .2 or dt < 0) and \
            'servo.rudder' in self.server.values:
             value = self.server.values['servo.rudder'].value
             if value:
                 self.send_nmea('APRSA,%.3f,A,,' % value)
+                self.rudder.source.update('servo')
+                self.rudder.angle.update(value)
+                self.handle_messages({'rudder': val}, 'servo')
+
             self.last_rudder_time = time.time()
             
         t5 = time.time()
@@ -423,7 +445,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
         super(NmeaBridgeProcess, self).__init__(target=self.process, args=(pipe,))
 
     def setup_watches(self, watch=True):
-        watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command', 'gps.source', 'wind.source']
+        watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command', 'gps.source', 'wind.source', 'rudder.source']
         for name in watchlist:
             self.client.watch(name, watch)
 
@@ -433,8 +455,10 @@ class NmeaBridgeProcess(multiprocessing.Process):
             parsers.append(parse_nmea_gps)
         if source_priority[self.last_values['wind.source']] >= source_priority['tcp']:
             parsers.append(parse_nmea_wind)
+        if source_priority[self.last_values['rudder.source']] >= source_priority['tcp']:
+            parsers.append(parse_nmea_rudder)
 
-        for parser in parsers:
+        for parser in  parsers:
             result = parser(line)
             if result:
                 name, msg = result
