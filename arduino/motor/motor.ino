@@ -1098,14 +1098,14 @@ void loop()
         if(volts >= 1800 && !voltage_mode && !voltage_sense) {
             // switch to higher voltage
             voltage_mode = 1; // higher voltage
-            pinMode(voltage_sense_pin, OUTPUT);
             digitalWrite(voltage_sense_pin, LOW);
+            pinMode(voltage_sense_pin, OUTPUT);
             max_voltage = 3600; // 36 v max
             delay(2);
             TakeVolts(0); // clear readings
             TakeVolts(1);
         } else
-        /* voltage must be between 6 and 18 volts */
+        /* voltage must be between 6 and max voltage */
         if(volts <= 600 || volts >= max_voltage) {
             stop();
             flags |= BADVOLTAGE;

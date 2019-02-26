@@ -36,7 +36,7 @@ extern "C" {
 #define ANENOMETER   // comment to show only baro graph
 #define LCD
 
-//#define LCD_BL_HIGH  // if backlight pin is high rather than gnd
+#define LCD_BL_HIGH  // if backlight pin is high rather than gnd
 
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
