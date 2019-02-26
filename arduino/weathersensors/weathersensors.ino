@@ -10,7 +10,7 @@
  calibrated signalk data over serial at 38400 baud
  */
 
-/* anenometer wires
+/* anemometer wires
 
 using potentiometer for wind direction
 using a reed switch for wind speed
@@ -33,7 +33,7 @@ extern "C" {
   #include <twi.h>
 }
 
-#define ANENOMETER   // comment to show only baro graph
+#define ANEMOMETER   // comment to show only baro graph
 #define LCD
 
 #define LCD_BL_HIGH  // if backlight pin is high rather than gnd
@@ -136,7 +136,7 @@ void bmX280_setup()
 
 volatile unsigned int rotation_count;
 volatile uint16_t lastperiod;
-void isr_anenometer_count()
+void isr_anemometer_count()
 {
     static uint16_t lastt;
     int t = millis();
@@ -154,7 +154,7 @@ void isr_anenometer_count()
 
 struct eeprom_data_struct {
     char signature[6];
-    uint16_t wind_min_reading, wind_max_reading;
+    int16_t wind_min_reading, wind_max_reading;
 } eeprom_data;
 
 void setup()
@@ -192,8 +192,8 @@ void setup()
 
   bmX280_setup();
 
-#ifdef ANENOMETER
-  attachInterrupt(0, isr_anenometer_count, FALLING);
+#ifdef ANEMOMETER
+  attachInterrupt(0, isr_anemometer_count, FALLING);
   pinMode(analogInPin, INPUT);
   pinMode(2, INPUT_PULLUP);
 #endif
@@ -219,21 +219,32 @@ ISR(WDT_vect)
 }
 
 static volatile uint8_t adcchannel;
-static volatile uint32_t adcval[2];
-static volatile int16_t adccount[2];
+static volatile uint32_t adcval[4];
+static volatile int16_t adccount[4];
 
 ISR(ADC_vect)
 {
-#ifdef ANENOMETER
-    adccount[adcchannel]++;
-    if(adccount[adcchannel] > 0)
-        adcval[adcchannel] += (int16_t)ADCW;
-    if(adcchannel == 0 && adccount[adcchannel] == 1)
-        ADMUX = _BV(REFS0) | 7, adcchannel = 1;
-#else
-    adcval[0] = (int16_t)ADCW;
-#endif
     ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
+#ifdef ANEMOMETER
+    uint16_t adcw = ADCW;
+    if(adcchannel == 0) {
+        adccount[0]++;
+        // backlight sensor
+        if(adcchannel == 0 && adccount[0] >= 1) {
+            adcval[0] = adcw;
+            ADMUX = _BV(REFS0) | 7, adcchannel = 1;
+        }
+    } else {
+        uint8_t b = adcw < 256 ? 1 : adcw < 768 ? 2 : 3;
+        if(adccount[b] < 4000) {
+            adccount[b]++;
+            if(adccount[b] > 0)
+                adcval[b] += adcw;
+        }
+    }
+#else
+    adcval[0] = ADCW;
+#endif
 }
 
 int32_t t_fine;
@@ -288,25 +299,71 @@ void send_nmea(const char *buf)
 int lcd_update;
 float wind_dir, wind_speed, wind_speed_30;
 
-void read_anenometer()
+void read_anemometer()
 {
     static float lpdir;
-    const float lp = .1;
-//    lp = 1;
-    // read the analog in value:
-    float sensorValue = 0;
+    const float lp = .1; // lowpass filter constant
 
+    if(adccount[1] < 100 && adccount[2] < 100 && adccount[3] < 100)
+        return; // not enough data
+    
     cli();
-    uint32_t val = adcval[1];
-    uint16_t count = adccount[1];
+    uint32_t val[3];
+    int16_t count[3];
+    for(int i=0; i<3; i++) {
+        val[i] = adcval[i+1];
+        count[i] = adccount[i+1];
+    }
     // reset the adc
-    adcval[0] = adcval[1] = 0;
-    adccount[0] = adccount[1] = -4; // skip the first 4 readings after changing channel
+    for(int i=0; i<4; i++) {
+        adcval[i] = 0;
+        adccount[i] = -4;
+    }
+#ifdef LCD
+    // read from backlight sense
     adcchannel = 0;
     ADMUX = _BV(REFS0) | 6;
+#else
+    ADMUX = _BV(REFS0) | 7, adcchannel = 1;
+#endif
     sei();
-    sensorValue = val / count;
 
+    // read the analog in value:
+    int16_t sensorValue = 0;
+
+    // discard this since we crossed zero and read
+    // possibly invalid data
+    if(count[0] != -4 && count[2] != -4) {
+        //Serial.println("CROSS!!!!");
+        return;
+    }
+
+    uint32_t tval = 0;
+    int16_t tcount = 0;
+    for(int i=0; i<3; i++) {
+        if(count[i] > 64) {
+            tval += val[i];
+            tcount += count[i];
+        }
+    }
+
+    if(tcount < 64) {
+        Serial.println(count[0]);
+        Serial.println(count[1]);
+        Serial.println(count[2]);
+        Serial.println(tcount);
+        Serial.println("Not enough data!!");
+        return; // not enough data
+    }
+
+    sensorValue = tval / tcount; // average data
+      
+    // make sure the value is sane
+    if(sensorValue < 0 || sensorValue > 1024) {
+        Serial.println("invalid range: program error");
+        return;
+    }
+    
     if(sensorValue < eeprom_data.wind_min_reading / 2 && eeprom_data.wind_min_reading > 20)
         lpdir = -1; // invalid
     else {
@@ -329,15 +386,16 @@ void read_anenometer()
         if(eeprom_data.wind_min_reading < 20 && eeprom_data.wind_max_reading > 1000)
             dir = (sensorValue + 13) * .34;
         else
-            dir = (sensorValue - eeprom_data.wind_min_reading)
+            dir = float(sensorValue - eeprom_data.wind_min_reading)
                 / (eeprom_data.wind_max_reading - eeprom_data.wind_min_reading) * 360.0;
-        
+
         if(lpdir - dir > 180)
             dir += 360;
         else if(dir - lpdir > 180)
             dir -= 360;
-        
-        lpdir = lp*dir + (1-lp)*lpdir;
+
+        if(fabs(lpdir - dir) < 180) // another test which should never fail
+            lpdir = lp*dir + (1-lp)*lpdir;
 
         if(lpdir >= 360)
             lpdir -= 360;
@@ -380,6 +438,7 @@ void read_anenometer()
         //        Serial.println(lpdir*100);
         //        Serial.println((int)(uint16_t)(lpdir*100.0)%100U);
 
+//        Serial.println(sensorValue);
         send_nmea(buf);
 
         wind_dir = lpdir;
@@ -493,7 +552,7 @@ void read_light()
 
 static uint16_t last_lcd_updatetime, last_lcd_texttime;
 static char status_buf[4][16];
-void draw_anenometer()
+void draw_anemometer()
 {
 #ifdef LCD
     if(!lcd_update)
@@ -675,9 +734,9 @@ void loop()
 #ifdef LCD
     read_light();
 #endif
-#ifdef ANENOMETER
-    read_anenometer();
-    draw_anenometer();
+#ifdef ANEMOMETER
+    read_anemometer();
+    draw_anemometer();
 #else
     draw_barometer_graph();
 #endif
