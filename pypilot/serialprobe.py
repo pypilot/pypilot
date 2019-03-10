@@ -76,13 +76,13 @@ def scan_devices():
 
     allowed_devices = []
 
-    blacklist_serial_ports  = read_blacklist()
+    blacklist_serial_ports = read_blacklist()
     for device in blacklist_serial_ports:
         for d in devices:
             if os.path.realpath(d.strip()) == device:
                 devices.remove(d)
     
-    allowed_serial_ports= read_allowed()
+    allowed_serial_ports = read_allowed()
     if allowed_serial_ports == 'any':
         return devices
     
