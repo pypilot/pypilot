@@ -11,19 +11,6 @@ python-opengl python-pip
 sudo pip install pyglet
 sudo pip install pywavefront
 
-# correct a bug in pywavefront
-typically in /usr/local/lib/python2.7/dist-packages/pywavefront
-+++ material.py 2017-10-30 19:43:53.288141444 +0000
-@@ -100,6 +100,7 @@
-         glMaterialfv(face, GL_AMBIENT, self.gl_light(self.ambient))
-         glMaterialfv(face, GL_SPECULAR, self.gl_light(self.specular))
-         glMaterialfv(face, GL_EMISSION, self.gl_light(self.emissive))
-+        self.shininess = min(128, self.shininess)
-         glMaterialf(face, GL_SHININESS, self.shininess)
-
-         if self.gl_floats is None:
-
-
 sudo pip install ujson
 
 wxwidgets client dependencies: python-opengl python-pip
@@ -58,33 +45,36 @@ or test programs, some function as clients, other as servers
 
 servers (only one executes at a time)
 
-pypilot/simple_autopilot.py -- classic PID based autopilot implementation
 pypilot/basic_autopilot.py -- basic PID based autopilot with additional gains and filters
 
 These server scripts can be run as tests:
 * execute this script directly
 
-signalk/server.py -- implements poll based server allowing external manipulation,
-                     * basic demo server with clock
-signalk/pipeserver.py -- implements tcp sockets in a separate unix process
-                         relieving the main process from json parsing, and transmission.
-                         * basic demo server
-pypilot/boatimu.py -- specialized imu specific to boat motions
+pypilot/autopilot.py -- autopilot
+
+instead of running the complete autopilot these scripts provide a server with specific functionallity.
+
+pypilot/boatimu.py -- imu specific to boat motions
                       includes automatic 2d/3d calibration and alignment of magnetic sensors
                       * useful for testing the imu (gyros) or even just reading gyros
                       
 pypilot/nmea.py -- signalk <-> nmea0183 translator
                    reads nmea0183 from serial ports or from tcp connections, and multiplexes
                    the output to both nmea0183.
+                   listed on tcp port 20220 by default
                    * convert and multiplex nmea0183 data
 
-pypilot/servo.py -- controls servo via RC pwm signal, and gpio feedback for fault
-                    * use to test or verify a working servo is detected,
-                      can be used to control or calibrate the servo
+pypilot/servo.py --   use to test or verify a working motor controller is detected,
+                      can be used to control and calibrate the servo
+
+signalk/server.py -- implements poll based server allowing external manipulation,
+                     * demo server with clock
+signalk/pipeserver.py -- implements tcp sockets in a separate unix process
+                         relieving the main process from json parsing, and transmission.
+                         * basic demo server
 
 
-
-clients (run as many of these):
+clients (run as many of these to connect to a server):
 
 ui/autopilot_control.py -- simple interface to command autopilot
 ui/autopilot_calibration.py -- interactive gui for all autopilot calibrations
