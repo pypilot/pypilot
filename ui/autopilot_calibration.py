@@ -116,8 +116,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                      'imu.heading',
                      'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel',
                      'imu.heading_offset',
-                     'servo.flags', 'servo.rudder.offset',
-                     'servo.rudder.scale', 'servo.rudder.range',
+                     'servo.flags', 'servo.rudder.offset', 'servo.rudder.scale',
+                     'servo.rudder.nonlinearity', 'servo.rudder.range',
                      'servo.calibration', 'servo.max_current',
                      'servo.max_controller_temp', 'servo.max_motor_temp',
                      'servo.current.factor', 'servo.current.offset',
@@ -212,12 +212,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.stServoFlags.SetLabel(value)
         elif name == 'servo.rudder.offset':
             self.stRudderOffset.SetLabel(str(round3(value)))
-            self.rudder_offset = value
         elif name == 'servo.rudder.scale':
-            self.rudder_scale = value
+            self.stRudderScale.SetLabel(str(round3(value)))
+        elif name == 'servo.rudder.nonlinearity':
+            self.stRudderNonLinearity.SetLabel(str(round3(value)))
         elif name == 'servo.rudder.range':
             self.sRudderRange.SetValue(value);
-            self.rudder_range = value
         elif name == 'servo.calibration':
             s = ''
             for name in value:
@@ -454,17 +454,15 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onServoGain( self, event ):
         self.client.set('servo.gain', event.GetValue())
-
+        
     def onRudderCentered( self, event ):
-        rudder_pos = self.rudder / self.rudder_scale - self.rudder_offset + .5
-        self.client.set('servo.rudder.offset', .5 - rudder_pos)
+        if self.rudder.calibration.set('centered')
 
-    def onRudderAtRange( self, event ):
-        scale = self.rudder_range * self.rudder_scale / self.rudder
-        self.client.set('servo.rudder.scale', scale)
+    def self.onRudderStarboardRange( self, event ):
+        if self.rudder.calibration.set('starboard range')
 
-    def onRudderRange( self, event ):
-        self.client.set('servo.rudder.range', self.sRudderRange.GetValue())
+    def self.onRudderPortRange( self, event ):
+        if self.rudder.calibration.set('port range')
 
 def main():
     glutInit(sys.argv)
