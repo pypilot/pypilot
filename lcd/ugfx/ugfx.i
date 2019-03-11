@@ -55,8 +55,6 @@ public:
     long int screensize = 0;
 };
 
-#ifdef __ARMEL__
-
 class nokia5110screen : public surface
 {
 public:
@@ -66,5 +64,3 @@ public:
     void refresh();
     int contrast;
 };
-
-#endif
