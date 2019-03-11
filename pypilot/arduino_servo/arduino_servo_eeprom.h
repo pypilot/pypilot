@@ -1,4 +1,4 @@
-/* Copyright (C) 2018 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -10,7 +10,7 @@
 struct arduino_servo_data /*__attribute__(("packed"))*/ {
     char signature[6]; // changes if eeprom format changes
     uint16_t max_current, max_controller_temp, max_motor_temp;
-    uint16_t rudder_scale;
+    uint16_t rudder_scale, rudder_nonlinearity;
     uint8_t rudder_range, rudder_offset;
     uint8_t max_slew_speed, max_slew_slow;
     uint8_t current_factor, voltage_factor;
@@ -36,6 +36,8 @@ public:
     void set_rudder_offset(double rudder_offset);
     double get_rudder_scale();
     void set_rudder_scale(double rudder_scale);
+    double get_rudder_nonlinearity();
+    void set_rudder_nonlinearity(double rudder_nonlinearity);
     double get_max_slew_speed();
     void set_max_slew_speed(double max_slew_speed);
     double get_max_slew_slow();
