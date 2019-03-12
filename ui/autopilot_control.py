@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2018 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -30,6 +30,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.heading = 0
         self.lastcommand = False
         self.recv = {}
+        self.rudder = False
+        self.apenabled = False
+        #self.bCenter.Show(False)
 
         self.timer = wx.Timer(self, self.ID_MESSAGES)
         self.timer.Start(100)
@@ -42,8 +45,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                           'gps.source', 'wind.source',
                           'ap.heading', 'servo.flags',
                           'ap.pilot',
-                          'servo.controller',
-                          'servo.mode', 'servo.engaged']
+                          'servo.controller', 'servo.rudder',
+                          'servo.engaged']
         value_list = client.list_values()
         self.gains = {}
         pilots = {}
@@ -230,6 +233,17 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'ap.enabled':
                 self.tbAP.SetValue(value)
                 self.set_mode_color()
+                self.apenabled = value
+                self.bCenter.Show(not self.apenabled and self.rudder)
+            elif name == 'servo.rudder':
+                try:
+                    value = round(value, 1)
+                except:
+                    pass
+                self.rudder = value
+                if (not (not self.apenabled and self.rudder)) == self.bCenter.IsShown():
+                    self.bCenter.Show(not self.bCenter.IsShown())
+                self.stRudder.SetLabel(str(value))
             elif name == 'ap.mode':
                 rb = {'compass': self.rbCompass, 'gps': self.rbGPS, 'wind': self.rbWind, 'true wind': self.rbTrueWind}
                 rb[value].SetValue(True)
@@ -257,8 +271,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.stStatus.SetLabel(value)
             elif name == 'servo.controller':
                 self.stController.SetLabel(value)
-            elif name == 'servo.mode':
-                self.stMode.SetLabel(value)
             elif name == 'servo.current':
                 pass # timeout value to know we are receiving
             elif 'ap.pilot.' in name:
@@ -343,6 +355,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             val = self.sCommand.GetMin() + (self.sCommand.GetMax() - self.sCommand.GetMin()) * x / self.sCommand.GetSize().x
             self.sCommand.SetValue(val)
 
+    def onCenter( self, event ):
+        self.client.set('servo.position_command', 0)
+
     def onScope( self, event ):
         subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/scope_wx.py'] + sys.argv[1:])
 	
@@ -361,5 +376,5 @@ def main():
     app.MainLoop()
 
 if __name__ == "__main__":
+    os.system('sed -i s/self.SetSizeHints/#/g autopilot_control_ui.py');
     main()
-
