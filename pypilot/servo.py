@@ -211,18 +211,20 @@ class Servo(object):
         self.rudder.calibration = self.Register(EnumProperty, 'rudder.calibration', 'idle', ['idle', 'centered', 'starboard range', 'port range', 'auto gain'])
         self.rudder.calibration.raw = {}
         self.rudder.range = self.Register(RangeProperty, 'rudder.range',  60, 10, 100, persistent=True)
+        self.rudder.autogain_state = 'idle'
+
         self.engaged = self.Register(BooleanValue, 'engaged', False)
         self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 60, persistent=True)
         self.current.factor = self.Register(RangeProperty, 'current.factor', 1, 0.8, 1.2, persistent=True)
         self.current.offset = self.Register(RangeProperty, 'current.offset', 0, -1.2, 1.2, persistent=True)
         self.voltage.factor = self.Register(RangeProperty, 'voltage.factor', 1, 0.8, 1.2, persistent=True)
         self.voltage.offset = self.Register(RangeProperty, 'voltage.offset', 0, -1.2, 1.2, persistent=True)
-        self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 70, 45, 100, persistent=True)
+        self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 60, 45, 100, persistent=True)
         self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
 
         self.max_slew_speed = self.Register(RangeProperty, 'max_slew_speed', 30, 0, 100, persistent=True)
         self.max_slew_slow = self.Register(RangeProperty, 'max_slew_slow', 50, 0, 100, persistent=True)
-        self.gain = self.Register(RangeProperty, 'gain', 1, .1, 10, persistent=True)
+        self.gain = self.Register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
         self.period = self.Register(RangeProperty, 'period', .7, .1, 3, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'compensate_voltage', False, persistent=True)
@@ -235,10 +237,11 @@ class Servo(object):
         self.speed = self.Register(SensorValue, 'speed', timestamp)
 
         self.position = self.Register(SensorValue, 'position', timestamp)
+        self.position.elp = 0
         self.position.set(0)
-        self.position.p = self.Register(RangeProperty, 'position.p', .1, .01, 1, persistent=True)
-        self.position.i = self.Register(RangeProperty, 'position.i', .1, .01, 1, persistent=True);
-        self.position.d = self.Register(RangeProperty, 'position.d', .1, .01, 1, persistent=True);
+        self.position.p = self.Register(RangeProperty, 'position.p', .2, .01, 1, persistent=True)
+        self.position.i = self.Register(RangeProperty, 'position.i', .025, 0, 1, persistent=True);
+        self.position.d = self.Register(RangeProperty, 'position.d', .1, 0, 1, persistent=True);
 
         self.rawcommand = self.Register(SensorValue, 'raw_command', timestamp)
 
@@ -265,7 +268,7 @@ class Servo(object):
         self.driver_timeout_start = 0
 
         self.state = self.Register(StringValue, 'state', 'none')
-        #self.mode = self.Register(EnumProperty, 'mode', 'relative', ['relative', 'position', 'speed']))
+
         self.controller = self.Register(StringValue, 'controller', 'none')
         self.flags = self.Register(ServoFlags, 'flags')
 
@@ -291,9 +294,9 @@ class Servo(object):
 
         if dp < dc:
             timeout = 10 # position command will expire after 10 seconds
+            self.disengaged = False
             if abs(self.rudder.value - self.command.value) < 1:
                 self.command.set(0)
-                self.disengaged = False
             else:
                 self.do_position_command(self.command.value)
                 return
@@ -309,18 +312,20 @@ class Servo(object):
         if not self.rudder.value:
             return
 
-        e = position-self.position.value;
+        e = self.position.value - position;
         d = self.speed.value
-        position.elp = .98*position.elp + .02*e;
-        position.dlp = .8*position.dlp + .2*d;
+        self.position.elp = .98*self.position.elp + .02*min(max(e, -30), 30)
+        #self.position.dlp = .8*self.position.dlp + .2*d;
 
         p = self.position.p.value*e
-        i = position.i.value*elp
-        d = position.d.value*dlp
+        i = self.position.i.value*self.position.elp
+        d = self.position.d.value*d
+        pid = p + i + d
 
-        self.do_command(p + i + d, False)
+        self.do_command(pid)
             
     def do_command(self, duty):
+        duty *= self.gain.value
         if not duty or self.fault():
             #print 'timeout', t - self.command_timeout
             if self.disengauge_on_timeout.value and \
@@ -338,6 +343,7 @@ class Servo(object):
 
         if self.flags.value & (ServoFlags.FWD_FAULT | ServoFlags.MAX_RUDDER) and duty > 0 or \
            self.flags.value & (ServoFlags.REV_FAULT | ServoFlags.MIN_RUDDER) and duty < 0:
+            #print 'refuse to move', duty
             if not self.rudder.value:
                 self.speed.set(0)
             self.raw_command(0)
@@ -384,9 +390,9 @@ class Servo(object):
         # if windup overflows, move at minimum speed
         if abs(self.windup) > self.period.value*min_speed / 1.5:
             if abs(duty) < min_speed:
-                speed = min_speed if self.windup > 0 else -min_speed
+                duty = min_speed if self.windup > 0 else -min_speed
         else:
-            speed = 0
+            duty = 0
 
         # don't let windup overflow
         if abs(self.windup) > 1.5*self.period.value:
@@ -399,9 +405,9 @@ class Servo(object):
         if duty * self.last_duty <= 0: # switched direction or stopped?
             if t - self.windup_change < self.period.value:
                 # less than period, keep previous direction, but use minimum speed
-                if self.speed.value > 0:
+                if self.last_duty > 0:
                     duty = min_speed
-                elif self.speed.value < 0:
+                elif self.last_duty < 0:
                     duty = -min_speed
                 else:
                     duty = 0
@@ -413,6 +419,7 @@ class Servo(object):
         if not self.rudder.value:
             self.speed.set(duty)
 
+        #print 'duty', duty
         self.last_duty = duty
 
         if duty > 0:
@@ -542,10 +549,21 @@ class Servo(object):
                 scale = (rudder1 - rudder0 - nonlinearity*(raw1**2 - raw0**2)) / (raw1 - raw0)
             offset = rudder0 - (nonlinearity*raw0 + scale)*raw0
 
-        self.rudder.offset.update(offset)
-        self.rudder.scale.update(scale)
-        self.rudder.nonlinearity.update(nonlinearity/scale)
+        if abs(scale) <= .01:
+            # bad update, trash an other reading
+            print 'bad servo rudder calibration', scale, nonlinearity
+            while len(self.rudder.calibration.raw) > 1:
+                for c in self.rudder.calibration.raw:
+                    if c != command:
+                        del self.rudder.calibration.raw[c]
+                        break
+        else:
+            self.rudder.offset.update(offset)
+            self.rudder.scale.update(scale)
 
+            nonlinearity /= scale
+            if abs(nonlinearity) < 2:
+                self.rudder.nonlinearity.update(nonlinearity)
                         
     def reset(self):
         if self.driver:
@@ -595,8 +613,54 @@ class Servo(object):
 
         if self.rudder.calibration.value != 'idle':
             if self.rudder.calibration.value == 'auto gain':
-                pass
-                # drive rudder
+                def idle():
+                    self.rudder.autogain_state='idle'
+                    self.rudder.calibration.set('idle')
+
+                t = time.time();
+                if self.rudder.autogain_state=='idle':
+                    self.gain.set(1)
+                    self.rudder.autogain_state='fwd'
+                    self.rudder.autogain_movetime = t
+
+                # must have rudder readings
+                if type(self.rudder.value) == type(False):
+                    idle();
+
+                rng = self.rudder.range.value
+                print self.rudder.autogain_state, self.rudder.value, rng
+
+                if self.rudder.autogain_state=='fwd':
+                    self.command.set(1)
+                    if abs(self.rudder.value) >= rng:
+                        self.rudder.autogain_state='center'
+                        self.rudder.autogain_time = t
+
+                if self.rudder.autogain_state=='center':
+                    self.command.set(-1)
+                    if abs(self.rudder.value) < rng - 1:
+                        self.rudder.autogain_state='rev'
+                                        
+                if self.rudder.autogain_state=='rev':
+                    self.command.set(-1)
+                    if abs(self.rudder.value) >= rng:
+                        dt = time.time() - self.rudder.autogain_time
+                        #print 'hardover', dt, 'with', rng/dt, 'deg/s'
+                        # 5 deg/s is gain of 1
+
+                        gain = min(max(5*dt/rng, .5), 2)
+                        if self.rudder.value < 0:
+#                            print 'negative gain detected'
+                            gain = -gain
+                        self.gain.set(gain)
+                        idle()
+
+                if self.current.value:
+                    self.rudder.autogain_movetime = t
+
+                if t - self.rudder.autogain_movetime > 3:
+                    print 'servo rudder autogain failed'
+                    idle()
             else: # perform calibration
                 self.rudder_calibration(self.rudder.calibration.value)
                 self.rudder.calibration.set('idle')
@@ -652,13 +716,12 @@ class Servo(object):
                 t = time.time()
                 dt = t - self.rudder.last_time
 
-                self.rudder.last_time = t
-                self.rudder.last = self.rudder.value
-
                 if dt > self.period:
                     dt = self.period
                 if dt > 0:
                     speed = (self.rudder.value - self.rudder.last) / dt
+                self.rudder.last_time = t
+                self.rudder.last = self.rudder.value
                 self.speed.set(.9*self.speed.value + .1*speed)
                 
         if result & ServoTelemetry.CURRENT:
