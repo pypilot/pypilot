@@ -33,7 +33,7 @@ extern "C" {
   #include <twi.h>
 }
 
-#define ANEMOMETER   // comment to show only baro graph
+//#define ANEMOMETER   // comment to show only baro graph
 #define LCD
 
 #define LCD_BL_HIGH  // if backlight pin is high rather than gnd
