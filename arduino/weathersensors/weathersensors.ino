@@ -1,4 +1,4 @@
-/* Copyright (C) 2017 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -33,7 +33,7 @@ extern "C" {
   #include <twi.h>
 }
 
-//#define ANEMOMETER   // comment to show only baro graph
+#define ANEMOMETER   // comment to show only baro graph
 #define LCD
 
 #define LCD_BL_HIGH  // if backlight pin is high rather than gnd
@@ -136,17 +136,31 @@ void bmX280_setup()
 
 volatile unsigned int rotation_count;
 volatile uint16_t lastperiod;
+
 void isr_anemometer_count()
 {
-    static uint16_t lastt;
-    int t = millis();
-    uint16_t period = t-lastt;
-    if(period < 15) // debounce, at least for less than 130 knots of wind
-        return;
+    uint8_t pin = digitalRead(2);
 
-    lastt = t;
-    lastperiod += period;
-    rotation_count++;
+    static uint16_t lastt, lastofft;
+    static uint8_t lastpin;
+    int t = millis();
+    if(!pin && lastpin) {
+        uint16_t period = t-lastt;
+        uint16_t offperiod = t-lastofft;
+
+        lastt = t;
+
+        if(offperiod > 20 && // debounce, at least for less than 120 knots of wind
+           offperiod > period/2 && offperiod < period/10*9) { // test good reading
+            lastperiod += period;
+            rotation_count++;
+        } else { // bad reading, reset
+            lastperiod = 0;
+            rotation_count=0;
+        }
+    }
+    lastpin = pin;
+    lastofft = t;
 }
 
 #include <avr/wdt.h>
@@ -193,7 +207,7 @@ void setup()
   bmX280_setup();
 
 #ifdef ANEMOMETER
-  attachInterrupt(0, isr_anemometer_count, FALLING);
+  attachInterrupt(0, isr_anemometer_count, CHANGE);
   pinMode(analogInPin, INPUT);
   pinMode(2, INPUT_PULLUP);
 #endif
@@ -417,17 +431,23 @@ void read_anemometer()
         sei();
         
         static uint16_t nowindcount;
-        static float knots = 0;
+        static float knots = 0,lastnewknots = 0;;
         const int nowindtimeout = 30;
         if(count) {
-            if(nowindcount!=nowindtimeout)
-                knots = .868976 * 2.25 * 1000 * count / period;
+            if(nowindcount!=nowindtimeout) {
+                float newknots = .868976 * 2.25 * 1000 * count / period;
+                if(fabs(lastnewknots/newknots-1) < .15) // if changing too fast, maybe bad reading
+                    knots = newknots;
+
+                lastnewknots = newknots;
+            }
+
             nowindcount = 0;
         } else {
             if(nowindcount<nowindtimeout)
                 nowindcount++;
             else
-                knots = 0;
+                knots = lastnewknots = 0;
         }
 
         char buf[128];
@@ -435,12 +455,8 @@ void read_anemometer()
             snprintf(buf, sizeof buf, "ARMWV,%d.%02d,R,%d.%02d,N,A", (int)lpdir, (uint16_t)(lpdir*100.0)%100U, (int)knots, (int)(knots*100)%100);
         else // invalid wind direction (no magnet?)
             snprintf(buf, sizeof buf, "ARMWV,,R,%d.%02d,N,A", (int)knots, (int)(knots*100)%100);
-        //        Serial.println(lpdir*100);
-        //        Serial.println((int)(uint16_t)(lpdir*100.0)%100U);
-
-//        Serial.println(sensorValue);
         send_nmea(buf);
-
+        
         wind_dir = lpdir;
         wind_speed = knots;
         wind_speed_30 = wind_speed_30*299.0/300.0 + wind_speed/300.0;
