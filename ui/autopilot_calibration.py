@@ -292,7 +292,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
             self.servoprocess = False
 
-    def onPageChanged( self, event ):
+    def PageChanged( self, event ):
         self.set_watches(self.client)
             
     def onKeyPressAccel( self, event ):
