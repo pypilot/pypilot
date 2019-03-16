@@ -151,7 +151,7 @@ void isr_anemometer_count()
         lastt = t;
 
         if(offperiod > 20 && // debounce, at least for less than 120 knots of wind
-           offperiod > period/2 && offperiod < period/10*9) { // test good reading
+                    offperiod > period/2 && offperiod < period/10*9) { // test good reading
             lastperiod += period;
             rotation_count++;
         } else { // bad reading, reset
@@ -180,7 +180,7 @@ void setup()
   sei();
 
   // default values
-  char signature[] =  "arws10";
+  char signature[] =  "arws11";
   memcpy(eeprom_data.signature, signature, sizeof eeprom_data.signature);
   eeprom_data.wind_min_reading = 300;
   eeprom_data.wind_max_reading = 650;
@@ -249,7 +249,7 @@ ISR(ADC_vect)
             ADMUX = _BV(REFS0) | 7, adcchannel = 1;
         }
     } else {
-        uint8_t b = adcw < 256 ? 1 : adcw < 768 ? 2 : 3;
+        uint8_t b = adcw < 448 ? 1 : adcw < 576 ? 2 : 3;
         if(adccount[b] < 4000) {
             adccount[b]++;
             if(adccount[b] > 0)
@@ -333,6 +333,7 @@ void read_anemometer()
         adcval[i] = 0;
         adccount[i] = -4;
     }
+
 #ifdef LCD
     // read from backlight sense
     adcchannel = 0;
@@ -344,10 +345,9 @@ void read_anemometer()
 
     // read the analog in value:
     int16_t sensorValue = 0;
-
     // discard this since we crossed zero and read
     // possibly invalid data
-    if(count[0] != -4 && count[2] != -4) {
+    if(count[0] > 0 && count[2] > 0) {
         //Serial.println("CROSS!!!!");
         return;
     }
@@ -361,6 +361,7 @@ void read_anemometer()
         }
     }
 
+
     if(tcount < 64) {
         Serial.println(count[0]);
         Serial.println(count[1]);
@@ -371,13 +372,21 @@ void read_anemometer()
     }
 
     sensorValue = tval / tcount; // average data
+
+#ifdef DEBUG
+    Serial.print(sensorValue);
+    Serial.print("  ");
+    Serial.print(eeprom_data.wind_min_reading);
+    Serial.print(" ");
+    Serial.println(eeprom_data.wind_max_reading);
+#endif
       
     // make sure the value is sane
     if(sensorValue < 0 || sensorValue > 1024) {
         Serial.println("invalid range: program error");
         return;
     }
-    
+
     if(sensorValue < eeprom_data.wind_min_reading / 2 && eeprom_data.wind_min_reading > 20)
         lpdir = -1; // invalid
     else {
