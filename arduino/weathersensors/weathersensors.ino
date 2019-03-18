@@ -144,19 +144,18 @@ void isr_anemometer_count()
     static uint16_t lastt, lastofft;
     static uint8_t lastpin;
     int t = millis();
+
     if(!pin && lastpin) {
         uint16_t period = t-lastt;
         uint16_t offperiod = t-lastofft;
 
-        lastt = t;
-
         if(offperiod > 20 && // debounce, at least for less than 120 knots of wind
                     offperiod > period/2 && offperiod < period/10*9) { // test good reading
+            lastt = t;            
             lastperiod += period;
             rotation_count++;
         } else { // bad reading, reset
-            lastperiod = 0;
-            rotation_count=0;
+
         }
     }
     lastpin = pin;
@@ -440,7 +439,7 @@ void read_anemometer()
         sei();
         
         static uint16_t nowindcount;
-        static float knots = 0,lastnewknots = 0;;
+        static float knots = 0, lastnewknots = 0;;
         const int nowindtimeout = 30;
         if(count) {
             if(nowindcount!=nowindtimeout) {
