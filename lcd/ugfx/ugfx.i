@@ -55,6 +55,7 @@ public:
     long int screensize = 0;
 };
 
+#ifdef WIRINGPI
 class nokia5110screen : public surface
 {
 public:
@@ -64,3 +65,4 @@ public:
     void refresh();
     int contrast;
 };
+#endif

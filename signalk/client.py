@@ -42,14 +42,20 @@ class SignalKClient(object):
             file = open(self.configfilename)
             config = kjson.loads(file.readline())
             file.close()
-            if 'host' in config and not host:
-                host = config['host']
-            elif config['host'] != host:
-                self.write_config = config
-                self.write_config['host'] = host
                 
         except Exception as e:
             print 'failed to read config file:', self.configfilename, e
+            config = {}
+
+        if not 'host' in config:
+            config['host'] = '127.0.0.1'
+            
+        if not host:
+            host = config['host']
+
+        if config['host'] != host:
+            self.write_config = config
+            self.write_config['host'] = host
 
         if not host:
             host = 'pypilot'
@@ -198,7 +204,14 @@ class SignalKClient(object):
     def list_values(self, timeout=10):
         request = {'method' : 'list'}
         self.send(request)
-        return self.receive(timeout)
+        t0 = t = time.time()
+        while t - t0 <= timeout:
+            t = time.time()
+            try:
+                return self.receive(timeout-t+t0)
+            except Exception as e:
+                print e
+        return False
 
     def get(self, name):
         request = {'method' : 'get', 'name' : name}

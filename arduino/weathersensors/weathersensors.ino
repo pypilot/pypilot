@@ -179,7 +179,7 @@ void setup()
   sei();
 
   // default values
-  char signature[] =  "arws11";
+  char signature[] =  "arws13";
   memcpy(eeprom_data.signature, signature, sizeof eeprom_data.signature);
   eeprom_data.wind_min_reading = 300;
   eeprom_data.wind_max_reading = 650;
@@ -189,7 +189,9 @@ void setup()
   eeprom_read_block(&ram_eeprom, 0, sizeof ram_eeprom);
   if(memcmp(ram_eeprom.signature, signature, sizeof ram_eeprom.signature) != 0)
       eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
-  else
+  else if(ram_eeprom.wind_min_reading > 0 && // ensure somewhat sane range
+         ram_eeprom.wind_max_reading < 1024 &&
+         ram_eeprom.wind_min_reading < ram_eeprom.wind_max_reading-100)
       memcpy(&eeprom_data, &ram_eeprom, sizeof eeprom_data);
   
   Serial.begin(38400);  // start serial for output
@@ -366,7 +368,7 @@ void read_anemometer()
         Serial.println(count[1]);
         Serial.println(count[2]);
         Serial.println(tcount);
-        Serial.println("Not enough data!!");
+        //Serial.println("Not enough data!!");
         return; // not enough data
     }
 
@@ -381,12 +383,12 @@ void read_anemometer()
 #endif
       
     // make sure the value is sane
-    if(sensorValue < 0 || sensorValue > 1024) {
+    if(sensorValue < 0 || sensorValue > 1023) {
         Serial.println("invalid range: program error");
         return;
     }
 
-    if(sensorValue < eeprom_data.wind_min_reading / 2 && eeprom_data.wind_min_reading > 20)
+    if(sensorValue < eeprom_data.wind_min_reading / 2 && eeprom_data.wind_min_reading > 40)
         lpdir = -1; // invalid
     else {
         int noise = 5;
@@ -405,7 +407,7 @@ void read_anemometer()
 
         // compensate 13 degree deadband in potentiometer
         float dir;
-        if(eeprom_data.wind_min_reading < 20 && eeprom_data.wind_max_reading > 1000)
+        if(eeprom_data.wind_min_reading < 40 || eeprom_data.wind_max_reading > 1000)
             dir = (sensorValue + 13) * .34;
         else
             dir = float(sensorValue - eeprom_data.wind_min_reading)

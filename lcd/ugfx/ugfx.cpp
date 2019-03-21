@@ -467,7 +467,7 @@ void surface::binary_write(int fileno)
 #endif
 }
 
-#ifdef __ARMEL__
+#ifdef WIRINGPI
 #include <wiringPi.h>
 void surface::binary_write_sw(int sclk, int mosi)
 {
@@ -561,7 +561,7 @@ screen::~screen()
 }
 
 
-#ifdef __ARMEL__
+#ifdef WIRINGPI
 #include <wiringPiSPI.h>
 
 #define SPI_DEVICE 0
