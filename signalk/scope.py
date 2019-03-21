@@ -124,7 +124,7 @@ class trace(object):
 
         for i in range(1, SignalKPlot.NUM_X_DIV):
             x = float(i) / SignalKPlot.NUM_X_DIV
-            glRasterPos2d(x, .95)
+            self.rasterpos([x, .95])
             period = 3/math.exp(x) # incorrect!!
             SignalKPlot.drawputs(str(period))
 
@@ -218,12 +218,14 @@ class SignalKPlot():
             glutBitmapCharacter(SignalKPlot.FONT, ctypes.c_int(ord(c)))
 
     # because glutbitmapcharacter doesn't get the glcolor unless the raster position is set
-    @staticmethod
-    def synccolor():
+    def synccolor(self):
         vp = glGetDoublev(GL_VIEWPORT)
-        pos = glGetDoublev(GL_CURRENT_RASTER_POSITION)
-        glRasterPos2d(pos[0]/vp[2], pos[1]/vp[3])
+        apply(glRasterPos2d, self.lastrasterpos);
 
+    def rasterpos(self, pos):
+        #pos = glGetDoublev(GL_CURRENT_RASTER_POSITION)
+        apply(glRasterPos2d, pos)
+        self.lastrasterpos = pos
 
     def drawticks(self):
         glLineWidth(1)
@@ -251,16 +253,16 @@ class SignalKPlot():
 
         # For each datapoint display its scale
         glColor3d(1, 1, 1)
-        glRasterPos2d(0, .01)
+        self.rasterpos([0, .01])
         i=1
         for t in self.traces:
             glColor3dv(t.color)
-            SignalKPlot.synccolor()
+            self.synccolor()
             SignalKPlot.drawputs("%d " % i)
             i+=1
 
         glColor3dv(self.curtrace.color)
-        SignalKPlot.synccolor()
+        self.synccolor()
 
         val = float('nan')
         if len(self.curtrace.points):
@@ -269,11 +271,11 @@ class SignalKPlot():
         SignalKPlot.drawputs("name: %s offset: %g  value: %g  visible: %s  " % \
                  (self.curtrace.name, self.curtrace.offset, val, 'T' if self.curtrace.visible else 'F'))
         glColor3d(1, 1, 1)
-        SignalKPlot.synccolor()
+        self.synccolor()
         SignalKPlot.drawputs("scale: %g  time: %g  " % (self.scale, self.disptime))
         
         glColor3dv(self.curtrace.color)
-        SignalKPlot.synccolor()
+        self.synccolor()
         
         SignalKPlot.drawputs("noise: %g" % self.curtrace.noise());
 
