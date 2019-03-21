@@ -245,14 +245,6 @@ class Servo(object):
 
         self.rawcommand = self.Register(SensorValue, 'raw_command', timestamp)
 
-        self.max_current_received = False
-        self.max_controller_temp_received = False
-        self.max_motor_temp_received = False
-        self.rudder_range_received = False
-        self.max_slew_received = False
-        self.current_correction_received = False
-        self.voltage_correction_received = False
-
         self.position.inttime = time.time()
         self.position.amphours = 0
 
