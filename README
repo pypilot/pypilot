@@ -3,36 +3,16 @@ Installing:
 The dependencies can be installed with "apt install" or sometimes 'pip install"
 
 server dependencies (required): python-gps python-serial libpython-dev python-numpy python-scipy swig
+                    (recommended): ujson pyudev
 lcdclient dependencies: python-pil
 webapp dependencies: python-flask python-gevent-websocket
 
 client dependencies (viewers control applications)
-python-opengl python-pip
-sudo pip install pyglet
-sudo pip install pywavefront
-
-sudo pip install ujson
-
-wxwidgets client dependencies: python-opengl python-pip
-# for the calibration program also:
-    pip install pyglet
-    pip install pywavefront
-
-# my version of rtimulib is required!
-git clone https://github.com/seandepagnier/RTIMULib2
-cd RTIMULib2/Linux/python
-python setup.py build
-sudo python setup.py install
-
+python-wxgtk3.0 python-opengl  pyglet pywavefront
 
 
 You may want to run pypilot as a service, see the scripts/debian directory
 
-
-install:
-
-sudo pip install PyOpenGL
-sudo apt-get install python-numpy python-scipy
 
 
 Clone the data repository and copy data

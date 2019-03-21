@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2018 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -45,8 +45,7 @@ class LCDMenu():
         self.lcd = lcd
         self.selection = 0
         self.name = name
-        if not lcd.have_select:
-            items.append((_('return'), self.lcd.menu_back))
+        items.append((_('return'), self.lcd.menu_back))
         self.items = items
         self.prev = prev
         self.display_hook = False
@@ -59,25 +58,29 @@ class LCDMenu():
 
     def display(self):
         fit = self.lcd.fittext(rectangle(0, 0, 1, .25), self.name)
-        firstitem = fit[1]
-        y = firstitem
-        for item in self.items:
+        sy = y = fit[1] + .03
+        items = min(int((1 - y)/.15), len(self.items))
+        scroll = max(self.selection - int(items/2), 0)
+        scroll = min(scroll, len(self.items) - items)
+        for item in self.items[scroll:]:
             size = self.lcd.fittext(rectangle(0, y, 1, .15), item[0])[0] + .25
-            if len(item) > 2:
+            if len(item) > 2: # more than just a text item
                 val = item[2]()
-                if type(val) == type(False):
-                    if val:
+                if type(val) == type(False): # check box
+                    if val: # draw if value is true
                         self.lcd.invertrectangle(rectangle(.8, y+.07, .1, .07))
-                else:
+                else: # slider, draw box showing value
                     sliderarea = rectangle(size, y+.05, (1-size), .07)
                     self.lcd.rectangle(sliderarea, .015)
                     sliderarea.width *= val
                     self.lcd.rectangle(sliderarea)
-                self.lcd.client.get(item[3])
+                self.lcd.client.get(item[3]) # refresh value from server
             y += .15
+            if y >= 1:
+                break
 
-        y = .15*self.selection + firstitem + .03
-        self.lcd.invertrectangle(rectangle(0, y, 1, .13))
+        y = .15*(self.selection-scroll) + sy
+        self.lcd.invertrectangle(rectangle(0, y+.03, 1, .12))
         if self.display_hook:
             self.display_hook()
 
@@ -171,6 +174,7 @@ class LCDClient():
         self.config['language'] = 'en'
         self.config['bigstep'] = 10
         self.config['smallstep'] = 1
+        self.gains = []
 
         print 'loading load config file:', self.configfilename
         try:
@@ -205,7 +209,6 @@ class LCDClient():
 
         self.initial_gets = ['servo.min_speed', 'servo.max_speed', 'servo.max_current', 'servo.period', 'imu.alignmentCounter']
 
-        self.have_select = False
         self.create_mainmenu()
 
         self.longsleep = 30
@@ -290,7 +293,13 @@ class LCDClient():
                 return self.range_edit.display
 
             if value:
-                return name, thunk, lambda : (self.last_val(signalk_name)-min) / (max - min), signalk_name
+                def last_val_num(name):
+                    ret = self.last_val(name)
+                    if ret=='N/A':
+                        return 0
+                    return ret
+
+                return name, thunk, lambda : (last_val_num(signalk_name)-min) / (max - min), signalk_name
             return name, thunk
         def value_check(name, signalk_name):
             def thunk():
@@ -305,31 +314,47 @@ class LCDClient():
             return name, thunk
 
         def pilot():
-            selection = 0
+            try:
+                pilots = self.value_list['ap.pilot']['choices']
+            except:
+                pilots = []
+
+            def set_pilot(name):
+                def thunk():
+                    self.client.set('ap.pilot', name)
+                    return self.display_menu
+                return thunk
+                
+            self.menu = LCDMenu(self, _('Pilot'), map(lambda name : (name, set_pilot), self.value_list['ap.pilot']['choices']), self.menu)
             index = 0
-
-            for pilot in self.pilots:
+            for pilot in pilots:
                 if pilot == self.last_val('ap.pilot'):
-                    selection = index
+                    self.menu.selection = index
                 index+=1
-
-            self.menu = LCDMenu(self, _('Pilot'), pilots, self.menu)
-            self.menu.selection = selection
 
             return self.display_menu
 
         def curgains():
             ret = []
-            for g in self.gains:
-                if self.last_val('ap.pilot') in g:
-                    ret += g
+            for name in self.value_list:
+                if 'AutopilotGain' in self.value_list[name]:
+                    if 'ap.pilot.' in name:
+                        s = name.split('.')
+                        if self.last_msg['ap.pilot'] == s[2]:
+                            ret.append(name)
+                    else:
+                        ret.append(name)
             return ret
         
         def gain():
+            def gain_edit(gain):
+                n = gain[gain.rfind('.')+1:]
+                return value_edit(n, n, gain, True)
+            
+            gain_list = map(gain_edit, curgains())
             self.menu = LCDMenu(self, _('Gain'),
                                 [(_('pilot'), pilot)] +
-                                map(lambda gain : value_edit(gain[gain.find('.')+1:],
-                                                             gain, gain, True), curgains()),
+                                gain_list,
                                  self.menu)
             return self.display_menu
 
@@ -337,6 +362,23 @@ class LCDClient():
             self.client.set('imu.alignmentCounter', 100)
             return self.display_page
 
+        def calibrate_rudder_feedback():
+            options = []
+            if 'servo.rudder' in self.last_msg and \
+               'servo.rudder.calibration' in self.value_list:
+                options = self.value_list['servo.rudder.calibration']['choices']
+                options.remove('idle')
+
+            self.menu = LCDMenu(self, _('Rudder') + '\n' + _('Feedback'),
+                                map(lambda option : (option, lambda : self.client.set('servo.rudder.calibration', option)), options), self.menu)
+
+            def display_rudder():
+                fit = self.fittext(rectangle(0, .5, 1, .25), str(self.last_val('servo.rudder')))
+                self.get('servo.rudder')
+
+            self.menu.display_hook = display_rudder
+            return self.display_menu
+        
         def calibrate():
             def getheading():
                 self.get('imu.heading')
@@ -349,11 +391,12 @@ class LCDClient():
                                 [(_('level'), level),
                                  value_edit(_('heading'), getheading, 'imu.heading_offset'),
                                  value_check(_('lock'), 'imu.compass.calibration.locked'),
+                                 (_('rudder'), calibrate_rudder_feedback),
                                  (_('info'), lambda : self.display_calibrate_info)],
                                 self.menu)
             self.menu.display_hook = self.display_calibrate
             return self.display_menu
-
+        
         def settings():
             def mode():
                 def set_mode(name):
@@ -559,10 +602,11 @@ class LCDClient():
         watchlist = ['ap.enabled', 'ap.mode', 'ap.pilot', 'ap.heading_command',
                      'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
                      'imu.compass.calibration', 'imu.compass.calibration.sigmapoints',
-                     'imu.compass.calibration.locked', 'imu.alignmentQ']
+                     'imu.compass.calibration.locked', 'imu.alignmentQ',
+                     'servo.rudder.calibration']
+
         poll_list = ['ap.heading']
         self.last_msg = {}
-        self.pilots = {}
         for name in ['gps.source', 'wind.source']:
             self.last_msg[name] = 'none'
         self.last_msg['ap.heading_command'] = 0
@@ -573,24 +617,23 @@ class LCDClient():
             host = sys.argv[1]
         
         def on_con(client):
-            self.value_list = {}
-            request = {'method' : 'list'}
-            client.send(request)
             for name in watchlist:
                 client.watch(name)
+            for request in self.initial_gets:
+                client.get(request)
 
         try:
             self.client = SignalKClient(on_con, host)
             self.value_list = self.client.list_values(10)
-
-                            
-                                
-            self.display_page = self.display_control
-            print 'connected'
-
-            for request in self.initial_gets:
-                self.get(request)
-        except:
+                
+            if self.value_list:
+                self.display_page = self.display_control
+                print 'connected'
+            else:
+                client.disconnect()
+                raise 1
+        except Exception as e:
+            print e
             self.client = False
             time.sleep(1)
 
@@ -1063,6 +1106,7 @@ class LCDClient():
         self.glutspecial(k, False)
 
     def glutspecial(self, k, down=True):
+        from OpenGL import GLUT as glut
         if k == glut.GLUT_KEY_UP:
             self.key(keynames['up'], down)
         elif k == glut.GLUT_KEY_DOWN:
@@ -1170,7 +1214,7 @@ class LCDClient():
             if 'value' in data:
                 self.last_msg[name] = data['value']
 
-            for token in ['min', 'max']:
+            for token in ['min', 'max', 'choices', 'AutopilotGain']:
                 if token in data:
                     #print 'name', name, token, ' = ', data[token]
                     if not name in self.value_list:
