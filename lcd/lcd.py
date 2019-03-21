@@ -45,8 +45,7 @@ class LCDMenu():
         self.lcd = lcd
         self.selection = 0
         self.name = name
-        if not lcd.have_select:
-            items.append((_('return'), self.lcd.menu_back))
+        items.append((_('return'), self.lcd.menu_back))
         self.items = items
         self.prev = prev
         self.display_hook = False
@@ -59,9 +58,10 @@ class LCDMenu():
 
     def display(self):
         fit = self.lcd.fittext(rectangle(0, 0, 1, .25), self.name)
-        y = .25
-        scroll = max(self.selection - 2, 0)
-        scroll = min(scroll, len(self.items) - 5)
+        sy = y = fit[1] + .03
+        items = min(int((1 - y)/.15), len(self.items))
+        scroll = max(self.selection - int(items/2), 0)
+        scroll = min(scroll, len(self.items) - items)
         for item in self.items[scroll:]:
             size = self.lcd.fittext(rectangle(0, y, 1, .15), item[0])[0] + .25
             if len(item) > 2: # more than just a text item
@@ -79,8 +79,8 @@ class LCDMenu():
             if y >= 1:
                 break
 
-        y = .15*(self.selection-scroll) + .25 + .03
-        self.lcd.invertrectangle(rectangle(0, y, 1, .13))
+        y = .15*(self.selection-scroll) + sy
+        self.lcd.invertrectangle(rectangle(0, y+.03, 1, .12))
         if self.display_hook:
             self.display_hook()
 
@@ -209,7 +209,6 @@ class LCDClient():
 
         self.initial_gets = ['servo.min_speed', 'servo.max_speed', 'servo.max_current', 'servo.period', 'imu.alignmentCounter']
 
-        self.have_select = False
         self.create_mainmenu()
 
         self.longsleep = 30
@@ -363,6 +362,23 @@ class LCDClient():
             self.client.set('imu.alignmentCounter', 100)
             return self.display_page
 
+        def calibrate_rudder_feedback():
+            options = []
+            if 'servo.rudder' in self.last_msg and \
+               'servo.rudder.calibration' in self.value_list:
+                options = self.value_list['servo.rudder.calibration']['choices']
+                options.remove('idle')
+
+            self.menu = LCDMenu(self, _('Rudder') + '\n' + _('Feedback'),
+                                map(lambda option : (option, lambda : self.client.set('servo.rudder.calibration', option)), options), self.menu)
+
+            def display_rudder():
+                fit = self.fittext(rectangle(0, .5, 1, .25), str(self.last_val('servo.rudder')))
+                self.get('servo.rudder')
+
+            self.menu.display_hook = display_rudder
+            return self.display_menu
+        
         def calibrate():
             def getheading():
                 self.get('imu.heading')
@@ -375,11 +391,12 @@ class LCDClient():
                                 [(_('level'), level),
                                  value_edit(_('heading'), getheading, 'imu.heading_offset'),
                                  value_check(_('lock'), 'imu.compass.calibration.locked'),
+                                 (_('rudder'), calibrate_rudder_feedback),
                                  (_('info'), lambda : self.display_calibrate_info)],
                                 self.menu)
             self.menu.display_hook = self.display_calibrate
             return self.display_menu
-
+        
         def settings():
             def mode():
                 def set_mode(name):
@@ -585,7 +602,8 @@ class LCDClient():
         watchlist = ['ap.enabled', 'ap.mode', 'ap.pilot', 'ap.heading_command',
                      'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
                      'imu.compass.calibration', 'imu.compass.calibration.sigmapoints',
-                     'imu.compass.calibration.locked', 'imu.alignmentQ']
+                     'imu.compass.calibration.locked', 'imu.alignmentQ',
+                     'servo.rudder.calibration']
 
         poll_list = ['ap.heading']
         self.last_msg = {}
@@ -607,13 +625,15 @@ class LCDClient():
         try:
             self.client = SignalKClient(on_con, host)
             self.value_list = self.client.list_values(10)
+                
             if self.value_list:
                 self.display_page = self.display_control
                 print 'connected'
             else:
                 client.disconnect()
                 raise 1
-        except:
+        except Exception as e:
+            print e
             self.client = False
             time.sleep(1)
 
