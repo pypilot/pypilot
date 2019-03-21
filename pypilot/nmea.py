@@ -205,17 +205,17 @@ class Nmea(object):
         self.server = server
         self.values = {'gps': {}, 'wind': {}, 'rudder': {}}
 
-        def make_source(name, dirname, speed=True):
+        def make_source(name, dirname=False):
             timestamp = server.TimeStamp(name)
-            self.values[name][dirname] = server.Register(SensorValue(name + '.' + dirname, timestamp, directional=True))
-            if speed:
+            if dirname:
+                self.values[name][dirname] = server.Register(SensorValue(name + '.' + dirname, timestamp, directional=True))
                 self.values[name]['speed'] = server.Register(SensorValue(name + '.speed', timestamp))
             self.values[name]['source'] = server.Register(StringValue(name + '.source', 'none'))
             self.values[name]['lastupdate'] = 0
 
         make_source('gps', 'track')
         make_source('wind', 'direction')
-        make_source('rudder', 'angle')
+        make_source('rudder')
 
         self.devices = []
         self.devices_lastmsg = {}
@@ -361,7 +361,7 @@ class Nmea(object):
             self.last_imu_time = time.time()
 
         # update rudder from servo
-        if 'servo.rudder' in self.server.values:
+        if 'servo.rudder' in self.server.values and self.rudder.source.value == 'servo':
             value = self.server.values['servo.rudder'].value
             if value:
                 self.handle_messages({'rudder': {'angle': value}}, 'servo')
@@ -370,9 +370,10 @@ class Nmea(object):
         dt = time.time() - self.last_rudder_time
         if self.process.sockets and (dt > .2 or dt < 0) and self.values['rudder']['source'].value == 'servo':
             # if the servo has rudder, output nmea rudder angle
-            value = self.values['rudder']['angle'].value
-            if value:
-                self.send_nmea('APRSA,%.3f,A,,' % value)
+            if 'servo.rudder' in self.server.values:
+                value = self.server.values['servo.rudder'].value
+                if value:
+                    self.send_nmea('APRSA,%.3f,A,,' % value)
             self.last_rudder_time = time.time()
             
         t5 = time.time()
