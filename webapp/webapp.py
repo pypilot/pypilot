@@ -160,6 +160,7 @@ class MyNamespace(Namespace):
                         line = self.client.readline()
                         if not line:
                             break
+                        #print 'line',  line.rstrip()
                         socketio.emit('signalk', line.rstrip())
                     except Exception as e:
                         socketio.emit('log', line)
@@ -173,7 +174,6 @@ class MyNamespace(Namespace):
 
 
     def on_signalk(self, message):
-        #print 'msg',  message
         if self.client:
             self.client.send(message + '\n')
 

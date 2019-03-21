@@ -4,7 +4,7 @@ The dependencies can be installed with "apt install" or sometimes 'pip install"
 
 server dependencies (required): python-gps python-serial libpython-dev python-numpy python-scipy swig
 lcdclient dependencies: python-pil
-webapp dependencies: python-flask
+webapp dependencies: python-flask python-gevent-websocket
 
 client dependencies (viewers control applications)
 python-opengl python-pip
