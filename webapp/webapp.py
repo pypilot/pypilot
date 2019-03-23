@@ -16,6 +16,13 @@ from signalk.server import LineBufferedNonBlockingSocket
 pypilot_webapp_port=80
 if len(sys.argv) > 1:
     pypilot_webapp_port=int(sys.argv[1])
+else:
+    file = open(filename, 'r')
+    config = json.loads(file.readline())
+    if 'port' in config:
+        pypilot_webapp_port = config['port']
+    file.close()
+
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose

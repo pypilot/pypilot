@@ -4,8 +4,10 @@ DefaultDependencies=false
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/sudo pypilot_lcdclient nokia5110
-User=pypilot
+ExecStart=/usr/bin/sudo pypilot_lcd nokia5110
+StandardOutput=syslog
+StandardError=syslog
+User=pi
 Restart=always
 RestartSec=3
 

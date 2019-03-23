@@ -161,19 +161,16 @@ AUTO, MENU, UP, DOWN, SELECT, LEFT, RIGHT = range(7)
 keynames = {'auto': AUTO, 'menu': MENU, 'up': UP, 'down': DOWN, 'select': SELECT, 'left': LEFT, 'right': RIGHT}
 
 class LCDClient():
-    def __init__(self, screen):
-#        w, h, self.bw = 44, 84, 1
-#        w, h, self.bw = 64, 128, 1
-#        w, h, self.bw = 320, 480, 0
-
+    def __init__(self, lcd=False):        
         self.config = {}
-        self.configfilename = os.getenv('HOME') + '/.pypilot/lcdclient.conf' 
+        self.configfilename = os.getenv('HOME') + '/.pypilot/lcd.conf' 
         self.config['contrast'] = 60
         self.config['invert'] = False
         self.config['flip'] = False
         self.config['language'] = 'en'
         self.config['bigstep'] = 10
         self.config['smallstep'] = 1
+        self.config['lcd'] = 'default'
         self.gains = []
 
         print 'loading load config file:', self.configfilename
@@ -184,6 +181,36 @@ class LCDClient():
                 self.config[name] = config[name]
         except:
             print 'failed to load config file:', self.configfilename
+
+        if lcd:
+            self.config['lcd'] = lcd
+        lcd = self.config['lcd']
+
+        if lcd = 'none':
+            screen = None
+        if lcd = 'nokia5110':
+            print 'using nokia5110'
+            screen = ugfx.nokia5110screen()
+            use_glut = False
+
+        else
+            use_glut = 'DISPLAY' in os.environ
+        
+            if use_glut:
+                print 'using glut'
+                import glut
+                #screen = glut.screen((120, 210))
+                #screen = glut.screen((64, 128))
+                screen = glut.screen((48, 84))
+                #screen = glut.screen((96, 168))
+            else:
+                print 'using framebuffer'
+                screen = ugfx.screen("/dev/fb0")
+
+            if screen.width > 480:
+                screen.width = 480
+                screen.height= min(screen.height, 640)
+            
         if screen:
             w, h = screen.width, screen.height
             mul = int(math.ceil(w / 48.0))
@@ -1227,34 +1254,10 @@ def main():
 
     use_glut = True
     screen = None
-    for arg in sys.argv:
-        if 'nokia5110' in arg:
-            sys.argv.remove(arg)
-            print 'using nokia5110'
-            screen = ugfx.nokia5110screen()
-            use_glut = False
+    if len(sys.argv) > 1:
+        t = sys.argv[1]
 
-    if not screen:
-        use_glut = 'DISPLAY' in os.environ
-        
-        if use_glut:
-            import glut
-            #screen = glut.screen((120, 210))
-            #screen = glut.screen((64, 128))
-            screen = glut.screen((48, 84))
-            #screen = glut.screen((96, 168))
-        else:
-            screen = ugfx.screen("/dev/fb0")
-            if screen.width == 416 and screen.height == 656:
-                # no actual device or display
-                print 'no actual screen, running headless'
-                screen = None
-
-            if screen.width > 480:
-                screen.width = 480
-                screen.height= min(screen.height, 640)
-
-    lcdclient = LCDClient(screen)
+    lcdclient = LCDClient(t)
     if screen:
         # magnify to fill screen
         mag = min(screen.width / lcdclient.surface.width, screen.height / lcdclient.surface.height)
