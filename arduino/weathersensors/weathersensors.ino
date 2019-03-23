@@ -37,6 +37,7 @@ extern "C" {
 #define LCD
 
 #define LCD_BL_HIGH  // if backlight pin is high rather than gnd
+#define FARENHIET
 
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
@@ -625,9 +626,15 @@ void draw_anemometer()
         lcd.setpos(a*7+6, 61);
         lcd.print(status_buf[2]);
 
+        char unit = 'C';
+#ifdef FARENHIET
+        unit = 'F';
+        temperature_comp = temperature_comp*9/5+3200;
+#endif
+        
         a = temperature_comp / 100;
         r = temperature_comp - a*100;
-        snprintf(status_buf[3], sizeof status_buf[3], "%d.%02dC", a, abs(r));
+        snprintf(status_buf[3], sizeof status_buf[3], "%d.%02d%c", a, abs(r), unit);
         
         lcd.setfont(0);
         lcd.setpos(1, 71);
