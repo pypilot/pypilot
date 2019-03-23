@@ -1,15 +1,16 @@
 [Unit]
-Description=pypilot webapp
+Description=pypilot boatimu
 DefaultDependencies=false
+Conflicts=pypilot.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/sudo pypilot_webapp
+ExecStart=/usr/local/bin/pypilot_boatimu
 StandardOutput=syslog
 StandardError=syslog
 User=pi
 Restart=always
-RestartSec=3
+RestartSec=2
 
 [Install]
 WantedBy=local-fs.target
