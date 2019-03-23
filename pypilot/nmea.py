@@ -141,6 +141,7 @@ from signalk.linebuffer import linebuffer
 class NMEASerialDevice(object):
     def __init__(self, path):
         self.device = serial.Serial(*path)
+        self.path = path
         self.device.timeout=0 #nonblocking
         fcntl.ioctl(self.device.fileno(), TIOCEXCL)
         self.b = linebuffer.LineBuffer(self.device.fileno())
@@ -335,8 +336,9 @@ class Nmea(object):
             if not device:
                 continue
             dt = time.time() - self.devices_lastmsg[device]
-            if dt > 1:
-                print 'serial device dt', dt, device
+            if dt > 2:
+                if dt < 3:
+                    print 'serial device dt', dt, device.path, 'is another process accessing it?'
             if dt > 15:
                 print 'serial device timed out', dt, device
                 self.remove_serial_device(device)
