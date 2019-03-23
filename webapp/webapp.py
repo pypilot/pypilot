@@ -16,6 +16,13 @@ from signalk.server import LineBufferedNonBlockingSocket
 pypilot_webapp_port=80
 if len(sys.argv) > 1:
     pypilot_webapp_port=int(sys.argv[1])
+else:
+    file = open(filename, 'r')
+    config = json.loads(file.readline())
+    if 'port' in config:
+        pypilot_webapp_port = config['port']
+    file.close()
+
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
@@ -160,6 +167,7 @@ class MyNamespace(Namespace):
                         line = self.client.readline()
                         if not line:
                             break
+                        #print 'line',  line.rstrip()
                         socketio.emit('signalk', line.rstrip())
                     except Exception as e:
                         socketio.emit('log', line)
@@ -173,7 +181,6 @@ class MyNamespace(Namespace):
 
 
     def on_signalk(self, message):
-        #print 'msg',  message
         if self.client:
             self.client.send(message + '\n')
 
