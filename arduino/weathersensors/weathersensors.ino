@@ -35,6 +35,7 @@ extern "C" {
 
 #define ANEMOMETER   // comment to show only baro graph
 #define LCD
+#define DAVIS
 
 #define LCD_BL_HIGH  // if backlight pin is high rather than gnd
 
@@ -149,8 +150,13 @@ void isr_anemometer_count()
         uint16_t period = t-lastt;
         uint16_t offperiod = t-lastofft;
 
+#ifdef DAVIS
+        if(period > 20)
+#else
         if(offperiod > 20 && // debounce, at least for less than 120 knots of wind
-                    offperiod > period/2 && offperiod < period/10*9) { // test good reading
+           offperiod > period/2 && offperiod < period/10*9) // test good reading
+#endif
+        {
             lastt = t;            
             lastperiod += period;
             rotation_count++;
@@ -388,9 +394,12 @@ void read_anemometer()
         return;
     }
 
-    if(sensorValue < eeprom_data.wind_min_reading / 2 && eeprom_data.wind_min_reading > 40)
+    if(sensorValue < eeprom_data.wind_min_reading / 2 && eeprom_data.wind_min_reading >= 40)
         lpdir = -1; // invalid
-    else {
+    else
+    {
+        float dir;
+
         int noise = 5;
         if(sensorValue < eeprom_data.wind_min_reading - noise) {
             // new minimum
@@ -406,9 +415,9 @@ void read_anemometer()
             sensorValue = eeprom_data.wind_max_reading;
 
         // compensate 13 degree deadband in potentiometer
-        float dir;
         if(eeprom_data.wind_min_reading < 40 || eeprom_data.wind_max_reading > 1000)
             dir = (sensorValue + 13) * .34;
+
         else
             dir = float(sensorValue - eeprom_data.wind_min_reading)
                 / (eeprom_data.wind_max_reading - eeprom_data.wind_min_reading) * 360.0;
