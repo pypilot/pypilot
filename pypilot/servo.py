@@ -191,6 +191,8 @@ class Servo(object):
 
         self.min_speed = self.Register(RangeProperty, 'min_speed', 1, 0, 1, persistent=True)
         self.max_speed = self.Register(RangeProperty, 'max_speed', 1, 0, 1, persistent=True)
+        self.speed_gain = self.Register(RangeProperty, 'speed_gain', 0, 0, 1, persistent=True)
+        self.duty = self.Register(SensorValue, 'duty', 0, 0, 1)
 
         self.faults = self.Register(ResettableValue, 'faults', 0)
 
@@ -257,7 +259,7 @@ class Servo(object):
         self.position.amphours = 0
 
         self.windup = 0
-        self.last_duty = 0
+        self.last_speed = 0
         self.windup_change = 0
 
         self.disengaged = True
@@ -324,9 +326,9 @@ class Servo(object):
 
         self.do_command(pid)
             
-    def do_command(self, duty):
-        duty *= self.gain.value
-        if not duty or self.fault():
+    def do_command(self, speed):
+        speed *= self.gain.value
+        if not speed or self.fault():
             #print 'timeout', t - self.command_timeout
             if self.disengauge_on_timeout.value and \
                not self.force_engaged and \
@@ -337,13 +339,13 @@ class Servo(object):
             self.raw_command(0)
             return
         
-        if duty == 0 and self.speed.value == 0: # optimization
+        if speed == 0 and self.speed.value == 0: # optimization
             self.raw_command(0)
             return
 
-        if self.flags.value & (ServoFlags.FWD_FAULT | ServoFlags.MAX_RUDDER) and duty > 0 or \
-           self.flags.value & (ServoFlags.REV_FAULT | ServoFlags.MIN_RUDDER) and duty < 0:
-            #print 'refuse to move', duty
+        if self.flags.value & (ServoFlags.FWD_FAULT | ServoFlags.MAX_RUDDER) and speed > 0 or \
+           self.flags.value & (ServoFlags.REV_FAULT | ServoFlags.MIN_RUDDER) and speed < 0:
+            #print 'refuse to move', speed
             if not self.rudder.value:
                 self.speed.set(0)
             self.raw_command(0)
@@ -365,7 +367,7 @@ class Servo(object):
             self.flags.clearbit(ServoFlags.REV_FAULT)
             
         if self.compensate_voltage.value:
-            duty *= 12 / self.voltage.value
+            speed *= 12 / self.voltage.value
 
         if self.compensate_current.value:
             # get current
@@ -384,15 +386,25 @@ class Servo(object):
         if min_speed > self.max_speed.value:
             self.max_speed.set(min_speed)
 
+        # compute duty cycle
+        lp = .001
+        self.duty.set(lp*int(not not speed) + (1-lp)*self.duty.value)
+
+        # adjust speed based on current duty
+        min_speed += (self.max_speed.value - min_speed)*self.duty.value*self.speed_gain.value
+
+        # ensure it is in range
+        min_speed = min(max(self.max_speed.value, self.min_speed.value))
+        
         # integrate windup
-        self.windup += (duty - self.last_duty) * dt
+        self.windup += (speed - self.last_speed) * dt
 
         # if windup overflows, move at minimum speed
         if abs(self.windup) > self.period.value*min_speed / 1.5:
-            if abs(duty) < min_speed:
-                duty = min_speed if self.windup > 0 else -min_speed
+            if abs(speed) < min_speed:
+                speed = min_speed if self.windup > 0 else -min_speed
         else:
-            duty = 0
+            speed = 0
 
         # don't let windup overflow
         if abs(self.windup) > 1.5*self.period.value:
@@ -402,39 +414,41 @@ class Servo(object):
             self.flags.clearbit(ServoFlags.SATURATED)
         #print 'windup', self.windup, dt, self.windup / dt, speed, self.speed
             
-        if duty * self.last_duty <= 0: # switched direction or stopped?
+        if speed * self.last_speed <= 0: # switched direction or stopped?
             if t - self.windup_change < self.period.value:
                 # less than period, keep previous direction, but use minimum speed
-                if self.last_duty > 0:
-                    duty = min_speed
-                elif self.last_duty < 0:
-                    duty = -min_speed
+                if self.last_speed > 0:
+                    speed = min_speed
+                elif self.last_speed < 0:
+                    speed = -min_speed
                 else:
-                    duty = 0
+                    speed = 0
             else:
                 self.windup_change = t
 
         # clamp to max speed
-        duty = min(max(duty, -self.max_speed.value), self.max_speed.value)
+        speed = min(max(speed, -self.max_speed.value), self.max_speed.value)
+
+        
         if not self.rudder.value:
-            self.speed.set(duty)
+            self.speed.set(speed)
 
-        #print 'duty', duty
-        self.last_duty = duty
+        #print 'speed', speed
+        self.last_speed = speed
 
-        if duty > 0:
+        if speed > 0:
             cal = self.calibration.value['forward']
-        elif duty < 0:
+        elif speed < 0:
             cal = self.calibration.value['reverse']
         else:
             self.raw_command(0)
             return
 
-        raw_duty = cal[0] + abs(duty)*cal[1]
-        if duty < 0:
-            raw_duty = -raw_duty
+        raw_speed = cal[0] + abs(speed)*cal[1]
+        if speed < 0:
+            raw_speed = -raw_speed
 
-        self.raw_command(raw_duty)
+        self.raw_command(raw_speed)
 
     def raw_command(self, command):
         self.rawcommand.set(command)
