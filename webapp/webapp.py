@@ -24,7 +24,7 @@ else:
     file.close()
 
 
-# Set this variable to "threading", "eventlet" or "gevent" to test the
+# Set this variable to 'threading', 'eventlet' or 'gevent' to test the
 # different async modes, or leave it set to None for the application to choose
 # the best option based on installed packages.
 async_mode = None
@@ -58,7 +58,7 @@ def index():
 if tinypilot:
     @app.route('/wifi', methods=['GET', 'POST'])
     def wifi():
-        networking = "/home/tc/.pypilot/networking.txt"
+        networking = '/home/tc/.pypilot/networking.txt'
 
         if request.method == 'POST':
             try:
@@ -70,7 +70,7 @@ if tinypilot:
             except Exception as e:
                 print 'exception!', e
 
-        mode, ssid, key = "Master", "pypilot", "" # defauls
+        mode, ssid, key = 'Master', 'pypilot', '' # defauls
         try:
             f = open(networking, 'r')
             while True:
@@ -86,7 +86,6 @@ if tinypilot:
             f.close()
         except:
             pass
-        print 'home', mode
         return render_template('wifi.html', async_mode=socketio.async_mode, wifi_mode=mode, wifi_ssid=ssid, wifi_key=key)
 
 
