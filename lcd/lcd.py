@@ -186,17 +186,16 @@ class LCDClient():
             self.config['lcd'] = lcd
         lcd = self.config['lcd']
 
-        if lcd = 'none':
+        self.use_glut = False
+        if lcd == 'none':
             screen = None
-        if lcd = 'nokia5110':
+        if lcd == 'nokia5110':
             print 'using nokia5110'
             screen = ugfx.nokia5110screen()
-            use_glut = False
-
-        else
-            use_glut = 'DISPLAY' in os.environ
+        else:
+            self.use_glut = 'DISPLAY' in os.environ
         
-            if use_glut:
+            if self.use_glut:
                 print 'using glut'
                 import glut
                 #screen = glut.screen((120, 210))
@@ -225,6 +224,7 @@ class LCDClient():
             self.surface = None
             self.frameperiod = 1
 
+        self.screen = screen
         self.set_language(self.config['language'])
         self.range_edit = False
 
@@ -1252,12 +1252,12 @@ class LCDClient():
 def main():
     print 'init...'
 
-    use_glut = True
-    screen = None
+    t = 'any'
     if len(sys.argv) > 1:
         t = sys.argv[1]
 
     lcdclient = LCDClient(t)
+    screen = lcdclient.screen
     if screen:
         # magnify to fill screen
         mag = min(screen.width / lcdclient.surface.width, screen.height / lcdclient.surface.height)
@@ -1291,7 +1291,7 @@ def main():
 
         lcdclient.idle()
 
-    if use_glut:
+    if lcdclient.use_glut:
         from OpenGL.GLUT import glutMainLoop
         from OpenGL.GLUT import glutIdleFunc
         from OpenGL.GLUT import glutKeyboardFunc
