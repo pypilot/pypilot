@@ -59,7 +59,7 @@ class LCDMenu():
     def display(self):
         fit = self.lcd.fittext(rectangle(0, 0, 1, .25), self.name)
         sy = y = fit[1] + .03
-        items = min(int((1 - y)/.15), len(self.items))
+        items = min(int((1 - y)/.15)+1, len(self.items))
         scroll = max(self.selection - int(items/2), 0)
         scroll = min(scroll, len(self.items) - items)
         for item in self.items[scroll:]:
@@ -74,7 +74,8 @@ class LCDMenu():
                     self.lcd.rectangle(sliderarea, .015)
                     sliderarea.width *= val
                     self.lcd.rectangle(sliderarea)
-                self.lcd.client.get(item[3]) # refresh value from server
+                if len(item) > 3:
+                    self.lcd.client.get(item[3]) # refresh value from server
             y += .15
             if y >= 1:
                 break
@@ -161,7 +162,7 @@ AUTO, MENU, UP, DOWN, SELECT, LEFT, RIGHT = range(7)
 keynames = {'auto': AUTO, 'menu': MENU, 'up': UP, 'down': DOWN, 'select': SELECT, 'left': LEFT, 'right': RIGHT}
 
 class LCDClient():
-    def __init__(self, lcd=False):        
+    def __init__(self):
         self.config = {}
         self.configfilename = os.getenv('HOME') + '/.pypilot/lcd.conf' 
         self.config['contrast'] = 60
@@ -182,9 +183,18 @@ class LCDClient():
         except:
             print 'failed to load config file:', self.configfilename
 
+        lcd = False
+        for possible_lcd in ['nokia5110', 'default', 'none']:
+            if possible_lcd in sys.argv:
+                sys.argv.remove(possible_lcd)
+                lcd = possible_lcd
+                break
+
         if lcd:
             self.config['lcd'] = lcd
         lcd = self.config['lcd']
+
+        print 'Using lcd', lcd
 
         self.use_glut = False
         if lcd == 'none':
@@ -464,9 +474,69 @@ class LCDClient():
                                     self.menu)
                 return self.display_menu
 
+            def wifi():
+                self.wifi = True
+                if not self.wifi:
+                    def display_no_wifi():
+                        self.surface.fill(black)
+                        self.fittext(rectangle(0, 0, 1, 1), _('No Wifi detected'), True)
+                    return display_no_wifi
+
+                networking = '/home/tc/.pypilot/networking.txt'
+                self.wifi_settings = {'mode': 'Master', 'ssid': 'pypilot', 'key':''} # defauls
+                try:
+                    f = open(networking, 'r')
+                    while True:
+                        l = f.readline()
+                        if not l:
+                            break
+                        for setting in self.wifi_settings:
+                            if l.startswith(setting+'='):
+                                self.wifi_settings[setting] = l[len(setting)+1:].strip()
+                    f.close()
+                except:
+                    pass
+
+                def write():
+                    try:
+                        f = open(networking, 'w')
+                        for setting in self.wifi_settings:
+                            f.write(setting+'='+self.wifi_settings[setting]+'\n')
+                        f.close()
+                    except Exception as e:
+                        print 'exception writing', networking, ':', e
+
+                def select_wifi_ap_toggle(ap):
+                    def thunk():
+                        print 'modet', mode
+                        self.wifi_settings['mode'] = 'Master' if ap else 'Managed'
+                        write()
+                        return self.display_menu
+                    return [thunk, lambda : (self.wifi_settings['mode'] == 'Master') == ap]
+
+                def select_wifi_encrypt():
+                    def thunk():
+                        self.wifi_settings['key'] = ''
+                        write()
+                        return self.display_menu
+                    return [thunk, lambda : not not self.wifi_settings['key']]
+
+                def reboot():
+                    os.system('sudo reboot')
+                    return self.display_menu
+
+                self.menu = LCDMenu(self, _('WIFI'),
+                                    [['AP'] + select_wifi_ap_toggle(True),
+                                     [_('Client')] + select_wifi_ap_toggle(False),
+                                     [_('Encrypt')] + select_wifi_encrypt(),
+                                     (_('Reboot'), reboot)], self.menu)
+                return self.display_menu
+
+
             def control():
                 self.menu = LCDMenu(self, _('Control'),
-                                    [config_edit(_('small step'), _('degrees'), 'smallstep', 1, 5, 1),
+                                    [(_('wifi'), wifi),
+                                     config_edit(_('small step'), _('degrees'), 'smallstep', 1, 5, 1),
                                      config_edit(_('big step'), _('degrees'), 'bigstep', 5, 20, 5)],
                                     self.menu)
                 return self.display_menu
@@ -1252,11 +1322,7 @@ class LCDClient():
 def main():
     print 'init...'
 
-    t = 'any'
-    if len(sys.argv) > 1:
-        t = sys.argv[1]
-
-    lcdclient = LCDClient(t)
+    lcdclient = LCDClient()
     screen = lcdclient.screen
     if screen:
         # magnify to fill screen
