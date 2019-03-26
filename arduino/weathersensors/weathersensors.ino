@@ -35,10 +35,10 @@ extern "C" {
 
 #define ANEMOMETER   // comment to show only baro graph
 #define LCD
-#define DAVIS
+#define DAVIS      // prevent autodetection of range (davis only)
 
 #define LCD_BL_HIGH  // if backlight pin is high rather than gnd
-#define FARENHEIT
+//#define FARENHEIT
 
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
