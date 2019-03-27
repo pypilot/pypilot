@@ -33,14 +33,13 @@ extern "C" {
   #include <twi.h>
 }
 
+// comment/uncomment these settings as needed
 #define ANEMOMETER   // comment to show only baro graph
-#define LCD
-//#define DAVIS     // uncomment only for davis sensors
-
-#define CCW   //  voltage decreases with wind direction (not davis!)
-
+#define LCD          // if nokia5110 lcd on spi port
+#define DAVIS     // uncomment only for davis sensors
+//#define CCW   //  voltage decreases with wind direction (not davis!)
 #define LCD_BL_HIGH  // if backlight pin is high rather than gnd
-#define FARENHEIT
+//#define FARENHEIT
 
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
@@ -490,12 +489,20 @@ void read_anemometer()
         sei();
         
         static uint16_t nowindcount;
-        static float knots = 0, lastnewknots = 0;;
+        static float knots = 0, lastnewknots = 0;
         const int nowindtimeout = 30;
         if(count) {
             if(nowindcount!=nowindtimeout) {
                 float newknots = .868976 * 2.25 * 1000 * count / period;
-                if(fabs(lastnewknots/newknots-1) < .15) // if changing too fast, maybe bad reading
+#if 0
+                Serial.print(lastnewknots);
+                Serial.print("   ");
+                Serial.print(newknots);
+                Serial.print("   ");
+                Serial.println(lastnewknots/newknots-1);
+#endif
+                // if changing too fast, maybe bad reading
+                if(lastnewknots == 0 || fabs(lastnewknots - newknots) < 5 || fabs(lastnewknots/newknots-1) <= .5)
                     knots = newknots;
 
                 lastnewknots = newknots;
