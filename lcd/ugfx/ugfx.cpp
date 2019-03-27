@@ -1,4 +1,4 @@
-/* Copyright (C) 2017 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -455,16 +455,14 @@ void surface::binary_write(int fileno)
             }
             binary[index] = bits;
         }
-#if 1
+
+    // write up to 64 bytes at a time
     for (unsigned int pos=0; pos<sizeof binary; pos += 64) {
         int len = 64;
         if (sizeof binary - pos < 64)
             len = sizeof binary - pos;
         write(fileno, binary + pos, len);
     }   
-#else
-    write(fileno, binary, sizeof binary);
-#endif
 }
 
 #ifdef WIRINGPI
