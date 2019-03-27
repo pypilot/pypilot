@@ -715,6 +715,8 @@ class LCDClient():
             host = sys.argv[1]
         
         def on_con(client):
+            self.value_list = client.list_values(10)
+
             for name in watchlist:
                 client.watch(name)
             for request in self.initial_gets:
@@ -722,7 +724,6 @@ class LCDClient():
 
         try:
             self.client = SignalKClient(on_con, host)
-            self.value_list = self.client.list_values(10)
                 
             if self.value_list:
                 self.display_page = self.display_control
@@ -1258,11 +1259,6 @@ class LCDClient():
 
     def idle(self):
         self.get('ap.heading')
-        try:
-            mode = self.last_val('ap.mode')
-            print 'mode', mode
-        except:
-            pass
 
         if any(self.keypadup):
             self.longsleep = 0
