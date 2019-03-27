@@ -1,1 +1,3 @@
-sudo cp -rv debian/etc/systemd /etc
+#!/bin/sh
+
+cp -rv debian/etc/systemd /etc
