@@ -22,6 +22,7 @@ class BasicPilot(AutopilotPilot):
     timestamp = self.ap.server.TimeStamp('ap')
 
     self.heading_command_rate = self.Register(SensorValue, 'heading_command_rate', timestamp)
+    self.last_heading_command.time = 0
     self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
 
     # create simple pid filter
@@ -58,6 +59,7 @@ class BasicPilot(AutopilotPilot):
     self.lastenabled = False
 
   def process_imu_data(self):
+    t = time.time()
     ap = self.ap
     if ap.enabled.value != self.lastenabled:
       self.lastenabled = ap.enabled.value
@@ -67,8 +69,8 @@ class BasicPilot(AutopilotPilot):
         self.last_heading_command = ap.heading_command.value
         self.heading_command_rate.set(0)
 
-    # reset feed-forward error if mode changed
-    if ap.mode.value != ap.lastmode:
+    # reset feed-forward error if mode changed, or last command is older than 1 second
+    if ap.mode.value != ap.lastmode or t - self.heading_command_rate.time > 1:
       self.last_heading_command = ap.heading_command.value
     
     # if disabled, only bother to compute if a client cares
@@ -84,6 +86,7 @@ class BasicPilot(AutopilotPilot):
     # filter the heading command to compute feed-forward gain
     heading_command_diff = resolv(ap.heading_command.value - self.last_heading_command)
     self.last_heading_command = ap.heading_command.value
+    self.heading_command_rate.time = t;
     lp = .1
     command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
     self.heading_command_rate.set(command_rate)
@@ -93,7 +96,7 @@ class BasicPilot(AutopilotPilot):
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
     feedforward_value = self.heading_command_rate.value
-    reactive_value = self.servocommand_queue.take(time.time() - self.reactive_time.value)
+    reactive_value = self.servocommand_queue.take(t - self.reactive_time.value)
     self.reactive_value.set(reactive_value)
     
     if not 'wind' in ap.mode.value:
