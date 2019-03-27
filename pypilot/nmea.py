@@ -363,7 +363,7 @@ class Nmea(object):
             self.last_imu_time = time.time()
 
         # update rudder from servo
-        if 'servo.rudder' in self.server.values and self.rudder.source.value == 'servo':
+        if 'servo.rudder' in self.server.values and self.server.values['rudder.source'].value == 'servo':
             value = self.server.values['servo.rudder'].value
             if value:
                 self.handle_messages({'rudder': {'angle': value}}, 'servo')

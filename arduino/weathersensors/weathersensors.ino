@@ -35,9 +35,11 @@ extern "C" {
 
 // comment/uncomment these settings as needed
 #define ANEMOMETER   // comment to show only baro graph
+
 #define LCD          // if nokia5110 lcd on spi port
 #define DAVIS     // uncomment only for davis sensors
 //#define CCW   //  voltage decreases with wind direction (not davis!)
+
 #define LCD_BL_HIGH  // if backlight pin is high rather than gnd
 //#define FARENHEIT
 

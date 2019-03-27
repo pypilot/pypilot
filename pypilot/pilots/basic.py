@@ -22,7 +22,7 @@ class BasicPilot(AutopilotPilot):
     timestamp = self.ap.server.TimeStamp('ap')
 
     self.heading_command_rate = self.Register(SensorValue, 'heading_command_rate', timestamp)
-    self.last_heading_command.time = 0
+    self.heading_command_rate.time = 0
     self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
 
     # create simple pid filter

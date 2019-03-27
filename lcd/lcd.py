@@ -199,7 +199,7 @@ class LCDClient():
         self.use_glut = False
         if lcd == 'none':
             screen = None
-        if lcd == 'nokia5110':
+        elif lcd == 'nokia5110':
             print 'using nokia5110'
             screen = ugfx.nokia5110screen()
         else:
@@ -671,7 +671,8 @@ class LCDClient():
         return float(size[0])/self.surface.width, float(size[1])/self.surface.height
 
     def line(self, x1, y1, x2, y2):
-        self.surface.line(x1, y1, x2, y2, white)
+        w, h = self.surface.width - 1, self.surface.height - 1
+        self.surface.line(int(x1*w), int(y1*h), int(x2*w+.5), int(y2*h+.5), white)
 
     def convbox(self, x1, y1, x2, y2):
         w, h = self.surface.width - 1, self.surface.height - 1
@@ -758,6 +759,32 @@ class LCDClient():
     def have_true_wind(self):
         return self.have_gps() and self.have_wind()
 
+    def display_mode(self, control):
+        def modes():
+            return [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
+
+        mode = self.last_val('ap.mode')
+        if control:
+            if control['mode'] == mode and control['modes'] == modes():
+                return # no need to refresh
+            control['mode'] = mode
+            control['modes'] = modes()
+
+        #print 'mode', self.last_val('ap.mode')
+        modes = {'compass': ('C', self.have_compass, rectangle(0, .74, .25, .16)),
+                 'gps':     ('G', self.have_gps,     rectangle(.25, .74, .25, .16)),
+                 'wind':    ('W', self.have_wind,    rectangle(.5, .74, .25, .16)),
+                 'true wind': ('T', self.have_true_wind, rectangle(.75, .74, .25, .16))}
+
+        self.surface.box(*(self.convrect(rectangle(0, .74, 1, .18)) + [black]))
+        for mode in modes:
+            if modes[mode][1]():
+                self.fittext(modes[mode][2], modes[mode][0])
+            if self.last_val('ap.mode') == mode:
+                r = modes[mode][2]
+                marg = .02
+                self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
+    
     def display_wifi(self):
         wifi = False
         try:
@@ -865,8 +892,6 @@ class LCDClient():
 
                     self.control['mode'] = False # refresh mode
 
-        def modes():
-            return [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
         warning = False
         if mode == 'compass':
             warning = False
@@ -887,27 +912,28 @@ class LCDClient():
                 warncal(_('Bad Cal'))
                 warning = True
 
-        if not warning and \
-           (self.control['mode'] != mode or self.control['modes'] != modes()):
-            self.control['mode'] = mode
-            self.control['modes'] = modes()
+        if not warning:
+            self.display_mode(self.control)
+        self.display_wifi()
 
-            #print 'mode', self.last_val('ap.mode')
-            modes = {'compass': ('C', self.have_compass, rectangle(0, .74, .25, .16)),
-                     'gps':     ('G', self.have_gps,     rectangle(.25, .74, .25, .16)),
-                     'wind':    ('W', self.have_wind,    rectangle(.5, .74, .25, .16)),
-                     'true wind': ('T', self.have_true_wind, rectangle(.75, .74, .25, .16))}
+    def display_select(self):
+        self.surface.fill(black)
+        def arrow(x1, y1, x2, y2):
+            self.line(x1, y1, x2, y2)
+            d, e = .3, .6
+            x, y = (1-d)*x1 + d*x2, (1-d)*y1 + d*y2
+            dx, dy = e*(x1-x), e*(y1-y)
+            self.line(x1, y1, x + dy, y - dx)
+            self.line(x1, y1, x - dy, y + dx)
 
-            self.surface.box(*(self.convrect(rectangle(0, .74, 1, .18)) + [black]))
-            for mode in modes:
-                if modes[mode][1]():
-                    self.fittext(modes[mode][2], modes[mode][0])
-                if self.last_val('ap.mode') == mode:
-                    r = modes[mode][2]
-                    marg = .02
-                    self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
+        self.fittext(rectangle(.1, .1, .8, .2), _('tack'))
+        arrow(.1, .1, .5, .1)
+        arrow(.9, .1, .5, .1)
+        self.fittext(rectangle(0, .4, .8, .2), _('mode'))
+        arrow(.9, .25, .9, .7)
+        arrow(.9, .7, .9, .25)
 
-            #self.control['mode'] = False # refresh mode
+        self.display_mode(False)
         self.display_wifi()
 
     def display_menu(self):
@@ -1095,18 +1121,13 @@ class LCDClient():
                 self.set('ap.enabled', False)
         
             self.display_page = self.display_control
-
+            
         if self.keypadup[SELECT]:
-            if self.display_page == self.display_control:
-                for t in range(len(self.modes_list)):
-                    next_mode = self.modes_list[0]
-                    self.modes_list = self.modes_list[1:] + [next_mode]
-                    if next_mode != self.last_val('ap.mode') and \
-                       self.modes[next_mode]():
-                        self.client.set('ap.mode', next_mode)
-                        break
+            if self.display_page == self.display_control and self.surface:
+                self.display_page = self.display_select
             else:
-                self.menu = self.menu.adam() # reset to main menu
+                if self.display_page != self.display_select:
+                    self.menu = self.menu.adam() # reset to main menu
                 self.display_page = self.display_control
 
         # for up and down keys providing acceration
@@ -1132,6 +1153,28 @@ class LCDClient():
                     self.set('ap.heading_command', cmd)
                 else:
                     self.set('servo.command', sign*(speed+8.0)/20)
+
+        elif self.display_page == self.display_select:
+            if self.keypadup[MENU] and self.last_val('ap.tack.state') != 'none':
+                self.client.set('ap.tack.state', 'none')
+            elif self.keypadup[LEFT]:
+                self.client.set('ap.tack.direction', 'port')
+                self.client.set('ap.tack.state', 'begin')
+            elif self.keypadup[RIGHT]:
+                self.client.set('ap.tack.direction', 'starboard')
+                self.client.set('ap.tack.state', 'begin')
+            elif self.keypadup[UP] or self.keypadup[DOWN]:
+                # change mode
+                for t in range(len(self.modes_list)):
+                    if self.keypadup[UP]:
+                        self.modes_list = [self.modes_list[-1]] + self.modes_list[:-1]
+                    else:
+                        self.modes_list = self.modes_list[1:] + [self.modes_list[0]]
+                    next_mode = self.modes_list[0]
+                    if next_mode != self.last_val('ap.mode') and \
+                       self.modes[next_mode]():
+                        self.client.set('ap.mode', next_mode)
+                        break
 
         elif self.display_page == self.display_menu:
             if self.keypadup[UP]:
@@ -1215,6 +1258,11 @@ class LCDClient():
 
     def idle(self):
         self.get('ap.heading')
+        try:
+            mode = self.last_val('ap.mode')
+            print 'mode', mode
+        except:
+            pass
 
         if any(self.keypadup):
             self.longsleep = 0
