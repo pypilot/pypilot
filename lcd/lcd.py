@@ -288,7 +288,10 @@ class LCDClient():
                 def cbr(channel):
                     self.longsleep = 0
 
-                GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
+                try:
+                    GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
+                except Exception as e:
+                    print 'WARNING', e
 
         global LIRC
         if LIRC:
