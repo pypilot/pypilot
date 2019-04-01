@@ -92,6 +92,5 @@ def main():
     except KeyboardInterrupt:
         print 'Keyboard interrupt, gpsprobe exit'
 
-
 if __name__ == "__main__":
     main()

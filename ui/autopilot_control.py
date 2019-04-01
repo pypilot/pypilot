@@ -42,6 +42,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def on_con(self, client):
         self.fgGains.Clear(True)
         self.watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
+                          'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
                           'gps.source', 'wind.source',
                           'ap.heading', 'servo.flags',
                           'ap.pilot',
@@ -265,6 +266,15 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'ap.heading':
                 self.stHeading.SetLabel('%.1f' % value)
                 self.heading = value
+            elif name == 'ap.tack.state':
+                self.stTackState.SetLabel(value)
+                self.bTack.SetLabel('Tack' if value == 'none' else 'Cancel')
+                self.tackstate = value
+            elif name == 'ap.tack.timeout':
+                if self.tackstate == 'waiting':
+                    self.stTackState.SetLabel(str(value))
+            elif name == 'ap.tack.direction':
+                self.cTackDirection.SetSelection(value == 'starboard')
             elif name == 'servo.engaged':
                 self.stEngaged.SetLabel('Engaged' if value else 'Disengaged')
             elif name == 'servo.flags':
@@ -301,6 +311,16 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def onPilot(self, event):
         self.client.set('ap.pilot', self.cPilot.GetStringSelection())
 
+    def onTack(self, event):
+        if self.bTack.GetLabel() == 'Tack':
+            self.tackstate = 'begin'
+        else:
+            self.tackstate = 'none'
+        self.client.set('ap.tack.state', self.tackstate)
+
+    def onTackDirection(self, event):
+        self.client.set('ap.tack.direction', 'port' if self.cTackDirection.GetSelection() else 'starboard')
+
     def onPaintControlSlider( self, event ):
         # gtk3 is a bit broken
         if 'gtk3' in wx.version():
@@ -309,9 +329,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         dc = wx.PaintDC( self.sCommand )        
         s = self.sCommand.GetSize()
 
-        #dc.SetTextForeground(wx.BLACK);
-        dc.SetPen(wx.Pen(wx.BLACK));
-        dc.SetBrush(wx.TRANSPARENT_BRUSH);
+        #dc.SetTextForeground(wx.BLACK)
+        dc.SetPen(wx.Pen(wx.BLACK))
+        dc.SetBrush(wx.TRANSPARENT_BRUSH)
         y = 10
         x = 0
         for l in self.sliderlabels:
@@ -376,5 +396,4 @@ def main():
     app.MainLoop()
 
 if __name__ == "__main__":
-    os.system('sed -i s/self.SetSizeHints/#/g autopilot_control_ui.py');
     main()
