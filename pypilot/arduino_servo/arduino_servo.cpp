@@ -125,7 +125,7 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
         if(value == 65535)
             rudder = NAN;
         else
-            rudder = (uint16_t)value / 65472.0;
+            rudder = (uint16_t)value / 727.0 - 45.0; // nominal range +- 45
         return RUDDER;
     case FLAGS_CODE:
         flags = value;
