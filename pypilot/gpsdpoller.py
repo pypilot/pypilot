@@ -86,7 +86,8 @@ class GpsdPoller(object):
         def fval(name):
             return fix[name] if name in fix else False
 
-        val = {'timestamp' : time.time(), 'track': fval('track'), 'speed': fval('speed')}
+        # use fix timestamp??
+        val = {'timestamp' : time.time(), 'track': fval('track'), 'speed': fval('speed'), 'device': fval('device')}
         self.nmea.handle_messages({'gps': val}, 'gpsd')
 
 if __name__ == '__main__':
