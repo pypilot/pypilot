@@ -96,9 +96,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.servo_timer = wx.Timer(self, self.ID_CALIBRATE_SERVO)
         self.Bind(wx.EVT_TIMER, self.calibrate_servo_timer, id=self.ID_CALIBRATE_SERVO)
 
+        self.have_rudder = False
+
         self.request_msg_timer = wx.Timer(self, self.ID_REQUEST_MSG)
         self.Bind(wx.EVT_TIMER, self.request_msg, id=self.ID_REQUEST_MSG)
-        self.request_msg_timer.Start(200)
+        self.request_msg_timer.Start(250)
         
         self.servoprocess = False
 
@@ -113,11 +115,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
              'imu.accel.calibration.sigmapoints', 'imu.accel.calibration.locked'],
             ['imu.compass.calibration', 'imu.compass.calibration.age', 'imu.compass',
              'imu.compass.calibration.sigmapoints', 'imu.compass.calibration.locked'],
-            ['servo.flags', 'servo.rudder.offset', 'servo.rudder.scale',
-             'servo.rudder.nonlinearity', 'servo.rudder.range', 'servo.calibration',
+            ['servo.flags',
              'servo.max_current', 'servo.max_controller_temp', 'servo.max_motor_temp',
              'servo.current.factor', 'servo.current.offset','servo.voltage.factor',
-             'servo.voltage.offset', 'servo.max_slew_speed', 'servo.max_slew_slow']]
+             'servo.voltage.offset', 'servo.max_slew_speed', 'servo.max_slew_slow'],
+            ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity',
+             'rudder.range', 'rudder.calibration_state']]
 
         pageindex = 0
         for pagelist in watchlist:
@@ -148,10 +151,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def request_msg(self, event):
         if not self.client:
             return
-        if self.m_notebook.GetSelection() == 3: # servo
-            msgs = ['servo.rudder', 'servo.voltage', 'servo.current']
-            for name in msgs:
-                self.client.get(name)
+
+        page_gets = [[], [], [], ['servo.voltage', 'servo.current'], ['rudder.angle']]
+        i = self.m_notebook.GetSelection()
+        for name in page_gets[i]:
+            self.client.get(name)
 
     def UpdateControl(self, control, update):
         t = time.time()
@@ -221,17 +225,18 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 self.heading_offset_timer.Start(1000, True)
 
         elif self.m_notebook.GetSelection() == 3:
-            if name == 'servo.rudder':
+            if name == 'rudder.angle':
                 self.UpdateLabel(self.stRudderAngle, str(round3(value)))
+                self.have_rudder = type(value) != type(bool)
             elif name == 'servo.flags':
                 self.UpdateLabel(self.stServoFlags, value)
-            elif name == 'servo.rudder.offset':
+            elif name == 'rudder.offset':
                 self.UpdateLabel(self.stRudderOffset, str(round3(value)))
-            elif name == 'servo.rudder.scale':
+            elif name == 'rudder.scale':
                 self.UpdateLabel(self.stRudderScale, (str(round3(value))))
-            elif name == 'servo.rudder.nonlinearity':
+            elif name == 'rudder.nonlinearity':
                 self.UpdateLabel(self.stRudderNonlinearity, str(round3(value)))
-            elif name == 'servo.rudder.range':
+            elif name == 'rudder.range':
                 self.UpdatedSpin(self.sRudderRange, value)
             elif name == 'servo.calibration':
                 s = ''
@@ -473,22 +478,33 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onServoGain( self, event ):
         self.client.set('servo.gain', event.GetValue())
-        
+
+    def onServoAutoGain( self, event ):
+        print 'hi', self.have_rudder
+        if self.have_rudder:
+            self.client.set('rudder.calibration_state', 'auto gain')
+        else:
+            print 'hi2'
+            wx.MessageDialog(self, _('Auto gain calibration requires a rudder sensor'), _('Warning'), wx.OK).ShowModal()
+
     def onRudderCentered( self, event ):
-        self.client.set('servo.rudder.calibration', 'centered')
+        self.client.set('rudder.calibration_state', 'centered')
 
     def onRudderStarboardRange( self, event ):
-        self.client.set('servo.rudder.calibration', 'starboard range')
+        self.client.set('rudder.calibration_state', 'starboard range')
 
     def onRudderPortRange( self, event ):
-        self.client.set('servo.rudder.calibration', 'port range')
+        self.client.set('rudder.calibration_state', 'port range')
 
     def onRudderRange( self, event ):
-        self.client.set('servo.rudder.range', event.GetValue())
+        self.client.set('rudder.range', event.GetValue())
 
 def main():
-    glutInit(sys.argv)
+    import gettext
+    gettext.install('pypilot', 'locale', unicode=False)
+    #glutInit(sys.argv)
     app = wx.App()
+    
     CalibrationDialog().ShowModal()
 
 if __name__ == "__main__":
