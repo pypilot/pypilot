@@ -126,10 +126,10 @@ $(document).ready(function() {
             block_polling = 2;
         });
 
-        watch('servo.rudder.offset')
-        watch('servo.rudder.scale')
-        watch('servo.rudder.nonlinearity')
-        watch('servo.rudder.range')
+        watch('rudder.offset')
+        watch('rudder.scale')
+        watch('rudder.nonlinearity')
+        watch('rudder.range')
 
         // configuration
         $('#configuration_container').text('')
@@ -196,7 +196,7 @@ $(document).ready(function() {
         } else if(tab == 'Calibration') {
             poll('imu.pitch');
             poll('imu.roll');
-            poll('servo.rudder');
+            poll('rudder.angle');
         } else if(tab == 'Configuration') {
             for(i=0; i < conf_names.length; i++)
                 poll(conf_names[i][0]);
@@ -324,18 +324,18 @@ $(document).ready(function() {
             $('.myBar').width((100-data['imu.alignmentCounter']['value'])+'%');
         if('imu.compass_calibration_locked' in data)
             $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']['value']);
-        if('servo.rudder' in data) {
-            $('#rudder').text(data['servo.rudder']['value']);
-            var dict = {'servo.rudder.offset': 'Offset',
-                        'servo.rudder.scale': 'Scale',
-                        'servo.rudder.nonlinearity': 'Non Linearity'};
+        if('rudder.angle' in data) {
+            $('#rudder').text(data['rudder.angle']['value']);
+            var dict = {'rudder.offset': 'Offset',
+                        'rudder.scale': 'Scale',
+                        'rudder.nonlinearity': 'Non Linearity'};
             for(var d in dict)
                 if(d in last_data)
                     $('#rudder').append(' ' + dict[d] + ' ' + last_data[d]);
         }
 
-        if('servo.rudder.range' in data)
-            $('#rudder_range').val(data['servo.rudder.range']['value']);
+        if('rudder.range' in data)
+            $('#rudder_range').val(data['rudder.range']['value']);
             
 
         // configuration
@@ -431,19 +431,19 @@ $(document).ready(function() {
     });
 
     $('#rudder_centered').click(function(event) {
-        signalk_set('servo.rudder.calibration', 'centered');
+        signalk_set('rudder.calibration_state', 'centered');
     });
 
     $('#rudder_port_range').click(function(event) {
-        signalk_set('servo.rudder.calibration', 'port_range');
+        signalk_set('rudder.calibration_state', 'port_range');
     });
 
     $('#rudder_starboard_range').click(function(event) {
-        signalk_set('servo.rudder.calibration', 'starboard_range');
+        signalk_set('rudder.calibration_state', 'starboard_range');
     });
 
     $('#rudder_range').change(function(event) {
-        signalk_set('servo.rudder_range', $('#rudder_range').value());
+        signalk_set('rudder.range', $('#rudder_range').value());
     });
 
     // Configuration

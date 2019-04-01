@@ -404,17 +404,17 @@ class LCDClient():
 
         def calibrate_rudder_feedback():
             options = []
-            if 'servo.rudder' in self.last_msg and \
-               'servo.rudder.calibration' in self.value_list:
-                options = self.value_list['servo.rudder.calibration']['choices']
+            if 'rudder' in self.last_msg and \
+               'rudder.calibration_state' in self.value_list:
+                options = self.value_list['rudder.calibration_state']['choices']
                 options.remove('idle')
 
             self.menu = LCDMenu(self, _('Rudder') + '\n' + _('Feedback'),
-                                map(lambda option : (option, lambda : self.client.set('servo.rudder.calibration', option)), options), self.menu)
+                                map(lambda option : (option, lambda : self.client.set('rudder.calibration_state', option)), options), self.menu)
 
             def display_rudder():
-                fit = self.fittext(rectangle(0, .5, 1, .25), str(self.last_val('servo.rudder')))
-                self.get('servo.rudder')
+                fit = self.fittext(rectangle(0, .5, 1, .25), str(self.last_val('rudder')))
+                self.get('rudder.angle')
 
             self.menu.display_hook = display_rudder
             return self.display_menu
@@ -704,7 +704,7 @@ class LCDClient():
                      'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
                      'imu.compass.calibration', 'imu.compass.calibration.sigmapoints',
                      'imu.compass.calibration.locked', 'imu.alignmentQ',
-                     'servo.rudder.calibration']
+                     'rudder.calibration_state']
 
         poll_list = ['ap.heading']
         self.last_msg = {}
