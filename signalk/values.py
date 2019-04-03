@@ -64,7 +64,10 @@ def round_value(value, fmt):
         if value:
             return 'true'
         return 'false'
-    return fmt % value
+    try:
+        return fmt % value
+    except Exception as e:
+        return str(e)
 
 class RoundedValue(Value):
     def __init__(self, name, initial, **kwargs):

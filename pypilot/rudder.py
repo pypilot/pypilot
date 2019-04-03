@@ -7,22 +7,26 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-class Rudder(object):
+import math
+from signalk.values import *
+from sensors import Sensor
+
+class Rudder(Sensor):
     def __init__(self, server):
+        super(Rudder, self).__init__(server, 'rudder')
+
         timestamp = server.TimeStamp('rudder')
         self.angle = self.Register(SensorValue, 'angle', timestamp)
+        self.speed = self.Register(SensorValue, 'speed', timestamp)
         self.last = 0
         self.last_time = time.time()
         self.offset = self.Register(Value, 'offset', 0, persistent=True)
         self.scale = self.Register(Value, 'scale', 1, persistent=True)
         self.nonlinearity = self.Register(Value, 'nonlinearity',  0, persistent=True)
         self.calibration_state = self.Register(EnumProperty, 'calibration_state', 'idle', ['idle', 'centered', 'starboard range', 'port range', 'auto gain'])
-        self.calibration.raw = {}
+        self.calibration_raw = {}
         self.range = self.Register(RangeProperty, 'range',  60, 10, 100, persistent=True)
         self.autogain_state = 'idle'
-
-    def Register(self, _type, name, *args, **kwargs):
-        return self.server.Register(_type(*(['rudder.' + name] + list(args)), **kwargs))
 
     def calibration(self, command):
         if command == 'centered':
@@ -36,7 +40,7 @@ class Rudder(object):
             return
         
             # raw range -.5 to .5
-        self.rudder.calibration.raw[command] = {'raw': self.driver.rudder - 0.5,
+        self.rudder.calibration_raw[command] = {'raw': self.driver.rudder - 0.5,
                                                 'rudder': true_angle}
         offset = self.rudder.offset.value
         scale = self.rudder.scale.value
@@ -44,8 +48,8 @@ class Rudder(object):
 
         # rudder = (nonlinearity * raw + scale) * raw + offset
         p = []
-        for c in self.rudder.calibration.raw:
-            p.append(self.rudder.calibration.raw[c])
+        for c in self.rudder.calibration_raw:
+            p.append(self.rudder.calibration_raw[c])
 
         l = len(p)
         # 1 point, estimate offset
@@ -94,10 +98,10 @@ class Rudder(object):
         if abs(scale) <= .01:
             # bad update, trash an other reading
             print 'bad servo rudder calibration', scale, nonlinearity
-            while len(self.rudder.calibration.raw) > 1:
-                for c in self.rudder.calibration.raw:
+            while len(self.rudder.calibration_raw) > 1:
+                for c in self.rudder.calibration_raw:
                     if c != command:
-                        del self.rudder.calibration.raw[c]
+                        del self.rudder.calibration_raw[c]
                         break
         else:
             self.rudder.offset.update(offset)
@@ -111,10 +115,10 @@ class Rudder(object):
         return type(self.angle.value) == type(False)
 
     def poll(self):
-        if self.calibration.value == 'idle':
+        if self.calibration_state.value == 'idle':
             return
 
-        if self.rudder.calibration.value == 'auto gain':
+        if self.calibration_state.value == 'auto gain':
             def idle():
                 self.autogain_state='idle'
                 self.calibration_state.set('idle')
@@ -167,7 +171,8 @@ class Rudder(object):
             self.calibration(self.calibration_state.value)
             self.calibration_state.set('idle')
 
-    def update(self, raw):
+    def update(self, data):
+        raw = data['angle']
         if math.isnan(raw):
             self.angle.update(False)
             return
@@ -180,8 +185,8 @@ class Rudder(object):
         t = time.time()
         dt = t - self.last_time
 
-        if dt > self.period:
-            dt = self.period
+        if dt > 1:
+            dt = 1
         if dt > 0:
             speed = (self.angle.value - self.last) / dt
             self.last_time = t
