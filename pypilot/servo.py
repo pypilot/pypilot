@@ -181,26 +181,25 @@ class TimedProperty(Property):
 class Servo(object):
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
 
-    def __init__(self, server, nmea):
+    def __init__(self, server, sensors):
         self.server = server
+        self.sensors = sensors
         self.lastdir = 0 # doesn't matter
 
         self.servo_calibration = ServoCalibration(self)
         self.calibration = self.Register(JSONValue, 'calibration', {})
         self.load_calibration()
 
+        timestamp = server.TimeStamp('servo')
         self.min_speed = self.Register(RangeProperty, 'min_speed', 1, 0, 1, persistent=True)
         self.max_speed = self.Register(RangeProperty, 'max_speed', 1, 0, 1, persistent=True)
         self.speed_gain = self.Register(RangeProperty, 'speed_gain', 0, 0, 1, persistent=True)
-        self.duty = self.Register(SensorValue, 'duty', 0, 0, 1)
+        self.duty = self.Register(SensorValue, 'duty', timestamp)
 
         self.faults = self.Register(ResettableValue, 'faults', 0)
 
-        self.rudder = rudder
-
         # power usage
         self.current_timestamp = time.time()
-        timestamp = server.TimeStamp('servo')
         self.voltage = self.Register(SensorValue, 'voltage', timestamp)
         self.current = self.Register(SensorValue, 'current', timestamp)
         self.controller_temp = self.Register(SensorValue, 'controller_temp', timestamp)
@@ -277,10 +276,10 @@ class Servo(object):
         dp = t - self.position_command.time
         dc = t - self.command.time
 
-        if dp < dc and not self.rudder.invalid():
+        if dp < dc and not self.sensors.rudder.invalid():
             timeout = 10 # position command will expire after 10 seconds
             self.disengaged = False
-            if abs(self.rudder.angle.value - self.command.value) < 1:
+            if abs(self.sensors.rudder.angle.value - self.command.value) < 1:
                 self.command.set(0)
             else:
                 self.do_position_command(self.command.value)
@@ -330,16 +329,16 @@ class Servo(object):
         t = time.time()
         dt = t - self.position.inttime
         self.position.inttime = t
-        if self.rudder.invalid():
+        if self.sensors.rudder.invalid():
             # integrate position if no rudder feedback
             # crude integration of position from speed
             position = self.position.value + self.speed.value * dt
             self.position.set(min(max(position, 0), 1))
 
         #print 'integrate pos', self.position, self.speed, speed, dt, self.fwd_fault, self.rev_fault
-        if self.position.value < .9*self.rudder.range.value:
+        if self.position.value < .9*self.sensors.rudder.range.value:
             self.flags.clearbit(ServoFlags.FWD_FAULT)
-        if self.position.value > -.9*self.rudder.range.value:
+        if self.position.value > -.9*self.sensors.rudder.range.value:
             self.flags.clearbit(ServoFlags.REV_FAULT)
             
         if self.compensate_voltage.value:
@@ -405,7 +404,7 @@ class Servo(object):
         # clamp to max speed
         speed = min(max(speed, -self.max_speed.value), self.max_speed.value)
 
-        if not self.rudder.invalid():
+        if not self.sensors.rudder.invalid():
             self.speed.set(speed)
 
         #print 'speed', speed
@@ -432,7 +431,7 @@ class Servo(object):
                 self.state.update('reverse')
                 self.lastdir = -1
             else:
-                if self.rudder.invalid():
+                if self.sensors.rudder.invalid():
                     self.speed.set(0)
                 self.state.update('idle')
         else:
@@ -480,7 +479,7 @@ class Servo(object):
     def close_driver(self):
         print 'servo lost connection'
         self.controller.set('none')
-        self.rudder.update(False)
+        self.sensors.rudder.update(False)
 
         # for unknown reasons setting timeout to 0 here (already 0)
         # makes device.close() take only .001 seconds instead of .02 seconds
@@ -493,7 +492,7 @@ class Servo(object):
         self.driver = False
 
     def send_driver_params(self, _max_current):
-        self.driver.params(_max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.rudder.range.value, self.rudder.offset.value, self.rudder.scale.value, self.rudder.nonlinearity.value, self.max_slew_speed.value, self.max_slew_slow.value, self.current.factor.value, self.current.offset.value, self.voltage.factor.value, self.voltage.offset.value, self.min_speed.value, self.max_speed.value, self.gain.value)
+        self.driver.params(_max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.sensors.rudder.range.value, self.sensors.rudder.offset.value, self.sensors.rudder.scale.value, self.sensors.rudder.nonlinearity.value, self.max_slew_speed.value, self.max_slew_slow.value, self.current.factor.value, self.current.offset.value, self.voltage.factor.value, self.voltage.offset.value, self.min_speed.value, self.max_speed.value, self.gain.value)
 
     def poll(self):
         if not self.driver:
@@ -512,6 +511,7 @@ class Servo(object):
                 uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value)/ self.current.factor.value 
                 self.send_driver_params(uncorrected_max_current)
                 self.device = device
+                self.device.path = device_path[0]
                 self.lastpolltime = time.time()
 
         if not self.driver:
@@ -557,10 +557,11 @@ class Servo(object):
         if result & ServoTelemetry.MOTOR_TEMP:
             self.motor_temp.set(self.driver.motor_temp)
         if result & ServoTelemetry.RUDDER:
-            val = {'timestamp' : time.time(), 'angle': self.driver.rudder, 'device': self.driver.path}
-            self.nmea.handle_messages(val, 'servo')
-
-            self.position.set(self.rudder.angle.value)
+            if not math.isnan(self.driver.rudder):
+                data = {'angle': self.driver.rudder, 'timestamp' : t,
+                        'device': self.device.path}
+                self.sensors.write('rudder', data, 'servo')
+                self.position.set(self.sensors.rudder.angle.value)
         if result & ServoTelemetry.CURRENT:
             # apply correction
             corrected_current = self.current.factor.value*self.driver.current
@@ -582,11 +583,11 @@ class Servo(object):
             flags = self.flags.value & ~ServoFlags.DRIVER_MASK | self.driver.flags
 
             # if rudder angle comes from serial or tcp, may need to set these flags
-            angle = self.rudder.angle.value
+            angle = self.sensors.rudder.angle.value
             if angle: # note, this is ok here for both False and 0
-                if angle < -self.rudder.range.value:
+                if angle < -self.sensors.rudder.range.value:
                     flags |= ServoFlags.MIN_RUDDER
-                elif angle > self.rudder.range.value:
+                elif angle > self.sensors.rudder.range.value:
                     flags |= ServoFlags.MAX_RUDDER
 
             self.flags.update(flags)
@@ -599,10 +600,10 @@ class Servo(object):
             self.max_motor_temp.set(self.driver.max_motor_temp)
             self.max_slew_speed.set(self.driver.max_slew_speed)
             self.max_slew_slow.set(self.driver.max_slew_slow)
-            self.rudder.scale.set(self.driver.rudder_scale)
-            self.rudder.nonlinearity.set(self.driver.rudder_nonlinearity)
-            self.rudder.offset.set(self.driver.rudder_offset)
-            self.rudder.range.set(self.driver.rudder_range)
+            self.sensors.rudder.scale.set(self.driver.rudder_scale)
+            self.sensors.rudder.nonlinearity.set(self.driver.rudder_nonlinearity)
+            self.sensors.rudder.offset.set(self.driver.rudder_offset)
+            self.sensors.rudder.range.set(self.driver.rudder_range)
             self.current.factor.set(self.driver.current_factor)
             self.current.offset.set(self.driver.current_offset)
             self.voltage.factor.set(self.driver.voltage_factor)
@@ -673,9 +674,8 @@ def main():
     print 'Servo Server'
     server = SignalKServer()
 
-    from nmea import Nmea
-    nmea = Nmea(server)
-    servo = Servo(server, nmea)
+    sensors = Sensors(server)
+    servo = Servo(server, sensors)
     servo.max_current.set(10)
 
     period = .1
@@ -684,7 +684,7 @@ def main():
         servo.poll()
 
         if servo.controller.value != 'none':
-            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', nmea.rudder.angle.value, 'flags', servo.flags.strvalue()
+            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', sensors.rudder.angle.value, 'flags', servo.flags.strvalue()
             #print servo.command.value, servo.speed.value, servo.windup
             pass
         server.HandleRequests()

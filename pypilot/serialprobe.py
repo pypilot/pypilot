@@ -262,7 +262,7 @@ def probe(name, bauds, timeout=5):
 
 # allow reserving gps devices against probing
 def reserve(device):
-    print 'serial reserve', device
+    print 'prevent serial probing', device
     i = 0
     while 'reserved%d' % i in probes:
         i+=1

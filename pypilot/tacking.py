@@ -48,8 +48,8 @@ class Tack(object):
 
     if self.state.value == 'none': # not tacking
       # if we have wind data, use it to determine the tacking direction
-      if self.ap.nmea.values['wind']['source'].value != 'none':
-        if self.ap.nmea.values['wind']['direction'].value < 180:
+      if self.ap.sensors.wind.source.value != 'none':
+        if self.ap.sensors.wind.direction.value < 180:
             self.direction.update('starboard')
         else:
             self.direction.update('port')

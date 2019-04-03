@@ -21,13 +21,13 @@ from signalk.server import *
 from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 
-strversion = "0.6"
+strversion = "0.7"
 
 from boatimu import *
 from resolv import *
 import tacking
 
-from nmea import Nmea
+from sensors import Sensors
 import servo
 
 def minmax(value, r):
@@ -147,8 +147,9 @@ class Autopilot(object):
 #    self.server = SignalKServer()
     self.server = SignalKPipeServer()
     self.boatimu = BoatIMU(self.server)
-    self.nmea = Nmea(self.server)
-    self.servo = servo.Servo(self.server, self.nmea)
+    self.sensors = Sensors(self.server)
+    self.servo = servo.Servo(self.server, self.sensors)
+
     self.version = self.Register(JSONValue, 'version', 'pypilot' + ' ' + strversion)
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
@@ -203,7 +204,7 @@ class Autopilot(object):
     self.times = 4*[0]
 
     self.childpids = [self.boatimu.imu_process.pid, self.boatimu.auto_cal.process.pid,
-                 self.server.process.pid, self.nmea.process.pid, self.nmea.gpsdpoller.process.pid]
+                 self.server.process.pid, self.sensors.nmea.process.pid, self.sensors.gps.process.pid]
     signal.signal(signal.SIGCHLD, cleanup)
     import atexit
     atexit.register(lambda : cleanup('atexit'))
@@ -260,28 +261,28 @@ class Autopilot(object):
       headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
 
       #switch back to the last mode if possible
-      if self.lost_mode.value and self.lastmode in self.nmea.values and \
-         self.nmea.values[self.lastmode]['source'].value != 'none':
+      if self.lost_mode.value and self.lastmode in self.sensors.sensors and \
+         self.sensors.sensors[self.lastmode].source.value != 'none':
         mode_found()
 
       #update wind and gps offsets
-      if self.nmea.values['gps']['source'].value != 'none':
+      if self.sensors.gps.source.value != 'none':
           d = .002
-          gps_speed = self.nmea.values['gps']['speed'].value
+          gps_speed = self.sensors.gps.speed.value
           self.gps_speed.set((1-d)*self.gps_speed.value + d*gps_speed)
           if gps_speed > 1: # don't update gps offset below 1 knot
               # weight gps compass offset higher with more gps speed
               d = .005*math.log(gps_speed + 1)
-              gps_compass_offset = resolv(self.nmea.values['gps']['track'].value - compass_heading, self.gps_compass_offset.value)
+              gps_compass_offset = resolv(self.sensors.gps.track.value - compass_heading, self.gps_compass_offset.value)
               self.gps_compass_offset.set(resolv(d*gps_compass_offset + (1-d)*self.gps_compass_offset.value))
-      if self.nmea.values['wind']['source'].value != 'none':
+      if self.sensors.wind.source.value != 'none':
           d = .005
-          wind_speed = self.nmea.values['wind']['speed'].value
+          wind_speed = self.sensors.wind.speed.value
           self.wind_speed.set((1-d)*self.wind_speed.value + d*wind_speed)
           # weight wind direction more with higher wind speed
           d = .005*math.log(wind_speed/5.0 + .2)
           if d > 0: # below 4 knots of wind, can't even use it
-              wind_direction = resolv(self.nmea.values['wind']['direction'].value, self.wind_direction.value)
+              wind_direction = resolv(self.sensors.wind.direction.value, self.wind_direction.value)
               wind_direction = (1-d)*self.wind_direction.value + d*wind_direction
               self.wind_direction.set(resolv(wind_direction, 180))
               offset = resolv(wind_direction + compass_heading, self.wind_compass_offset.value)
@@ -289,9 +290,9 @@ class Autopilot(object):
 
       if self.mode.value == 'true wind':
           # for true wind, we must have both wind and gps
-          if self.nmea.values['wind']['source'].value == 'none':
+          if self.sensors.wind.source.value == 'none':
               self.mode_lost('gps')
-          elif self.nmea.values['gps']['source'].value == 'none':
+          elif self.sensors.gpssource.value == 'none':
               self.mode_lost('wind')
 
           wind_speed = self.wind_speed.value
@@ -313,14 +314,14 @@ class Autopilot(object):
 
       if self.mode.value == 'wind':
           # if wind sensor drops out, switch to compass
-          if self.nmea.values['wind']['source'].value == 'none':
+          if self.sensors.wind.source.value == 'none':
               self.mode_lost('compass')
           wind_direction = resolv(self.wind_compass_offset.value - compass_heading, 180)
           self.heading.set(wind_direction)
 
       if self.mode.value == 'gps':
           # if gps drops out switch to compass
-          if self.nmea.values['gps']['source'].value == 'none':
+          if self.sensors.gps.source.value == 'none':
               self.mode_lost('compass')
           gps_heading = resolv(compass_heading + self.gps_compass_offset.value, 180)
           self.heading.set(gps_heading)
@@ -394,11 +395,11 @@ class Autopilot(object):
       if t2-t1 > self.boatimu.period/2:
           print 'servo is running too _slowly_', t2-t1
 
-      self.nmea.poll()
+      self.sensors.poll()
 
       t4 = time.time()
       if t4 - t2 > self.boatimu.period/2:
-          print 'nmea is running too _slowly_', t4-t2
+          print 'sensors is running too _slowly_', t4-t2
 
       self.server.HandleRequests()
       t5 = time.time()
