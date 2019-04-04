@@ -280,7 +280,7 @@ class Autopilot(object):
           wind_speed = self.sensors.wind.speed.value
           self.wind_speed.set((1-d)*self.wind_speed.value + d*wind_speed)
           # weight wind direction more with higher wind speed
-          d = .005*math.log(wind_speed/5.0 + .2)
+          d = .05*math.log(wind_speed/5.0 + 1.2)
           if d > 0: # below 4 knots of wind, can't even use it
               wind_direction = resolv(self.sensors.wind.direction.value, self.wind_direction.value)
               wind_direction = (1-d)*self.wind_direction.value + d*wind_direction
