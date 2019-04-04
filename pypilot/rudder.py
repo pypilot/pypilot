@@ -23,33 +23,40 @@ class Rudder(Sensor):
         self.offset = self.Register(Value, 'offset', 0, persistent=True)
         self.scale = self.Register(Value, 'scale', 1, persistent=True)
         self.nonlinearity = self.Register(Value, 'nonlinearity',  0, persistent=True)
-        self.calibration_state = self.Register(EnumProperty, 'calibration_state', 'idle', ['idle', 'centered', 'starboard range', 'port range', 'auto gain'])
+        self.calibration_state = self.Register(EnumProperty, 'calibration_state', 'idle', ['idle', 'reset', 'centered', 'starboard range', 'port range', 'auto gain'])
         self.calibration_raw = {}
         self.range = self.Register(RangeProperty, 'range',  60, 10, 100, persistent=True)
         self.autogain_state = 'idle'
+        self.raw = 0
 
     def calibration(self, command):
-        if command == 'centered':
+        if command == 'reset':
+            self.nonlinearity.update(0.0)
+            self.scale.update(1.0)
+            self.offset.update(0.0)
+            return
+
+        elif command == 'centered':
             true_angle = 0
         elif command == 'port range':
-            true_angle = -self.rudder.range.value
+            true_angle = -self.range.value
         elif command == 'starboard range':
-            true_angle = self.rudder.range.value
+            true_angle = self.range.value
         else:
             print 'unhandled rudder_calibration', command
             return
         
             # raw range -.5 to .5
-        self.rudder.calibration_raw[command] = {'raw': self.driver.rudder - 0.5,
+        self.calibration_raw[command] = {'raw': self.raw,
                                                 'rudder': true_angle}
-        offset = self.rudder.offset.value
-        scale = self.rudder.scale.value
-        nonlinearity = self.rudder.nonlinearity.value*scale
+        offset = self.offset.value
+        scale = self.scale.value
+        nonlinearity = self.nonlinearity.value*scale
 
         # rudder = (nonlinearity * raw + scale) * raw + offset
         p = []
-        for c in self.rudder.calibration_raw:
-            p.append(self.rudder.calibration_raw[c])
+        for c in self.calibration_raw:
+            p.append(self.calibration_raw[c])
 
         l = len(p)
         # 1 point, estimate offset
@@ -98,18 +105,18 @@ class Rudder(Sensor):
         if abs(scale) <= .01:
             # bad update, trash an other reading
             print 'bad servo rudder calibration', scale, nonlinearity
-            while len(self.rudder.calibration_raw) > 1:
-                for c in self.rudder.calibration_raw:
+            while len(self.calibration_raw) > 1:
+                for c in self.calibration_raw:
                     if c != command:
-                        del self.rudder.calibration_raw[c]
+                        del self.calibration_raw[c]
                         break
         else:
-            self.rudder.offset.update(offset)
-            self.rudder.scale.update(scale)
+            self.offset.update(offset)
+            self.scale.update(scale)
 
             nonlinearity /= scale
             if abs(nonlinearity) < 2:
-                self.rudder.nonlinearity.update(nonlinearity)
+                self.nonlinearity.update(nonlinearity)
 
     def invalid(self):
         return type(self.angle.value) == type(False)
