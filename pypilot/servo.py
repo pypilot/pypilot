@@ -369,7 +369,7 @@ class Servo(object):
         min_speed += (self.max_speed.value - min_speed)*self.duty.value*self.speed_gain.value
 
         # ensure it is in range
-        min_speed = min(max(self.max_speed.value, self.min_speed.value))
+        min_speed = max(min(min_speed, self.max_speed.value), self.min_speed.value)
         
         # integrate windup
         self.windup += (speed - self.last_speed) * dt
@@ -585,10 +585,11 @@ class Servo(object):
             # if rudder angle comes from serial or tcp, may need to set these flags
             angle = self.sensors.rudder.angle.value
             if angle: # note, this is ok here for both False and 0
-                if angle < -self.sensors.rudder.range.value:
-                    flags |= ServoFlags.MIN_RUDDER
-                elif angle > self.sensors.rudder.range.value:
-                    flags |= ServoFlags.MAX_RUDDER
+                if abs(angle) > self.sensors.rudder.range.value:
+                    if angle > 0:
+                        flags |= ServoFlags.MIN_RUDDER
+                    else:
+                        flags |= ServoFlags.MAX_RUDDER
 
             self.flags.update(flags)
 
