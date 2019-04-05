@@ -160,6 +160,8 @@ class NMEASocket(object):
         self.out_buffer = ''
         self.pollout = select.poll()
         self.pollout.register(connection, select.POLLOUT)
+        self.sendfailcount = 0
+        self.failcountmsg = 1
 
     def recv(self):
         return self.b.recv()
@@ -181,8 +183,11 @@ class NMEASocket(object):
             return
         try:
             if not self.pollout.poll(0):
-                print 'nmea socket failed to send'
-                self.out_buffer = ''
+                self.sendfailcount += 1
+                if self.sendfailcount == self.failcountmsg:
+                    print 'nmea socket', self.socket.fileno(), 'failed to send', self.sendfailcount
+                    self.failcountmsg *= 10 # print only at 1, 10, 100 etc frequency
+                self.out_buffer = '' # drop nmea data
                 return
             count = self.socket.send(self.out_buffer)
             if count < 0:

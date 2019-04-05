@@ -561,7 +561,6 @@ class Servo(object):
                 data = {'angle': self.driver.rudder, 'timestamp' : t,
                         'device': self.device.path}
                 self.sensors.write('rudder', data, 'servo')
-                self.position.set(self.sensors.rudder.angle.value)
         if result & ServoTelemetry.CURRENT:
             # apply correction
             corrected_current = self.current.factor.value*self.driver.current
@@ -630,6 +629,9 @@ class Servo(object):
 
             self.reset() # clear fault condition
 
+        if not self.sensors.rudder.invalid():
+            self.position.set(self.sensors.rudder.angle.value)
+            
         self.send_command()
 
     def fault(self):
