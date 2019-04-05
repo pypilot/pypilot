@@ -292,7 +292,7 @@ class Autopilot(object):
           # for true wind, we must have both wind and gps
           if self.sensors.wind.source.value == 'none':
               self.mode_lost('gps')
-          elif self.sensors.gpssource.value == 'none':
+          elif self.sensors.gps.source.value == 'none':
               self.mode_lost('wind')
 
           wind_speed = self.wind_speed.value
