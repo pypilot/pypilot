@@ -1,14 +1,48 @@
+====== PyPilot webapp ======
+
+==== Dependencies ====
+```
 pip install Flask
 pip install flask-socketio
 pip install gevent
+```
 
-sudo python webapp.py
+==== Launch the web server ====
 
-firefox localhost
+== Launch from the command line interface == 
+The web server should be run with sudo
+```
+    sudo python webapp.py
+```
 
-For apache2:
+Optionaly, a port number can be specified in the first argument  
+```
+    sudo python webapp.py 8080  
+```
 
+Or provided from a json config file at ['port':8080] . 
+
+If no port is specified, the default value is 80.
+
+
+
+== Launch with systemd service ==
+
+For a one time run:
+```
+    systemctl start pypilot_webapp.service
+```
+
+To start it at boot: 
+```
+    systemctl enable pypilot_webapp.service
+```
+
+
+== Launch behind apache2 server ==
+```
 apt-get install apache2 python-pip libapache2-mod-wsgi
+```
 
 move pypilot_webapp into /var/www, and update /etc/apache2/sites-available/000-default.conf:
 
