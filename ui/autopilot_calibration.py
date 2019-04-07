@@ -502,7 +502,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 def main():
     import gettext
     gettext.install('pypilot', 'locale', unicode=False)
-    #glutInit(sys.argv)
+    glutInit(sys.argv)
     app = wx.App()
     
     CalibrationDialog().ShowModal()
