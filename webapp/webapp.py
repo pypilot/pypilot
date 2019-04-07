@@ -17,11 +17,15 @@ pypilot_webapp_port=80
 if len(sys.argv) > 1:
     pypilot_webapp_port=int(sys.argv[1])
 else:
-    file = open(filename, 'r')
-    config = json.loads(file.readline())
-    if 'port' in config:
-        pypilot_webapp_port = config['port']
-    file.close()
+    filename = '~/.pypilot/webapp.conf'
+    try:
+        file = open(filename, 'r')
+        config = json.loads(file.readline())
+        if 'port' in config:
+            pypilot_webapp_port = config['port']
+        file.close()
+    except:
+        print 'using default port of', pypilot_webapp_port
 
 
 # Set this variable to 'threading', 'eventlet' or 'gevent' to test the
