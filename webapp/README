@@ -33,13 +33,13 @@ For a one time run:
     systemctl start pypilot_webapp.service
 ```
 
-To start it at boot: 
+To have it starting automatically it at boot: 
 ```
     systemctl enable pypilot_webapp.service
 ```
 
 
-== Launch behind apache2 server ==
+== Use behind a apache2 server ==
 ```
 apt-get install apache2 python-pip libapache2-mod-wsgi
 ```
