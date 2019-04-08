@@ -7,10 +7,10 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import kjson, socket, select, sys, os, time
 from values import *
 from bufferedsocket import LineBufferedNonBlockingSocket
-
 
 
 DEFAULT_PORT = 21311
@@ -44,7 +44,7 @@ class SignalKClient(object):
             file.close()
                 
         except Exception as e:
-            print 'failed to read config file:', self.configfilename, e
+            print('failed to read config file:', self.configfilename, e)
             config = {}
 
         if not 'host' in config:
@@ -59,7 +59,7 @@ class SignalKClient(object):
 
         if not host:
             host = 'pypilot'
-            print 'host not specified using host', host
+            print('host not specified using host', host)
 
         if '/dev' in host: # serial port
             device, baud = host, port
@@ -67,7 +67,7 @@ class SignalKClient(object):
                 baud = 9600
             connection = serial.Serial(device, baud)
             cmd = 'stty -F ' + device + ' icanon iexten'
-            print 'running', cmd
+            print('running', cmd)
             os.system(cmd)
         else:
             if not port:
@@ -80,7 +80,7 @@ class SignalKClient(object):
             try:
                 connection = socket.create_connection((host, port), 1)
             except:
-                print 'connect failed to %s:%d' % (host, port)
+                print('connect failed to %s:%d' % (host, port))
                 raise
 
             self.host_port = host, port
@@ -96,9 +96,9 @@ class SignalKClient(object):
                 file.close()
                 self.write_config = False
             except IOError:
-                print 'failed to write config file:', self.configfilename
+                print('failed to write config file:', self.configfilename)
             except Exception as e:
-                print 'Exception writing config file:', self.configfilename, e
+                print('Exception writing config file:', self.configfilename, e)
 
         self.socket = LineBufferedNonBlockingSocket(connection)
         self.values = []
@@ -112,7 +112,7 @@ class SignalKClient(object):
         self.f_on_connected(self)
 
 
-    def poll(self, timeout = 0):
+    def poll(self, timeout = 0):        
         t0 = time.time()
         self.socket.flush()
         events = self.poller.poll(1000.0 * timeout)
@@ -146,7 +146,8 @@ class SignalKClient(object):
         try:
             if not self.poll(timeout):
                 return False
-        except ConnectionLost:
+        except Exception as e:
+            print('exception', type(e))
             self.disconnected()
         dt = time.time()-t
         return self.receive_line(timeout - dt)
@@ -158,11 +159,11 @@ class SignalKClient(object):
                 
         connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while True:
-            print 'Disconnected.  Reconnecting in 3...'
+            print('Disconnected.  Reconnecting in 3...')
             time.sleep(3)
             try:
                 connection.connect(self.host_port)
-                print 'Connected.'
+                print('Connected.')
                 break
             except:
                 continue
@@ -204,13 +205,14 @@ class SignalKClient(object):
     def list_values(self, timeout=10):
         request = {'method' : 'list'}
         self.send(request)
+        
         t0 = t = time.time()
         while t - t0 <= timeout:
             t = time.time()
             try:
                 return self.receive(timeout-t+t0)
             except Exception as e:
-                print e
+                print(e)
         return False
 
     def get(self, name):
@@ -264,13 +266,13 @@ class SignalKClient(object):
 
         for name in sorted(results):
             if info:
-                print name, self.values[name], results[name]
+                print(name, self.values[name], results[name])
             else:
                 maxlen = 80
                 result = str(results[name]['value'])
                 if len(name) + len(result) + 3  > maxlen:
                     result = result[:80 - len(name) - 7] + ' ...'
-                print name, '=', result
+                print(name, '=', result)
         return True
 
 def SignalKClientFromArgs(argv, watch, f_con=False):
@@ -291,7 +293,7 @@ def SignalKClientFromArgs(argv, watch, f_con=False):
     def on_con(client):
         for arg in watches:
             if watch:
-                #print 'watch', arg
+                #print('watch', arg)
                 client.watch(arg)
             else:
                 client.get(arg)
@@ -320,10 +322,10 @@ def nice_str(value):
 # each value, printing them
 def main():
     if '-h' in sys.argv:
-        print 'usage', sys.argv[0], '[host] -i -c -h [NAME]...'
-        print '-i', 'print info about each value type'
-        print '-c', 'continuous watch'
-        print '-h', 'show this message'
+        print('usage', sys.argv[0], '[host] -i -c -h [NAME]...')
+        print('-i', 'print info about each value type')
+        print('-c', 'continuous watch')
+        print('-h', 'show this message')
         exit(0)
 
     continuous = '-c' in sys.argv
@@ -338,7 +340,7 @@ def main():
     if not client.have_watches:
         while True:
             if not client.print_values(10, info):
-                print 'timed out'
+                print('timed out')
                 exit(1)
             if not continuous:
                 break
@@ -353,12 +355,12 @@ def main():
             # split on separate lines if not continuous
             name, value = msg
             if info:
-                print kjson.dumps({name: value})
+                print(kjson.dumps({name: value}))
             else:
-                print name, '=', nice_str(value['value'])
+                print(name, '=', nice_str(value['value']))
             return
         if info:
-            print kjson.dumps(msg)
+            print(kjson.dumps(msg))
         else:
             first = True
             name, value = msg
@@ -367,7 +369,7 @@ def main():
             else:
                 sys.stdout.write(', ')
             sys.stdout.write(name + ' = ' + nice_str(value['value']))
-            print ''
+            print('') # newline
 
 if __name__ == '__main__':
     main()
