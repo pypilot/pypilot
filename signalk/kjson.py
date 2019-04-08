@@ -11,6 +11,6 @@ try:
     import ujson
     loads, dumps = ujson.loads, ujson.dumps
 except:
-    print 'WARNING: python ujson library failed, parsing will consume more cpu'
+    print('WARNING: python ujson library failed, parsing will consume more cpu')
     import json
     loads, dumps = json.loads, json.dumps

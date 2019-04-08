@@ -92,7 +92,7 @@ class SensorValue(Value): # same as Value with added timestamp
         super(SensorValue, self).__init__(name, initial, **kwargs)
         if type(timestamp) != type('') and \
            (type(timestamp) != type([]) or len(timestamp) != 2 or type(timestamp[1]) != type('')):
-            print 'invalid timstamp', timestamp, 'for sensorvalue', name
+            print('invalid timestamp', timestamp, 'for sensorvalue', name)
         self.timestamp = timestamp
         self.directional = 'directional' in kwargs and kwargs['directional']
         self.fmt = fmt # round to 3 places unless overrideen
@@ -136,7 +136,7 @@ class RangeProperty(Property):
         self.min_value = min_value
         self.max_value = max_value
         if initial < min_value or initial > max_value:
-            raise 'invalid initial value for range property', name, initial
+            print('invalid initial value for range property', name, initial)
         super(RangeProperty, self).__init__(name, initial, **kwargs)
 
     def type(self):
@@ -181,7 +181,7 @@ class EnumProperty(Property):
             if str(choice) == str(value):
                 super(EnumProperty, self).set(value)
                 return
-        print 'set', self.name, 'to invalid enum value', value
+        print('set', self.name, 'to invalid enum value', value)
 
 class BooleanValue(Value):
     def __init__(self, name, initial, **kwargs):
