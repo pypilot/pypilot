@@ -35,7 +35,7 @@ except:
         import OPi.GPIO
         ugfx_libraries=['wiringPi']
     except:
-        print 'no wiring library for ugfx'
+        print('no wiring library for ugfx')
         ugfx_libraries=[]
         ugfx_defs = ''
 
