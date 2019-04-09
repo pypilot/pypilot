@@ -43,11 +43,10 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.fgGains.Clear(True)
         self.watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
                           'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
+                          'ap.heading', 'ap.pilot',
                           'gps.source', 'wind.source',
-                          'ap.heading', 'servo.flags',
-                          'ap.pilot',
-                          'servo.controller', 'servo.rudder',
-                          'servo.engaged']
+                          'servo.controller', 'servo.engaged', 'servo.flags',
+                          'rudder.angle']
         value_list = client.list_values()
         self.gains = {}
         pilots = {}
@@ -236,7 +235,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.set_mode_color()
                 self.apenabled = value
                 self.bCenter.Show(not self.apenabled and self.rudder)
-            elif name == 'servo.rudder':
+            elif name == 'rudder.angle':
                 try:
                     value = round(value, 1)
                 except:
@@ -322,6 +321,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.client.set('ap.tack.direction', 'port' if self.cTackDirection.GetSelection() else 'starboard')
 
     def onPaintControlSlider( self, event ):
+        return
         # gtk3 is a bit broken
         if 'gtk3' in wx.version():
             return
