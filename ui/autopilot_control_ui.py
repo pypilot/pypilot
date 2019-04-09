@@ -62,7 +62,9 @@ class AutopilotControlBase ( wx.Frame ):
 		fgSizer21.Add( self.stEngaged, 0, wx.ALL, 5 )
 
 		self.stStatus = wx.StaticText( self, wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.Size( 100,-1 ), 0 )
-		self.stStatus.Wrap( -1 )
+		self.stStatus.Wrap( 36 )
+
+		self.stStatus.SetFont( wx.Font( 8, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Sans" ) )
 
 		fgSizer21.Add( self.stStatus, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL|wx.EXPAND, 5 )
 
@@ -475,7 +477,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook.AddPage( self.m_panel3, u"imu", True )
+		self.m_notebook.AddPage( self.m_panel3, u"imu", False )
 		self.m_panel7 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer81 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer81.AddGrowableCol( 0 )
@@ -870,7 +872,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer36.SetFlexibleDirection( wx.BOTH )
 		fgSizer36.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_staticText41 = wx.StaticText( self.m_panel71, wx.ID_ANY, u"To calibrate the rudder feedback, move the rudder and press each button.", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText41 = wx.StaticText( self.m_panel71, wx.ID_ANY, u"Press each button when the rudder is at the correct position to calibrate.", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText41.Wrap( 550 )
 
 		fgSizer36.Add( self.m_staticText41, 0, wx.ALL, 5 )
@@ -892,6 +894,9 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.stRudderAngle.Wrap( -1 )
 
 		fgSizer32.Add( self.stRudderAngle, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_button161 = wx.Button( self.m_panel71, wx.ID_ANY, u"Reset Calibration", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer32.Add( self.m_button161, 0, wx.ALL, 5 )
 
 
 		fgSizer35.Add( fgSizer32, 1, wx.EXPAND, 5 )
@@ -973,7 +978,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel71.SetSizer( fgSizer35 )
 		self.m_panel71.Layout()
 		fgSizer35.Fit( self.m_panel71 )
-		self.m_notebook.AddPage( self.m_panel71, u"rudder", False )
+		self.m_notebook.AddPage( self.m_panel71, u"rudder", True )
 
 		fgSizer7.Add( self.m_notebook, 1, wx.EXPAND |wx.ALL, 5 )
 
@@ -1015,6 +1020,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_button10.Bind( wx.EVT_BUTTON, self.onClearCompass )
 		self.cbCompassCalibrationLocked.Bind( wx.EVT_CHECKBOX, self.onCompassCalibrationLocked )
 		self.m_button16.Bind( wx.EVT_BUTTON, self.onServoAutoGain )
+		self.m_button161.Bind( wx.EVT_BUTTON, self.onRudderResetCalibration )
 		self.m_button11.Bind( wx.EVT_BUTTON, self.onRudderCentered )
 		self.m_button12.Bind( wx.EVT_BUTTON, self.onRudderStarboardRange )
 		self.m_button121.Bind( wx.EVT_BUTTON, self.onRudderPortRange )
@@ -1100,6 +1106,9 @@ class CalibrationDialogBase ( wx.Dialog ):
 		event.Skip()
 
 	def onServoAutoGain( self, event ):
+		event.Skip()
+
+	def onRudderResetCalibration( self, event ):
 		event.Skip()
 
 	def onRudderCentered( self, event ):
