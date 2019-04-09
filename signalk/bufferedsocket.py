@@ -48,7 +48,7 @@ class LineBufferedNonBlockingSocket(object):
                 self.sendfail_cnt += 1
                 return
             t0 = time.time()
-            count = self.socket.send(str.encode(self.out_buffer))
+            count = self.socket.send(str.encode(str(self.out_buffer)))
             t1 = time.time()
 
             if t1-t0 > .1:
