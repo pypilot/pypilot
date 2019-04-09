@@ -225,19 +225,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 self.heading_offset_timer.Start(1000, True)
 
         elif self.m_notebook.GetSelection() == 3:
-            if name == 'rudder.angle':
-                self.UpdateLabel(self.stRudderAngle, str(round3(value)))
-                self.have_rudder = type(value) != type(bool)
-            elif name == 'servo.flags':
+            if name == 'servo.flags':
                 self.UpdateLabel(self.stServoFlags, value)
-            elif name == 'rudder.offset':
-                self.UpdateLabel(self.stRudderOffset, str(round3(value)))
-            elif name == 'rudder.scale':
-                self.UpdateLabel(self.stRudderScale, (str(round3(value))))
-            elif name == 'rudder.nonlinearity':
-                self.UpdateLabel(self.stRudderNonlinearity, str(round3(value)))
-            elif name == 'rudder.range':
-                self.UpdatedSpin(self.sRudderRange, value)
             elif name == 'servo.calibration':
                 s = ''
                 for name in value:
@@ -266,6 +255,19 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 self.UpdateLabel(self.m_stServoVoltage, (str(round3(value))))
             elif name == 'servo.current':
                 self.UpdateLabel(self.m_stServoCurrent, (str(round3(value))))
+
+        elif self.m_notebook.GetSelection() == 4:
+            if name == 'rudder.angle':
+                self.UpdateLabel(self.stRudderAngle, str(round3(value)))
+                self.have_rudder = type(value) != type(bool)
+            elif name == 'rudder.offset':
+                self.UpdateLabel(self.stRudderOffset, str(round3(value)))
+            elif name == 'rudder.scale':
+                self.UpdateLabel(self.stRudderScale, (str(round3(value))))
+            elif name == 'rudder.nonlinearity':
+                self.UpdateLabel(self.stRudderNonlinearity, str(round3(value)))
+            elif name == 'rudder.range':
+                self.UpdatedSpin(self.sRudderRange, value)
 
 
     def servo_console(self, text):
@@ -480,12 +482,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.client.set('servo.gain', event.GetValue())
 
     def onServoAutoGain( self, event ):
-        print 'hi', self.have_rudder
         if self.have_rudder:
             self.client.set('rudder.calibration_state', 'auto gain')
         else:
-            print 'hi2'
             wx.MessageDialog(self, _('Auto gain calibration requires a rudder sensor'), _('Warning'), wx.OK).ShowModal()
+    def onRudderResetCalibration( self, event ):
+        self.client.set('rudder.calibration_state', 'reset')
 
     def onRudderCentered( self, event ):
         self.client.set('rudder.calibration_state', 'centered')
