@@ -46,9 +46,9 @@ class Rudder(Sensor):
             print 'unhandled rudder_calibration', command
             return
         
-            # raw range -.5 to .5
+        # raw range -.5 to .5
         self.calibration_raw[command] = {'raw': self.raw,
-                                                'rudder': true_angle}
+                                         'rudder': true_angle}
         offset = self.offset.value
         scale = self.scale.value
         nonlinearity = self.nonlinearity.value*scale
@@ -179,14 +179,14 @@ class Rudder(Sensor):
             self.calibration_state.set('idle')
 
     def update(self, data):
-        raw = data['angle']
-        if math.isnan(raw):
+        self.raw = data['angle']
+        if math.isnan(self.raw):
             self.angle.update(False)
             return
 
-        # rudder = (nonlinearity*raw + 1)*scale*raw + offset
-        self.angle.set((self.nonlinearity.value * raw + 1)*
-                       self.scale.value*raw +
+        # rudder = (nonlinearity*self.raw + 1)*scale*self.raw + offset
+        self.angle.set((self.nonlinearity.value*self.raw + 1)*
+                       self.scale.value*self.raw +
                        self.offset.value)
 
         t = time.time()
