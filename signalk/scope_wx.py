@@ -54,7 +54,7 @@ class SignalKScope(SignalKScopeBase):
                     self.watches[name] = True
                     watches.remove(name)
         for arg in watches:
-            print 'value not found:', arg
+            print('value not found:', arg)
 
         self.on_con(self.client)
 

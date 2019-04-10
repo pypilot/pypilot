@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import select, socket, time, kjson
 import fcntl, os
 from values import *
@@ -22,8 +23,8 @@ def LoadPersistentData(persistent_path, server=True):
         persistent_data = kjson.loads(file.readline())
         file.close()
     except Exception as e:
-        print 'failed to load', persistent_path, e
-        print 'WARNING Alignment and other data lost!!!!!!!!!'
+        print('failed to load', persistent_path, e)
+        print('WARNING Alignment and other data lost!!!!!!!!!')
 
         if server:
             # log failing to load persistent data
@@ -38,7 +39,7 @@ def LoadPersistentData(persistent_path, server=True):
             file.close()
             return persistent_data
         except Exception as e:
-            print 'backup data failed as well', e
+            print('backup data failed as well', e)
         return {}
 
     if server:
@@ -89,16 +90,16 @@ class SignalKServer(object):
             file.write(kjson.dumps(self.persistent_data)+'\n')
             file.close()
         except Exception as e:
-            print 'failed to write', self.persistent_path, e
+            print('failed to write', self.persistent_path, e)
 
     def Register(self, value):
         if value.persistent and value.name in self.persistent_data:
             #value.value = self.persistent_data[value.name]
             value.set(self.persistent_data[value.name])
-            #print 'persist', value.name, ' = ', value.value
+            #print('persist', value.name, ' = ', value.value)
 
         if value.name in self.values:
-            print 'warning, registering existing value:', value.name
+            print('warning, registering existing value:', value.name)
             
         self.values[value.name] = value
         return value
@@ -167,7 +168,7 @@ class SignalKServer(object):
         socket.socket.close()
 
         if not found:
-            print 'socket not found in fd_to_socket'
+            print('socket not found in fd_to_socket')
 
         for name in self.values:
             if socket in self.values[name].watchers:
@@ -182,13 +183,13 @@ class SignalKServer(object):
             if socket == self.server_socket:
                 connection, address = socket.accept()
                 if len(self.sockets) == max_connections:
-                    print 'max connections reached!!!', len(self.sockets)
+                    print('signalk server: max connections reached!!!', len(self.sockets))
                     self.RemoveSocket(self.sockets[0]) # dump first socket??
 
                 socket = LineBufferedNonBlockingSocket(connection)
                 self.sockets.append(socket)
                 fd = socket.socket.fileno()
-                # print 'new client', address, fd
+                # print('new client', address, fd)
                 self.fd_to_socket[fd] = socket
                 self.poller.register(fd, select.POLLIN)
             elif flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
@@ -203,7 +204,7 @@ class SignalKServer(object):
                     try:
                         self.HandleRequest(socket, line)
                     except Exception as e:
-                        print 'invalid request from socket', line, e
+                        print('invalid request from socket', line, e)
                         socket.send('invalid request: ' + line + '\n')
 
         # flush all sockets
@@ -215,7 +216,7 @@ class SignalKServer(object):
           try:
               self.server_socket.bind(('0.0.0.0', self.port))
           except:
-              print 'signalk_server: bind failed, try again.'
+              print('signalk_server: bind failed, try again.')
               time.sleep(1)
               return
 
@@ -226,18 +227,18 @@ class SignalKServer(object):
           self.poller.register(self.server_socket, select.POLLIN)
         
       t1 = time.time()
-      #print 'store', t1 - self.persistent_timeout
+      #print('store', t1 - self.persistent_timeout)
       if t1 >= self.persistent_timeout:
           self.StorePersistentValues()
           if time.time() - t1 > .1:
-              print 'persistent store took too long!', time.time() - t1
+              print('persistent store took too long!', time.time() - t1)
               return
 
       self.PollSockets()
 
 if __name__ == '__main__':
     server = SignalKServer()
-    print 'signalk demo server, try running signalk_client'
+    print('signalk demo server, try running signalk_client')
     clock = server.Register(Value('clock', 0))
     test = server.Register(Property('test', 1234))
     while True:
