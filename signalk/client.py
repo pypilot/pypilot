@@ -146,8 +146,7 @@ class SignalKClient(object):
         try:
             if not self.poll(timeout):
                 return False
-        except Exception as e:
-            print('exception', type(e))
+        except:
             self.disconnected()
         dt = time.time()-t
         return self.receive_line(timeout - dt)
