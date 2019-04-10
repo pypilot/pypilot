@@ -406,7 +406,7 @@ class SignalKPlot():
 
 def main():
     def usage():
-        print 'usage: ' + sys.argv[0] + ' [host] [VAR1] [VAR2] .. [VARN]'
+        print('usage: ' + sys.argv[0] + ' [host] [VAR1] [VAR2] .. [VARN]')
         exit(1)
 
     if len(sys.argv) < 2:
@@ -419,7 +419,7 @@ def main():
     if not client.have_watches:
         usage()
     
-    print 'connected'
+    print('connected')
     def idle():
         while True:
             try:
