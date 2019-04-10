@@ -220,11 +220,11 @@ class SignalKPlot():
     # because glutbitmapcharacter doesn't get the glcolor unless the raster position is set
     def synccolor(self):
         vp = glGetDoublev(GL_VIEWPORT)
-        apply(glRasterPos2d, self.lastrasterpos);
+        glRasterPos2d(*self.lastrasterpos)
 
     def rasterpos(self, pos):
         #pos = glGetDoublev(GL_CURRENT_RASTER_POSITION)
-        apply(glRasterPos2d, pos)
+        glRasterPos2d(*pos)
         self.lastrasterpos = pos
 
     def drawticks(self):
@@ -277,7 +277,7 @@ class SignalKPlot():
         glColor3dv(self.curtrace.color)
         self.synccolor()
         
-        SignalKPlot.drawputs("noise: %g" % self.curtrace.noise());
+        SignalKPlot.drawputs("noise: %g" % self.curtrace.noise())
 
     def init(self, value_list):
         glClearColor (0.0, 0.0, 0.0, 0.0)
