@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import vector
+from pypilot import vector
 import math
 
 def angvec2quat(angle, v):

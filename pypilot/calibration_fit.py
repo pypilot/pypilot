@@ -122,7 +122,7 @@ def LinearFit(points):
         line_dev += d
 
         t = vector.dot(p, plane_fit[1]) - vector.dot(plane_fit[0], plane_fit[1])
-        v = map(lambda b : t*b, plane_fit[1])
+        v = list(map(lambda b : t*b, plane_fit[1]))
         d = vector.dot(v, v)
         max_plane_dev = max(d, max_plane_dev)
         plane_dev += d
@@ -182,8 +182,8 @@ def FitPointsCompass(points, current, norm):
     minc = [1000, 1000, 1000]
     maxc = [-1000, -1000, -1000]
     for p in points:
-        minc = map(min, p[:3], minc)
-        maxc = map(max, p[:3], maxc)
+        minc = list(map(min, p[:3], minc))
+        maxc = list(map(max, p[:3], maxc))
 
     guess = map(lambda a, b : (a+b)/2, minc, maxc)
     diff = map(lambda a, b : b-a, minc, maxc)
@@ -471,12 +471,12 @@ def FitAccel(accel_cal):
     if len(p) < 5:
         return False
 
-    mina = apply(lambda *x : map(min, *x), p)
-    maxa = apply(lambda *x : map(max, *x), p)
+    mina = map(min, *p)
+    maxa = map(max, *p)
     diff = vector.sub(maxa[:3], mina[:3])
     #print 'accelfit', diff
 
-    if apply(min, diff) < 1.2:
+    if min(*diff) < 1.2:
         return # require sufficient range on all axes
     if sum(diff) < 4.5:
         return # require more spread
