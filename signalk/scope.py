@@ -271,11 +271,11 @@ class SignalKPlot():
         SignalKPlot.drawputs("name: %s offset: %g  value: %g  visible: %s  " % \
                  (self.curtrace.name, self.curtrace.offset, val, 'T' if self.curtrace.visible else 'F'))
         glColor3d(1, 1, 1)
-        self.synccolor()
+        #self.synccolor()
         SignalKPlot.drawputs("scale: %g  time: %g  " % (self.scale, self.disptime))
         
         glColor3dv(self.curtrace.color)
-        self.synccolor()
+        #self.synccolor()
         
         SignalKPlot.drawputs("noise: %g" % self.curtrace.noise())
 
