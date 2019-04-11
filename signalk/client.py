@@ -8,10 +8,10 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-import kjson, socket, select, sys, os, time
-from values import *
-from bufferedsocket import LineBufferedNonBlockingSocket
-
+import socket, select, sys, os, time
+from signalk import kjson
+from signalk.values import *
+from signalk.bufferedsocket import LineBufferedNonBlockingSocket
 
 DEFAULT_PORT = 21311
 

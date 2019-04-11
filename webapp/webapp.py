@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import time, sys
 from flask import Flask, render_template, session, request
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
@@ -25,7 +26,7 @@ else:
             pypilot_webapp_port = config['port']
         file.close()
     except:
-        print 'using default port of', pypilot_webapp_port
+        print('using default port of', pypilot_webapp_port)
 
 
 # Set this variable to 'threading', 'eventlet' or 'gevent' to test the
@@ -49,9 +50,9 @@ f = os.fdopen(temp[0], 'r')
 f.seek(0)
 kernel_release = f.readline().rstrip()
 f.close()
-#print 'kernel_release', kernel_release
+#print('kernel_release', kernel_release)
 tinypilot = 'piCore' in kernel_release
-#print 'tinypilot', tinypilot
+#print('tinypilot', tinypilot)
 # javascript uses lowercase bool, easier to use int
 tinypilot = 1 if tinypilot else 0
 
@@ -72,7 +73,7 @@ if tinypilot:
                 f.write('key='+request.form['key']+'\n')
                 f.close()
             except Exception as e:
-                print 'exception!', e
+                print('exception!', e)
 
         mode, ssid, key = 'Master', 'pypilot', '' # defauls
         try:
@@ -101,7 +102,7 @@ class MyNamespace(Namespace):
         self.polls = {}
 
     def connect_signalk(self):
-        print 'connect signalk...'
+        print('connect signalk...')
         connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socketio.emit('flush') # unfortunately needed to awaken socket for client messages
         try:
@@ -109,7 +110,7 @@ class MyNamespace(Namespace):
         except:
             socketio.sleep(2)
             return
-        print 'connected to pypilot signalk'
+        print('connected to pypilot signalk')
 
         self.client = LineBufferedNonBlockingSocket(connection)
         self.client.send('{"method": "list"}\n')
@@ -130,7 +131,7 @@ class MyNamespace(Namespace):
         self.client = False
 
     def background_thread(self):
-        print 'processing clients'
+        print('processing clients')
         x = 0
         polls_sent = {}
         while True:
@@ -145,7 +146,7 @@ class MyNamespace(Namespace):
                 for message in polls:
                     if not message in polls_sent or \
                        t - polls_sent[message] > 1:
-                        #print 'msg', message
+                        #print('msg', message)
                         self.client.send(message + '\n')
                         polls_sent[message] = t
                     
@@ -159,7 +160,7 @@ class MyNamespace(Namespace):
                 fd, flag = event
                 if flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL) \
                    or not self.client.recv():
-                    print 'client disconnected'
+                    print('client disconnected')
                     self.client.socket.close()
                     socketio.emit('signalk_disconnect', self.list_values)
                     self.client = False
@@ -170,11 +171,11 @@ class MyNamespace(Namespace):
                         line = self.client.readline()
                         if not line:
                             break
-                        #print 'line',  line.rstrip()
+                        #print('line',  line.rstrip())
                         socketio.emit('signalk', line.rstrip())
                     except Exception as e:
                         socketio.emit('log', line)
-                        print 'error: ', e, line.rstrip()
+                        print('error: ', e, line.rstrip())
                         break
             else:
                 if self.polls:
@@ -188,7 +189,7 @@ class MyNamespace(Namespace):
             self.client.send(message + '\n')
 
     def on_signalk_poll(self, message):
-        #print 'message', message
+        #print('message', message)
         if message == 'clear':
             self.polls[request.sid] = {}
             return
@@ -217,7 +218,7 @@ class MyNamespace(Namespace):
             if self.client:
                 self.client.socket.close()
                 self.client = False
-                print 'closed signalk client'
+                print('closed signalk client')
         print('Client disconnected', request.sid, len(self.polls))
 
 socketio.on_namespace(MyNamespace(''))

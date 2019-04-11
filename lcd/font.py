@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import os
 from ugfx import ugfx
 
@@ -28,7 +29,6 @@ def draw(surface, pos, text, size, bw, crop=False):
         fonts[size] = {}
 
     font = fonts[size]
-
     if pos:
         x, y = pos
     else:
@@ -48,13 +48,12 @@ def draw(surface, pos, text, size, bw, crop=False):
         
         if not c in font:
             filename = fontpath + '/%03d%03d' % (size, ord(c))
-
             if bw:
                 filename += 'b';
             if crop:
                 filename += 'c';
 
-            #print 'ord', ord(c), filename
+            #print('ord', ord(c), filename)
             font[c] = ugfx.surface(filename)
             if font[c].bypp != surface.bypp:
                 font[c] = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
@@ -77,7 +76,7 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
 
     except:
         # we will get respawn hopefully after python-PIL is loaded
-        print 'failed to load PIL to create fonts, aborting...'
+        print('failed to load PIL to create fonts, aborting...')
         import time
         time.sleep(3)
         exit(1)
@@ -105,6 +104,6 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
     return ugfx.surface(image.size[0], image.size[1], bypp, image.tobytes())
     
 if __name__ == '__main__':
-    print 'ugfx test program'
+    print('ugfx test program')
     screen = ugfx.display("/dev/fb0")
     draw(screen, (0, 100), "1234567890", 28);
