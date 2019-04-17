@@ -7,8 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import os, time
-from signalk import kjson
+import os, time, math
+import kjson
 
 class Value(object):
     def __init__(self, name, initial, **kwargs):
@@ -66,6 +66,8 @@ def round_value(value, fmt):
             return 'true'
         return 'false'
     try:
+        if math.isnan(value):
+            return '"nan"'
         return fmt % value
     except Exception as e:
         return str(e)
