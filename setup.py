@@ -59,7 +59,7 @@ for walk in os.walk('lcd/locale'):
 
             
 setup (name = 'pypilot',
-       version = '0.7',
+       version = '0.8',
        description = 'pypilot sailboat autopilot',
        license = 'GPLv3',
        author="Sean D'Epagnier",
