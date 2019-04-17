@@ -179,6 +179,10 @@ class Rudder(Sensor):
             self.calibration_state.set('idle')
 
     def update(self, data):
+        if not data:
+            self.angle.update(False)
+            return
+        
         self.raw = data['angle']
         if math.isnan(self.raw):
             self.angle.update(False)
