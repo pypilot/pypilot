@@ -12,4 +12,4 @@ for module in os.listdir(os.path.dirname(__file__)):
         print 'ERROR loading', module, e
     del module
 
-default += [simple.SimplePilot, basic.BasicPilot, learning.LearningPilot]
+default += [simple.SimplePilot, basic.BasicPilot, learning.LearningPilot, wind.WindPilot]

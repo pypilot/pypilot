@@ -167,7 +167,7 @@ class Autopilot(object):
     for pilot_type in pilots.default:
       self.pilots.append(pilot_type(self))
 
-    self.pilot = self.Register(EnumProperty, 'pilot', 'basic', ['simple', 'basic', 'learning'])
+    self.pilot = self.Register(EnumProperty, 'pilot', 'basic', ['simple', 'basic', 'learning', 'wind'])
 
     timestamp = self.server.TimeStamp('ap')
     self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)
