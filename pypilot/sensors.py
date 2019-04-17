@@ -124,9 +124,9 @@ class Sensors(object):
     def lostdevice(self, device):
         # optional routine  useful when a device is
         # unplugged to skip the normal data timeout
+        print 'sensor lost device', device
         for name in self.sensors:
             sensor = self.sensors[name]
-            if sensor.device == device:
+            if sensor.device[2:] == device:
                 sensor.source.set('none')
                 sensor.device = None
-                break

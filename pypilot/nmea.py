@@ -238,10 +238,15 @@ class Nmea(object):
 
     def read_process_pipe(self):
         msgs = self.process.pipe.recv()
-        if msgs == 'sockets':
-            self.process.sockets = True
-        elif msgs == 'nosockets':
-            self.process.sockets = False
+        if type(msgs) == type('string'):
+            if msgs == 'sockets':
+                self.process.sockets = True
+            elif msgs == 'nosockets':
+                self.process.sockets = False
+            elif msgs[:10] == 'lostsocket':
+                self.sensors.lostdevice(msgs[4:])
+            else:
+                print 'handled nmea pipe string'
         else:
             for name in msgs:
                 self.sensors.write(name, msgs[name], 'tcp')
@@ -510,6 +515,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
             print 'sock not in sockets!'
             pass
         
+        self.pipe.send('lostsocket' + str(sock.socket.fileno()))
         if not self.sockets:
             self.setup_watches(False)
             self.pipe.send('nosockets')
