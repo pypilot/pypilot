@@ -122,6 +122,10 @@ class Gpsd(Sensor):
     def update(self, data):
         self.track.set(data['track'])
         self.speed.set(data['speed'])
+
+    def reset(self):
+        self.track.set(False)
+        self.speed.set(False)
         
 
 if __name__ == '__main__':
