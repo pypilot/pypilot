@@ -316,7 +316,9 @@ void setup()
     uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
     uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
     if(lowBits != 0xFF || highBits != 0xda ||
-       (extendedBits != 0xFD && extendedBits != 0xFC) || lockBits != 0xCF)
+       (extendedBits != 0xFD && extendedBits != 0xFC)
+       // || lockBits != 0xCF // too many clones don't set lock bits and there is no spm
+        )
         flags |= BAD_FUSES;
 
     sei(); // Enable all interrupts.
