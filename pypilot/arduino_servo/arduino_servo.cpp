@@ -368,7 +368,7 @@ void ArduinoServo::send_params()
         case 12:
         {
             //  nonlinearity * raw**2 + scale * raw + offset - rudder_range
-            double min = 1, max = 0;
+            double min = 1, max = -1;
             for(int i=0; i<4; i++) {
                 double x = quad_sub(rudder_nonlinearity, rudder_scale, rudder_offset + (i < 2 ? 1 : -1) * rudder_range, i%2 ? 1 : -1);
                 //printf("suba %d %f\n", i , x);
