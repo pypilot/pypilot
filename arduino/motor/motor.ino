@@ -1152,10 +1152,10 @@ void loop()
                 flags |= MAX_RUDDER;
             } else
                 flags &= ~MAX_RUDDER;
-            if(v < 512 || v > 65472 - 512)
+            if(v < 1024 || v > 65472 - 1024)
                 rudder_sense = 0;
         } else {
-            if(v > 1024 && v < 65472 - 1024)
+            if(v > 1536 && v < 65472 - 1536)
                 rudder_sense = 1;
             flags &= ~(MIN_RUDDER | MAX_RUDDER);
         }
