@@ -180,7 +180,7 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
     }
     }
     return 0;
-}    
+}
 
 int ArduinoServo::poll()
 {
