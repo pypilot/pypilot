@@ -98,6 +98,7 @@ class Rudder(Sensor):
             D = ((raw2**2 - raw0**2) - (raw1**2 - raw0**2)*A)
             if abs(D) > .001:
                 nonlinearity = C / D
+
             if abs(raw1-raw0) > .001:
                 scale = (rudder1 - rudder0 - nonlinearity*(raw1**2 - raw0**2)) / (raw1 - raw0)
             offset = rudder0 - (nonlinearity*raw0 + scale)*raw0
