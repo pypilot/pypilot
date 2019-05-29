@@ -118,7 +118,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             ['servo.flags',
              'servo.max_current', 'servo.max_controller_temp', 'servo.max_motor_temp',
              'servo.current.factor', 'servo.current.offset','servo.voltage.factor',
-             'servo.voltage.offset', 'servo.max_slew_speed', 'servo.max_slew_slow'],
+             'servo.voltage.offset', 'servo.max_slew_speed', 'servo.max_slew_slow',
+             'servo.gain'],
             ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity',
              'rudder.range', 'rudder.calibration_state']]
 
@@ -251,6 +252,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 self.UpdatedSpin(self.dsServoMaxSlewSpeed, value)
             elif name == 'servo.max_slew_slow':
                 self.UpdatedSpin(self.dsServoMaxSlewSlow, value)
+            elif name == 'servo.gain':
+                self.UpdatedSpin(self.dsServoGain, value)
             elif name == 'servo.voltage':
                 self.UpdateLabel(self.m_stServoVoltage, (str(round3(value))))
             elif name == 'servo.current':
