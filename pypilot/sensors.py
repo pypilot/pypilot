@@ -116,9 +116,9 @@ class Sensors(object):
             if sensor.source.value == 'none':
                 continue
             if t - sensor.lastupdate > 8:
-                self.lost_sensor(sensor);
+                self.lostsensor(sensor);
 
-    def lost_sensor(self, sensor):
+    def lostsensor(self, sensor):
         print 'sensor', sensor.name, 'lost', sensor.device, 'source', sensor.source.value
         sensor.source.set('none')
         sensor.reset()
@@ -137,4 +137,4 @@ class Sensors(object):
         for name in self.sensors:
             sensor = self.sensors[name]
             if sensor.device and sensor.device[2:] == device:
-                lost_sensor(sensor)
+                self.lostsensor(sensor)

@@ -87,7 +87,7 @@ class SignalKServer(object):
                 
         try:
             file = open(self.persistent_path, 'w')
-            file.write(kjson.dumps(self.persistent_data)+'\n')
+            file.write(kjson.dumps(self.persistent_data).replace(',', ',\n')+'\n')
             file.close()
         except Exception as e:
             print('failed to write', self.persistent_path, e)
