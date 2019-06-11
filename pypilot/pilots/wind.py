@@ -55,7 +55,7 @@ class WindPilot(AutopilotPilot):
   def compute_offsets(self):
     # compute the difference from wind to other headings
     wind = self.ap.wind_direction.value
-    compass = self.boatimu.SensorValues['heading_lowpass'].value
+    compass = self.ap.boatimu.SensorValues['heading_lowpass'].value
 
     d = .005
     self.compass_wind_offset.update(wind+compass, d)
@@ -70,8 +70,9 @@ class WindPilot(AutopilotPilot):
       d = .05
       self.true_wind_wind_offset.update(offset, d)
 
-    if self.compass_change:
-      self.compass_wind_offset.value += self.compass_change
+    # compensate compass relative to wind offset
+    if self.ap.compass_change:
+      self.compass_wind_offset.value += self.ap.compass_change
 
       
   def compute_heading(self):
@@ -106,7 +107,7 @@ class WindPilot(AutopilotPilot):
   def process(self, reset):
     ap = self.ap
 
-    if type(ap.sensors.wind.value) == type(False):
+    if ap.sensors.wind.source.value == 'none':
         ap.pilot.set('basic') # fall back to basic pilot if wind input fails
         return
     

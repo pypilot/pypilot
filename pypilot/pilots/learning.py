@@ -122,7 +122,7 @@ class LearningPilot(AutopilotPilot):
 
     self.lastenabled = False
 
-  def process_imu_data(self):
+  def process(self, reset):
     return
     ap = self.ap
     if ap.enabled.value != self.lastenabled:
