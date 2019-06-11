@@ -80,24 +80,24 @@ class RaspberryHWPWMServoDriver(object):
 # as well as voltage and current feedback
 class ServoFlags(Value):
     SYNC = 1
-    OVERTEMP = 2
-    OVERCURRENT = 4
+    OVERTEMP_FAULT = 2
+    OVERCURRENT_FAULT = 4
     ENGAGED = 8
 
     INVALID=16*1
-    FWD_FAULTPIN=16*2
-    REV_FAULTPIN=16*4
-    BADVOLTAGE=16*8
+    PORT_PIN_FAULT=16*2
+    STARBOARD_PIN_FAULT=16*4
+    BADVOLTAGE_FAULT=16*8
 
-    MIN_RUDDER=256*1
-    MAX_RUDDER=256*2
+    MIN_RUDDER_FAULT=256*1
+    MAX_RUDDER_FAULT=256*2
     CURRENT_RANGE=256*4
     BAD_FUSES=256*8
 
     DRIVER_MASK = 4095 # bits used for driver flags
 
-    FWD_FAULT=4096*1 # overcurrent faults
-    REV_FAULT=4096*2
+    PORT_FAULT=4096*1 # overcurrent faults
+    STARBOARD_FAULT=4096*2
     DRIVER_TIMEOUT = 4096*4
     SATURATED = 4096*8
 
@@ -108,30 +108,30 @@ class ServoFlags(Value):
         ret = ''
         if self.value & self.SYNC:
             ret += 'SYNC '
-        if self.value & self.OVERTEMP:
-            ret += 'OVERTEMP '
+        if self.value & self.OVERTEMP_FAULT:
+            ret += 'OVERTEMP_FAULT '
         if self.value & self.OVERCURRENT:
             ret += 'OVERCURRENT '
         if self.value & self.ENGAGED:
             ret += 'ENGAGED '
         if self.value & self.INVALID:
             ret += 'INVALID '
-        if self.value & self.FWD_FAULTPIN:
-            ret += 'FWD_FAULTPIN '
-        if self.value & self.REV_FAULTPIN:
-            ret += 'REV_FAULTPIN '
-        if self.value & self.BADVOLTAGE:
-            ret += 'BADVOLTAGE '
-        if self.value & self.MIN_RUDDER:
-            ret += 'MIN_RUDDER '
-        if self.value & self.MAX_RUDDER:
-            ret += 'MAX_RUDDER '
+        if self.value & self.PORT_PIN_FAULT:
+            ret += 'PORT_PIN_FAULT '
+        if self.value & self.STARBOARD_PIN_FAULT:
+            ret += 'STARBOARD_PIN_FAULT '
+        if self.value & self.BADVOLTAGE_FAULT:
+            ret += 'BADVOLTAGE_FAULT '
+        if self.value & self.MIN_RUDDER_FAULT:
+            ret += 'MIN_RUDDER_FAULT '
+        if self.value & self.MAX_RUDDER_FAULT:
+            ret += 'MAX_RUDDER_FAULT '
         if self.value & self.BAD_FUSES:
             ret += 'BAD_FUSES '
-        if self.value & self.FWD_FAULT:
-            ret += 'FWD_FAULT '
-        if self.value & self.REV_FAULT:
-            ret += 'REV_FAULT '
+        if self.value & self.PORT_FAULT:
+            ret += 'PORT_FAULT '
+        if self.value & self.STARBOARD_FAULT:
+            ret += 'STARBOARD_FAULT '
         if self.value & self.DRIVER_TIMEOUT:
             ret += 'DRIVER_TIMEOUT '
         if self.value & self.SATURATED:
@@ -147,13 +147,13 @@ class ServoFlags(Value):
     def clearbit(self, bit):
         self.setbit(bit, False)
             
-    def fwd_fault(self):
-        self.update((self.value | ServoFlags.FWD_FAULT) \
-                    & ~ServoFlags.REV_FAULT)
+    def port_fault(self):
+        self.update((self.value | ServoFlags.PORT_FAULT) \
+                    & ~ServoFlags.STARBOARD_FAULT)
 
-    def rev_fault(self):
-        self.update((self.value | ServoFlags.REV_FAULT) \
-                    & ~ServoFlags.FWD_FAULT)
+    def starboard_fault(self):
+        self.update((self.value | ServoFlags.STARBOARD_FAULT) \
+                    & ~ServoFlags.PORT_FAULT)
         
     def get_signalk(self):
         return '{"' + self.name + '": {"value": "' + self.strvalue() + '"}}'
@@ -330,8 +330,8 @@ class Servo(object):
             return
 
         # prevent moving the wrong direction if flags set
-        if self.flags.value & (ServoFlags.FWD_FAULT | ServoFlags.MAX_RUDDER) and speed > 0 or \
-           self.flags.value & (ServoFlags.REV_FAULT | ServoFlags.MIN_RUDDER) and speed < 0:
+        if self.flags.value & (ServoFlags.PORT_FAULT | ServoFlags.MAX_RUDDER_FAULT) and speed > 0 or \
+           self.flags.value & (ServoFlags.STARBOARD_FAULT | ServoFlags.MIN_RUDDER_FAULT) and speed < 0:
             self.raw_command(0)
             return # abort
 
@@ -343,9 +343,9 @@ class Servo(object):
         # clear faults from overcurrent if moved sufficiently the other direction
         rudder_range = self.sensors.rudder.range.value
         if self.position.value < .9*rudder_range:
-            self.flags.clearbit(ServoFlags.FWD_FAULT)
+            self.flags.clearbit(ServoFlags.PORT_FAULT)
         if self.position.value > -.9*rudder_range:
-            self.flags.clearbit(ServoFlags.REV_FAULT)
+            self.flags.clearbit(ServoFlags.STARBOARD_FAULT)
 
         # compensate for fluxuating battery voltage
         if self.compensate_voltage.value and self.voltage.value:
@@ -465,8 +465,8 @@ class Servo(object):
                 self.driver.disengage()
             else:
                 mul = 1
-                if self.flags.value & ServoFlags.FWD_FAULT or \
-                   self.flags.value & ServoFlags.REV_FAULT: # allow more current to "unstuck" ram
+                if self.flags.value & ServoFlags.PORT_FAULT or \
+                   self.flags.value & ServoFlags.STARBOARD_FAULT: # allow more current to "unstuck" ram
                     mul = 2
                 self.send_driver_params(mul)
 
@@ -617,9 +617,9 @@ class Servo(object):
             if angle: # note, this is ok here for both False and 0
                 if abs(angle) > self.sensors.rudder.range.value:
                     if angle > 0:
-                        flags |= ServoFlags.MAX_RUDDER
+                        flags |= ServoFlags.MAX_RUDDER_FAULT
                     else:
-                        flags |= ServoFlags.MIN_RUDDER
+                        flags |= ServoFlags.MIN_RUDDER_FAULT
 
             self.flags.update(flags)
 
@@ -645,17 +645,17 @@ class Servo(object):
             self.gain.set(self.driver.gain)
 
         if self.fault():
-            if not self.flags.value & ServoFlags.FWD_FAULT and \
-               not self.flags.value & ServoFlags.REV_FAULT:
+            if not self.flags.value & ServoFlags.PORT_FAULT and \
+               not self.flags.value & ServoFlags.STARBOARD_FAULT:
                 self.faults.set(self.faults.value + 1)
             
             # if overcurrent then fault in the direction traveled
             # this prevents moving further in this direction
             if self.flags.value & ServoFlags.OVERCURRENT:
                 if self.lastdir > 0:
-                    self.flags.fwd_fault()                    
+                    self.flags.port_fault()                    
                 elif self.lastdir < 0:
-                    self.flags.rev_fault()
+                    self.flags.starboard_fault()
                 if self.sensors.rudder.invalid() and self.lastdir:
                     rudder_range = self.sensors.rudder.range.value
                     self.position.set(self.lastdir*rudder_range)
