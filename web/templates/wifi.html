@@ -5,7 +5,7 @@
 </head>
 <body>
   <p>Tinypilot Wireless Configuration
-    <form action="{{ url_for('wifi') }}", method="post">
+    <form action="{{ url_for('wifi') }}" method="post">
       <select name="mode" onchange="wifi_mode()">
         <option value="Master">Master (AP)</option>
         <option value="Managed" {{ mode_managed_selected }}>Managed (client)</option>
