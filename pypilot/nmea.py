@@ -272,7 +272,7 @@ class Nmea(object):
     def __init__(self, server, sensors):
         self.server = server
 
-        server.Register(Property, 'nmea.client', '', persistent=True)
+        server.Register(Property('nmea.client', '', persistent=True))
         self.sensors = sensors
         self.process = NmeaBridgeProcess()
         self.process.start()
@@ -481,7 +481,8 @@ class NmeaBridgeProcess(multiprocessing.Process):
         super(NmeaBridgeProcess, self).__init__(target=self.process, args=(pipe,))
 
     def setup_watches(self, watch=True):
-        watchlist = ['gps.source', 'wind.source', 'rudder.source', 'apb.source', 'nmea.client']
+        print('setup wiatches', watch)
+        watchlist = ['gps.source', 'wind.source', 'rudder.source', 'apb.source']
         for name in watchlist:
             self.client.watch(name, watch)
 
@@ -558,6 +559,20 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         sock.close()
 
+    def connect_client(self, nmea_client):
+        host, port = nmea_client.split(':')
+        port = int(port)
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tc0 = time.time()
+            s.connect((host, port))
+            print('connected to', host, port, 'in', time.time() - tc0, 'seconds')
+            self.client_socket = self.new_socket_connection(s, nmea_client)
+            self.client_socket.nmea_client = nmea_client
+        except Exception as e:
+            print('failed to connect to', nmea_client, ':', e)
+            self.client_socket = False
+
     def process(self, pipe):
         import os
         self.pipe = pipe
@@ -567,15 +582,15 @@ class NmeaBridgeProcess(multiprocessing.Process):
             print('nmea ready for connections')
             if self.sockets:
                 self.setup_watches()
-
+            client.watch('nmea.client')
+        
         while True:
             time.sleep(2)
             try:
                 self.client = SignalKClient(on_con, 'localhost', autoreconnect=True)
                 break
             except Exception as e:
-                print('nmea process failed to connect')
-                pass
+                print('nmea process failed to connect signalk', e)
 
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setblocking(0)
@@ -666,30 +681,17 @@ class NmeaBridgeProcess(multiprocessing.Process):
             t5 = time.time()
 
             # reconnect client tcp socket
-            nmea_socket = self.last_values['nmea.socket']
+            nmea_client = self.last_values['nmea.client']
             if self.client_socket:
-                if self.client_socket.nmea_socket != nmea_socket
+                if self.client_socket.nmea_client != nmea_client:
                     self.client_socket.socket.close() # address has changed, close connection
-            else:
-                if nmea_socket and  t5 - last_client_connect > 10:
-                    last_client_connect = t5
-                    try:
-                        host, port = nmea_socket.split(':')
-                    except Exception as e:
-                        print('failed to create nmea socket as host:port', nmea_socket, e)
-                        self.last_values['nmea.socket'] = '' # don't try until changed
-                    
-                        try:
-                            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                            tc0 = time.time()
-                            s.connect((host, port))
-                            print('connected to', host, port, 'in' time.time() - tc0)
-                            self.client_socket = self.new_socket_connection(s, nmea_socket)
-                            self.client_socket.nmea_socket = nmea_socket
-                        except Exception as e:
-                            print('failed to connect', e)
-                            self.client_socket = False
-            
+            elif nmea_client:
+                try:
+                    self.connect_client(nmea_client)
+                except Exception as e:
+                    print('failed to create nmea socket as host:port', nmea_client, e)
+                    self.last_values['nmea.client'] = '' # don't try until changed
+                                
             t6 = time.time()
 
             # run tcp nmea traffic at rate of 10hz

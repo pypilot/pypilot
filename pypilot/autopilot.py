@@ -26,7 +26,8 @@ from boatimu import *
 from resolv import *
 import tacking, servo
 from pypilot.version import strversion
-from pypilot.sensors import Sensors
+#from pypilot.sensors import Sensors
+from sensors import Sensors
 
 def minmax(value, r):
     return min(max(value, -r), r)
@@ -253,7 +254,8 @@ class Autopilot(object):
     self.times = 4*[0]
 
     self.childpids = [self.boatimu.imu_process.pid, self.boatimu.auto_cal.process.pid,
-                 self.server.process.pid, self.sensors.nmea.process.pid, self.sensors.gps.process.pid]
+                      self.sensors.nmea.process.pid, self.sensors.gps.process.pid]
+    self.childpids += [self.server.process.pid]
     signal.signal(signal.SIGCHLD, cleanup)
     import atexit
     atexit.register(lambda : cleanup('atexit'))
