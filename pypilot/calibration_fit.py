@@ -100,8 +100,8 @@ def LinearFit(points):
         zpoints[i] = map(lambda x : x[i], points)
         
     data = numpy.array(list(zip(zpoints[0], zpoints[1], zpoints[2])))
-    print('zpoints', zpoints[0])
-    print('data', data)
+    #print('zpoints', zpoints[0])
+    #print('data', data)
     datamean = data.mean(axis=0)
     uu, dd, vv = numpy.linalg.svd(data - datamean)
 

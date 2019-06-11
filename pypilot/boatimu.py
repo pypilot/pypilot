@@ -102,22 +102,37 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
       cal_poller = select.poll()
       cal_poller.register(cal_pipe, select.POLLIN)
 
+      avggyro = [0, 0, 0]
+      cycles = 0
+
       while True:
         t0 = time.time()
         
-        if rtimu.IMURead():
-          data = rtimu.getIMUData()
-          data['accel.residuals'] = list(rtimu.getAccelResiduals())
-          data['gyrobias'] = s.GyroBias
-          data['timestamp'] = t0 # imu timestamp is perfectly accurate
-          pipe.send(data, False)
-        else:
-          print('failed to read IMU!!!!!!!!!!!!!!')
-          break # reinitialize imu
+        if not rtimu.IMURead():
+            print('failed to read IMU!!!!!!!!!!!!!!')
+            break # reinitialize imu
+         
+        data = rtimu.getIMUData()
+        data['accel.residuals'] = list(rtimu.getAccelResiduals())
+        data['gyrobias'] = s.GyroBias
+        data['timestamp'] = t0 # imu timestamp is perfectly accurate
 
+        pipe.send(data, False)
+
+        if cycles * period < 100: # only the first 100 seconds after initializing
+          # see if gyro is out of range, sometimes the sensors read
+          # very high gyro readings and the sensors need to be reset by software
+          d = .05*period # filter constant
+          for i in range(3): # filter gyro vector
+            avggyro[i] = (1-d)*avggyro[i] + d*data['gyro'][i]
+          if abs(vector.norm(avggyro)) > .8: # 55 degrees/s
+            print ('too high standing gyro bias, resetting sensors', data['gyro'], avggyro, cycles)
+            break
+        cycles += 1
+        
         if cal_poller.poll(0):
           r = cal_pipe.recv()
-          
+
           #print('[imu process] new cal', new_cal)
           if r[0] == 'accel':
             s.AccelCalValid = True
@@ -130,7 +145,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
           #rtimu.resetFusion()
         
         dt = time.time() - t0
-        t = period - dt # 10hz
+        t = period - dt
 
         if t > 0 and t < period:
           time.sleep(t)
