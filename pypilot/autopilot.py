@@ -372,8 +372,8 @@ class Autopilot(object):
       if self.mode.value != self.lastmode:
           error = self.heading_error.value
           if 'wind' in self.mode.value:
-              error = -err
-          self.heading_command.set(resolv(heading - err, 180))
+              error = -error
+          self.heading_command.set(resolv(heading - error, 180))
           self.lastmode = self.mode.value
       
       # compute heading error
