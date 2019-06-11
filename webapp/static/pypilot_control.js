@@ -326,12 +326,13 @@ $(document).ready(function() {
             $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']['value']);
         if('rudder.angle' in data) {
             $('#rudder').text(data['rudder.angle']['value']);
+            $('#rudder').append('<p>')
             var dict = {'rudder.offset': 'Offset',
                         'rudder.scale': 'Scale',
                         'rudder.nonlinearity': 'Non Linearity'};
             for(var d in dict)
                 if(d in last_data)
-                    $('#rudder').append(' ' + dict[d] + ' ' + last_data[d]);
+                    $('#rudder').append(' ' + dict[d] + ' ' + Math.round(100*last_data[d])/100);
         }
 
         if('rudder.range' in data)
@@ -442,6 +443,10 @@ $(document).ready(function() {
         signalk_set('rudder.calibration_state', 'starboard range');
     });
 
+    $('#rudder_reset').click(function(event) {
+        signalk_set('rudder.calibration_state', 'reset');
+    });
+    
     $('#rudder_range').change(function(event) {
         signalk_set('rudder.range', $('#rudder_range').value());
     });
