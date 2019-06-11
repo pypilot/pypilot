@@ -33,6 +33,8 @@ class arduino(object):
         self.packet_size = 6
         self.next_packet = [0] * (self.packet_size - 1)
 
+        self.events = []
+
         if config and 'arduino' in config:
             self.config = config['arduino']
         else:
@@ -40,7 +42,6 @@ class arduino(object):
             
         if not self.config:
             print('No hat config, arduino not found')
-            print('rf/ir interface not available')
 
     def open(self):
         if not self.config:
@@ -58,11 +59,11 @@ class arduino(object):
                 if not self.verify(filename) and not self.verify(filename):
                     if not self.write(filename) or not self.verify(filename):
                         print('failed to verify or upload', filename)
-                        self.config['device'] = False # prevent retry
-                        return
+                        #self.config['device'] = False # prevent retry
+                        #return
 
                 port, slave = int(device[11]), int(device[13])
-                print('spidev', port, slave)
+                print('arduino on spidev%d.%d' % (port, slave))
                 self.spi = spidev.SpiDev()
                 self.spi.open(port, slave)
                 self.spi.max_speed_hz=5000
@@ -74,11 +75,6 @@ class arduino(object):
         print('failed to read spi:', e)
         self.spi.close()
         self.spi = False
-        
-    def poll(self):
-        if not self.spi:
-            self.open()
-            return
 
     def packet(self, d):
         if len(d) != self.packet_size - 1:
@@ -90,10 +86,15 @@ class arduino(object):
             self.backlight = min(max(int(value), 0), 200)
             self.next_packet = [SET_BACKLIGHT, 0, 0, 0, self.backlight]
 
-    def read(self):
+    def poll(self):
         if not self.spi:
-            return False
+            self.open()
+            return
 
+        while self.read_packet():
+            pass
+
+    def read_packet(self):
         s = self.packet_size-1
         try:
             x = self.spi.xfer(self.packet(self.next_packet))
@@ -134,10 +135,11 @@ class arduino(object):
             count = x[4]
         else:
             return False
-        return key, count
-
+        self.events.append((key, count))
+        return True
 
     def flash(self, filename, c):
+        global GPIO
         if not GPIO:
             return False
 
@@ -149,7 +151,6 @@ class arduino(object):
             GPIO.output(self.resetpin, 0)
         except Exception as e:
             print('failed to setup gpio reset pin for arduino')
-            global GPIO
             GPIO = False # prevent further tries
             return False
 
