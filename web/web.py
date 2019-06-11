@@ -10,6 +10,7 @@
 from __future__ import print_function
 import time, sys
 from flask import Flask, render_template, session, request, Markup
+
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
 from signalk.server import LineBufferedNonBlockingSocket
@@ -18,7 +19,7 @@ pypilot_web_port=80
 if len(sys.argv) > 1:
     pypilot_web_port=int(sys.argv[1])
 else:
-    filename = '~/.pypilot/web.conf'
+    filename = os.getenv('HOME')+'/.pypilot/web.conf'
     try:
         file = open(filename, 'r')
         config = json.loads(file.readline())

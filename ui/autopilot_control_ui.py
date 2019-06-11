@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ###########################################################################
-## Python code generated with wxFormBuilder (version 3.9.0 Nov 18 2019)
+## Python code generated with wxFormBuilder (version 3.9.0 Jan 22 2020)
 ## http://www.wxformbuilder.org/
 ##
 ## PLEASE DO *NOT* EDIT THIS FILE!
@@ -20,7 +20,7 @@ class AutopilotControlBase ( wx.Frame ):
 	def __init__( self, parent ):
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Autopilot Control", pos = wx.DefaultPosition, size = wx.Size( 444,400 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 
-		#self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
+		self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
 
 		fgSizer5 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer5.AddGrowableCol( 0 )
@@ -295,7 +295,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 	def __init__( self, parent ):
 		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Calibration", pos = wx.DefaultPosition, size = wx.Size( 617,432 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
 
-		#self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 
 		fgSizer7 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer7.AddGrowableCol( 0 )
@@ -333,73 +333,10 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel4.Layout()
 		fgSizer22.Fit( self.m_panel4 )
 		self.m_panel5 = wx.Panel( self.m_splitter1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		fgSizer31 = wx.FlexGridSizer( 0, 2, 0, 0 )
-		fgSizer31.AddGrowableCol( 0 )
-		fgSizer31.AddGrowableRow( 0 )
-		fgSizer31.SetFlexibleDirection( wx.BOTH )
-		fgSizer31.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
 		fgSizer29 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer29.AddGrowableCol( 0 )
 		fgSizer29.SetFlexibleDirection( wx.BOTH )
 		fgSizer29.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-		fgSizer18 = wx.FlexGridSizer( 1, 0, 0, 0 )
-		fgSizer18.SetFlexibleDirection( wx.BOTH )
-		fgSizer18.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-		self.m_staticText16 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Alignment", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText16.Wrap( -1 )
-
-		fgSizer18.Add( self.m_staticText16, 0, wx.ALL, 5 )
-
-		self.bReset = wx.Button( self.m_panel5, wx.ID_ANY, u"Reset", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer18.Add( self.bReset, 0, wx.ALL, 5 )
-
-		self.stAlignment = wx.StaticText( self.m_panel5, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stAlignment.Wrap( -1 )
-
-		fgSizer18.Add( self.stAlignment, 0, wx.ALL|wx.EXPAND, 5 )
-
-
-		fgSizer29.Add( fgSizer18, 1, wx.EXPAND, 5 )
-
-		fgSizer19 = wx.FlexGridSizer( 1, 0, 0, 0 )
-		fgSizer19.SetFlexibleDirection( wx.BOTH )
-		fgSizer19.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-		self.m_staticText19 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Pitch", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText19.Wrap( -1 )
-
-		fgSizer19.Add( self.m_staticText19, 0, wx.ALL, 5 )
-
-		self.stPitch = wx.StaticText( self.m_panel5, wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stPitch.Wrap( -1 )
-
-		fgSizer19.Add( self.stPitch, 0, wx.ALL, 5 )
-
-		self.m_staticText34 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Roll", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText34.Wrap( -1 )
-
-		fgSizer19.Add( self.m_staticText34, 0, wx.ALL, 5 )
-
-		self.stRoll = wx.StaticText( self.m_panel5, wx.ID_ANY, u"     N/A     ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stRoll.Wrap( -1 )
-
-		fgSizer19.Add( self.stRoll, 0, wx.ALL, 5 )
-
-		self.m_staticText18 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Heel", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText18.Wrap( -1 )
-
-		fgSizer19.Add( self.m_staticText18, 0, wx.ALL, 5 )
-
-		self.stHeel = wx.StaticText( self.m_panel5, wx.ID_ANY, u"     N/A     ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stHeel.Wrap( -1 )
-
-		fgSizer19.Add( self.stHeel, 0, wx.ALL, 5 )
-
-
-		fgSizer29.Add( fgSizer19, 1, wx.EXPAND, 5 )
 
 		fgSizer13 = wx.FlexGridSizer( 1, 0, 0, 0 )
 		fgSizer13.AddGrowableCol( 1 )
@@ -413,8 +350,39 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.gAlignment.SetValue( 0 )
 		fgSizer13.Add( self.gAlignment, 0, wx.ALIGN_RIGHT|wx.ALL|wx.EXPAND, 5 )
 
+		self.bReset = wx.Button( self.m_panel5, wx.ID_ANY, u"Reset", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer13.Add( self.bReset, 0, wx.ALL, 5 )
+
 
 		fgSizer29.Add( fgSizer13, 1, wx.EXPAND, 5 )
+
+		fgSizer361 = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgSizer361.AddGrowableCol( 0 )
+		fgSizer361.SetFlexibleDirection( wx.BOTH )
+		fgSizer361.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		fgSizer37 = wx.FlexGridSizer( 0, 1, 0, 0 )
+		fgSizer37.AddGrowableCol( 0 )
+		fgSizer37.SetFlexibleDirection( wx.BOTH )
+		fgSizer37.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		fgSizer18 = wx.FlexGridSizer( 1, 0, 0, 0 )
+		fgSizer18.AddGrowableCol( 1 )
+		fgSizer18.SetFlexibleDirection( wx.BOTH )
+		fgSizer18.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		self.m_staticText16 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Alignment", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText16.Wrap( -1 )
+
+		fgSizer18.Add( self.m_staticText16, 0, wx.ALL, 5 )
+
+		self.stAlignment = wx.StaticText( self.m_panel5, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stAlignment.Wrap( -1 )
+
+		fgSizer18.Add( self.stAlignment, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+		fgSizer37.Add( fgSizer18, 1, wx.EXPAND, 5 )
 
 		fgSizer14 = wx.FlexGridSizer( 1, 0, 0, 0 )
 		fgSizer14.SetFlexibleDirection( wx.BOTH )
@@ -439,14 +407,10 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer14.Add( self.sHeadingOffset, 0, wx.ALL, 5 )
 
 
-		fgSizer29.Add( fgSizer14, 1, wx.EXPAND, 5 )
+		fgSizer37.Add( fgSizer14, 1, wx.EXPAND, 5 )
 
 
-		fgSizer31.Add( fgSizer29, 1, wx.EXPAND, 5 )
-
-		fgSizer23 = wx.FlexGridSizer( 0, 1, 0, 0 )
-		fgSizer23.SetFlexibleDirection( wx.BOTH )
-		fgSizer23.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		fgSizer361.Add( fgSizer37, 1, wx.EXPAND, 5 )
 
 		sbSizer4 = wx.StaticBoxSizer( wx.StaticBox( self.m_panel5, wx.ID_ANY, u"Coords" ), wx.VERTICAL )
 
@@ -456,25 +420,62 @@ class CalibrationDialogBase ( wx.Dialog ):
 		sbSizer4.Add( self.cCoords, 0, wx.ALL, 5 )
 
 
-		fgSizer23.Add( sbSizer4, 1, wx.EXPAND, 5 )
+		fgSizer361.Add( sbSizer4, 1, wx.EXPAND, 5 )
 
 
-		fgSizer31.Add( fgSizer23, 1, wx.EXPAND, 5 )
+		fgSizer29.Add( fgSizer361, 1, wx.EXPAND, 5 )
 
 
-		self.m_panel5.SetSizer( fgSizer31 )
+		self.m_panel5.SetSizer( fgSizer29 )
 		self.m_panel5.Layout()
-		fgSizer31.Fit( self.m_panel5 )
+		fgSizer29.Fit( self.m_panel5 )
 		self.m_splitter1.SplitHorizontally( self.m_panel4, self.m_panel5, -1 )
 		fgSizer12.Add( self.m_splitter1, 1, wx.EXPAND, 5 )
 
-		fgSizer181 = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgSizer181 = wx.FlexGridSizer( 0, 3, 0, 0 )
 		fgSizer181.AddGrowableCol( 1 )
 		fgSizer181.SetFlexibleDirection( wx.BOTH )
 		fgSizer181.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
 		self.bIMUScope = wx.Button( self.m_panel3, wx.ID_ANY, u"Scope", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer181.Add( self.bIMUScope, 0, wx.ALL, 5 )
+
+		fgSizer19 = wx.FlexGridSizer( 1, 0, 0, 0 )
+		fgSizer19.SetFlexibleDirection( wx.BOTH )
+		fgSizer19.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		self.m_staticText19 = wx.StaticText( self.m_panel3, wx.ID_ANY, u"Pitch", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText19.Wrap( -1 )
+
+		fgSizer19.Add( self.m_staticText19, 0, wx.ALL, 5 )
+
+		self.stPitch = wx.StaticText( self.m_panel3, wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stPitch.Wrap( -1 )
+
+		fgSizer19.Add( self.stPitch, 0, wx.ALL, 5 )
+
+		self.m_staticText34 = wx.StaticText( self.m_panel3, wx.ID_ANY, u"Roll", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText34.Wrap( -1 )
+
+		fgSizer19.Add( self.m_staticText34, 0, wx.ALL, 5 )
+
+		self.stRoll = wx.StaticText( self.m_panel3, wx.ID_ANY, u"     N/A     ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stRoll.Wrap( -1 )
+
+		fgSizer19.Add( self.stRoll, 0, wx.ALL, 5 )
+
+		self.m_staticText18 = wx.StaticText( self.m_panel3, wx.ID_ANY, u"Heel", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText18.Wrap( -1 )
+
+		fgSizer19.Add( self.m_staticText18, 0, wx.ALL, 5 )
+
+		self.stHeel = wx.StaticText( self.m_panel3, wx.ID_ANY, u"     N/A     ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stHeel.Wrap( -1 )
+
+		fgSizer19.Add( self.stHeel, 0, wx.ALL, 5 )
+
+
+		fgSizer181.Add( fgSizer19, 1, wx.EXPAND, 5 )
 
 		m_sdbSizer2 = wx.StdDialogButtonSizer()
 		self.m_sdbSizer2OK = wx.Button( self.m_panel3, wx.ID_OK )
@@ -490,7 +491,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook.AddPage( self.m_panel3, u"alignment", False )
+		self.m_notebook.AddPage( self.m_panel3, u"alignment", True )
 		self.m_panel7 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer81 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer81.AddGrowableCol( 0 )
@@ -754,7 +755,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel71.SetSizer( fgSizer35 )
 		self.m_panel71.Layout()
 		fgSizer35.Fit( self.m_panel71 )
-		self.m_notebook.AddPage( self.m_panel71, u"rudder", True )
+		self.m_notebook.AddPage( self.m_panel71, u"rudder", False )
 		self.m_pSettings = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		self.m_notebook.AddPage( self.m_pSettings, u"settings", False )
 
@@ -776,8 +777,8 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.BoatPlot.Bind( wx.EVT_RIGHT_DOWN, self.onMouseEventsBoatPlot )
 		self.BoatPlot.Bind( wx.EVT_RIGHT_UP, self.onMouseEventsBoatPlot )
 		self.BoatPlot.Bind( wx.EVT_SIZE, self.onSizeGLBoatPlot )
-		self.bReset.Bind( wx.EVT_BUTTON, self.onResetAlignment )
 		self.bLevel.Bind( wx.EVT_BUTTON, self.onLevel )
+		self.bReset.Bind( wx.EVT_BUTTON, self.onResetAlignment )
 		self.sHeadingOffset.Bind( wx.EVT_SPINCTRL, self.onIMUHeadingOffset )
 		self.bIMUScope.Bind( wx.EVT_BUTTON, self.onIMUScope )
 		self.AccelCalibration.Bind( wx.EVT_KEY_DOWN, self.onKeyPressAccel )
@@ -813,8 +814,8 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.BoatPlot.Unbind( wx.EVT_RIGHT_DOWN, None )
 		self.BoatPlot.Unbind( wx.EVT_RIGHT_UP, None )
 		self.BoatPlot.Unbind( wx.EVT_SIZE, None )
-		self.bReset.Unbind( wx.EVT_BUTTON, None )
 		self.bLevel.Unbind( wx.EVT_BUTTON, None )
+		self.bReset.Unbind( wx.EVT_BUTTON, None )
 		self.sHeadingOffset.Unbind( wx.EVT_SPINCTRL, None )
 		self.bIMUScope.Unbind( wx.EVT_BUTTON, None )
 		self.AccelCalibration.Unbind( wx.EVT_KEY_DOWN, None )
@@ -860,10 +861,10 @@ class CalibrationDialogBase ( wx.Dialog ):
 	def onSizeGLBoatPlot( self, event ):
 		event.Skip()
 
-	def onResetAlignment( self, event ):
+	def onLevel( self, event ):
 		event.Skip()
 
-	def onLevel( self, event ):
+	def onResetAlignment( self, event ):
 		event.Skip()
 
 	def onIMUHeadingOffset( self, event ):
