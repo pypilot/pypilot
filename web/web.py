@@ -9,7 +9,7 @@
 
 from __future__ import print_function
 import time, sys
-from flask import Flask, render_template, session, request
+from flask import Flask, render_template, session, request, Markup
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
 from signalk.server import LineBufferedNonBlockingSocket
@@ -65,7 +65,7 @@ if tinypilot:
     def wifi():
         networking = '/home/tc/.pypilot/networking.txt'
 
-        wifi = {'mode': 'Master', 'ssid': 'pypilot', 'psk': '', 'client_ssid': '', 'client_psk': ''}
+        wifi = {'mode': 'Master', 'ssid': 'pypilot', 'psk': '', 'client_ssid': 'pypilot', 'client_psk': ''}
         try:
             f = open(networking, 'r')
             while True:
@@ -74,7 +74,7 @@ if tinypilot:
                     break
                 try:
                     name, value = l.split('=')
-                    wifi[name] = value
+                    wifi[name] = value.rstrip()
                 except Exception as e:
                     print('failed to parse line in networking.txt', l)
             f.close()
@@ -87,18 +87,18 @@ if tinypilot:
                     cname = name
                     if request.form['mode'] == 'Managed':
                         cname = 'client_' + name
-                    wifi[cname] = request.form[name]
+                    wifi[cname] = str(request.form[name])
 
                 f = open(networking, 'w')
                 for name in wifi:
-                    f.write(name'='+wifi[name]+'\n')
+                    f.write(name+'='+wifi[name]+'\n')
                 f.close()
 
-                os.shell('/opt/networking.sh')
+                os.system('/opt/networking.sh')
             except Exception as e:
                 print('exception!', e)
 
-        return render_template('wifi.html', async_mode=socketio.async_mode, wifi=wifi)
+        return render_template('wifi.html', async_mode=socketio.async_mode, wifi=Markup(wifi))
 
 
 class MyNamespace(Namespace):
