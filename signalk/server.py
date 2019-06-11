@@ -59,7 +59,6 @@ class SignalKServer(object):
         self.init = False
         self.sockets = []
         self.values = {}
-        self.timestamps = {}
 
         self.persistent_path = persistent_path
         self.persistent_timeout = time.time() + 300
@@ -104,13 +103,6 @@ class SignalKServer(object):
             
         self.values[value.name] = value
         return value
-
-    def TimeStamp(self, name, t=False):
-        if not name in self.timestamps:
-            self.timestamps[name] = [t]
-        else:
-            self.timestamps[name][0] = t
-        return self.timestamps[name]
 
     def ListValues(self, socket):
         msg = {}

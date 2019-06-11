@@ -16,9 +16,8 @@ class Rudder(Sensor):
     def __init__(self, server):
         super(Rudder, self).__init__(server, 'rudder')
 
-        timestamp = server.TimeStamp('rudder')
-        self.angle = self.Register(SensorValue, 'angle', timestamp)
-        self.speed = self.Register(SensorValue, 'speed', timestamp)
+        self.angle = self.Register(SensorValue, 'angle')
+        self.speed = self.Register(SensorValue, 'speed')
         self.last = 0
         self.last_time = time.time()
         self.offset = self.Register(Value, 'offset', 0.0, persistent=True)

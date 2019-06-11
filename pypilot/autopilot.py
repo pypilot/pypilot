@@ -95,6 +95,7 @@ import pilots
 class Autopilot(object):
   def __init__(self):
     super(Autopilot, self).__init__()
+    self.starttime = time.time()
 
     # setup all processes to exit on any signal
     self.childpids = []
@@ -151,22 +152,22 @@ class Autopilot(object):
     print('Loaded Pilots:', pilot_names)
     self.pilot = self.Register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True)
 
-    timestamp = self.server.TimeStamp('ap')
-    self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)
-    self.heading_error = self.Register(SensorValue, 'heading_error', timestamp)
-    self.heading_error_int = self.Register(SensorValue, 'heading_error_int', timestamp)
+    self.timestamp = self.Register(SensorValue, 'timestamp', 0)
+    self.heading = self.Register(SensorValue, 'heading', directional=True)
+    self.heading_error = self.Register(SensorValue, 'heading_error')
+    self.heading_error_int = self.Register(SensorValue, 'heading_error_int')
     self.heading_error_int_time = time.time()
 
     self.tack = tacking.Tack(self)
 
     self.gps_compass_offset = HeadingOffset()
-    self.gps_speed = self.Register(SensorValue, 'gps_speed', timestamp)
+    self.gps_speed = self.Register(SensorValue, 'gps_speed')
 
     self.wind_compass_offset = HeadingOffset()
     self.true_wind_compass_offset = HeadingOffset()
     
-    self.wind_direction = self.Register(SensorValue, 'wind_direction', timestamp, directional=True)
-    self.wind_speed = self.Register(SensorValue, 'wind_speed', timestamp)
+    self.wind_direction = self.Register(SensorValue, 'wind_direction', directional=True)
+    self.wind_speed = self.Register(SensorValue, 'wind_speed')
 
     self.runtime = self.Register(TimeValue, 'runtime') #, persistent=True)
 
@@ -180,7 +181,6 @@ class Autopilot(object):
     if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
       print('warning, failed to make autopilot process realtime')
 
-    self.starttime = time.time()
     self.times = 4*[0]
 
     self.childpids = [self.boatimu.imu_process.pid, self.boatimu.auto_cal.process.pid,
@@ -254,9 +254,8 @@ class Autopilot(object):
             d = .05
             self.true_wind_compass_offset.update(offset, d)
     
-  def fix_compass_calibration_change(self, data):
+  def fix_compass_calibration_change(self, data, t0):
       headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
-      t0 = time.time()
       dt = t0 - self.lasttime
       self.lasttime = t0
       #if the compass gets a new fix, or the alignment changes,
@@ -284,7 +283,7 @@ class Autopilot(object):
             heading_command = self.heading_command.value + self.compass_change
             self.heading_command.set(resolv(heading_command, 180))
           
-  def compute_heading_error(self):
+  def compute_heading_error(self, t):
       heading = self.heading.value
 
       # keep same heading if mode changes
@@ -306,7 +305,6 @@ class Autopilot(object):
           err = -err
       self.heading_error.set(err)
 
-      t = time.time()
       # compute integral for I gain
       dt = t - self.heading_error_int_time
       dt = max(min(dt, 1), 0) # ensure dt is from 0 to 1
@@ -318,6 +316,8 @@ class Autopilot(object):
   def iteration(self):
       data = False
       t00 = time.time()
+      # set timestamp
+      self.timestamp.set(t00-self.starttime)
       for tries in range(14): # try 14 times to read from imu 
           data = self.boatimu.IMURead()
           if data:
@@ -328,11 +328,7 @@ class Autopilot(object):
           print('autopilot failed to read imu at time:', time.time())
 
       t0 = time.time()
-
-      # set autopilot timestamp
-      self.server.TimeStamp('ap', t0-self.starttime)
-
-      self.fix_compass_calibration_change(data)
+      self.fix_compass_calibration_change(data, t0)
       self.compute_offsets()
 
       pilot = None
@@ -342,7 +338,7 @@ class Autopilot(object):
 
       self.adjust_mode(pilot)
       pilot.compute_heading()
-      self.compute_heading_error()
+      self.compute_heading_error(t0)
           
       if self.enabled.value:
           self.runtime.update()

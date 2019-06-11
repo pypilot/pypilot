@@ -70,10 +70,6 @@ class SignalKPipeServerClient(SignalKServer):
     def Register(self, value):
       super(SignalKPipeServerClient, self).Register(value)
       self.gets[value.name] = []
-      try:
-        value.timestamp = self.TimeStamp(value.timestamp)
-      except:
-        pass
       return value
     
     def RemoveSocket(self, socket):
@@ -115,28 +111,19 @@ class SignalKPipeServerClient(SignalKServer):
         if not msgs:
             return False
 
-        values = {}
-        for name in msgs:
-            value = msgs[name]
+        for msg in msgs:
+            name, param = msg
             if name == '_register':
-                self.Register(value)
-            elif name in self.timestamps:
-                if name in values:
-                    print('timestamp collides with name of value!', name)
-                self.TimeStamp(name, value)
-            else:
-                values[name] = value
+                self.Register(param)
+                continue
+            
+            value = self.values[name]
+            value.value = param
+            value.send() # send to watching clients
 
-        # send values once all potential timestamps are received
-        for name in values:
-          value = self.values[name]
-          for v in values[name]:
-              value.value = v
-              self.values[name].send() # send to watching clients
-
-          # send to any clients who requested this value (get request)
-          if self.gets[name]:
-              response = self.values[name].get_signalk() + '\n'
+            # send to any clients who requested this value (get request)
+            if self.gets[name]:
+              response = value.get_signalk() + '\n'
               for socket in self.gets[name]:
                   if not socket in value.watchers:
                       socket.send(response)
@@ -165,8 +152,7 @@ class SignalKPipeServer(object):
         self.pipe, process_pipe = NonBlockingPipe('signalkpipeserver', True)
     
         self.values = {}
-        self.sets = {}
-        self.timestamps = {}
+        self.sets = []
         self.last_recv = time.time()
 
         self.persistent_data = LoadPersistentData(persistent_path, False)
@@ -184,7 +170,7 @@ class SignalKPipeServer(object):
     def SetPersistentValues(self):
       for name in self.persistent_sets:
         if self.persistent_sets[name]:
-          self.sets[name] = [self.values[name].value]
+          self.sets.append((name, self.values[name].value))
       self.ResetPersistentState()
 
     def ResetPersistentState(self):
@@ -192,13 +178,8 @@ class SignalKPipeServer(object):
       self.persistent_sets = {}
 
     def queue_send(self, value):
-      if value.timestamp:
-          self.sets[value.timestamp] = self.timestamps[value.timestamp]
-          
-      if value.name in self.sets:
-          self.sets[value.name].append(value.value)
-      else:
-          self.sets[value.name] = [value.value]
+      self.sets.append((value.name, value.value))
+
       if value.persistent:
         self.persistent_sets[value.name] = False
         
@@ -206,7 +187,7 @@ class SignalKPipeServer(object):
         if value.persistent and value.name in self.persistent_data:
             value.set(self.persistent_data[value.name])
       
-        self.pipe.send({'_register': value})
+        self.pipe.send([('_register', value)])
         self.values[value.name] = value
 
         def make_send():
@@ -218,10 +199,6 @@ class SignalKPipeServer(object):
             return send
         value.send = make_send()
         return value
-
-    def TimeStamp(self, name, t=False):
-        self.timestamps[name] = t
-        return name
 
     def HandleRequest(self, request):
       method = request['method']
@@ -240,30 +217,16 @@ class SignalKPipeServer(object):
         if t0 >= self.persistent_timeout:
             self.SetPersistentValues()
 
-        if self.sets:
-            ta = time.time()
-            # should we break up sets if there are many!?!
-            l = len(self.sets)
-            if l > 20:
-                setnames = list(self.sets)
-                while setnames:
-                    sets = {}
-                    for i in range(20): # send 20 values at a time
-                        if not setnames:
-                            break
-                        name = setnames.pop()
-                        sets[name] = self.sets[name]
-                    if not self.pipe.send(sets, False):
-                        break
-                    for name in sets:
-                        del self.sets[name]
+        ta = time.time()
+        while self.sets:
+            if self.pipe.send(self.sets[:20], False):
+                self.sets = self.sets[20:]
             else:
-                if self.pipe.send(self.sets, False):
-                    self.sets = {}
+                break
 
-            dta = time.time() - ta
-            if dta > .02:
-              print('too long to send sets down pipe', dta, l)
+        dta = time.time() - ta
+        if dta > .02:
+            print('too long to send sets down pipe', dta, l)
 
         while True:
             request = self.pipe.recv()
@@ -276,7 +239,7 @@ if __name__ == '__main__':
     print('pipe server demo')
     server = SignalKPipeServer()
 #    server = SignalKServer()
-    test_sensor = server.Register(SensorValue('sensor', server.TimeStamp('testtime')))
+    test_sensor = server.Register(SensorValue('sensor'))
     clock = server.Register(Value('clock', 0))
     test_property = server.Register(Property('test_property', 100))
     test_range = server.Register(RangeProperty('test_range', 1, 0, 10))
@@ -284,7 +247,6 @@ if __name__ == '__main__':
     test_boolean = server.Register(BooleanProperty('test_boolean', False))
     while True:
         clock.set(clock.value + 1)
-        server.TimeStamp('testtime', time.time())
         test_sensor.set(test_sensor.value+1)
         server.HandleRequests()
         time.sleep(.02)

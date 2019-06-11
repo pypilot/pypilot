@@ -172,14 +172,14 @@ class ServoTelemetry(object):
 
 # a property which records the time when it is updated
 class TimedProperty(Property):
-    def __init__(self, name, initial):
-        super(TimedProperty, self).__init__(name, initial)
+    def __init__(self, name):
         self.time = 0
+        super(TimedProperty, self).__init__(name, 0)
 
     def set(self, value):
         self.time = time.time()
         return super(TimedProperty, self).set(value)
-    
+
 class Servo(object):
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
 
@@ -192,21 +192,20 @@ class Servo(object):
         self.calibration = self.Register(JSONValue, 'calibration', {})
         self.load_calibration()
 
-        self.command = self.Register(TimedProperty, 'command', 0)
-        self.position_command = self.Register(TimedProperty, 'position_command', 0)
+        self.command = self.Register(TimedProperty, 'command')
+        self.position_command = self.Register(TimedProperty, 'position_command')
 
-        timestamp = server.TimeStamp('servo')
         self.speed_gain = self.Register(RangeProperty, 'speed_gain', 0, 0, 1)
-        self.duty = self.Register(SensorValue, 'duty', timestamp)
+        self.duty = self.Register(SensorValue, 'duty')
 
         self.faults = self.Register(ResettableValue, 'faults', 0, persistent=True)
 
         # power usage
-        self.current_timestamp = time.time()
-        self.voltage = self.Register(SensorValue, 'voltage', timestamp)
-        self.current = self.Register(SensorValue, 'current', timestamp)
-        self.controller_temp = self.Register(SensorValue, 'controller_temp', timestamp)
-        self.motor_temp = self.Register(SensorValue, 'motor_temp', timestamp)
+        self.voltage = self.Register(SensorValue, 'voltage')
+        self.current = self.Register(SensorValue, 'current')
+        self.current.lasttime = time.time()
+        self.controller_temp = self.Register(SensorValue, 'controller_temp')
+        self.motor_temp = self.Register(SensorValue, 'motor_temp')
 
         self.engaged = self.Register(BooleanValue, 'engaged', False)
         self.max_current = self.Register(RangeSetting, 'max_current', 7, 0, 60, 'amps')
@@ -224,20 +223,20 @@ class Servo(object):
         self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'compensate_voltage', False, persistent=True)
         self.amphours = self.Register(ResettableValue, 'amp_hours', 0, persistent=True)
-        self.watts = self.Register(SensorValue, 'watts', timestamp)
+        self.watts = self.Register(SensorValue, 'watts')
 
-        self.speed = self.Register(SensorValue, 'speed', timestamp)
+        self.speed = self.Register(SensorValue, 'speed')
         self.speed.min = self.Register(RangeSetting, 'speed.min', 100, 0, 100, '%')
         self.speed.max = self.Register(RangeSetting, 'speed.max', 100, 0, 100, '%')
 
-        self.position = self.Register(SensorValue, 'position', timestamp)
+        self.position = self.Register(SensorValue, 'position')
         self.position.elp = 0
         self.position.set(0)
         self.position.p = self.Register(RangeProperty, 'position.p', .15, .01, 1, persistent=True)
         self.position.i = self.Register(RangeProperty, 'position.i', 0, 0, .1, persistent=True)
         self.position.d = self.Register(RangeProperty, 'position.d', .02, 0, .1, persistent=True)
 
-        self.rawcommand = self.Register(SensorValue, 'raw_command', timestamp)
+        self.rawcommand = self.Register(SensorValue, 'raw_command')
 
         self.use_eeprom = self.Register(BooleanValue, 'use_eeprom', True, persistent=True)
 
@@ -550,21 +549,21 @@ class Servo(object):
         self.servo_calibration.poll()
                 
         result = self.driver.poll()
-
         if result == -1:
             print('servo lost')
             self.close_driver()
             return
-
+        
+        t = time.time()
         if result == 0:
-            d = time.time() - self.lastpolltime
+            d = t - self.lastpolltime
             if d > 5: # correct for clock skew
-                self.lastpolltime = time.time()
+                self.lastpolltime = t
             elif d > 4:
                 print('servo timeout', d)
                 self.close_driver()
         else:
-            self.lastpolltime = time.time()
+            self.lastpolltime = t
 
             if self.controller.value == 'none':
                 device_path = [self.device.port, self.device.baudrate]
@@ -574,8 +573,6 @@ class Servo(object):
                 self.driver.command(0)
 
 
-        t = time.time()
-        self.server.TimeStamp('servo', t)
         if result & ServoTelemetry.VOLTAGE:
             # apply correction
             corrected_voltage = self.voltage.factor.value*self.driver.voltage
@@ -603,9 +600,8 @@ class Servo(object):
             
             self.current.set(round(corrected_current, 3))
             # integrate power consumption
-            dt = (t - self.current_timestamp)
-            #print('have current', round(1/dt), dt)
-            self.current_timestamp = t
+            dt = (t - self.current.lasttime)
+            self.current.lasttime = t
             if self.current.value:
                 amphours = self.current.value*dt/3600
                 self.amphours.set(self.amphours.value + amphours)

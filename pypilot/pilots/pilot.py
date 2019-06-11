@@ -30,9 +30,8 @@ class AutopilotPilot(object):
   def Gain(self, name, default, min_val, max_val, compute=None):
     if not compute:
       compute = lambda value : value * self.gains[name]['apgain'].value
-    timestamp = self.ap.server.TimeStamp('ap')
     self.gains[name] = {'apgain': self.Register(AutopilotGain, name, default, min_val, max_val),
-                        'sensor': self.Register(SensorValue, name+'gain', timestamp),
+                        'sensor': self.Register(SensorValue, name+'gain'),
                         'compute': compute}
 
   def PosGain(self, name, default, max_val):
