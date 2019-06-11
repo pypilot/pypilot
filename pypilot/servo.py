@@ -195,7 +195,7 @@ class Servo(object):
         self.position_command = self.Register(TimedProperty, 'position_command', 0)
 
         timestamp = server.TimeStamp('servo')
-        self.command_gain = self.Register(RangeProperty, 'command_gain', 0, 0, 1)
+        self.speed_gain = self.Register(RangeProperty, 'speed_gain', 0, 0, 1)
         self.duty = self.Register(SensorValue, 'duty', timestamp)
 
         self.faults = self.Register(ResettableValue, 'faults', 0)

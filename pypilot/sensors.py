@@ -97,8 +97,11 @@ class APB(Sensor):
         self.track = self.Register(SensorValue, 'track', timestamp, directional=True)
         self.xte = self.Register(SensorValue, 'xte', timestamp)
         # 300 is 30 degrees for 1/10th mile
-        self.gain = self.Register(RangeProperty, 'xte', 300, 0, 3000, persistent=True)
+        self.gain = self.Register(RangeProperty, 'xte.gain', 300, 0, 3000, persistent=True)
         self.last_time = time.time()
+
+    def reset(self):
+        self.xte.update(0)
 
     def update(self, data):
         t = time.time()
@@ -113,7 +116,7 @@ class APB(Sensor):
             print('ERROR, parsing apb without autopilot')
             return
 
-        if not self.server.values['ap.enabled']:
+        if not self.server.values['ap.enabled'].value:
             return
 
         mode = self.server.values['ap.mode']
@@ -126,7 +129,7 @@ class APB(Sensor):
 
         heading_command = self.server.values['ap.heading_command']
         if abs(heading_command.value - command) > .1:
-            heading_command.value.set(command)
+            heading_command.set(command)
 
     
 class Sensors(object):
@@ -159,7 +162,7 @@ class Sensors(object):
                 self.lostsensor(sensor)
 
     def lostsensor(self, sensor):
-        print('sensor', sensor.name, 'lost', sensor.device, 'source', sensor.source.value)
+        print('sensor', sensor.name, 'lost', sensor.source.value, sensor.device)
         sensor.source.set('none')
         sensor.reset()
         sensor.device = None

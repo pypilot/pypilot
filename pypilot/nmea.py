@@ -157,16 +157,17 @@ def parse_nmea_apb(line):
     if line[3:6] != 'APB':
         return False
     try:
-       data = line[7:len(line)-3].split(',')
-       mode = 'compass' if data[13] == 'M' else 'gps'
-       command = float(data[12])
-       xte = float(data[2])
-       xte = min(xte, 0.15) # maximum 0.15 miles
-       if data[3] == 'L':
-        xte = -xte
-       return 'apb', {'mode': mode, 'track':  track, 'xte': xte, '**': line[1:3] == 'GP'}
-    except: 
-       return false
+        data = line[7:len(line)-3].split(',')
+        mode = 'compass' if data[13] == 'M' else 'gps'
+        track = float(data[12])
+        xte = float(data[2])
+        xte = min(xte, 0.15) # maximum 0.15 miles
+        if data[3] == 'L':
+            xte = -xte
+        return 'apb', {'mode': mode, 'track':  track, 'xte': xte, '**': line[1:3] == 'GP'}
+    except Exception as e:
+        print('ex', e)
+        return False
 
 nmea_parsers = {'gps': parse_nmea_gps, 'wind': parse_nmea_wind, 'rudder': parse_nmea_rudder, 'apb': parse_nmea_apb}
 
@@ -426,7 +427,7 @@ class Nmea(object):
             
         t5 = time.time()
         if t5 - t0 > .1:
-            print('nmea poll times', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
+            print('nmea poll times', t0, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
             
     def probe_serial(self):
         # probe new nmea data devices
@@ -493,7 +494,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
             result = parser(line)
             if result:
                 name, msg = result
-                msg['device'] = line[1:3]+device
+                msg['device'] = device + line[1:3]
                 msgs[name] = msg
                 return
 
@@ -517,10 +518,10 @@ class NmeaBridgeProcess(multiprocessing.Process):
         self.fd_to_socket[fd] = sock
 
         self.poller.register(sock.socket, select.POLLIN)
-        print('new nmea connection:', address, sock.uid)
+        #print('new nmea connection:', address, sock.uid)
 
     def socket_lost(self, sock, fd):
-        print('lost nmea connection:', self.addresses[sock])
+        #print('lost nmea connection:', self.addresses[sock])
         try:
             self.sockets.remove(sock)
         except:
@@ -618,7 +619,6 @@ class NmeaBridgeProcess(multiprocessing.Process):
                             pass
                 elif flag & select.POLLIN:
                     if not sock.recv():
-                        print('sock recv lost')
                         self.socket_lost(sock, fd)
                     else:
                         while True:
