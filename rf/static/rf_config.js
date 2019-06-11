@@ -22,7 +22,6 @@ $(document).ready(function() {
         $('#connection').text('Connected')
     });
 
-    
     socket.on('disconnect', function() {
         $('#connection').text('Disconnected')
     });
@@ -34,7 +33,60 @@ $(document).ready(function() {
     socket.on('rfcode', function(code) {
         $('#rfcode').text(code);
     });
+
+    socket.on('action', function(action) {
+        $('#action').text(action);
+    });
     
+    socket.on('action_codes', function(codes) {
+        $('#action'+codes['name']+'codes').text(codes['codes'])
+    });
+             
+    $('#engage').click(function(event) {
+        socket.emit('codes', 'engage');
+    });
+
+    $('#disengage').click(function(event) {
+        socket.emit('codes', 'disengage');
+    });
+    
+    $('#m1').click(function(event) {
+        socket.emit('codes', '1');
+    });
+    
+    $('#m2').click(function(event) {
+        socket.emit('codes', '2');
+    });
+    
+    $('#m10').click(function(event) {
+        socket.emit('codes', '10');
+    });
+    
+    
+    $('#m-1').click(function(event) {
+        socket.emit('codes', '-1');
+    });
+    
+    $('#m-2').click(function(event) {
+        socket.emit('codes', '-2');
+    });
+    
+    $('#m-10').click(function(event) {
+        socket.emit('codes', '-10');
+    });
+
+    $('#compassmode').click(function(event) {
+        socket.emit('codes', 'compassmode');
+    });
+    
+    $('#gpsmode').click(function(event) {
+        socket.emit('codes', 'gpsmode');
+    });
+
+    $('#windmode').click(function(event) {
+        socket.emit('codes', 'windmode');
+    });
+
     // Interval function that tests message latency by sending a "ping"
     var ping_pong_times = [];
     var start_time;
