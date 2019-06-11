@@ -200,8 +200,9 @@ class LCDClient():
         self.use_glut = False
         if lcd == 'none':
             screen = None
-        elif lcd == 'nokia5110' or lcd == 'spi':
-            print('using spi display')
+        elif lcd == 'nokia5110':
+            screen = ugfx.spiscreen(0)
+        elif lcd == 'spi':
             screen = ugfx.spiscreen()
         else:
             self.use_glut = 'DISPLAY' in os.environ

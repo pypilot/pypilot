@@ -61,7 +61,7 @@ public:
 class spiscreen : public surface
 {
 public:
-    spiscreen();
+    spiscreen(int driver=-1);
     virtual ~spiscreen();
 
     void refresh();
