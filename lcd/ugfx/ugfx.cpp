@@ -549,7 +549,7 @@ public:
         pinMode(dc, OUTPUT);
 
 	for(int port=0; port<2; port++)
-	    if((spifd = wiringPiSPISetup(port, 100000)) != -1)
+	    if((spifd = wiringPiSPISetup(port, 1000000)) != -1)
 		break;
 	  
 	if(spifd == -1) {
@@ -689,42 +689,42 @@ public:
 //  delay(50);
             usleep(50000);
             jlx1264reset--;
-        }
 
-        command(0xe2); // Soft Reset
-        command(0x2c); // Boost 1
-        command(0x2e); // Boost 2
+            //          command(0xe2); // Soft Reset
+//        command(0x2c); // Boost 1
+//        command(0x2e); // Boost 2
         command(0x2f); // Boost 3
-        command(0x23); // Coarse Contrast, setting range is from 20 to 27
-        command(0x81); // Trim Contrast
-        command(0x28); // Trim Contrast value range can be set from 0 to 63
-        command(0xa2); // 1/9 bias ratio
-        command(0xc8); // Line scan sequence : from top to bottom
-        command(0xa0); // Column scanning order : from left to right
+//        command(0x23); // Coarse Contrast, setting range is from 20 to 27
+//        command(0x81); // Trim Contrast
+//        command(0x20); // Trim Contrast value range can be set from 0 to 63
+//        command(0xa2); // 1/9 bias ratio
+        }
         command(0xaf); // Open the display
+        //      command(0xa0); // Column scanning order : from left to right
+        //command(0xc8); // Line scan sequence : from top to bottom
+
     
         int i;
 
         char binary[128*64];//width*height/8];
         for(int col = 0; col<8; col++)
             for(int y = 0; y < 128; y++) {
-                int index = y + (7-col)*s->height;
+                int index = y + col*s->height;
                 uint8_t bits = 0;
                 for(int bit = 0; bit<8; bit++) {
                     bits <<= 1;
-                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+bit))
+                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+7-bit))
                         bits |= 1;
                 }
                 binary[index] = bits;
             }
-        
+
+//        for(int k=0; k<10; k++)
         for(i=0;i<8;i++)
         {
-            digitalWrite (dc, LOW) ;	// Off
             command(0xb0+i);
             command(0x10);
             command(0x00);
-
             digitalWrite (dc, HIGH) ;	// Off
 #if 0
             char *address = binary + i*128; //pointer
@@ -735,13 +735,8 @@ public:
             }
 #else
             char *address = binary + i*128; //pointer
-            // write up to 64 bytes at a time
-            for (unsigned int pos=0; pos<128; pos += 64) {
-                int len = 64;
-                if (128 - pos < 64)
-                    len = 128 - pos;
-                write(spifd, address + pos, len);
-            }
+            write(spifd, address, 128);
+
 #endif
         }
      }

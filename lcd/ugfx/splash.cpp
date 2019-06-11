@@ -77,8 +77,22 @@ int main(int argc, char *argv[])
     logom->magnify(logo, fac);
     logom->invert(0, 0, logom->width, logom->height);
 
-    framebuffer->fill(0);
+    framebuffer->fill(255);
     framebuffer->blit(logom, 0, 0);
     framebuffer->refresh();
+
+#if 1
+    for(int i=0; i<20; i++) {
+        framebuffer->fill(0);
+        framebuffer->refresh();
+        usleep(100000);
+        framebuffer->fill(255);
+        framebuffer->refresh();
+        usleep(100000);
+        framebuffer->blit(logom, 0, 0);
+        framebuffer->refresh();
+        usleep(100000);
+    }
+#endif
     delete framebuffer;
 }
