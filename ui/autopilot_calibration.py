@@ -95,6 +95,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             client.watch(name)
 
     def on_con(self, client):
+        # clear out plots
+        self.accel_calibration_plot.points = []
+        self.compass_calibration_plot.points = []
+
         values = client.list_values()
 
         if not self.settings:
@@ -329,7 +333,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.compass_calibration_plot.reshape(event.GetSize().x, event.GetSize().y)
 
     def onResetAlignment(self, event):
-        self.client.set('imu.alignmentQ', [1, 0, 0, 0])
+        self.client.set('imu.alignmentQ', False)
 
     def onLevel( self, event ):
         self.client.set('imu.alignmentCounter', 100)

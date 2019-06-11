@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -13,17 +13,11 @@ import vector, resolv, quaternion
 resolv = resolv.resolv
 
 from signalk.pipeserver import NonBlockingPipe
-
-def debug(*args):
-    pass
-'''
-def debug(*args):
-    for a in args:
-        sys.stdout.write(str(a))
-        sys.stdout.write(' ')
-    sys.stdout.write('\n')
-'''
+    
 calibration_fit_period = 20  # run every 20 seconds
+
+def lmap(*cargs):
+    return list(map(*cargs))
 
 def FitLeastSq(beta0, f, zpoints, dimensions=1):
     try:
@@ -42,9 +36,7 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
     except:
         print('failed to load scientific library, cannot perform calibration update!')
         return False
-
     try:
-#    if True:
         Model = scipy.odr.Model(f, implicit=1)
         Data = scipy.odr.RealData(zpoints, dimensions)
         Odr = scipy.odr.ODR(Data, Model, beta0, maxit = 1000)
@@ -97,11 +89,9 @@ def PointFit(points):
 def LinearFit(points):
     zpoints = [[], [], []]
     for i in range(3):
-        zpoints[i] = map(lambda x : x[i], points)
+        zpoints[i] = lmap(lambda x : x[i], points)
         
     data = numpy.array(list(zip(zpoints[0], zpoints[1], zpoints[2])))
-    #print('zpoints', zpoints[0])
-    #print('data', data)
     datamean = data.mean(axis=0)
     uu, dd, vv = numpy.linalg.svd(data - datamean)
 
@@ -114,14 +104,14 @@ def LinearFit(points):
     max_plane_dev = 0
     for p in data:
         t = vector.dot(p, line_fit[1]) - vector.dot(line_fit[0], line_fit[1])
-        q = map(lambda o, n : o + t*n, line_fit[0], line_fit[1])
+        q = lmap(lambda o, n : o + t*n, line_fit[0], line_fit[1])
         v = vector.sub(p, q)
         d = vector.dot(v, v)
         max_line_dev = max(d, max_line_dev)
         line_dev += d
 
         t = vector.dot(p, plane_fit[1]) - vector.dot(plane_fit[0], plane_fit[1])
-        v = list(map(lambda b : t*b, plane_fit[1]))
+        v = lmap(lambda b : t*b, plane_fit[1])
         d = vector.dot(v, v)
         max_plane_dev = max(d, max_plane_dev)
         plane_dev += d
@@ -133,10 +123,10 @@ def LinearFit(points):
     plane = [plane_fit, plane_dev**.5, max_plane_dev**.5]
     return line, plane
 
-def FitPointsAccel(points):
+def FitPointsAccel(debug, points):
     zpoints = [[], [], []]
     for i in range(3):
-        zpoints[i] = map(lambda x : x[i], points)
+        zpoints[i] = lmap(lambda x : x[i], points)
         
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
@@ -146,26 +136,26 @@ def FitPointsAccel(points):
 
     def f_sphere3(beta, x):
         bias = beta[:3]
-        b = numpy.matrix(map(lambda a, b : a - b, x[:3], bias))
+        b = numpy.matrix(lmap(lambda a, b : a - b, x[:3], bias))
         m = list(numpy.array(b.transpose()))
-        r0 = map(lambda y : beta[3] - vector.norm(y), m)
+        r0 = lmap(lambda y : beta[3] - vector.norm(y), m)
         return r0
 
     sphere3d_fit = FitLeastSq([0, 0, 0, 1], f_sphere3, zpoints)
     if not sphere3d_fit or sphere3d_fit[3] < 0:
         print('FitLeastSq sphere failed!!!! ', len(points))
         return False
-    #debug('sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
+    debug('accel sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
     return sphere3d_fit
 
-def FitPointsCompass(points, current, norm):
+def FitPointsCompass(debug, points, current, norm):
     # ensure current and norm are float
-    current = map(float, current)
-    norm = map(float, norm)
+    current = lmap(float, current)
+    norm = lmap(float, norm)
 
     zpoints = [[], [], [], [], [], []]
     for i in range(6):
-        zpoints[i] = map(lambda x : x[i], points)
+        zpoints[i] = lmap(lambda x : x[i], points)
         
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
@@ -181,11 +171,11 @@ def FitPointsCompass(points, current, norm):
     minc = [1000, 1000, 1000]
     maxc = [-1000, -1000, -1000]
     for p in points:
-        minc = list(map(min, p[:3], minc))
-        maxc = list(map(max, p[:3], maxc))
+        minc = lmap(min, p[:3], minc)
+        maxc = lmap(max, p[:3], maxc)
 
-    guess = map(lambda a, b : (a+b)/2, minc, maxc)
-    diff = map(lambda a, b : b-a, minc, maxc)
+    guess = lmap(lambda a, b : (a+b)/2, minc, maxc)
+    diff = lmap(lambda a, b : b-a, minc, maxc)
     guess.append((diff[0]+diff[1]+diff[2])/3)
     debug('initial guess', guess)
 
@@ -197,37 +187,37 @@ def FitPointsCompass(points, current, norm):
     # attempt 'normal' fit along normal vector
     '''
     def f_sphere1(beta, x):
-        bias = map(lambda x, n: x + beta[0]*n, initial[:3], norm)
-        b = numpy.matrix(map(lambda a, b : a - b, x[:3], bias))
+        bias = lmap(lambda x, n: x + beta[0]*n, initial[:3], norm)
+        b = numpy.matrix(lmap(lambda a, b : a - b, x[:3], bias))
         m = list(numpy.array(b.transpose()))
-        r0 = map(lambda y : beta[1] - vector.norm(y), m)
+        r0 = lmap(lambda y : beta[1] - vector.norm(y), m)
         return r0
     sphere1d_fit = FitLeastSq([0, initial[3]], f_sphere1, zpoints)
     if not sphere1d_fit or sphere1d_fit[1] < 0:
         print('FitLeastSq sphere1d failed!!!! ', len(points))
         return False
-    sphere1d_fit = map(lambda x, n: x + sphere1d_fit[0]*n, initial[:3], norm) + [sphere1d_fit[1]]
+    sphere1d_fit = lmap(lambda x, n: x + sphere1d_fit[0]*n, initial[:3], norm) + [sphere1d_fit[1]]
     debug('sphere1 fit', sphere1d_fit, ComputeDeviation(points, sphere1d_fit))
     '''
 
     def f_new_sphere1(beta, x):
-        bias = map(lambda x, n: x + beta[0]*n, initial[:3], norm)
-        b = numpy.matrix(map(lambda a, b : a - b, x[:3], bias))
+        bias = lmap(lambda x, n: x + beta[0]*n, initial[:3], norm)
+        b = numpy.matrix(lmap(lambda a, b : a - b, x[:3], bias))
         m = list(numpy.array(b.transpose()))
-        r0 = map(lambda y : beta[1] - vector.norm(y), m)
+        r0 = lmap(lambda y : beta[1] - vector.norm(y), m)
         g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
         fac = 1 # weight deviation
         def dip(y, z):
             n = min(max(vector.dot(y, z)/vector.norm(y), -1), 1)
             return n
-        r1 = map(lambda y, z : fac*beta[1]*(beta[2]-dip(y, z)), m, g)
+        r1 = lmap(lambda y, z : fac*beta[1]*(beta[2]-dip(y, z)), m, g)
         return r0 + r1
     new_sphere1d_fit = FitLeastSq([0, initial[3], 0], f_new_sphere1, zpoints, 2)
     if not new_sphere1d_fit or new_sphere1d_fit[1] < 0 or abs(new_sphere1d_fit[2]) > 1:
         debug('FitLeastSq new_sphere1 failed!!!! ', len(points), new_sphere1d_fit)
         new_sphere1d_fit = current
     else:
-        new_sphere1d_fit = map(lambda x, a: x + new_sphere1d_fit[0]*a, initial[:3], norm) + [new_sphere1d_fit[1], math.degrees(math.asin(new_sphere1d_fit[2]))]
+        new_sphere1d_fit = lmap(lambda x, a: x + new_sphere1d_fit[0]*a, initial[:3], norm) + [new_sphere1d_fit[1], math.degrees(math.asin(new_sphere1d_fit[2]))]
     new_sphere1d_fit = [new_sphere1d_fit, ComputeDeviation(points, new_sphere1d_fit), 1]
         #print('new sphere1 fit', new_sphere1d_fit)
 
@@ -248,38 +238,38 @@ def FitPointsCompass(points, current, norm):
     
     '''
     def f_sphere2(beta, x):
-        bias = map(lambda x, a, b: x + beta[0]*a + beta[1]*b, initial[:3], u, v)
-        b = numpy.matrix(map(lambda a, b : a - b, x[:3], bias))
+        bias = lmap(lambda x, a, b: x + beta[0]*a + beta[1]*b, initial[:3], u, v)
+        b = numpy.matrix(lmap(lambda a, b : a - b, x[:3], bias))
         m = list(numpy.array(b.transpose()))
-        r0 = map(lambda y : beta[2] - vector.norm(y), m)
+        r0 = lmap(lambda y : beta[2] - vector.norm(y), m)
         return r0
     sphere2d_fit = FitLeastSq([0, 0, initial[3]], f_sphere2, zpoints)
     if not sphere2d_fit or sphere2d_fit[2] < 0:
         print('FitLeastSq sphere2d failed!!!! ', len(points))
         new_sphere2d_fit = initial
     else:
-        sphere2d_fit = map(lambda x, a, b: x + sphere2d_fit[0]*a + sphere2d_fit[1]*b, initial[:3], u, v) + [sphere2d_fit[2]]
+        sphere2d_fit = lmap(lambda x, a, b: x + sphere2d_fit[0]*a + sphere2d_fit[1]*b, initial[:3], u, v) + [sphere2d_fit[2]]
     debug('sphere2 fit', sphere2d_fit, ComputeDeviation(points, sphere2d_fit))
     '''
 
     def f_new_sphere2(beta, x):
-        bias = map(lambda x, a, b: x + beta[0]*a + beta[1]*b, initial[:3], u, v)
-        b = numpy.matrix(map(lambda a, b : a - b, x[:3], bias))
+        bias = lmap(lambda x, a, b: x + beta[0]*a + beta[1]*b, initial[:3], u, v)
+        b = numpy.matrix(lmap(lambda a, b : a - b, x[:3], bias))
         m = list(numpy.array(b.transpose()))
-        r0 = map(lambda y : beta[2] - vector.norm(y), m)
-        #r0 = map(lambda y : 1 - vector.norm(y)/beta[2], m)
+        r0 = lmap(lambda y : beta[2] - vector.norm(y), m)
+        #r0 = lmap(lambda y : 1 - vector.norm(y)/beta[2], m)
         g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
         fac = 1 # weight deviation
         def dip(y, z):
             n = min(max(vector.dot(y, z)/vector.norm(y), -1), 1)
             return n
-        r1 = map(lambda y, z : fac*beta[2]*(beta[3]-dip(y, z)), m, g)
+        r1 = lmap(lambda y, z : fac*beta[2]*(beta[3]-dip(y, z)), m, g)
         return r0 + r1
     new_sphere2d_fit = FitLeastSq([0, 0, initial[3], 0], f_new_sphere2, zpoints, 2)
     if not new_sphere2d_fit or new_sphere2d_fit[2] < 0 or abs(new_sphere2d_fit[3]) >= 1:
         debug('FitLeastSq sphere2 failed!!!! ', len(points), new_sphere2d_fit)
         return False
-    new_sphere2d_fit = map(lambda x, a, b: x + new_sphere2d_fit[0]*a + new_sphere2d_fit[1]*b, initial[:3], u, v) + [new_sphere2d_fit[2], math.degrees(math.asin(new_sphere2d_fit[3]))]
+    new_sphere2d_fit = lmap(lambda x, a, b: x + new_sphere2d_fit[0]*a + new_sphere2d_fit[1]*b, initial[:3], u, v) + [new_sphere2d_fit[2], math.degrees(math.asin(new_sphere2d_fit[3]))]
     new_sphere2d_fit = [new_sphere2d_fit, ComputeDeviation(points, new_sphere2d_fit), 2]
 
     if plane_max_dev < 1.2:
@@ -297,9 +287,9 @@ def FitPointsCompass(points, current, norm):
     '''
     def f_sphere3(beta, x):
         bias = beta[:3]
-        b = numpy.matrix(map(lambda a, b : a - b, x[:3], bias))
+        b = numpy.matrix(lmap(lambda a, b : a - b, x[:3], bias))
         m = list(numpy.array(b.transpose()))
-        r0 = map(lambda y : beta[3] - vector.norm(y), m)
+        r0 = lmap(lambda y : beta[3] - vector.norm(y), m)
         return r0
     sphere3d_fit = FitLeastSq(initial[:4], f_sphere3, zpoints)
     if not sphere3d_fit or sphere3d_fit[3] < 0:
@@ -308,16 +298,16 @@ def FitPointsCompass(points, current, norm):
     debug('sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
     '''
     def f_new_sphere3(beta, x):
-        b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
+        b = numpy.matrix(lmap(lambda a, b : a - b, x[:3], beta[:3]))
         m = list(numpy.array(b.transpose()))
-        r0 = map(lambda y : beta[3] - vector.norm(y), m)
-        #r0 = map(lambda y : 1 - vector.norm(y)/beta[3], m)
+        r0 = lmap(lambda y : beta[3] - vector.norm(y), m)
+        #r0 = lmap(lambda y : 1 - vector.norm(y)/beta[3], m)
         g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
         fac = 1 # weight deviation
         def dip(y, z):
             n = min(max(vector.dot(y, z)/vector.norm(y), -1), 1)
             return n
-        r1 = map(lambda y, z : fac*beta[3]*(beta[4]-dip(y, z)), m, g)
+        r1 = lmap(lambda y, z : fac*beta[3]*(beta[4]-dip(y, z)), m, g)
 
         return r0 + r1
     new_sphere3d_fit = FitLeastSq(initial[:4] + [0], f_new_sphere3, zpoints, 2)
@@ -332,10 +322,10 @@ def FitPointsCompass(points, current, norm):
 
 
 def avg(fac, v0, v1):
-    return list(map(lambda a, b : (1-fac)*a + fac*b, v0, v1))
+    return lmap(lambda a, b : (1-fac)*a + fac*b, v0, v1)
 
 class SigmaPoint(object):
-    def __init__(self, sensor, down):
+    def __init__(self, sensor, down=False):
         self.sensor = sensor
         self.down = down
         self.count = 1
@@ -345,7 +335,8 @@ class SigmaPoint(object):
         self.count += 1
         fac = max(1/self.count, .01)
         self.sensor = avg(fac, self.sensor, sensor)
-        self.down = avg(fac, self.down, down)
+        if down:
+            self.down = avg(fac, self.down, down)
         self.time = time.time()
 
 # store averaged sensore measurements over time for
@@ -356,20 +347,27 @@ class SigmaPoints(object):
         self.max_sigma_points = max_sigma_points
         self.min_count = min_count
         self.Reset()
+        self.last_sigma = False
+
+    def Updated(self):
+        if self.sigma == self.last_sigma:
+            return False
 
     # forget all knowledge of stored sensor points
     def Reset(self):
         self.sigma_points = []
         self.lastpoint = False
 
-    def Points(self):
-        p = []
-        for sigma in self.sigma_points:
-            p.append(sigma.sensor + sigma.down)
-        return p
+    def Points(self, down=False):
+        def pt(p):
+            if down:
+                return p.sensor + p.down
+            else:
+                p.sensor
+        return lmap(pt, self.sigma_points)
 
     # store a new sensor
-    def AddPoint(self, sensor, down):
+    def AddPoint(self, sensor, down=False):
         if not self.lastpoint:
             self.lastpoint = SigmaPoint(sensor, down)
             return
@@ -384,8 +382,6 @@ class SigmaPoints(object):
 
         # use lastpoint as better sample
         sensor, down = self.lastpoint.sensor, self.lastpoint.down
-        for i in range(3):
-            down[i] /= self.lastpoint.count
         self.lastpoint = False
 
         ind = 0
@@ -401,28 +397,28 @@ class SigmaPoints(object):
 
         index = len(self.sigma_points)
         p = SigmaPoint(sensor, down)
-        if index == self.max_sigma_points:
-            # replace point that is closest to other points
-            minweighti = 0
-            minweight = 1e20
-            for i in range(len(self.sigma_points)):
-                for j in range(len(self.sigma_points)):
-                    if i == j:
-                        continue
-                    dist = vector.dist(self.sigma_points[i].sensor, self.sigma_points[j].sensor)
-                    count = min(self.sigma_points[i].count, 100)
-                    dt = time.time() - self.sigma_points[i].time
-                    weight = dist * count**.2 * 1/dt**.1
-                    #print('ij', i, j, dist, count, dt, weight)
-                    if weight < minweight:
-                        minweighti = i
-                        minweight = weight
-
-            #print('replace', minweighti, self.sigma_points[minweighti].count, time.time() - self.sigma_points[minweighti].time)
-            self.sigma_points[minweighti] = p
+        if index < self.max_sigma_points:
+            self.sigma_points.append(p)
             return
 
-        self.sigma_points.append(p)
+        # replace point that is closest to other points
+        minweighti = 0
+        minweight = 1e20
+        for i in range(len(self.sigma_points)):
+            for j in range(len(self.sigma_points)):
+                if i == j:
+                    continue
+                dist = vector.dist(self.sigma_points[i].sensor, self.sigma_points[j].sensor)
+                count = min(self.sigma_points[i].count, 100)
+                dt = time.time() - self.sigma_points[i].time
+                weight = dist * count**.2 * 1/dt**.1
+
+                if weight < minweight:
+                    minweighti = i
+                    minweight = weight
+
+            self.sigma_points[minweighti] = p
+            return
 
     def RemoveOlder(self, dt=3600):
         p = []
@@ -441,8 +437,8 @@ class SigmaPoints(object):
         if time.time() - oldest_sigma.time >= 60:
             self.sigma_points.remove(oldest_sigma)
 
-# calculate the largest angle in radians between any two measurements
-# for a given calibration bias and normal vector
+# calculate how well these datapoints cover the space by
+# counting how many 20 degree segments have at least 1 datapoint
 def ComputeCoverage(p, bias, norm):
     q = quaternion.vec2vec2quat(norm, [0, 0, 1])
     def ang(p):
@@ -453,24 +449,24 @@ def ComputeCoverage(p, bias, norm):
         return math.degrees(math.atan2(v[1], v[0]))
     #, abs(math.degrees(math.acos(v[2])))
 
-    spacing = 20 # 20 degrees
-    angles = [False] * (360 / spacing)
+    spacing = 20 # 20 degree segments
+    angles = [False] * int(360 / spacing)
     count = 0
-    for a in map(ang, p):
+    for a in lmap(ang, p):
         i = int(resolv(a, 180) / spacing)
         if not angles[i]:
             angles[i] = True
             count += 1
     return count
 
-def FitAccel(accel_cal):
+def FitAccel(debug,accel_cal):
     p = accel_cal.Points()
     debug('accelfit count', len(p))
     if len(p) < 5:
         return False
 
-    mina = map(min, *p)
-    maxa = map(max, *p)
+    mina = lmap(min, *p)
+    maxa = lmap(max, *p)
     diff = vector.sub(maxa[:3], mina[:3])
     #print('accelfit', diff)
 
@@ -478,7 +474,7 @@ def FitAccel(accel_cal):
         return # require sufficient range on all axes
     if sum(diff) < 4.5:
         return # require more spread
-    fit = FitPointsAccel(p)
+    fit = FitPointsAccel(debug, p)
 
     if abs(1-fit[3]) > .1:
         debug('scale factor out of range', fit)
@@ -487,14 +483,14 @@ def FitAccel(accel_cal):
     dev = ComputeDeviation(p, fit)
     return [fit, dev]
 
-def FitCompass(compass_cal, compass_calibration, norm):
-    p = compass_cal.Points()
+def FitCompass(debug, compass_cal, compass_calibration, norm):
+    p = compass_cal.Points(True)
     #print('compassfit count', len(p))
     if len(p) < 8:
         return False
 
     debug('FitPointsCompass', p, compass_calibration, norm)
-    fit = FitPointsCompass(p, compass_calibration, norm)
+    fit = FitPointsCompass(debug, p, compass_calibration, norm)
     if not fit:
         return
     debug('compass fit', fit)
@@ -517,14 +513,15 @@ def FitCompass(compass_cal, compass_calibration, norm):
 
     if not c:
         return
-        
+
     coverage = ComputeCoverage(p, c[0][:3], norm)
     if coverage < 12: # require 240 degrees
         debug('calibration: not enough coverage:', coverage)
         if c == fit[1]: # must have had 3d fit to use 1d fit
             return
         debug('insufficient coverage, use 1d fit')
-        return # no 1d fit
+        c = fit[0]
+        return # for now disallow 1d fit
 
     # make sure the magnitude is sane
     mag = c[0][3]
@@ -542,9 +539,8 @@ def FitCompass(compass_cal, compass_calibration, norm):
     # test points for deviation, all must fall on a sphere
     deviation = c[1]
     if deviation[0] > .15 or deviation[1] > 3:
-        debug('bad fit:', deviation)
         curdeviation = ComputeDeviation(p, compass_calibration)
-        debug('cur dev', curdeviation)
+        debug('bad fit:', deviation, 'cur dev:', curdeviation)
         # if compass_calibration calibration is really terrible
         if deviation[0]/curdeviation[0] + deviation[1]/curdeviation[1] < 2.5 or curdeviation[0] > .2 or curdeviation[1] > 10:
             debug('allowing bad fit')
@@ -557,11 +553,9 @@ def FitCompass(compass_cal, compass_calibration, norm):
     if vector.dist2(c[0], compass_calibration) < .1:
         debug('insufficient change in bias, calibration already ok')
         debug('coverage', coverage, 'new fit:', c)
-
     return c
 
-
-def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass_calibration):
+def CalibrationProcess(cal_pipe):
     import os
     if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
       print('warning, failed to make calibration process idle, trying renice')
@@ -569,81 +563,78 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
           print('warning, failed to renice calibration process')
 
     accel_cal = SigmaPoints(.05**2, 12, 12)
-    compass_cal = SigmaPoints(1**2, 18, 4)
-    #down_sigma = .05 # distance between down vectors
+    compass_cal = SigmaCal_Pipe(1**2, 18, 4)
 
     norm = [0, 0, 1]
 
+    def on_con(client):
+        client.watch('imu.alignmentQ')
+
+    client = SignalKClient(on_con, 'localhost', autoreconnect=True)
+    def debug(name):
+        def debug_by_name(*args):
+            s = ''
+            for a in args:
+                s += a + ' '
+            #print('calibration log ' + name + ': ' + a)
+            client.set('imu.'name+'.calibration.log', s)
+        return debug_by_name
+    
     while True:
         t = time.time()
         addedpoint = False
         while time.time() - t < calibration_fit_period:
-            p = points.recv(1)
+            # receive signalk messages
+            msg = client.recieve()
+            for name in msg:
+                value = msg[name]['value']
+                if name == 'imu.alignmentQ':
+                    norm = quaternion.rotvecquat([0, 0, 1], value)
+                    compass_cal.Reset()
+
+            # receive calibration data
+            p = cal_pipe.recv(1)
             if p:
-                accel, compass, down = p
-                if accel:
-                    accel_cal.AddPoint(accel, list(accel))
-                    #print('add', len(accel_cal.sigma_points))
-                if compass and down:
-                    compass_cal.AddPoint(compass, down)
-                addedpoint = True
-
-        while True:
-            n = norm_pipe.recv()
-            if not n:
-                break
-            norm = n
-            compass_cal.Reset()
-            #print('set norm', norm)
-
+                if 'accel' in p:
+                    accel_cal.AddPoint(p['accel'])
+                    addedpoint = True
+                if 'compass' in p:
+                    compass_cal.AddPoint(p['compass'], p['down'])
+                    addedpoint = True
+                    
         if not addedpoint: # don't bother to run fit if no new data
             continue
 
         accel_cal.RemoveOlder(10*60) # 10 minutes
-        fit = FitAccel(accel_cal)
+        fit = FitAccel(debug('accel'), accel_cal)
         if fit: # reset compass sigmapoints on accel cal
             dist = vector.dist(fit[0][:3], accel_calibration[:3])
             if dist > .01: # only update when bias changes more than this
-                if dist > .1: # reset compass cal from large change in accel bias
+                if dist > .08: # reset compass cal from large change in accel bias
                     compass_cal.Reset()
                 accel_calibration = fit[0]
-                fit_output.send(('accel', fit, map(lambda p : p.sensor, accel_cal.sigma_points)), False)
-
+                client.set('imu.accel.calibration', fit)
 
         compass_cal.RemoveOlder(60*60) # 60 minutes
-
-        fit = FitCompass(compass_cal, compass_calibration, norm)
+        fit = FitCompass(debug('compass')compass_cal, compass_calibration, norm)
         if fit:
-            fit_output.send(('compass', fit, map(lambda p : p.sensor + p.down, compass_cal.sigma_points)), False)
+            client.set('imu.compass.calibration', fit)
             compass_calibration = fit[0]
 
-class IMUAutomaticCalibration(object):
-    def __init__(self, cal_pipe, accel_calibration, compass_calibration):
-        self.cal_pipe = cal_pipe
-        points, self.points = NonBlockingPipe('points pipe', True)
-        norm_pipe, self.norm_pipe = NonBlockingPipe('norm pipe', True)
-        self.fit_output, fit_output = NonBlockingPipe('fit output', True)
+        # send updated sigmapoints as well
+        for cal in [accel_cal, compass_cal]:
+            if cal.Updated()
+                client.set('imu.' + name + '.calibration.sigmapoints', cal.sigma)
 
-        self.process = multiprocessing.Process(target=CalibrationProcess, args=(points, norm_pipe, fit_output, accel_calibration, compass_calibration))
-        #print('start cal process')
+class IMUAutomaticCalibration(object):
+    def __init__(self, accel_calibration, compass_calibration):
+        self.cal_pipe, cal_pipe = NonBlockingPipe('nmea pipe', True)
+        self.process = multiprocessing.Process(target=CalibrationProcess, args=(cal_pipe,))
         self.process.start()
 
     def __del__(self):
         print('terminate calibration process')
         self.process.terminate()
-
-    def AddPoint(self, point):
-        self.points.send(point, False)
-
-    def SetNorm(self, norm):
-        self.norm_pipe.send(norm)
-    
-    def UpdatedCalibration(self):
-        result = self.fit_output.recv()
-        # use new bias fit
-        if result:
-            self.cal_pipe.send(result)
-        return result
 
 def ExtraFit():
     ellipsoid_fit = False
@@ -670,58 +661,58 @@ def ExtraFit():
 
         # if the ellipsoid fit is sane
     if abs(ellipsoid_fit[4]-1) < .2 and abs(ellipsoid_fit[5]-1) < .2:
-        cpoints = map(lambda a, b : a - b, zpoints[:3], ellipsoid_fit[:3])
+        cpoints = lmap(lambda a, b : a - b, zpoints[:3], ellipsoid_fit[:3])
         rotellipsoid_fit = FitLeastSq(ellipsoid_fit[3:] + [0, 0, 0], f_rotellipsoid3, cpoints)
         #print('rotellipsoid_fit', rotellipsoid_fit)
         ellipsoid_fit2 = FitLeastSq(ellipsoid_fit[:3] + rotellipsoid_fit[:3], f_ellipsoid3_cr, (zpoints, rotellipsoid_fit[3:]))
         #print('ellipsoid_fit2', ellipsoid_fit2)
 
-        cpoints = map(lambda a, b : a - b, zpoints[:3], ellipsoid_fit2[:3])
+        cpoints = lmap(lambda a, b : a - b, zpoints[:3], ellipsoid_fit2[:3])
         rotellipsoid_fit2 = FitLeastSq(ellipsoid_fit[3:] + [0, 0, 0], f_rotellipsoid3, cpoints)
         print('rotellipsoid_fit2', rotellipsoid_fit2)
     else:
         ellipsoid_fit = False
 
     def f_uppermatrixfit(beta, x):
-            b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
+            b = numpy.matrix(lmap(lambda a, b : a - b, x[:3], beta[:3]))
             r = numpy.matrix([beta[3:6], [0]+list(beta[6:8]), [0, 0]+[beta[8]]])
             print('b', beta)
 
             m = r * b
             m = list(numpy.array(m.transpose()))
-            r0 = map(lambda y : 1 - vector.dot(y, y), m)
+            r0 = lmap(lambda y : 1 - vector.dot(y, y), m)
 
             return r0
 
     def f_matrixfit(beta, x, efit):
-            b = numpy.matrix(map(lambda a, b : a - b, x[:3], efit[:3]))
+            b = numpy.matrix(lmap(lambda a, b : a - b, x[:3], efit[:3]))
             r = numpy.matrix([[1,       beta[0], beta[1]],
                               [beta[2], efit[4], beta[3]],
                               [beta[4], beta[5], efit[5]]])
 
             m = r * b
             m = list(numpy.array(m.transpose()))
-            r0 = map(lambda y : efit[3]**2 - vector.dot(y, y), m)
+            r0 = lmap(lambda y : efit[3]**2 - vector.dot(y, y), m)
             #return r0
 
             g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
-            r1 = map(lambda y, z : beta[6] - vector.dot(y, z), m, g)
+            r1 = lmap(lambda y, z : beta[6] - vector.dot(y, z), m, g)
 
             return r0+r1
 
     def f_matrix2fit(beta, x, efit):
-            b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
+            b = numpy.matrix(lmap(lambda a, b : a - b, x[:3], beta[:3]))
             r = numpy.matrix([[1,       efit[0], efit[1]],
                               [efit[2], beta[4], efit[3]],
                               [efit[4], efit[5], beta[5]]])
 
             m = r * b
             m = list(numpy.array(m.transpose()))
-            r0 = map(lambda y : beta[3]**2 - vector.dot(y, y), m)
+            r0 = lmap(lambda y : beta[3]**2 - vector.dot(y, y), m)
             #return r0
 
             g = list(numpy.array(numpy.matrix(x[3:]).transpose()))
-            r1 = map(lambda y, z : beta[6] - vector.dot(y, z), m, g)
+            r1 = lmap(lambda y, z : beta[6] - vector.dot(y, z), m, g)
 
             return r0+r1
 
@@ -762,8 +753,8 @@ def ExtraFit():
         n = [x[0]-sphere_fit[0], x[1]-sphere_fit[1], x[2]-sphere_fit[2]]
         q = [1 - vector.norm(beta[:3])] + list(beta[:3])
         q = angvec2quat(vector.norm(beta[:3]), beta[:3])
-        m = map(lambda v : rotvecquat(vector.normalize(v), q), list(zip(n[0], n[1], n[2])))
-#        m = map(lambda v : rot(v, beta), list(zip(n[0], n[1], n[2])))
+        m = lmap(lambda v : rotvecquat(vector.normalize(v), q), list(zip(n[0], n[1], n[2])))
+#        m = lmap(lambda v : rot(v, beta), list(zip(n[0], n[1], n[2])))
 
         m = numpy.array(list(zip(*m)))
         d = m[0]*x[3] + m[1]*x[4] + m[2]*x[5]
@@ -778,7 +769,7 @@ def ExtraFit():
     def f_rot(beta, x, sphere_fit):
         sphere_fit = numpy.array(sphere_fit)
         n = [x[0]-sphere_fit[0], x[1]-sphere_fit[1], x[2]-sphere_fit[2]]
-        m = map(lambda v : rot(v, beta), zip(n[0], n[1], n[2]))
+        m = lmap(lambda v : rot(v, beta), zip(n[0], n[1], n[2]))
         m = numpy.array(list(zip(*m)))
 
         d = m[0]*x[3] + m[1]*x[4] + m[2]*x[5]
@@ -840,7 +831,9 @@ if __name__ == '__main__':
     points = [[53.285282690160855, 58.871106047115504, -28.090253257729376, 0.992966676176644, 0.1009939149402317, 0.04599320155318153], [53.02685065179349, 60.711634128512486, -28.82566083403166, 0.9911848036674772, 0.12093681690774409, 0.038936019190791656], [52.822950249615914, 63.15749743594719, -29.000021423035715, 0.9866654876285239, 0.15208235550073845, 0.04182044419175561], [54.27413224198153, 57.574977964195085, -25.871109582078482, 0.9929614674029262, 0.06358615899395223, 0.09550227129180672], [53.8312419735853, 61.82211236231175, -27.124918235022008, 0.9874736852871288, 0.13749487353977763, 0.06786576134603123], [53.33024206558424, 64.09780264205895, -27.59282154629943, 0.9829598832373241, 0.16408211831123945, 0.0675350187952051], [53.268313186030504, 66.27638329752997, -26.918623859029044, 0.9774147504573961, 0.18753219893998782, 0.08321646778692335], [51.97772097450074, 64.64229471561777, -30.228604589833324, 0.9850422618388216, 0.16679391410192057, 0.0253055838410764], [52.74729690149773, 65.56743571556623, -28.634559831158978, 0.9811720718450707, 0.18058039918796598, 0.05311553006342866], [52.98378678131104, 50.75919114990234, -25.782258224487304, 0.9979137825264384, 0.018581690619357143, 0.06076959242185106], [51.5155051978988, 61.095289058346474, -31.648215319698508, 0.9923110783402697, 0.12253422946064824, -0.012053116334400649], [52.40508329028649, 67.81328958498463, -28.34205352222136, 0.9760766430314248, 0.20427039711992462, 0.06213661796259325], [52.52845936529267, 55.170462979950166, -28.96701624720117, 0.9982079523787111, 0.04967978048894871, 0.019789439073877996], [53.653602420656426, 50.276720907427986, -23.879918220776513, 0.9976565053322691, 0.03300067479923961, 0.05892913465898901], [52.45180380993401, 69.25248830110294, -27.099967140672895, 0.97523423759751, 0.20057004314966465, 0.07766130621106589], [50.597637104797364, 42.44659485321045, -25.490598194885255, 0.9942575903096568, -0.1064352842641565, 0.007512783977333681], [55.0934706181759, 60.96392120395534, -24.953535791925404, 0.9582484439975373, 0.27828500951311064, 0.06450181318753877], [51.767599839940026, 66.77220358820772, -29.924118427130686, 0.9804353566779963, 0.1899871670180682, 0.02961749276702069]]
 
     n = [0,0,1]
-    n = [0.9983170254035888, 0.03953416279367987, 0.042428372129188596]
+
+
+    points = [[226.54404342174533, -19.66955736279488, -42.97068554162979, 0.038929499449466956, 0.06079304101218541, 0.9973771021890304, 0.009732374862366739, 0.015198260253046353, 0.2493442755472576], [226.2345848083496, -41.731523513793945, -49.991013526916504, 0.009249243674950162, 0.03014918233048117, 0.9994917076079323, 0.0023123109187375406, 0.007537295582620293, 0.24987292690198307], [246.8574896918403, -16.980319764879017, -47.96139653523764, 0.01921937037037213, 0.13928750801936654, 0.9900133308173383, 0.004804842592593032, 0.034821877004841635, 0.24750333270433458], [267.53543853759766, -23.125783443450928, -51.809184074401855, 0.07988442804302498, 0.09743679630190384, 0.9920286597285303, 0.019971107010756245, 0.02435919907547596, 0.24800716493213257], [270.63211822509766, -48.196231842041016, -59.23476600646973, 0.08946378715409964, -0.12177103698554272, 0.9884815065405346, 0.02236594678852491, -0.03044275924638568, 0.24712037663513364], [230.91203308105472, -46.09972922007243, -53.933204650878906, -0.047262539043494554, -0.02401087459647426, 0.9981876970092708, -0.011815634760873639, -0.006002718649118565, 0.2495469242523177], [264.17333221435547, -46.584439277648926, -55.92129135131836, -0.02007275813511605, -0.015722249848212466, 0.9995785304681076, -0.0050181895337790125, -0.0039305624620531165, 0.2498946326170269], [254.54708862304688, -47.688167572021484, -55.02070713043213, 0.03846901220824969, 0.03618881707105856, 0.9985259603026889, 0.009617253052062423, 0.00904720426776464, 0.24963149007567223], [275.76966857910156, -32.74029000600179, -54.11960252126058, 0.06915842292726454, 0.00820002320216553, 0.9974131905585801, 0.017289605731816135, 0.0020500058005413825, 0.24935329763964503], [226.26112365722656, -20.24381971359253, -45.38613510131836, -0.03579844168741489, 0.05002226127945309, 0.9980935315487709, -0.008949610421853722, 0.012505565319863273, 0.24952338288719272], [239.3468132019043, -18.44806671142578, -46.507619857788086, -0.08218163032711095, 0.08691228381567967, 0.992803824410857, -0.02054540758177774, 0.021728070953919917, 0.24820095610271425], [269.8181343078613, -27.365509510040283, -50.90859365463257, 0.031879414237854335, 0.04588104716547708, 0.9968687834685934, 0.007969853559463584, 0.01147026179136927, 0.24921719586714836], [242.53196907043457, -17.572091102600098, -46.66904592514038, -0.0012672248840525854, 0.10068340130048037, 0.9949007936012595, -0.00031680622101314636, 0.025170850325120092, 0.24872519840031487], [248.35371780395508, -48.49406337738037, -54.88476753234864, 0.06965919421917015, 0.0007772816534596105, 0.9975691272730726, 0.017414798554792537, 0.00019432041336490263, 0.24939228181826814], [215.28118896484375, -35.897521018981934, -49.80410289764404, -0.05821950265417684, 0.00038787507075737195, 0.9982599497145936, -0.01455487566354421, 9.696876768934299e-05, 0.2495649874286484], [221.92228953043622, -21.883487701416016, -45.71362050374349, -0.03085315926156204, 0.06088522074686457, 0.9976031227352818, -0.00771328981539051, 0.015221305186716142, 0.24940078068382046], [215.09833017985028, -31.003731091817222, -47.63476626078288, -0.03914976385489109, 0.017388155302363286, 0.9990599838558527, -0.009787440963722773, 0.0043470388255908215, 0.24976499596396318], [215.19271087646484, -24.7200608253479, -46.76250076293945, -0.060501695256190216, 0.07578774444540118, 0.9952818664415801, -0.015125423814047554, 0.018946936111350295, 0.24882046661039503]]
 
     fit = FitPointsCompass(points, [20,53,-7,30, 0], n)
     print('fit', fit)

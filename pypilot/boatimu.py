@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -17,7 +17,7 @@ import os, sys
 import time, math, multiprocessing, select
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import autopilot, calibration_fit, vector, quaternion
+import calibration_fit, vector, quaternion
 from signalk.server import SignalKServer
 from signalk.pipeserver import SignalKPipeServer, NonBlockingPipe
 from signalk.values import *
@@ -100,6 +100,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
 
       avggyro = [0, 0, 0]
       cycles = 0
+      compass_calibration_updated = False
 
       while True:
         t0 = time.time()
@@ -112,6 +113,9 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
         data['accel.residuals'] = list(rtimu.getAccelResiduals())
         data['gyrobias'] = s.GyroBias
         data['timestamp'] = t0 # imu timestamp is perfectly accurate
+        if compass_calibration_updated:
+          data['compass_calibration_updated'] = True
+          compass_calibration_updated = False
 
         pipe.send(data, False)
 
@@ -136,6 +140,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
             s.AccelCalMin = b[0] - t, b[1] - t, b[2] - t
             s.AccelCalMax = b[0] + t, b[1] + t, b[2] + t
           elif r[0] == 'compass':
+            compass_calibration_updated = True
             s.CompassCalEllipsoidValid = True
             s.CompassCalEllipsoidOffset = tuple(r[1][0][:3])
           #rtimu.resetFusion()
@@ -244,6 +249,25 @@ class QuaternionValue(ResettableValue):
         value = quaternion.normalize(value)
       super(QuaternionValue, self).set(value)
 
+
+class CalibrationProperty(RoundedProperty):
+  def __init__(self, boatimu, name, default):
+    super(CalibrationProperty, self).__init__(name+'.calibration', default, persistent=True)
+    self.boatimu, server = boatimu, boatimu.server
+    server.Register(self)
+    self.age = server.Register(AgeValue, name+'.calibration.age', persistent=True)
+    self.locked = server.Register(BooleanProperty, name+'.calibration.locked', False, persistent=True)
+    self.sigmapoints = server.Register(RoundedProperty, name+'.calibration.sigmapoints', False)
+    self.log = server.Register(Property, name+'.calibration.log', '')
+
+  def set(self, value):
+    if self.locked.value:
+      return
+
+    self.age.reset()
+    self.boatimu.imu_cal_pipe.send({name: value}) # inform imu process of new calibration
+    super(CalibrationValue, self).set(value)
+
 def heading_filter(lp, a, b):
     if not a:
         return b
@@ -276,25 +300,17 @@ class BoatIMU(object):
 
     self.uptime = self.Register(TimeValue, 'uptime')
 
-    def calibration(name, default):
-        calibration = self.Register(RoundedValue, name+'.calibration', default, persistent=True)
-        calibration.age = self.Register(AgeValue, name+'.calibration.age', persistent=True)
-        calibration.locked = self.Register(BooleanProperty, name+'.calibration.locked', False, persistent=True)
-        calibration.sigmapoints = self.Register(RoundedValue, name+'.calibration.sigmapoints', False)
-        return calibration
-
-    self.accel_calibration = calibration('accel', [[0, 0, 0, 1], 1])
-    self.compass_calibration = calibration('compass', [[0, 0, 0, 30, 0], [1, 1], 0])
+    self.accel_calibration = CalibrationValue(self, 'accel', [[0, 0, 0, 1], 1])
+    self.compass_calibration = CalibrationValue(self, 'compass', [[0, 0, 0, 30, 0], [1, 1], 0])
     
     self.imu_pipe, imu_pipe = NonBlockingPipe('imu_pipe')
-    imu_cal_pipe = NonBlockingPipe('imu_cal_pipe')
+    imu_cal_pipe, self.imu_cal_pipe = NonBlockingPipe('imu_cal_pipe')
 
     self.poller = select.poll()
     self.poller.register(self.imu_pipe, select.POLLIN)
 
-    self.auto_cal = calibration_fit.IMUAutomaticCalibration(imu_cal_pipe[1], self.accel_calibration.value[0], self.compass_calibration.value[0])
+    self.auto_cal = calibration_fit.IMUAutomaticCalibration()
 
-    self.lastqpose = False
     self.FirstTimeStamp = False
 
     self.headingrate = self.heel = 0
@@ -340,7 +356,6 @@ class BoatIMU(object):
     off = self.heading_off.value - heading_offset
     o = quaternion.angvec2quat(off*math.pi/180, [0, 0, 1])
     self.alignmentQ.update(quaternion.normalize(quaternion.multiply(q, o)))
-    self.auto_cal.SetNorm(quaternion.rotvecquat([0, 0, 1], self.alignmentQ.value))
 
   def IMURead(self):    
     data = False
@@ -369,14 +384,12 @@ class BoatIMU(object):
 
     data['timestamp'] -= self.FirstTimeStamp
 
-    #data['accel_comp'] = quaternion.rotvecquat(vector.sub(data['accel'], down), self.alignmentQ.value)
-
     # apply alignment calibration
     gyro_q = quaternion.rotvecquat(data['gyro'], data['fusionQPose'])
 
     data['pitchrate'], data['rollrate'], data['headingrate'] = map(math.degrees, gyro_q)
-
     origfusionQPose = data['fusionQPose']
+    
     aligned = quaternion.multiply(data['fusionQPose'], self.alignmentQ.value)
     data['fusionQPose'] = quaternion.normalize(aligned) # floating point precision errors
 
@@ -415,15 +428,6 @@ class BoatIMU(object):
     for name in self.SensorValues:
       self.SensorValues[name].set(data[name])
 
-    compass, accel, down = False, False, False
-    if not self.accel_calibration.locked.value:
-      accel = list(data['accel'])
-    if not self.compass_calibration.locked.value:
-      down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(origfusionQPose))
-      compass = list(data['compass']) + down
-    if accel or compass:
-      self.auto_cal.AddPoint((accel, compass, down))
-
     self.uptime.update()
 
     # count down to alignment
@@ -438,7 +442,6 @@ class BoatIMU(object):
         self.alignmentPose = quaternion.normalize(self.alignmentPose)
         adown = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(self.alignmentPose))
         alignment = []
-
         alignment = quaternion.vec2vec2quat([0, 0, 1], adown)
         alignment = quaternion.multiply(self.alignmentQ.value, alignment)
         
@@ -453,21 +456,15 @@ class BoatIMU(object):
       self.heading_off.last = self.heading_off.value
       self.alignmentQ.last = self.alignmentQ.value
 
-    result = self.auto_cal.UpdatedCalibration()
-    
-    if result:
-      if result[0] == 'accel' and not self.accel_calibration.locked.value:
-        #print('[boatimu] cal result', result[0])
-        self.accel_calibration.sigmapoints.set(result[2])
-        if result[1]:
-          self.accel_calibration.age.reset()
-          self.accel_calibration.set(result[1])
-      elif result[0] == 'compass' and not self.compass_calibration.locked.value:
-        #print('[boatimu] cal result', result[0])
-        self.compass_calibration.sigmapoints.set(result[2])
-        if result[1]:
-          self.compass_calibration.age.reset()
-          self.compass_calibration.set(result[1])
+    cal_data = {}
+    if not self.accel_calibration.locked.value:
+      cal_data['accel'] = list(data['accel'])
+    if not self.compass_calibration.locked.value:
+      cal_data['compass'] = list(data['compass'])
+      cal_data['down'] = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(origfusionQPose))
+
+    if cal_data:
+      self.auto_cal.cal_pipe.send(cal_data)
 
     self.accel_calibration.age.update()
     self.compass_calibration.age.update()
