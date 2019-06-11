@@ -21,6 +21,8 @@
 
 //#define DEBUG_SERIAL
 
+#define SET_BACKLIGHT 0xe8
+
 #include <RCSwitch.h>
 
 #define DATA_PIN 2
@@ -28,13 +30,29 @@
 #define PWR_PIN 4
 
 RCSwitch mySwitch = RCSwitch();
+uint8_t spiread[4];
+uint8_t backlight_value = 128; // determines when backlight turns on
 
 volatile static uint32_t spiread_rfkeys, spiread_rfkeys_buf;
 // SPI interrupt routine
 ISR (SPI_STC_vect)
 {
     uint8_t *d = (uint8_t*)&spiread_rfkeys_buf;
-    static uint8_t spipos;
+    static uint8_t spipos, spiposin;
+    static uint8_t spiin[4];
+    uint8_t c = SPDR;
+
+    spiin[spiposin] = c;
+    if(c == 0 && spiposin < 2)
+        spiposin = 0;
+    else
+        spiposin++;
+
+    if (spiposin == 4) {
+        memcpy(spiread, spiin, sizeof spiin);
+        spiposin = 0;
+    }
+        
     SPDR = d[3-spipos++];
 
     if(spipos >= 4) {
@@ -44,19 +62,21 @@ ISR (SPI_STC_vect)
     }
 }
 
-
 void setup() {
 // turn on SPI in slave mode
     SPCR |= _BV(SPE);
 
     // turn on interrupts
     SPCR |= _BV(SPIE);
+    pinMode(MISO, OUTPUT);
 
-//    pinMode(MISO, OUTPUT);
-        pinMode(MISO, INPUT);
+    // turn on backlight
+    pinMode(A0, OUTPUT);
+    digitalWrite(A0, HIGH);
 
 #ifdef DEBUG_SERIAL
     Serial.begin(38400);
+      Serial.print("Begin");
 #endif
 
   pinMode(DATA_PIN, INPUT);
@@ -68,17 +88,26 @@ void setup() {
 }
 
 void loop() {
+    // valid packet is 0 command value xor
+    uint8_t command = spiread[1], value = spiread[2], xorv = spiread[3];
+    if(command) {
+        if((command ^ value) == xorv) {
+            if(command == SET_BACKLIGHT) {
+                backlight_value = value;
+            }
+        }
+
+    }
     
-  if (mySwitch.available()) {
+  if (!mySwitch.available())
+      return;
     
-    int value = mySwitch.getReceivedValue();
+  int rvalue = mySwitch.getReceivedValue();
     
-    if (value == 0) {
 #ifdef DEBUG_SERIAL
+  if (rvalue == 0) {
       Serial.print("Unknown encoding");
-#endif
-    } else {
-#ifdef DEBUG_SERIAL
+  } else {
       Serial.print("Received ");
       Serial.print( mySwitch.getReceivedValue() );
       Serial.print(" / ");
@@ -90,13 +119,14 @@ void loop() {
       Serial.print("timings: ");
       for(int i=0; i<16; i++) {
           Serial.print(raw[i]);
-                  Serial.print(" ");
+          Serial.print(" ");
       }
       Serial.println("");
-#endif
-      if(mySwitch.getReceivedBitlength() == 24)
-          spiread_rfkeys = mySwitch.getReceivedValue();
-    }
-    mySwitch.resetAvailable(); 
   }
+#endif
+
+  if(rvalue && mySwitch.getReceivedBitlength() == 24)
+      spiread_rfkeys = rvalue;
+  mySwitch.resetAvailable();
+  
 }
