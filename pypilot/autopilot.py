@@ -104,11 +104,15 @@ class ModeProperty(EnumProperty):
         super(ModeProperty, self).__init__(name, 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
 
       def set(self, value):
-        # clear the lost mode when the user changes the mode
+        # update the preferred mode when the mode changes
         if self.ap:
-            self.ap.lost_mode.update(False)
+            self.ap.preferred_mode.update(value)
+        self.set_internal(value)
+
+      def set_internal(self, value):
+        if self.ap:
             self.ap.switch_mode(value)
-        super(ModeProperty, self).set(value)    
+        super(ModeProperty, self).set(value)
 
 class AutopilotPilot(object):
   def __init__(self, name, ap):
@@ -204,7 +208,7 @@ class Autopilot(object):
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
     self.lastenabled = False
 
-    self.lost_mode = self.Register(Value, 'lost_mode', False)
+    self.preferred_mode = self.Register(Value, 'preferred_mode', 'compass')
     self.mode = self.Register(ModeProperty, 'mode')
     self.mode.ap = self
 
@@ -298,38 +302,30 @@ class Autopilot(object):
 
   # return new mode if sensors don't support it
   def best_mode(self, mode):
-      ap = self.ap
-      nowind = ap.sensors.wind.source.value != 'none'
-      nogps = ap.sensors.gps.source.value != 'none'
-      mode = self.mode.value
-      if not mode:
-          return 'none'
+      nowind = self.sensors.wind.source.value == 'none'
+      nogps = self.sensors.gps.source.value == 'none'
+
       if mode == 'true wind':
           # for true wind, we must no both wind and gps
           if nowind:
-              return 'gps'
+              mode = 'gps'
           if nogps:
-              return 'wind'
-      elif mode == 'wind':
+              mode = 'wind'
+      if mode == 'wind':
           # if wind sensor drops out, switch to compass
           if nowind:
-              return 'compass'
+              mode = 'compass'
       elif mode == 'gps':
           # if gps drops out switch to compass
           if nogps:
-              return 'compass'
-      return False
+              mode = 'compass'
+      return mode
 
   def adjust_mode(self):
-      recovered_mode = self.best_mode(ap.lost_mode.value)
-
-      if not recovered_mode:
-          self.mode.update(ap.lost_mode.value)
-      newmode = self.best_mode(ap.mode.value)
-      if newmode:
-          lostmode = ap.mode.value
-          self.mode.update(newmode)
-          self.lostmode.update(lostmode)
+      # if the mode must change from last sensors
+      newmode = self.best_mode(self.preferred_mode.value)
+      if self.mode.value != newmode:
+          self.mode.set_internal(newmode)
 
   def compute_offsets(self):
       # compute difference between compass to gps and compass to wind
