@@ -35,12 +35,6 @@ $(document).ready(function() {
     $('#power_consumption').text("N/A");
     $('#runtime').text("N/A");
 
-    var conf_names = [['servo.min_speed', 'min_speed',''],
-                      ['servo.max_speed', 'max_speed',''],
-                      ['servo.max_current', 'max_current','Amps'],
-                      ['servo.max_controller_temp', 'max_controller_temp','Degrees C'],
-                      ['servo.period', 'period', 'seconds']];
-
     // Connect to the Socket.IO server.
     var port = location.port;
     port = pypilot_webapp_port;
@@ -133,18 +127,24 @@ $(document).ready(function() {
 
         // configuration
         $('#configuration_container').text('')
-        var names = conf_names;
-        for(i=0; i<names.length; i++) {
-            var name = names[i][0];
-            var namf = names[i][1];
-            var namg = names[i][2];
+        conf_names = [];
+        for (var name in list_values)
+            if(list_values[name]['type'] == 'RangeSetting')
+                conf_names.push(name); // remove ap.
+        conf_names.sort();
+
+        for (var i = 0; i<conf_names.length; i++) {
+            var name = conf_names[i];
             var info = list_values[name];
 
             var min = info['min'];
             var max = info['max'];
+            var unit = info['units'];
 
-            $('#configuration_container').append('<div class="w3-row"><div class="w3-col s4 m4 l4">' + name + '</div><div class="w3-col s3 m3 l3"><input type="range" id="'+namf+'" min="' + min + '" max="' + max + '" step=".01" value="2" style="width: 240px" name="'+name+'"></input></div><div class="w3-col s2 m2 l2"><span id="'+namf+'label"></span></div><div class="w3-col s3 m3 l3">' + namg + '</div></div>');
-            $('#'+namf).change(function(event) {
+            var iname = 'confname'+i;
+
+            $('#configuration_container').append('<div class="w3-row"><div class="w3-col s4 m4 l4">' + name + '</div><div class="w3-col s3 m3 l3"><input type="range" id="'+iname+'" min="' + min + '" max="' + max + '" step=".01" value="2" style="width: 240px" name="'+name+'"></input></div><div class="w3-col s2 m2 l2"><span id="'+ iname+'label"></span></div><div class="w3-col s3 m3 l3">' + unit + '</div></div>');
+            $('#'+iname).change(function(event) {
                 signalk_set(this.name, this.valueAsNumber);
                 block_polling = 2;
             });
@@ -199,7 +199,7 @@ $(document).ready(function() {
             poll('rudder.angle');
         } else if(tab == 'Configuration') {
             for(i=0; i < conf_names.length; i++)
-                poll(conf_names[i][0]);
+                poll(conf_names[i]);
         } else if(tab == 'Statistics') {
             poll('servo.amp_hours');
             poll('servo.voltage');
@@ -340,12 +340,12 @@ $(document).ready(function() {
             
 
         // configuration
-        names = conf_names;
-        for(i=0; i < names.length; i++) {
-            if(names[i][0] in data) {
-                value = data[names[i][0]]['value'];
-                $('#' + names[i][1]).val(value);
-                $('#' + names[i][1]+'label').text(value);
+        for(i=0; i < conf_names.length; i++) {
+            if(conf_names[i] in data) {
+                value = data[conf_names[i]]['value'];
+                var iname = 'confname'+i;
+                $('#' + iname).val(value);
+                $('#' + iname + 'label').text(value);
             }
         }
 
