@@ -16,7 +16,7 @@ struct arduino_servo_data /*__attribute__(("packed"))*/ {
     uint8_t max_slew_speed, max_slew_slow;
     uint8_t current_factor, voltage_factor;
     uint8_t current_offset, voltage_offset;
-    uint8_t min_command, max_command;
+    uint8_t min_speed, max_speed;
     uint16_t gain;
     char signature[6]; // changes if eeprom format changes,
                        // put at end so it's written last
@@ -56,10 +56,10 @@ public:
     double get_voltage_offset();
     void set_voltage_offset(double voltage_offset);
 
-    double get_min_command();
-    void set_min_command(double min_command);
-    double get_max_command();
-    void set_max_command(double max_command);
+    double get_min_speed();
+    void set_min_speed(double min_speed);
+    double get_max_speed();
+    void set_max_speed(double max_speed);
 
     double get_gain();
     void set_gain(double gain);

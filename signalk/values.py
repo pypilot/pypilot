@@ -162,8 +162,8 @@ class RangeSetting(RangeProperty):
 
     def type(self):
         d = super(RangeSetting, self).type()
-        d['Type'] = 'RangeSetting'
-        d['Units'] = self.units
+        d['type'] = 'RangeSetting'
+        d['units'] = self.units
         return d
         
 class HeadingProperty(RangeProperty):
