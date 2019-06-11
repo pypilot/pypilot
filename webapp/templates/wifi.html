@@ -8,7 +8,7 @@
     <form action="{{ url_for('wifi') }}", method="post">
       <select name="mode" value="{{ wifi_mode }}">
         <option value="Master">Master (AP)</option>
-        <option value="Managed">Managed (client)</option>
+        <option value="Managed" {{ mode_managed_selected }}>Managed (client)</option>
       </select>
       <p>SSID
         <input type="text" name="ssid" value="{{ wifi_ssid }}">
@@ -17,7 +17,7 @@
       <p>
         <input type="submit" value="Submit">
       <p>After submit, reboot tinypilot to use new network values
-      <p>If there is a problem, edit the file /home/tc/.pypilot/networking.txt
+      <p>If there is a problem, edit the file /.pypilot/networking.txt
     </form>
 <a href="/">Back</a>
 </body>

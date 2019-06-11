@@ -185,6 +185,7 @@ class Rudder(Sensor):
             return
         
         self.raw = data['angle']
+        print 'raw', self.raw
         if math.isnan(self.raw):
             self.angle.update(False)
             return
