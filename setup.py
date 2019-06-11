@@ -75,6 +75,7 @@ setup (name = 'pypilot',
 #       py_modules = ['pypilot/arduino_servo', 'signalk/linebuffer/linebuffer'],
        package_data={'lcd': ['font.ttf'] + locale_files,
                      'ui': ['*.png', '*.mtl', '*.obj'],
+                     'rf': ['static/*', 'templates/*'],
                      'webapp': ['static/*', 'templates/*']},
 #       requires=['flask', 'gevent'], # webapp
        #       dependency_links	= ['https://github.com/adafruit/Adafruit_Nokia_LCD/tarball/master#egg=Adafruit-Nokia-LCD-0.1.0'],
