@@ -17,4 +17,4 @@ if __name__ == '__main__':
     for i in range(10):
         servo.driver.reprogram()
         time.sleep(.1)
-#    servo.raw_command(0);
+#    servo.raw_command(0)

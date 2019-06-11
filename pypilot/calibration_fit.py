@@ -601,7 +601,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
             continue
 
         accel_cal.RemoveOlder(10*60) # 10 minutes
-        fit = FitAccel(accel_cal);
+        fit = FitAccel(accel_cal)
         if fit: # reset compass sigmapoints on accel cal
             dist = vector.dist(fit[0][:3], accel_calibration[:3])
             if dist > .01: # only update when bias changes more than this
@@ -613,7 +613,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
 
         compass_cal.RemoveOlder(60*60) # 60 minutes
 
-        fit = FitCompass(compass_cal, compass_calibration, norm);
+        fit = FitCompass(compass_cal, compass_calibration, norm)
         if fit:
             fit_output.send(('compass', fit, map(lambda p : p.sensor + p.down, compass_cal.sigma_points)), False)
             compass_calibration = fit[0]

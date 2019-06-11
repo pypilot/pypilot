@@ -421,7 +421,7 @@ class Autopilot(object):
       if not data and self.lastdata:
           print('autopilot failed to read imu at time:', time.time())
 
-      self.lastdata = data;
+      self.lastdata = data
       t0 = time.time()
 
       # set autopilot timestamp

@@ -71,10 +71,10 @@ class Tack(object):
     self.state = self.Register(EnumProperty, 'state', 'none', ['none', 'begin', 'waiting', 'tacking'])
     self.timeout = self.Register(Value, 'timeout', 0)
 
-    self.delay = self.Register(RangeSetting, 'delay', 0, 0, 60)
-    self.angle = self.Register(RangeSetting, 'angle', 100, 10, 180)
-    self.rate = self.Register(RangeSetting, 'rate', 20, 1, 100)
-    self.threshold = self.Register(RangeSetting, 'threshold', .5, .1, 1)
+    self.delay = self.Register(RangeSetting, 'delay', 0, 0, 60, 'Seconds')
+    self.angle = self.Register(RangeSetting, 'angle', 100, 10, 180, 'Angle')
+    self.rate = self.Register(RangeSetting, 'rate', 20, 1, 100, 'deg/s')
+    self.threshold = self.Register(RangeSetting, 'threshold', 50, 10, 100, '%')
     self.count = self.Register(ResettableValue, 'count', 0, persistent=True)
     self.direction = self.Register(EnumProperty, 'direction', 'port', ['port', 'starboard'])
     self.current_direction = 'port' # so user can't change while tacking

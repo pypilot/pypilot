@@ -79,7 +79,7 @@ class Wind(Sensor):
         timestamp = server.TimeStamp('wind')
         self.direction = self.Register(SensorValue, 'direction', timestamp, directional=True)
         self.speed = self.Register(SensorValue, 'speed', timestamp)
-        self.offset = self.Register(RangeSetting, 'offset', 0, -180, 180, 'degrees', persistent=True)
+        self.offset = self.Register(RangeSetting, 'offset', 0, -180, 180, 'deg')
 
     def update(self, data):
         self.direction.set(resolv(data['direction'] + self.offset.value, 180))
@@ -156,7 +156,7 @@ class Sensors(object):
             if sensor.source.value == 'none':
                 continue
             if t - sensor.lastupdate > 8:
-                self.lostsensor(sensor);
+                self.lostsensor(sensor)
 
     def lostsensor(self, sensor):
         print('sensor', sensor.name, 'lost', sensor.device, 'source', sensor.source.value)

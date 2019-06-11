@@ -195,9 +195,9 @@ class Servo(object):
         self.position_command = self.Register(TimedProperty, 'position_command', 0)
 
         timestamp = server.TimeStamp('servo')
-        self.command.min = self.Register(RangeSetting, 'command.min', 100, 0, 100, '%', persistent=True)
-        self.command.max = self.Register(RangeSetting, 'command.max', 100, 0, 100, '%', persistent=True)
-        self.command_gain = self.Register(RangeProperty, 'command_gain', 0, 0, 1, persistent=True)
+        self.command.min = self.Register(RangeSetting, 'command.min', 100, 0, 100, '%')
+        self.command.max = self.Register(RangeSetting, 'command.max', 100, 0, 100, '%')
+        self.command_gain = self.Register(RangeProperty, 'command_gain', 0, 0, 1)
         self.duty = self.Register(SensorValue, 'duty', timestamp)
 
         self.faults = self.Register(ResettableValue, 'faults', 0)
@@ -210,18 +210,18 @@ class Servo(object):
         self.motor_temp = self.Register(SensorValue, 'motor_temp', timestamp)
 
         self.engaged = self.Register(BooleanValue, 'engaged', False)
-        self.max_current = self.Register(RangeSetting, 'max_current', 2, 0, 60, persistent=True)
+        self.max_current = self.Register(RangeSetting, 'max_current', 2, 0, 60, 'Amps')
         self.current.factor = self.Register(RangeProperty, 'current.factor', 1, 0.8, 1.2, persistent=True)
         self.current.offset = self.Register(RangeProperty, 'current.offset', 0, -1.2, 1.2, persistent=True)
         self.voltage.factor = self.Register(RangeProperty, 'voltage.factor', 1, 0.8, 1.2, persistent=True)
         self.voltage.offset = self.Register(RangeProperty, 'voltage.offset', 0, -1.2, 1.2, persistent=True)
-        self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 70, 45, 100, persistent=True)
-        self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 70, 30, 100, persistent=True)
+        self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 60, 45, 100, persistent=True)
+        self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
 
-        self.max_slew_speed = self.Register(RangeSetting, 'max_slew_speed', 30, 0, 100, persistent=True)
-        self.max_slew_slow = self.Register(RangeSetting, 'max_slew_slow', 50, 0, 100, persistent=True)
-        self.gain = self.Register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
-        self.period = self.Register(RangeSetting, 'period', .4, .1, 3, persistent=True)
+        self.max_slew_speed = self.Register(RangeSetting, 'max_slew_speed', 30, 0, 100, 'count')
+        self.max_slew_slow = self.Register(RangeSetting, 'max_slew_slow', 50, 0, 100, 'count')
+        self.gain = self.Register(RangeSetting, 'gain', 1, -10, 10, 'x')
+        self.period = self.Register(RangeSetting, 'period', .4, .1, 3, 'sec')
         self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'compensate_voltage', False, persistent=True)
         self.amphours = self.Register(ResettableValue, 'amp_hours', 0, persistent=True)
@@ -232,8 +232,8 @@ class Servo(object):
         self.position.elp = 0
         self.position.set(0)
         self.position.p = self.Register(RangeProperty, 'position.p', .2, .01, 1, persistent=True)
-        self.position.i = self.Register(RangeProperty, 'position.i', .025, 0, 1, persistent=True);
-        self.position.d = self.Register(RangeProperty, 'position.d', .1, 0, 1, persistent=True);
+        self.position.i = self.Register(RangeProperty, 'position.i', .025, 0, 1, persistent=True)
+        self.position.d = self.Register(RangeProperty, 'position.d', .1, 0, 1, persistent=True)
 
         self.rawcommand = self.Register(SensorValue, 'raw_command', timestamp)
 
@@ -295,10 +295,10 @@ class Servo(object):
         self.do_command(self.command.value)
 
     def do_position_command(self, position):
-        e = self.position.value - position;
+        e = self.position.value - position
         d = self.speed.value
         self.position.elp = .98*self.position.elp + .02*min(max(e, -30), 30)
-        #self.position.dlp = .8*self.position.dlp + .2*d;
+        #self.position.dlp = .8*self.position.dlp + .2*d
 
         p = self.position.p.value*e
         i = self.position.i.value*self.position.elp
@@ -500,7 +500,7 @@ class Servo(object):
         self.device.close()
         self.driver = False
 
-    def send_driver_params(self, mul):
+    def send_driver_params(self, mul=1):
         uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value) / self.current.factor.value        
         self.driver.params(mul * uncorrected_max_current,
                            self.sensors.rudder.minmax[0],
@@ -518,8 +518,8 @@ class Servo(object):
                            self.current.offset.value,
                            self.voltage.factor.value,
                            self.voltage.offset.value,
-                           self.command_min.value,
-                           self.command_max.value,
+                           self.command.min.value,
+                           self.command.max.value,
                            self.gain.value)
 
     def poll(self):
@@ -575,7 +575,7 @@ class Servo(object):
         self.server.TimeStamp('servo', t)
         if result & ServoTelemetry.VOLTAGE:
             # apply correction
-            corrected_voltage = self.voltage.factor.value*self.driver.voltage;
+            corrected_voltage = self.voltage.factor.value*self.driver.voltage
             corrected_voltage += self.voltage.offset.value
             self.voltage.set(round(corrected_voltage, 3))
 
@@ -637,9 +637,9 @@ class Servo(object):
             self.current.offset.set(self.driver.current_offset)
             self.voltage.factor.set(self.driver.voltage_factor)
             self.voltage.offset.set(self.driver.voltage_offset)
-            self.command.min.set(self.driver.min_command);
-            self.command.max.set(self.driver.max_command);
-            self.gain.set(self.driver.gain);
+            self.command.min.set(self.driver.min_command)
+            self.command.max.set(self.driver.max_command)
+            self.gain.set(self.driver.gain)
 
         if self.fault():
             if not self.flags.value & ServoFlags.FWD_FAULT and \

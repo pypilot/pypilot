@@ -119,7 +119,6 @@ class SignalKServer(object):
             if type(t) == type(''):
                 t = {'type' : t}
             msg[value] = t
-
         socket.send(kjson.dumps(msg) + '\n')
 
     def HandleNamedRequest(self, socket, data):

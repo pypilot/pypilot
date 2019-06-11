@@ -11,7 +11,7 @@ from pypilot import vector
 import math
 
 def angvec2quat(angle, v):
-    n = vector.norm(v);
+    n = vector.norm(v)
     if n == 0:
       fac = 0
     else:
@@ -25,12 +25,12 @@ def angle(q):
 
 
 def vec2vec2quat(a, b):
-    n = vector.cross(a, b);
+    n = vector.cross(a, b)
     fac = vector.dot(a, b) / vector.norm(a) / vector.norm(b)
     fac = min(max(fac, -1), 1) # protect against possible slight numerical errors
 
-    ang = math.acos(fac);
-    return angvec2quat(ang, n);
+    ang = math.acos(fac)
+    return angvec2quat(ang, n)
 
 def multiply(q1, q2):
     return [q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2] - q1[3]*q2[3], \

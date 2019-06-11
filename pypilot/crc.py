@@ -41,9 +41,9 @@ crc8_table = [0x00, 0x31, 0x62, 0x53, 0xC4, 0xF5, 0xA6, 0x97, \
               0x3B, 0x0A, 0x59, 0x68, 0xFF, 0xCE, 0x9D, 0xAC ]
 
 def crc8_byte(crc, byte):
-    return crc8_table[crc ^ byte];
+    return crc8_table[crc ^ byte]
 
 def crc8(block, crc=0xFF):
     for byte in block:
         crc = crc8_byte(crc, byte)
-    return crc;
+    return crc
