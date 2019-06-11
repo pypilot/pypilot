@@ -168,7 +168,6 @@ class Sensors(object):
         if not sensor in self.sensors:
             print('unknown data parsed!', sensor)
             return
-
         self.sensors[sensor].write(data, source)
 
     def lostdevice(self, device):

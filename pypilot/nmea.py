@@ -208,6 +208,7 @@ class NMEASerialDevice(object):
     def close(self):
         self.device.close()
 
+nmeasocketuid = 0
 class NMEASocket(object):
     def __init__(self, connection):
         connection.setblocking(0)
@@ -218,6 +219,10 @@ class NMEASocket(object):
         self.pollout.register(connection, select.POLLOUT)
         self.sendfailcount = 0
         self.failcountmsg = 1
+
+        global nmeasocketuid
+        self.uid = nmeasocketuid #connection.fileno()
+        nmeasocketuid += 1
 
     def recv(self):
         return self.b.recv()
@@ -512,17 +517,17 @@ class NmeaBridgeProcess(multiprocessing.Process):
         self.fd_to_socket[fd] = sock
 
         self.poller.register(sock.socket, select.POLLIN)
-        print('new nmea connection: ', address)
+        print('new nmea connection:', address, sock.uid)
 
     def socket_lost(self, sock, fd):
-        print('lost nmea connection: ', self.addresses[sock])
+        print('lost nmea connection:', self.addresses[sock])
         try:
             self.sockets.remove(sock)
         except:
             print('nmea sock not in sockets!')
             return
         
-        self.pipe.send('lostsocket' + str(sock.socket.fileno()))
+        self.pipe.send('lostsocket' + str(sock.uid))
         if not self.sockets:
             self.setup_watches(False)
             self.pipe.send('nosockets')
@@ -599,7 +604,6 @@ class NmeaBridgeProcess(multiprocessing.Process):
                     if sock == pipe:
                         print('nmea bridge pipe to autopilot')
                         exit(2)
-                    print('lost')
                     self.socket_lost(sock, fd)
                 elif sock == server:
                     self.new_socket_connection(server)
@@ -621,7 +625,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
                             line = sock.readline()
                             if not line:
                                 break
-                            self.receive_nmea(line, 'socket' + str(sock.socket.fileno()), msgs)
+                            self.receive_nmea(line, 'socket' + str(sock.uid), msgs)
                 else:
                     print('nmea bridge unhandled poll flag', flag)
 
