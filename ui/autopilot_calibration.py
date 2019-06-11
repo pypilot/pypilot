@@ -200,6 +200,9 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             if name == 'imu.alignmentQ':
                 self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(pypilot.quaternion.angle(value))))
             elif name == 'imu.fusionQPose':
+                if not value:
+                    return # no imu!  show warning?
+                    
                 if self.cCoords.GetSelection() == 1:
                     self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, self.fusionQPose)
                     self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, pypilot.quaternion.conjugate(value))
