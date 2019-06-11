@@ -17,7 +17,7 @@
 
 #include "arduino_servo.h"
 
-enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53};
+enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, RUDDER_MIN_CODE=0x2b,  RUDDER_MAX_CODE=0x4d, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53};
 
 enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f, EEPROM_VALUE_CODE=0x9a};
 
@@ -288,13 +288,13 @@ void ArduinoServo::params(double _raw_max_current, double _rudder_min, double _r
     rudder_range = fmin(120, fmax(0, _rudder_range));
     eeprom.set_rudder_range(rudder_range);
 
-    rudder_offset = fmin(500, fmax(-500, _rudder_offset));
+    rudder_offset = fmin(1000, fmax(-1000, _rudder_offset));
     eeprom.set_rudder_offset(rudder_offset);
 
     rudder_scale = fmin(4000, fmax(-4000, _rudder_scale));
     eeprom.set_rudder_scale(rudder_scale);
 
-    rudder_nonlinearity = fmin(2, fmax(-2, _rudder_nonlinearity));
+    rudder_nonlinearity = fmin(4000, fmax(-4000, _rudder_nonlinearity));
     eeprom.set_rudder_nonlinearity(rudder_nonlinearity);
 
     max_slew_speed = fmin(100, fmax(0, _max_slew_speed));
@@ -363,9 +363,16 @@ void ArduinoServo::send_params()
         send_value(MAX_MOTOR_TEMP_CODE, eeprom.local.max_motor_temp);
         break;
     case 12:
-        send_value(RUDDER_RANGE_CODE,
+        // don't use 8 bit rudder range, for controllers supporting it,
+        // don't support negative rudder feedback scale factor (reverse polarity)
+        // so the rudder limit stops are handled only in python
+/*        send_value(RUDDER_RANGE_CODE,
                    ((int)round(rudder_min*255) & 0xff) << 8 |
-                   ((int)round(rudder_max*255) & 0xff));
+                   ((int)round(rudder_max*255) & 0xff)); */
+        send_value(RUDDER_MIN_CODE, (int)round(rudder_min*65535));
+        break;
+    case 14:
+        send_value(RUDDER_MAX_CODE, (int)round(rudder_min*65535));
         break;
     case 18:
         send_value(MAX_SLEW_CODE,
