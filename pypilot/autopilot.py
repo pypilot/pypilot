@@ -95,7 +95,6 @@ import pilots
 class Autopilot(object):
   def __init__(self):
     super(Autopilot, self).__init__()
-    self.starttime = time.time()
 
     # setup all processes to exit on any signal
     self.childpids = []
@@ -152,7 +151,6 @@ class Autopilot(object):
     print('Loaded Pilots:', pilot_names)
     self.pilot = self.Register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True)
 
-    self.timestamp = self.Register(SensorValue, 'timestamp', 0)
     self.heading = self.Register(SensorValue, 'heading', directional=True)
     self.heading_error = self.Register(SensorValue, 'heading_error')
     self.heading_error_int = self.Register(SensorValue, 'heading_error_int')
@@ -317,7 +315,6 @@ class Autopilot(object):
       data = False
       t00 = time.time()
       # set timestamp
-      self.timestamp.set(t00-self.starttime)
       for tries in range(14): # try 14 times to read from imu 
           data = self.boatimu.IMURead()
           if data:

@@ -278,8 +278,10 @@ def heading_filter(lp, a, b):
 
 class BoatIMU(object):
   def __init__(self, server, *args, **keywords):
+    self.starttime = time.time()
     self.server = server
 
+    self.timestamp = server.Register(SensorValue('timestamp', 0))
     self.rate = self.Register(EnumProperty, 'rate', 10, [10, 25], persistent=True)
     self.period = 1.0/self.rate.value
 
@@ -377,7 +379,10 @@ class BoatIMU(object):
       print('accel values invalid', data['accel'])
       return False
 
-    self.last_imuread = time.time()
+    t = time.time()
+    self.timestamp.set(t-self.starttime)
+
+    self.last_imuread = t
     self.loopfreq.strobe()
 
     # apply alignment calibration
