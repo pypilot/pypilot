@@ -151,7 +151,7 @@ class Hat(object):
             print('assuming original 26 pin tinypilot')
             self.hatconfig = False
 
-        self.config = {'remote': False, 'host': 'pypilot', 'actions': {}}
+        self.config = {'remote': False, 'host': 'pypilot', 'actions': {}, 'lcd': {}}
         self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf' 
         print('loading config file:', self.configfilename)
         try:
