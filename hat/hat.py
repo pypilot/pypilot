@@ -145,7 +145,7 @@ class Hat(object):
             print('assuming original 26 pin tinypilot')
             self.hatconfig = False
 
-        self.config = {'lcd': {}}
+        self.config = {'remote': False, 'host': 'pypilot', 'actions': {}}
         self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf' 
         print('loading config file:', self.configfilename)
         try:
@@ -193,19 +193,21 @@ class Hat(object):
                          ActionTack(self, 'tackstarboard', 'starboard')]
 
         for action in self.actions:
-            if action.name in self.config:
-                action.keys = self.config[action.name]
+            if action.name in self.config['actions']:
+                action.keys = self.config['actions'][action.name]
 
         self.web = Web(self)
 
     def write_config(self):
-        config = {}
+        actions = {}
         for action in self.actions:
-            config[action.name] = action.keys
+            actions[action.name] = action.keys
+
+        self.config['actions'] = actions
                                 
         try:
             file = open(self.configfilename, 'w')
-            file.write(json.dumps(config) + '\n')
+            file.write(json.dumps(self.config) + '\n')
         except IOError:
             print('failed to save config file:', self.configfilename)
 
@@ -216,9 +218,10 @@ class Hat(object):
         self.last_msg['ap.heading_command'] = 0
         self.last_msg['imu.heading_offset'] = 0
 
-        host = ''
-        if len(sys.argv) > 1:
-            host = sys.argv[1]
+        if self.config['remote']:
+            host = self.config['host']
+        else:
+            host = 'localhost'
         
         def on_con(client):
             self.value_list = client.list_values(10)
@@ -236,12 +239,12 @@ class Hat(object):
                 print('connected')
                 self.web.set_status('connected')
             else:
-                client.disconnect()
+                self.client.disconnect()
                 print('no value list!')
                 self.client = False
                 self.web.set_status('disconnected')
         except Exception as e:
-            print(e)
+            print('hat exception', e)
             self.client = False
             time.sleep(1)
 

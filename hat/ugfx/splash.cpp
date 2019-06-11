@@ -14,7 +14,6 @@
 
 #include "ugfx.h"
 
-
 #define LOAD() \
     const char *data = header_data; \
     unsigned char pixel[4] = {0}; \
@@ -122,7 +121,7 @@ int main(int argc, char *argv[])
     framebuffer->blit(logom, 0, 0);
     framebuffer->refresh();
 
-#if 1 // for testing
+#if 0 // for testing
     while(1) {
         usleep(1000000);
 /*        framebuffer->fill(0);
