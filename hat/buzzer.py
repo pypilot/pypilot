@@ -27,12 +27,14 @@ except ImportError:
 class buzzer(object):
     def __init__(self, config):
         self.alarmcount = 0
+        self.lastalarmtime = 0
+        self.needbeep = 0
         self.pwm = False
         try:
             self.config = config['buzzer']
             pin = self.config['pin']
             GPIO.setmode(GPIO.BCM)
-            GPIO.setup(pin,GPIO.OUT)
+            GPIO.setup(pin, GPIO.OUT)
             self.pwm = GPIO.PWM(pin, 800)
         except Exception as e:
             print('failed to configure buzzer', e)
@@ -48,19 +50,22 @@ class buzzer(object):
                 self.pwm.stop()
             self.alarmcount-=1
         elif self.needbeep:
-            self.pwm.ChangeFrequency(1200)
+            self.pwm.ChangeFrequency(600)
             self.pwm.start(50)
-            
+            self.needbeep -= 1
         else:
             self.pwm.stop()
-        self.needbeep = False
             
     def beep(self):
-        self.needbeep = True
+        self.needbeep = 1
 
     def alarm(self):
+        t = time.time()
+        if t - self.lastalarmtime < 3:
+            return
+        self.lastalarmtime = t
         if not self.alarmcount:
-            self.alarmcount = 3
+            self.alarmcount = 7
 
 def main():
     c = {'buzzer': {'pin':12}}

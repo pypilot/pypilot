@@ -31,7 +31,7 @@ class ActionKeypad(Action):
         
 class ActionSignalK(Action):
     def  __init__(self, hat, name, signalk_name, signalk_value):
-        super(ActionSignalK, self).__init__(lcd, name)
+        super(ActionSignalK, self).__init__(hat, name)
         self.signalk_name = signalk_name
         self.value = signalk_value
 
@@ -44,10 +44,10 @@ class ActionEngage(ActionSignalK):
         super(ActionEngage, self).__init__(hat, 'engage', 'ap.enabled', True)
 
     def trigger(self, count):
-        super(ActionEngage, self).trigger()
+        super(ActionEngage, self).trigger(count)
         # set heading to current heading
         if self.hat.client and not count:
-            self.hat.client.set('ap.heading_command', self.last_val('ap.heading'))
+            self.hat.client.set('ap.heading_command', self.hat.last_msg['ap.heading'])
             
 class ActionHeading(Action):
     def __init__(self, hat, offset):
@@ -55,15 +55,16 @@ class ActionHeading(Action):
         self.offset = offset
 
     def trigger(self, count):
-        if self.hat.client:
-            if self.last_val('ap.enabled'):
-                if not count:
-                    self.client.set('ap.heading_command',
-                                    self.last_val['ap.heading_command'] + self.offset)
-            else: # manual mode
-                self.servo_timeout = time.time() + abs(self.offset)**.5/2
-                self.client.set('servo.command', 1 if self.offset > 0 else -1)
-
+        if not self.hat.client:
+            return
+        if self.hat.last_msg['ap.enabled']:
+            if not count:
+                self.hat.client.set('ap.heading_command',
+                                    self.hat.last_msg['ap.heading_command'] + self.offset)
+        else: # manual mode
+            self.servo_timeout = time.time() + abs(self.offset)**.5/2
+            self.hat.client.set('servo.command', 1 if self.offset > 0 else -1)
+            
 class ActionTack(ActionSignalK):
     def  __init__(self, hat, name, direction):
         super(ActionTack, self).__init__(hat, name, 'ap.tack.state', 'begin')
@@ -74,23 +75,62 @@ class ActionTack(ActionSignalK):
         if self.hat.client:
             self.hat.client.set('ap.tack.direction', self.direction)
 
-def web_process(pipe, actions):
-    import web
-    web.web_process(pipe, actions)
+def web_process(pipe, keyspipe, actions):
+    while True:
+        try:
+            import web
+            web.web_process(pipe, keyspipe, actions)
+        except Exception as e:
+            print('failed to run web server:', e)
+            #time.sleep(5)
+            exit(0)
+            
 
 class Web(object):
-    def __init__(self, actions):
-        import multiprocessing
-        from signalk.pipeserver import NonBlockingPipe
-        self.pipe, pipe = NonBlockingPipe('pipe', True)
-        self.process = multiprocessing.Process(target=web_process, args=(pipe,actions))
-        self.process.start()
+    def __init__(self, hat):
+        self.process = False
+        self.status = 'Not Connected'
+        self.hat = hat
         import atexit, signal
         def cleanup():
-            os.kill(self.process.pid, signal.SIGTERM)
+            print('cleanup web process')
+            if self.process:
+                self.process.terminate()
 
         atexit.register(cleanup) # get backtrace
-            
+
+    def send(self, value):
+        if self.process:
+            self.pipe.send(value)
+
+    def set_status(self, value):
+        self.status = value
+        self.send({'status': value})
+
+    def poll(self):
+        if not self.process:
+            import multiprocessing
+            from signalk.pipeserver import NonBlockingPipe
+            self.pipe, pipe = NonBlockingPipe('webpipe', True)
+            keyspipe, self.keyspipe = NonBlockingPipe('webkeyspipe', True)
+            self.process = multiprocessing.Process(target=web_process, args=(pipe, keyspipe, self.hat.actions))
+            self.process.start()
+            self.send({'status': self.status})
+            print('web on', self.process.pid)
+
+        if not self.process.is_alive():
+            self.process = False
+            return
+
+        msg = self.keyspipe.recv()
+        if msg:
+            for name in msg:
+                for action in self.hat.actions:
+                    if name == action.name:
+                        action.keys = msg[name]
+
+            self.hat.write_config()
+
 class Hat(object):
     def __init__(self):
         # read config
@@ -132,7 +172,7 @@ class Hat(object):
         
         # keypad for lcd interface
         self.actions = []
-        keypadnames = ['Auto', 'Menu', 'Up', 'Down', 'Select', 'Left', 'Right']
+        keypadnames = ['auto', 'menu', 'up', 'down', 'select', 'left', 'right']
         
         for i in range(7):
             self.actions.append(ActionKeypad(self.lcd, i, keypadnames[i]))
@@ -156,7 +196,7 @@ class Hat(object):
             if action.name in self.config:
                 action.keys = self.config[action.name]
 
-        self.web = Web(self.actions)
+        self.web = Web(self)
 
     def write_config(self):
         config = {}
@@ -164,7 +204,7 @@ class Hat(object):
             config[action.name] = action.keys
                                 
         try:
-            file = open(config_path, 'w')
+            file = open(self.configfilename, 'w')
             file.write(json.dumps(config) + '\n')
         except IOError:
             print('failed to save config file:', self.configfilename)
@@ -194,12 +234,12 @@ class Hat(object):
             self.client = SignalKClient(on_con, host)
             if self.value_list:
                 print('connected')
-                self.web.pipe.send({'pypilot': 'Connected'})
+                self.web.set_status('connected')
             else:
                 client.disconnect()
                 print('no value list!')
                 self.client = False
-                self.web.pipe.send({'pypilot': 'Disconnected'})
+                self.web.set_status('disconnected')
         except Exception as e:
             print(e)
             self.client = False
@@ -209,10 +249,12 @@ class Hat(object):
         if count:
             self.longsleep = 0
 
-        self.web.pipe.send({'key': key})
+        if count == 1:
+            self.web.send({'key': key})
         for action in self.actions:
             if key in action.keys:
-                self.web.pipe.send({'action': action.name})
+                if not count:
+                    self.web.send({'action': action.name})
                 action.trigger(count)
             
     def poll(self):
@@ -231,38 +273,30 @@ class Hat(object):
                 break
 
             name, data = result
-
             if 'value' in data:
                 self.last_msg[name] = data['value']
 
             for token in ['min', 'max', 'choices', 'AutopilotGain']:
                 if token in data:
-                    #print('name', name, token, ' = ', data[token])
+                    # print('name', name, token, ' = ', data[token])
                     if not name in self.value_list:
                         self.client.value_list[name] = {}
                     self.client.value_list[name][token] = data[token]
 
-        for i in [self.lcd, self.buzzer]:
+        for i in [self.lcd, self.buzzer, self.web]:
             i.poll()
 
-        anycode = False # are any keys read?
         for i in [self.gpio, self.arduino, self.lirc]:
             i.poll()
             while True:
-                r = i.read()
-                if not r:
+                if not i.events:
                     break
-                print('apply', r)
+
+                r = i.events[0]
+                i.events = i.events[1:]
                 self.apply_code(*r)
-                anycode = True
 
-        if anycode == False:
-            self.longsleep += 10
-
-        while self.longsleep > 20:
-            dt = self.lcd.frameperiod / 10.0
-            time.sleep(dt)
-            self.longsleep -= 1
+        time.sleep(.1)
 
         # poll heading once per second if not enabled
         t = time.time()
