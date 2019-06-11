@@ -428,11 +428,10 @@ class Servo(object):
             command = cal[0] + abs(speed)*cal[1]
             if speed < 0:
                 command = -command
+            self.raw_command(command)
         except:
             print ('servo calibration invalid', self.calibration.value)
             self.calibration.set({'port': [.2, .8], 'starboard': [.2, .8]})            
-
-        self.raw_command(command)
 
     def raw_command(self, command):
         # compute duty cycle
