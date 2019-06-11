@@ -174,7 +174,7 @@ uint8_t low_current = 1;
 // pwm style, 0 = hbridge, 1 = rc pwm, 2 = vnh2sp30
 uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 2
 
-#define fwd_fault_pin 7 // use pin 7 for optional fault
+#define port_fault_pin 7 // use pin 7 for optional fault
 #define rev_fault_pin 8 // use pin 7 for optional fault
 // if switches pull this pin low, the motor is disengaged
 // and will be noticed by the control program
@@ -224,7 +224,7 @@ enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CO
 
 enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f, EEPROM_VALUE_CODE=0x9a};
 
-enum {SYNC=1, OVERTEMP=2, OVERCURRENT=4, ENGAGED=8, INVALID=16*1, FWD_FAULTPIN=16*2, REV_FAULTPIN=16*4, BADVOLTAGE=16*8, MIN_RUDDER=256*1, MAX_RUDDER=256*2, CURRENT_RANGE=256*4, BAD_FUSES=256*8};
+enum {SYNC=1, OVERTEMP_FAULT=2, OVERCURRENT_FAULT=4, ENGAGED=8, INVALID=16*1, PORT_PIN_FAULT=16*2, STARBOARD_PIN_FAULT=16*4, BADVOLTAGE_FAULT=16*8, MIN_RUDDER_FAULT=256*1, MAX_RUDDER_FAULT=256*2, CURRENT_RANGE=256*4, BAD_FUSES=256*8};
 
 uint16_t flags = 0, faults = 0;
 uint8_t serialin, packet_count = 0;
@@ -371,10 +371,10 @@ void setup()
     digitalWrite(led_pin, LOW);
     pinMode(led_pin, OUTPUT); // status LED
 
-    pinMode(fwd_fault_pin, INPUT);
-    digitalWrite(fwd_fault_pin, HIGH); /* enable internal pullups */
-    pinMode(rev_fault_pin, INPUT);
-    digitalWrite(rev_fault_pin, HIGH); /* enable internal pullups */
+    pinMode(port_fault_pin, INPUT);
+    digitalWrite(port_fault_pin, HIGH); /* enable internal pullups */
+    pinMode(starboard_fault_pin, INPUT);
+    digitalWrite(starboard_fault_pin, HIGH); /* enable internal pullups */
 
     pinMode(pwm_style_pin, INPUT);
     digitalWrite(pwm_style_pin, HIGH); /* enable internal pullups */
@@ -525,13 +525,13 @@ void stop()
     command_value = 1000;
 }
 
-void stop_fwd()
+void stop_port()
 {
     if(lastpos > 1000)
        stop();
 }
 
-void stop_rev()
+void stop_starboard()
 {
     if(lastpos < 1000)
        stop();
@@ -968,7 +968,7 @@ void process_packet()
     } break;
     case RESET_CODE:
         // reset overcurrent flag
-        flags &= ~OVERCURRENT;
+        flags &= ~OVERCURRENT_FAULT;
         break;
     case COMMAND_CODE:
         timeout = 0;
@@ -977,14 +977,14 @@ void process_packet()
         if(value > 2000);
             // unused range, invalid!!!
             // ignored
-        else if(flags & (OVERTEMP | OVERCURRENT | BADVOLTAGE));
+        else if(flags & (OVERTEMP_FAULT | OVERCURRENT_FAULT | BADVOLTAGE_FAULT));
             // no command because of overtemp or overcurrent or badvoltage
-        else if((flags & (FWD_FAULTPIN | MAX_RUDDER)) && value > 1000)
+        else if((flags & (PORT_PIN_FAULT | MAX_RUDDER_FAULT)) && value > 1000)
             stop();
-            // no forward command if fwd fault
-        else if((flags & (REV_FAULTPIN | MIN_RUDDER)) && value < 1000)
+            // no forward command if port fault
+        else if((flags & (STARBOARD_PIN_FAULT | MIN_RUDDER_FAULT)) && value < 1000)
             stop();
-            // no reverse command if fwd fault
+            // no starboarderse command if port fault
         else {
             command_value = value;
             engage();
@@ -1119,17 +1119,17 @@ void loop()
     }
 
     // test fault pins
-    if(!digitalRead(fwd_fault_pin)) {
-        stop_fwd();
-        flags |= FWD_FAULTPIN;
+    if(!digitalRead(port_fault_pin)) {
+        stop_port();
+        flags |= PORT_PIN_FAULT;
     } else
-      flags &= ~FWD_FAULTPIN;
+      flags &= ~PORT_PIN_FAULT;
 
-    if(!digitalRead(rev_fault_pin)) {
-        stop_rev();
-        flags |= REV_FAULTPIN;
+    if(!digitalRead(starboard_fault_pin)) {
+        stop_starboard();
+        flags |= STARBOARD_PIN_FAULT;
     } else
-      flags &= ~REV_FAULTPIN;
+      flags &= ~STARBOARD_PIN_FAULT;
 
     // test current
 #if DIV_CLOCK == 1
@@ -1141,9 +1141,9 @@ void loop()
         uint16_t amps = TakeAmps(1);
         if(amps >= max_current) {
             stop();
-            faults |= OVERCURRENT;
+            faults |= OVERCURRENT_FAULT;
         } else
-            faults &= ~OVERCURRENT;
+            faults &= ~OVERCURRENT_FAULT;
     }
 
     if(CountADC(VOLTAGE, 1) > react_count) {
@@ -1161,9 +1161,9 @@ void loop()
         /* voltage must be between 9 and max voltage */
         if(volts <= 900 || volts >= max_voltage) {
             stop();
-            flags |= BADVOLTAGE;
+            flags |= BADVOLTAGE_FAULT;
         } else
-            flags &= ~BADVOLTAGE;
+            flags &= ~BADVOLTAGE_FAULT;
     }
 
     flags |= faults;
@@ -1176,9 +1176,9 @@ void loop()
         uint16_t motor_temp = TakeTemp(MOTOR_TEMP, 1);
         if(controller_temp >= max_controller_temp || motor_temp > max_motor_temp) {
             stop();
-            flags |= OVERTEMP;
+            flags |= OVERTEMP_FAULT;
         } else
-            flags &= ~OVERTEMP;
+            flags &= ~OVERTEMP_FAULT;
 
         // 100C is max allowed temp, 117C is max measurable.
         // 110C indicates software fault
@@ -1192,16 +1192,16 @@ void loop()
     if(CountADC(RUDDER, 1) > rudder_react_count) {
         uint16_t v = TakeRudder(1);
         if(rudder_sense) {
-            // if not positive, then rudder feedback has negative gain (reversed)
+            // if not positive, then rudder feedback has negative gain (starboardersed)
             uint8_t pos = rudder_min < rudder_max;
             
             if((pos && v < rudder_min) || (!pos && v > rudder_min)) {
-                stop_rev();
+                stop_starboard();
                 flags |= MIN_RUDDER;
             } else
                 flags &= ~MIN_RUDDER;
             if((pos && v > rudder_max) || (!pos && v < rudder_max)) {
-                stop_fwd();
+                stop_port();
                 flags |= MAX_RUDDER;
             } else
                 flags &= ~MAX_RUDDER;
