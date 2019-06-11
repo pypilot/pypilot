@@ -70,7 +70,10 @@ AVRDUDE = sudo avrdude
 BOOTLOADER = linuxspi
 BAUDRATE = 500000
 upload: $(SKETCHNAME).cpp.hex
+	echo 16 > /sys/class/gpio/export || echo ok
+	echo out > /sys/class/gpio/gpio16/direction
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:w:$(SKETCHNAME).cpp.hex -b $(BAUDRATE)
+	echo in > /sys/class/gpio/gpio16/direction
 
 serial:
 	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5 38400
