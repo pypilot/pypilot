@@ -457,6 +457,17 @@ $(document).ready(function() {
     });
 
     // Configuration
+    document.addEventListener('click', function(event) {
+        var target = event.target;
+        if (target.tagName.toLowerCase() == 'a')
+        {
+            if(target.getAttribute('href').match('33333')) {
+                target.href = window.location.origin;
+                target.port = 33333;
+            }
+
+        }
+    }, false);
 
     // Statistics
     $('#reset_amp_hours').click(function(event) {
