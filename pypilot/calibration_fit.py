@@ -562,7 +562,7 @@ def FitCompass(debug, compass_cal, compass_calibration, norm):
     # if the bias has not sufficiently changed,
     # the fit didn't change much, so don't bother to report this update
     if vector.dist2(c[0], compass_calibration) < .1:
-        debug('insufficient change in bias, calibration already ok')
+        debug('new calibration same as previous')
         return
 
     return c
