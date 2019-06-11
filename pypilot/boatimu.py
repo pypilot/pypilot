@@ -192,7 +192,7 @@ class TimeValue(StringValue):
       if self.stopped:
         return
       self.total += time.time() - self.start
-      self.stopped = True;
+      self.stopped = True
 
     def get_signalk(self):
         if abs(self.value - self.lastage_value) > 1: # to reduce cpu, if the time didn't change by a second
@@ -343,7 +343,7 @@ class BoatIMU(object):
         self.loopfreq.set(0)
         for name in self.SensorValues:
           self.SensorValues[name].set(False)
-        self.uptime.reset();
+        self.uptime.reset()
       return False
   
     if vector.norm(data['accel']) == 0:

@@ -53,7 +53,7 @@ class Rudder(Sensor):
 
         self.minmax = 1, 0
         for rm in [[range, 1], [range, -1], [-range, 1], [-range, -1]]:
-            x = quad_sub(nonlinearity, scale, offset + rm[0], rm[1]);
+            x = quad_sub(nonlinearity, scale, offset + rm[0], rm[1])
             if x>=0 and x<=1:
                 self.minmax = min(x, self.minmax[0]), max(x, self.minmax[1])
 
@@ -170,7 +170,7 @@ class Rudder(Sensor):
                 self.autogain_state='idle'
                 self.calibration_state.set('idle')
 
-            t = time.time();
+            t = time.time()
             if self.autogain_state=='idle':
                 self.gain.set(1)
                 self.autogain_state='fwd'

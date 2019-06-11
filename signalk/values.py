@@ -154,14 +154,16 @@ class RangeProperty(Property):
             self.value = max_value
         self.max_value = max_value
 
-class RangeSetting(Property):
-    def __init__(self, name, initial, min_value, max_value, units, **kwargs):
+# a range property that is persistent and specifies the units
+class RangeSetting(RangeProperty):
+    def __init__(self, name, initial, min_value, max_value, units):
         self.units = units
-        super(RangeSetting, self).__init__(name, initial, min_value, max_value, **kwargs)
+        super(RangeSetting, self).__init__(name, initial, min_value, max_value, persistent=True)
 
     def type(self):
-        d = super(RangeProperty, self).type()
-        d['Units'] = self.units;
+        d = super(RangeSetting, self).type()
+        d['Type'] = 'RangeSetting'
+        d['Units'] = self.units
         return d
         
 class HeadingProperty(RangeProperty):
