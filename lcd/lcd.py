@@ -185,7 +185,7 @@ class LCDClient():
             print('failed to load config file:', self.configfilename)
 
         lcd = False
-        for possible_lcd in ['nokia5110', 'default', 'none']:
+        for possible_lcd in ['nokia5110', 'spi', 'default', 'none']:
             if possible_lcd in sys.argv:
                 sys.argv.remove(possible_lcd)
                 lcd = possible_lcd
@@ -200,9 +200,9 @@ class LCDClient():
         self.use_glut = False
         if lcd == 'none':
             screen = None
-        elif lcd == 'nokia5110':
-            print('using nokia5110')
-            screen = ugfx.nokia5110screen()
+        elif lcd == 'nokia5110' or lcd == 'spi':
+            print('using spi display')
+            screen = ugfx.spiscreen()
         else:
             self.use_glut = 'DISPLAY' in os.environ
         
