@@ -31,8 +31,6 @@ class LearningPilot(AutopilotPilot):
   def __init__(self, ap):
     super(LearningPilot, self).__init__('learning', ap)
     # create filters
-    timestamp = self.ap.server.TimeStamp('ap')
-
     # gains for training pilot
     self.P = self.Register(AutopilotGain, 'P', .001, .0001, .01)
     self.D = self.Register(AutopilotGain, 'D', .03, .01, .1)
@@ -41,7 +39,6 @@ class LearningPilot(AutopilotPilot):
     self.servo_rules = self.Register(BooleanProperty, 'servo_rules', True)
 
     timestamp = self.ap.server.TimeStamp('ap')
-    self.dt = self.Register(SensorValue, 'dt', timestamp)
     self.initialized = False
     self.start_time = time.time()
 

@@ -192,10 +192,7 @@ class SignalKPlot():
 
     def read_data(self, msg):
         name, data = msg
-        if 'timestamp' in data:
-            timestamp = data['timestamp']
-        else:
-            timestamp = time.time()
+        timestamp = time.time()
 
         value = data['value']
         if type(value) == type([]):
