@@ -152,8 +152,10 @@ $(document).ready(function() {
             });
         }
 
-        if(tinypilot)
+        if(tinypilot) {
             $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>')
+            $('#configuration_container').append('<p><a href=":33333">Configure RF Remote</a>')
+        }
 
         watch('servo.controller');
         watch('servo.flags');

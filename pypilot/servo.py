@@ -587,10 +587,14 @@ class Servo(object):
         if result & ServoTelemetry.MOTOR_TEMP:
             self.motor_temp.set(self.driver.motor_temp)
         if result & ServoTelemetry.RUDDER:
-            if self.driver.rudder and not math.isnan(self.driver.rudder):
-                data = {'angle': self.driver.rudder, 'timestamp' : t,
-                        'device': self.device.path}
-                self.sensors.write('rudder', data, 'servo')
+            if self.driver.rudder:
+                if math.isnan(self.driver.rudder): # rudder no longer valid
+                    if self.sensors.rudder.source.value == 'servo':
+                        self.sensors.lostsensor(self.sensors.rudder)
+                else:
+                    data = {'angle': self.driver.rudder, 'timestamp' : t,
+                            'device': self.device.path}
+                    self.sensors.write('rudder', data, 'servo')
         if result & ServoTelemetry.CURRENT:
             # apply correction
             corrected_current = self.current.factor.value*self.driver.current

@@ -1,3 +1,15 @@
+/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
+ *
+ * This Program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ */
+
+/* this program reads rf key codes from the spi port, and applies
+   commands as configured by the webapp on port 33333
+*/
+
 #include <Arduino.h>
 #include <stdint.h>
 #include <HardwareSerial.h>
@@ -7,7 +19,7 @@
 #include <avr/boot.h>
 #include <util/delay.h>
 
-
+//#define DEBUG_SERIAL
 
 #include <RCSwitch.h>
 
@@ -40,9 +52,12 @@ void setup() {
     // turn on interrupts
     SPCR |= _BV(SPIE);
 
-    pinMode(MISO, OUTPUT);
+//    pinMode(MISO, OUTPUT);
+        pinMode(MISO, INPUT);
 
+#ifdef DEBUG_SERIAL
     Serial.begin(38400);
+#endif
 
   pinMode(DATA_PIN, INPUT);
   pinMode(DIR_PIN, INPUT);
@@ -59,34 +74,29 @@ void loop() {
     int value = mySwitch.getReceivedValue();
     
     if (value == 0) {
+#ifdef DEBUG_SERIAL
       Serial.print("Unknown encoding");
+#endif
     } else {
-   
-        Serial.print("Received ");
+#ifdef DEBUG_SERIAL
+      Serial.print("Received ");
       Serial.print( mySwitch.getReceivedValue() );
       Serial.print(" / ");
       Serial.print( mySwitch.getReceivedBitlength() );
       Serial.print("bit ");
       Serial.print("Protocol: ");
       Serial.println( mySwitch.getReceivedProtocol() );
-
-
+      unsigned int *raw = mySwitch.getReceivedRawdata();
+      Serial.print("timings: ");
+      for(int i=0; i<16; i++) {
+          Serial.print(raw[i]);
+                  Serial.print(" ");
+      }
+      Serial.println("");
+#endif
       if(mySwitch.getReceivedBitlength() == 24)
           spiread_rfkeys = mySwitch.getReceivedValue();
-      
-#if 0
-              unsigned int *raw = mySwitch.getReceivedRawdata();
-        Serial.print("timings: ");
-        for(int i=0; i<16; i++) {
-            Serial.print(raw[i]);
-                    Serial.print(" ");
-        }
-        Serial.println("");
-#endif
     }
-    
-    mySwitch.resetAvailable();
-    
+    mySwitch.resetAvailable(); 
   }
-
 }

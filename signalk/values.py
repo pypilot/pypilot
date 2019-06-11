@@ -31,7 +31,7 @@ class Value(object):
             self.set(value)
 
     def get_signalk(self):
-        if type(self.value) == type(''):
+        if type(self.value) == type('') or type(self.value) == type(u''):
             return '{"' + self.name + '": {"value": "' + self.value + '"}}'
         return '{"' + self.name + '": {"value": ' + str(self.value) + '}}'
 
