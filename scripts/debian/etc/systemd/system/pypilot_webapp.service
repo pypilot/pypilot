@@ -1,10 +1,10 @@
 [Unit]
-Description=pypilot webapp
+Description=pypilot web
 DefaultDependencies=false
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/sudo pypilot_webapp
+ExecStart=/usr/bin/sudo pypilot_web
 StandardOutput=syslog
 StandardError=syslog
 User=pi

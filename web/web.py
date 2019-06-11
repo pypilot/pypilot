@@ -14,19 +14,19 @@ from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
 from signalk.server import LineBufferedNonBlockingSocket
 
-pypilot_webapp_port=80
+pypilot_web_port=80
 if len(sys.argv) > 1:
-    pypilot_webapp_port=int(sys.argv[1])
+    pypilot_web_port=int(sys.argv[1])
 else:
-    filename = '~/.pypilot/webapp.conf'
+    filename = '~/.pypilot/web.conf'
     try:
         file = open(filename, 'r')
         config = json.loads(file.readline())
         if 'port' in config:
-            pypilot_webapp_port = config['port']
+            pypilot_web_port = config['port']
         file.close()
     except:
-        print('using default port of', pypilot_webapp_port)
+        print('using default port of', pypilot_web_port)
 
 
 # Set this variable to 'threading', 'eventlet' or 'gevent' to test the
@@ -58,7 +58,7 @@ tinypilot = 1 if tinypilot else 0
 
 @app.route('/')
 def index():
-    return render_template('index.html', async_mode=socketio.async_mode, pypilot_webapp_port=pypilot_webapp_port, tinypilot=tinypilot)
+    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot)
 
 if tinypilot:
     @app.route('/wifi', methods=['GET', 'POST'])
@@ -227,7 +227,7 @@ def main():
     import os
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
-    socketio.run(app, debug=False, host='0.0.0.0', port=pypilot_webapp_port)
+    socketio.run(app, debug=False, host='0.0.0.0', port=pypilot_web_port)
 
 if __name__ == '__main__':
     main()
