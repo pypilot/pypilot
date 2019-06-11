@@ -1,4 +1,4 @@
-====== PyPilot webapp ======
+====== PyPilot web ======
 
 ==== Dependencies ====
 ```
@@ -12,12 +12,12 @@ pip install gevent
 == Launch from the command line interface == 
 The web server should be run with sudo
 ```
-    sudo python webapp.py
+    sudo python web.py
 ```
 
 Optionaly, a port number can be specified in the first argument  
 ```
-    sudo python webapp.py 8080  
+    sudo python web.py 8080  
 ```
 
 Or provided from a json config file at ['port':8080] . 
@@ -30,12 +30,12 @@ If no port is specified, the default value is 80.
 
 For a one time run:
 ```
-    systemctl start pypilot_webapp.service
+    systemctl start pypilot_web.service
 ```
 
 To have it starting automatically it at boot: 
 ```
-    systemctl enable pypilot_webapp.service
+    systemctl enable pypilot_web.service
 ```
 
 
@@ -44,13 +44,13 @@ To have it starting automatically it at boot:
 apt-get install apache2 python-pip libapache2-mod-wsgi
 ```
 
-move pypilot_webapp into /var/www, and update /etc/apache2/sites-available/000-default.conf:
+move pypilot_web into /var/www, and update /etc/apache2/sites-available/000-default.conf:
 
 	WSGIDaemonProcess webtool user=www-data group-data threads=5 home=/var/www/flask/
         # change / to a different location if desired
-	WSGIScriptAlias / /var/www/pypilot_webapp/pypilot_webapp.wsgi
+	WSGIScriptAlias / /var/www/pypilot_web/pypilot_web.wsgi
 
-	<directory /var/www/pypilot_webapp>
+	<directory /var/www/pypilot_web>
 	  WSGIProcessGroup webtool
 	  WSGIApplicationGroup %{GLOBAL}
 	  WSGIScriptReloading On

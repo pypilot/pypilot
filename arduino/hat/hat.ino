@@ -7,7 +7,7 @@
  */
 
 /* this program reads rf key codes from the spi port, and applies
-   commands as configured by the webapp on port 33333
+   commands as configured by the web on port 33333
 */
 
 #include <Arduino.h>
