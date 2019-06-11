@@ -91,7 +91,7 @@ if tinypilot:
             f.close()
         except:
             pass
-        return render_template('wifi.html', async_mode=socketio.async_mode, wifi_mode=mode, wifi_ssid=ssid, wifi_key=key)
+        return render_template('wifi.html', async_mode=socketio.async_mode, wifi_mode=mode, wifi_ssid=ssid, wifi_key=key, mode_managed_selected= 'selected' if mode == 'Managed' else '')
 
 
 class MyNamespace(Namespace):
