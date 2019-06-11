@@ -154,7 +154,7 @@ $(document).ready(function() {
 
         if(tinypilot) {
             $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>')
-            $('#configuration_container').append('<p><a href=":33333">Configure RF Remote</a>')
+            $('#configuration_container').append('<p><a href=":33333">Configure LCD Keypad and Remotes</a>')
         }
 
         watch('servo.controller');
