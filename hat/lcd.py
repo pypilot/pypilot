@@ -1016,6 +1016,12 @@ class LCD():
         return self.display_control
             
     def process_keys(self):
+        def testkeydown(key):
+            if self.keypad[key]==1:
+                self.keypad[key]=2
+                return True
+            return False
+        
         if self.keypadup[AUTO]: # AUTO
             if self.last_val('ap.enabled') == False and self.display_page == self.display_control:
                 self.set('ap.heading_command', self.last_val('ap.heading'))
@@ -1026,7 +1032,7 @@ class LCD():
         
             self.display_page = self.display_control
             
-        if self.keypadup[SELECT]:
+        if testkeydown(SELECT):
             if self.display_page == self.display_control and self.surface:
                 # change mode
                 for t in range(len(self.modes_list)):
@@ -1053,7 +1059,7 @@ class LCD():
             speed = 10
 
         if self.display_page == self.display_control:                
-            if self.keypadup[MENU] and self.surface: # MENU
+            if testkeydown(MENU) and self.surface: # MENU
                 self.display_page = self.display_menu
             elif updown: # LEFT/RIGHT/UP/DOWN
                 sign = -1 if down or right else 1                
@@ -1068,20 +1074,20 @@ class LCD():
                     self.set('servo.command', sign*(speed+8.0)/20)
 
         elif self.display_page == self.display_menu:
-            if self.keypadup[UP] or self.keypadup[LEFT]:
+            if testkeydown(UP) or testkeydown(LEFT):
                 self.menu.selection -= 1
                 if self.menu.selection < 0:
                     self.menu.selection = len(self.menu.items)-1
-            elif self.keypadup[DOWN] or self.keypadup[RIGHT]:
+            elif testkeydown(DOWN) or testkeydown(RIGHT):
                 self.menu.selection += 1
                 if self.menu.selection == len(self.menu.items):
                     self.menu.selection = 0
-            elif self.keypadup[MENU]:
+            elif testkeydown(MENU):
                 self.display_page = self.menu.items[self.menu.selection][1]()
 
         elif self.display_page == self.display_info or \
              self.display_page == self.display_calibrate_info:
-            if self.keypadup[MENU]:
+            if testkeydown(MENU):
                 self.display_page = self.display_menu
             if self.keypadup[UP] or self.keypadup[RIGHT]:
                 self.info_page += 1
@@ -1089,7 +1095,7 @@ class LCD():
                 self.info_page -= 1
 
         elif self.range_edit and self.display_page == self.range_edit.display:
-            if self.keypadup[MENU]:
+            if testkeydown(MENU):
                 self.display_page = self.display_menu
                 if not self.range_edit.signalk:
                     self.write_config()

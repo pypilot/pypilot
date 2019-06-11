@@ -83,8 +83,7 @@ def web_process(pipe, keyspipe, actions):
         except Exception as e:
             print('failed to run web server:', e)
             #time.sleep(5)
-            exit(0)
-            
+            exit(0)            
 
 class Web(object):
     def __init__(self, hat):
@@ -92,12 +91,19 @@ class Web(object):
         self.status = 'Not Connected'
         self.hat = hat
         import atexit, signal
-        def cleanup():
+        def cleanup(signal_number, frame=None):
             print('cleanup web process')
             if self.process:
                 self.process.terminate()
+            sys.stdout.flush()
+            if signal_number:
+                raise KeyboardInterrupt # to get backtrace on all processes
+                
 
-        atexit.register(cleanup) # get backtrace
+        atexit.register(lambda : cleanup(None)) # get backtrace
+        for s in range(1, 12):
+            if s != 9:
+                signal.signal(s, cleanup)
 
     def send(self, value):
         if self.process:
@@ -300,7 +306,6 @@ class Hat(object):
                 self.apply_code(*r)
 
         time.sleep(.1)
-
         # poll heading once per second if not enabled
         t = time.time()
         dtp = t - self.lastpollheading
