@@ -760,11 +760,12 @@ static int detectdriver() {
 spiscreen::spiscreen()
     : surface(spilcdsizes[detectdriver()][0], spilcdsizes[detectdriver()][1], 1, NULL)
 {
-    switch (detectdriver()) {
-//    case 0: disp = new PCD8544(); break;
+    int driver = detectdriver();
+    switch (driver) {
+    case 0: disp = new PCD8544(); break;
     case 1: disp = new JLX12864G(); break;
     default:
-        fprintf(stderr, "invalid driver");
+        fprintf(stderr, "invalid driver: %d", driver);
         exit(1);
     }
     contrast = 60;
