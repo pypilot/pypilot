@@ -12,16 +12,6 @@ import math
 from signalk.values import *
 from sensors import Sensor
 
-def quad_sub(a, b, c, m):
-    if abs(b) < .0001:
-        return -1
-    if abs(a) < .0001:
-        return -c/b
-    dis = b*b - 4*a*c # quadratic formula
-    if dis < 0:
-        return -1 # invalid in this case
-    return (-b + m*dis**.5) / (2*a)
-
 class Rudder(Sensor):
     def __init__(self, server):
         super(Rudder, self).__init__(server, 'rudder')
@@ -31,8 +21,8 @@ class Rudder(Sensor):
         self.speed = self.Register(SensorValue, 'speed', timestamp)
         self.last = 0
         self.last_time = time.time()
-        self.offset = self.Register(Value, 'offset', 0, persistent=True)
-        self.scale = self.Register(Value, 'scale', 1, persistent=True)
+        self.offset = self.Register(Value, 'offset', -100, persistent=True)
+        self.scale = self.Register(Value, 'scale', 220, persistent=True)
         self.nonlinearity = self.Register(Value, 'nonlinearity',  0, persistent=True)
         self.calibration_state = self.Register(EnumProperty, 'calibration_state', 'idle', ['idle', 'reset', 'centered', 'starboard range', 'port range', 'auto gain'])
         self.calibration_raw = {}
@@ -42,31 +32,35 @@ class Rudder(Sensor):
         self.autogain_state = 'idle'
         self.raw = 0
 
-    def update_minmax(self):
-        # recompute minimum and maximum raw rudder values from 0 to 1
-        #  nonlinearity * raw**2 + scale*raw + offset +- rudder_range
-
+    def update_minmax(self):        
         scale = self.scale.value
-        nonlinearity = self.nonlinearity.value*scale
         offset = self.offset.value
         range = self.range.value
+        oldminmax = self.minmax
+        self.minmax = (-range - offset)/scale, (range - offset)/scale
 
-        self.minmax = 1, 0
-        for rm in [[range, 1], [range, -1], [-range, 1], [-range, -1]]:
-            x = quad_sub(nonlinearity, scale, offset + rm[0], rm[1])
-            if x>=0 and x<=1:
-                self.minmax = min(x, self.minmax[0]), max(x, self.minmax[1])
+        if self.lastrange != self.range.value:
+            # compute and update scale and offset if range changes
+            nonlinearity = self.nonlinearity.value
 
-        if self.minmax[0] > self.minmax[1]:
-            self.minmax = 0, 1 # for now don't set range, allow movement
+            min, max = oldminmax
+            B = scale -nonlinearity*(min+max)
+            C = offset + nonlinearity*min*max
 
-        self.lastrange = self.range.value            
+            min, max = self.minmax
+            scale = B + nonlinearity*(min+max)
+            offset = C - nonlinearity*min*max
+
+            self.scale.update(scale)
+            self.offset.update(offset)
+
+        self.lastrange = self.range.value
         
     def calibration(self, command):
         if command == 'reset':
             self.nonlinearity.update(0.0)
-            self.scale.update(1.0)
-            self.offset.update(0.0)
+            self.scale.update(220.0)
+            self.offset.update(-100.0)
             self.update_minmax()
             self.calibration_raw = {}
             return
@@ -74,9 +68,9 @@ class Rudder(Sensor):
         elif command == 'centered':
             true_angle = 0
         elif command == 'port range':
-            true_angle = -self.range.value
-        elif command == 'starboard range':
             true_angle = self.range.value
+        elif command == 'starboard range':
+            true_angle = -self.range.value
         else:
             print('unhandled rudder_calibration', command)
             return
@@ -86,58 +80,44 @@ class Rudder(Sensor):
                                          'rudder': true_angle}
         scale = self.scale.value
         offset = self.offset.value
-        nonlinearity = self.nonlinearity.value*scale
+        nonlinearity = self.nonlinearity.value
 
         # rudder = (nonlinearity * raw + scale) * raw + offset
         p = []
-        for c in self.calibration_raw:
-            p.append(self.calibration_raw[c])
+        for c in ['starboard range', 'centered', 'port range']:
+            if c in self.calibration_raw:
+                p.append(self.calibration_raw[c])
 
         l = len(p)
         # 1 point, estimate offset
         if l == 1:
             rudder= p[0]['rudder']
             raw = p[0]['raw']
-            offset = rudder - (nonlinearity * raw + scale) * raw
+            offset = rudder - scale*raw - nonlinearity*(self.minmax[0]-raw)*(self.minmax[1]-raw)
 
         # 2 points, estimate scale and offset
         elif l == 2:
             rudder0, rudder1 = p[0]['rudder'], p[1]['rudder']
             raw0, raw1 = p[0]['raw'], p[1]['raw']
             if abs(raw1-raw0) > .001:
-                scale = (rudder1 - rudder0 + nonlinearity*(raw0**2 - raw1**2)) / (raw1 - raw0)
-            offset = rudder0 - (nonlinearity * raw0 + scale) * raw0
-
+                scale = (rudder1 - rudder0)/(raw1 - raw0)
+            offset = rudder1 - scale*raw1
+            nonlinearity = 0
             
         # 3 points, estimate nonlinearity scale and offset
         if l == 3:
             rudder0, rudder1, rudder2 = p[0]['rudder'], p[1]['rudder'], p[2]['rudder']
             raw0, raw1, raw2 = p[0]['raw'], p[1]['raw'], p[2]['raw']
 
-            # rudder0 = (nonlinearity*raw0 + scale)*raw0 + offset
-            # rudder1 = (nonlinearity*raw1 + scale)*raw1 + offset
-            # rudder2 = (nonlinearity*raw2 + scale)*raw2 + offset
-
-            # rudder1 = (nonlinearity*raw1 + scale)*raw1 + rudder0 - (nonlinearity*raw0 + scale)*raw0
-            # rudder2 = (nonlinearity*raw2 + scale)*raw2 + rudder0 - (nonlinearity*raw0 + scale)*raw0
-            # rudder1 - rudder0 = nonlinearity*(raw1^2 - raw0^2) + scale*(raw1 - raw0)
-            # rudder2 - rudder0 = nonlinearity*(raw2^2 - raw0^2) + scale*(raw2 - raw0)
-
-
-            # scale = (rudder1 - rudder0 - nonlinearity*(raw1^2 - raw0^2)) / (raw1 - raw0)
-            # A = (raw2 - raw0)/(raw1 - raw0)
-            # rudder2 - rudder0 + A*(rudder0 - rudder1) = nonlinearity*((raw2^2 - raw0^2) - (raw1^2 - raw0^2)*A) 
-
-            A = (raw2 - raw0)/(raw1 - raw0)
-            C = (rudder2 - rudder0 + (rudder0 - rudder1)*A)
-            D = ((raw2**2 - raw0**2) - (raw1**2 - raw0**2)*A)
-            if abs(D) > .001:
-                nonlinearity = C / D
-
-            if abs(raw1-raw0) > .001:
-                scale = (rudder1 - rudder0 - nonlinearity*(raw1**2 - raw0**2)) / (raw1 - raw0)
-            offset = rudder0 - (nonlinearity*raw0 + scale)*raw0
-
+            if min(abs(raw1 - raw0), abs(raw2 - raw0), abs(raw2 - raw1)) > .001:
+                scale = (rudder2 - rudder0)/(raw2 - raw0)
+                offset = rudder0 - scale*raw0
+                nonlinearity = (rudder1 - scale*raw1 - offset)/(raw0-raw1)/(raw2-raw1)
+                self.minmax = raw0, raw1
+                self.lastrange = 0 # force update minmax
+            else:
+                print('bad rudder calibration', self.calibration_raw)
+            
         if abs(scale) <= .01:
             # bad update, trash an other reading
             print('bad servo rudder calibration', scale, nonlinearity)
@@ -146,14 +126,12 @@ class Rudder(Sensor):
                     if c != command:
                         del self.calibration_raw[c]
                         break
-        else:
-            self.offset.update(offset)
-            self.scale.update(scale)
+            return
 
-            nonlinearity /= scale
-            if abs(nonlinearity) < 2:
-                self.nonlinearity.update(nonlinearity)
-            self.update_minmax()
+        self.offset.update(offset)
+        self.scale.update(scale)
+        self.nonlinearity.update(nonlinearity)
+        self.update_minmax()
 
     def invalid(self):
         return type(self.angle.value) == type(False)
@@ -229,7 +207,13 @@ class Rudder(Sensor):
             return
 
         # rudder = ((nonlinearity*self.raw + 1  + offset)*self.raw + offset)*scale
-        angle = ((self.nonlinearity.value*self.raw + 1)*self.raw)*self.scale.value + self.offset.value
+        #angle = ((self.nonlinearity.value*self.raw + 1)*self.raw)*self.scale.value + self.offset.value
+        scale = self.scale.value
+        offset = self.offset.value
+        nonlinearity = self.nonlinearity.value
+        raw = self.raw
+        
+        angle = scale*raw + offset + nonlinearity*(self.minmax[0]-raw)*(self.minmax[1]-raw)
         angle = round(angle, 2) # 2 decimal for rudder angle is enough
         self.angle.set(angle)
 

@@ -33,8 +33,9 @@ calibration_fit_period = 20  # run every 60 seconds
 def FitLeastSq(beta0, f, zpoints, dimensions=1):
     try:
         import scipy.optimize
-    except:
-        print("failed to load scientific library, cannot perform calibration update!")
+    except Exception as e:
+        print('failed to load scientific library:', e)
+        print('cannot perform calibration update!')
         return False
 
     leastsq = scipy.optimize.leastsq(f, beta0, zpoints)
