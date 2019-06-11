@@ -100,12 +100,14 @@ $(document).ready(function() {
 
         for (var i = 0; i<gains.length; i++) {
             var w = $(window).width();
-            var info = list_values['ap.' + gains[i]]
-            var min = info['min']
-            var max = info['max']
-            $('#gain_container').append('<br>'+gains[i]+' <input type="range" id="' + gains[i] + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" style="width:'+w*3/4+'px"><span id="' + gains[i] + 'label"></span><br>');
-            $('#'+gains[i]).change(function(event) {
-                signalk_set('ap.'+this.id, this.valueAsNumber);
+            var name = gains[i];
+            var info = list_values['ap.' + name];
+            var min = info['min'];
+            var max = info['max'];
+            var iname = 'gains'+i;
+            $('#gain_container').append('<br>'+gains[i]+' <input type="range" id="' + iname + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" style="width:'+w*3/4+'px" name="'+name+'"></input><span id="' + iname + 'label"></span><br>');
+            $('#'+iname).change(function(event) {
+                signalk_set('ap.'+this.name, this.valueAsNumber);
                 block_polling = 2;
             });
         }
@@ -295,13 +297,14 @@ $(document).ready(function() {
             if('ap.' + gains[i] in data) {
                 data = data['ap.' + gains[i]]
                 value = data['value'];
-                if(value != $('#' + gains[i]).valueAsNumber) {
-                    $('#' + gains[i]).val(value);
-                    $('#' + gains[i] + 'label').text(value);
+                var iname = 'gains'+i;
+                if(value != $('#' + iname).valueAsNumber) {
+                    $('#' + iname).val(value);
+                    $('#' + iname + 'label').text(value);
                     if('min' in data)
-                        $('#' + gains[i]).attr('min', data['min'])
+                        $('#' + iname).attr('min', data['min'])
                     if('max' in data)
-                        $('#' + gains[i]).attr('max', data['max'])
+                        $('#' + iname).attr('max', data['max'])
                 }
             }
         if('ap.heading_command' in data) {
