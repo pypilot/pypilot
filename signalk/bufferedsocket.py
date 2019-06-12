@@ -23,7 +23,8 @@ class LineBufferedNonBlockingSocket(object):
         self.out_buffer = ''
         self.pollout = select.poll()
         self.pollout.register(connection, select.POLLOUT)
-        self.sendfail_msg = self.sendfail_cnt = 0
+        self.sendfail_msg = 1
+        self.sendfail_cnt = 0
 
     def recv(self):
         return self.b.recv()
@@ -48,7 +49,7 @@ class LineBufferedNonBlockingSocket(object):
                 self.sendfail_cnt += 1
                 return
             t0 = time.time()
-            count = self.socket.send(str.encode(str(self.out_buffer)))
+            count = self.socket.send(self.out_buffer.encode())
             t1 = time.time()
 
             if t1-t0 > .1:
@@ -76,7 +77,7 @@ class LineBufferedNonBlockingSocketPython(object):
         if not len(self.out_buffer):
             return
         try:
-            count = self.socket.send(self.out_buffer)
+            count = self.socket.send(self.out_buffer.encode())
             if count < 0:
                 print('socket send error in server flush')
                 self.out_buffer = ''

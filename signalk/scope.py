@@ -15,7 +15,7 @@ import math
 import time
 import sys
 
-from client import SignalKClientFromArgs
+from signalk.client import SignalKClientFromArgs
 
 class trace(object):
     colors = [[1, 0, 0], [0, 1, 0], [1, 1, 0],

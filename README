@@ -13,19 +13,25 @@ python-wxgtk3.0 python-opengl  pyglet pywavefront
 
 You may want to run pypilot as a service, see the scripts/debian directory
 
+Clone the data repository and copy data:
 
-
-Clone the data repository and copy data
+git clone https://github.com/pypilot/pypilot
 git clone --depth 1 https://github.com/pypilot/pypilot_data
 cp -rv pypilot_data/* pypilot
+
+Build and install pypilot:
+
+cd pypilot
+python setup.py build
+sudo python setup.py install
+
+
 
 most of the scripts can be run individually as standalone
 or test programs, some function as clients, other as servers
 
 
 servers (only one executes at a time)
-
-pypilot/basic_autopilot.py -- basic PID based autopilot with additional gains and filters
 
 These server scripts can be run as tests:
 * execute this script directly
@@ -38,11 +44,11 @@ pypilot/boatimu.py -- imu specific to boat motions
                       includes automatic 2d/3d calibration and alignment of magnetic sensors
                       * useful for testing the imu (gyros) or even just reading gyros
                       
-pypilot/nmea.py -- signalk <-> nmea0183 translator
-                   reads nmea0183 from serial ports or from tcp connections, and multiplexes
-                   the output to both nmea0183.
-                   listed on tcp port 20220 by default
-                   * convert and multiplex nmea0183 data
+pypilot/sensors.py -- signalk <-> nmea0183 translator
+                       reads nmea0183 from serial ports or from tcp connections, and multiplexes
+                       the output to both nmea0183.
+                       listed on tcp port 20220 by default
+                       * convert and multiplex nmea0183 data
 
 pypilot/servo.py --   use to test or verify a working motor controller is detected,
                       can be used to control and calibrate the servo

@@ -29,13 +29,12 @@ public:
     void invert(int x1, int y1, int x2, int y2);
     void fill(unsigned int c);
     virtual void refresh() {}
-    void binary_write(int fileno);
     void binary_write_sw(int sclk, int mosi);
 
     int width, height, bypp;
     char *p;
     int getpixel(int x, int y);
-    unsigned char *ptr() { return (unsigned char*)p; }
+    char *ptr() { return p; }
 
     int xoffset, yoffset, line_length;
 
@@ -61,19 +60,19 @@ public:
 #ifdef WIRINGPI
 
 // nokia5110 spi device
-class PCD8544;
-class nokia5110screen : public surface
+class spilcd;
+class spiscreen : public surface
 {
 public:
-    nokia5110screen();
-    virtual ~nokia5110screen();
+    spiscreen();
+    virtual ~spiscreen();
     
     void refresh();
 
     int contrast;
 
 private:
-    PCD8544 *disp;
+    spilcd *disp;
 };
 
 #endif

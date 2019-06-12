@@ -185,7 +185,7 @@ class LCDClient():
             print('failed to load config file:', self.configfilename)
 
         lcd = False
-        for possible_lcd in ['nokia5110', 'default', 'none']:
+        for possible_lcd in ['nokia5110', 'spi', 'default', 'none']:
             if possible_lcd in sys.argv:
                 sys.argv.remove(possible_lcd)
                 lcd = possible_lcd
@@ -200,9 +200,9 @@ class LCDClient():
         self.use_glut = False
         if lcd == 'none':
             screen = None
-        elif lcd == 'nokia5110':
-            print('using nokia5110')
-            screen = ugfx.nokia5110screen()
+        elif lcd == 'nokia5110' or lcd == 'spi':
+            print('using spi display')
+            screen = ugfx.spiscreen()
         else:
             self.use_glut = 'DISPLAY' in os.environ
         
@@ -267,7 +267,7 @@ class LCDClient():
         if orangepi:
             self.pins = [11, 16, 13, 15, 12]
         else:
-            self.pins = [17, 23, 27, 22, 18]
+            self.pins = [17, 23, 27, 22, 18, 5, 6]
 
         if GPIO:
             if orangepi:
@@ -585,7 +585,7 @@ class LCDClient():
                     if lang[1] == self.config['language']:
                         selection = index
                     index+=1
-                self.menu = LCDMenu(self, _('Language'), map(lambda lang : (lang[0], set_language(lang[1])), languages), self.menu)
+                self.menu = LCDMenu(self, _('Language'), list(map(lambda lang : (lang[0], set_language(lang[1])), languages)), self.menu)
                 self.menu.selection = selection
             
                 return self.display_menu
@@ -1235,7 +1235,8 @@ class LCDClient():
         self.glutkey(k, False)
 
     def glutkey(self, k, down=True):
-        if k == 'q' or k == 27:
+        k = k.decode()
+        if k == 'q' or ord(k) == 27:
             exit(0)
         if k == ' ':
             key = keynames['auto']

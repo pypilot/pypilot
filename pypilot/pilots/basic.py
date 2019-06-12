@@ -42,7 +42,6 @@ class BasicPilot(AutopilotPilot):
       self.Gain(name, default, 0, max_val, compute2)
 
     PosGain('PR',  0, .05)  # position root
-    PosGain2('D2', 0, .05)  # derivative squared
     PosGain('FF',  .5, 3.0) # feed forward
     PosGain('R',  .1, 1.0)  # reactive
     self.reactive_time = self.Register(RangeProperty, 'Rtime', 1, 0, 3)
@@ -50,15 +49,11 @@ class BasicPilot(AutopilotPilot):
     self.reactive_value = self.Register(SensorValue, 'reactive_value', timestamp)
                                     
     self.last_heading_mode = False
-    self.lastenabled = False
 
-  def process_imu_data(self):
+  def process(self, reset):
     t = time.time()
     ap = self.ap
-    if ap.enabled.value != self.lastenabled:
-      self.lastenabled = ap.enabled.value
-      if ap.enabled.value:
-        ap.heading_error_int.set(0) # reset integral
+    if reset:
         self.heading_command_rate.set(0)
         # reset feed-forward gain
         self.last_heading_mode = False
@@ -105,7 +100,6 @@ class BasicPilot(AutopilotPilot):
     if gain_values['P'] < 0:
       PR = -PR
     gain_values['PR'] = PR
-    gain_values['D2'] = gain_values['D']
 
     command = self.Compute(gain_values)
       

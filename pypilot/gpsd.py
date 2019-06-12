@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import multiprocessing, time, socket
 from signalk.pipeserver import NonBlockingPipe
 import select
@@ -28,7 +29,7 @@ class GpsProcess(multiprocessing.Process):
                 import gps
                 self.gpsd = gps.gps(mode=gps.WATCH_ENABLE) #starting the stream of info
                 self.gpsd.next() # flush initial message
-                print 'connected to gpsd'
+                print('connected to gpsd')
                 return
             except socket.error:
                 time.sleep(3)
@@ -56,12 +57,12 @@ class GpsProcess(multiprocessing.Process):
                     lasttime = time.time()
 
             except StopIteration:
-                print 'lost connection to gpsd'
+                print('lost connection to gpsd')
                 break
 
     def gps_process(self, pipe):
         import os
-        #print 'gps on', os.getpid()
+        #print('gps on', os.getpid())
         while True:
             self.connect()
             self.read(pipe)
@@ -93,7 +94,7 @@ class Gpsd(Sensor):
             device = fix['device']
             if device and not device in self.devices:
                 self.devices.append(device)
-                print 'gpsd is using device', device
+                print('gpsd is using device', device)
                 serialprobe.reserve(device)
                 return
 
@@ -114,7 +115,7 @@ class Gpsd(Sensor):
                 fd, flag = event
                 if fd == self.fd:
                     if flag != select.POLLIN:
-                        print 'nmea got flag for gpsd pipe:', flag
+                        print('nmea got flag for gpsd pipe:', flag)
                     else:
                         self.read()
 
@@ -132,5 +133,5 @@ if __name__ == '__main__':
     import gps
     gpsd = gps.gps(mode=gps.WATCH_ENABLE)
     while True:
-        print gpsd.next()
-        print 'fix:', gpsd.fix.mode, gpsd.fix.track, gpsd.fix.speed
+        print(gpsd.next())
+        print('fix:', gpsd.fix.mode, gpsd.fix.track, gpsd.fix.speed)

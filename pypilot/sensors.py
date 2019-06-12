@@ -7,8 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-# autopilot base handles reading from the imu (boatimu)
-
+from __future__ import print_function
+from signalk.server import *
 from signalk.values import *
 from resolv import resolv
 
@@ -56,7 +56,7 @@ class Sensor(object):
         self.update(data)
                 
         if self.source.value != source:
-            print 'found', self.name, 'on', source, data['device']
+            print('found', self.name, 'on', source, data['device'])
             self.source.set(source)
             self.device = data['device']
         self.lastupdate = time.time()
@@ -89,7 +89,46 @@ class Wind(Sensor):
     def reset(self):
         self.direction.set(False)
         self.speed.set(False)
-        
+
+class APB(Sensor):
+    def __init__(self, server):
+        super(APB, self).__init__(server, 'apb')
+        timestamp = server.TimeStamp('apb')
+        self.track = self.Register(SensorValue, 'track', timestamp, directional=True)
+        self.xte = self.Register(SensorValue, 'xte', timestamp)
+        # 300 is 30 degrees for 1/10th mile
+        self.gain = self.Register(RangeProperty, 'xte', 300, 0, 3000, persistent=True)
+        self.last_time = time.time()
+
+    def update(self, data):
+        t = time.time()
+        if t - self.last_time < .5: # only accept apb update at 2hz
+            return
+
+        self.last_time = t
+        self.track.update(data['track'])
+        self.xte.update(data['xte'])
+
+        if not 'ap.enabled' in self.server.values:
+            print('ERROR, parsing apb without autopilot')
+            return
+
+        if not self.server.values['ap.enabled']:
+            return
+
+        mode = self.server.values['ap.mode']
+        if mode.value != data['mode']:
+            # for GPAPB, ignore message on wrong mode
+            if data['**'] != 'GP':
+                mode.set(data['mode'])
+
+        command = data['track'] + self.gain.value*data['xte']
+
+        heading_command = self.server.values['ap.heading_command']
+        if abs(heading_command.value - command) > .1:
+            heading_command.value.set(command)
+
+    
 class Sensors(object):
     def __init__(self, server):
         from gpsd import Gpsd
@@ -101,8 +140,9 @@ class Sensors(object):
         self.gps = Gpsd(server, self)
         self.wind = Wind(server)
         self.rudder = Rudder(server)
+        self.apb = APB(server)
 
-        self.sensors = {'gps': self.gps, 'wind': self.wind, 'rudder': self.rudder}
+        self.sensors = {'gps': self.gps, 'wind': self.wind, 'rudder': self.rudder, 'apb': self.apb}
 
     def poll(self):
         self.gps.poll()
@@ -119,14 +159,14 @@ class Sensors(object):
                 self.lostsensor(sensor);
 
     def lostsensor(self, sensor):
-        print 'sensor', sensor.name, 'lost', sensor.device, 'source', sensor.source.value
+        print('sensor', sensor.name, 'lost', sensor.device, 'source', sensor.source.value)
         sensor.source.set('none')
         sensor.reset()
         sensor.device = None
             
     def write(self, sensor, data, source):
         if not sensor in self.sensors:
-            print 'unknown data parsed!', sensor
+            print('unknown data parsed!', sensor)
             return
 
         self.sensors[sensor].write(data, source)
@@ -138,3 +178,15 @@ class Sensors(object):
             sensor = self.sensors[name]
             if sensor.device and sensor.device[2:] == device:
                 self.lostsensor(sensor)
+
+
+if __name__ == '__main__':
+    if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
+      print('warning, failed to make sensor process realtime')
+    server = SignalKServer()
+    sensors = Sensors(server)
+
+    while True:
+        sensors.poll()
+        server.HandleRequests()
+        time.sleep(.1)
