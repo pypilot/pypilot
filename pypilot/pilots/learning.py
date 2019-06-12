@@ -12,7 +12,7 @@ from signalk.values import Value
 import sys, multiprocessing, select
 #import tensorflow as tf
 sys.path.append('..')
-from autopilot import AutopilotPilot, AutopilotGain
+from pilot import AutopilotPilot, AutopilotGain
 from signalk.values import *
 from signalk.pipeserver import NonBlockingPipe
 
