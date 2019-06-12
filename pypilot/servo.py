@@ -364,7 +364,7 @@ class Servo(object):
         
         # ensure speed max is at least speed min
         if self.speed.min.value > self.speed.max.value:
-            self.speed.max.value.set(self.speed.min.value)
+            self.speed.max.set(self.speed.min.value)
 
         min_speed = self.speed.min.value/100.0 # convert percent to 0-1
         max_speed = self.speed.max.value/100.0
