@@ -9,7 +9,7 @@
 
 import sys
 sys.path.append('..')
-from autopilot import AutopilotPilot
+from pilot import AutopilotPilot
 
 # this pilot is an experiment to command the rudder
 # to an absolute position rather than relative speed

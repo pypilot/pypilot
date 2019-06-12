@@ -9,7 +9,8 @@
 
 import sys
 sys.path.append('..')
-from autopilot import AutopilotPilot, HeadingOffset, AutopilotGain, resolv
+from autopilot import HeadingOffset, resolv
+from pilot import AutopilotPilot, AutopilotGain
 from signalk.values import *
 
 # the wind pilot does not require a compass but does require a wind sensor.
