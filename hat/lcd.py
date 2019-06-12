@@ -710,7 +710,7 @@ class LCD():
             pass
 
         if self.wifi != wifi:
-            wifirect = rectangle(.3, .9, .6, .1)
+            wifirect = rectangle(.3, .9, .6, .12)
             if wifi:
                 text = 'WIFI'
                 if self.hat.config['remote']:
