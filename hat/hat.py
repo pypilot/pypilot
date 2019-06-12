@@ -9,8 +9,9 @@
 
 from __future__ import print_function
 import time, os, sys
+import json
 from signalk.client import SignalKClient
-import lcd, gpio, arduino, lirc, web
+import lcd, gpio, arduino, lirc, buzzer
 
 class Action(object):
     def  __init__(self, hat, name):
@@ -72,11 +73,28 @@ class ActionTack(ActionSignalK):
         if self.hat.client:
             self.hat.client.set('ap.tack.direction', self.direction)
 
+def web_process(pipe, actions):
+    import web
+    web.web_process(pipe, actions)
+
+class Web(object):
+    def __init__(self, actions):
+        import multiprocessing
+        from signalk.pipeserver import NonBlockingPipe
+        self.pipe, pipe = NonBlockingPipe('pipe', True)
+        self.process = multiprocessing.Process(target=web_process, args=(pipe,actions))
+        self.process.start()
+        import atexit, signal
+        def cleanup():
+            os.kill(self.process.pid, signal.SIGTERM)
+
+        atexit.register(cleanup) # get backtrace
+            
 class Hat(object):
     def __init__(self):
         # read config
         try:
-            configfile = '/proc/device-tree/hat/custom-0'
+            configfile = '/proc/device-tree/hat/custom_0'
             f = open(configfile)
             self.hatconfig = json.loads(f.read())
 
@@ -98,24 +116,23 @@ class Hat(object):
         except Exception as e:
             print('config failed:', e)
 
-        self.lcd = lcd.LCD(self)
-        self.gpio = gpio.gpio()
-        self.arduino = arduino.arduino(self.hatconfig)
-        self.lirc = lirc.lirc(self)
-        self.web = web.Web()
-
-        self.client = False
-
         self.lastpollheading = time.time()
         self.servo_timeout = time.time() + 1
         
         self.longsleep = 30
         self.last_msg = {}
 
+        self.client = False
+        self.lcd = lcd.LCD(self)
+        self.gpio = gpio.gpio()
+        self.arduino = arduino.arduino(self.config)
+        self.lirc = lirc.lirc()
+        self.buzzer = buzzer.buzzer(self.config)
+        
         # keypad for lcd interface
         self.actions = []
         keypadnames = ['Auto', 'Menu', 'Up', 'Down', 'Select', 'Left', 'Right']
-
+        
         for i in range(7):
             self.actions.append(ActionKeypad(self.lcd, i, keypadnames[i]))
 
@@ -138,6 +155,7 @@ class Hat(object):
             if action.name in self.config:
                 action.keys = self.config[action.name]
 
+        self.web = Web(self.actions)
 
     def write_config(self):
         config = {}
@@ -153,6 +171,7 @@ class Hat(object):
     def connect(self):
         for name in ['gps.source', 'wind.source']:
             self.last_msg[name] = 'none'
+        self.last_msg['ap.enabled'] = False
         self.last_msg['ap.heading_command'] = 0
         self.last_msg['imu.heading_offset'] = 0
 
@@ -189,7 +208,7 @@ class Hat(object):
         self.web.pipe.send({'key': key})
 
         for action in self.actions:
-            if key in action.key:
+            if key in action.keys:
                 self.web.pipe.send({'action': action.name})
                 action.trigger(down, count)
             
@@ -219,10 +238,11 @@ class Hat(object):
                     if not name in self.value_list:
                         self.client.value_list[name] = {}
                     self.client.value_list[name][token] = data[token]
-            
-        self.lcd.poll()
 
-        anycode = False
+        for i in [self.lcd, self.buzzer]:
+            i.poll()
+
+        anycode = False # are any keys read?
         for i in [self.gpio, self.arduino, self.lirc]:
             i.poll()
             while True:

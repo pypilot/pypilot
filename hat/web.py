@@ -9,8 +9,7 @@
 
 from flask import Flask, render_template, session, request
 from flask_socketio import SocketIO, Namespace, emit, disconnect
-import time, math, multiprocessing, select, os
-from signalk.pipeserver import NonBlockingPipe
+import time, math, select, os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -18,55 +17,60 @@ socketio = SocketIO(app, async_mode=None)
 
 web_port = 33333
 
-@app.route('/')
-def index():
-    return render_template('index.html', async_mode=socketio.async_mode, web_port=web_port)
-
-def generate_button_row(buttonid, name):
-    return '<tr><td><button id="' + buttonid + '">' + name + '</button></td><td><span id="action' + buttonid + 'codes"></span></td></tr>'
-
 class WebConfig(Namespace):
-    def __init__(self, name):
+    def __init__(self, name, pipe, actions):
         super(Namespace, self).__init__(name)
         socketio.start_background_task(target=self.background_thread)
+        self.pipe = pipe
+        self.actions = actions
+        self.pypilot = 'N/A'
+
+        acts = ''
+        for action in actions:
+            acts += '<tr><td><button id="' + action.name + '">' + action.name + '</button></td><td><span id="action' + action.name + 'keys"></span></td></tr>'            
+
+        @app.route('/')
+        def index():
+            return render_template('index.html', async_mode=socketio.async_mode, web_port=web_port, actionkeys = acts)
 
     def on_ping(self):
         emit('pong')
 
-    def on_codes(self, command):
-        if not self.last_code:
+    def on_keys(self, command):
+        if not self.last_key:
             return
 
-        # remove this code from any actions
+        # remove this key from any actions
         for action in self.actions:
-            while self.last_code in action.codes:
-                action.codes.remove(self.last_code)
+            while self.last_key in action.keys:
+                action.keys.remove(self.last_key)
 
-        # add the last code to the action
+        # add the last key to the action
         for action in self.actions:
             if command == action.name:
-                action.codes.append(self.last_code)
+                action.keys.append(self.last_key)
                 break
 
-        self.emit_codes()
+        self.emit_keys()
         self.write_config()
 
-    def emit_codes(self):
+    def emit_keys(self):
         for action in self.actions:
-            codes = {'name': action.name, 'codes': action.codes}
-            socketio.emit('action_codes', codes)
+            keys = {'name': action.name, 'keys': action.keys}
+            socketio.emit('action_keys', keys)
         
     def on_connect(self):
-        self.emit_codes()
+        self.emit_keys()
+        socketio.emit('pypilot', self.pypilot)
         print('Client connected', request.sid)
 
     def on_disconnect(self):
+        socketio.emit('pypilot', self.pypilot)
         print('Client disconnected', request.sid)
 
     def background_thread(self):
-
-        last_code = False
-        last_code_time = time.time()
+        last_key = False
+        last_key_time = time.time()
         print('processing clients')
         x = 0
         polls_sent = {}
@@ -74,37 +78,28 @@ class WebConfig(Namespace):
             socketio.sleep(.25)
 
             t = time.time()
-            dtc = t - last_code_time
-            if dtc > 8 and last_code:
-                last_code = False
-                socketio.emit('code', 'N/A')
+            dtc = t - last_key_time
+            if dtc > 8 and last_key:
+                last_key = False
+                socketio.emit('key', 'N/A')
                 socketio.emit('action', '')
 
-            continue
             msg = self.pipe.recv()
-            if 'code' in v:
-                last_code = v['code']
-                last_code_time = time.time()
-            for name in msg:
-                socketio.emit(name, str(msg[name]))
+            if msg:
+                if 'key' in msg:
+                    last_key = msg['key']
+                    last_key_time = time.time()
+                for name in msg:
+                    print('emit', name, str(msg[name]))
+                    socketio.emit(name, str(msg[name]))
+                if 'pypilot' in msg:
+                    self.pypilot = msg['pypilot']
 
-socketio.on_namespace(WebConfig(''))
-
-def web_process(pipe):
+def web_process(pipe, actions):
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
+    socketio.on_namespace(WebConfig('', pipe, actions))
     socketio.run(app, debug=False, host='0.0.0.0', port=web_port)
     
-class Web(object):
-    def __init__(self):
-        self.pipe, pipe = NonBlockingPipe('pipe')
-        self.process = multiprocessing.Process(target=web_process, args=(pipe,))
-        self.process.start()
-        import atexit, signal
-        def cleanup():
-            os.kill(self.process.pid, signal.SIGTERM)
-
-        atexit.register(cleanup) # get backtrace
-
 if __name__ == '__main__':
     web_process(None)
