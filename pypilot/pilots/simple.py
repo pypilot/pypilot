@@ -18,7 +18,6 @@ class SimplePilot(AutopilotPilot):
 
     # create simple pid filter
     self.gains = {}
-    timestamp = self.ap.server.TimeStamp('ap')
     self.Gain('P', .005, 0, .025)
     self.Gain('I', 0, 0, .05)
     self.Gain('D', .15, 0, .5)

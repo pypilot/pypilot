@@ -38,7 +38,6 @@ class LearningPilot(AutopilotPilot):
 
     self.servo_rules = self.Register(BooleanProperty, 'servo_rules', True)
 
-    timestamp = self.ap.server.TimeStamp('ap')
     self.initialized = False
     self.start_time = time.time()
 
