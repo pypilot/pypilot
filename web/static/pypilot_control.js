@@ -29,6 +29,7 @@ $(document).ready(function() {
     namespace = '';
     $('#ping-pong').text("N/A");
     $('#connection').text('Not Connected');
+    $('#imu_heading').text("N/A");
     $('#pitch').text("N/A");
     $('#roll').text("N/A");
     $('#rudder').text("N/A");
@@ -113,6 +114,7 @@ $(document).ready(function() {
         }
 
         // calibration
+        watch('imu.heading_offset');
         watch('imu.alignmentQ');
         watch('imu.alignmentCounter');
         watch('imu.compass_calibration_locked');
@@ -198,6 +200,7 @@ $(document).ready(function() {
             for (var i = 0; i<gains.length; i++)
                 poll('ap.' + gains[i]);
         } else if(tab == 'Calibration') {
+            poll('imu.heading');
             poll('imu.pitch');
             poll('imu.roll');
             poll('rudder.angle');
@@ -321,12 +324,16 @@ $(document).ready(function() {
         }
 
         // calibration
+        if('imu.heading' in data)
+            $('#imu_heading').text(data['imu.heading']['value']);
         if('imu.pitch' in data)
             $('#pitch').text(data['imu.pitch']['value']);
         if('imu.roll' in data)
             $('#roll').text(data['imu.roll']['value']);
         if('imu.alignmentCounter' in data)
             $('.myBar').width((100-data['imu.alignmentCounter']['value'])+'%');
+        if('imu.heading_offset' in data)
+            $('#imu_heading_offset').val(data['imu.heading_offset']['value']);
         if('imu.compass_calibration_locked' in data)
             $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']['value']);
         if('rudder.angle' in data) {
@@ -434,6 +441,10 @@ $(document).ready(function() {
         signalk_set('imu.alignmentCounter', 100);
         signalk_set('imu.alignmentType', 'level');
         return false;
+    });
+
+    $('#imu_heading_offset').change(function(event) {
+        signalk_set('imu.heading_offset', $('#imu_heading_offset').value());
     });
 
     $('#rudder_centered').click(function(event) {
