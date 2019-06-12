@@ -25,65 +25,65 @@ $(document).ready(function() {
         $('#connection').text('Disconnected')
     });
 
-    socket.on('pypilot', function(log) {
-        $('#pypilot').text(log);
+    socket.on('pypilot', function(msg) {
+        $('#pypilot').text(msg);
     });
 
-    socket.on('code', function(code) {
-        $('#code').text(code);
+    socket.on('key', function(key) {
+        $('#key').text(key);
     });
 
     socket.on('action', function(action) {
         $('#action').text(action);
     });
     
-    socket.on('action_codes', function(codes) {
-        $('#action'+codes['name']+'codes').text(codes['codes'])
+    socket.on('action_keys', function(keys) {
+        $('#action'+keys['name']+'keys').text(keys['keys'])
     });
              
     $('#engage').click(function(event) {
-        socket.emit('codes', 'engage');
+        socket.emit('keys', 'engage');
     });
 
     $('#disengage').click(function(event) {
-        socket.emit('codes', 'disengage');
+        socket.emit('keys', 'disengage');
     });
     
     $('#m1').click(function(event) {
-        socket.emit('codes', '1');
+        socket.emit('keys', '1');
     });
     
     $('#m2').click(function(event) {
-        socket.emit('codes', '2');
+        socket.emit('keys', '2');
     });
     
     $('#m10').click(function(event) {
-        socket.emit('codes', '10');
+        socket.emit('keys', '10');
     });
     
     
     $('#m-1').click(function(event) {
-        socket.emit('codes', '-1');
+        socket.emit('keys', '-1');
     });
     
     $('#m-2').click(function(event) {
-        socket.emit('codes', '-2');
+        socket.emit('keys', '-2');
     });
     
     $('#m-10').click(function(event) {
-        socket.emit('codes', '-10');
+        socket.emit('keys', '-10');
     });
 
     $('#compassmode').click(function(event) {
-        socket.emit('codes', 'compassmode');
+        socket.emit('keys', 'compassmode');
     });
     
     $('#gpsmode').click(function(event) {
-        socket.emit('codes', 'gpsmode');
+        socket.emit('keys', 'gpsmode');
     });
 
     $('#windmode').click(function(event) {
-        socket.emit('codes', 'windmode');
+        socket.emit('keys', 'windmode');
     });
 
     // Interval function that tests message latency by sending a "ping"

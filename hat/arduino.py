@@ -17,28 +17,23 @@ import os, sys, time, json
 import spidev
 from signalk.client import SignalKClient
 
-def flash(device, filename, c):
-    # detect if this board supports arduino
-    # echo 16 > /sys/class/gpio/export || echo ok
-    # echo out > /sys/class/gpio/gpio16/direction
-
-    command = 'avrdude -P ' + device + '-u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 500000'
-    ret = os.system(command)
-    # echo in > /sys/class/gpio/gpio16/direction
-
-def verify(device, filename):
-    return flash(device, filename, 'v')
-
-def write(device, filename):
-    return flash(device, filename, 'w')
+try:
+    import RPi.GPIO as GPIO
+except:
+    GPIO = False
 
 class arduino(object):
     def __init__(self, config):
         self.spi = False
 
-        self.config = config
-        if not config:
+        if 'arduino' in config:
+            self.config = config['arduino']
+        else:
+            self.config = False
+            
+        if not self.config:
             print('No hat config, arduino not found')
+            print('rf/ir interface not available')
 
     def open(self):
         if not self.config:
@@ -49,7 +44,7 @@ class arduino(object):
             if device.startswith('/dev/spidev'):
                 # update flash if needed
                 filename = '.pypilot/pypilothat.hex'
-                if not verify(device, filename) and not write(device, filename):
+                if not self.verify(filename) and not self.write(filename):
                     return
                 
                 port, slave = int(device[6]), int(device[8])
@@ -106,3 +101,24 @@ class arduino(object):
             down = command == 1
             count = x[2]
             return key, down, count
+
+    def flash(filename, c):
+        if not GPIO:
+            return
+
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(resetpin, GPIO.OUT)
+        GPIO.output(resetpin, 0)
+
+        command = 'avrdude -P ' + self.config['device'] + '-u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 500000'
+        print('executing', command)
+        ret = os.system(command)
+        GPIO.output(resetpin, 1)
+        GPIO.setup(resetpin, GPIO.IN)
+
+
+    def verify(filename):
+        return flash(filename, 'v')
+
+    def write(filename):
+        return flash(filename, 'w')

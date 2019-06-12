@@ -18,8 +18,7 @@ except:
     LIRC = None
 
 class lirc(object):
-    def __init__(self, hat):
-        self.hat = hat
+    def __init__(self):
         global LIRC
         if LIRC:
             try:
