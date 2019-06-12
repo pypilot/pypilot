@@ -254,7 +254,11 @@ class Autopilot(object):
 
     self.childpids = [self.boatimu.imu_process.pid, self.boatimu.auto_cal.process.pid,
                       self.sensors.nmea.process.pid, self.sensors.gps.process.pid]
-    self.childpids += [self.server.process.pid]
+    try:
+        self.childpids += [self.server.process.pid]
+    except:
+        print('warning no server process')
+        
     signal.signal(signal.SIGCHLD, cleanup)
     import atexit
     atexit.register(lambda : cleanup('atexit'))
