@@ -645,7 +645,7 @@ def CalibrationProcess(cal_pipe):
                 accel_calibration = fit[0]
                 client.set('imu.accel.calibration', fit)
 
-        compass_cal.RemoveOlder(60*60) # 60 minutes
+        compass_cal.RemoveOlder(20*60) # 20 minutes
         fit = FitCompass(debug('compass'), compass_cal, compass_calibration, norm)
         if fit:
             client.set('imu.compass.calibration', fit)
