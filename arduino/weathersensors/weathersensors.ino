@@ -15,10 +15,13 @@
 using potentiometer for wind direction
 using a reed switch for wind speed
 
-red    - gnd - pin 3 - potentiometer power A - reed switch A
-yellow - 5v  - pin 5 - potentiometer power B
-green  - a7  - pin 4 - potentiometer reading
-black  - d2  - pin 2 -                         reed switch B
+
+rj12        - arduino - rj12  -  connections
+wire color  - pin     - pin
+red         - gnd - pin 3 - potentiometer power A - reed switch A
+yellow      - 5v  - pin 5 - potentiometer power B
+green       - a7  - pin 4 - potentiometer reading
+black       - d2  - pin 2 -                         reed switch B
 
 */
 
@@ -37,11 +40,16 @@ extern "C" {
 #define ANEMOMETER   // comment to show only baro graph
 
 #define LCD          // if nokia5110 lcd on spi port
-#define DAVIS     // uncomment only for davis sensors
-//#define CCW   //  voltage decreases with wind direction (not davis!)
+//#define DAVIS     // uncomment only for davis sensors
+#define LCD_BL_HIGH  // if backlight pin is high rather than gnd
+#define FARENHEIT  // farenheit temperature on lcd display
 
-//#define LCD_BL_HIGH  // if backlight pin is high rather than gnd
-//#define FARENHEIT
+
+
+#ifndef DAVIS
+#define CCW   //  voltage decreases with wind direction (not davis!)
+#endif
+
 
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
@@ -147,6 +155,8 @@ volatile uint16_t lastperiod;
 void isr_anemometer_count()
 {
     uint8_t pin = digitalRead(2);
+//    Serial.print("read:  ");
+//      Serial.println(pin);
 
     static uint16_t lastt, lastofft;
     static uint8_t lastpin;
@@ -160,7 +170,9 @@ void isr_anemometer_count()
         if(period > 10)
 #else
         if(offperiod > 10 && // debounce, at least for less than 120 knots of wind
-           /*offperiod > period/2 &&*/ offperiod < period/10*9) // test good reading
+           /*offperiod > period/2 &&*/
+           offperiod < period &&
+            1) // test good reading
 #endif
         {
             lastt = t;            
@@ -180,7 +192,7 @@ void isr_anemometer_count()
 struct eeprom_data_struct {
     char signature[6];
     int16_t wind_min_reading, wind_max_reading;
-} eeprom_data;
+} eeprom_data, new_eeprom_data;
 
 void setup()
 {
@@ -201,14 +213,19 @@ void setup()
 
   char signature[] =  "arws12";
   memcpy(eeprom_data.signature, signature, sizeof eeprom_data.signature);
+  memcpy(new_eeprom_data.signature, signature, sizeof eeprom_data.signature);
   eeprom_data.wind_min_reading = 300;
   eeprom_data.wind_max_reading = 650;
 
+  new_eeprom_data.wind_min_reading = 450;
+  new_eeprom_data.wind_max_reading = 500;
+  
   if(memcmp(ram_eeprom.signature, signature, sizeof ram_eeprom.signature) == 0 &&
      ram_eeprom.wind_min_reading > 0 && // ensure somewhat sane range
      ram_eeprom.wind_max_reading < 1024 &&
      ram_eeprom.wind_min_reading < ram_eeprom.wind_max_reading-100) {
       memcpy(&eeprom_data, &ram_eeprom, sizeof eeprom_data);
+
       Serial.print("Calibration valid  ");
       Serial.print(ram_eeprom.wind_min_reading);
       Serial.print("  ");
@@ -226,7 +243,9 @@ void setup()
     uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
     uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
     if(lowBits != 0xFF || highBits != 0xda ||
-       (extendedBits != 0xFD && extendedBits != 0xFC) || lockBits != 0xCF)
+       (extendedBits != 0xFD && extendedBits != 0xFC)
+       //|| lockBits != 0xCF
+        )
         Serial.print("Warning, fuses set wrong, flash may become corrupted");
 
   bmX280_setup();
@@ -330,6 +349,7 @@ uint8_t checksum(const char *buf)
 
 void send_nmea(const char *buf)
 {
+//    return;
   char buf2[128];
   snprintf(buf2, sizeof buf2, "$%s*%02x\r\n", buf, checksum(buf));
   Serial.print(buf2);
@@ -372,7 +392,7 @@ void read_anemometer()
     int16_t sensorValue = 0;
     // discard this since we crossed zero and read
     // possibly invalid data
-    if(count[0] > 0 && count[2] > 0) {
+    if(count[0] > 0 && count[2] > 0 && count[1] <= 0) {
 #if 0
         Serial.print ("CROSS!!!!   ");
         Serial.print(float(val[0]) / count[0]);
@@ -380,21 +400,36 @@ void read_anemometer()
         Serial.println(float(val[2]) / count[2]);
 #endif
         if(cross_count > 0) {
+            uint16_t a = val[0]/count[0];
+            uint16_t b = val[2]/count[2];
+            
+            new_eeprom_data.wind_min_reading = min(new_eeprom_data.wind_min_reading, a);
+            new_eeprom_data.wind_max_reading = max(new_eeprom_data.wind_max_reading, a);
 #if 1
             Serial.print("Calibrating  ");
             Serial.print(sensorValue);
             Serial.print("  ");
-            Serial.print(eeprom_data.wind_min_reading);
+            Serial.print(new_eeprom_data.wind_min_reading);
             Serial.print(" ");
-            Serial.print(eeprom_data.wind_max_reading);
+            Serial.print(new_eeprom_data.wind_max_reading);
             Serial.print(" ");
             Serial.println(cross_count);
 #endif
             cross_count--;
         }
+    
+    
         if(cross_count == 0) { // write at zero
             Serial.println("Calibration Finished");
-            eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
+            cross_count--;
+            // use new calibration
+            memcpy(eeprom_data, new_eeprom_data, sizeof eeprom_data);
+            
+            struct eeprom_data_struct ram_eeprom;
+            eeprom_read_block(&ram_eeprom, 0, sizeof ram_eeprom);
+            // don't write update unless there is a significant change
+            if(abs(eeprom_data.wind_max_reading - ram_data.wind_max_reading) > 20 || abs(eeprom_data.wind_min_reading - ram_data.wind_min_reading) > 20)
+                eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
         }
         return;
     }
@@ -438,18 +473,13 @@ void read_anemometer()
     else
     {
         int noise = 0;
-        if(cross_count > 0) {
-            if(sensorValue < eeprom_data.wind_min_reading - noise)
-                eeprom_data.wind_min_reading = sensorValue + noise;
-            else if(sensorValue > eeprom_data.wind_max_reading + noise)
-                eeprom_data.wind_max_reading = sensorValue - noise;
+        if(cross_count == 0) {
+            if(sensorValue < eeprom_data.wind_min_reading)
+                sensorValue = eeprom_data.wind_min_reading;
+            else if(sensorValue > eeprom_data.wind_max_reading)
+                sensorValue = eeprom_data.wind_max_reading;
         }
         
-        if(sensorValue < eeprom_data.wind_min_reading)
-            sensorValue = eeprom_data.wind_min_reading;
-        else if(sensorValue > eeprom_data.wind_max_reading)
-            sensorValue = eeprom_data.wind_max_reading;
-
         if(eeprom_data.wind_min_reading < 40 || eeprom_data.wind_max_reading > 1000)
             dir = (sensorValue + 13) * .34;
         else
@@ -494,6 +524,7 @@ void read_anemometer()
         static float knots = 0, lastnewknots = 0;
         const int nowindtimeout = 30;
         if(count) {
+//            Serial.println(period);
             if(nowindcount!=nowindtimeout) {
                 float newknots = .868976 * 2.25 * 1000 * count / period;
 #if 0

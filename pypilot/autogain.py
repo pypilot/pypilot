@@ -48,7 +48,7 @@ class autogain(object):
             for name in self.watchlist:
                 client.watch(name)
 
-        print 'connecting to server...'
+        print('connecting to server...')
         host = False
         if len(sys.argv) > 1:
             host = sys.argv[1]
@@ -60,7 +60,7 @@ class autogain(object):
             except:
                 time.sleep(2)
 
-        print 'connected'
+        print('connected')
 
     def read_messages(self, log):
         msgs = self.client.receive()
@@ -72,7 +72,7 @@ class autogain(object):
                 if name == var:
                     name = name[3:]
                     if abs(value - self.gains[name].value) > 1e-8:
-                        print 'external program adjusting search variable!!, abort', name, value
+                        print('external program adjusting search variable!!, abort', name, value)
                         exit(0)
 
             if log:
@@ -81,17 +81,17 @@ class autogain(object):
                         self.total[name]['total'] += abs(value)
                         self.total[name]['count'] += 1
             if name == 'ap.enabled' and not value:
-                #print 'autopilot disabled!!'
+                #print('autopilot disabled!!')
                 #exit(0)
                 pass
 
     def set(self, name, val):
-        print 'setting', name, 'to', val
+        print('setting', name, 'to', val)
         self.searchval[name] = val
         self.client.set(name, val)
 
     def log(self):
-        print 'logging for', self.searchval
+        print('logging for', self.searchval)
         t0 = time.time()
         self.total = {}
         for var in self.variables:
@@ -107,7 +107,7 @@ class autogain(object):
             if count:
                 self.results[var].append((self.searchval.copy(), self.total[var]['total'] / count))
             else:
-                print 'warning, no results for', var
+                print('warning, no results for', var)
         
     def run_search(self, search):
         if search:
@@ -139,41 +139,41 @@ class autogain(object):
         l = len(search)
         s = search[0]
         if l < 2:
-            print s['name']
+            print(s['name'])
             for val in self.result_range(results, s['name']):
                 vals[s['name']] = val
-                print val, self.result_value(results, vals)
+                print(val, self.result_value(results, vals))
         elif l > 2:
             for val in self.result_range(results, s['name']):
-                print s['name'], '=', val
+                print(s['name'], '=', val)
                 vals[s['name']] = val
                 self.print_results(results, search[1:], vals)
                 
         elif l == 2:
             t = search[1]
-            print s['name'], '/', t['name']
+            print(s['name'], '/', t['name'])
             line = '\t'
             s_range = self.result_range(results, s['name'])
             for val0 in s_range:
                 line += '%.4f\t' % val0
-            print line
+            print(line)
             for val1 in self.result_range(results, t['name']):
                 line = '%.4f\t' % val1
                 vals[t['name']] = val1
                 for val0 in s_range:
                     vals[s['name']] = val0
                     line += str(self.result_value(results, vals)) + '\t'
-                print line
-            print ''
+                print(line)
+            print('')
 
     def run(self):
         self.searchval = {}
         self.results = {}
         self.run_search(self.search)
         for var in self.variables:
-            print 'Results for', var
+            print('Results for', var)
             self.print_results(self.results[var], self.search, {})
-            print ''
+            print('')
 
 if __name__ == '__main__':
     ag = autogain()

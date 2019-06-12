@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import sys
 import math
 import time
@@ -33,7 +34,7 @@ def FitLeastSq(beta0, f, zpoints, dimensions=1):
     try:
         import scipy.optimize
     except:
-        print "failed to load scientific library, cannot perform calibration update!"
+        print("failed to load scientific library, cannot perform calibration update!")
         return False
 
     leastsq = scipy.optimize.leastsq(f, beta0, zpoints)
@@ -43,7 +44,7 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
     try:
         import scipy.odr
     except:
-        print 'failed to load scientific library, cannot perform calibration update!'
+        print('failed to load scientific library, cannot perform calibration update!')
         return False
 
     try:
@@ -54,7 +55,7 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
         output = Odr.run()
         return list(output.beta)
     except:
-        print 'exception running odr fit!'
+        print('exception running odr fit!')
         return False
 
 def ComputeDeviation(points, fit):
@@ -154,7 +155,7 @@ def FitPointsAccel(points):
 
     sphere3d_fit = FitLeastSq([0, 0, 0, 1], f_sphere3, zpoints)
     if not sphere3d_fit or sphere3d_fit[3] < 0:
-        print 'FitLeastSq sphere failed!!!! ', len(points)
+        print('FitLeastSq sphere failed!!!! ', len(points))
         return False
     #debug('sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
     return sphere3d_fit
@@ -205,7 +206,7 @@ def FitPointsCompass(points, current, norm):
         return r0
     sphere1d_fit = FitLeastSq([0, initial[3]], f_sphere1, zpoints)
     if not sphere1d_fit or sphere1d_fit[1] < 0:
-        print 'FitLeastSq sphere1d failed!!!! ', len(points)
+        print('FitLeastSq sphere1d failed!!!! ', len(points))
         return False
     sphere1d_fit = map(lambda x, n: x + sphere1d_fit[0]*n, initial[:3], norm) + [sphere1d_fit[1]]
     debug('sphere1 fit', sphere1d_fit, ComputeDeviation(points, sphere1d_fit))
@@ -230,7 +231,7 @@ def FitPointsCompass(points, current, norm):
     else:
         new_sphere1d_fit = map(lambda x, a: x + new_sphere1d_fit[0]*a, initial[:3], norm) + [new_sphere1d_fit[1], math.degrees(math.asin(new_sphere1d_fit[2]))]
     new_sphere1d_fit = [new_sphere1d_fit, ComputeDeviation(points, new_sphere1d_fit), 1]
-        #print 'new sphere1 fit', new_sphere1d_fit
+        #print('new sphere1 fit', new_sphere1d_fit)
 
     if line_max_dev < 2:
         debug('line fit found, insufficient data', line_dev, line_max_dev)
@@ -256,7 +257,7 @@ def FitPointsCompass(points, current, norm):
         return r0
     sphere2d_fit = FitLeastSq([0, 0, initial[3]], f_sphere2, zpoints)
     if not sphere2d_fit or sphere2d_fit[2] < 0:
-        print 'FitLeastSq sphere2d failed!!!! ', len(points)
+        print('FitLeastSq sphere2d failed!!!! ', len(points))
         new_sphere2d_fit = initial
     else:
         sphere2d_fit = map(lambda x, a, b: x + sphere2d_fit[0]*a + sphere2d_fit[1]*b, initial[:3], u, v) + [sphere2d_fit[2]]
@@ -304,7 +305,7 @@ def FitPointsCompass(points, current, norm):
         return r0
     sphere3d_fit = FitLeastSq(initial[:4], f_sphere3, zpoints)
     if not sphere3d_fit or sphere3d_fit[3] < 0:
-        print 'FitLeastSq sphere failed!!!! ', len(points)
+        print('FitLeastSq sphere failed!!!! ', len(points))
         return False
     debug('sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
     '''
@@ -333,7 +334,7 @@ def FitPointsCompass(points, current, norm):
 
 
 def avg(fac, v0, v1):
-    return map(lambda a, b : (1-fac)*a + fac*b, v0, v1)
+    return list(map(lambda a, b : (1-fac)*a + fac*b, v0, v1))
 
 class SigmaPoint(object):
     def __init__(self, sensor, down):
@@ -414,23 +415,21 @@ class SigmaPoints(object):
                     count = min(self.sigma_points[i].count, 100)
                     dt = time.time() - self.sigma_points[i].time
                     weight = dist * count**.2 * 1/dt**.1
-                    #print 'ij', i, j, dist, count, dt, weight
+                    #print('ij', i, j, dist, count, dt, weight)
                     if weight < minweight:
                         minweighti = i
                         minweight = weight
 
-            #print 'replace', minweighti, self.sigma_points[minweighti].count, time.time() - self.sigma_points[minweighti].time
+            #print('replace', minweighti, self.sigma_points[minweighti].count, time.time() - self.sigma_points[minweighti].time)
             self.sigma_points[minweighti] = p
             return
 
         self.sigma_points.append(p)
 
     def RemoveOlder(self, dt=3600):
-        # remove points older than 1 hour
         p = []
         for sigma in self.sigma_points:
-            # only use measurements in last hour
-            if time.time() - sigma.time < 3600:
+            if time.time() - sigma.time < dt:
                 p.append(sigma)
         self.sigma_points = p
 
@@ -474,7 +473,7 @@ def FitAccel(accel_cal):
     mina = map(min, *p)
     maxa = map(max, *p)
     diff = vector.sub(maxa[:3], mina[:3])
-    #print 'accelfit', diff
+    #print('accelfit', diff)
 
     if min(*diff) < 1.2:
         return # require sufficient range on all axes
@@ -491,7 +490,7 @@ def FitAccel(accel_cal):
 
 def FitCompass(compass_cal, compass_calibration, norm):
     p = compass_cal.Points()
-    #print 'compassfit count', len(p)
+    #print('compassfit count', len(p))
     if len(p) < 8:
         return False
 
@@ -548,7 +547,7 @@ def FitCompass(compass_cal, compass_calibration, norm):
         curdeviation = ComputeDeviation(p, compass_calibration)
         debug('cur dev', curdeviation)
         # if compass_calibration calibration is really terrible
-        if deviation[0]/curdeviation[0] + deviation[1]/curdeviation[1] < 2 or curdeviation[0] > .15 or curdeviation[1] > 10:
+        if deviation[0]/curdeviation[0] + deviation[1]/curdeviation[1] < 2.5 or curdeviation[0] > .2 or curdeviation[1] > 10:
             debug('allowing bad fit')
         else:
             compass_cal.RemoveOldest()  # remove oldest point if too much deviation
@@ -566,9 +565,9 @@ def FitCompass(compass_cal, compass_calibration, norm):
 def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass_calibration):
     import os
     if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
-      print 'warning, failed to make calibration process idle, trying renice'
+      print('warning, failed to make calibration process idle, trying renice')
       if os.system("renice 20 %d" % os.getpid()):
-          print 'warning, failed to renice calibration process'
+          print('warning, failed to renice calibration process')
 
     accel_cal = SigmaPoints(.05**2, 12, 12)
     compass_cal = SigmaPoints(1**2, 18, 4)
@@ -585,7 +584,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
                 accel, compass, down = p
                 if accel:
                     accel_cal.AddPoint(accel, list(accel))
-                    #print 'add', len(accel_cal.sigma_points)
+                    #print('add', len(accel_cal.sigma_points))
                 if compass and down:
                     compass_cal.AddPoint(compass, down)
                 addedpoint = True
@@ -596,7 +595,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
                 break
             norm = n
             compass_cal.Reset()
-            #print 'set norm', norm
+            #print('set norm', norm)
 
         if not addedpoint: # don't bother to run fit if no new data
             continue
@@ -627,11 +626,11 @@ class IMUAutomaticCalibration(object):
         self.fit_output, fit_output = NonBlockingPipe('fit output', True)
 
         self.process = multiprocessing.Process(target=CalibrationProcess, args=(points, norm_pipe, fit_output, accel_calibration, compass_calibration))
-        #print 'start cal process'
+        #print('start cal process')
         self.process.start()
 
     def __del__(self):
-        print 'terminate calibration process'
+        print('terminate calibration process')
         self.process.terminate()
 
     def AddPoint(self, point):
@@ -654,7 +653,7 @@ def ExtraFit():
         def f_ellipsoid3(beta, x):
             return (x[0]-beta[0])**2 + (beta[4]*(x[1]-beta[1]))**2 + (beta[5]*(x[2]-beta[2]))**2 - beta[3]**2
         ellipsoid_fit = FitLeastSq(sphere_fit + [1, 1], f_ellipsoid3, zpoints)
-        print 'ellipsoid_fit', ellipsoid_fit
+        print('ellipsoid_fit', ellipsoid_fit)
     '''
 
 #        return [sphere_fit, 1, ellipsoid_fit]
@@ -674,20 +673,20 @@ def ExtraFit():
     if abs(ellipsoid_fit[4]-1) < .2 and abs(ellipsoid_fit[5]-1) < .2:
         cpoints = map(lambda a, b : a - b, zpoints[:3], ellipsoid_fit[:3])
         rotellipsoid_fit = FitLeastSq(ellipsoid_fit[3:] + [0, 0, 0], f_rotellipsoid3, cpoints)
-        #print 'rotellipsoid_fit', rotellipsoid_fit
+        #print('rotellipsoid_fit', rotellipsoid_fit)
         ellipsoid_fit2 = FitLeastSq(ellipsoid_fit[:3] + rotellipsoid_fit[:3], f_ellipsoid3_cr, (zpoints, rotellipsoid_fit[3:]))
-        #print 'ellipsoid_fit2', ellipsoid_fit2
+        #print('ellipsoid_fit2', ellipsoid_fit2)
 
         cpoints = map(lambda a, b : a - b, zpoints[:3], ellipsoid_fit2[:3])
         rotellipsoid_fit2 = FitLeastSq(ellipsoid_fit[3:] + [0, 0, 0], f_rotellipsoid3, cpoints)
-        print 'rotellipsoid_fit2', rotellipsoid_fit2
+        print('rotellipsoid_fit2', rotellipsoid_fit2)
     else:
         ellipsoid_fit = False
 
     def f_uppermatrixfit(beta, x):
             b = numpy.matrix(map(lambda a, b : a - b, x[:3], beta[:3]))
             r = numpy.matrix([beta[3:6], [0]+list(beta[6:8]), [0, 0]+[beta[8]]])
-            print 'b', beta
+            print('b', beta)
 
             m = r * b
             m = list(numpy.array(m.transpose()))
@@ -729,16 +728,16 @@ def ExtraFit():
 
     if False:
          matrix_fit = FitLeastSq([0, 0, 0, 0, 0, 0, 0], f_matrixfit, (zpoints, ellipsoid_fit))
-         #print 'matrix_fit', matrix_fit
+         #print('matrix_fit', matrix_fit)
 
          matrix2_fit = FitLeastSq(ellipsoid_fit + [matrix_fit[6]], f_matrix2fit, (zpoints, matrix_fit))
-         #print 'matrix2_fit', matrix2_fit
+         #print('matrix2_fit', matrix2_fit)
 
          matrix_fit2 = FitLeastSq(matrix_fit, f_matrixfit, (zpoints, matrix2_fit))
-         print 'matrix_fit2', matrix_fit2
+         print('matrix_fit2', matrix_fit2)
 
          matrix2_fit2 = FitLeastSq(matrix2_fit[:6] + [matrix_fit2[6]], f_matrix2fit, (zpoints, matrix_fit2))
-         print 'matrix2_fit2', matrix2_fit2
+         print('matrix2_fit2', matrix2_fit2)
 
     def rot(v, beta):
         sin, cos = math.sin, math.cos
@@ -775,7 +774,7 @@ def ExtraFit():
     #    q = [1 - vector.norm(quat_fit[:3])] + list(quat_fit[:3])
     q = angvec2quat(vector.norm(quat_fit[:3]), quat_fit[:3])
 
-    print 'quat fit', q, math.degrees(angle(q)), math.degrees(math.asin(quat_fit[3]))
+    print('quat fit', q, math.degrees(angle(q)), math.degrees(math.asin(quat_fit[3])))
     
     def f_rot(beta, x, sphere_fit):
         sphere_fit = numpy.array(sphere_fit)
@@ -787,7 +786,7 @@ def ExtraFit():
         return beta[3] - d
 
     rot_fit = FitLeastSq([0, 0, 0, 0], f_rot, (zpoints, sphere_fit))
-    print 'rot fit', rot_fit, math.degrees(rot_fit[0]), math.degrees(rot_fit[1]), math.degrees(rot_fit[2]), math.degrees(math.asin(min(1, max(-1, rot_fit[3]))))
+    print('rot fit', rot_fit, math.degrees(rot_fit[0]), math.degrees(rot_fit[1]), math.degrees(rot_fit[2]), math.degrees(math.asin(min(1, max(-1, rot_fit[3])))))
     
     
 
@@ -845,7 +844,7 @@ if __name__ == '__main__':
     n = [0.9983170254035888, 0.03953416279367987, 0.042428372129188596]
 
     fit = FitPointsCompass(points, [20,53,-7,30, 0], n)
-    print 'fit', fit
+    print('fit', fit)
     
     #allpoints = [points1, points2, points3, points4, points5]
     #for points in allpoints:

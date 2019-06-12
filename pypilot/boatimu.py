@@ -12,6 +12,7 @@
 # it is an enhanced imu with special knowledge of boat dynamics
 # giving it the ability to auto-calibrate the inertial sensors
 
+from __future__ import print_function
 import os, sys
 import time, math, multiprocessing, select
 from signalk.pipeserver import NonBlockingPipe
@@ -28,7 +29,7 @@ try:
   import RTIMU
 except ImportError:
   RTIMU = False
-  print "RTIMU library not detected, please install it"
+  print('RTIMU library not detected, please install it')
 
 def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
     if not RTIMU:
@@ -37,7 +38,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
   
     #print 'imu on', os.getpid()
     if os.system('sudo chrt -pf 2 %d 2>&1 > /dev/null' % os.getpid()):
-      print 'warning, failed to make imu process realtime'
+      print('warning, failed to make imu process realtime')
 
     #os.system("sudo renice -10 %d" % os.getpid())
     SETTINGS_FILE = "RTIMULib"
@@ -76,7 +77,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
       s.IMUType = 0 # always autodetect imu
       rtimu = RTIMU.RTIMU(s)
       if rtimu.IMUName() == 'Null IMU':
-        print 'no IMU detected... try again'
+        print('no IMU detected... try again')
         time.sleep(1)
         continue
       
@@ -110,13 +111,13 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
           data['timestamp'] = t0 # imu timestamp is perfectly accurate
           pipe.send(data, False)
         else:
-          print 'failed to read IMU!!!!!!!!!!!!!!'
+          print('failed to read IMU!!!!!!!!!!!!!!')
           break # reinitialize imu
 
         if cal_poller.poll(0):
           r = cal_pipe.recv()
           
-          #print '[imu process] new cal', new_cal
+          #print('[imu process] new cal', new_cal)
           if r[0] == 'accel':
             s.AccelCalValid = True
             b, t = r[1][0][:3], r[1][0][3]
@@ -315,7 +316,7 @@ class BoatIMU(object):
     self.last_heading_off = 3000 # invalid
 
   def __del__(self):
-    print 'terminate imu process'
+    print('terminate imu process')
     self.imu_process.terminate()
 
   def Register(self, _type, name, *args, **kwargs):
@@ -338,7 +339,7 @@ class BoatIMU(object):
 
     if not data:
       if time.time() - self.last_imuread > 1 and self.loopfreq.value:
-        print 'IMURead failed!'
+        print('IMURead failed!')
         self.loopfreq.set(0)
         for name in self.SensorValues:
           self.SensorValues[name].set(False)
@@ -346,7 +347,7 @@ class BoatIMU(object):
       return False
   
     if vector.norm(data['accel']) == 0:
-      print 'vector n', data['accel']
+      print('vector n', data['accel'])
       return False
 
     self.last_imuread = time.time()
@@ -442,13 +443,13 @@ class BoatIMU(object):
     
     if result:
       if result[0] == 'accel' and not self.accel_calibration.locked.value:
-        #print '[boatimu] cal result', result[0]
+        #print('[boatimu] cal result', result[0])
         self.accel_calibration.sigmapoints.set(result[2])
         if result[1]:
           self.accel_calibration.age.reset()
           self.accel_calibration.set(result[1])
       elif result[0] == 'compass' and not self.compass_calibration.locked.value:
-        #print '[boatimu] cal result', result[0]
+        #print('[boatimu] cal result', result[0])
         self.compass_calibration.sigmapoints.set(result[2])
         if result[1]:
           self.compass_calibration.age.reset()
@@ -463,7 +464,7 @@ class BoatIMUServer():
     # setup all processes to exit on any signal
     self.childpids = []
     def cleanup(signal_number, frame=None):
-        print 'got signal', signal_number, 'cleaning up'
+        print('got signal', signal_number, 'cleaning up')
         while self.childpids:
             pid = self.childpids.pop()
             os.kill(pid, signal.SIGTERM) # get backtrace
@@ -475,7 +476,7 @@ class BoatIMUServer():
     # some sort of timing issue where python doesn't realize the pipe
     # is broken yet, so doesn't raise an exception
     def printpipewarning(signal_number, frame):
-        print 'got SIGPIPE, ignoring'
+        print('got SIGPIPE, ignoring')
 
     import signal
     for s in range(1, 16):

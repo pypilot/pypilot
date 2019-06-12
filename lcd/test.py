@@ -7,6 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
+
 import os
 import ugfx
 import glut
@@ -34,7 +36,7 @@ screen.invert(100, 100, 200, 200)
 import font
 font.draw(screen, (0, 0), "Hello!", 80, False)
 
-print 'type', str(type(screen))
+print('type', str(type(screen)))
 if use_glut:
     from OpenGL.GLUT import glutMainLoop
     glutMainLoop()

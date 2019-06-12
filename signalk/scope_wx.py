@@ -9,9 +9,9 @@
 
 import wx, wx.glcanvas, sys, socket, time
 from OpenGL.GL import *
-from scope_ui import SignalKScopeBase
-from client import SignalKClient, SignalKClientFromArgs, ConnectionLost
-from scope import SignalKPlot
+from signalk.scope_ui import SignalKScopeBase
+from signalk.client import SignalKClient, SignalKClientFromArgs, ConnectionLost
+from signalk.scope import SignalKPlot
 
 def wxglutkeypress(event, special, key):
     translation = { wx.WXK_UP : GLUT_KEY_UP, wx.WXK_DOWN : GLUT_KEY_DOWN, \

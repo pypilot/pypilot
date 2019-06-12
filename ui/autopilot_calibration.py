@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import tempfile, time, math, sys, subprocess, json, socket, os
 import wx, wx.glcanvas
 import autopilot_control_ui
@@ -108,12 +109,15 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.controltimes = {}
 
     def set_watches(self, client):
+        if not client:
+            return
+
         watchlist = [
             ['imu.fusionQPose', 'imu.alignmentCounter', 'imu.heading',
              'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading_offset'],
             ['imu.accel.calibration', 'imu.accel.calibration.age', 'imu.accel',
              'imu.accel.calibration.sigmapoints', 'imu.accel.calibration.locked'],
-            ['imu.compass.calibration', 'imu.compass.calibration.age', 'imu.compass',
+            ['imu.fusionQPose', 'imu.compass.calibration', 'imu.compass.calibration.age', 'imu.compass',
              'imu.compass.calibration.sigmapoints', 'imu.compass.calibration.locked'],
             ['servo.flags',
              'servo.max_current', 'servo.max_controller_temp', 'servo.max_motor_temp',
@@ -125,10 +129,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         pageindex = 0
         for pagelist in watchlist:
-            watch = self.m_notebook.GetSelection() == pageindex            
             for name in pagelist:
-                client.watch(name, watch)
-            pageindex+=1
+                client.watch(name, False)
+
+        pageindex = self.m_notebook.GetSelection()
+        for name in watchlist[pageindex]:
+            client.watch(name)
         
     def on_con(self, client):
         self.set_watches(client)
@@ -285,11 +291,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.servoprocess.poll()
 
-        print 'servotimer', self.servoprocess.returncode, self.servoprocess.returncode==None
+        print('servotimer', self.servoprocess.returncode, self.servoprocess.returncode==None)
         if self.servoprocess.returncode == None:
             self.servoprocess.communicate()
             line = self.servoprocess.stdout.readline()
-            print 'line', line
+            print('line', line)
             if line:
                 self.servo_console(line)
             self.servo_timer.Start(150, True)
@@ -509,7 +515,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
 def main():
     import gettext
-    gettext.install('pypilot', 'locale', unicode=False)
+    gettext.install('pypilot', 'locale')#, unicode=False)
     glutInit(sys.argv)
     app = wx.App()
     

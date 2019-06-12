@@ -1,5 +1,8 @@
 /* File: ugfx.i */
 %module ugfx
+%begin %{
+    #define SWIG_PYTHON_STRICT_BYTE_CHAR
+%}
 
 %{
 #include "ugfx.h"
@@ -26,13 +29,12 @@ public:
     void invert(int x1, int y1, int x2, int y2);
     void fill(unsigned int c);
     virtual void refresh() {}
-    void binary_write(int fileno);
     void binary_write_sw(int sclk, int mosi);
 
     int width, height, bypp;
     char *p;
     int getpixel(int x, int y);
-    unsigned char *ptr() { return (unsigned char*)p; }
+    char *ptr() { return p; }
  
     int xoffset, yoffset, line_length;
 
@@ -50,17 +52,17 @@ public:
     struct fb_fix_screeninfo finfo;
     struct fb_var_screeninfo vinfo;
 
-    char *fbp = 0;
+    char  *fbp = 0;
     int fbfd = 0;
     long int screensize = 0;
 };
 
 #ifdef WIRINGPI
-class nokia5110screen : public surface
+class spiscreen : public surface
 {
 public:
-    nokia5110screen();
-    virtual ~nokia5110screen();
+    spiscreen();
+    virtual ~spiscreen();
 
     void refresh();
     int contrast;

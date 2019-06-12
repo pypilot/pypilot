@@ -5,6 +5,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import sys, os, time
 import json
 
@@ -19,11 +20,11 @@ def read_config(filename, fail):
                 device = f.readline()
                 if not device:
                     break
-                devices.append(os.path.realpath(device.strip()))
+                devices.append(device.strip())
             f.close()
             return devices
         except Exception as e:
-            print 'error reading', pypilot_dir + 'serial_ports'
+            print('error reading', pypilot_dir + 'serial_ports')
     return fail
 
 blacklist_serial_ports = 'init'
@@ -74,21 +75,35 @@ def scan_devices():
                 devicesd.append('/dev/'+dev)
         devices = devicesd + devices
 
-    allowed_devices = []
-
     blacklist_serial_ports = read_blacklist()
     for device in blacklist_serial_ports:
+        realpath = os.path.realpath(device)
         for d in devices:
-            if os.path.realpath(d.strip()) == device:
+            if os.path.realpath(d.strip()) == realpath:
                 devices.remove(d)
     
     allowed_serial_ports = read_allowed()
     if allowed_serial_ports == 'any':
         return devices
     
-    for device in devices:
-        if os.path.realpath(device) in allowed_serial_ports:
+    allowed_devices = []
+    for device in allowed_serial_ports:
+        realpath = os.path.realpath(device)
+        for d in devices:
+            if realpath == os.path.realpath(d):
+                allowed_devices.append(d)
+
+    # add any unique serial ports not scanned
+    # but listed in serial_ports file to end of list
+    for device in allowed_serial_ports:
+        realpath = os.path.realpath(device)
+        have = False
+        for d in allowed_devices:
+            if realpath == os.path.realpath(d):
+                have = True
+        if not have:
             allowed_devices.append(device)
+    
     return allowed_devices
 
 devices = 'init'
@@ -105,7 +120,7 @@ def enumerate_devices():
     if devices == 'init':
         starttime = time.time()
         devices = scan_devices()
-
+        
     if monitor:
         import signal
         t1 = time.time()
@@ -130,7 +145,7 @@ def enumerate_devices():
             except Exception as e:
                 global pyudevwarning
                 if not pyudevwarning:
-                    print 'no pyudev module! will scan usb devices every probe!', e
+                    print('no pyudev module! will scan usb devices every probe!', e)
                     pyudevwarning = True
                 # try pyudev again in 20 seconds if it is delayed loading
                 starttime = time.time() + 20
@@ -199,7 +214,8 @@ def probe(name, bauds, timeout=5):
     # find a new device
     #t1 = time.time()
     devices = enumerate_devices()
-    #print 'enumtime', time.time() - t1, devices
+
+    #print('enumtime', time.time() - t1, devices)
 
     # find next device index to probe
     try:
@@ -225,7 +241,7 @@ def probe(name, bauds, timeout=5):
         return False
 
     device = devices[index]
-    print 'device', device
+    #print('device', device, devices)
     serial_device = device, bauds[0]
 
     try:
@@ -236,7 +252,7 @@ def probe(name, bauds, timeout=5):
         if type(arg) == type('') and 'Errno ' in  arg:
             arg = int(arg[arg.index('Errno ')+6: arg.index(']')])
         if arg == 16: # device busy, retry later
-            print 'busy, try again later', probe['device'], name
+            print('busy, try again later', probe['device'], name)
         elif arg == 6: # No such device or address, don't try again
             devices.remove(device)
         elif arg == 5: # input output error (unusable)
@@ -245,26 +261,26 @@ def probe(name, bauds, timeout=5):
             devices.remove(device)
         else:
             devices.remove(device)
-            print 'serial exception', serial_device, name, err
+            print('serial exception', serial_device, name, err)
             # don't try again if ttyS port?
             #if device.startswith('/dev/ttyS'):
             #    devices.remove(device)
         serial_device = False
     except IOError:
-        print 'io error', serial_device
+        print('io error', serial_device)
         devices.remove(device)
         serial_device = False
 
     probe['device'] = device
     probe['lastdevice'] = probe['device']
     probe['bauds'] = bauds
-    #print 'probe', name, serial_device
+    #print('probe', name, serial_device)
     return serial_device
 
 # allow reserving gps devices against probing
 def reserve(device):
     devices = enumerate_devices()
-    #print 'prevent serial probing', device
+    #print('prevent serial probing', device)
     i = 0
     while 'reserved%d' % i in probes:
         i+=1
@@ -277,20 +293,20 @@ def reserve(device):
 def success(name, device):
     global probes
     filename = pypilot_dir + name + 'device'
-    print 'serialprobe success:', filename, device
+    print('serialprobe success:', filename, device)
     try:
         file = open(filename, 'w')
         file.write(json.dumps(device) + '\n')
         file.close()
 
     except:
-        print 'serialprobe failed to record device', name
+        print('serialprobe failed to record device', name)
 
 if __name__ == '__main__':
-    print 'testing serial probe'
+    print('testing serial probe')
     while True:
         t0 = time.time()
         device = probe('test', [9600], timeout=2)
         if device:
-            print 'return', device, time.time() - t0
+            print('return', device, time.time() - t0)
         time.sleep(1)

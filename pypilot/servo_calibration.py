@@ -5,6 +5,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import time, sys, json, os
 from signalk.client import SignalKClient
 from servo import *
@@ -17,7 +18,7 @@ def fit(x, n):
     try:
         import scipy.optimize
     except:
-        print "failed to load scientific library, cannot perform calibration update!"
+        print("failed to load scientific library, cannot perform calibration update!")
         return False
     
     def func(b, x, n):
@@ -50,10 +51,10 @@ def FitCalibration(cal):
         commands.append(raw_cmd)
     
     fits = {}
-    print 'speeds', len(speeds)
-    print 'plot'
+    print('speeds', len(speeds))
+    print('plot')
     for val in zip(speeds, commands):
-        print val[0], val[1]
+        print(val[0], val[1])
 
     for n in [1, 3, 5]:  # linear, 3rd and 5th order fit
         if len(speeds) > n+1:
@@ -61,13 +62,13 @@ def FitCalibration(cal):
         else:
             fits[n] = False
             
-        print 'fit order', n, fits[n]
+        print('fit order', n, fits[n])
         if fits[n]:
-            print fit_str(fits[n][0])
+            print(fit_str(fits[n][0]))
 
     # did third order help much?
     #if fits[3][1] / fits[1][1] < .9:
-    #    print 'warning non-linear servo!'
+    #    print('warning non-linear servo!')
     if fits[1]:
         return map(float, fits[1][0]) # first order, good enough
     else:
@@ -85,14 +86,14 @@ def ServoCalibrationThread(calibration):
             c += t + ' '
         calibration.console.set(c)
         if printconsole:
-            print c
+            print(c)
     
     def command(value):
         if self.fwd_fault and value < 0:
             servo.fwd_fault = False
         elif self.rev_fault and value > 0:
             servo.rev_fault = False
-        engauge()
+        engage()
         calibration.raw_command.set(value)
 
     def stop():
@@ -101,7 +102,7 @@ def ServoCalibrationThread(calibration):
     def reset(self):
         self.stop()
         if not self.waitnofault(7):
-            print 'servo reset failed', self.fault(), self.data['servo.flags']
+            print('servo reset failed', self.fault(), self.data['servo.flags'])
             exit(1)
 
     def average_power(self, timeout):
@@ -123,16 +124,16 @@ def ServoCalibrationThread(calibration):
         return avgc, avgv, power
 
     def calibrate_period(raw_cmd, period, idle_current):
-        #print 'reset, and cool down'
+        #print('reset, and cool down')
         reset()
         for t in range(20):
             sys.stdout.write('%d ' % t)
             sys.stdout.flush()
             self.average_power(1) # wait to reset and cool
-        print 'start'
+        print('start')
         t0 = time.time()
         transitions = 0
-        #print 'run', raw_cmd, period
+        #print('run', raw_cmd, period)
         while True:
             def period_command(raw_cmd):
                 t = time.time()
@@ -140,9 +141,9 @@ def ServoCalibrationThread(calibration):
                     command(raw_cmd)
                     if self.fault() and time.time() - t0 > 3:
                         return True
-                    #print 'idle current', idle_current, self.data['servo.current']
+                    #print('idle current', idle_current, self.data['servo.current'])
                     if time.time() - t0 > 3 and self.data['servo.current'] > 1.6 * idle_current:
-                        #print 'max current', self.data['servo.current'], idle_current
+                        #print('max current', self.data['servo.current'], idle_current)
                         return True
                     time.sleep(.1)
                 return False
@@ -157,7 +158,7 @@ def ServoCalibrationThread(calibration):
         current, voltage, t = self.average_power(0)
         power = current*voltage*dt
         truespeed = 1/dt
-        print transitions, truespeed, 'plota' if raw_cmd > 0 else 'plotb'
+        print(transitions, truespeed, 'plota' if raw_cmd > 0 else 'plotb')
         return current, voltage, transitions, dt, power
 
     
@@ -191,7 +192,7 @@ def ServoCalibrationThread(calibration):
             if t-t0 >= self.timeout:
                 break
 
-            #print 'current', current, idle_current, lp_current
+            #print('current', current, idle_current, lp_current)
             if idle_current and (current > idle_current*1.3 or lp_current > idle_current * 1.1):
                 console('found stall current', current, lp_current)
 
@@ -226,7 +227,7 @@ def ServoCalibrationThread(calibration):
             lp_current = .9*lp_current + .1*current
             count += 1
 
-        print 'timeout calibrating raw_cmd', raw_cmd
+        print('timeout calibrating raw_cmd', raw_cmd)
         return False
 
 
@@ -256,7 +257,7 @@ def ServoCalibrationThread(calibration):
     brake_hack = False
     servo.brake_hack.set(brake_hack)
     servo.max_current.set(10)
-    servo.disengauge_on_timeout.set(False)
+    servo.disengage_on_timeout.set(False)
     calibration.raw_command(0)
 
     timeout = 40 # max time to move end to end
@@ -272,7 +273,7 @@ def ServoCalibrationThread(calibration):
             console('failed to reset servo position to start')
             exit(1)
         
-    print 'initial cal', cal
+    print('initial cal', cal)
     command, idle_current, stall_current, cal_voltage, dt, power = cal
     truespeed = 1/dt
     max_current = idle_current + .75*(stall_current - idle_current)
@@ -286,11 +287,11 @@ def ServoCalibrationThread(calibration):
     if False:
         period = .2
         for d in range(12):
-            print 'period', period
+            print('period', period)
             cal = self.calibrate_period(period_speed, period, idle_current)
-            print 'fwd', cal
+            print('fwd', cal)
             cal = self.calibrate_period(-period_speed, period, idle_current)
-            print 'rev', cal
+            print('rev', cal)
             period *= 1.5
                                           
         exit(0)
@@ -317,7 +318,7 @@ def ServoCalibrationThread(calibration):
             if cal:
                 command, idle_current, stall_current, cal_voltage, dt, power = cal
                 truespeed = 1/dt
-                print 'truespeed', truespeed, 'lastspeed', lastspeed[signi], 'power', power
+                print('truespeed', truespeed, 'lastspeed', lastspeed[signi], 'power', power)
                 if lastspeed[signi] and truespeed / lastspeed[signi] < 1+.1/steps:
                     complete[signi] += 1
                     console('completed this direction when counter >= 3:', complete[signi])
@@ -326,12 +327,12 @@ def ServoCalibrationThread(calibration):
 
 #                    c = map(lambda x : sign*x, calibration)
 #                    if len(c) == 0 or truespeed > sorted(c)[len(c)-1]:
-#                        print 'update cal', cal
+#                        print('update cal', cal)
                     calibration[sign*truespeed] = cal
                     lastspeed[signi] = max(truespeed, lastspeed[signi])
             else:
                 if not self.search_end(sign):
-                    print 'failed to find end'
+                    print('failed to find end')
                     exit(0)
 
         if complete[0] >= 3 and complete[1] >= 3:
@@ -344,19 +345,19 @@ def ServoCalibrationThread(calibration):
     self.stop()
     self.client.set('servo.raw_command', 0)
 
-    #print 'calibration:', calibration
+    #print('calibration:', calibration)
     # normalize calibration speed from 0 to 1
     speeds = list(calibration)
     max_fwd_speed = max(speeds)
     max_rev_speed = -min(speeds)
 
     ratio = max_fwd_speed / max_rev_speed
-    print 'fwd/rev', ratio
+    print('fwd/rev', ratio)
     if ratio > 1.1 or ratio < .9:
-        print 'warning: very unbalanced ratio in forward/reverse speed'
+        print('warning: very unbalanced ratio in forward/reverse speed')
 
     max_speed = min(max_rev_speed, max_fwd_speed)
-    print 'max speed', max_speed
+    print('max speed', max_speed)
 
     fwd_calibration = {}
     rev_calibration = {}
@@ -371,15 +372,15 @@ def ServoCalibrationThread(calibration):
             else:
                 rev_calibration[-speed] = [-cal[0]] + cal[1:]
         else:
-            print 'discarding speed, outside of range', truespeed
+            print('discarding speed, outside of range', truespeed)
 
     min_fwd_speed = min(fwd_calibration)
     min_rev_speed = min(rev_calibration)
     min_speed = max(min_fwd_speed, min_rev_speed)
 
-    #print 'forward calibration', fwd_calibration
+    #print('forward calibration', fwd_calibration)
     fwdfit = FitCalibration(fwd_calibration)
-    #print 'reverse calibration', rev_calibration
+    #print('reverse calibration', rev_calibration)
     revfit = FitCalibration(rev_calibration)        
     cal = {'forward': fwdfit, 'reverse': revfit, 'Min Speed': min_speed, 'Brake Hack': self.brake_hack}
 
@@ -439,7 +440,7 @@ class ServoCalibration(object):
             self.fwd_fault = False
         elif self.rev_fault and self.rawcommand.value > 0:
             self.rev_fault = False
-        self.servo.engauge()
+        self.servo.engage()
         self.servo.raw_command(self.rawcommand.value)
 
     def stop(self):
@@ -461,7 +462,7 @@ def round_any(x, n):
 
 if __name__ == '__main__':
     import serialprobe
-    print 'Servo Server'
+    print('Servo Server')
     printconsole = True
     server = SignalKServer()
     serial_probe = serialprobe.SerialProbe()

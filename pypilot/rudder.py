@@ -7,9 +7,20 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import math
 from signalk.values import *
 from sensors import Sensor
+
+def quad_sub(a, b, c, m):
+    if abs(b) < .0001:
+        return -1
+    if abs(a) < .0001:
+        return -c/b
+    dis = b*b - 4*a*c # quadratic formula
+    if dis < 0:
+        return -1 # invalid in this case
+    return (-b + m*dis**.5) / (2*a)
 
 class Rudder(Sensor):
     def __init__(self, server):
@@ -26,14 +37,38 @@ class Rudder(Sensor):
         self.calibration_state = self.Register(EnumProperty, 'calibration_state', 'idle', ['idle', 'reset', 'centered', 'starboard range', 'port range', 'auto gain'])
         self.calibration_raw = {}
         self.range = self.Register(RangeProperty, 'range',  60, 10, 100, persistent=True)
+        self.lastrange = 0
+        self.minmax = 0, 1
         self.autogain_state = 'idle'
         self.raw = 0
 
+    def update_minmax(self):
+        # recompute minimum and maximum raw rudder values from 0 to 1
+        #  nonlinearity * raw**2 + scale*raw + offset +- rudder_range
+
+        scale = self.scale.value
+        nonlinearity = self.nonlinearity.value*scale
+        offset = self.offset.value
+        range = self.range.value
+
+        self.minmax = 1, 0
+        for rm in [[range, 1], [range, -1], [-range, 1], [-range, -1]]:
+            x = quad_sub(nonlinearity, scale, offset + rm[0], rm[1]);
+            if x>=0 and x<=1:
+                self.minmax = min(x, self.minmax[0]), max(x, self.minmax[1])
+
+        if self.minmax[0] > self.minmax[1]:
+            self.minmax = 0, 1 # for now don't set range, allow movement
+
+        self.lastrange = self.range.value            
+        
     def calibration(self, command):
         if command == 'reset':
             self.nonlinearity.update(0.0)
             self.scale.update(1.0)
             self.offset.update(0.0)
+            self.update_minmax()
+            self.calibration_raw = {}
             return
 
         elif command == 'centered':
@@ -43,14 +78,14 @@ class Rudder(Sensor):
         elif command == 'starboard range':
             true_angle = self.range.value
         else:
-            print 'unhandled rudder_calibration', command
+            print('unhandled rudder_calibration', command)
             return
         
-        # raw range -.5 to .5
+        # raw range 0 to 1
         self.calibration_raw[command] = {'raw': self.raw,
                                          'rudder': true_angle}
-        offset = self.offset.value
         scale = self.scale.value
+        offset = self.offset.value
         nonlinearity = self.nonlinearity.value*scale
 
         # rudder = (nonlinearity * raw + scale) * raw + offset
@@ -105,7 +140,7 @@ class Rudder(Sensor):
 
         if abs(scale) <= .01:
             # bad update, trash an other reading
-            print 'bad servo rudder calibration', scale, nonlinearity
+            print('bad servo rudder calibration', scale, nonlinearity)
             while len(self.calibration_raw) > 1:
                 for c in self.calibration_raw:
                     if c != command:
@@ -118,11 +153,15 @@ class Rudder(Sensor):
             nonlinearity /= scale
             if abs(nonlinearity) < 2:
                 self.nonlinearity.update(nonlinearity)
+            self.update_minmax()
 
     def invalid(self):
         return type(self.angle.value) == type(False)
 
     def poll(self):
+        if self.lastrange != self.range.value:
+            self.update_minmax()
+        
         if self.calibration_state.value == 'idle':
             return
 
@@ -142,7 +181,7 @@ class Rudder(Sensor):
                 idle()
 
             rng = self.range.value
-            #print self.autogain_state, self.angle.value, rng
+            #print(self.autogain_state, self.angle.value, rng)
 
             if self.autogain_state=='fwd':
                 self.command.set(1)
@@ -159,12 +198,12 @@ class Rudder(Sensor):
                 self.command.set(-1)
                 if abs(self.value) >= rng:
                     dt = time.time() - self.autogain_time
-                    #print 'hardover', dt, 'with', rng/dt, 'deg/s'
+                    #print('hardover', dt, 'with', rng/dt, 'deg/s')
                     # 5 deg/s is gain of 1
 
                     gain = min(max(5*dt/rng, .5), 2)
                     if self.angle.value < 0:
-#                            print 'negative gain detected'
+#                            print('negative gain detected')
                         gain = -gain
                     self.gain.set(gain)
                     idle()
@@ -173,7 +212,7 @@ class Rudder(Sensor):
                 self.autogain_movetime = t
 
             if t - self.autogain_movetime > 3:
-                print 'servo rudder autogain failed'
+                print('servo rudder autogain failed')
                 idle()
         else: # perform calibration
             self.calibration(self.calibration_state.value)
@@ -185,13 +224,12 @@ class Rudder(Sensor):
             return
         
         self.raw = data['angle']
-        print 'raw', self.raw
         if math.isnan(self.raw):
             self.angle.update(False)
             return
 
-        # rudder = (nonlinearity*self.raw + 1)*scale*self.raw + offset
-        angle = (self.nonlinearity.value*self.raw + 1)*self.scale.value*self.raw + self.offset.value
+        # rudder = ((nonlinearity*self.raw + 1  + offset)*self.raw + offset)*scale
+        angle = ((self.nonlinearity.value*self.raw + 1)*self.raw)*self.scale.value + self.offset.value
         angle = round(angle, 2) # 2 decimal for rudder angle is enough
         self.angle.set(angle)
 
