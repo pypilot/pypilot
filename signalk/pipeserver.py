@@ -128,17 +128,18 @@ class SignalKPipeServerClient(SignalKServer):
                 values[name] = value
 
         # send values once all potential timestamps are received
-        # TODO: benchmark without timestamp
         for name in values:
           value = self.values[name]
-          value.value = values[name]
-          self.values[name].send() # send to watching clients
+          for v in values[name]:
+              value.value = v
+              self.values[name].send() # send to watching clients
 
           # send to any clients who requested this value (get request)
           if self.gets[name]:
               response = self.values[name].get_signalk() + '\n'
               for socket in self.gets[name]:
-                  socket.send(response)
+                  if not socket in value.watchers:
+                      socket.send(response)
               self.gets[name] = []
         return True
 
@@ -183,7 +184,7 @@ class SignalKPipeServer(object):
     def SetPersistentValues(self):
       for name in self.persistent_sets:
         if self.persistent_sets[name]:
-          self.sets[name] = self.values[name].value
+          self.sets[name] = [self.values[name].value]
       self.ResetPersistentState()
 
     def ResetPersistentState(self):
@@ -193,7 +194,11 @@ class SignalKPipeServer(object):
     def queue_send(self, value):
       if value.timestamp:
           self.sets[value.timestamp] = self.timestamps[value.timestamp]
-      self.sets[value.name] = value.value
+          
+      if value.name in self.sets:
+          self.sets[value.name].append(value.value)
+      else:
+          self.sets[value.name] = [value.value]
       if value.persistent:
         self.persistent_sets[value.name] = False
         
@@ -225,7 +230,8 @@ class SignalKPipeServer(object):
         self.queue_send(self.values[name])
       elif method == 'set':
         self.values[name].set(request['value'])
-        self.queue_send(self.values[name])
+        #self.queue_send(self.values[name])
+            
       elif method == 'watch':
           self.values[name].watchers = request['value']
         

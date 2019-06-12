@@ -94,19 +94,18 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
       poll_interval = rtimu.IMUGetPollInterval()
       time.sleep(.1)
 
-      c = 0
       cal_poller = select.poll()
       cal_poller.register(cal_pipe, select.POLLIN)
 
       avggyro = [0, 0, 0]
-      cycles = 0
       compass_calibration_updated = False
 
       while True:
         t0 = time.time()
-        
+
         if not rtimu.IMURead():
             print('failed to read IMU!!!!!!!!!!!!!!')
+            pipe.send(False)
             break # reinitialize imu
          
         data = rtimu.getIMUData()
@@ -119,16 +118,15 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
 
         pipe.send(data, False)
 
-        if cycles * period < 100: # only the first 100 seconds after initializing
-          # see if gyro is out of range, sometimes the sensors read
-          # very high gyro readings and the sensors need to be reset by software
-          d = .05*period # filter constant
-          for i in range(3): # filter gyro vector
+        # see if gyro is out of range, sometimes the sensors read
+        # very high gyro readings and the sensors need to be reset by software
+        # this is probably a bug in the underlying driver with fifo misalignment
+        d = .05*period # filter constant
+        for i in range(3): # filter gyro vector
             avggyro[i] = (1-d)*avggyro[i] + d*data['gyro'][i]
-          if abs(vector.norm(avggyro)) > .8: # 55 degrees/s
-            print ('too high standing gyro bias, resetting sensors', data['gyro'], avggyro, cycles)
+        if abs(vector.norm(avggyro)) > .8: # 55 degrees/s
+            print ('too high standing gyro bias, resetting sensors', data['gyro'], avggyro)
             break
-        cycles += 1
         
         if cal_poller.poll(0):
           r = cal_pipe.recv()
@@ -250,23 +248,19 @@ class QuaternionValue(ResettableValue):
       super(QuaternionValue, self).set(value)
 
 
-class CalibrationProperty(RoundedProperty):
-  def __init__(self, boatimu, name, default):
+class CalibrationProperty(RoundedValue):
+  def __init__(self, name, server, default):
+    self.client_can_set = True
     super(CalibrationProperty, self).__init__(name+'.calibration', default, persistent=True)
-    self.boatimu, server = boatimu, boatimu.server
-    server.Register(self)
-    self.age = server.Register(AgeValue, name+'.calibration.age', persistent=True)
-    self.locked = server.Register(BooleanProperty, name+'.calibration.locked', False, persistent=True)
-    self.sigmapoints = server.Register(RoundedProperty, name+'.calibration.sigmapoints', False)
-    self.log = server.Register(Property, name+'.calibration.log', '')
 
   def set(self, value):
-    if self.locked.value:
-      return
-
-    self.age.reset()
-    self.boatimu.imu_cal_pipe.send({name: value}) # inform imu process of new calibration
-    super(CalibrationValue, self).set(value)
+    try:
+      if self.value and self.locked.value:
+        return
+      self.age.reset()
+    except:
+      pass # startup before locked is initiated
+    super(CalibrationProperty, self).set(value)
 
 def heading_filter(lp, a, b):
     if not a:
@@ -300,8 +294,17 @@ class BoatIMU(object):
 
     self.uptime = self.Register(TimeValue, 'uptime')
 
-    self.accel_calibration = CalibrationValue(self, 'accel', [[0, 0, 0, 1], 1])
-    self.compass_calibration = CalibrationValue(self, 'compass', [[0, 0, 0, 30, 0], [1, 1], 0])
+    def RegisterCalibration(name, default):
+      calibration = self.Register(CalibrationProperty, name, server, default)
+      calibration.age = self.Register(AgeValue, name+'.calibration.age', persistent=True)
+      calibration.locked = self.Register(BooleanProperty, name+'.calibration.locked', False, persistent=True)
+      calibration.sigmapoints = self.Register(RoundedValue, name+'.calibration.sigmapoints', False)
+      calibration.sigmapoints.client_can_set = True
+      calibration.log = self.Register(Property, name+'.calibration.log', '')
+      return calibration
+
+    self.accel_calibration = RegisterCalibration('accel', [[0, 0, 0, 1], 1])
+    self.compass_calibration = RegisterCalibration('compass', [[0, 0, 0, 30, 0], [1, 1], 0])
     
     self.imu_pipe, imu_pipe = NonBlockingPipe('imu_pipe')
     imu_cal_pipe, self.imu_cal_pipe = NonBlockingPipe('imu_cal_pipe')
@@ -336,7 +339,7 @@ class BoatIMU(object):
     sensornames += ['gyrobias']
     self.SensorValues['gyrobias'] = self.Register(SensorValue, 'gyrobias', timestamp, persistent=True)
 
-    self.imu_process = multiprocessing.Process(target=imu_process, args=(imu_pipe,imu_cal_pipe[0], self.accel_calibration.value[0], self.compass_calibration.value[0], self.SensorValues['gyrobias'].value, self.period))
+    self.imu_process = multiprocessing.Process(target=imu_process, args=(imu_pipe,imu_cal_pipe, self.accel_calibration.value[0], self.compass_calibration.value[0], self.SensorValues['gyrobias'].value, self.period))
     self.imu_process.start()
 
     self.last_imuread = time.time()
