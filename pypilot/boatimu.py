@@ -250,10 +250,13 @@ class QuaternionValue(ResettableValue):
 
 class CalibrationProperty(RoundedValue):
   def __init__(self, name, server, default):
+    self.default = default
     self.client_can_set = True
     super(CalibrationProperty, self).__init__(name+'.calibration', default, persistent=True)
 
   def set(self, value):
+    if not value:
+      value = self.default
     try:
       if self.value and self.locked.value:
         return
