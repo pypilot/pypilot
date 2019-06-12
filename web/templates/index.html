@@ -79,6 +79,7 @@
     </div>
     
     <div id="Calibration" class="w3-container tab">
+      Magnetic Heading <span id="imu_heading"></span>
       Pitch <span id="pitch"></span>
       Roll <span id="roll"></span>
       <p>Press <button id="level" class="button">here</button>
@@ -87,6 +88,8 @@
       <div class="myProgress">
         <div class="myBar" id="progress"> </div>
       </div>
+      Magnetic Heading Offset
+      <input type="spin" id="imu_heading_offset" min=-180 max=180 value=0>Degrees</input>
       <p><input type="checkbox" id="calibration_locked">Lock Calibration</input>
       </p>
       <br>
