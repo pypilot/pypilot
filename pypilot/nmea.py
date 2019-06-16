@@ -363,7 +363,7 @@ class Nmea(object):
             if (dt > .2 or dt < 0) and source_priority[source] < source_priority['tcp']:
                 if name == 'wind':
                     wind = self.sensors.wind
-                    self.send_nmea('APMWV,%.3f,R,%.3f,K,A' % (wind.direction.value, wind.speed.value))
+                    self.send_nmea('APMWV,%.3f,R,%.3f,N,A' % (wind.direction.value, wind.speed.value))
                 else:
                     self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
                 self.nmea_times[name] = t
