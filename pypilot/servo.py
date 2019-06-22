@@ -687,6 +687,7 @@ def main():
     start = lastt = time.time()
     while True:
         servo.poll()
+        sensors.poll()
 
         if servo.controller.value != 'none':
             print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', sensors.rudder.angle.value, 'flags', servo.flags.strvalue()

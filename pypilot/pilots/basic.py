@@ -28,15 +28,8 @@ class BasicPilot(AutopilotPilot):
     # create simple pid filter
     self.gains = {}
 
-    def Gain(name, default, min_val, max_val, compute=None):
-      if not compute:
-        compute = lambda value : value * self.gains[name]['apgain'].value
-      self.gains[name] = {'apgain': self.Register(AutopilotGain, name, default, min_val, max_val),
-                          'sensor': self.Register(SensorValue, name+'gain', timestamp),
-                          'compute': compute}
-
     def PosGain(name, default, max_val):
-      Gain(name, default, 0, max_val)
+      self.Gain(name, default, 0, max_val)
         
     PosGain('P', .003, .02)  # position (heading error)
     PosGain('I', 0, .1)      # integral
@@ -46,7 +39,7 @@ class BasicPilot(AutopilotPilot):
     def PosGain2(name, default, max_val):
       def compute2(value):
         return value * abs(value) * self.gains[name]['apgain'].value
-      Gain(name, default, 0, max_val, compute2)
+      self.Gain(name, default, 0, max_val, compute2)
 
     PosGain('PR',  0, .05)  # position root
     PosGain2('D2', 0, .05)  # derivative squared
@@ -94,7 +87,6 @@ class BasicPilot(AutopilotPilot):
     self.heading_command_rate.set(command_rate)
 
     # compute command
-    command = 0
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
     feedforward_value = self.heading_command_rate.value
@@ -115,15 +107,9 @@ class BasicPilot(AutopilotPilot):
     gain_values['PR'] = PR
     gain_values['D2'] = gain_values['D']
 
-    rval = 0
-    for gain in self.gains:
-      value = gain_values[gain]
-      gains = self.gains[gain]
-      gains['sensor'].set(gains['compute'](value))
-      if gain == 'R':
-        rval = gains['sensor'].value
-      command += gains['sensor'].value
-
+    command = self.Compute(gain_values)
+      
+    rval = self.gains['R']['sensor'].value
     # don't include R contribution to command
     self.servocommand_queue.add(command - rval)
     
