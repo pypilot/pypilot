@@ -13,42 +13,60 @@
 
 #include "arduino_servo_eeprom.h"
 
+static uint16_t tobase255(uint16_t x)
+{
+    // max value is 65024, and 0xff is forbidden in either byte
+    uint16_t h = x/255, l = x%255;
+
+    if(h > 255)
+        h = 255; // invalid
+
+    return (h<<8) | l;
+}
+
+static uint16_t frombase255(uint16_t x)
+{
+    // max value is 65024, and 0xff is forbidden in either byte
+    uint16_t h = (x>>8), l = x&0xff;
+    return h*255 + l;
+}
+
 arduino_servo_eeprom::arduino_servo_eeprom()
     : initial_read(false)
 {
     memset(&local, 0, sizeof local);
     memset(&verified, 0, sizeof verified);
-    memcpy(local.signature, "arsv23", 6); // change this if the format changes
+    memcpy(local.signature, "arsv24", 6); // change this if the format changes
 }
 
 double arduino_servo_eeprom::get_max_current()
 {
-    return arduino.max_current/100.0;
+    return frombase255(arduino.max_current)/100.0;
 }
 
 void arduino_servo_eeprom::set_max_current(double max_current)
 {
-    local.max_current = round(max_current * 100.0);
+    local.max_current = tobase255(round(max_current * 100.0));
 }
 
 double arduino_servo_eeprom::get_max_controller_temp()
 {
-    return arduino.max_motor_temp/100.0;
+    return frombase255(arduino.max_motor_temp)/100.0;
 }
 
 void arduino_servo_eeprom::set_max_controller_temp(double max_controller_temp)
 {
-    local.max_controller_temp = round(max_controller_temp * 100.0);
+    local.max_controller_temp = tobase255(round(max_controller_temp * 100.0));
 }
 
 double arduino_servo_eeprom::get_max_motor_temp()
 {
-    return arduino.max_motor_temp/100.0;
+    return frombase255(arduino.max_motor_temp)/100.0;
 }
 
 void arduino_servo_eeprom::set_max_motor_temp(double max_motor_temp)
 {
-    local.max_motor_temp = round(max_motor_temp * 100.0);
+    local.max_motor_temp = tobase255(round(max_motor_temp * 100.0));
 }
 
 double arduino_servo_eeprom::get_rudder_range()
@@ -58,7 +76,7 @@ double arduino_servo_eeprom::get_rudder_range()
 
 void arduino_servo_eeprom::set_rudder_range(double rudder_range)
 {
-    local.rudder_range = round(rudder_range * 2); // from 0 to 120
+    local.rudder_range = round(rudder_range * 2); // from 0 to 120 in 0.5 increments
 }
 
 double arduino_servo_eeprom::get_rudder_offset()
@@ -74,43 +92,43 @@ void arduino_servo_eeprom::set_rudder_offset(double rudder_offset)
 // store rudder scale from -512 to 512 for s9.6 fixed point
 double arduino_servo_eeprom::get_rudder_scale()
 {
-    return arduino.rudder_scale/64.0;
+    return frombase255(arduino.rudder_scale)/64.0;
 }
 
 void arduino_servo_eeprom::set_rudder_scale(double rudder_scale)
 {
-    local.rudder_scale = round(rudder_scale * 64);
+    local.rudder_scale = tobase255(round(rudder_scale * 64));
 }
 
 // store nonlinearity from -1 to 1 for s1.14 fixed point
 double arduino_servo_eeprom::get_rudder_nonlinearity()
 {
-    return arduino.rudder_nonlinearity/16384.0;
+    return (int16_t)frombase255(arduino.rudder_nonlinearity)/16250.0;
 }
 
 void arduino_servo_eeprom::set_rudder_nonlinearity(double rudder_nonlinearity)
 {
-    local.rudder_nonlinearity = round(rudder_nonlinearity * 16384);
+    local.rudder_nonlinearity = tobase255(round(rudder_nonlinearity * 16250));
 }
 
 double arduino_servo_eeprom::get_max_slew_speed()
 {
-    return arduino.max_slew_speed/255.0*100.0;
+    return arduino.max_slew_speed/254.0*100.0;
 }
 
 void arduino_servo_eeprom::set_max_slew_speed(double max_slew_speed)
 {
-    local.max_slew_speed = round(max_slew_speed * 255/100);
+    local.max_slew_speed = round(max_slew_speed * 254/100);
 }
 
 double arduino_servo_eeprom::get_max_slew_slow()
 {
-    return arduino.max_slew_slow/255.0*100.0;
+    return arduino.max_slew_slow/254.0*100.0;
 }
 
 void arduino_servo_eeprom::set_max_slew_slow(double max_slew_slow)
 {
-    local.max_slew_slow = round(max_slew_slow * 255/100);
+    local.max_slew_slow = round(max_slew_slow * 254/100);
 }
 
 double arduino_servo_eeprom::get_current_factor()
@@ -176,12 +194,12 @@ void arduino_servo_eeprom::set_max_motor_speed(double max_motor_speed)
 
 double arduino_servo_eeprom::get_gain()
 {
-    return arduino.gain/1000.0;
+    return frombase255(arduino.gain)/1000.0;
 }
 
 void arduino_servo_eeprom::set_gain(double gain)
 {
-    local.gain = round(gain*1000.0);
+    local.gain = tobase255(round(gain*1000.0));
 }
 
 int arduino_servo_eeprom::need_read(uint8_t *end)
@@ -234,6 +252,15 @@ bool arduino_servo_eeprom::initial()
     }
     //sprintf("EEPROM SIGNATURE ok\n");
 
+    uint8_t *l = (uint8_t*)&local, *a = (uint8_t*)&arduino;
+    int ls = sizeof local;
+
+    // discard if any byte is 0xff.
+    // This is invalid data and is also the initial eeprom value
+    for(int i=0; i < ls; i++)
+        if(l[i] == 0xff)
+            return false;
+    
     return true;
 }
 
