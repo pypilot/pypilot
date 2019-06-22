@@ -114,6 +114,24 @@ class AutopilotPilot(object):
   def Register(self, _type, name, *args, **kwargs):
     return self.ap.server.Register(_type(*(['ap.pilot.' + self.name + '.' + name] + list(args)), **kwargs))
 
+  def Gain(self, name, default, min_val, max_val, compute=None):
+    if not compute:
+      compute = lambda value : value * self.gains[name]['apgain'].value
+    timestamp = self.ap.server.TimeStamp('ap')
+
+    self.gains[name] = {'apgain': self.Register(AutopilotGain, name, default, min_val, max_val),
+                        'sensor': self.Register(SensorValue, name+'gain', timestamp),
+                        'compute': compute}
+
+  def Compute(self, gain_values):
+    command = 0
+    for gain in self.gains:
+      value = gain_values[gain]
+      gains = self.gains[gain]
+      gains['sensor'].set(gains['compute'](value))
+      command += gains['sensor'].value
+
+    return command
 
 class CompassOffset(object):
   def __init__(self):

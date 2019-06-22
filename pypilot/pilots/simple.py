@@ -19,26 +19,18 @@ class SimplePilot(AutopilotPilot):
     # create simple pid filter
     self.gains = {}
     timestamp = self.ap.server.TimeStamp('ap')
-    def Gain(name, default, max_val):
-      self.gains[name] = (self.Register(AutopilotGain, name, default, 0, max_val),
-                          self.Register(SensorValue, name+'gain', timestamp))
-    Gain('P', .005, .025)
-    Gain('I', 0, .05)
-    Gain('D', .15, .5)
+    self.Gain('P', .005, 0, .025)
+    self.Gain('I', 0, 0, .05)
+    self.Gain('D', .15, 0, .5)
 
   def process_imu_data(self):
     ap = self.ap
-    command = 0
     headingrate = ap.boatimu.SensorValues['headingrate'].value
     gain_values = {'P': ap.heading_error.value,
                    'I': ap.heading_error_int.value,
                    'D': headingrate}
 
-    for gain in self.gains:
-      value = gain_values[gain]
-      gains = self.gains[gain]
-      gains[1].set(gains[0].value*value)
-      command += gains[1].value
+    command = self.Compute(gain_values)
 
     if ap.enabled.value:
       ap.servo.command.set(command)

@@ -1107,8 +1107,8 @@ void loop()
             TakeVolts(0); // clear readings
             TakeVolts(1);
         } else
-        /* voltage must be between 6 and max voltage */
-        if(volts <= 600 || volts >= max_voltage) {
+        /* voltage must be between 9 and max voltage */
+        if(volts <= 900 || volts >= max_voltage) {
             stop();
             flags |= BADVOLTAGE;
         } else
@@ -1231,10 +1231,10 @@ void loop()
                     v = value << 8 | eeprom_read_addr;
                     eeprom_read_addr++;
                     code = EEPROM_VALUE_CODE;
+                    out_sync_pos--; // fast eeprom read
                     break;
                 }
                 eeprom_read_addr++; // skip for now
-                out_sync_pos--; // fast eeprom read
             }
             return;
         default:
