@@ -23,7 +23,8 @@ class LineBufferedNonBlockingSocket(object):
         self.out_buffer = ''
         self.pollout = select.poll()
         self.pollout.register(connection, select.POLLOUT)
-        self.sendfail_msg = self.sendfail_cnt = 0
+        self.sendfail_msg = 1
+        self.sendfail_cnt = 0
 
     def recv(self):
         return self.b.recv()
