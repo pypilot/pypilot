@@ -113,7 +113,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
              'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading_offset'],
             ['imu.accel.calibration', 'imu.accel.calibration.age', 'imu.accel',
              'imu.accel.calibration.sigmapoints', 'imu.accel.calibration.locked'],
-            ['imu.compass.calibration', 'imu.compass.calibration.age', 'imu.compass',
+            ['imu.fusionQPose', 'imu.compass.calibration', 'imu.compass.calibration.age', 'imu.compass',
              'imu.compass.calibration.sigmapoints', 'imu.compass.calibration.locked'],
             ['servo.flags',
              'servo.max_current', 'servo.max_controller_temp', 'servo.max_motor_temp',
