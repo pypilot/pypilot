@@ -125,10 +125,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         pageindex = 0
         for pagelist in watchlist:
-            watch = self.m_notebook.GetSelection() == pageindex            
             for name in pagelist:
-                client.watch(name, watch)
-            pageindex+=1
+                client.watch(name, False)
+
+        pageindex = self.m_notebook.GetSelection()
+        for name in watchlist[pageindex]:
+            client.watch(name)
         
     def on_con(self, client):
         self.set_watches(client)
