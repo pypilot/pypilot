@@ -282,7 +282,7 @@ class Servo(object):
             if abs(self.sensors.rudder.angle.value - self.command.value) < 1:
                 self.command.set(0)
             else:
-                self.do_position_command(self.command.value)
+                self.do_position_command(self.position_command.value)
                 return
         elif self.command.value and not self.fault():
             timeout = 1 # command will expire after 1 second
