@@ -42,7 +42,6 @@ class BasicPilot(AutopilotPilot):
       self.Gain(name, default, 0, max_val, compute2)
 
     PosGain('PR',  0, .05)  # position root
-    PosGain2('D2', 0, .05)  # derivative squared
     PosGain('FF',  .5, 3.0) # feed forward
     PosGain('R',  .1, 1.0)  # reactive
     self.reactive_time = self.Register(RangeProperty, 'Rtime', 1, 0, 3)
@@ -105,7 +104,6 @@ class BasicPilot(AutopilotPilot):
     if gain_values['P'] < 0:
       PR = -PR
     gain_values['PR'] = PR
-    gain_values['D2'] = gain_values['D']
 
     command = self.Compute(gain_values)
       
