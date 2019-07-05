@@ -20,7 +20,7 @@ default_persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
 def LoadPersistentData(persistent_path, server=True):
     try:
         file = open(persistent_path)
-        persistent_data = kjson.loads(file.readline())
+        persistent_data = kjson.loads(file.read())
         file.close()
     except Exception as e:
         print('failed to load', persistent_path, e)
@@ -35,7 +35,7 @@ def LoadPersistentData(persistent_path, server=True):
 
         try:
             file = open(persistent_path + '.bak')
-            persistent_data = kjson.loads(file.readline())
+            persistent_data = kjson.loads(file.read())
             file.close()
             return persistent_data
         except Exception as e:

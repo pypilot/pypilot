@@ -51,4 +51,5 @@ private:
     int nosync_count, nosync_data;
 
     arduino_servo_eeprom eeprom;
+    int eeprom_read;
 };

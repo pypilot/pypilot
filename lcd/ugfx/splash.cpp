@@ -18,8 +18,8 @@ surface *load_logo(int bypp)
 {    
     #include "pypilot_logo.h"
     const char *data = header_data;
-    char pixel[4] = {0};
-    char data32[4*width*height], *p = data32;
+    unsigned char pixel[4] = {0};
+    unsigned char data32[4*width*height], *p = data32;
 
     for(int i = 0; i<width*height; i++) {
         HEADER_PIXEL(data, pixel);
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 {
     surface *framebuffer;
     if(argc > 1 && !strcmp(argv[1], "nokia5110"))
-        framebuffer = new nokia5110screen();
+        framebuffer = new spiscreen();
     else
         framebuffer = new screen("/dev/fb0");
 
@@ -56,13 +56,15 @@ int main(int argc, char *argv[])
         }
     }
 #endif    
-    int facw = framebuffer->width / logo->width, fach = framebuffer->height / logo->height;
-    int fac = facw < fach ? facw : fach;
+    double facw = (float)framebuffer->width / logo->width, fach = (float)framebuffer->height / logo->height;
+    float facf = facw < fach ? facw : fach;
     surface *logom = new surface(framebuffer);
 
+    int fac = facf;
     logom->magnify(logo, fac);
     logom->invert(0, 0, logom->width, logom->height);
 
+    framebuffer->fill(0);
     framebuffer->blit(logom, 0, 0);
     framebuffer->refresh();
     delete framebuffer;

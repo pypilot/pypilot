@@ -438,33 +438,6 @@ void surface::fill(uint32_t c)
     box(0, 0, width-1, height-1, c);
 }
 
-void surface::binary_write(int fileno)
-{
-    if(bypp != 1)
-        return;
-  
-    char binary[width*height/8];
-    for(int col = 0; col<6; col++)
-        for(int y = 0; y < height; y++) {
-            int index = y + (5-col)*height;
-            uint8_t bits = 0;
-            for(int bit = 0; bit<8; bit++) {
-                bits <<= 1;
-                if(*(uint8_t*)(p + y*line_length + col*8+bit))
-                    bits |= 1;
-            }
-            binary[index] = bits;
-        }
-
-    // write up to 64 bytes at a time
-    for (unsigned int pos=0; pos<sizeof binary; pos += 64) {
-        int len = 64;
-        if (sizeof binary - pos < 64)
-            len = sizeof binary - pos;
-        write(fileno, binary + pos, len);
-    }   
-}
-
 #ifdef WIRINGPI
 #include <wiringPi.h>
 void surface::binary_write_sw(int sclk, int mosi)
@@ -561,7 +534,51 @@ screen::~screen()
 #ifdef WIRINGPI
 #include <wiringPiSPI.h>
 
-#define SPI_DEVICE 0
+class spilcd
+{
+public:
+    spilcd(int _rst, int _dc)
+        : rst(_rst), dc(_dc) {
+    	setenv("WIRINGPI_CODES", "1", 1);
+        if(wiringPiSetup () < 0) {
+            printf("wiringPiSetup Failed (no permissions?)\n");
+            exit(1);
+        }
+
+        pinMode(rst, OUTPUT);
+        pinMode(dc, OUTPUT);
+
+	for(int port=0; port<2; port++)
+	    if((spifd = wiringPiSPISetup(port, 100000)) != -1)
+		break;
+	  
+	if(spifd == -1) {
+            fprintf(stderr, "failed to open spi device");
+            exit(1);
+	}
+    }
+
+    virtual ~spilcd() {
+        close(spifd);
+    }
+
+
+    void command(uint8_t c) {
+        digitalWrite (dc, LOW) ;	// Off
+        write(spifd, &c, 1);
+    }
+
+    void reset() {
+        digitalWrite (rst, LOW);
+        usleep(200000);
+        digitalWrite (rst, HIGH);
+    }
+
+    virtual void refresh(int contrast, surface *s) = 0;
+
+    int spifd, rst, dc;
+};
+
 #define DC 6 //25
 #define RST 5 //24
 
@@ -583,37 +600,11 @@ screen::~screen()
 #define PCD8544_SETBIAS 0x10
 #define PCD8544_SETVOP 0x80
 
-class PCD8544
+class PCD8544 : public spilcd
 {
 public:
-    PCD8544() {
-	setenv("WIRINGPI_CODES", "1", 1);
-        if(wiringPiSetup () < 0) {
-            printf("wiringPiSetup Failed (no permissions?)\n");
-            exit(1);
-        }
-
-        pinMode(RST, OUTPUT);
-        pinMode(DC, OUTPUT);
-
-	for(int port=0; port<2; port++)
-	    if((spifd = wiringPiSPISetup(port, 100000)) != -1)
-		break;
-	  
-	if(spifd == -1) {
-            fprintf(stderr, "failed to open spi device");
-            exit(1);
-	}
-    }
-
-    ~PCD8544() {
-        close(spifd);
-    }
-
-    void command(uint8_t c) {
-        digitalWrite (DC, LOW) ;	// Off
-        write(spifd, &c, 1);
-    }
+    PCD8544() : spilcd(RST, DC) {}
+    virtual ~PCD8544() {} 
 
     void extended_command(uint8_t c) {
         command(PCD8544_FUNCTIONSET | PCD8544_EXTENDEDINSTRUCTION);
@@ -621,18 +612,6 @@ public:
 
         command(PCD8544_FUNCTIONSET);
         command(PCD8544_DISPLAYCONTROL | PCD8544_DISPLAYNORMAL);
-    }
-    
-    void begin(int contrast, int bias=4) {
-        reset();
-        set_bias(bias);
-        set_contrast(contrast);
-    }
-
-    void reset() {
-        digitalWrite (RST, LOW);
-        usleep(200000);
-        digitalWrite (RST, HIGH);
     }
     
     void set_contrast(int contrast) {
@@ -645,33 +624,161 @@ public:
         extended_command(PCD8544_SETBIAS | bias);
     }
 
-    int spifd;
+    void refresh(int contrast, surface *s) {
+        if(s->bypp != 1)
+            return;
+
+        set_bias(4);
+        set_contrast(contrast);
+
+        command(PCD8544_SETYADDR);
+        command(PCD8544_SETXADDR);
+
+        digitalWrite (dc, HIGH) ;
+
+        int size = 84*48/8;
+
+        char binary[size];
+        for(int col = 0; col<6; col++)
+            for(int y = 0; y < s->height; y++) {
+                int index = y + (5-col)*s->height;
+                uint8_t bits = 0;
+                for(int bit = 0; bit<8; bit++) {
+                    bits <<= 1;
+                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+bit))
+                        bits |= 1;
+                }
+                binary[index] = bits;
+            }
+        
+        // write up to 64 bytes at a time
+        for (unsigned int pos=0; pos<size; pos += 64) {
+            int len = 64;
+            if (size - pos < 64)
+                len = size - pos;
+            write(spifd, binary + pos, len);
+        }
+    }
 };
 
-nokia5110screen::nokia5110screen()
-    : surface(48, 84, 1, NULL)
+// JLX12864G-086
+
+
+#define LCD_C LOW
+#define LCD_D HIGH
+
+#define LCD_X 128
+#define LCD_Y 64
+#define LCD_CMD 0
+
+const int rstPIN  = 5;    // RST
+const int  rsPIN  = 6;    // RS
+
+        static  int jlx1264reset=1;
+class JLX12864G : public spilcd
 {
-    disp = new PCD8544();
-    contrast = 60;
-    disp->begin(contrast);
+public:
+    JLX12864G() : spilcd(rstPIN, rsPIN) {}
+    virtual ~JLX12864G() {}
+    void refresh(int contrast, surface *s) {
+        if(jlx1264reset>0) {
+            digitalWrite(rst, LOW);
+            //delay(50);
+            usleep(50000);
+            digitalWrite(rst, HIGH);
+//  delay(50);
+            usleep(50000);
+            jlx1264reset--;
+        }
+
+        command(0xe2); // Soft Reset
+        command(0x2c); // Boost 1
+        command(0x2e); // Boost 2
+        command(0x2f); // Boost 3
+        command(0x23); // Coarse Contrast, setting range is from 20 to 27
+        command(0x81); // Trim Contrast
+        command(0x28); // Trim Contrast value range can be set from 0 to 63
+        command(0xa2); // 1/9 bias ratio
+        command(0xc8); // Line scan sequence : from top to bottom
+        command(0xa0); // Column scanning order : from left to right
+        command(0xaf); // Open the display
+    
+        int i,j;
+
+
+
+        char binary[128*64];//width*height/8];
+        for(int col = 0; col<8; col++)
+            for(int y = 0; y < 128; y++) {
+                int index = y + (7-col)*s->height;
+                uint8_t bits = 0;
+                for(int bit = 0; bit<8; bit++) {
+                    bits <<= 1;
+                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+bit))
+                        bits |= 1;
+                }
+                binary[index] = bits;
+            }
+        
+        for(i=0;i<8;i++)
+        {
+            digitalWrite (dc, LOW) ;	// Off
+            command(0xb0+i);
+            command(0x10);
+            command(0x00);
+
+            digitalWrite (dc, HIGH) ;	// Off
+#if 0
+            char *address = binary + i*128; //pointer
+            for (unsigned int pos=0; pos<128; pos ++) {
+                char data[1] = {0xff};
+                write(spifd, data, 1);
+                address++;
+            }
+#else
+            char *address = binary + i*128; //pointer
+            // write up to 64 bytes at a time
+            for (unsigned int pos=0; pos<128; pos += 64) {
+                int len = 64;
+                if (128 - pos < 64)
+                    len = 128 - pos;
+                write(spifd, address + pos, len);
+            }
+#endif
+        }
+     }
+};
+
+
+
+static int spilcdsizes[][2] = {{48, 84}, {64, 128}};
+
+static int detectdriver() {
+    return 0;
 }
 
-nokia5110screen::~nokia5110screen()
+spiscreen::spiscreen()
+    : surface(spilcdsizes[detectdriver()][0], spilcdsizes[detectdriver()][1], 1, NULL)
+{
+    switch (detectdriver()) {
+//    case 0: disp = new PCD8544(); break;
+    case 1: disp = new JLX12864G(); break;
+    default:
+        fprintf(stderr, "invalid driver");
+        exit(1);
+    }
+    contrast = 60;
+    disp->reset();
+}
+
+spiscreen::~spiscreen()
 {
     delete disp;
 }
 
-
-void nokia5110screen::refresh()
+void spiscreen::refresh()
 {
-    disp->set_bias(4);
-    disp->set_contrast(contrast);
-
-    disp->command(PCD8544_SETYADDR);
-    disp->command(PCD8544_SETXADDR);
-
-    digitalWrite (DC, HIGH) ;
-    binary_write(disp->spifd);
+    disp->refresh(contrast, this);
 }
 
 #endif

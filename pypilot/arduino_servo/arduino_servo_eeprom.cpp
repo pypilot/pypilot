@@ -143,12 +143,12 @@ void arduino_servo_eeprom::set_current_factor(double current_factor)
 
 double arduino_servo_eeprom::get_current_offset()
 {
-    return arduino.current_offset/100.0;
+    return (arduino.current_offset-127)/100.0;
 }
 
 void arduino_servo_eeprom::set_current_offset(double current_offset)
 {
-    local.current_offset = round(current_offset*100.0);
+    local.current_offset = 127+round(current_offset*100.0);
 }
 
 double arduino_servo_eeprom::get_voltage_factor()
@@ -163,12 +163,12 @@ void arduino_servo_eeprom::set_voltage_factor(double voltage_factor)
 
 double arduino_servo_eeprom::get_voltage_offset()
 {
-    return arduino.voltage_offset/100.0;
+    return (arduino.voltage_offset-127)/100.0;
 }
 
 void arduino_servo_eeprom::set_voltage_offset(double voltage_offset)
 {
-    local.voltage_offset = round(voltage_offset*100.0);
+    local.voltage_offset = 127 + round(voltage_offset*100.0);
 }
 
 double arduino_servo_eeprom::get_min_motor_speed()
@@ -250,16 +250,19 @@ bool arduino_servo_eeprom::initial()
         printf("Arudino EEPROM Signature FAILED!\n");
         return false;
     }
-    //sprintf("EEPROM SIGNATURE ok\n");
 
     uint8_t *l = (uint8_t*)&local, *a = (uint8_t*)&arduino;
     int ls = sizeof local;
 
     // discard if any byte is 0xff.
     // This is invalid data and is also the initial eeprom value
-    for(int i=0; i < ls; i++)
-        if(l[i] == 0xff)
+    for(int i=0; i < ls; i++) {
+        if(a[i] == 0xff) {
+            printf("EEPROM SIGNATURE invalid byte %d\n", i);
             return false;
+        }
+    }
+    printf("EEPROM SIGNATURE ok\n");
     
     return true;
 }

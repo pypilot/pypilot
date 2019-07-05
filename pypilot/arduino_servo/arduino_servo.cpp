@@ -91,6 +91,7 @@ ArduinoServo::ArduinoServo(int _fd, int _baud)
 //    while(read(fd, in_buf, in_buf_len) > 0);
     nosync_count = 0;
     nosync_data = 0;
+    eeprom_read = 0;
 }
 
 void ArduinoServo::command(double command)
@@ -135,7 +136,8 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
         
     case EEPROM_VALUE_CODE:
     {
-        //printf("EEPROM VALUE %d %d\n", in_buf[1], in_buf[2]);
+//        printf("EEPROM VALUE %d %d\n", in_buf[1], in_buf[2]);
+        eeprom_read = 4;
         uint8_t addr = in_buf[1], val = in_buf[2];
         static uint8_t lastaddr, lastvalue;
         if(addr&1) {
@@ -392,12 +394,15 @@ void ArduinoServo::send_params()
 #if 1
         case 20:
         {
-            uint8_t end;
-            int addr = eeprom.need_read(&end);
-            if(addr >= 0 && end > addr) {
-                send_value(EEPROM_READ_CODE, addr | end<<8);
-                //printf("EEPROM_READ %d %d\n", addr, end);
-            }
+            if(eeprom_read == 0) {
+                uint8_t end;
+                int addr = eeprom.need_read(&end);
+                if(addr >= 0 && end > addr) {
+                    send_value(EEPROM_READ_CODE, addr | end<<8);
+                    //printf("EEPROM_READ %d %d\n", addr, end);
+                }
+            } else
+                eeprom_read--;
         } break;
         case 22:
         {
