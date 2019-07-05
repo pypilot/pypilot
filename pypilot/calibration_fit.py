@@ -548,7 +548,7 @@ def FitCompass(compass_cal, compass_calibration, norm):
         curdeviation = ComputeDeviation(p, compass_calibration)
         debug('cur dev', curdeviation)
         # if compass_calibration calibration is really terrible
-        if deviation[0]/curdeviation[0] + deviation[1]/curdeviation[1] < 2 or curdeviation[0] > .15 or curdeviation[1] > 10:
+        if deviation[0]/curdeviation[0] + deviation[1]/curdeviation[1] < 2.5 or curdeviation[0] > .2 or curdeviation[1] > 10:
             debug('allowing bad fit')
         else:
             compass_cal.RemoveOldest()  # remove oldest point if too much deviation
