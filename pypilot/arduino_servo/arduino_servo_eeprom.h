@@ -13,7 +13,7 @@ struct arduino_servo_data /*__attribute__(("packed"))*/ {
     uint16_t rudder_scale, rudder_nonlinearity;
     uint8_t max_slew_speed, max_slew_slow;
     uint8_t current_factor, voltage_factor;
-    int8_t current_offset, voltage_offset;
+    uint8_t current_offset, voltage_offset;
     uint8_t min_motor_speed, max_motor_speed;
     uint16_t gain;
     char signature[6]; // changes if eeprom format changes,
