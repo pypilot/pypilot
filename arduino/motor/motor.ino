@@ -37,7 +37,17 @@ D4  D5
  1   1        .05 ohm, (or .001 ohm x 50 gain)
  0   1        .01 ohm
  1   0        .0005 ohm x 50 gain
- 0   0        reserved
+ 0   0        .0005 ohm x 200 gain   *ratiometric mode
+
+
+Ratiometric Mode:
+for D4=0 and D5=0, the adc operates over the 0-5 volt range
+making it ratiometric (linearly accurate) for rudder feedback
+and reduces impedance in the rudder measurement
+the temperature resistors are changed to 10k and 10k ntc
+voltage measurement accuracy is reduced, and the resistors used are
+1k5 and 10k for a range of 38 volts.   R12 is not used in this mode.
+
 
 digital pin6 determines RC pwm if 1, or Hbridge if 0.
 if RC pwm:
