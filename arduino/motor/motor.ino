@@ -40,26 +40,26 @@ D4  D5
  0   0        .0005 ohm x 200 gain   *ratiometric mode
 
 
+digital pin6 determines:
+1 - RC pwm:
+   digital pin9 pwm output standard ESC (1-2 ms pulse every 20 ms)
+           pin2 esc programming input/output (with arduinousblinker script)
+0 - Hbridge
+   digital pin2 and pin3 for low side, pin9 and pin10 for high side
+
+
+optional:digital pin7 forward fault for optional switch to stop forward travel
+digital pin8 reverse fault for optional switch to stop reverse travel
+
+
 Ratiometric Mode:
 for D4=0 and D5=0, the adc operates over the 0-5 volt range
 making it ratiometric (linearly accurate) for rudder feedback
 and reduces impedance in the rudder measurement
 the temperature resistors are changed to 10k and 10k ntc
 voltage measurement accuracy is reduced, and the resistors used are
-1k5 and 10k for a range of 38 volts.   R12 is not used in this mode.
+15k and 100k for a range of 38 volts.   Pin 12 is not used in this mode.
 
-
-digital pin6 determines RC pwm if 1, or Hbridge if 0.
-if RC pwm:
-   digital pin9 pwm output standard ESC (1-2 ms pulse every 20 ms)
-           pin2 esc programming input/output (with arduinousblinker script)
-if Hbridge
-   digital pin2 and pin3 for low side, pin9 and pin10 for high side
-
-
-optional:
-digital pin7 forward fault for optional switch to stop forward travel
-digital pin8 reverse fault for optional switch to stop reverse travel
 
 If Pin 12 has 560 ohm resistor to A0, then 24 volts is supported,
 this allows for measuring voltage up to 40.4 volts, without losing
@@ -70,6 +70,7 @@ D12
  0    0-40.4  volts (280 and 10k resistor)  resolution 0.04 volts
 
 digital pin13 is led on when engaged
+
 
 The program uses a simple protocol to ensure only
 correct data can be received and to ensure that
@@ -88,12 +89,11 @@ the command can be recognized.
 */
 
 /* vnh2sp30 is supported, but warning, I received 3 boards:
--  reverse is half power making chip very hot
--  reverse does not work
--  current sense does not work
+1) reverse is half power making chip very hot
+2) reverse does not work
+3) current sense does not work
 
-So in some way, 3 out of 3 were defective and I cannot recommend
-this part at all unfortunately.
+3 out of 3 were defective, I do not recommend.
 
 vnh2sp30  <->  arduino <->  CPC5001
 +5V              5v
@@ -112,6 +112,8 @@ PWR+             VIN
                  gnd        gnd
 */
 
+
+
 //#define VNH2SP30 // defined if this board is used
 //#define DISABLE_TEMP_SENSE    // if no temp sensors avoid errors
 //#define DISABLE_VOLTAGE_SENSE // if no voltage sense
@@ -119,7 +121,7 @@ PWR+             VIN
 
 
 // run at 4mhz instead of 16mhz to save power,
-// and to be able to measure lower current from the shunt
+// and somehow at slower clock atmega328 is able to measure lower current from the shunt
 
 #define DIV_CLOCK 4  // 1 for 16mhz, 2 for 8mhz, 4 for 4mhz
 #define QUIET  // don't use 1khz
@@ -153,9 +155,6 @@ PWR+             VIN
 #else
 #error "invalid DIV_CLOCK"
 #endif
-
-//#define HIGH_CURRENT_OLD   // high current uses 500uohm resistor and 50x amplifier
-// otherwise using shunt without amplification
 
 #define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
 uint8_t shunt_resistance = 1;
@@ -795,16 +794,10 @@ uint16_t TakeAmps(uint8_t p)
     } else { // high current
         // high curront controller has .0005 ohm with 50x gain
         // 275/64 = 100.0/1024/.0005/50*1.1
-#if defined(HIGH_CURRENT_OLD)
-        // high curront controller has .001 ohm with 50x gain
-        // 275/128 = 100.0/1024/.001/50*1.1
-        v = v * 275 / 128 / 16;
-#else
         if(v > 16)
             v = v * 275 / 64 / 16; // 820mA offset
         else
             v = 0;
-#endif        
     }
     if(v == 0)
         return 0;
