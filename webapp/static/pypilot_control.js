@@ -435,11 +435,11 @@ $(document).ready(function() {
     });
 
     $('#rudder_port_range').click(function(event) {
-        signalk_set('rudder.calibration_state', 'port_range');
+        signalk_set('rudder.calibration_state', 'port range');
     });
 
     $('#rudder_starboard_range').click(function(event) {
-        signalk_set('rudder.calibration_state', 'starboard_range');
+        signalk_set('rudder.calibration_state', 'starboard range');
     });
 
     $('#rudder_range').change(function(event) {
