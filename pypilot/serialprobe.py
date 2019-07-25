@@ -19,7 +19,7 @@ def read_config(filename, fail):
                 device = f.readline()
                 if not device:
                     break
-                devices.append(os.path.realpath(device.strip()))
+                devices.append(device.strip())
             f.close()
             return devices
         except Exception as e:
@@ -74,21 +74,35 @@ def scan_devices():
                 devicesd.append('/dev/'+dev)
         devices = devicesd + devices
 
-    allowed_devices = []
-
     blacklist_serial_ports = read_blacklist()
     for device in blacklist_serial_ports:
+        realpath = os.path.realpath(device)
         for d in devices:
-            if os.path.realpath(d.strip()) == device:
+            if os.path.realpath(d.strip()) == realpath:
                 devices.remove(d)
     
     allowed_serial_ports = read_allowed()
     if allowed_serial_ports == 'any':
         return devices
     
-    for device in devices:
-        if os.path.realpath(device) in allowed_serial_ports:
+    allowed_devices = []
+    for device in allowed_serial_ports:
+        realpath = os.path.realpath(device)
+        for d in devices:
+            if realpath == os.path.realpath(d):
+                allowed_devices.append(d)
+
+    # add any unique serial ports not scanned
+    # but listed in serial_ports file to end of list
+    for device in allowed_serial_ports:
+        realpath = os.path.realpath(device)
+        have = False
+        for d in allowed_devices:
+            if realpath == os.path.realpath(d):
+                have = True
+        if not have:
             allowed_devices.append(device)
+    
     return allowed_devices
 
 devices = 'init'
@@ -105,7 +119,7 @@ def enumerate_devices():
     if devices == 'init':
         starttime = time.time()
         devices = scan_devices()
-
+        
     if monitor:
         import signal
         t1 = time.time()
@@ -199,6 +213,7 @@ def probe(name, bauds, timeout=5):
     # find a new device
     #t1 = time.time()
     devices = enumerate_devices()
+
     #print 'enumtime', time.time() - t1, devices
 
     # find next device index to probe
@@ -225,7 +240,7 @@ def probe(name, bauds, timeout=5):
         return False
 
     device = devices[index]
-    print 'device', device
+    #print 'device', device, devices
     serial_device = device, bauds[0]
 
     try:
