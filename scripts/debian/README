@@ -10,7 +10,7 @@ git clone ...
 cd RTIMULib2/Linux/python
 sudo python setup.py install
 
-Next ensure wiringpi or wiring orangepi zero installed, eg:
+If you are using orange pi:
 git clone  https://github.com/xpertsavenue/WiringOP-Zero
 cd WiringOP-Zero
 sudo make install
@@ -31,7 +31,7 @@ cd ../..
 
 # this makes pypilot access point "pypilot"
 sudo systemctl enable pypilot
-sudo systemctl enable pypilot_lcdclient
+sudo systemctl enable pypilot_lcd
 sudo systemctl enable pypilot_webapp
 
 sudo systemctl enable hostapd
