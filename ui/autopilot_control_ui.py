@@ -477,7 +477,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook.AddPage( self.m_panel3, u"imu", False )
+		self.m_notebook.AddPage( self.m_panel3, u"imu", True )
 		self.m_panel7 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer81 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer81.AddGrowableCol( 0 )
@@ -978,7 +978,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel71.SetSizer( fgSizer35 )
 		self.m_panel71.Layout()
 		fgSizer35.Fit( self.m_panel71 )
-		self.m_notebook.AddPage( self.m_panel71, u"rudder", True )
+		self.m_notebook.AddPage( self.m_panel71, u"rudder", False )
 
 		fgSizer7.Add( self.m_notebook, 1, wx.EXPAND |wx.ALL, 5 )
 
