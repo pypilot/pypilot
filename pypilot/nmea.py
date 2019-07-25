@@ -653,15 +653,3 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 dt = .1 - (t5 - t0)
                 if dt > 0 and dt < .1:
                     time.sleep(dt)
-
-
-if __name__ == '__main__':
-    if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
-      print 'warning, failed to make nmea process realtime'
-    server = SignalKServer()
-    nmea = Nmea(server)
-
-    while True:
-        nmea.poll()
-        server.HandleRequests()
-        time.sleep(.1)
