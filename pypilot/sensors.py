@@ -7,8 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-# autopilot base handles reading from the imu (boatimu)
-
+from signalk.server import *
 from signalk.values import *
 from resolv import resolv
 
@@ -138,3 +137,15 @@ class Sensors(object):
             sensor = self.sensors[name]
             if sensor.device and sensor.device[2:] == device:
                 self.lostsensor(sensor)
+
+
+if __name__ == '__main__':
+    if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
+      print 'warning, failed to make sensor process realtime'
+    server = SignalKServer()
+    sensors = Sensors(server)
+
+    while True:
+        sensors.poll()
+        server.HandleRequests()
+        time.sleep(.1)
