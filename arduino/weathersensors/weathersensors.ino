@@ -15,10 +15,13 @@
 using potentiometer for wind direction
 using a reed switch for wind speed
 
-red    - gnd - pin 3 - potentiometer power A - reed switch A
-yellow - 5v  - pin 5 - potentiometer power B
-green  - a7  - pin 4 - potentiometer reading
-black  - d2  - pin 2 -                         reed switch B
+
+rj12        - arduino - rj12  -  connections
+wire color  - pin     - pin
+red         - gnd - pin 3 - potentiometer power A - reed switch A
+yellow      - 5v  - pin 5 - potentiometer power B
+green       - a7  - pin 4 - potentiometer reading
+black       - d2  - pin 2 -                         reed switch B
 
 */
 
@@ -36,12 +39,12 @@ extern "C" {
 // comment/uncomment these settings as needed
 #define ANEMOMETER   // comment to show only baro graph
 
-#define LCD          // if nokia5110 lcd on spi port
+//#define LCD          // if nokia5110 lcd on spi port
 #define DAVIS     // uncomment only for davis sensors
 //#define CCW   //  voltage decreases with wind direction (not davis!)
 
-//#define LCD_BL_HIGH  // if backlight pin is high rather than gnd
-//#define FARENHEIT
+#define LCD_BL_HIGH  // if backlight pin is high rather than gnd
+#define FARENHEIT
 
 #ifdef LCD
 static PCD8544 lcd(13, 11, 8, 7, 4);
@@ -147,6 +150,8 @@ volatile uint16_t lastperiod;
 void isr_anemometer_count()
 {
     uint8_t pin = digitalRead(2);
+//    Serial.print("read:  ");
+//      Serial.println(pin);
 
     static uint16_t lastt, lastofft;
     static uint8_t lastpin;
@@ -160,7 +165,9 @@ void isr_anemometer_count()
         if(period > 10)
 #else
         if(offperiod > 10 && // debounce, at least for less than 120 knots of wind
-           /*offperiod > period/2 &&*/ offperiod < period/10*9) // test good reading
+           /*offperiod > period/2 &&*/
+           offperiod < period &&
+            1) // test good reading
 #endif
         {
             lastt = t;            
@@ -226,7 +233,9 @@ void setup()
     uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
     uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
     if(lowBits != 0xFF || highBits != 0xda ||
-       (extendedBits != 0xFD && extendedBits != 0xFC) || lockBits != 0xCF)
+       (extendedBits != 0xFD && extendedBits != 0xFC)
+       //|| lockBits != 0xCF
+        )
         Serial.print("Warning, fuses set wrong, flash may become corrupted");
 
   bmX280_setup();
@@ -330,6 +339,7 @@ uint8_t checksum(const char *buf)
 
 void send_nmea(const char *buf)
 {
+//    return;
   char buf2[128];
   snprintf(buf2, sizeof buf2, "$%s*%02x\r\n", buf, checksum(buf));
   Serial.print(buf2);
@@ -380,7 +390,7 @@ void read_anemometer()
         Serial.println(float(val[2]) / count[2]);
 #endif
         if(cross_count > 0) {
-#if 1
+#if 0
             Serial.print("Calibrating  ");
             Serial.print(sensorValue);
             Serial.print("  ");
@@ -395,6 +405,7 @@ void read_anemometer()
         if(cross_count == 0) { // write at zero
             Serial.println("Calibration Finished");
             eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
+            cross_count--;
         }
         return;
     }
@@ -494,6 +505,7 @@ void read_anemometer()
         static float knots = 0, lastnewknots = 0;
         const int nowindtimeout = 30;
         if(count) {
+//            Serial.println(period);
             if(nowindcount!=nowindtimeout) {
                 float newknots = .868976 * 2.25 * 1000 * count / period;
 #if 0
