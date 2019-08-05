@@ -108,6 +108,9 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.controltimes = {}
 
     def set_watches(self, client):
+        if not client:
+            return
+
         watchlist = [
             ['imu.fusionQPose', 'imu.alignmentCounter', 'imu.heading',
              'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading_offset'],
