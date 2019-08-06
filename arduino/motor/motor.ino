@@ -162,6 +162,8 @@ uint8_t shunt_resistance = 1;
 #define low_current_pin 5 // use pin 5 to specify low current (no amplifier)
 uint8_t low_current = 1;
 
+#define ratiometric_mode (!shunt_resistance && !low_current)
+
 #define pwm_style_pin 6
 // pwm style, 0 = hbridge, 1 = rc pwm, 2 = vnh2sp30
 uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 2
@@ -295,6 +297,8 @@ uint8_t rudder_min = 0, rudder_max = 255;
 uint8_t eeprom_read_addr = 0;
 uint8_t eeprom_read_end = 0;
 
+uint8_t adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
+
 #include <avr/pgmspace.h>
 
 void setup()
@@ -387,6 +391,7 @@ void setup()
     }
     // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
     shunt_resistance = digitalRead(shunt_sense_pin);
+    //shunt_resistance = 0;  // for test board which doesn't have pin grounded
 
     // test current
     low_current = digitalRead(low_current_pin);
@@ -394,10 +399,11 @@ void setup()
 #if 1
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
-    if(pwm_style == 2)
-        ADMUX = _BV(REFS0) | _BV(MUX0); // 5v
+    if(pwm_style == 2 || ratiometric_mode)
+        adcref = _BV(REFS0); // 5v
     else
-        ADMUX = _BV(REFS0)| _BV(REFS1) | _BV(MUX0); // 1.1v
+        adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
+    ADMUX = adcref | _BV(MUX0);
     ADCSRA = _BV(ADEN) | _BV(ADIE); // enable adc with interrupts
 #if DIV_CLOCK==4
     ADCSRA |= _BV(ADPS2) | _BV(ADPS1); // divide clock by 64
@@ -665,7 +671,6 @@ volatile struct adc_results_t {
     uint16_t count;
 } adc_results[CHANNEL_COUNT][2];
 
-const uint8_t defmux = _BV(REFS0)| _BV(REFS1); // 1.1v
 uint16_t adc_counter;
 uint8_t adc_cnt;
 
@@ -720,7 +725,7 @@ ISR(ADC_vect)
     if(adc_counter == RUDDER)
         adc_counter=0;
 #endif
-    ADMUX = defmux | muxes[adc_counter];
+    ADMUX = adcref | muxes[adc_counter];
 ret:;
     if(!pwm_style)
         ADCSRA |= _BV(ADSC); // enable conversion
@@ -792,12 +797,18 @@ uint16_t TakeAmps(uint8_t p)
         else
             v = 0;
     } else { // high current
-        // high curront controller has .0005 ohm with 50x gain
-        // 275/64 = 100.0/1024/.0005/50*1.1
-        if(v > 16)
-            v = v * 275 / 64 / 16; // 820mA offset
-        else
+        if(v <= 16)
             v = 0;
+        else  {
+            if(shunt_resistance)
+                //  .0005 ohm with 50x gain
+                // 275/64 = 100.0/1024/.0005/50*1.1
+                v = v * 275 / 64 / 16;
+            else
+                //  .0005 ohm with 200x gain (5v ref)
+                // 625/128 = 100.0/1024/.0005/200*5
+                v = v  * 625 / 128 / 16;
+        }
     }
     if(v == 0)
         return 0;
@@ -813,7 +824,10 @@ uint16_t TakeVolts(uint8_t p)
     if(voltage_mode)
         // 14135 / 3584 = 100.0/1024*10280/280*1.1
         v = v * 14135 / 3584 / 16;
-    else
+    else if(ratiometric_mode) {
+        // 100.0/1024*115000/15000*5.0
+        v = v * 719 / 192 / 16;
+    } else
         // 1815 / 896 = 100.0/1024*10560/560*1.1
         v = v * 1815 / 896 / 16;
 
@@ -822,13 +836,29 @@ uint16_t TakeVolts(uint8_t p)
 
 uint16_t TakeTemp(uint8_t index, uint8_t p)
 {
-    uint32_t v = TakeADC(index, p);
-    // thermistors are 100k resistor to 5v, and 10k NTC to GND with 1.1v ref
-    // V = 1.1 * v / 1024
-    // V = R / (R + 100k) * 5.0
-    // x = 1.1 / 5.0 * v / 1024
-    // R = 100k * x / (1 - x)
-    uint32_t R = 100061 * v / (74464 - v);  // resistance in ohms
+    uint32_t v = TakeADC(index, p), R;
+    if(ratiometric_mode) {
+        // thermistors are 10k resistor to 5v, and 10k NTC to GND with 5.0v ref
+        // V = 5.0 * v / 1024
+        // V = R / (R + 10k) * 5.0
+        // x = 5.0 / 5.0 * v / 1024
+        // R = 10k * x / (1 - x)
+        // x = v / 1024
+        // R = 10k * v / (1024*16 - v)
+
+        R = 10000 * v / (16384 - v);  // resistance in ohms
+
+        //  I accidentally put 100k resistors on board: R = 100000 * v / (16384 - v);  // resistance in ohms
+    } else {
+        // thermistors are 100k resistor to 5v, and 10k NTC to GND with 1.1v ref
+        // V = 1.1 * v / 1024
+        // V = R / (R + 100k) * 5.0
+        // x = 1.1 / 5.0 * v / 1024
+        // R = 100k * x / (1 - x)
+        // R = 22000 * v / 1024 / (1 - 1.1 / 5.0 * v / 1024)
+
+        R = 100061 * v / (74464 - v);  // resistance in ohms
+    }
     // T0 = 298, B = 3905, R0 = 10000
     // T = 1 / (1 / T0 + 1/B * ln(R/R0))
     // T = 1.0 / (1.0 / 298.0 + 1/3905.0 * math.log(R/10000.0)) - 273.0
