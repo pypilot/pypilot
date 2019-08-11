@@ -473,13 +473,15 @@ class NmeaBridgeProcess(multiprocessing.Process):
    ** 14) M = Magnetic, T = True
    ** 15) Checksum
         '''
-        #
         if line[3:6] == 'APB' and time.time() - self.last_apb_time > 1:
             self.last_apb_time = time.time()
             data = line[7:len(line)-3].split(',')
             if self.last_values['ap.enabled']:
                 mode = 'compass' if data[13] == 'M' else 'gps'
                 if self.last_values['ap.mode'] != mode:
+                    # for GPAPB, don't change mode or set heading on wrong mode
+                    if line[1:3] == 'GP':
+                        return True
                     self.client.set('ap.mode', mode)
 
             command = float(data[12])
