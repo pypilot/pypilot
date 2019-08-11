@@ -99,6 +99,9 @@ class CalibrationPlot(object):
 
         glPushMatrix()
 
+        if not self.fusionQPose:
+            return
+
         down = [0, 0, 1]
         q = [1, 0, 0, 0]
         q = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
