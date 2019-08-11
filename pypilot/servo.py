@@ -343,7 +343,7 @@ class Servo(object):
         if self.position.value > -.9*self.sensors.rudder.range.value:
             self.flags.clearbit(ServoFlags.REV_FAULT)
             
-        if self.compensate_voltage.value:
+        if self.compensate_voltage.value and self.voltage.value:
             speed *= 12 / self.voltage.value
 
         if self.compensate_current.value:
@@ -566,7 +566,8 @@ class Servo(object):
         if result & ServoTelemetry.CURRENT:
             # apply correction
             corrected_current = self.current.factor.value*self.driver.current
-            corrected_current = max(0, corrected_current + self.current.offset.value)
+            if self.driver.current:
+                corrected_current = max(0, corrected_current + self.current.offset.value)
             
             self.current.set(round(corrected_current, 3))
             # integrate power consumption
