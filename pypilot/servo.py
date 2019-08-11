@@ -237,6 +237,8 @@ class Servo(object):
 
         self.rawcommand = self.Register(SensorValue, 'raw_command', timestamp)
 
+        self.use_eeprom = self.Register(BooleanValue, 'use_eeprom', True)
+
         self.position.inttime = time.time()
         self.position.amphours = 0
 
@@ -594,13 +596,14 @@ class Servo(object):
 
             self.engaged.update(not not self.driver.flags & ServoFlags.ENGAGED)
 
-        if result & ServoTelemetry.EEPROM: # occurs only once after connecting
+        if result & ServoTelemetry.EEPROM && self.use_eeprom.value: # occurs only once after connecting
             self.max_current.set(self.driver.max_current)
             self.max_controller_temp.set(self.driver.max_controller_temp)
             self.max_motor_temp.set(self.driver.max_motor_temp)
             self.max_slew_speed.set(self.driver.max_slew_speed)
             self.max_slew_slow.set(self.driver.max_slew_slow)
             #print "GOT EEPROM", self.driver.rudder_scale, self.driver.rudder_offset, self.driver.rudder_range
+            # if self.sensors.rudder.source == 'servo':
             self.sensors.rudder.scale.set(self.driver.rudder_scale)
             self.sensors.rudder.nonlinearity.set(self.driver.rudder_nonlinearity)
             self.sensors.rudder.offset.set(self.driver.rudder_offset)
