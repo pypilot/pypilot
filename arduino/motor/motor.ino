@@ -1136,7 +1136,7 @@ void loop()
             voltage_mode = 1; // higher voltage
             digitalWrite(voltage_sense_pin, LOW);
             pinMode(voltage_sense_pin, OUTPUT);
-            max_voltage = 3600; // 36 v max
+            max_voltage = 3600; // 36 v max in 24v mode
             delay(2);
             TakeVolts(0); // clear readings
             TakeVolts(1);
