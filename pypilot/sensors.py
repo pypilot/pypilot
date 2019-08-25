@@ -88,7 +88,48 @@ class Wind(Sensor):
     def reset(self):
         self.direction.set(False)
         self.speed.set(False)
-        
+
+class APB(Sensor):
+    def __init__(self, server):
+        super(APB, self).__init__(server, 'apb')
+        timestamp = server.TimeStamp('apb')
+        self.track = self.Register(SensorValue, 'track', timestamp, directional=True)
+        self.xte = self.Register(SensorValue, 'xte', timestamp)
+        # 300 is 30 degrees for 1/10th mile
+        self.gain = self.Register(RangeProperty, 'xte', 300, 0, 3000, persistent=True)
+        self.last_time = time.time()
+
+    def update(self, data):
+        t = time.time()
+        if t - self.last_time < .5: # only accept apb update at 2hz
+            return
+
+        self.last_time = t
+        self.track.update(data['track'])
+        self.xte.update(data['xte'])
+
+        if not 'ap.enabled' in self.server.values:
+            print 'ERROR, parsing apb without autopilot'
+            return
+
+        if not self.server.values['ap.enabled']:
+            return
+
+        mode = self.server.values['ap.mode']
+        if mode.value != data['mode']:
+            # for GPAPB, ignore message on wrong mode
+            if data['**'] == 'GP':
+                return
+            
+            mode.set(data['mode'])
+
+        command = data['track'] + self.gain.value*data['xte']
+
+        heading_command = self.server.values['ap.heading_command']
+        if abs(heading_command.value - command) > .1:
+            heading_command.value.set(command)
+
+    
 class Sensors(object):
     def __init__(self, server):
         from gpsd import Gpsd
@@ -100,6 +141,7 @@ class Sensors(object):
         self.gps = Gpsd(server, self)
         self.wind = Wind(server)
         self.rudder = Rudder(server)
+        self.apb = APB(server)
 
         self.sensors = {'gps': self.gps, 'wind': self.wind, 'rudder': self.rudder}
 

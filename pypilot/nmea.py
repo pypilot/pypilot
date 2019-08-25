@@ -119,8 +119,53 @@ def parse_nmea_rudder(line):
 
     return 'rudder', {'angle': angle}
 
-nmea_parsers = {'gps': parse_nmea_gps, 'wind': parse_nmea_wind, 'rudder': parse_nmea_rudder}
 
+def parse_nmea_apb(self, line):
+    # also allow ap commands (should we allow via serial too??)
+        '''
+   ** APB - Autopilot Sentence "B"
+   **                                         13    15
+   **        1 2 3   4 5 6 7 8   9 10   11  12|   14|
+   **        | | |   | | | | |   | |    |   | |   | |
+   ** $--APB,A,A,x.x,a,N,A,A,x.x,a,c--c,x.x,a,x.x,a*hh<CR><LF>
+   **
+   **  1) Status
+   **     V = LORAN-C Blink or SNR warning
+   **     V = general warning flag or other navigation systems when a reliable
+   **         fix is not available
+   **  2) Status
+   **     V = Loran-C Cycle Lock warning flag
+   **     A = OK or not used
+   **  3) Cross Track Error Magnitude
+   **  4) Direction to steer, L or R
+   **  5) Cross Track Units, N = Nautical Miles
+   **  6) Status
+   **     A = Arrival Circle Entered
+   **  7) Status
+   **     A = Perpendicular passed at waypoint
+   **  8) Bearing origin to destination
+   **  9) M = Magnetic, T = True
+   ** 10) Destination Waypoint ID
+   ** 11) Bearing, present position to Destination
+   ** 12) M = Magnetic, T = True
+   ** 13) Heading to steer to destination waypoint
+   ** 14) M = Magnetic, T = True
+   ** 15) Checksum
+        '''
+    if line[3:6] != 'APB':
+        return False
+    
+    data = line[7:len(line)-3].split(',')
+    mode = 'compass' if data[13] == 'M' else 'gps'
+    command = float(data[12])
+    xte = float(data[2])
+    xte = min(xte, 0.15) # maximum 0.15 miles
+    if data[3] == 'L':
+        xte = -xte
+    return 'apb', {'mode': mode, 'track':  track, 'xte': xte, '**': line[1:3] == 'GP'}
+
+
+nmea_parsers = {'gps': parse_nmea_gps, 'wind': parse_nmea_wind, 'rudder': parse_nmea_rudder, 'apb', parse_nmea_apb}
 
 # because serial.readline() is very slow
 class LineBufferedSerialDevice(object):
@@ -250,7 +295,7 @@ class Nmea(object):
         else:
             for name in msgs:
                 self.sensors.write(name, msgs[name], 'tcp')
-
+                
     def read_serial_device(self, device, serial_msgs):
         t = time.time()
         line = device.readline()
@@ -258,8 +303,9 @@ class Nmea(object):
             return
         if self.process.sockets:
             nmea_name = line[:6]
-            # we output these messages after calibration
-            if not nmea_name[3:] in ['MWV', 'RSA']:
+            # we output mwv and rsa messages after calibration
+            # do not relay apb messages
+            if not nmea_name[3:] in ['MWV', 'RSA', 'APB']:
                 # do not output nmea data over tcp faster than 5hz
                 # for each message time
                 # forward nmea lines from serial to tcp
@@ -287,8 +333,9 @@ class Nmea(object):
             result = parser(line)
             if result:
                 name, msg = result
-                msg['device'] = line[1:3]+device.path[0]
-                serial_msgs[name] = msg
+                if name:
+                    msg['device'] = line[1:3]+device.path[0]
+                    serial_msgs[name] = msg
                 break
 
     def remove_serial_device(self, device):
@@ -418,7 +465,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
         super(NmeaBridgeProcess, self).__init__(target=self.process, args=(pipe,))
 
     def setup_watches(self, watch=True):
-        watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command', 'gps.source', 'wind.source', 'rudder.source']
+        watchlist = ['gps.source', 'wind.source', 'rudder.source', 'apb.source']
         for name in watchlist:
             self.client.watch(name, watch)
 
@@ -440,60 +487,6 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 msg['device'] = line[1:3]+device
                 msgs[name] = msg
                 return
-
-    def receive_apb(self, line, msgs):
-        # also allow ap commands (should we allow via serial too??)
-        '''
-   ** APB - Autopilot Sentence "B"
-   **                                         13    15
-   **        1 2 3   4 5 6 7 8   9 10   11  12|   14|
-   **        | | |   | | | | |   | |    |   | |   | |
-   ** $--APB,A,A,x.x,a,N,A,A,x.x,a,c--c,x.x,a,x.x,a*hh<CR><LF>
-   **
-   **  1) Status
-   **     V = LORAN-C Blink or SNR warning
-   **     V = general warning flag or other navigation systems when a reliable
-   **         fix is not available
-   **  2) Status
-   **     V = Loran-C Cycle Lock warning flag
-   **     A = OK or not used
-   **  3) Cross Track Error Magnitude
-   **  4) Direction to steer, L or R
-   **  5) Cross Track Units, N = Nautical Miles
-   **  6) Status
-   **     A = Arrival Circle Entered
-   **  7) Status
-   **     A = Perpendicular passed at waypoint
-   **  8) Bearing origin to destination
-   **  9) M = Magnetic, T = True
-   ** 10) Destination Waypoint ID
-   ** 11) Bearing, present position to Destination
-   ** 12) M = Magnetic, T = True
-   ** 13) Heading to steer to destination waypoint
-   ** 14) M = Magnetic, T = True
-   ** 15) Checksum
-        '''
-        if line[3:6] == 'APB' and time.time() - self.last_apb_time > 1:
-            self.last_apb_time = time.time()
-            data = line[7:len(line)-3].split(',')
-            if self.last_values['ap.enabled']:
-                mode = 'compass' if data[13] == 'M' else 'gps'
-                if self.last_values['ap.mode'] != mode:
-                    # for GPAPB, don't change mode or set heading on wrong mode
-                    if line[1:3] == 'GP':
-                        return True
-                    self.client.set('ap.mode', mode)
-
-            command = float(data[12])
-            xte = float(data[2])
-            xte = min(xte, 0.15) # maximum 0.15 miles
-            if data[3] == 'L':
-                xte = -xte
-            command += 300*xte; # 30 degrees for 1/10th mile
-            if abs(self.last_values['ap.heading_command'] - command) > .1:
-                self.client.set('ap.heading_command', command)
-            return True
-        return False
 
     def new_socket_connection(self, server):
         connection, address = server.accept()
@@ -550,7 +543,6 @@ class NmeaBridgeProcess(multiprocessing.Process):
         #print 'nmea bridge on', os.getpid()
         self.pipe = pipe
         self.sockets = []
-        self.last_apb_time = time.time()
         def on_con(client):
             print 'nmea ready for connections'
             if self.sockets:
@@ -578,9 +570,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         server.listen(5)
 
-        self.last_values = {'ap.enabled': False, 'ap.mode': 'N/A',
-                            'ap.heading_command' : 1000,
-                            'gps.source' : 'none', 'wind.source' : 'none', 'rudder.source': 'none'}
+        self.last_values = {'gps.source' : 'none', 'wind.source' : 'none', 'rudder.source': 'none', 'apb.source': 'none'}
         self.addresses = {}
         cnt = 0
 
@@ -614,10 +604,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
                         msg = self.pipe.recv()
                         if not msg:
                             break
-                        if not self.receive_apb(msg, msgs):
-                            msg += '\r\n'
-                            for sock in self.sockets:
-                                sock.send(msg)
+                        msg += '\r\n'
+                        for sock in self.sockets:
+                            sock.send(msg)
                 elif flag & select.POLLIN:
                     if not sock.recv():
                         self.socket_lost(sock)
@@ -626,8 +615,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
                             line = sock.readline()
                             if not line:
                                 break
-                            if not self.receive_apb(line, msgs):
-                                self.receive_nmea(line, 'socket' + str(sock.socket.fileno()), msgs)
+                            self.receive_nmea(line, 'socket' + str(sock.socket.fileno()), msgs)
                 else:
                     print 'nmea bridge unhandled poll flag', flag
 
