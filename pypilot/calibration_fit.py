@@ -426,11 +426,9 @@ class SigmaPoints(object):
         self.sigma_points.append(p)
 
     def RemoveOlder(self, dt=3600):
-        # remove points older than 1 hour
         p = []
         for sigma in self.sigma_points:
-            # only use measurements in last hour
-            if time.time() - sigma.time < 3600:
+            if time.time() - sigma.time < dt:
                 p.append(sigma)
         self.sigma_points = p
 

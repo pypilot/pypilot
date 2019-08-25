@@ -13,19 +13,25 @@ python-wxgtk3.0 python-opengl  pyglet pywavefront
 
 You may want to run pypilot as a service, see the scripts/debian directory
 
+Clone the data repository and copy data:
 
-
-Clone the data repository and copy data
+git clone https://github.com/pypilot/pypilot
 git clone --depth 1 https://github.com/pypilot/pypilot_data
 cp -rv pypilot_data/* pypilot
+
+Build and install pypilot:
+
+cd pypilot
+python setup.py build
+sudo python setup.py install
+
+
 
 most of the scripts can be run individually as standalone
 or test programs, some function as clients, other as servers
 
 
 servers (only one executes at a time)
-
-pypilot/basic_autopilot.py -- basic PID based autopilot with additional gains and filters
 
 These server scripts can be run as tests:
 * execute this script directly
