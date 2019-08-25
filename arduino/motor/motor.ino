@@ -61,9 +61,10 @@ voltage measurement accuracy is reduced, and the resistors used are
 15k and 100k for a range of 38 volts.   Pin 12 is not used in this mode.
 
 
+Pin 11 drives mosfet (560ohm and 10k resistors) for clutch engage.
+
 If Pin 12 has 560 ohm resistor to A0, then 24 volts is supported,
-this allows for measuring voltage up to 40.4 volts, without losing
-resolution if operating below 20 volts
+this allows for measuring voltage up to 40.4 volts
 
 D12
  1    0-20.75 volts (560 and 10k resistor)  resolution 0.02 volts
@@ -1135,7 +1136,7 @@ void loop()
             voltage_mode = 1; // higher voltage
             digitalWrite(voltage_sense_pin, LOW);
             pinMode(voltage_sense_pin, OUTPUT);
-            max_voltage = 3600; // 36 v max
+            max_voltage = 3600; // 36 v max in 24v mode
             delay(2);
             TakeVolts(0); // clear readings
             TakeVolts(1);
