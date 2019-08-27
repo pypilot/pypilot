@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import math
 from signalk.values import *
 from sensors import Sensor
@@ -43,7 +44,7 @@ class Rudder(Sensor):
         elif command == 'starboard range':
             true_angle = self.range.value
         else:
-            print 'unhandled rudder_calibration', command
+            print('unhandled rudder_calibration', command)
             return
         
         # raw range -.5 to .5
@@ -105,7 +106,7 @@ class Rudder(Sensor):
 
         if abs(scale) <= .01:
             # bad update, trash an other reading
-            print 'bad servo rudder calibration', scale, nonlinearity
+            print('bad servo rudder calibration', scale, nonlinearity)
             while len(self.calibration_raw) > 1:
                 for c in self.calibration_raw:
                     if c != command:
@@ -142,7 +143,7 @@ class Rudder(Sensor):
                 idle()
 
             rng = self.range.value
-            #print self.autogain_state, self.angle.value, rng
+            #print(self.autogain_state, self.angle.value, rng)
 
             if self.autogain_state=='fwd':
                 self.command.set(1)
@@ -159,12 +160,12 @@ class Rudder(Sensor):
                 self.command.set(-1)
                 if abs(self.value) >= rng:
                     dt = time.time() - self.autogain_time
-                    #print 'hardover', dt, 'with', rng/dt, 'deg/s'
+                    #print('hardover', dt, 'with', rng/dt, 'deg/s')
                     # 5 deg/s is gain of 1
 
                     gain = min(max(5*dt/rng, .5), 2)
                     if self.angle.value < 0:
-#                            print 'negative gain detected'
+#                            print('negative gain detected')
                         gain = -gain
                     self.gain.set(gain)
                     idle()
@@ -173,7 +174,7 @@ class Rudder(Sensor):
                 self.autogain_movetime = t
 
             if t - self.autogain_movetime > 3:
-                print 'servo rudder autogain failed'
+                print('servo rudder autogain failed')
                 idle()
         else: # perform calibration
             self.calibration(self.calibration_state.value)

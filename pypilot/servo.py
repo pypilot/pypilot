@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import os, math, sys
 import time, json
 
@@ -271,7 +272,7 @@ class Servo(object):
             self.disengaged = False
 
         if self.servo_calibration.thread.is_alive():
-            print 'cal thread'
+            print('cal thread')
             return
 
         t = time.time()
@@ -289,7 +290,7 @@ class Servo(object):
         elif self.command.value and not self.fault():
             timeout = 1 # command will expire after 1 second
             if time.time() - self.command.time > timeout:
-                #print 'servo command timeout', time.time() - self.command.time
+                #print('servo command timeout', time.time() - self.command.time)
                 self.command.set(0)
             self.disengaged = False
         self.do_command(self.command.value)
@@ -310,7 +311,7 @@ class Servo(object):
     def do_command(self, speed):
         speed *= self.gain.value
         if not speed or self.fault():
-            #print 'timeout', t - self.command_timeout
+            #print('timeout', t - self.command_timeout)
             if self.disengauge_on_timeout.value and \
                not self.force_engaged and \
                time.time() - self.command_timeout > self.period.value*3:
@@ -324,7 +325,7 @@ class Servo(object):
 
         if self.flags.value & (ServoFlags.FWD_FAULT | ServoFlags.MAX_RUDDER) and speed > 0 or \
            self.flags.value & (ServoFlags.REV_FAULT | ServoFlags.MIN_RUDDER) and speed < 0:
-            #print 'refuse to move', speed
+            #print('refuse to move', speed)
             self.raw_command(0)
             return # abort
 
@@ -337,7 +338,7 @@ class Servo(object):
             position = self.position.value + self.speed.value * dt
             self.position.set(min(max(position, 0), 1))
 
-        #print 'integrate pos', self.position, self.speed, speed, dt, self.fwd_fault, self.rev_fault
+        #print('integrate pos', self.position, self.speed, speed, dt, self.fwd_fault, self.rev_fault)
         if self.position.value < .9*self.sensors.rudder.range.value:
             self.flags.clearbit(ServoFlags.FWD_FAULT)
         if self.position.value > -.9*self.sensors.rudder.range.value:
@@ -389,7 +390,7 @@ class Servo(object):
             self.windup = 1.5*self.period.value*sign(self.windup)
         else:
             self.flags.clearbit(ServoFlags.SATURATED)
-        #print 'windup', self.windup, dt, self.windup / dt, speed, self.speed
+        #print('windup', self.windup, dt, self.windup / dt, speed, self.speed)
             
         if speed * self.last_speed <= 0: # switched direction or stopped?
             if t - self.windup_change < self.period.value:
@@ -409,7 +410,7 @@ class Servo(object):
         if not self.sensors.rudder.invalid():
             self.speed.set(speed)
 
-        #print 'speed', speed
+        #print('speed', speed)
         self.last_speed = speed
 
         if speed > 0:
@@ -479,7 +480,7 @@ class Servo(object):
             self.driver.reset()
 
     def close_driver(self):
-        print 'servo lost connection'
+        print('servo lost connection')
         self.controller.set('none')
         self.sensors.rudder.update(False)
 
@@ -507,7 +508,7 @@ class Servo(object):
                     device.timeout=0 #nonblocking
                     fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
                 except Exception as e:
-                    print 'failed to open servo on:', device_path, e
+                    print('failed to open servo on:', device_path, e)
                     return
                 self.driver = ArduinoServo(device.fileno(), device_path[1])
                 uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value)/ self.current.factor.value 
@@ -524,7 +525,7 @@ class Servo(object):
         result = self.driver.poll()
 
         if result == -1:
-            print 'servo lost'
+            print('servo lost')
             self.close_driver()
             return
 
@@ -533,14 +534,14 @@ class Servo(object):
             if d > 5: # correct for clock skew
                 self.lastpolltime = time.time()
             elif d > 4:
-                print 'servo timeout', d
+                print('servo timeout', d)
                 self.close_driver()
         else:
             self.lastpolltime = time.time()
 
             if self.controller.value == 'none':
                 device_path = [self.device.port, self.device.baudrate]
-                print 'arduino servo found on', device_path
+                print('arduino servo found on', device_path)
                 serialprobe.success('servo', device_path)
                 self.controller.set('arduino')
                 self.driver.command(0)
@@ -572,7 +573,7 @@ class Servo(object):
             self.current.set(round(corrected_current, 3))
             # integrate power consumption
             dt = (t - self.current_timestamp)
-            #print 'have current', round(1/dt), dt
+            #print('have current', round(1/dt), dt)
             self.current_timestamp = t
             if self.current.value:
                 amphours = self.current.value*dt/3600
@@ -603,7 +604,7 @@ class Servo(object):
             self.max_motor_temp.set(self.driver.max_motor_temp)
             self.max_slew_speed.set(self.driver.max_slew_speed)
             self.max_slew_slow.set(self.driver.max_slew_slow)
-            #print "GOT EEPROM", self.driver.rudder_scale, self.driver.rudder_offset, self.driver.rudder_range
+            #print("GOT EEPROM", self.driver.rudder_scale, self.driver.rudder_offset, self.driver.rudder_range)
             # if self.sensors.rudder.source == 'servo':
             self.sensors.rudder.scale.set(self.driver.rudder_scale)
             self.sensors.rudder.nonlinearity.set(self.driver.rudder_nonlinearity)
@@ -647,11 +648,11 @@ class Servo(object):
     def load_calibration(self):
         try:
             filename = Servo.calibration_filename
-            print 'loading servo calibration', filename
+            print('loading servo calibration', filename)
             file = open(filename)
             self.calibration.set(json.loads(file.readline()))
         except:
-            print 'WARNING: using default servo calibration!!'
+            print('WARNING: using default servo calibration!!')
             self.calibration.set({'forward': [.2, .8], 'reverse': [.2, .8]})
 
     def save_calibration(self):
@@ -660,14 +661,14 @@ class Servo(object):
 
 def test(device_path, baud):
     from arduino_servo.arduino_servo import ArduinoServo
-    print 'probing arduino servo on', device_path
+    print('probing arduino servo on', device_path)
     device = serial.Serial(device_path, baud)
     device.timeout=0 #nonblocking
     fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
     driver = ArduinoServo(device.fileno())
     t0 = time.time()
     if driver.initialize(baud):
-        print 'arduino servo found'
+        print('arduino servo found')
         exit(0)
     exit(1)
         
@@ -675,11 +676,11 @@ def main():
     for i in range(len(sys.argv)):
         if sys.argv[i] == '-t':
             if len(sys.argv) < i + 3:
-                print 'device and baud needed for option -t'
+                print('device and baud needed for option -t')
                 exit(1)
             test(sys.argv[i+1], int(sys.argv[i+2]))
     
-    print 'Servo Server'
+    print('Servo Server')
     server = SignalKServer()
 
     from sensors import Sensors
@@ -694,8 +695,8 @@ def main():
         sensors.poll()
 
         if servo.controller.value != 'none':
-            print 'voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', sensors.rudder.angle.value, 'flags', servo.flags.strvalue()
-            #print servo.command.value, servo.speed.value, servo.windup
+            print('voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', sensors.rudder.angle.value, 'flags', servo.flags.strvalue())
+            #print(servo.command.value, servo.speed.value, servo.windup)
             pass
         server.HandleRequests()
 

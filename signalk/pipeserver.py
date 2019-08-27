@@ -12,8 +12,8 @@
 
 from __future__ import print_function
 import time
-from server import SignalKServer, DEFAULT_PORT, default_persistent_path, LoadPersistentData
-from values import *
+from signalk.server import SignalKServer, DEFAULT_PORT, default_persistent_path, LoadPersistentData
+from signalk.values import *
 import multiprocessing
 import select
 

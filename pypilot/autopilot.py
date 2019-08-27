@@ -9,6 +9,7 @@
 
 # autopilot base handles reading from the imu (boatimu)
 
+from __future__ import print_function
 import sys, getopt, os
 import math
 
@@ -149,10 +150,10 @@ class Autopilot(object):
     # setup all processes to exit on any signal
     self.childpids = []
     def cleanup(signal_number, frame=None):
-        print 'got signal', signal_number, 'cleaning up'
+        print('got signal', signal_number, 'cleaning up')
         while self.childpids:
             pid = self.childpids.pop()
-            #print 'kill child', pid
+            #print('kill child', pid)
             os.kill(pid, signal.SIGTERM) # get backtrace
         sys.stdout.flush()
         if signal_number != 'atexit':
@@ -162,7 +163,7 @@ class Autopilot(object):
     # some sort of timing issue where python doesn't realize the pipe
     # is broken yet, so doesn't raise an exception
     def printpipewarning(signal_number, frame):
-        print 'got SIGPIPE, ignoring'
+        print('got SIGPIPE, ignoring')
 
     import signal
     for s in range(1, 16):
@@ -220,11 +221,10 @@ class Autopilot(object):
     try:
         self.watchdog_device = open(device, 'w')
     except:
-        print 'warning: failed to open special file', device, 'for writing'
-        print '         cannot stroke the watchdog'
-
+        print('warning: failed to open special file', device, 'for writing')
+        print('         cannot stroke the watchdog')
     if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
-      print 'warning, failed to make autopilot process realtime'
+      print('warning, failed to make autopilot process realtime')
 
     self.starttime = time.time()
     self.times = 4*[0]
@@ -243,11 +243,11 @@ class Autopilot(object):
 #        time.sleep(.1)
 
   def __del__(self):
-      print 'closing autopilot'
+      print('closing autopilot')
       self.server.__del__()
 
       if self.watchdog_device:
-          print 'close watchdog'
+          print('close watchdog')
           self.watchdog_device.write('V')
           self.watchdog_device.close()
 
@@ -283,7 +283,7 @@ class Autopilot(object):
           time.sleep(self.boatimu.period/10)
 
       if not data and self.lastdata:
-          print 'autopilot failed to read imu at time:', time.time()
+          print('autopilot failed to read imu at time:', time.time())
 
       self.lastdata = data;
       t0 = time.time()
@@ -427,27 +427,27 @@ class Autopilot(object):
 
       t1 = time.time()
       if t1-t0 > self.boatimu.period/2:
-          print 'Autopilot routine is running too _slowly_', t1-t0, BoatIMU.period/2
+          print('Autopilot routine is running too _slowly_', t1-t0, BoatIMU.period/2)
 
       self.servo.poll()
       t2 = time.time()
       if t2-t1 > self.boatimu.period/2:
-          print 'servo is running too _slowly_', t2-t1
+          print('servo is running too _slowly_', t2-t1)
 
       self.sensors.poll()
 
       t4 = time.time()
       if t4 - t2 > self.boatimu.period/2:
-          print 'sensors is running too _slowly_', t4-t2
+          print('sensors is running too _slowly_', t4-t2)
 
       self.server.HandleRequests()
       t5 = time.time()
       if t5 - t4 > self.boatimu.period/2:
-          print 'server is running too _slowly_', t5-t4
+          print('server is running too _slowly_', t5-t4)
 
       times = t1-t0, t2-t1, t4-t2
       #self.times = map(lambda x, y : .975*x + .025*y, self.times, times)
-      #print 'times', map(lambda t : '%.2f' % (t*1000), self.times)
+      #print('times', map(lambda t : '%.2f' % (t*1000), self.times))
       
       if self.watchdog_device:
           self.watchdog_device.write('c')

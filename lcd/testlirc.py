@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import pylirc as LIRC
 import time
 LIRC.init('pypilot')
@@ -5,6 +7,6 @@ LIRC.init('pypilot')
 while True:
     code = LIRC.nextcode(1)
     if code:
-        print code
+        print(code)
     time.sleep(.1)
 

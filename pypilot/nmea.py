@@ -19,6 +19,8 @@
 # inputs nmea: wind, rudder, autopilot commands (serial and tcp)
 # outputs nmea: pitch, roll, and heading messages, wind, rudder (tcp)
 
+from __future__ import print_function
+
 DEFAULT_PORT = 20220
 
 import sys, select, time, socket
@@ -228,7 +230,7 @@ class NMEASocket(object):
     def send(self, data):
         self.out_buffer += data
         if len(self.out_buffer) > 4096:
-            print 'nmea socket out_buffer overflow'
+            print('nmea socket out_buffer overflow')
             self.out_buffer = data
 
     def flush(self):
@@ -238,23 +240,24 @@ class NMEASocket(object):
             if not self.pollout.poll(0):
                 self.sendfailcount += 1
                 if self.sendfailcount == self.failcountmsg:
-                    print 'nmea socket', self.socket.fileno(), 'failed to send', self.sendfailcount
-                    self.failcountmsg *= 10 # print only at 1, 10, 100 etc frequency
+                    print('nmea socket', self.socket.fileno(), 'failed to send', self.sendfailcount)
+                    self.failcountmsg *= 10 # print(only at 1, 10, 100 etc frequency)
                     
                 self.out_buffer = '' # drop nmea data
                 if self.sendfailcount > 100:
-                    print 'closing nmea socket', self.socket.fileno()
+                    print('closing nmea socket', self.socket.fileno())
                     self.socket.close() # fail to send too many times, close socket
                 return
-            count = self.socket.send(self.out_buffer)
+            count = self.socket.send(self.out_buffer.encode())
             if count < 0:
-                print 'nmea socket send error'
+                print('nmea socket send error')
                 self.out_buffer = ''
                 self.socket.close()
                 return
 
             self.out_buffer = self.out_buffer[count:]
-        except:
+        except Exception as e:
+            print ('excep', e)
             self.out_buffer = ''
             self.socket.close()
 
@@ -278,7 +281,7 @@ class Nmea(object):
         self.probedevice = None
 
     def __del__(self):
-        print 'terminate nmea process'
+        print('terminate nmea process')
         self.process.terminate()
 
     def read_process_pipe(self):
@@ -291,7 +294,7 @@ class Nmea(object):
             elif msgs[:10] == 'lostsocket':
                 self.sensors.lostdevice(msgs[4:])
             else:
-                print 'handled nmea pipe string'
+                print('handled nmea pipe string')
         else:
             for name in msgs:
                 self.sensors.write(name, msgs[name], 'tcp')
@@ -311,7 +314,7 @@ class Nmea(object):
                 # forward nmea lines from serial to tcp
                 dt = t-self.nmea_times[nmea_name] if nmea_name in self.nmea_times else -1
                 if dt>.2 or dt < 0:
-                    self.process.pipe.send(line, False)
+                    #self.process.pipe.send(line, False)
                     self.nmea_times[nmea_name] = t
 
         self.devices_lastmsg[device] = t
@@ -340,7 +343,7 @@ class Nmea(object):
 
     def remove_serial_device(self, device):
         index = self.devices.index(device)
-        print 'lost serial nmea%d' % index
+        print('lost serial nmea%d' % index)
         self.sensors.lostdevice(self.devices[index].path[0])
         self.devices[index] = False
         self.poller.unregister(device.device.fileno())
@@ -363,7 +366,7 @@ class Nmea(object):
                 fd, flag = event
                 if fd == self.process_fd:
                     if flag != select.POLLIN:
-                        print 'nmea got flag for process pipe:', flag
+                        print('nmea got flag for process pipe:', flag)
                     else:
                         self.read_process_pipe()
                 elif flag == select.POLLIN:
@@ -384,9 +387,9 @@ class Nmea(object):
             dt = time.time() - self.devices_lastmsg[device]
             if dt > 2:
                 if dt < 3:
-                    print 'serial device dt', dt, device.path, 'is another process accessing it?'
+                    print('serial device dt', dt, device.path, 'is another process accessing it?')
             if dt > 15: # no data for 15 seconds
-                print 'serial device timed out', dt, device
+                print('serial device timed out', dt, device)
                 self.remove_serial_device(device)
         t4 = time.time()
 
@@ -417,7 +420,7 @@ class Nmea(object):
             
         t5 = time.time()
         if t5 - t0 > .1:
-            print 'nmea poll times', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4
+            print('nmea poll times', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
             
     def probe_serial(self):
         # probe new nmea data devices
@@ -432,16 +435,16 @@ class Nmea(object):
                     self.probedevice = NMEASerialDevice(self.probedevicepath)
                     self.probetime = time.time()
                 except serial.serialutil.SerialException:
-                    print 'failed to open', self.probedevicepath, 'for nmea data'
+                    print('failed to open', self.probedevicepath, 'for nmea data')
                     pass
         elif time.time() - self.probetime > 5:
-            print 'nmea serial probe timeout', self.probedevicepath
+            print('nmea serial probe timeout', self.probedevicepath)
             self.probedevice = None # timeout
         else:
             # see if the probe device gets a valid nmea message
             if self.probedevice:
                 if self.probedevice.readline():
-                    print 'new nmea device', self.probedevicepath
+                    print('new nmea device', self.probedevicepath)
                     serialprobe.success('nmea%d' % self.probeindex, self.probedevicepath)
                     if self.probeindex < len(self.devices):
                         self.devices[self.probeindex] = self.probedevice
@@ -493,7 +496,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
         max_connections = 10
         if len(self.sockets) == max_connections:
             connection.close()
-            print 'nmea server has too many connections'
+            print('nmea server has too many connections')
             return
     
         if not self.sockets:
@@ -502,20 +505,21 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         sock = NMEASocket(connection)
         self.sockets.append(sock)
-        #print 'new nmea connection: ', address
+        #print('new nmea connection: ', address)
         self.addresses[sock] = address
         fd = sock.socket.fileno()
         self.fd_to_socket[fd] = sock
 
         self.poller.register(sock.socket, select.POLLIN)
+        print('new nmea connection: ', address)
 
-    def socket_lost(self, sock):
-        #print 'lost connection: ', self.addresses[sock]
+    def socket_lost(self, sock, fd):
+        print('lost nmea connection: ', self.addresses[sock])
         try:
             self.sockets.remove(sock)
         except:
-            print 'sock not in sockets!'
-            pass
+            print('nmea sock not in sockets!')
+            return
         
         self.pipe.send('lostsocket' + str(sock.socket.fileno()))
         if not self.sockets:
@@ -523,15 +527,14 @@ class NmeaBridgeProcess(multiprocessing.Process):
             self.pipe.send('nosockets')
 
         try:
-            self.poller.unregister(sock.socket)
+            self.poller.unregister(fd)
         except Exception as e:
-            print 'failed to unregister socket', e
+            print('nmea failed to unregister socket', e)
 
         try:
-            fd = sock.socket.fileno()
             del self.fd_to_socket[fd]
         except Exception as e:
-            print 'failed to remove fd', e
+            print('nmea failed to remove fd', e)
 
         sock.close()
 
@@ -540,11 +543,10 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
     def process(self, pipe):
         import os
-        #print 'nmea bridge on', os.getpid()
         self.pipe = pipe
         self.sockets = []
         def on_con(client):
-            print 'nmea ready for connections'
+            print('nmea ready for connections')
             if self.sockets:
                 self.setup_watches()
 
@@ -564,9 +566,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
         try:
             server.bind(('0.0.0.0', port))
         except:
-            print 'nmea_bridge: bind failed.'
+            print('nmea_bridge: bind failed.')
             exit(1)
-        print 'listening on port', port, 'for nmea connections'
+        print('listening on port', port, 'for nmea connections')
 
         server.listen(5)
 
@@ -591,12 +593,13 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
                 if flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
                     if sock == server:
-                        print 'nmea bridge lost server connection'
+                        print('nmea bridge lost server connection')
                         exit(2)
                     if sock == pipe:
-                        print 'nmea bridge pipe to autopilot'
+                        print('nmea bridge pipe to autopilot')
                         exit(2)
-                    self.socket_lost(sock)
+                    print('lost')
+                    self.socket_lost(sock, fd)
                 elif sock == server:
                     self.new_socket_connection(server)
                 elif sock == pipe:
@@ -607,9 +610,11 @@ class NmeaBridgeProcess(multiprocessing.Process):
                         msg += '\r\n'
                         for sock in self.sockets:
                             sock.send(msg)
+                            pass
                 elif flag & select.POLLIN:
                     if not sock.recv():
-                        self.socket_lost(sock)
+                        print('sock recv lost')
+                        self.socket_lost(sock, fd)
                     else:
                         while True:
                             line = sock.readline()
@@ -617,7 +622,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
                                 break
                             self.receive_nmea(line, 'socket' + str(sock.socket.fileno()), msgs)
                 else:
-                    print 'nmea bridge unhandled poll flag', flag
+                    print('nmea bridge unhandled poll flag', flag)
 
             t2 = time.time()
             if msgs:
@@ -629,8 +634,8 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 signalk_msgs = self.client.receive()
                 for name in signalk_msgs:
                     self.client_message(name, signalk_msgs[name]['value'])
-            except Exception, e:
-                print 'nmea exception receiving:', e
+            except Exception as e:
+                print('nmea exception receiving:', e)
 
             t4 = time.time()
             for sock in self.sockets:
@@ -638,7 +643,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
             t5 = time.time()
 
             if t5-t1 > .1:
-                print 'nmea process loop too slow:', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4
+                print('nmea process loop too slow:', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
             else:
                 dt = .1 - (t5 - t0)
                 if dt > 0 and dt < .1:
