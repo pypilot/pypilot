@@ -1,5 +1,8 @@
 /* File: ugfx.i */
 %module ugfx
+%begin %{
+    #define SWIG_PYTHON_STRICT_BYTE_CHAR
+%}
 
 %{
 #include "ugfx.h"
