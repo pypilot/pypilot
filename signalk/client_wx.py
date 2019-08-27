@@ -7,8 +7,9 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import wx, sys, math, subprocess, os, socket
-from client import SignalKClient, SignalKClientFromArgs, ConnectionLost
+from signalk.client import SignalKClient, SignalKClientFromArgs, ConnectionLost
 
 def round3(value):
     if type(value) == type([]):
@@ -24,7 +25,7 @@ def round3(value):
 
 class MainFrame(wx.Frame):
     def __init__(self):
-	wx.Frame.__init__(self, None, title="signalk client", size=(1000, 600))
+        wx.Frame.__init__(self, None, title="signalk client", size=(1000, 600))
 
         self.value_list = []
         self.client = SignalKClientFromArgs(sys.argv, True, self.on_con)
@@ -202,7 +203,7 @@ class MainFrame(wx.Frame):
 
             for name in result:
                 if not 'value' in result[name]:
-                    print 'no value', result
+                    print('no value', result)
                     raise 'no value'
 
                 value = round3(result[name]['value'])
@@ -216,7 +217,7 @@ class MainFrame(wx.Frame):
                     try:
                         if str(type(self.controls[name])) == "<class 'wx._controls.Choice'>":
                             if not self.controls[name].SetStringSelection(value):
-                                print 'warning, invalid choice value specified'
+                                print('warning, invalid choice value specified')
                         elif str(type(self.controls[name])) == "<class 'wx._controls.Slider'>":
                             r = self.sliderrange[name]
                             self.controls[name].SetValue(float(value - r[0])/(r[1]-r[0])*1000)

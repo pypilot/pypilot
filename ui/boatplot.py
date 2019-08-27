@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import math, json, numpy
 try:
     import Image
@@ -22,7 +23,7 @@ try:
     import pywavefront
     from pywavefront import visualization
 except Exception as e:
-    print 'failed to load pywavefront:', e
+    print('failed to load pywavefront:', e)
     pywavefront = False
 
 from pypilot import quaternion
@@ -91,8 +92,8 @@ class BoatPlot():
             try:
                 self.obj = pywavefront.Wavefront('Vagabond.obj')
             except Exception as e:
-                print 'Vagabond.obj failed to load', e
-                print 'Did you add the pypilot_data repository?'
+                print('Vagabond.obj failed to load', e)
+                print('Did you add the pypilot_data repository?')
 
         glEnable(GL_DEPTH_TEST)
         if self.texture_compass:
@@ -142,7 +143,7 @@ class BoatPlot():
             try:
                 img = Image.open('compass.png')
             except:
-                print 'compass.png not found, texture compass cannot be used'
+                print('compass.png not found, texture compass cannot be used')
                 self.texture_compass = False
                 return
 
