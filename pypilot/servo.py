@@ -597,7 +597,7 @@ class Servo(object):
 
             self.engaged.update(not not self.driver.flags & ServoFlags.ENGAGED)
 
-        if result & ServoTelemetry.EEPROM && self.use_eeprom.value: # occurs only once after connecting
+        if result & ServoTelemetry.EEPROM and self.use_eeprom.value: # occurs only once after connecting
             self.max_current.set(self.driver.max_current)
             self.max_controller_temp.set(self.driver.max_controller_temp)
             self.max_motor_temp.set(self.driver.max_motor_temp)

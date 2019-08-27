@@ -143,7 +143,7 @@ class Sensors(object):
         self.rudder = Rudder(server)
         self.apb = APB(server)
 
-        self.sensors = {'gps': self.gps, 'wind': self.wind, 'rudder': self.rudder}
+        self.sensors = {'gps': self.gps, 'wind': self.wind, 'rudder': self.rudder, 'apb': self.apb}
 
     def poll(self):
         self.gps.poll()
