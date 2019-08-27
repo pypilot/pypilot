@@ -585,7 +585,7 @@ class LCDClient():
                     if lang[1] == self.config['language']:
                         selection = index
                     index+=1
-                self.menu = LCDMenu(self, _('Language'), map(lambda lang : (lang[0], set_language(lang[1])), languages), self.menu)
+                self.menu = LCDMenu(self, _('Language'), list(map(lambda lang : (lang[0], set_language(lang[1])), languages)), self.menu)
                 self.menu.selection = selection
             
                 return self.display_menu
@@ -1235,7 +1235,8 @@ class LCDClient():
         self.glutkey(k, False)
 
     def glutkey(self, k, down=True):
-        if k == 'q' or k == 27:
+        k = k.decode()
+        if k == 'q' or ord(k) == 27:
             exit(0)
         if k == ' ':
             key = keynames['auto']
