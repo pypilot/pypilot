@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os, time, math
-import kjson
+from signalk import kjson
 
 class Value(object):
     def __init__(self, name, initial, **kwargs):

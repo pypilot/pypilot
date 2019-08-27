@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import wx, sys, subprocess, socket, os, time
 import autopilot_control_ui
 from signalk.client import *
@@ -32,6 +33,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.recv = {}
         self.rudder = False
         self.apenabled = False
+        self.tackstate = False
         #self.bCenter.Show(False)
 
         self.timer = wx.Timer(self, self.ID_MESSAGES)
@@ -187,7 +189,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         if not msgs:
             if time.time() - self.lastmsgtime > 2:
-                print 'message timeout'
+                print('message timeout')
                 self.client = False
             return
 
@@ -196,7 +198,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         for name in msgs:
             data = msgs[name]
             if not 'value' in data:
-                print 'no value?!?!', data
+                print('no value?!?!', data)
                 continue
             value = data['value']
             self.recv[name] = True
@@ -285,7 +287,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif 'ap.pilot.' in name:
                 pass
             else:
-                print 'warning: unhandled message "%s"' % name
+                print('warning: unhandled message "%s"' % name)
 
     def onAP( self, event ):
         self.client.set('servo.raw_command', 0)
@@ -366,7 +368,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         l0 = self.sliderlabels[int(p)]
         l1 = self.sliderlabels[int(p)+1]
         v = (p - int(p)) * (l1 - l0) + l0
-        #print 'a', command, r, p, l0, l1, v
+        #print('a', command, r, p, l0, l1, v)
         return v        
     
     def onCommand( self, event ):
@@ -388,7 +390,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/autopilot_calibration.py'] + sys.argv[1:])
 	
     def onClose( self, event ):
-	self.Close()
+        self.Close()
 
 def main():
     app = wx.App()

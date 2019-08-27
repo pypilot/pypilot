@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import time, sys
 from signalk.client import SignalKClient
 import json, math, numpy
@@ -278,7 +279,7 @@ class CompassCalibrationPlot(CalibrationPlot):
             glVertex3fv(map(lambda x, y :-x*cal_sphere[3]+y, down, cal_sphere[:3]))
             glVertex3fv(map(lambda x, y : x*cal_sphere[3]+y, down, cal_sphere[:3]))
         except:
-            print 'ERROR!!!!!!!!!!!!!!', self.accel, cal_sphere
+            print('ERROR!!!!!!!!!!!!!!', self.accel, cal_sphere)
         glEnd()
         self.draw_points()
 

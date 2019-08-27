@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import tempfile, time, math, sys, subprocess, json, socket, os
 import wx, wx.glcanvas
 import autopilot_control_ui
@@ -290,11 +291,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.servoprocess.poll()
 
-        print 'servotimer', self.servoprocess.returncode, self.servoprocess.returncode==None
+        print('servotimer', self.servoprocess.returncode, self.servoprocess.returncode==None)
         if self.servoprocess.returncode == None:
             self.servoprocess.communicate()
             line = self.servoprocess.stdout.readline()
-            print 'line', line
+            print('line', line)
             if line:
                 self.servo_console(line)
             self.servo_timer.Start(150, True)
@@ -514,7 +515,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
 def main():
     import gettext
-    gettext.install('pypilot', 'locale', unicode=False)
+    gettext.install('pypilot', 'locale')#, unicode=False)
     glutInit(sys.argv)
     app = wx.App()
     
