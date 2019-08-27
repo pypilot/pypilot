@@ -120,9 +120,9 @@ def parse_nmea_rudder(line):
     return 'rudder', {'angle': angle}
 
 
-def parse_nmea_apb(self, line):
+def parse_nmea_apb(line):
     # also allow ap commands (should we allow via serial too??)
-        '''
+    '''
    ** APB - Autopilot Sentence "B"
    **                                         13    15
    **        1 2 3   4 5 6 7 8   9 10   11  12|   14|
@@ -165,7 +165,7 @@ def parse_nmea_apb(self, line):
     return 'apb', {'mode': mode, 'track':  track, 'xte': xte, '**': line[1:3] == 'GP'}
 
 
-nmea_parsers = {'gps': parse_nmea_gps, 'wind': parse_nmea_wind, 'rudder': parse_nmea_rudder, 'apb', parse_nmea_apb}
+nmea_parsers = {'gps': parse_nmea_gps, 'wind': parse_nmea_wind, 'rudder': parse_nmea_rudder, 'apb': parse_nmea_apb}
 
 # because serial.readline() is very slow
 class LineBufferedSerialDevice(object):
