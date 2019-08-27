@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 from signalk.server import *
 from signalk.values import *
 from resolv import resolv
@@ -55,7 +56,7 @@ class Sensor(object):
         self.update(data)
                 
         if self.source.value != source:
-            print 'found', self.name, 'on', source, data['device']
+            print('found', self.name, 'on', source, data['device'])
             self.source.set(source)
             self.device = data['device']
         self.lastupdate = time.time()
@@ -109,7 +110,7 @@ class APB(Sensor):
         self.xte.update(data['xte'])
 
         if not 'ap.enabled' in self.server.values:
-            print 'ERROR, parsing apb without autopilot'
+            print('ERROR, parsing apb without autopilot')
             return
 
         if not self.server.values['ap.enabled']:
@@ -160,14 +161,14 @@ class Sensors(object):
                 self.lostsensor(sensor);
 
     def lostsensor(self, sensor):
-        print 'sensor', sensor.name, 'lost', sensor.device, 'source', sensor.source.value
+        print('sensor', sensor.name, 'lost', sensor.device, 'source', sensor.source.value)
         sensor.source.set('none')
         sensor.reset()
         sensor.device = None
             
     def write(self, sensor, data, source):
         if not sensor in self.sensors:
-            print 'unknown data parsed!', sensor
+            print('unknown data parsed!', sensor)
             return
 
         self.sensors[sensor].write(data, source)
@@ -183,7 +184,7 @@ class Sensors(object):
 
 if __name__ == '__main__':
     if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
-      print 'warning, failed to make sensor process realtime'
+      print('warning, failed to make sensor process realtime')
     server = SignalKServer()
     sensors = Sensors(server)
 

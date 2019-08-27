@@ -8,10 +8,11 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-import select, socket, time, kjson
+import select, socket, time
+import signalk.kjson
 import fcntl, os
-from values import *
-from bufferedsocket import LineBufferedNonBlockingSocket
+from signalk.values import *
+from signalk.bufferedsocket import LineBufferedNonBlockingSocket
 
 DEFAULT_PORT = 21311
 max_connections = 20
