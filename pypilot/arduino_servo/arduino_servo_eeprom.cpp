@@ -251,8 +251,8 @@ bool arduino_servo_eeprom::initial()
         return false;
     }
 
-    uint8_t *l = (uint8_t*)&local, *a = (uint8_t*)&arduino;
-    int ls = sizeof local;
+    uint8_t *a = (uint8_t*)&arduino;
+    int ls = sizeof arduino;
 
     // discard if any byte is 0xff.
     // This is invalid data and is also the initial eeprom value

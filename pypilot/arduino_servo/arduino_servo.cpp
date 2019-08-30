@@ -441,7 +441,7 @@ void ArduinoServo::reset()
     send_value(RESET_CODE, 0);
 }
 
-void ArduinoServo::disengauge()
+void ArduinoServo::disengage()
 {
     send_params();
     send_value(DISENGAGE_CODE, 0);

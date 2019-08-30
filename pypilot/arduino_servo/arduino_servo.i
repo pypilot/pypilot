@@ -15,7 +15,7 @@ public:
 
     void command(double command);
     void reset();
-    void disengauge();
+    void disengage();
     void reprogram();
     int poll();
     bool fault();

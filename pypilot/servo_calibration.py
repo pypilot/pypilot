@@ -93,7 +93,7 @@ def ServoCalibrationThread(calibration):
             servo.fwd_fault = False
         elif self.rev_fault and value > 0:
             servo.rev_fault = False
-        engauge()
+        engage()
         calibration.raw_command.set(value)
 
     def stop():
@@ -257,7 +257,7 @@ def ServoCalibrationThread(calibration):
     brake_hack = False
     servo.brake_hack.set(brake_hack)
     servo.max_current.set(10)
-    servo.disengauge_on_timeout.set(False)
+    servo.disengage_on_timeout.set(False)
     calibration.raw_command(0)
 
     timeout = 40 # max time to move end to end
@@ -440,7 +440,7 @@ class ServoCalibration(object):
             self.fwd_fault = False
         elif self.rev_fault and self.rawcommand.value > 0:
             self.rev_fault = False
-        self.servo.engauge()
+        self.servo.engage()
         self.servo.raw_command(self.rawcommand.value)
 
     def stop(self):
