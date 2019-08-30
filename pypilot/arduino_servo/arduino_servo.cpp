@@ -177,7 +177,7 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
             // send a lot of disengage commands to speed up communication speed which
             // will complete reading eeprom faster
             for(int i=0; i<16; i++)
-                disengauge();
+                disengage();
         }
     }
     }

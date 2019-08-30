@@ -23,7 +23,7 @@ class SimplePilot(AutopilotPilot):
     self.Gain('I', 0, 0, .05)
     self.Gain('D', .15, 0, .5)
 
-  def process_imu_data(self):
+  def process(self):
     ap = self.ap
     headingrate = ap.boatimu.SensorValues['headingrate'].value
     gain_values = {'P': ap.heading_error.value,
