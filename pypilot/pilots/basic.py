@@ -49,15 +49,11 @@ class BasicPilot(AutopilotPilot):
     self.reactive_value = self.Register(SensorValue, 'reactive_value', timestamp)
                                     
     self.last_heading_mode = False
-    self.lastenabled = False
 
-  def process_imu_data(self):
+  def process(self, reset):
     t = time.time()
     ap = self.ap
-    if ap.enabled.value != self.lastenabled:
-      self.lastenabled = ap.enabled.value
-      if ap.enabled.value:
-        ap.heading_error_int.set(0) # reset integral
+    if reset:
         self.heading_command_rate.set(0)
         # reset feed-forward gain
         self.last_heading_mode = False
