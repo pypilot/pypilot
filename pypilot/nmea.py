@@ -156,7 +156,7 @@ def parse_nmea_apb(line):
         '''
     if line[3:6] != 'APB':
         return False
-    try
+    try:
        data = line[7:len(line)-3].split(',')
        mode = 'compass' if data[13] == 'M' else 'gps'
        command = float(data[12])
