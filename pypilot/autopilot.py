@@ -421,7 +421,7 @@ class Autopilot(object):
             pilot.process_imu_data() # implementation specific process
             break
 
-      # servo can only disengauge under manual control
+      # servo can only disengage under manual control
       self.servo.force_engaged = self.enabled.value
       self.lastmode = self.mode.value
 
