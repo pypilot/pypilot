@@ -248,7 +248,7 @@ class Servo(object):
         self.windup_change = 0
 
         self.disengaged = True
-        self.disengauge_on_timeout = self.Register(BooleanValue, 'disengauge_on_timeout', True, persistent=True)
+        self.disengage_on_timeout = self.Register(BooleanValue, 'disengage_on_timeout', True, persistent=True)
         self.force_engaged = False
 
         self.last_zero_command_time = self.command_timeout = time.time()
@@ -268,7 +268,7 @@ class Servo(object):
     def send_command(self):
         t = time.time()
 
-        if not self.disengauge_on_timeout.value:
+        if not self.disengage_on_timeout.value:
             self.disengaged = False
 
         if self.servo_calibration.thread.is_alive():
@@ -312,7 +312,7 @@ class Servo(object):
         speed *= self.gain.value
         if not speed or self.fault():
             #print('timeout', t - self.command_timeout)
-            if self.disengauge_on_timeout.value and \
+            if self.disengage_on_timeout.value and \
                not self.force_engaged and \
                time.time() - self.command_timeout > self.period.value*3:
                 self.disengaged = True
@@ -452,8 +452,8 @@ class Servo(object):
 
         if self.driver:
             uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value)/ self.current.factor.value 
-            if self.disengaged: # keep sending disengauge to keep sync
-                self.driver.disengauge()
+            if self.disengaged: # keep sending disengage to keep sync
+                self.driver.disengage()
                 self.send_driver_params(uncorrected_max_current)
             else:
                 max_current = uncorrected_max_current
