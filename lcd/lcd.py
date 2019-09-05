@@ -267,7 +267,7 @@ class LCDClient():
         if orangepi:
             self.pins = [11, 16, 13, 15, 12]
         else:
-            self.pins = [17, 23, 27, 22, 18]
+            self.pins = [17, 23, 27, 22, 18, 5, 6]
 
         if GPIO:
             if orangepi:
