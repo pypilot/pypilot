@@ -156,16 +156,17 @@ def parse_nmea_apb(line):
         '''
     if line[3:6] != 'APB':
         return False
-    
-    data = line[7:len(line)-3].split(',')
-    mode = 'compass' if data[13] == 'M' else 'gps'
-    command = float(data[12])
-    xte = float(data[2])
-    xte = min(xte, 0.15) # maximum 0.15 miles
-    if data[3] == 'L':
+    try:
+       data = line[7:len(line)-3].split(',')
+       mode = 'compass' if data[13] == 'M' else 'gps'
+       command = float(data[12])
+       xte = float(data[2])
+       xte = min(xte, 0.15) # maximum 0.15 miles
+       if data[3] == 'L':
         xte = -xte
-    return 'apb', {'mode': mode, 'track':  track, 'xte': xte, '**': line[1:3] == 'GP'}
-
+       return 'apb', {'mode': mode, 'track':  track, 'xte': xte, '**': line[1:3] == 'GP'}
+    except: 
+       return false
 
 nmea_parsers = {'gps': parse_nmea_gps, 'wind': parse_nmea_wind, 'rudder': parse_nmea_rudder, 'apb': parse_nmea_apb}
 
