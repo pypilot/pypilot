@@ -119,10 +119,8 @@ class APB(Sensor):
         mode = self.server.values['ap.mode']
         if mode.value != data['mode']:
             # for GPAPB, ignore message on wrong mode
-            if data['**'] == 'GP':
-                return
-            
-            mode.set(data['mode'])
+            if data['**'] != 'GP':
+                mode.set(data['mode'])
 
         command = data['track'] + self.gain.value*data['xte']
 
