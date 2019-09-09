@@ -495,7 +495,22 @@ class Servo(object):
         self.driver = False
 
     def send_driver_params(self, _max_current):
-        self.driver.params(_max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.sensors.rudder.range.value, self.sensors.rudder.offset.value, self.sensors.rudder.scale.value, self.sensors.rudder.nonlinearity.value, self.max_slew_speed.value, self.max_slew_slow.value, self.current.factor.value, self.current.offset.value, self.voltage.factor.value, self.voltage.offset.value, self.min_speed.value, self.max_speed.value, self.gain.value)
+        self.driver.params(_max_current,
+                           self.max_controller_temp.value,
+                           self.max_motor_temp.value,
+                           self.sensors.rudder.range.value,
+                           self.sensors.rudder.offset.value,
+                           self.sensors.rudder.scale.value,
+                           self.sensors.rudder.nonlinearity.value,
+                           self.max_slew_speed.value,
+                           self.max_slew_slow.value,
+                           self.current.factor.value,
+                           self.current.offset.value,
+                           self.voltage.factor.value,
+                           self.voltage.offset.value,
+                           self.min_speed.value,
+                           self.max_speed.value,
+                           self.gain.value)
 
     def poll(self):
         if not self.driver:
