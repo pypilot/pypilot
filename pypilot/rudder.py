@@ -12,6 +12,16 @@ import math
 from signalk.values import *
 from sensors import Sensor
 
+
+def quad_sub(a, b, c, m):
+    if abs(a) < .0001:
+        return -c/b
+
+    dis = b*b - 4*a*c # quadratic formula
+    if dis < 0:
+        return -1 # invalid in this case
+    return (-b + m*dis**.5) / (2*a)
+
 class Rudder(Sensor):
     def __init__(self, server):
         super(Rudder, self).__init__(server, 'rudder')
@@ -27,14 +37,29 @@ class Rudder(Sensor):
         self.calibration_state = self.Register(EnumProperty, 'calibration_state', 'idle', ['idle', 'reset', 'centered', 'starboard range', 'port range', 'auto gain'])
         self.calibration_raw = {}
         self.range = self.Register(RangeProperty, 'range',  60, 10, 100, persistent=True)
+        self.minmax = -1, 1
         self.autogain_state = 'idle'
         self.raw = 0
 
+    def update_minmax(self):
+        # recompute minimum and maximum raw rudder values from -1 to 1
+        #  nonlinearity * raw**2 + scale*raw + offset - rudder_range
+
+        nonlinearity, scale = self.nonlinearity.value, self.scale.value
+        range  = self.offset.value, self.range.value
+        a = quad_sub(nonlinearity, scale, offset + range, 1);
+        b = quad_sub(nonlinearity, scale, offset + range, -1);
+        c = quad_sub(nonlinearity, scale, offset - range, 1);
+        d = quad_sub(nonlinearity, scale, offset - range, -1);
+        self.minmax = fmin(a, b,  c, d),  fmax(a, b,  c, d)
+        print 'update minmax', a, b, c, d, self.minmax
+        
     def calibration(self, command):
         if command == 'reset':
             self.nonlinearity.update(0.0)
             self.scale.update(1.0)
             self.offset.update(0.0)
+            self.update_minmax()
             return
 
         elif command == 'centered':
@@ -119,6 +144,7 @@ class Rudder(Sensor):
             nonlinearity /= scale
             if abs(nonlinearity) < 2:
                 self.nonlinearity.update(nonlinearity)
+            self.update_minmax()
 
     def invalid(self):
         return type(self.angle.value) == type(False)
