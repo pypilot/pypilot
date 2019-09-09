@@ -73,7 +73,7 @@ class SignalKServer(object):
             socket.socket.close()
             
     def StorePersistentValues(self):
-        self.persistent_timeout = time.time() + 300 # 5 minutes
+        self.persistent_timeout = time.time() + 30 # 30 seconds
         need_store = False
         for name in self.values:
             value = self.values[name]
