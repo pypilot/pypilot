@@ -165,12 +165,12 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
             current_offset = eeprom.get_current_offset();
             voltage_factor = eeprom.get_voltage_factor();
             voltage_offset = eeprom.get_voltage_offset();
-            min_motor_speed = eeprom.get_min_motor_speed();
-            max_motor_speed = eeprom.get_max_motor_speed();
+            min_command = eeprom.get_min_command();
+            max_command = eeprom.get_max_command();
             gain = eeprom.get_gain();
 
             // validate ranges
-            params(60, 0, 1, max_current, max_controller_temp, max_motor_temp, rudder_range, rudder_offset, rudder_scale, rudder_nonlinearity, max_slew_speed, max_slew_slow, current_factor, current_offset, voltage_factor, voltage_offset, min_motor_speed, max_motor_speed, gain);
+            params(60, 0, 1, max_current, max_controller_temp, max_motor_temp, rudder_range, rudder_offset, rudder_scale, rudder_nonlinearity, max_slew_speed, max_slew_slow, current_factor, current_offset, voltage_factor, voltage_offset, min_command, max_command, gain);
             return EEPROM;
         } else if(!eeprom.initial_read) {
             // if we got an eeprom value, but did not get the initial read,
@@ -270,7 +270,7 @@ bool ArduinoServo::fault()
     return flags & OVERCURRENT;
 }
 
-void ArduinoServo::params(double _raw_max_current, double _rudder_min, double _rudder_max, double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _rudder_nonlinearity, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_motor_speed, double _max_motor_speed, double _gain)
+void ArduinoServo::params(double _raw_max_current, double _rudder_min, double _rudder_max, double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _rudder_nonlinearity, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_command, double _max_command, double _gain)
 {
     raw_max_current = fmin(60, fmax(0, _raw_max_current));
     rudder_min = fmin(1, fmax(0, _rudder_min));
@@ -315,11 +315,11 @@ void ArduinoServo::params(double _raw_max_current, double _rudder_min, double _r
     voltage_offset = fmin(1.2, fmax(-1.2, _voltage_offset));
     eeprom.set_voltage_offset(voltage_offset);
 
-    min_motor_speed = fmin(1, fmax(0, _min_motor_speed));
-    eeprom.set_min_motor_speed(min_motor_speed);
+    min_command = fmin(100, fmax(0, _min_command));
+    eeprom.set_min_command(min_command);
     
-    max_motor_speed = fmin(1, fmax(0, _max_motor_speed));
-    eeprom.set_max_motor_speed(max_motor_speed);
+    max_command = fmin(100, fmax(0, _max_command));
+    eeprom.set_max_command(max_command);
 
     gain = fmin(10, fmax(-10, _gain));
     // disallow gain from -.5 to .5

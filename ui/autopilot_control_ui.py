@@ -477,7 +477,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook.AddPage( self.m_panel3, u"imu", True )
+		self.m_notebook.AddPage( self.m_panel3, u"imu", False )
 		self.m_panel7 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer81 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer81.AddGrowableCol( 0 )
@@ -620,249 +620,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel1.Layout()
 		fgSizer8.Fit( self.m_panel1 )
 		self.m_notebook.AddPage( self.m_panel1, u"compass", False )
-		self.m_panel2 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		fgSizer9 = wx.FlexGridSizer( 0, 1, 0, 0 )
-		fgSizer9.AddGrowableCol( 0 )
-		fgSizer9.AddGrowableRow( 0 )
-		fgSizer9.SetFlexibleDirection( wx.BOTH )
-		fgSizer9.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-		self.m_swservo = wx.ScrolledWindow( self.m_panel2, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.HSCROLL|wx.VSCROLL )
-		self.m_swservo.SetScrollRate( 5, 5 )
-		fgSizer351 = wx.FlexGridSizer( 0, 1, 0, 0 )
-		fgSizer351.AddGrowableCol( 0 )
-		fgSizer351.AddGrowableRow( 0 )
-		fgSizer351.SetFlexibleDirection( wx.BOTH )
-		fgSizer351.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-		sbSizer1 = wx.StaticBoxSizer( wx.StaticBox( self.m_swservo, wx.ID_ANY, u"Calibration" ), wx.VERTICAL )
-
-		self.stServoCalibration = wx.StaticText( sbSizer1.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stServoCalibration.Wrap( 400 )
-
-		sbSizer1.Add( self.stServoCalibration, 0, wx.ALL|wx.EXPAND, 5 )
-
-
-		fgSizer351.Add( sbSizer1, 1, wx.EXPAND, 5 )
-
-		fgSizer43 = wx.FlexGridSizer( 0, 2, 0, 0 )
-		fgSizer43.SetFlexibleDirection( wx.BOTH )
-		fgSizer43.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-		self.m_staticText61 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Flags", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText61.Wrap( -1 )
-
-		fgSizer43.Add( self.m_staticText61, 0, wx.ALL, 5 )
-
-		self.stServoFlags = wx.StaticText( self.m_swservo, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stServoFlags.Wrap( -1 )
-
-		fgSizer43.Add( self.stServoFlags, 0, wx.ALL, 5 )
-
-
-		fgSizer351.Add( fgSizer43, 1, wx.EXPAND, 5 )
-
-		fgSizer15 = wx.FlexGridSizer( 0, 3, 0, 0 )
-		fgSizer15.AddGrowableCol( 1 )
-		fgSizer15.SetFlexibleDirection( wx.BOTH )
-		fgSizer15.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-		self.m_staticText30 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Max Current", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText30.Wrap( -1 )
-
-		fgSizer15.Add( self.m_staticText30, 0, wx.ALL, 5 )
-
-		self.dsServoMaxCurrent = wx.SpinCtrlDouble(self.m_swservo)
-		self.dsServoMaxCurrent.SetMinSize( wx.Size( 60,30 ) )
-
-		fgSizer15.Add( self.dsServoMaxCurrent, 0, wx.ALL|wx.EXPAND, 5 )
-
-		self.m_staticText32 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Amps", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText32.Wrap( -1 )
-
-		fgSizer15.Add( self.m_staticText32, 0, wx.ALL, 5 )
-
-		self.m_staticText305 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Max Controller Temperature", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText305.Wrap( -1 )
-
-		fgSizer15.Add( self.m_staticText305, 0, wx.ALL, 5 )
-
-		self.dsServoMaxControllerTemp = wx.SpinCtrl(self.m_swservo)
-		self.dsServoMaxControllerTemp.SetMinSize( wx.Size( 60,30 ) )
-
-		fgSizer15.Add( self.dsServoMaxControllerTemp, 0, wx.ALL|wx.EXPAND, 5 )
-
-		self.m_staticText325 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"°C", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText325.Wrap( -1 )
-
-		fgSizer15.Add( self.m_staticText325, 0, wx.ALL, 5 )
-
-		self.m_staticText3051 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Max Motor Temperature", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText3051.Wrap( -1 )
-
-		fgSizer15.Add( self.m_staticText3051, 0, wx.ALL, 5 )
-
-		self.dsServoMaxMotorTemp = wx.SpinCtrl(self.m_swservo)
-		self.dsServoMaxMotorTemp.SetMinSize( wx.Size( 60,30 ) )
-
-		fgSizer15.Add( self.dsServoMaxMotorTemp, 0, wx.ALL|wx.EXPAND, 5 )
-
-		self.m_staticText3251 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"°C", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText3251.Wrap( -1 )
-
-		fgSizer15.Add( self.m_staticText3251, 0, wx.ALL, 5 )
-
-		self.m_staticText304 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Max Slew Speed", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText304.Wrap( -1 )
-
-		fgSizer15.Add( self.m_staticText304, 0, wx.ALL, 5 )
-
-		self.dsServoMaxSlewSpeed = wx.SpinCtrl(self.m_swservo)
-		self.dsServoMaxSlewSpeed.SetMinSize( wx.Size( 100,30 ) )
-
-		fgSizer15.Add( self.dsServoMaxSlewSpeed, 0, wx.ALL|wx.EXPAND, 5 )
-
-		self.m_staticText324 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"steps", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText324.Wrap( -1 )
-
-		fgSizer15.Add( self.m_staticText324, 0, wx.ALL, 5 )
-
-		self.m_staticText3041 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Max Slew Slow", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText3041.Wrap( -1 )
-
-		fgSizer15.Add( self.m_staticText3041, 0, wx.ALL, 5 )
-
-		self.dsServoMaxSlewSlow = wx.SpinCtrl(self.m_swservo)
-		self.dsServoMaxSlewSlow.SetMinSize( wx.Size( 100,30 ) )
-
-		fgSizer15.Add( self.dsServoMaxSlewSlow, 0, wx.ALL|wx.EXPAND, 5 )
-
-		self.m_staticText3241 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"steps", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText3241.Wrap( -1 )
-
-		fgSizer15.Add( self.m_staticText3241, 0, wx.ALL, 5 )
-
-		self.m_staticText53 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Gain", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText53.Wrap( -1 )
-
-		fgSizer15.Add( self.m_staticText53, 0, wx.ALL, 5 )
-
-		fgSizer38 = wx.FlexGridSizer( 0, 2, 0, 0 )
-		fgSizer38.AddGrowableCol( 0 )
-		fgSizer38.SetFlexibleDirection( wx.BOTH )
-		fgSizer38.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-		self.dsServoGain = wx.SpinCtrlDouble(self.m_swservo)
-		self.dsServoGain.SetMinSize( wx.Size( 100,30 ) )
-
-		fgSizer38.Add( self.dsServoGain, 0, wx.ALL|wx.EXPAND, 5 )
-
-		self.m_button16 = wx.Button( self.m_swservo, wx.ID_ANY, u"Auto Gain", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer38.Add( self.m_button16, 0, wx.ALL, 5 )
-
-
-		fgSizer15.Add( fgSizer38, 1, wx.EXPAND, 5 )
-
-		self.m_staticText32411 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"factor", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText32411.Wrap( -1 )
-
-		fgSizer15.Add( self.m_staticText32411, 0, wx.ALL, 5 )
-
-
-		fgSizer351.Add( fgSizer15, 1, wx.EXPAND, 5 )
-
-		fgSizer361 = wx.FlexGridSizer( 0, 2, 0, 0 )
-		fgSizer361.SetFlexibleDirection( wx.BOTH )
-		fgSizer361.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-		self.m_staticText52 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Voltage", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText52.Wrap( -1 )
-
-		fgSizer361.Add( self.m_staticText52, 0, wx.ALL, 5 )
-
-		self.m_stServoVoltage = wx.StaticText( self.m_swservo, wx.ID_ANY, u"---", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_stServoVoltage.Wrap( -1 )
-
-		fgSizer361.Add( self.m_stServoVoltage, 0, wx.ALL, 5 )
-
-		self.m_staticText30411 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Voltage Correction Offset", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText30411.Wrap( -1 )
-
-		fgSizer361.Add( self.m_staticText30411, 0, wx.ALL, 5 )
-
-		self.dsServoVoltageOffset = wx.SpinCtrlDouble(self.m_swservo)
-		self.dsServoVoltageOffset.SetMinSize( wx.Size( 100,30 ) )
-
-		fgSizer361.Add( self.dsServoVoltageOffset, 0, wx.ALL, 5 )
-
-		self.m_staticText303 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Voltage Correction Factor", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText303.Wrap( -1 )
-
-		fgSizer361.Add( self.m_staticText303, 0, wx.ALL, 5 )
-
-		self.dsServoVoltageFactor = wx.SpinCtrlDouble(self.m_swservo)
-		self.dsServoVoltageFactor.SetMinSize( wx.Size( 100,30 ) )
-
-		fgSizer361.Add( self.dsServoVoltageFactor, 0, wx.ALL, 5 )
-
-
-		fgSizer351.Add( fgSizer361, 1, wx.EXPAND, 5 )
-
-		fgSizer37 = wx.FlexGridSizer( 0, 2, 0, 0 )
-		fgSizer37.SetFlexibleDirection( wx.BOTH )
-		fgSizer37.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-		self.m_staticText55 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Current", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText55.Wrap( -1 )
-
-		fgSizer37.Add( self.m_staticText55, 0, wx.ALL, 5 )
-
-		self.m_stServoCurrent = wx.StaticText( self.m_swservo, wx.ID_ANY, u"---", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_stServoCurrent.Wrap( -1 )
-
-		fgSizer37.Add( self.m_stServoCurrent, 0, wx.ALL, 5 )
-
-		self.m_staticText302 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Current Correction Offset", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText302.Wrap( -1 )
-
-		fgSizer37.Add( self.m_staticText302, 0, wx.ALL, 5 )
-
-		self.dsServoCurrentOffset = wx.SpinCtrlDouble(self.m_swservo)
-		self.dsServoCurrentOffset.SetMinSize( wx.Size( 100,30 ) )
-
-		fgSizer37.Add( self.dsServoCurrentOffset, 0, wx.ALL, 5 )
-
-		self.m_staticText301 = wx.StaticText( self.m_swservo, wx.ID_ANY, u"Current Correction Factor", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText301.Wrap( -1 )
-
-		fgSizer37.Add( self.m_staticText301, 0, wx.ALL, 5 )
-
-		self.dsServoCurrentFactor = wx.SpinCtrlDouble(self.m_swservo)
-		self.dsServoCurrentFactor.SetMinSize( wx.Size( 100,30 ) )
-
-		fgSizer37.Add( self.dsServoCurrentFactor, 0, wx.ALL, 5 )
-
-
-		fgSizer351.Add( fgSizer37, 1, wx.EXPAND, 5 )
-
-
-		self.m_swservo.SetSizer( fgSizer351 )
-		self.m_swservo.Layout()
-		fgSizer351.Fit( self.m_swservo )
-		fgSizer9.Add( self.m_swservo, 1, wx.EXPAND |wx.ALL, 5 )
-
-		m_sdbSizer3 = wx.StdDialogButtonSizer()
-		self.m_sdbSizer3OK = wx.Button( self.m_panel2, wx.ID_OK )
-		m_sdbSizer3.AddButton( self.m_sdbSizer3OK )
-		m_sdbSizer3.Realize();
-
-		fgSizer9.Add( m_sdbSizer3, 1, wx.EXPAND, 5 )
-
-
-		self.m_panel2.SetSizer( fgSizer9 )
-		self.m_panel2.Layout()
-		fgSizer9.Fit( self.m_panel2 )
-		self.m_notebook.AddPage( self.m_panel2, u"servo", False )
 		self.m_panel71 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer35 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer35.SetFlexibleDirection( wx.BOTH )
@@ -978,7 +735,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel71.SetSizer( fgSizer35 )
 		self.m_panel71.Layout()
 		fgSizer35.Fit( self.m_panel71 )
-		self.m_notebook.AddPage( self.m_panel71, u"rudder", False )
+		self.m_notebook.AddPage( self.m_panel71, u"rudder", True )
 
 		fgSizer7.Add( self.m_notebook, 1, wx.EXPAND |wx.ALL, 5 )
 
@@ -1019,7 +776,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.CompassCalibration.Bind( wx.EVT_SIZE, self.onSizeGLCompass )
 		self.m_button10.Bind( wx.EVT_BUTTON, self.onClearCompass )
 		self.cbCompassCalibrationLocked.Bind( wx.EVT_CHECKBOX, self.onCompassCalibrationLocked )
-		self.m_button16.Bind( wx.EVT_BUTTON, self.onServoAutoGain )
 		self.m_button161.Bind( wx.EVT_BUTTON, self.onRudderResetCalibration )
 		self.m_button11.Bind( wx.EVT_BUTTON, self.onRudderCentered )
 		self.m_button12.Bind( wx.EVT_BUTTON, self.onRudderStarboardRange )
@@ -1103,9 +859,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		event.Skip()
 
 	def onCompassCalibrationLocked( self, event ):
-		event.Skip()
-
-	def onServoAutoGain( self, event ):
 		event.Skip()
 
 	def onRudderResetCalibration( self, event ):
