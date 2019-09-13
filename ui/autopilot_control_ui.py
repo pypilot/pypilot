@@ -348,7 +348,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer29.Add( fgSizer18, 1, wx.EXPAND, 5 )
 
 		fgSizer19 = wx.FlexGridSizer( 1, 0, 0, 0 )
-		fgSizer19.AddGrowableCol( 2 )
 		fgSizer19.SetFlexibleDirection( wx.BOTH )
 		fgSizer19.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
@@ -362,39 +361,40 @@ class CalibrationDialogBase ( wx.Dialog ):
 
 		fgSizer19.Add( self.stPitch, 0, wx.ALL, 5 )
 
-		self.gAlignment = wx.Gauge( self.m_panel5, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
-		self.gAlignment.SetValue( 0 )
-		fgSizer19.Add( self.gAlignment, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
+		self.m_staticText34 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Roll", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText34.Wrap( -1 )
+
+		fgSizer19.Add( self.m_staticText34, 0, wx.ALL, 5 )
+
+		self.stRoll = wx.StaticText( self.m_panel5, wx.ID_ANY, u"     N/A     ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stRoll.Wrap( -1 )
+
+		fgSizer19.Add( self.stRoll, 0, wx.ALL, 5 )
+
+		self.m_staticText18 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Heel", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText18.Wrap( -1 )
+
+		fgSizer19.Add( self.m_staticText18, 0, wx.ALL, 5 )
+
+		self.stHeel = wx.StaticText( self.m_panel5, wx.ID_ANY, u"     N/A     ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stHeel.Wrap( -1 )
+
+		fgSizer19.Add( self.stHeel, 0, wx.ALL, 5 )
 
 
 		fgSizer29.Add( fgSizer19, 1, wx.EXPAND, 5 )
 
 		fgSizer13 = wx.FlexGridSizer( 1, 0, 0, 0 )
+		fgSizer13.AddGrowableCol( 1 )
 		fgSizer13.SetFlexibleDirection( wx.BOTH )
 		fgSizer13.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_staticText34 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Roll", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText34.Wrap( -1 )
-
-		fgSizer13.Add( self.m_staticText34, 0, wx.ALL, 5 )
-
-		self.stRoll = wx.StaticText( self.m_panel5, wx.ID_ANY, u"     N/A     ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stRoll.Wrap( -1 )
-
-		fgSizer13.Add( self.stRoll, 0, wx.ALL, 5 )
-
-		self.m_staticText18 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Heel", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText18.Wrap( -1 )
-
-		fgSizer13.Add( self.m_staticText18, 0, wx.ALL, 5 )
-
-		self.stHeel = wx.StaticText( self.m_panel5, wx.ID_ANY, u"     N/A     ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stHeel.Wrap( -1 )
-
-		fgSizer13.Add( self.stHeel, 0, wx.ALL, 5 )
-
 		self.bLevel = wx.Button( self.m_panel5, wx.ID_ANY, u"Boat is level", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer13.Add( self.bLevel, 0, wx.ALL, 5 )
+
+		self.gAlignment = wx.Gauge( self.m_panel5, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
+		self.gAlignment.SetValue( 0 )
+		fgSizer13.Add( self.gAlignment, 0, wx.ALIGN_RIGHT|wx.ALL|wx.EXPAND, 5 )
 
 
 		fgSizer29.Add( fgSizer13, 1, wx.EXPAND, 5 )
@@ -441,10 +441,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 
 		fgSizer23.Add( sbSizer4, 1, wx.EXPAND, 5 )
 
-		self.cbTextureCompass = wx.CheckBox( self.m_panel5, wx.ID_ANY, u"tex compass", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.cbTextureCompass.SetValue(True)
-		fgSizer23.Add( self.cbTextureCompass, 0, wx.ALL, 5 )
-
 
 		fgSizer31.Add( fgSizer23, 1, wx.EXPAND, 5 )
 
@@ -477,7 +473,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook.AddPage( self.m_panel3, u"imu", False )
+		self.m_notebook.AddPage( self.m_panel3, u"alignment", False )
 		self.m_panel7 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer81 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer81.AddGrowableCol( 0 )
@@ -735,7 +731,29 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel71.SetSizer( fgSizer35 )
 		self.m_panel71.Layout()
 		fgSizer35.Fit( self.m_panel71 )
-		self.m_notebook.AddPage( self.m_panel71, u"rudder", True )
+		self.m_notebook.AddPage( self.m_panel71, u"rudder", False )
+		self.m_pSettings = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		fgSizer361 = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgSizer361.SetFlexibleDirection( wx.BOTH )
+		fgSizer361.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+
+		fgSizer361.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+		m_sdbSizer5 = wx.StdDialogButtonSizer()
+		self.m_sdbSizer5OK = wx.Button( self.m_pSettings, wx.ID_OK )
+		m_sdbSizer5.AddButton( self.m_sdbSizer5OK )
+		self.m_sdbSizer5Cancel = wx.Button( self.m_pSettings, wx.ID_CANCEL )
+		m_sdbSizer5.AddButton( self.m_sdbSizer5Cancel )
+		m_sdbSizer5.Realize();
+
+		fgSizer361.Add( m_sdbSizer5, 1, wx.EXPAND, 5 )
+
+
+		self.m_pSettings.SetSizer( fgSizer361 )
+		self.m_pSettings.Layout()
+		fgSizer361.Fit( self.m_pSettings )
+		self.m_notebook.AddPage( self.m_pSettings, u"settings", True )
 
 		fgSizer7.Add( self.m_notebook, 1, wx.EXPAND |wx.ALL, 5 )
 
@@ -758,7 +776,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.bReset.Bind( wx.EVT_BUTTON, self.onResetAlignment )
 		self.bLevel.Bind( wx.EVT_BUTTON, self.onLevel )
 		self.sHeadingOffset.Bind( wx.EVT_SPINCTRL, self.onIMUHeadingOffset )
-		self.cbTextureCompass.Bind( wx.EVT_CHECKBOX, self.onTextureCompass )
 		self.bIMUScope.Bind( wx.EVT_BUTTON, self.onIMUScope )
 		self.AccelCalibration.Bind( wx.EVT_KEY_DOWN, self.onKeyPressAccel )
 		self.AccelCalibration.Bind( wx.EVT_LEFT_DOWN, self.onMouseEventsAccel )
@@ -813,9 +830,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		event.Skip()
 
 	def onIMUHeadingOffset( self, event ):
-		event.Skip()
-
-	def onTextureCompass( self, event ):
 		event.Skip()
 
 	def onIMUScope( self, event ):
