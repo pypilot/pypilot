@@ -191,10 +191,13 @@ class Servo(object):
         self.calibration = self.Register(JSONValue, 'calibration', {})
         self.load_calibration()
 
+        self.command = self.Register(TimedProperty, 'command', 0)
+        self.position_command = self.Register(TimedProperty, 'position_command', 0)
+
         timestamp = server.TimeStamp('servo')
-        self.min_speed = self.Register(RangeProperty, 'min_speed', 1, 0, 1, persistent=True)
-        self.max_speed = self.Register(RangeProperty, 'max_speed', 1, 0, 1, persistent=True)
-        self.speed_gain = self.Register(RangeProperty, 'speed_gain', 0, 0, 1, persistent=True)
+        self.command.min = self.Register(RangeSetting, 'command.min', 100, 0, 100, '%', persistent=True)
+        self.command.max = self.Register(RangeSetting, 'command.max', 100, 0, 100, '%', persistent=True)
+        self.command_gain = self.Register(RangeProperty, 'command_gain', 0, 0, 1, persistent=True)
         self.duty = self.Register(SensorValue, 'duty', timestamp)
 
         self.faults = self.Register(ResettableValue, 'faults', 0)
@@ -207,28 +210,24 @@ class Servo(object):
         self.motor_temp = self.Register(SensorValue, 'motor_temp', timestamp)
 
         self.engaged = self.Register(BooleanValue, 'engaged', False)
-        self.max_current = self.Register(RangeProperty, 'max_current', 2, 0, 60, persistent=True)
+        self.max_current = self.Register(RangeSetting, 'max_current', 2, 0, 60, persistent=True)
         self.current.factor = self.Register(RangeProperty, 'current.factor', 1, 0.8, 1.2, persistent=True)
         self.current.offset = self.Register(RangeProperty, 'current.offset', 0, -1.2, 1.2, persistent=True)
         self.voltage.factor = self.Register(RangeProperty, 'voltage.factor', 1, 0.8, 1.2, persistent=True)
         self.voltage.offset = self.Register(RangeProperty, 'voltage.offset', 0, -1.2, 1.2, persistent=True)
-        self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 60, 45, 100, persistent=True)
-        self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
+        self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 70, 45, 100, persistent=True)
+        self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 70, 30, 100, persistent=True)
 
-        self.max_slew_speed = self.Register(RangeProperty, 'max_slew_speed', 30, 0, 100, persistent=True)
-        self.max_slew_slow = self.Register(RangeProperty, 'max_slew_slow', 50, 0, 100, persistent=True)
+        self.max_slew_speed = self.Register(RangeSetting, 'max_slew_speed', 30, 0, 100, persistent=True)
+        self.max_slew_slow = self.Register(RangeSetting, 'max_slew_slow', 50, 0, 100, persistent=True)
         self.gain = self.Register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
-        self.period = self.Register(RangeProperty, 'period', .7, .1, 3, persistent=True)
+        self.period = self.Register(RangeSetting, 'period', .4, .1, 3, persistent=True)
         self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.Register(BooleanProperty, 'compensate_voltage', False, persistent=True)
         self.amphours = self.Register(ResettableValue, 'amp_hours', 0, persistent=True)
         self.watts = self.Register(SensorValue, 'watts', timestamp)
 
-        self.command = self.Register(TimedProperty, 'command', 0)
-        self.position_command = self.Register(TimedProperty, 'position_command', 0)
-
         self.speed = self.Register(SensorValue, 'speed', timestamp)
-
         self.position = self.Register(SensorValue, 'position', timestamp)
         self.position.elp = 0
         self.position.set(0)
@@ -244,7 +243,7 @@ class Servo(object):
         self.position.amphours = 0
 
         self.windup = 0
-        self.last_speed = 0
+        self.last_command = 0
         self.windup_change = 0
 
         self.disengaged = True
@@ -308,9 +307,11 @@ class Servo(object):
 
         self.do_command(pid)
             
-    def do_command(self, speed):
-        speed *= self.gain.value
-        if not speed or self.fault():
+    def do_command(self, command):
+        command *= self.gain.value # apply gain
+
+        # if not moving or faulted, disengauge
+        if not command or self.fault():
             #print('timeout', t - self.command_timeout)
             if self.disengage_on_timeout.value and \
                not self.force_engaged and \
@@ -318,34 +319,34 @@ class Servo(object):
                 self.disengaged = True
             self.raw_command(0)
             return
-        
-        if speed == 0 and self.speed.value == 0: # optimization
+
+        # save computation if not moving
+        if command == 0 and self.speed.value == 0: # optimization
             self.raw_command(0)
             return
 
-        if self.flags.value & (ServoFlags.FWD_FAULT | ServoFlags.MAX_RUDDER) and speed > 0 or \
-           self.flags.value & (ServoFlags.REV_FAULT | ServoFlags.MIN_RUDDER) and speed < 0:
+        # prevent moving the wrong direction if flags set
+        if self.flags.value & (ServoFlags.FWD_FAULT | ServoFlags.MAX_RUDDER) and command > 0 or \
+           self.flags.value & (ServoFlags.REV_FAULT | ServoFlags.MIN_RUDDER) and command < 0:
             #print('refuse to move', speed)
             self.raw_command(0)
             return # abort
 
+        # compute time and dt
         t = time.time()
         dt = t - self.position.inttime
         self.position.inttime = t
-        if self.sensors.rudder.invalid():
-            # integrate position if no rudder feedback
-            # crude integration of position from speed
-            position = self.position.value + self.speed.value * dt
-            self.position.set(min(max(position, 0), 1))
 
-        #print('integrate pos', self.position, self.speed, speed, dt, self.fwd_fault, self.rev_fault)
-        if self.position.value < .9*self.sensors.rudder.range.value:
+        # clear faults from overcurrent if moved sufficiently the other direction
+        position_range = self.sensors.rudder.range.value
+        if self.position.value < .9*position_range:
             self.flags.clearbit(ServoFlags.FWD_FAULT)
-        if self.position.value > -.9*self.sensors.rudder.range.value:
+        if self.position.value > -.9*position_range:
             self.flags.clearbit(ServoFlags.REV_FAULT)
-            
+
+        # compensate for fluxuating battery voltage
         if self.compensate_voltage.value and self.voltage.value:
-            speed *= 12 / self.voltage.value
+            command *= 12 / self.voltage.value
 
         if self.compensate_current.value:
             # get current
@@ -358,76 +359,81 @@ class Servo(object):
         #if self.compensate_voltage.value:
         #    max_current *= self.voltage.value/voltage
         
-        min_speed = self.min_speed.value
+        # ensure command_min is at least command_min
+        if self.command.min.value > self.command.max.value:
+            self.command.max.value.set(self.command.min.value)
+
+        command_min = self.command.min.value/100.0 # convert percent to 0-1
+        command_max = self.command.max.value/100.0
         
-        # ensure max_speed is at least min_speed
-        if min_speed > self.max_speed.value:
-            self.max_speed.set(min_speed)
-
-        # compute duty cycle
-        lp = .001
-        self.duty.set(lp*int(not not speed) + (1-lp)*self.duty.value)
-
         # adjust speed based on current duty
-        min_speed += (self.max_speed.value - min_speed)*self.duty.value*self.speed_gain.value
+        command_min += (command_max - command_min)*self.duty.value*self.speed_gain.value
 
         # ensure it is in range
-        min_speed = max(min(min_speed, self.max_speed.value), self.min_speed.value)
+        command_min = max(min(command_min, self.command.max.value), self.command.min.value)
         
         # integrate windup
-        self.windup += (speed - self.last_speed) * dt
+        self.windup += (command - self.last_command) * dt
 
-        # if windup overflows, move at minimum speed
-        if abs(self.windup) > self.period.value*min_speed / 1.5:
-            if abs(speed) < min_speed:
-                speed = min_speed if self.windup > 0 else -min_speed
+        # if windup overflows, move at least minimum speed
+        if abs(self.windup) > self.period.value*command_min / 1.5:
+            if abs(command) < command_min:
+                command = command_min if self.windup > 0 else -command_min
         else:
-            speed = 0
+            command = 0
 
         # don't let windup overflow
-        if abs(self.windup) > 1.5*self.period.value:
+        max_windup = 1.5*self.period.value
+        if abs(self.windup) > max_windup:
             self.flags.setbit(ServoFlags.SATURATED)
-            self.windup = 1.5*self.period.value*sign(self.windup)
+            self.windup = max_windup*sign(self.windup)
         else:
             self.flags.clearbit(ServoFlags.SATURATED)
-        #print('windup', self.windup, dt, self.windup / dt, speed, self.speed)
             
-        if speed * self.last_speed <= 0: # switched direction or stopped?
+        if command * self.last_command <= 0: # switched direction or stopped?
             if t - self.windup_change < self.period.value:
-                # less than period, keep previous direction, but use minimum speed
-                if self.last_speed > 0:
-                    speed = min_speed
-                elif self.last_speed < 0:
-                    speed = -min_speed
+                # less than period, keep previous direction, but use minimum command
+                if self.last_command > 0:
+                    command = min_command
+                elif self.last_command < 0:
+                    command = -command_min
                 else:
-                    speed = 0
+                    command = 0
             else:
                 self.windup_change = t
 
         # clamp to max speed
-        speed = min(max(speed, -self.max_speed.value), self.max_speed.value)
+        command = min(max(command, -self.max_speed.value), self.max_speed.value)
 
-        if not self.sensors.rudder.invalid():
-            self.speed.set(speed)
+        # estimate speed and position of rudder if no rudder sensor        
+        if self.sensors.rudder.invalid():
+            self.speed.set(command*position_range/10)
+            # crude integration of position from speed
+            position = self.position.value + self.speed.value * dt
+            self.position.set(min(max(position, -position_range), position_range))
 
         #print('speed', speed)
-        self.last_speed = speed
+        self.last_command = command
 
-        if speed > 0:
+        if command > 0:
             cal = self.calibration.value['forward']
-        elif speed < 0:
+        elif command < 0:
             cal = self.calibration.value['reverse']
         else:
             self.raw_command(0)
             return
 
-        raw_speed = cal[0] + abs(speed)*cal[1]
-        if speed < 0:
-            raw_speed = -raw_speed
+        raw_command = cal[0] + abs(command)*cal[1]
+        if command < 0:
+            raw_command = -raw_command
 
-        self.raw_command(raw_speed)
+        self.raw_command(raw_command)
 
     def raw_command(self, command):
+        # compute duty cycle
+        lp = .001
+        self.duty.set(lp*int(not not command) + (1-lp)*self.duty.value)
+
         self.rawcommand.set(command)
         if command <= 0:
             if command < 0:
@@ -443,7 +449,7 @@ class Servo(object):
 
         t = time.time()
         if command == 0:
-            # only send at .2  seconds when command is zero for more than a second
+            # only send at .2 seconds when command is zero for more than a second
             if t > self.command_timeout + 1 and t - self.last_zero_command_time < .2:
                 return
             self.last_zero_command_time = t
@@ -451,15 +457,16 @@ class Servo(object):
             self.command_timeout = t
 
         if self.driver:
-            uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value) / self.current.factor.value 
+
             if self.disengaged: # keep sending disengage to keep sync
-                self.send_driver_params(uncorrected_max_current)
+                self.send_driver_params()
                 self.driver.disengage()
             else:
+                mul = 1
                 if self.flags.value & ServoFlags.FWD_FAULT or \
                    self.flags.value & ServoFlags.REV_FAULT: # allow more current to "unstuck" ram
-                    uncorrected_max_current *= 2
-                self.send_driver_params(uncorrected_max_current)
+                    mul = 2
+                self.send_driver_params(mul)
 
                 self.driver.command(command)
 
@@ -493,8 +500,9 @@ class Servo(object):
         self.device.close()
         self.driver = False
 
-    def send_driver_params(self, _raw_max_current):
-        self.driver.params(_raw_max_current,
+    def send_driver_params(self, mul):
+        uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value) / self.current.factor.value        
+        self.driver.params(mul * uncorrected_max_current,
                            self.sensors.rudder.minmax[0],
                            self.sensors.rudder.minmax[1],
                            self.max_current.value,
@@ -510,8 +518,8 @@ class Servo(object):
                            self.current.offset.value,
                            self.voltage.factor.value,
                            self.voltage.offset.value,
-                           self.min_speed.value,
-                           self.max_speed.value,
+                           self.command_min.value,
+                           self.command_max.value,
                            self.gain.value)
 
     def poll(self):
@@ -528,8 +536,7 @@ class Servo(object):
                     print('failed to open servo on:', device_path, e)
                     return
                 self.driver = ArduinoServo(device.fileno(), device_path[1])
-                uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value)/ self.current.factor.value 
-                self.send_driver_params(uncorrected_max_current)
+                self.send_driver_params()
                 self.device = device
                 self.device.path = device_path[0]
                 self.lastpolltime = time.time()
@@ -603,6 +610,7 @@ class Servo(object):
             flags = self.flags.value & ~ServoFlags.DRIVER_MASK | self.driver.flags
 
             # if rudder angle comes from serial or tcp, may need to set these flags
+            # to prevent rudder movement
             angle = self.sensors.rudder.angle.value
             if angle: # note, this is ok here for both False and 0
                 if abs(angle) > self.sensors.rudder.range.value:
@@ -629,8 +637,8 @@ class Servo(object):
             self.current.offset.set(self.driver.current_offset)
             self.voltage.factor.set(self.driver.voltage_factor)
             self.voltage.offset.set(self.driver.voltage_offset)
-            self.min_speed.set(self.driver.min_motor_speed);
-            self.max_speed.set(self.driver.max_motor_speed);
+            self.command.min.set(self.driver.min_command);
+            self.command.max.set(self.driver.max_command);
             self.gain.set(self.driver.gain);
 
         if self.fault():
@@ -641,17 +649,19 @@ class Servo(object):
             # if overcurrent then fault in the direction traveled
             # this prevents moving further in this direction
             if self.flags.value & ServoFlags.OVERCURRENT:
+                position_range = self.sensors.rudder.range.value
                 if self.lastdir > 0:
-                    self.flags.fwd_fault()
-                    self.position.set(1)
+                    self.flags.fwd_fault()                    
+                    self.position.set(position_range)
                 elif self.lastdir < 0:
                     self.flags.rev_fault()
-                    self.position.set(-1)
+                    self.position.set(-position_range)
 
             self.reset() # clear fault condition
 
         if not self.sensors.rudder.invalid():
             self.position.set(self.sensors.rudder.angle.value)
+            self.speed.set(self.sensors.rudder.speed.value)
             
         self.send_command()
 

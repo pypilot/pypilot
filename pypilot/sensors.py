@@ -79,7 +79,7 @@ class Wind(Sensor):
         timestamp = server.TimeStamp('wind')
         self.direction = self.Register(SensorValue, 'direction', timestamp, directional=True)
         self.speed = self.Register(SensorValue, 'speed', timestamp)
-        self.offset = self.Register(RangeProperty, 'offset', 0, -180, 180, persistent=True)
+        self.offset = self.Register(RangeSetting, 'offset', 0, -180, 180, 'degrees', persistent=True)
 
     def update(self, data):
         self.direction.set(resolv(data['direction'] + self.offset.value, 180))

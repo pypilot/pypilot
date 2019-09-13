@@ -36,7 +36,7 @@ class Rudder(Sensor):
         self.nonlinearity = self.Register(Value, 'nonlinearity',  0, persistent=True)
         self.calibration_state = self.Register(EnumProperty, 'calibration_state', 'idle', ['idle', 'reset', 'centered', 'starboard range', 'port range', 'auto gain'])
         self.calibration_raw = {}
-        self.range = self.Register(RangeProperty, 'range',  60, 10, 100, persistent=True)
+        self.range = self.Register(RangeProperty, 'range',  45, 10, 100, persistent=True)
         self.lastrange = 0
         self.minmax = 0, 1
         self.autogain_state = 'idle'

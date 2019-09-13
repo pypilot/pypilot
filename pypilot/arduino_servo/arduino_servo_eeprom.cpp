@@ -186,24 +186,24 @@ void arduino_servo_eeprom::set_voltage_offset(double voltage_offset)
     local.voltage_offset = 127 + round(voltage_offset*100.0);
 }
 
-double arduino_servo_eeprom::get_min_motor_speed()
+double arduino_servo_eeprom::get_min_command()
 {
-    return arduino.min_motor_speed/200.0;
+    return arduino.min_command/2.0;
 }
      
-void arduino_servo_eeprom::set_min_motor_speed(double min_motor_speed)
+void arduino_servo_eeprom::set_min_command(double min_command)
 {
-    local.min_motor_speed = round(min_motor_speed*200.0);
+    local.min_command = round(min_command*2.0);
 }
 
-double arduino_servo_eeprom::get_max_motor_speed()
+double arduino_servo_eeprom::get_max_command()
 {
-    return arduino.max_motor_speed/200.0;
+    return arduino.max_command/2.0;
 }
      
-void arduino_servo_eeprom::set_max_motor_speed(double max_motor_speed)
+void arduino_servo_eeprom::set_max_command(double max_command)
 {
-    local.max_motor_speed = round(max_motor_speed*200.0);
+    local.max_command = round(max_command*2.0);
 }
 
 // record gain in thousandths

@@ -215,7 +215,7 @@ class Autopilot(object):
     self.sensors = Sensors(self.server)
     self.servo = servo.Servo(self.server, self.sensors)
 
-    self.version = self.Register(JSONValue, 'version', 'pypilot' + ' ' + strversion)
+    self.version = self.Register(Value, 'version', 'pypilot' + ' ' + strversion)
     self.heading_command = self.Register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
     self.lastenabled = False

@@ -385,14 +385,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def onSizeGLCompass( self, event ):
         self.compass_calibration_plot.reshape(event.GetSize().x, event.GetSize().y)
 
-    def StartAlignment(self):
-        self.client.set('imu.alignmentCounter', 100)
-
     def onResetAlignment(self, event):
         self.client.set('imu.alignmentQ', [1, 0, 0, 0])
 
     def onLevel( self, event ):
-        self.StartAlignment()
+        self.client.set('imu.alignmentCounter', 100)
         
     def onIMUHeadingOffset( self, event ):
         self.client.set('imu.heading_offset', self.sHeadingOffset.GetValue())
@@ -453,51 +450,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         args = ['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/scope_wx.py', host + ':' + str(port),
                 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading']
         subprocess.Popen(args)
-        
-    def onCalibrateServo( self, event ):
-        try:
-            self.servoprocess = subprocess.Popen(['python', 'servo_calibration.py', sys.argv[1]], stdout=subprocess.PIPE)
-            self.servo_console('executed servo_calibration.py...')
-            self.servo_timer.Start(150, True)
-            self.bCalibrateServo.Disable()
-        except OSError:
-            self.servo_console('Failed to execute servo_calibration.py.\n')
 
-    def onMaxCurrent( self, event ):
-        self.client.set('servo.max_current', event.GetValue())
-
-    def onMaxControllerTemp( self, event ):
-        self.client.set('servo.max_controller_temp', event.GetValue())
-
-    def onMaxMotorTemp( self, event ):
-        self.client.set('servo.max_motor_temp', event.GetValue())
-
-    def onCurrentFactor( self, event ):
-        self.client.set('servo.current.factor', event.GetValue())
-
-    def onCurrentOffset( self, event ):
-        self.client.set('servo.current.offset', event.GetValue())
-
-    def onVoltageFactor( self, event ):
-        self.client.set('servo.voltage.factor', event.GetValue())
-
-    def onVoltageOffset( self, event ):
-        self.client.set('servo.voltage.offset', event.GetValue())
-
-    def onMaxSlewSpeed( self, event ):
-        self.client.set('servo.max_slew_speed', event.GetValue())
-
-    def onMaxSlewSlow( self, event ):
-        self.client.set('servo.max_slew_slow', event.GetValue())
-
-    def onServoGain( self, event ):
-        self.client.set('servo.gain', event.GetValue())
-
-    def onServoAutoGain( self, event ):
-        if self.have_rudder:
-            self.client.set('rudder.calibration_state', 'auto gain')
-        else:
-            wx.MessageDialog(self, _('Auto gain calibration requires a rudder sensor'), _('Warning'), wx.OK).ShowModal()
     def onRudderResetCalibration( self, event ):
         self.client.set('rudder.calibration_state', 'reset')
 

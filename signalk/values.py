@@ -117,9 +117,6 @@ class Property(Value):
         super(Property, self).__init__(name, initial, **kwargs)
         self.client_can_set = True
 
-    def type(self):
-        return 'Property'
-
 class ResettableValue(Property):
     def __init__(self, name, initial, **kwargs):
         self.initial = initial
@@ -157,6 +154,16 @@ class RangeProperty(Property):
             self.value = max_value
         self.max_value = max_value
 
+class RangeSetting(Property):
+    def __init__(self, name, initial, min_value, max_value, units, **kwargs):
+        self.units = units
+        super(RangeSetting, self).__init__(name, initial, min_value, max_value, **kwargs)
+
+    def type(self):
+        d = super(RangeProperty, self).type()
+        d['Units'] = self.units;
+        return d
+        
 class HeadingProperty(RangeProperty):
     def __init__(self, name, initial):
         super(HeadingProperty, self).__init__(name, initial, 0, 360)
