@@ -703,9 +703,7 @@ public:
         command(0xa0); // Column scanning order : from left to right
         command(0xaf); // Open the display
     
-        int i,j;
-
-
+        int i;
 
         char binary[128*64];//width*height/8];
         for(int col = 0; col<8; col++)
