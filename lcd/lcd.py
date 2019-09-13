@@ -245,7 +245,7 @@ class LCDClient():
                       'true wind': self.have_true_wind};
         self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
 
-        self.initial_gets = ['servo.min_speed', 'servo.max_speed', 'servo.max_current', 'servo.period', 'imu.alignmentCounter']
+        self.initial_gets = ['servo.speed.min', 'servo.speed.max', 'servo.max_current', 'servo.period', 'imu.alignmentCounter']
 
         self.create_mainmenu()
 
@@ -464,8 +464,8 @@ class LCDClient():
 
             def motor():
                 self.menu = LCDMenu(self, _('Motor'),
-                                    [value_edit(_('min speed'), _('relative'), 'servo.min_speed'),
-                                     value_edit(_('max speed'), _('relative'), 'servo.max_speed'),
+                                    [value_edit(_('min speed'), _('relative'), 'servo.speed,min'),
+                                     value_edit(_('max speed'), _('relative'), 'servo.speed.max'),
                                      value_edit(_('max current'), _('amps'), 'servo.max_current'),
                                      value_edit(_('period'), _('seconds'), 'servo.period')],
                                     self.menu)
