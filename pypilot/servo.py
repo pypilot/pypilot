@@ -451,16 +451,15 @@ class Servo(object):
             self.command_timeout = t
 
         if self.driver:
-            uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value)/ self.current.factor.value 
+            uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value) / self.current.factor.value 
             if self.disengaged: # keep sending disengage to keep sync
-                self.driver.disengage()
                 self.send_driver_params(uncorrected_max_current)
+                self.driver.disengage()
             else:
-                max_current = uncorrected_max_current
                 if self.flags.value & ServoFlags.FWD_FAULT or \
                    self.flags.value & ServoFlags.REV_FAULT: # allow more current to "unstuck" ram
-                    max_current *= 2
-                self.send_driver_params(max_current)
+                    uncorrected_max_current *= 2
+                self.send_driver_params(uncorrected_max_current)
 
                 self.driver.command(command)
 
@@ -494,8 +493,26 @@ class Servo(object):
         self.device.close()
         self.driver = False
 
-    def send_driver_params(self, _max_current):
-        self.driver.params(_max_current, self.max_controller_temp.value, self.max_motor_temp.value, self.sensors.rudder.range.value, self.sensors.rudder.offset.value, self.sensors.rudder.scale.value, self.sensors.rudder.nonlinearity.value, self.max_slew_speed.value, self.max_slew_slow.value, self.current.factor.value, self.current.offset.value, self.voltage.factor.value, self.voltage.offset.value, self.min_speed.value, self.max_speed.value, self.gain.value)
+    def send_driver_params(self, _raw_max_current):
+        self.driver.params(_raw_max_current,
+                           self.sensors.rudder.minmax[0],
+                           self.sensors.rudder.minmax[1],
+                           self.max_current.value,
+                           self.max_controller_temp.value,
+                           self.max_motor_temp.value,
+                           self.sensors.rudder.range.value,
+                           self.sensors.rudder.offset.value,
+                           self.sensors.rudder.scale.value,
+                           self.sensors.rudder.nonlinearity.value,
+                           self.max_slew_speed.value,
+                           self.max_slew_slow.value,
+                           self.current.factor.value,
+                           self.current.offset.value,
+                           self.voltage.factor.value,
+                           self.voltage.offset.value,
+                           self.min_speed.value,
+                           self.max_speed.value,
+                           self.gain.value)
 
     def poll(self):
         if not self.driver:
@@ -604,8 +621,6 @@ class Servo(object):
             self.max_motor_temp.set(self.driver.max_motor_temp)
             self.max_slew_speed.set(self.driver.max_slew_speed)
             self.max_slew_slow.set(self.driver.max_slew_slow)
-            #print("GOT EEPROM", self.driver.rudder_scale, self.driver.rudder_offset, self.driver.rudder_range)
-            # if self.sensors.rudder.source == 'servo':
             self.sensors.rudder.scale.set(self.driver.rudder_scale)
             self.sensors.rudder.nonlinearity.set(self.driver.rudder_nonlinearity)
             self.sensors.rudder.offset.set(self.driver.rudder_offset)
