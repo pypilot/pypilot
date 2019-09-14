@@ -77,7 +77,7 @@ class MainFrame(wx.Frame):
                     cb.Bind( wx.EVT_CHECKBOX, oncheck )
                 proc()
 
-            elif t == 'RangeProperty':
+            elif t == 'RangeProperty' or t == 'RangeSetting':
                 useSlider = True
                 def proc():
                     r = self.value_list[name]['min'], self.value_list[name]['max']
