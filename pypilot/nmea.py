@@ -287,6 +287,8 @@ class Nmea(object):
         self.devices_lastmsg = {}
         self.probedevice = None
 
+        self.start_time = time.time()
+
     def __del__(self):
         print('terminate nmea process')
         self.process.terminate()
@@ -426,8 +428,8 @@ class Nmea(object):
                 self.nmea_times[name] = t
             
         t5 = time.time()
-        if t5 - t0 > .1:
-            print('nmea poll times', t0, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
+        if t5 - t0 > .1 and self.start_time - t0 > 1:
+            print('nmea poll times', self.start_time-t0, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
             
     def probe_serial(self):
         # probe new nmea data devices
