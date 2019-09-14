@@ -109,7 +109,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 if 'units' in values[name]:
                     v = values[name]
                     def proc():
-                        s = wx.SpinCtrlDouble(self.m_pSettings)
+                        s = wx.SpinCtrlDouble(self.m_pSettings, wx.ID_ANY)
                         s.SetRange(v['min'], v['max'])
                         s.SetIncrement(min(1, (v['max'] - v['min']) / 100.0))
                         s.SetDigits(-math.log(s.GetIncrement()) / math.log(10) + 1)
