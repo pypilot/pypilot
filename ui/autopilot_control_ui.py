@@ -733,26 +733,6 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer35.Fit( self.m_panel71 )
 		self.m_notebook.AddPage( self.m_panel71, u"rudder", False )
 		self.m_pSettings = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		fgSizer361 = wx.FlexGridSizer( 0, 2, 0, 0 )
-		fgSizer361.SetFlexibleDirection( wx.BOTH )
-		fgSizer361.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-
-		fgSizer361.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-
-		m_sdbSizer5 = wx.StdDialogButtonSizer()
-		self.m_sdbSizer5OK = wx.Button( self.m_pSettings, wx.ID_OK )
-		m_sdbSizer5.AddButton( self.m_sdbSizer5OK )
-		self.m_sdbSizer5Cancel = wx.Button( self.m_pSettings, wx.ID_CANCEL )
-		m_sdbSizer5.AddButton( self.m_sdbSizer5Cancel )
-		m_sdbSizer5.Realize();
-
-		fgSizer361.Add( m_sdbSizer5, 1, wx.EXPAND, 5 )
-
-
-		self.m_pSettings.SetSizer( fgSizer361 )
-		self.m_pSettings.Layout()
-		fgSizer361.Fit( self.m_pSettings )
 		self.m_notebook.AddPage( self.m_pSettings, u"settings", True )
 
 		fgSizer7.Add( self.m_notebook, 1, wx.EXPAND |wx.ALL, 5 )
