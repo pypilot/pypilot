@@ -33,7 +33,7 @@ import servo
 def minmax(value, r):
     return min(max(value, -r), r)
 
-def compute_true_wind(self, gps_speed, wind_speed, wind_direction):
+def compute_true_wind(gps_speed, wind_speed, wind_direction):
     rd = math.radians(wind_direction)
     windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
     truewind = math.degrees(math.atan2(windv[0], windv[1] - gps_speed))
