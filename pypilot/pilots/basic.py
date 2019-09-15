@@ -96,7 +96,7 @@ class BasicPilot(AutopilotPilot):
                    'DD': headingraterate,
                    'FF': feedforward_value,
                    'R': -reactive_value}
-    PR = math.sqrt(abs(gain_values['D']))
+    PR = math.sqrt(abs(gain_values['P']))
     if gain_values['P'] < 0:
       PR = -PR
     gain_values['PR'] = PR
