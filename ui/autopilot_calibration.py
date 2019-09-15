@@ -150,7 +150,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         if not self.client:
             return
 
-        page_gets = [[], [], [], ['servo.voltage', 'servo.current'], ['rudder.angle']]
+        page_gets = [[], [], [], ['rudder.angle'], []]
         i = self.m_notebook.GetSelection()
         for name in page_gets[i]:
             self.client.get(name)
