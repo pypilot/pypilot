@@ -451,7 +451,7 @@ class Autopilot(object):
       # reset filters when autopilot is enabled
       reset = False
       if self.enabled.value != self.lastenabled:
-        self.lastenabled = ap.enabled.value
+        self.lastenabled = self.enabled.value
         if self.enabled.value:
           self.heading_error_int.set(0) # reset integral
           reset = True
