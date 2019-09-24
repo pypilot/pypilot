@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 import time, select
 from signalk.linebuffer import linebuffer
 
@@ -35,8 +36,8 @@ class LineBufferedNonBlockingSocket(object):
     def send(self, data):
         self.out_buffer += data
         if len(self.out_buffer) > 65536:
-            self.out_buffer = data
-            print('overflow in signalk socket', len(data))
+            print('overflow in signalk socket')
+            self.socket.close()
     
     def flush(self):
         if not self.out_buffer:
@@ -47,6 +48,9 @@ class LineBufferedNonBlockingSocket(object):
                     print('signalk socket failed to send', self.sendfail_cnt)
                     self.sendfail_msg *= 10
                 self.sendfail_cnt += 1
+
+                if self.sendfail_cnt > 100:
+                    self.socket.close()
                 return
             t0 = time.time()
             count = self.socket.send(self.out_buffer.encode())
@@ -59,7 +63,7 @@ class LineBufferedNonBlockingSocket(object):
                 self.socket.close()
             self.out_buffer = self.out_buffer[count:]
         except Exception as e:
-            print('exception', e)
+            print('signalk socket exception', e)
             self.socket.close()
 
 class LineBufferedNonBlockingSocketPython(object):
