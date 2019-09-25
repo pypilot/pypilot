@@ -295,8 +295,8 @@ class Servo(object):
         self.do_command(self.command.value)
 
     def do_position_command(self, position):
-        e = self.position.value - position
-        d = -self.speed.value * self.sensors.rudder.range.value
+        e = position - self.position.value
+        d = self.speed.value * self.sensors.rudder.range.value
 
         self.position.elp = .98*self.position.elp + .02*min(max(e, -30), 30)
         #self.position.dlp = .8*self.position.dlp + .2*d
@@ -614,9 +614,9 @@ class Servo(object):
             if angle: # note, this is ok here for both False and 0
                 if abs(angle) > self.sensors.rudder.range.value:
                     if angle > 0:
-                        flags |= ServoFlags.MIN_RUDDER
-                    else:
                         flags |= ServoFlags.MAX_RUDDER
+                    else:
+                        flags |= ServoFlags.MIN_RUDDER
 
             self.flags.update(flags)
 
@@ -632,6 +632,7 @@ class Servo(object):
             self.sensors.rudder.nonlinearity.set(self.driver.rudder_nonlinearity)
             self.sensors.rudder.offset.set(self.driver.rudder_offset)
             self.sensors.rudder.range.set(self.driver.rudder_range)
+            self.sensors.rudder.update_minmax()
             self.current.factor.set(self.driver.current_factor)
             self.current.offset.set(self.driver.current_offset)
             self.voltage.factor.set(self.driver.voltage_factor)

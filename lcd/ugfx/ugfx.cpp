@@ -652,7 +652,7 @@ public:
             }
         
         // write up to 64 bytes at a time
-        for (unsigned int pos=0; pos<size; pos += 64) {
+        for (int pos=0; pos<size; pos += 64) {
             int len = 64;
             if (size - pos < 64)
                 len = size - pos;

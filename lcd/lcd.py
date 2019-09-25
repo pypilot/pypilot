@@ -366,6 +366,7 @@ class LCDClient():
             def set_pilot(name):
                 def thunk():
                     self.client.set('ap.pilot', name)
+                    self.menu = self.menu.adam()
                     return self.display_menu
                 return thunk
                 
@@ -388,6 +389,9 @@ class LCDClient():
                             ret.append(name)
                     else:
                         ret.append(name)
+
+            ret.sort() # sort of get PID in order (reverse alphabet)
+            ret.reverse()
             return ret
         
         def gain():
@@ -472,14 +476,6 @@ class LCDClient():
                 return self.display_menu
 
             
-            def filter():
-                self.menu = LCDMenu(self, _('Filter'),
-                                    [value_edit(_('heading'), _('relative'), 'imu.heading_lowpass_constant'),
-                                     value_edit(_("heading'"), _('relative'), 'imu.headingraterate_lowpass_constant'),
-                                     value_edit(_("heading''"), _('relative'), 'imu.headingraterate_lowpass_constant')],
-                                    self.menu)
-                return self.display_menu
-
             def wifi():
                 self.wifi = True
                 if not self.wifi:
@@ -593,7 +589,6 @@ class LCDClient():
             self.menu = LCDMenu(self, _('Settings'),
                                 [(_('mode'), mode),
                                  (_('motor'), motor),
-#                                 (_('filter'), filter),
                                  (_('control'), control),
                                  (_('display'), display),
                                  (_('language'), language)],
