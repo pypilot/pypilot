@@ -369,7 +369,7 @@ class LCDClient():
                     return self.display_menu
                 return thunk
                 
-            self.menu = LCDMenu(self, _('Pilot'), map(lambda name : (name, set_pilot), self.value_list['ap.pilot']['choices']), self.menu)
+            self.menu = LCDMenu(self, _('Pilot'), map(lambda name : (name, set_pilot(name)), self.value_list['ap.pilot']['choices']), self.menu)
             index = 0
             for pilot in pilots:
                 if pilot == self.last_val('ap.pilot'):
@@ -464,7 +464,7 @@ class LCDClient():
 
             def motor():
                 self.menu = LCDMenu(self, _('Motor'),
-                                    [value_edit(_('min speed'), _('relative'), 'servo.speed,min'),
+                                    [value_edit(_('min speed'), _('relative'), 'servo.speed.min'),
                                      value_edit(_('max speed'), _('relative'), 'servo.speed.max'),
                                      value_edit(_('max current'), _('amps'), 'servo.max_current'),
                                      value_edit(_('period'), _('seconds'), 'servo.period')],
@@ -1315,7 +1315,7 @@ class LCDClient():
                 code = LIRC.nextcode(1)
                 if not code:
                     break
-                print('LIRC code', code) # tracking strange bug...
+                #print('LIRC code', code) # tracking strange bug...
                 sys.stdout.flush() # update log so timestamp is accurate
                 repeat = code[0]['repeat']
 
