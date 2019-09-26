@@ -2,11 +2,10 @@ This motor controller monitor receives commands over a serial port.
 
 
 It monitors voltage, current, temperature and fault pins, and
-outputs PWM to command an ESC.
+outputs PWM to command an ESC or drive gate drivers which drive an H-bridge.
 
-The ESC may need to be reprogrammed to have forward and reverse,
+If an esc is used, it may need to be reprogrammed to have forward and reverse,
 and brushed or brushless.
-
 
 Based on arduino nano.  The efuse byte should be set to enable the
 brown-out detector (BOD) not always enabled by default.  This is critical
