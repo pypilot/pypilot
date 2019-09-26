@@ -104,14 +104,15 @@ class ModeProperty(EnumProperty):
         super(ModeProperty, self).__init__(name, 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
 
       def set(self, value):
-        # update the last mode when the user changes the mode
-        # it should only revert to the last mode if the mode was lost
+        # update the preferred mode when the mode changes
         if self.ap:
-          if self.ap.enabled.value:
-            self.ap.lastmode = value
-          self.ap.lost_mode.update(False)
-          self.ap.switch_mode(value)
-        super(ModeProperty, self).set(value)    
+            self.ap.preferred_mode.update(value)
+        self.set_internal(value)
+
+      def set_internal(self, value):
+        if self.ap:
+            self.ap.switch_mode(value)
+        super(ModeProperty, self).set(value)
 
 class AutopilotPilot(object):
   def __init__(self, name, ap):
@@ -131,33 +132,20 @@ class AutopilotPilot(object):
                         'sensor': self.Register(SensorValue, name+'gain', timestamp),
                         'compute': compute}
 
-  def compute_heading(self):
+  def compute_heading(self):        
     ap = self.ap
     compass = ap.boatimu.SensorValues['heading_lowpass'].value
+
     if ap.mode.value == 'true wind':
-      # for true wind, we must have both wind and gps
-      if ap.sensors.wind.source.value == 'none':
-        ap.mode_lost('gps')
-      elif ap.sensors.gps.source.value == 'none':
-        ap.mode_lost('wind')
       true_wind = resolv(ap.true_wind_compass_offset.value - compass, 180)
       ap.heading.set(true_wind)
-          
-    if ap.mode.value == 'wind':
-      # if wind sensor drops out, switch to compass
-      if ap.sensors.wind.source.value == 'none':
-        ap.mode_lost('compass')
+    elif ap.mode.value == 'wind':
       wind = resolv(ap.wind_compass_offset.value - compass, 180)
       ap.heading.set(wind)
-
-    if ap.mode.value == 'gps':
-      # if gps drops out switch to compass
-      if ap.sensors.gps.source.value == 'none':
-        ap.mode_lost('compass')
+    elif ap.mode.value == 'gps':
       gps = resolv(compass + ap.gps_compass_offset.value, 180)
       ap.heading.set(gps)
-          
-    if ap.mode.value == 'compass':
+    elif ap.mode.value == 'compass':
       ap.heading.set(compass)
 
     
@@ -220,10 +208,9 @@ class Autopilot(object):
     self.enabled = self.Register(BooleanProperty, 'enabled', False)
     self.lastenabled = False
 
-    self.lost_mode = self.Register(BooleanValue, 'lost_mode', False)
+    self.preferred_mode = self.Register(Value, 'preferred_mode', 'compass')
     self.mode = self.Register(ModeProperty, 'mode')
     self.mode.ap = self
-    self.lastmode = False
 
     self.last_heading = False
     self.last_heading_off = self.boatimu.heading_off.value
@@ -305,26 +292,40 @@ class Autopilot(object):
     command -= mode_offsets[self.mode.value]
     command += mode_offsets[newmode]
     self.heading_command.set(command)
-          
-  def mode_lost(self, newmode):
-    self.mode.update(newmode)
-    self.lost_mode.update(True)
 
+  # old logic.. simpler than above?
   def mode_changed(self):
-    if self.lastmode: # keep same course in new mode
-      err = self.heading_error.value
-      if 'wind' in self.mode.value:
+    err = self.heading_error.value
+    if 'wind' in self.mode.value:
         err = -err
-    else:
-      err = 0 # no error if enabling
     self.heading_command.set(resolv(self.heading.value - err, 180))
 
-  def recover_mode_lost(self):
-      #switch back to the lost mode if possible
-      if self.lost_mode.value and self.lastmode in self.sensors.sensors and \
-         self.sensors.sensors[self.lastmode].source.value != 'none':
-        self.mode.set(self.lastmode)
-        self.lost_mode.set(False)
+  # return new mode if sensors don't support it
+  def best_mode(self, mode):
+      nowind = self.sensors.wind.source.value == 'none'
+      nogps = self.sensors.gps.source.value == 'none'
+
+      if mode == 'true wind':
+          # for true wind, we must no both wind and gps
+          if nowind:
+              mode = 'gps'
+          if nogps:
+              mode = 'wind'
+      if mode == 'wind':
+          # if wind sensor drops out, switch to compass
+          if nowind:
+              mode = 'compass'
+      elif mode == 'gps':
+          # if gps drops out switch to compass
+          if nogps:
+              mode = 'compass'
+      return mode
+
+  def adjust_mode(self):
+      # if the mode must change from last sensors
+      newmode = self.best_mode(self.preferred_mode.value)
+      if self.mode.value != newmode:
+          self.mode.set_internal(newmode)
 
   def compute_offsets(self):
       # compute difference between compass to gps and compass to wind
@@ -427,7 +428,7 @@ class Autopilot(object):
       # set autopilot timestamp
       self.server.TimeStamp('ap', time.time()-self.starttime)
 
-      self.recover_mode_lost()
+      self.adjust_mode()
       self.fix_compass_calibration_change()
       self.compute_offsets()
 
@@ -437,15 +438,12 @@ class Autopilot(object):
           pilot = p
 
       pilot.compute_heading()
-
+          
       if self.enabled.value:
-          if self.mode.value != self.lastmode: # mode changed?
-            self.process_mode_changed()
           self.runtime.update()
           self.servo.servo_calibration.stop()
       else:
           self.runtime.stop()
-          self.lastmode = False
       self.compute_heading_error()
 
       # reset filters when autopilot is enabled
@@ -462,7 +460,6 @@ class Autopilot(object):
 
       # servo can only disengage under manual control
       self.servo.force_engaged = self.enabled.value
-      self.lastmode = self.mode.value
 
       t1 = time.time()
       if t1-t0 > self.boatimu.period/2:
