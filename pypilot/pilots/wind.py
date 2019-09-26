@@ -73,7 +73,6 @@ class WindPilot(AutopilotPilot):
     # compensate compass relative to wind offset
     if self.ap.compass_change:
       self.compass_wind_offset.value += self.ap.compass_change
-
       
   def compute_heading(self):
     self.compute_offsets()
@@ -103,6 +102,20 @@ class WindPilot(AutopilotPilot):
 
     if mode == 'wind':
       ap.heading.set(wind)
+
+  def best_mode(self, mode):
+      sensors = self.ap.sensors
+      nocompass = self.sensors.boatimu.SensorValues['compass'] == False
+      nogps = sensors.gps.source.value == 'none'
+
+      if mode == 'compass':
+        if nocompass:
+          return 'wind'
+      else:
+        if nogps:
+          return 'wind'
+
+      return mode
       
   def process(self, reset):
     ap = self.ap
