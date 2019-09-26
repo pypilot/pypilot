@@ -21,17 +21,18 @@ class Rudder(Sensor):
         self.speed = self.Register(SensorValue, 'speed', timestamp)
         self.last = 0
         self.last_time = time.time()
-        self.offset = self.Register(Value, 'offset', -100, persistent=True)
-        self.scale = self.Register(Value, 'scale', 220, persistent=True)
+        self.offset = self.Register(Value, 'offset', 0, persistent=True)
+        self.scale = self.Register(Value, 'scale', 100, persistent=True)
         self.nonlinearity = self.Register(Value, 'nonlinearity',  0, persistent=True)
         self.calibration_state = self.Register(EnumProperty, 'calibration_state', 'idle', ['idle', 'reset', 'centered', 'starboard range', 'port range', 'auto gain'])
         self.calibration_raw = {}
         self.range = self.Register(RangeProperty, 'range',  45, 10, 100, persistent=True)
         self.lastrange = 0
-        self.minmax = 0, 1
+        self.minmax = -.5, .5
         self.autogain_state = 'idle'
         self.raw = 0
 
+    # calculate minimum and maximum raw rudder value in the range -0.5 to 0.5
     def update_minmax(self):        
         scale = self.scale.value
         offset = self.offset.value
@@ -59,8 +60,8 @@ class Rudder(Sensor):
     def calibration(self, command):
         if command == 'reset':
             self.nonlinearity.update(0.0)
-            self.scale.update(220.0)
-            self.offset.update(-100.0)
+            self.scale.update(100.0)
+            self.offset.update(0.0)
             self.update_minmax()
             self.calibration_raw = {}
             return
@@ -78,6 +79,7 @@ class Rudder(Sensor):
         # raw range 0 to 1
         self.calibration_raw[command] = {'raw': self.raw,
                                          'rudder': true_angle}
+        
         scale = self.scale.value
         offset = self.offset.value
         nonlinearity = self.nonlinearity.value
@@ -87,7 +89,7 @@ class Rudder(Sensor):
         for c in ['starboard range', 'centered', 'port range']:
             if c in self.calibration_raw:
                 p.append(self.calibration_raw[c])
-
+                
         l = len(p)
         # 1 point, estimate offset
         if l == 1:
@@ -113,8 +115,6 @@ class Rudder(Sensor):
                 scale = (rudder2 - rudder0)/(raw2 - raw0)
                 offset = rudder0 - scale*raw0
                 nonlinearity = (rudder1 - scale*raw1 - offset)/(raw0-raw1)/(raw2-raw1)
-                self.minmax = raw0, raw1
-                self.lastrange = 0 # force update minmax
             else:
                 print('bad rudder calibration', self.calibration_raw)
             

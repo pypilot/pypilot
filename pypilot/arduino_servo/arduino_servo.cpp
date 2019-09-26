@@ -126,7 +126,7 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
         if(value == 65535)
             rudder = NAN;
         else
-            rudder = (uint16_t)value / 65472.0; // nominal range of 0 to 1
+            rudder = (uint16_t)value / 65472.0 - 0.5; // nominal range of -0.5 to 0.5
 
         return RUDDER;
     case FLAGS_CODE:
@@ -274,8 +274,8 @@ bool ArduinoServo::fault()
 void ArduinoServo::params(double _raw_max_current, double _rudder_min, double _rudder_max, double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _rudder_nonlinearity, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_speed, double _max_speed, double _gain)
 {
     raw_max_current = fmin(60, fmax(0, _raw_max_current));
-    rudder_min = fmin(1, fmax(0, _rudder_min));
-    rudder_max = fmin(1, fmax(0, _rudder_max));
+    rudder_min = fmin(.5, fmax(-.5, _rudder_min));
+    rudder_max = fmin(.5, fmax(-.5, _rudder_max));
 
     max_current = fmin(60, fmax(0, _max_current));
     eeprom.set_max_current(max_current);
@@ -289,7 +289,7 @@ void ArduinoServo::params(double _raw_max_current, double _rudder_min, double _r
     rudder_range = fmin(120, fmax(0, _rudder_range));
     eeprom.set_rudder_range(rudder_range);
 
-    rudder_offset = fmin(1000, fmax(-1000, _rudder_offset));
+    rudder_offset = fmin(500, fmax(-500, _rudder_offset));
     eeprom.set_rudder_offset(rudder_offset);
 
     rudder_scale = fmin(4000, fmax(-4000, _rudder_scale));
@@ -374,10 +374,10 @@ void ArduinoServo::send_params()
                    ((int)round(rudder_max*255) & 0xff)); 
 */
         // instead use 16 bit rudder ranges
-        send_value(RUDDER_MIN_CODE, (int)round(rudder_min*65472));
+        send_value(RUDDER_MIN_CODE, (int)round((rudder_min+0.5)*65472));
         break;
     case 14:
-        send_value(RUDDER_MAX_CODE, (int)round(rudder_max*65472));
+        send_value(RUDDER_MAX_CODE, (int)round((rudder_max+0.5)*65472));
         break;
     case 18:
         send_value(MAX_SLEW_CODE,
