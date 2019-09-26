@@ -77,7 +77,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             ['imu.fusionQPose', 'imu.compass.calibration', 'imu.compass.calibration.age', 'imu.compass',
              'imu.compass.calibration.sigmapoints', 'imu.compass.calibration.locked'],
             ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity',
-             'rudder.range', 'rudder.calibration_state']]
+             'rudder.range', 'servo.flags']]
 
         watchlist.append(list(self.settings))
 
@@ -236,7 +236,9 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             elif name == 'rudder.nonlinearity':
                 self.UpdateLabel(self.stRudderNonlinearity, str(round3(value)))
             elif name == 'rudder.range':
-                self.UpdatedSpin(self.sRudderRange, value)        
+                self.UpdatedSpin(self.sRudderRange, value)
+            elif name == 'servo.flags':
+                self.stServoFlags.SetLabel(value)
 
         elif self.m_notebook.GetSelection() == 4:
             for n in self.settings:
