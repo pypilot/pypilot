@@ -175,7 +175,7 @@ uint8_t low_current = 1;
 uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 2
 
 #define port_fault_pin 7 // use pin 7 for optional fault
-#define rev_fault_pin 8 // use pin 7 for optional fault
+#define starboard_fault_pin 8 // use pin 7 for optional fault
 // if switches pull this pin low, the motor is disengaged
 // and will be noticed by the control program
 
@@ -1197,20 +1197,20 @@ void loop()
             
             if((pos && v < rudder_min) || (!pos && v > rudder_min)) {
                 stop_starboard();
-                flags |= MIN_RUDDER;
+                flags |= MIN_RUDDER_FAULT;
             } else
-                flags &= ~MIN_RUDDER;
+                flags &= ~MIN_RUDDER_FAULT;
             if((pos && v > rudder_max) || (!pos && v < rudder_max)) {
                 stop_port();
-                flags |= MAX_RUDDER;
+                flags |= MAX_RUDDER_FAULT;
             } else
-                flags &= ~MAX_RUDDER;
+                flags &= ~MAX_RUDDER_FAULT;
             if(v < 1024 || v > 65472 - 1024)
                 rudder_sense = 0;
         } else {
             if(v > 1536 && v < 65472 - 1536)
                 rudder_sense = 1;
-            flags &= ~(MIN_RUDDER | MAX_RUDDER);
+            flags &= ~(MIN_RUDDER_FAULT | MAX_RUDDER_FAULT);
         }
     }
 
