@@ -416,17 +416,21 @@ class Servo(object):
             position = self.position.value + speed*rudder_range/10 * dt
             self.position.set(min(max(position, -rudder_range), rudder_range))
 
-        if speed > 0:
-            cal = self.calibration.value['forward']
-        elif speed < 0:
-            cal = self.calibration.value['reverse']
-        else:
-            self.raw_command(0)
-            return
+        try:
+            if speed > 0:
+                cal = self.calibration.value['port']
+            elif speed < 0:
+                cal = self.calibration.value['starboard']
+            else:
+                self.raw_command(0)
+                return
 
-        command = cal[0] + abs(speed)*cal[1]
-        if speed < 0:
-            command = -command
+            command = cal[0] + abs(speed)*cal[1]
+            if speed < 0:
+                command = -command
+        except:
+            print ('servo calibration invalid', self.calibration.value)
+            self.calibration.set({'port': [.2, .8], 'starboard': [.2, .8]})            
 
         self.raw_command(command)
 
@@ -678,7 +682,7 @@ class Servo(object):
             self.calibration.set(json.loads(file.readline()))
         except:
             print('WARNING: using default servo calibration!!')
-            self.calibration.set({'forward': [.2, .8], 'reverse': [.2, .8]})
+            self.calibration.set(False)
 
     def save_calibration(self):
         file = open(Servo.calibration_filename, 'w')
