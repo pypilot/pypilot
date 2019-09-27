@@ -9,8 +9,11 @@ for module in os.listdir(os.path.dirname(__file__)):
         continue
     try:
         __import__('pilots.'+module[:-3], locals(), globals())
-    except Exception as e:
-        print('ERROR loading', module, e)
-    del module
+    except Exception as e1:
+        try:
+            __import__(module[:-3], locals(), globals())
+        except Exception as e2:
+            print('ERROR loading', module, e1, ', ', e2)
+            del module
 
 default += [simple.SimplePilot, basic.BasicPilot, learning.LearningPilot, wind.WindPilot, absolute.AbsolutePilot]
