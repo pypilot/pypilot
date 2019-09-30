@@ -127,6 +127,7 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
             rudder = NAN;
         else
             rudder = (uint16_t)value / 65472.0; // nominal range of 0 to 1
+
         return RUDDER;
     case FLAGS_CODE:
         flags = value;
@@ -363,16 +364,20 @@ void ArduinoServo::send_params()
         send_value(MAX_MOTOR_TEMP_CODE, eeprom.local.max_motor_temp);
         break;
     case 12:
-        // don't use 8 bit rudder range, for controllers supporting it,
-        // don't support negative rudder feedback scale factor (reverse polarity)
-        // so the rudder limit stops are handled only in python
-/*        send_value(RUDDER_RANGE_CODE,
+/*
+        // don't use 8 bit rudder range, for controllers supporting it
+        // because they don't support negative rudder feedback scale
+        // where min code is greater than max code, and the voltage is decreasing
+        // the rudder limit stops are handled in python already
+        send_value(RUDDER_RANGE_CODE,
                    ((int)round(rudder_min*255) & 0xff) << 8 |
-                   ((int)round(rudder_max*255) & 0xff)); */
-        send_value(RUDDER_MIN_CODE, (int)round(rudder_min*65535));
+                   ((int)round(rudder_max*255) & 0xff)); 
+*/
+        // instead use 16 bit rudder ranges
+        send_value(RUDDER_MIN_CODE, (int)round(rudder_min*65472));
         break;
     case 14:
-        send_value(RUDDER_MAX_CODE, (int)round(rudder_min*65535));
+        send_value(RUDDER_MAX_CODE, (int)round(rudder_max*65472));
         break;
     case 18:
         send_value(MAX_SLEW_CODE,

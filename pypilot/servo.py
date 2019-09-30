@@ -198,7 +198,7 @@ class Servo(object):
         self.speed_gain = self.Register(RangeProperty, 'speed_gain', 0, 0, 1)
         self.duty = self.Register(SensorValue, 'duty', timestamp)
 
-        self.faults = self.Register(ResettableValue, 'faults', 0)
+        self.faults = self.Register(ResettableValue, 'faults', 0, persistent=True)
 
         # power usage
         self.current_timestamp = time.time()
