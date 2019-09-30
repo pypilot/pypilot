@@ -93,15 +93,15 @@ void arduino_servo_eeprom::set_rudder_range(double rudder_range)
     local.rudder_range = round(rudder_range * 2); // from 0 to 120 in 0.5 increments
 }
 
-// store offset as s10.5 fixed point
+// store offset as s9.6 fixed point
 double arduino_servo_eeprom::get_rudder_offset()
 {
-    return frombase255s(arduino.rudder_offset)/32.0;
+    return frombase255s(arduino.rudder_offset)/64.0;
 }
 
 void arduino_servo_eeprom::set_rudder_offset(double rudder_offset)
 {
-    local.rudder_offset = tobase255s(round(rudder_offset * 32));
+    local.rudder_offset = tobase255s(round(rudder_offset * 64));
 }
 
 // store rudder scale s12.3 fixed point
