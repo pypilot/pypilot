@@ -206,7 +206,7 @@ uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 
 #define voltage_sense_pin 12
 uint8_t voltage_sense = 1;
 uint8_t voltage_mode = 0;  // 0 = 12 volts, 1 = 24 volts
-uint16_t max_voltage = 1800; // 18 volts max by default
+uint16_t max_voltage = 1600; // 16 volts max by default
 
 #define led_pin 13 // led is on when engaged
 
@@ -220,7 +220,7 @@ void debug(char *fmt, ... ){
     Serial.print(buf);
 }
 
-enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53};
+enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, RUDDER_MIN_CODE=0x2b, RUDDER_MAX_CODE=0x4d, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53};
 
 enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f, EEPROM_VALUE_CODE=0x9a};
 
@@ -298,7 +298,7 @@ uint16_t max_current = 2000; // 20 Amps
 uint16_t max_controller_temp= 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
 uint8_t max_slew_speed = 15, max_slew_slow = 35; // 200 is full power in 1/10th of a second
-uint8_t rudder_min = 0, rudder_max = 255;
+uint16_t rudder_min = 0, rudder_max = 65535;
 
 uint8_t eeprom_read_addr = 0;
 uint8_t eeprom_read_end = 0;
@@ -1007,9 +1007,17 @@ void process_packet()
             value = 10000;
         max_motor_temp = value;
         break;
+#if 0 // ignore obsolete rudder range code
     case RUDDER_RANGE_CODE:
-        rudder_max = in_bytes[1];
-        rudder_min = in_bytes[2];
+      rudder_max = in_bytes[1]<<8;
+      rudder_min = in_bytes[2]<<8;
+      break;
+#endif
+    case RUDDER_MIN_CODE:
+        rudder_min = value;
+        break;
+    case RUDDER_MAX_CODE:
+        rudder_max = value;
         break;
     case DISENGAGE_CODE:
         if(serialin < 12)
@@ -1124,7 +1132,11 @@ void loop()
       flags &= ~REV_FAULTPIN;
 
     // test current
-    const int react_count = 686; // need 686 readings for 0.1s reaction time
+#if DIV_CLOCK == 1
+    const int react_count = 600; // need 600 for .1 reaction
+#else
+    const int react_count = 300;
+#endif
     if(CountADC(CURRENT, 1) > react_count) {
         uint16_t amps = TakeAmps(1);
         if(amps >= max_current) {
@@ -1141,7 +1153,7 @@ void loop()
             voltage_mode = 1; // higher voltage
             digitalWrite(voltage_sense_pin, LOW);
             pinMode(voltage_sense_pin, OUTPUT);
-            max_voltage = 3600; // 36 v max in 24v mode
+            max_voltage = 3200; // 32 v max in 24v mode
             delay(2);
             TakeVolts(0); // clear readings
             TakeVolts(1);
@@ -1157,7 +1169,7 @@ void loop()
     flags |= faults;
 
     // test over temp
-    const int temp_react_count = 200;
+    const int temp_react_count = 50; // 1 second
     if(CountADC(CONTROLLER_TEMP, 1) > temp_react_count &&
        CountADC(MOTOR_TEMP, 1) > temp_react_count) {
         uint16_t controller_temp = TakeTemp(CONTROLLER_TEMP, 1);
@@ -1176,17 +1188,19 @@ void loop()
         }
     }
 
-    const int rudder_react_count = 160; // approx 0.2 second reaction
+    const int rudder_react_count = 40; // approx 0.1 second reaction
     if(CountADC(RUDDER, 1) > rudder_react_count) {
         uint16_t v = TakeRudder(1);
         if(rudder_sense) {
-            uint16_t w = v >> 8;
-            if(w < rudder_min) {
+            // if not positive, then rudder feedback has negative gain (reversed)
+            uint8_t pos = rudder_min < rudder_max;
+            
+            if((pos && v < rudder_min) || (!pos && v > rudder_min)) {
                 stop_rev();
                 flags |= MIN_RUDDER;
             } else
                 flags &= ~MIN_RUDDER;
-            if(w > rudder_max) {
+            if((pos && v > rudder_max) || (!pos && v < rudder_max)) {
                 stop_fwd();
                 flags |= MAX_RUDDER;
             } else
