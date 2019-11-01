@@ -28,7 +28,7 @@ def debug(*args):
         sys.stdout.write(' ')
     sys.stdout.write('\n')
 '''
-calibration_fit_period = 20  # run every 60 seconds
+calibration_fit_period = 20  # run every 20 seconds
 
 def FitLeastSq(beta0, f, zpoints, dimensions=1):
     try:
