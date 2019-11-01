@@ -449,7 +449,7 @@ class Autopilot(object):
 
       t1 = time.time()
       if t1-t0 > self.boatimu.period/2:
-          print('Autopilot routine is running too _slowly_', t1-t0, BoatIMU.period/2)
+          print('Autopilot routine is running too _slowly_', t1-t0, self.boatimu.period/2)
 
       self.servo.poll()
       t2 = time.time()
