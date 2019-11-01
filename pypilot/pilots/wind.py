@@ -51,7 +51,6 @@ class WindPilot(AutopilotPilot):
     PosGain('D',  .1, 1.0)   # derivative (gyro)
     PosGain('DD',  .05, 1.0)  # position root
 
-
   def compute_offsets(self):
     # compute the difference from wind to other headings
     wind = self.ap.wind_direction.value
