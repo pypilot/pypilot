@@ -26,7 +26,7 @@ class Shape(object):
     def draw(self):
         glEnableClientState(GL_VERTEX_ARRAY);
         glVertexPointer(3, GL_FLOAT, 0, self.array)
-        glDrawArrays(GL_LINE_STRIP, 0, len(self.array)/3)
+        glDrawArrays(GL_LINE_STRIP, 0, int(len(self.array)/3))
         glDisableClientState(GL_VERTEX_ARRAY);
 
 class Spherical(Shape):

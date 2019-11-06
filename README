@@ -8,7 +8,8 @@ lcdclient dependencies: python-pil
 webapp dependencies: python-flask python-gevent-websocket
 
 client dependencies (viewers control applications)
-python-wxgtk3.0 python-opengl  pyglet pywavefront
+apt: python-wxgtk3.0 python-opengl
+pip: pyglet pywavefront
 
 
 You may want to run pypilot as a service, see the scripts/debian directory
