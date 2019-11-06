@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ###########################################################################
-## Python code generated with wxFormBuilder (version Mar 28 2019)
+## Python code generated with wxFormBuilder (version Nov  2 2019)
 ## http://www.wxformbuilder.org/
 ##
 ## PLEASE DO *NOT* EDIT THIS FILE!
@@ -20,7 +20,7 @@ class AutopilotControlBase ( wx.Frame ):
 	def __init__( self, parent ):
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Autopilot Control", pos = wx.DefaultPosition, size = wx.Size( -1,400 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 
-		self.SetSizeHintsSz( wx.Size( -1,-1 ), wx.DefaultSize )
+#		self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
 
 		fgSizer5 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer5.AddGrowableCol( 0 )
@@ -231,7 +231,21 @@ class AutopilotControlBase ( wx.Frame ):
 		self.bClose.Bind( wx.EVT_BUTTON, self.onClose )
 
 	def __del__( self ):
-		pass
+		# Disconnect Events
+		self.tbAP.Unbind( wx.EVT_TOGGLEBUTTON, None )
+		self.bTack.Unbind( wx.EVT_BUTTON, None )
+		self.cPilot.Unbind( wx.EVT_CHOICE, None )
+		self.rbCompass.Unbind( wx.EVT_RADIOBUTTON, None )
+		self.rbGPS.Unbind( wx.EVT_RADIOBUTTON, None )
+		self.rbWind.Unbind( wx.EVT_RADIOBUTTON, None )
+		self.rbTrueWind.Unbind( wx.EVT_RADIOBUTTON, None )
+		self.sCommand.Unbind( wx.EVT_SCROLL, None )
+		self.sCommand.Unbind( wx.EVT_UPDATE_UI, None )
+		self.bCenter.Unbind( wx.EVT_BUTTON, None )
+		self.bScope.Unbind( wx.EVT_BUTTON, None )
+		self.bClient.Unbind( wx.EVT_BUTTON, None )
+		self.bCalibration.Unbind( wx.EVT_BUTTON, None )
+		self.bClose.Unbind( wx.EVT_BUTTON, None )
 
 
 	# Virtual event handlers, overide them in your derived class
@@ -281,7 +295,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 	def __init__( self, parent ):
 		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Calibration", pos = wx.DefaultPosition, size = wx.Size( 640,650 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
 
-		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
+#		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 
 		fgSizer7 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer7.AddGrowableCol( 0 )
@@ -786,7 +800,41 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.sRudderRange.Bind( wx.EVT_SPINCTRL, self.onRudderRange )
 
 	def __del__( self ):
-		pass
+		# Disconnect Events
+		self.m_notebook.Unbind( wx.EVT_NOTEBOOK_PAGE_CHANGED, None )
+		self.BoatPlot.Unbind( wx.EVT_KEY_DOWN, None )
+		self.BoatPlot.Unbind( wx.EVT_LEFT_DOWN, None )
+		self.BoatPlot.Unbind( wx.EVT_LEFT_UP, None )
+		self.BoatPlot.Unbind( wx.EVT_MOTION, None )
+		self.BoatPlot.Unbind( wx.EVT_PAINT, None )
+		self.BoatPlot.Unbind( wx.EVT_RIGHT_DOWN, None )
+		self.BoatPlot.Unbind( wx.EVT_RIGHT_UP, None )
+		self.BoatPlot.Unbind( wx.EVT_SIZE, None )
+		self.bReset.Unbind( wx.EVT_BUTTON, None )
+		self.bLevel.Unbind( wx.EVT_BUTTON, None )
+		self.sHeadingOffset.Unbind( wx.EVT_SPINCTRL, None )
+		self.bIMUScope.Unbind( wx.EVT_BUTTON, None )
+		self.AccelCalibration.Unbind( wx.EVT_KEY_DOWN, None )
+		self.AccelCalibration.Unbind( wx.EVT_LEFT_DOWN, None )
+		self.AccelCalibration.Unbind( wx.EVT_LEFT_UP, None )
+		self.AccelCalibration.Unbind( wx.EVT_MOTION, None )
+		self.AccelCalibration.Unbind( wx.EVT_PAINT, None )
+		self.AccelCalibration.Unbind( wx.EVT_SIZE, None )
+		self.m_button101.Unbind( wx.EVT_BUTTON, None )
+		self.cbAccelCalibrationLocked.Unbind( wx.EVT_CHECKBOX, None )
+		self.CompassCalibration.Unbind( wx.EVT_KEY_DOWN, None )
+		self.CompassCalibration.Unbind( wx.EVT_LEFT_DOWN, None )
+		self.CompassCalibration.Unbind( wx.EVT_LEFT_UP, None )
+		self.CompassCalibration.Unbind( wx.EVT_MOTION, None )
+		self.CompassCalibration.Unbind( wx.EVT_PAINT, None )
+		self.CompassCalibration.Unbind( wx.EVT_SIZE, None )
+		self.m_button10.Unbind( wx.EVT_BUTTON, None )
+		self.cbCompassCalibrationLocked.Unbind( wx.EVT_CHECKBOX, None )
+		self.m_button161.Unbind( wx.EVT_BUTTON, None )
+		self.m_button11.Unbind( wx.EVT_BUTTON, None )
+		self.m_button12.Unbind( wx.EVT_BUTTON, None )
+		self.m_button121.Unbind( wx.EVT_BUTTON, None )
+		self.sRudderRange.Unbind( wx.EVT_SPINCTRL, None )
 
 
 	# Virtual event handlers, overide them in your derived class

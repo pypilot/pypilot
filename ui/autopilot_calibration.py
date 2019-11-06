@@ -10,8 +10,9 @@
 from __future__ import print_function
 import tempfile, time, math, sys, subprocess, json, socket, os
 import wx, wx.glcanvas
-import autopilot_control_ui
-import calibration_plot, pypilot.quaternion, boatplot
+from ui import autopilot_control_ui
+from ui import calibration_plot, boatplot
+import pypilot.quaternion
 import signalk.scope_wx
 from signalk.client import SignalKClient, ConnectionLost
 from signalk.client_wx import round3
@@ -89,19 +90,19 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         pageindex = self.m_notebook.GetSelection()
         for name in watchlist[pageindex]:
             client.watch(name)
-        
+
     def on_con(self, client):
         values = client.list_values()
 
         if not self.settings:
-	    fgSettings = wx.FlexGridSizer( 0, 3, 0, 0 )
-	    fgSettings.AddGrowableCol( 1 )
-	    fgSettings.SetFlexibleDirection( wx.BOTH )
-	    fgSettings.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+            fgSettings = wx.FlexGridSizer( 0, 3, 0, 0 )
+            fgSettings.AddGrowableCol( 1 )
+            fgSettings.SetFlexibleDirection( wx.BOTH )
+            fgSettings.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-	    self.m_pSettings.SetSizer( fgSettings )
-	    self.m_pSettings.Layout()
-	    fgSettings.Fit( self.m_pSettings )
+            self.m_pSettings.SetSizer( fgSettings )
+            self.m_pSettings.Layout()
+            fgSettings.Fit( self.m_pSettings )
 
             lvalues = list(values)
             lvalues.sort()
@@ -125,7 +126,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                     proc()
             fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
             fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-	    b = wx.Button( self.m_pSettings, wx.ID_OK )
+            b = wx.Button( self.m_pSettings, wx.ID_OK )
             fgSettings.Add ( b, 1, wx.ALIGN_RIGHT, 5)
 
         self.set_watches(client)
