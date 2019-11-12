@@ -17,8 +17,9 @@ import os, sys
 import time, math, multiprocessing, select
 from signalk.pipeserver import NonBlockingPipe
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import autopilot
-from calibration_fit import IMUAutomaticCalibration
+import calibration_fit
 import vector
 import quaternion
 from signalk.server import SignalKServer
@@ -279,7 +280,7 @@ class BoatIMU(object):
     self.poller = select.poll()
     self.poller.register(self.imu_pipe, select.POLLIN)
 
-    self.auto_cal = IMUAutomaticCalibration(imu_cal_pipe[1], self.accel_calibration.value[0], self.compass_calibration.value[0])
+    self.auto_cal = calibration_fit.IMUAutomaticCalibration(imu_cal_pipe[1], self.accel_calibration.value[0], self.compass_calibration.value[0])
 
     self.lastqpose = False
     self.FirstTimeStamp = False

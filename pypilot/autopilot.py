@@ -15,20 +15,18 @@ import math
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 
-sys.path.append('.')
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import os.path
 from signalk.server import *
 from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 
-from version import strversion
 from boatimu import *
 from resolv import *
-import tacking
-
-from sensors import Sensors
-import servo
+import tacking, servo
+from pypilot.version import strversion
+from pypilot.sensors import Sensors
 
 def minmax(value, r):
     return min(max(value, -r), r)
