@@ -40,24 +40,6 @@ def compute_true_wind(gps_speed, wind_speed, wind_direction):
     #print 'truewind', truewind
     return truewind
 
-class TimedQueue(object):
-  def __init__(self, length):
-    self.data = []
-    self.length = length
-
-  def add(self, data):
-    t = time.time()
-    while self.data and self.data[0][1] < t-self.length:
-      self.data = self.data[1:]
-    self.data.append((data, t))
-
-  def take(self, t):
-    while self.data and self.data[0][1] < t:
-        self.data = self.data[1:]
-    if self.data:
-      return self.data[0][0]
-    return 0
-
 class Filter(object):
     def __init__(self,filtered, lowpass):
         self.filtered = filtered
@@ -231,7 +213,12 @@ class Autopilot(object):
 
     self.pilots = []
     for pilot_type in pilots.default:
-      self.pilots.append(pilot_type(self))
+        try:
+            self.pilots.append(pilot_type(self))
+        except Exception as e:
+            print('failed to load pilot', pilot_type, e)
+
+    print('Loaded Pilots:', map(lambda pilot : pilot.name, self.pilots))
 
     self.pilot = self.Register(EnumProperty, 'pilot', 'basic', ['simple', 'basic', 'learning', 'wind'], persistent=True)
 

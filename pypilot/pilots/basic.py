@@ -7,12 +7,28 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-try:
-  from autopilot import *
-except:
-  from pypilot.autopilot import *
+import sys
+sys.path.append('..')
+from autopilot import AutopilotPilot
+from signalk.values import *
 
-global default_pilots
+class TimedQueue(object):
+  def __init__(self, length):
+    self.data = []
+    self.length = length
+
+  def add(self, data):
+    t = time.time()
+    while self.data and self.data[0][1] < t-self.length:
+      self.data = self.data[1:]
+    self.data.append((data, t))
+
+  def take(self, t):
+    while self.data and self.data[0][1] < t:
+        self.data = self.data[1:]
+    if self.data:
+      return self.data[0][0]
+    return 0
 
 class BasicPilot(AutopilotPilot):
   def __init__(self, ap):
@@ -103,3 +119,5 @@ class BasicPilot(AutopilotPilot):
     
     if ap.enabled.value:
       ap.servo.command.set(command)
+
+pilot = BasicPilot

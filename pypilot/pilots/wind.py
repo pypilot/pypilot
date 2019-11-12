@@ -7,12 +7,10 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-try:
-  from autopilot import *
-except:
-  from pypilot.autopilot import *
-
-global default_pilots
+import sys
+sys.path.append('..')
+from autopilot import AutopilotPilot, HeadingOffset, AutopilotGain
+from signalk.values import *
 
 # the wind pilot does not require a compass, instead
 # mixing gyro with wind directly
@@ -147,3 +145,5 @@ class WindPilot(AutopilotPilot):
 
     if ap.enabled.value:
       ap.servo.command.set(command)
+
+pilot = WindPilot
