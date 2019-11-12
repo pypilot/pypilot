@@ -7,10 +7,9 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-try:
-  from autopilot import *
-except:
-  from pypilot.autopilot import *
+import sys
+sys.path.append('..')
+from autopilot import AutopilotPilot
 
 class SimplePilot(AutopilotPilot):
   def __init__(self, ap):
@@ -34,3 +33,5 @@ class SimplePilot(AutopilotPilot):
 
     if ap.enabled.value:
       ap.servo.command.set(command)
+
+pilot = SimplePilot

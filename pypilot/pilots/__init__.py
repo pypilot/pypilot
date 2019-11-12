@@ -4,16 +4,21 @@ from __future__ import print_function
 default = []
 
 import os
+
+import importlib
+
 for module in os.listdir(os.path.dirname(__file__)):
     if module == '__init__.py' or module[-3:] != '.py' or module.startswith('.'):
         continue
     try:
-        __import__('pilots.'+module[:-3], locals(), globals())
+        mod = importlib.import_module('pilots.'+module[:-3])
     except Exception as e1:
         try:
-            __import__(module[:-3], locals(), globals())
+            mod = importlib.import_module(module[:-3])
         except Exception as e2:
             print('ERROR loading', module, e1, ', ', e2)
-            del module
-
-default += [simple.SimplePilot, basic.BasicPilot, learning.LearningPilot, wind.WindPilot, absolute.AbsolutePilot]
+            continue
+    try:
+        default.append(mod.pilot)
+    except Exception:
+        print('pilot not defined in', module)
