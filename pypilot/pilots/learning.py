@@ -7,13 +7,12 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import tensorflow as tf
 from signalk.values import Value
 
-try:
-  from autopilot import *
-except:
-  from pypilot.autopilot import *
+import sys
+sys.path.append('..')
+from autopilot import AutopilotPilot, AutopilotGain
+from signalk.values import *
 
 class History(object):
   def __init__(self, samples):
@@ -31,6 +30,7 @@ class History(object):
     return self.data
 
 def BuildModal(samples):
+    import tensorflow as tf
     input = tf.keras.layers.Input(shape=(samples,2), name='input_layer')
     hidden = tf.keras.layers.Dense(64, activation='relu')(input)
     output = tf.keras.layers.Dense(1, activation='tanh')(hidden)
@@ -66,6 +66,7 @@ class LearningPilot(AutopilotPilot):
     timestamp = self.ap.server.TimeStamp('ap')
     self.dt = self.Register(SensorValue, 'dt', timestamp)
 
+    return
     # Build modal
     samples = 50 # 5 seconds
     self.history = History(samples)
@@ -89,3 +90,5 @@ class LearningPilot(AutopilotPilot):
     command = self.model.evaluate()
 
     ap.servo.command.set(command)
+
+pilot = LearningPilot
