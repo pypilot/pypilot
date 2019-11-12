@@ -10,7 +10,7 @@
 from __future__ import print_function
 from signalk.server import *
 from signalk.values import *
-from resolv import resolv
+from pypilot.resolv import resolv
 
 # favor lower priority sources
 source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'signalk' : 4, 'none' : 5}

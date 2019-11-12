@@ -76,7 +76,7 @@ class LearningPilot(AutopilotPilot):
       self.reset()
 
   def reset(self):
-    PreTrain(self.modal)
+    PreTrain(self.modal, 50)
 
   def process(self, reset):
     ap = self.ap

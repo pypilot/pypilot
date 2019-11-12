@@ -8,16 +8,11 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-import sys
-import math
-import time
-import vector
-from resolv import resolv
-from quaternion import *
-import multiprocessing
-from signalk.pipeserver import NonBlockingPipe
+import sys, time, multiprocessing, math, numpy
+import vector, resolv, quaternion
+resolv = resolv.resolv
 
-import numpy
+from signalk.pipeserver import NonBlockingPipe
 
 def debug(*args):
     pass

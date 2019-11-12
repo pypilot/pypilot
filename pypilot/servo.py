@@ -13,6 +13,7 @@ import time, json
 
 from signalk.server import SignalKServer
 from signalk.values import *
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import autopilot
 import select
 import serial
@@ -735,4 +736,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

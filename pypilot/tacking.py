@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from signalk.values import *
-from resolv import *
+from pypilot.resolv import *
 
 class TackSensorLog(object):
   def __init__(self, threshold):
