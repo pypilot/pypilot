@@ -66,10 +66,10 @@ class LearningPilot(AutopilotPilot):
     timestamp = self.ap.server.TimeStamp('ap')
     self.dt = self.Register(SensorValue, 'dt', timestamp)
 
-    return
     # Build modal
     samples = 50 # 5 seconds
     self.history = History(samples)
+    return
     self.modal = BuildModal(samples)
     try:
       self.modal.load_weights('~/.pypilot/learning_weights')
@@ -86,7 +86,7 @@ class LearningPilot(AutopilotPilot):
     D = ap.boatimu.SensorValues['headingrate_lowpass'].value
 
     self.history.put([P, D])
-      
+    return
     command = self.model.evaluate()
 
     ap.servo.command.set(command)

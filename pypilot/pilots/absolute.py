@@ -28,11 +28,11 @@ class AbsolutePilot(AutopilotPilot):
     self.Gain('D', .2, 0, 2)
     self.Gain('DD',  0, 0, 1) # rate of derivative
 
-  def process_imu_data(self):
+  def process(self, reset):
     ap = self.ap
 
-    if type(ap.sensors.rudder.value) == type(False):
-        ap.pilot.set('basic') # fall back to basic pilot if rudder feedback failes
+    if type(ap.sensors.rudder.angle.value) == type(False):
+        ap.pilot.set('basic') # fall back to basic pilot if rudder feedback fails
         return
     
     headingrate = ap.boatimu.SensorValues['headingrate'].value
