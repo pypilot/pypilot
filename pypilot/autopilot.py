@@ -216,9 +216,9 @@ class Autopilot(object):
         except Exception as e:
             print('failed to load pilot', pilot_type, e)
 
-    print('Loaded Pilots:', map(lambda pilot : pilot.name, self.pilots))
-
-    self.pilot = self.Register(EnumProperty, 'pilot', 'basic', ['simple', 'basic', 'learning', 'wind'], persistent=True)
+    pilot_names = map(lambda pilot : pilot.name, self.pilots)
+    print('Loaded Pilots:', pilot_names)
+    self.pilot = self.Register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True)
 
     timestamp = self.server.TimeStamp('ap')
     self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)
