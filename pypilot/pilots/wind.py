@@ -9,7 +9,7 @@
 
 import sys
 sys.path.append('..')
-from autopilot import AutopilotPilot, HeadingOffset, AutopilotGain
+from autopilot import AutopilotPilot, HeadingOffset, AutopilotGain, resolv
 from signalk.values import *
 
 # the wind pilot does not require a compass, instead
@@ -102,7 +102,7 @@ class WindPilot(AutopilotPilot):
 
   def best_mode(self, mode):
       sensors = self.ap.sensors
-      nocompass = self.sensors.boatimu.SensorValues['compass'] == False
+      nocompass = self.ap.boatimu.SensorValues['compass'] == False
       nogps = sensors.gps.source.value == 'none'
 
       if mode == 'compass':

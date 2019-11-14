@@ -9,7 +9,7 @@
 
 import sys
 sys.path.append('..')
-from autopilot import AutopilotPilot
+from autopilot import AutopilotPilot, resolv
 from signalk.values import *
 
 class TimedQueue(object):
