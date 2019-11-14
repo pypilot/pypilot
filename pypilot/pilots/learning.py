@@ -1,6 +1,7 @@
+
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -29,19 +30,52 @@ class History(object):
       self.data += [0]*len(self.data[0])
     return self.data
 
-def BuildModal(samples):
+samples=4
+def BuildModel(samples):
     import tensorflow as tf
-    input = tf.keras.layers.Input(shape=(samples,2), name='input_layer')
-    hidden = tf.keras.layers.Dense(64, activation='relu')(input)
-    output = tf.keras.layers.Dense(1, activation='tanh')(hidden)
+    input = tf.keras.layers.Input(shape=2*samples, name='input_layer')
+#    hidden = tf.keras.layers.Dense(16, activation='relu')(input)
+    output = tf.keras.layers.Dense(1, activation='tanh')(input)
     model = tf.keras.Model(inputs=input, outputs=output)
-    model.compile(optimizer='adam',
-                       loss='mean_squared_error',
-                       metrics=['accuracy'])
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
     return model
 
-def PreTrain(modal, samples):
-  modal.fit(x, y, epochs=5)
+import random
+import numpy as np
+def PreTrain(model):
+  train_x=[]
+  train_y=[]
+  for i in range(10000):
+    x = []
+    for j in range(samples):
+      p = (random.random()-.5)*10
+      d = (random.random()-.5)*2
+      x.append(p)
+      x.append(d)
+    y = x[0]*.05 + x[1]*.1
+    train_x.append(x)
+    train_y.append(y)
+
+  model.fit(train_x, train_y, epochs=4)
+  model.evaluate(train_x,  train_y, verbose=2)
+
+  test_x = []
+  for j in range(samples):
+      p = (random.random()-.5)*10
+      d = (random.random()-.5)*2
+      test_x.append(p)
+      test_x.append(d)
+
+  test_x = np.array([test_x])
+  print('testx', test_x)
+#  test_x = test_x.astype('float32')
+  y = model.predict(test_x)
+  print('result', y)
+
+model=  BuildModel(samples)
+PreTrain(model)
+
+exit(0)
 
 def TrainingProcess(queue):
   p = psutil.Process(os.getpid())
@@ -77,7 +111,7 @@ class LearningPilot(AutopilotPilot):
       self.reset()
 
   def reset(self):
-    PreTrain(self.modal, 50)
+    PreTrain(self.modal)
 
   def process(self, reset):
     ap = self.ap
