@@ -21,9 +21,9 @@ class Rudder(Sensor):
         self.speed = self.Register(SensorValue, 'speed', timestamp)
         self.last = 0
         self.last_time = time.time()
-        self.offset = self.Register(Value, 'offset', 0, persistent=True)
-        self.scale = self.Register(Value, 'scale', 100, persistent=True)
-        self.nonlinearity = self.Register(Value, 'nonlinearity',  0, persistent=True)
+        self.offset = self.Register(Value, 'offset', 0.0, persistent=True)
+        self.scale = self.Register(Value, 'scale', 100.0, persistent=True)
+        self.nonlinearity = self.Register(Value, 'nonlinearity',  0.0, persistent=True)
         self.calibration_state = self.Register(EnumProperty, 'calibration_state', 'idle', ['idle', 'reset', 'centered', 'starboard range', 'port range', 'auto gain'])
         self.calibration_raw = {}
         self.range = self.Register(RangeProperty, 'range',  45, 10, 100, persistent=True)
@@ -36,7 +36,7 @@ class Rudder(Sensor):
     def update_minmax(self):        
         scale = self.scale.value
         offset = self.offset.value
-        range = self.range.value
+        range = float(self.range.value)
         oldminmax = self.minmax
         self.minmax = (-range - offset)/scale, (range - offset)/scale
 
