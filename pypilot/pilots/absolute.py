@@ -7,12 +7,9 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-try:
-  from autopilot import *
-except:
-  from pypilot.autopilot import *
-
-global default_pilots
+import sys
+sys.path.append('..')
+from autopilot import AutopilotPilot
 
 # this pilot is an experiment to command the rudder
 # to an absolute position rather than relative speed
@@ -31,11 +28,11 @@ class AbsolutePilot(AutopilotPilot):
     self.Gain('D', .2, 0, 2)
     self.Gain('DD',  0, 0, 1) # rate of derivative
 
-  def process_imu_data(self):
+  def process(self, reset):
     ap = self.ap
 
-    if type(ap.sensors.rudder.value) == type(False):
-        ap.pilot.set('basic') # fall back to basic pilot if rudder feedback failes
+    if type(ap.sensors.rudder.angle.value) == type(False):
+        ap.pilot.set('basic') # fall back to basic pilot if rudder feedback fails
         return
     
     headingrate = ap.boatimu.SensorValues['headingrate'].value
@@ -49,3 +46,5 @@ class AbsolutePilot(AutopilotPilot):
 
     if ap.enabled.value:
         ap.servo.position_command.set(command)
+
+pilot = AbsolutePilot
