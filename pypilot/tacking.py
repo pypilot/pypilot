@@ -140,8 +140,7 @@ class Tack(object):
 
       mul = 1 if self.current_direction == 'port' else -1
       heading_command = ap.heading_command.value
-      current = mul*resolv(heading_command - ap.heading) / self.tack_angle
-
+      current = mul*resolv(heading_command - ap.heading.value) / self.tack_angle
       # if we reach the threshold, tacking is complete, set the heading command
       # to the new value
       if current > self.threshold.value:
