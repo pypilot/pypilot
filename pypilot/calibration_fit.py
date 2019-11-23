@@ -8,16 +8,11 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-import sys
-import math
-import time
-import vector
-from resolv import resolv
-from quaternion import *
-import multiprocessing
-from signalk.pipeserver import NonBlockingPipe
+import sys, time, multiprocessing, math, numpy
+import vector, resolv, quaternion
+resolv = resolv.resolv
 
-import numpy
+from signalk.pipeserver import NonBlockingPipe
 
 def debug(*args):
     pass
@@ -28,7 +23,7 @@ def debug(*args):
         sys.stdout.write(' ')
     sys.stdout.write('\n')
 '''
-calibration_fit_period = 20  # run every 60 seconds
+calibration_fit_period = 20  # run every 20 seconds
 
 def FitLeastSq(beta0, f, zpoints, dimensions=1):
     try:

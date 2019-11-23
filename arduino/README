@@ -1,3 +1,8 @@
+To compile and upload arduino sketches:
+
+sudo apt install arduino
+
+
 pypilot can communicate with arduinos over serial port
 
 motor - motor controller   binary checksum 4 byte protocol (38400 baud)

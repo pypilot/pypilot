@@ -1,6 +1,7 @@
+
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2019 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -9,107 +10,88 @@
 
 from signalk.values import Value
 
-try:
-  from autopilot import *
-except:
-  from pypilot.autopilot import *
+import sys
+sys.path.append('..')
+from autopilot import AutopilotPilot, AutopilotGain
+from signalk.values import *
 
-def FindOffset(queue):
-  mindt = 0
-  minresidual = 1e10
-  for di in range(len(queue)/5):
-    for i in range(len(queue)):
-      j = i + di
-      if j >= len(queue):
-        continue
+class History(object):
+  def __init__(self, samples):
+    self.samples = samples
+    self.data = []
 
-      x, y = queue.data[j][0]
-      ys.append(y)
-      xs.append(x)
+  def put(self, data):
+    self.data = (data+self.data)[:self.samples]
 
-    a, b = numpy.polyfit(xs, ys)
-    residual = 0
-    n = len(xs)
-    for i in range(n):
-      x = xs[i]
-      y = ys[i]
-      d = (x*a + b) - y
-      residual += d*d # squared
-    residual /= n
+  def get(self):
+    if not self.data:
+      return False
+    while (len(self.data) < self.samples):
+      self.data += [0]*len(self.data[0])
+    return self.data
+
+samples=4
+def BuildModel(samples):
+    import tensorflow as tf
+    input = tf.keras.layers.Input(shape=2*samples, name='input_layer')
+#    hidden = tf.keras.layers.Dense(16, activation='relu')(input)
+    output = tf.keras.layers.Dense(1, activation='tanh')(input)
+    model = tf.keras.Model(inputs=input, outputs=output)
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+    return model
+
+import random
+import numpy as np
+def PreTrain(model):
+  train_x=[]
+  train_y=[]
+  for i in range(10000):
+    x = []
+    for j in range(samples):
+      p = (random.random()-.5)*10
+      d = (random.random()-.5)*2
+      x.append(p)
+      x.append(d)
+    y = x[0]*.05 + x[1]*.1
+    train_x.append(x)
+    train_y.append(y)
+
+  model.fit(train_x, train_y, epochs=4)
+  model.evaluate(train_x,  train_y, verbose=2)
+
+  test_x = []
+  for j in range(samples):
+      p = (random.random()-.5)*10
+      d = (random.random()-.5)*2
+      test_x.append(p)
+      test_x.append(d)
+
+  test_x = np.array([test_x])
+  print('testx', test_x)
+#  test_x = test_x.astype('float32')
+  y = model.predict(test_x)
+  print('result', y)
+
+model=  BuildModel(samples)
+PreTrain(model)
+
+exit(0)
+
+def TrainingProcess(queue):
+  p = psutil.Process(os.getpid())
+  while True:
+    # find cpu usage of training process
+    if p.cpu_percent() > 50:
+      print('learning cpu very high')
     
-    if residual < minresidual:
-      minresidual = residual
-      mindt = queue.data[j][0][1] - queue.data[i][0][1]
-  return mindt
-
-'''
-class DiffTable(Value):
-  def __init__(self):
-    super(Value, self).__init__('learning', False)
-    
-  def set(self, value):
-    if value and self.value:
-      diff = self.diff(value)
-      self.value = value
-      if diff:
-        self.send('{"' + self.name + '": {"diff": "' + diff + '"}}')
-        return
-    else:
-      self.value = value
-    self.send()
-
-  def diff(self, value):
-    for
-    '''
-
-class GainTable(Value):
-  prange = 10, 1
-  drange = 10, 1
-  def __init__(self, name):
-    super(GainTable, self).__init__(name, "False")
-    
-    self.value = []
-    P = .001
-    D = .03
-    for a in range(int(2*GainTable.prange[0]/GainTable.prange[1]+1)):
-      p = a*GainTable.prange[1]-GainTable.prange[0]
-      row = []
-      for b in range(int(2*GainTable.drange[0]/GainTable.drange[1]+1)):
-        d = b*GainTable.drange[1]-GainTable.drange[0]
-        row.append(p*P + d*D)
-      self.value.append(row)
-    #print 'value', self.value
-
-  def type(self):
-    return 'GainTable'
-    
-  def indexof(self, p, d):
-    p = min(prange[0], max(-prange[0], p))
-    d = min(drange[0], max(-drange[0], d))
-
-    a = (p+prange[0])/prange[1]
-    b = (d+drange[0])/drange[1]
-    return a, b
-      
-  def gain(self, p, d):
-    a, b = indexof(p, d)
-    return self.value[a][b]
-
-  def update(self, p, d, error):
-    a, b = indexof(p, d)
-    gain = self.value[a][b] + error
-    self.value[a][b] = min(1, max(-1, gain))
-    self.update(self.value)
-
+    # train model from error
+    time.sleep(.1)
+  
 class LearningPilot(AutopilotPilot):
   def __init__(self, ap):
     super(LearningPilot, self).__init__('learning', ap)
     # create filters
     timestamp = self.ap.server.TimeStamp('ap')
-
-    self.heading_command_rate = self.Register(SensorValue, 'heading_command_rate', timestamp)
-
-    timing_queue = TimedQueue(10)
 
     # create simple pid filter
     self.P = self.Register(AutopilotGain, 'P', .001, .0001, .01)
@@ -118,37 +100,29 @@ class LearningPilot(AutopilotPilot):
     timestamp = self.ap.server.TimeStamp('ap')
     self.dt = self.Register(SensorValue, 'dt', timestamp)
 
-    self.GainTable = self.Register(GainTable, 'GainTable')
+    # Build modal
+    samples = 50 # 5 seconds
+    self.history = History(samples)
+    return
+    self.modal = BuildModal(samples)
+    try:
+      self.modal.load_weights('~/.pypilot/learning_weights')
+    except:
+      self.reset()
 
-    self.lastenabled = False
+  def reset(self):
+    PreTrain(self.modal)
 
   def process(self, reset):
-    return
     ap = self.ap
-    if ap.enabled.value != self.lastenabled:
-      self.lastenabled = ap.enabled.value
-      if ap.enabled.value:
-        ap.heading_error_int.set(0) # reset integral
-        
-    # if disabled, we are done
-    if not ap.enabled.value:
-      return
-    
-    # filter the heading command to compute feed-forward gain
-    heading_error = ap.heading_error.value,
-    headingrate = ap.boatimu.SensorValues['headingrate'].value
-    headingraterate = ap.boatimu.SensorValues['headingraterate'].value
 
-    timing_queue.add((headingraterate, command, heading_error, headingrate))
-    command = self.GainTable.gain(heading_error, headingrate)
+    P = ap.heading_error.value
+    D = ap.boatimu.SensorValues['headingrate_lowpass'].value
 
-    dt = FindOffset(timing_queue)
-    self.dt.set(dt) 
-    if dt:
-      val = timing_queue.take(dt)
-      if val:
-        dd, c, p, d = val
-        error = self.P.value*p + self.D.value*d
-        self.GainTable.update(p, d, error)
+    self.history.put([P, D])
+    return
+    command = self.model.evaluate()
 
     ap.servo.command.set(command)
+
+pilot = LearningPilot

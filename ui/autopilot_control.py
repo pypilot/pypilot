@@ -9,7 +9,7 @@
 
 from __future__ import print_function
 import wx, sys, subprocess, socket, os, time
-import autopilot_control_ui
+from ui import autopilot_control_ui
 from signalk.client import *
 
 class AutopilotControl(autopilot_control_ui.AutopilotControlBase):

@@ -7,12 +7,10 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-try:
-  from autopilot import *
-except:
-  from pypilot.autopilot import *
-
-global default_pilots
+import sys
+sys.path.append('..')
+from autopilot import AutopilotPilot, HeadingOffset, AutopilotGain, resolv
+from signalk.values import *
 
 # the wind pilot does not require a compass, instead
 # mixing gyro with wind directly
@@ -50,7 +48,6 @@ class WindPilot(AutopilotPilot):
     PosGain('I', 0, .1)      # integral
     PosGain('D',  .1, 1.0)   # derivative (gyro)
     PosGain('DD',  .05, 1.0)  # position root
-
 
   def compute_offsets(self):
     # compute the difference from wind to other headings
@@ -105,7 +102,7 @@ class WindPilot(AutopilotPilot):
 
   def best_mode(self, mode):
       sensors = self.ap.sensors
-      nocompass = self.sensors.boatimu.SensorValues['compass'] == False
+      nocompass = self.ap.boatimu.SensorValues['compass'] == False
       nogps = sensors.gps.source.value == 'none'
 
       if mode == 'compass':
@@ -148,3 +145,5 @@ class WindPilot(AutopilotPilot):
 
     if ap.enabled.value:
       ap.servo.command.set(command)
+
+pilot = WindPilot

@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from signalk.values import *
-from resolv import *
+from pypilot.resolv import *
 
 class TackSensorLog(object):
   def __init__(self, threshold):
@@ -139,13 +139,14 @@ class Tack(object):
       ap.servo.do_command(command)
 
       mul = 1 if self.current_direction == 'port' else -1
-      current = mul*resolv(ap.command.value - ap.heading) / self.tack_angle
+      heading_command = ap.heading_command.value
+      current = mul*resolv(heading_command - ap.heading) / self.tack_angle
 
       # if we reach the threshold, tacking is complete, set the heading command
       # to the new value
       if current > self.threshold.value:
-        command = ap.command - mul*tack_angle
-        ap.command.set(resolv(command, 180))
+        heading_command -= mul*tack_angle
+        ap.command.set(resolv(heading_command, 180))
         self.state.set('none')
 
     return self.state.value == 'tacking'

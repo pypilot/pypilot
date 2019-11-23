@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-import select, socket, time
+import select, socket, time, numbers
 import signalk.kjson
 import fcntl, os
 from signalk.values import *
@@ -96,7 +96,10 @@ class SignalKServer(object):
     def Register(self, value):
         if value.persistent and value.name in self.persistent_data:
             #value.value = self.persistent_data[value.name]
-            value.set(self.persistent_data[value.name])
+            v = self.persistent_data[value.name]
+            if isinstance(v, numbers.Number):
+                v = float(v) # convert any numeric to floating point
+            value.set(v)
             #print('persist', value.name, ' = ', value.value)
 
         if value.name in self.values:

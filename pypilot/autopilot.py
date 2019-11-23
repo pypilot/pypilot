@@ -15,20 +15,18 @@ import math
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 
-sys.path.append('.')
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import os.path
 from signalk.server import *
 from signalk.pipeserver import SignalKPipeServer
 from signalk.values import *
 
-from version import strversion
 from boatimu import *
 from resolv import *
-import tacking
-
-from sensors import Sensors
-import servo
+import tacking, servo
+from pypilot.version import strversion
+from pypilot.sensors import Sensors
 
 def minmax(value, r):
     return min(max(value, -r), r)
@@ -39,24 +37,6 @@ def compute_true_wind(gps_speed, wind_speed, wind_direction):
     truewind = math.degrees(math.atan2(windv[0], windv[1] - gps_speed))
     #print 'truewind', truewind
     return truewind
-
-class TimedQueue(object):
-  def __init__(self, length):
-    self.data = []
-    self.length = length
-
-  def add(self, data):
-    t = time.time()
-    while self.data and self.data[0][1] < t-self.length:
-      self.data = self.data[1:]
-    self.data.append((data, t))
-
-  def take(self, t):
-    while self.data and self.data[0][1] < t:
-        self.data = self.data[1:]
-    if self.data:
-      return self.data[0][0]
-    return 0
 
 class Filter(object):
     def __init__(self,filtered, lowpass):
@@ -231,9 +211,14 @@ class Autopilot(object):
 
     self.pilots = []
     for pilot_type in pilots.default:
-      self.pilots.append(pilot_type(self))
+        try:
+            self.pilots.append(pilot_type(self))
+        except Exception as e:
+            print('failed to load pilot', pilot_type, e)
 
-    self.pilot = self.Register(EnumProperty, 'pilot', 'basic', ['simple', 'basic', 'learning', 'wind'], persistent=True)
+    pilot_names = map(lambda pilot : pilot.name, self.pilots)
+    print('Loaded Pilots:', pilot_names)
+    self.pilot = self.Register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True)
 
     timestamp = self.server.TimeStamp('ap')
     self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)
@@ -449,7 +434,7 @@ class Autopilot(object):
 
       t1 = time.time()
       if t1-t0 > self.boatimu.period/2:
-          print('Autopilot routine is running too _slowly_', t1-t0, BoatIMU.period/2)
+          print('Autopilot routine is running too _slowly_', t1-t0, self.boatimu.period/2)
 
       self.servo.poll()
       t2 = time.time()
