@@ -110,8 +110,8 @@ class ServoFlags(Value):
             ret += 'SYNC '
         if self.value & self.OVERTEMP_FAULT:
             ret += 'OVERTEMP_FAULT '
-        if self.value & self.OVERCURRENT:
-            ret += 'OVERCURRENT '
+        if self.value & self.OVERCURRENT_FAULT:
+            ret += 'OVERCURRENT_FAULT '
         if self.value & self.ENGAGED:
             ret += 'ENGAGED '
         if self.value & self.INVALID:
@@ -651,7 +651,7 @@ class Servo(object):
             
             # if overcurrent then fault in the direction traveled
             # this prevents moving further in this direction
-            if self.flags.value & ServoFlags.OVERCURRENT:
+            if self.flags.value & ServoFlags.OVERCURRENT_FAULT:
                 if self.lastdir > 0:
                     self.flags.port_fault()                    
                 elif self.lastdir < 0:
