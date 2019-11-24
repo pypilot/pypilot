@@ -70,8 +70,7 @@ class WindPilot(AutopilotPilot):
       rd = math.radians(wind_direction)
       windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
       true_wind = math.degrees(math.atan2(windv[0], windv[1] - gps_speed))
-      ap = self.ap
-      offset = resolv(true_wind - wind, ap.true_wind_compass_offset.value)
+      offset = resolv(true_wind - wind, self.true_wind_wind_offset.value)
       d = .05
       self.true_wind_wind_offset.update(offset, d)
 
@@ -140,8 +139,6 @@ class WindPilot(AutopilotPilot):
         return
 
     # compute command
-    wind = ap.wind_direction.value
-        
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
     gain_values = {'P': self.heading_error.value,
