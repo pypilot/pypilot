@@ -245,7 +245,14 @@ def probe(name, bauds, timeout=5):
     serial_device = device, bauds[0]
 
     try:
-        import serial
+        try:
+            import serial
+            serial.Serial
+        except Exception as e:
+            print('No serial.Serial available')
+            print('pip3 uninstall serial')
+            print('pip3 install pyserial')
+            exit(1)
         serial.Serial(*serial_device)
     except serial.serialutil.SerialException as err:
         arg = err.args[0]
