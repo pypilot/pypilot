@@ -12,8 +12,11 @@ sys.path.append('..')
 from autopilot import AutopilotPilot, HeadingOffset, AutopilotGain, resolv
 from signalk.values import *
 
-# the wind pilot does not require a compass, instead
-# mixing gyro with wind directly
+# the wind pilot does not require a compass but does require a wind sensor.
+# it does not rely on the compass or calibration (unless in compass mode)
+# and is not affected by magnetic changes.   Even in compass mode this pilot
+# will follow wind shifts and only hold the general compass course
+
 class WindPilot(AutopilotPilot):
   def __init__(self, ap):
     super(WindPilot, self).__init__('wind', ap)
