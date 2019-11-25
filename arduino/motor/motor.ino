@@ -984,7 +984,7 @@ void process_packet()
             // no forward command if port fault
         else if((flags & (STARBOARD_PIN_FAULT | MIN_RUDDER_FAULT)) && value < 1000)
             stop();
-            // no starboarderse command if port fault
+            // no starboard command if port fault
         else {
             command_value = value;
             engage();
@@ -1192,7 +1192,7 @@ void loop()
     if(CountADC(RUDDER, 1) > rudder_react_count) {
         uint16_t v = TakeRudder(1);
         if(rudder_sense) {
-            // if not positive, then rudder feedback has negative gain (starboardersed)
+            // if not positive, then rudder feedback has negative gain (reversed)
             uint8_t pos = rudder_min < rudder_max;
             
             if((pos && v < rudder_min) || (!pos && v > rudder_min)) {
