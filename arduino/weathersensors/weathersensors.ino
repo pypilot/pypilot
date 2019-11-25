@@ -40,9 +40,9 @@ extern "C" {
 #define ANEMOMETER   // comment to show only baro graph
 
 #define LCD          // if nokia5110 lcd on spi port
-//#define DAVIS     // uncomment only for davis sensors
+#define DAVIS     // uncomment only for davis sensors
 #define LCD_BL_HIGH  // if backlight pin is high rather than gnd
-#define FARENHEIT  // farenheit temperature on lcd display
+//#define FARENHEIT  // farenheit temperature on lcd display
 
 
 
