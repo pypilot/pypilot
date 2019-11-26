@@ -33,7 +33,7 @@ class BoatPlot():
         # looking at boat from nice angle
         self.Q = [-0.32060682, -0.32075041, 0.73081691, -0.51013437]
         #self.Q = [1, 0, 0, 0]
-        self.Scale = 2
+        self.Scale = 3
         self.compasstex = 0
         self.obj = False
         self.texture_compass = True
