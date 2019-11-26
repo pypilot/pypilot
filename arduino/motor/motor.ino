@@ -16,10 +16,13 @@
 #include <util/delay.h>
 
 /*
-This program is meant to interface with pwm based
-motor controller either brushless or brushed, or a regular RC servo
+This program talks to a motor driver.  Several kinds are supported.
+ - pwm based ESCs, either brushless or brushed
+ - regular RC servo
+ - vnh2sp30
+ - others coming
 
-You may need to modify the source code to support different hardware
+You can modify the source code to support new drivers.
 
 adc pin0 is a resistor divider to measure voltage
              allowing up to 20 volts (10k and 560 ohm, 1.1 volt reference)
@@ -39,14 +42,12 @@ D4  D5
  1   0        .0005 ohm x 50 gain
  0   0        .0005 ohm x 200 gain   *ratiometric mode
 
+For the H bridge, digital pins 2 and 3 are for the low side, 
+pins 9 and 10 are for the high side.
 
-digital pin6 determines:
-1 - RC pwm:
-   digital pin9 pwm output standard ESC (1-2 ms pulse every 20 ms)
-           pin2 esc programming input/output (with arduinousblinker script)
-0 - Hbridge
-   digital pin2 and pin3 for low side, pin9 and pin10 for high side
-
+For RC servo PWM, digital pin 9 is standard 1-2 ms pulse every 20 ms
+PWM output for ESC, pin 2 is for ESC programming input/output
+(with arduinousblinker script)
 
 optional:digital pin7 forward fault for optional switch to stop forward travel
 digital pin8 reverse fault for optional switch to stop reverse travel
@@ -114,12 +115,36 @@ PWR+             VIN
 */
 
 
+#define DRIVER_NOT_SET 0
+#define DRIVER_HBRIDGE 1
+#define DRIVER_RC_PWM 2
+#define DRIVER_VNH2SP30 3
+#define DRIVER_NEW 4
 
-//#define VNH2SP30 // defined if this board is used
-//#define DISABLE_TEMP_SENSE    // if no temp sensors avoid errors
-//#define DISABLE_VOLTAGE_SENSE // if no voltage sense
-//#define DISABLE_RUDDER_SENSE  // if no rudder sense
+// You need to change this to the kind of driver you have.
+#define DRIVER DRIVER_NOT_SET
 
+#if !DRIVER
+#  error You need to set the driver type above
+#endif
+
+#undef DISABLE_TEMP_SENSE    // has temp sensors
+#undef DISABLE_CURRENT_SENSE // has current sense
+#undef DISABLE_VOLTAGE_SENSE // has voltage sense
+#undef DISABLE_RUDDER_SENSE  // has rudder sense
+
+#if DRIVER==DRIVER_HBRIDGE
+// Add stuff here if needed
+#endif
+
+#if DRIVER==DRIVER_RC_PWM
+// Add stuff here if needed
+#endif
+
+#if DRIVER==DRIVER_VNH2SP30
+// Add stuff here if needed
+#  define DISABLE_CURRENT_SENSE // has no current sense, fake the current reading
+#endif
 
 // run at 4mhz instead of 16mhz to save power,
 // and somehow at slower clock atmega328 is able to measure lower current from the shunt
@@ -170,10 +195,6 @@ uint8_t low_current = 1;
 
 #define ratiometric_mode (!shunt_resistance && !low_current)
 
-#define pwm_style_pin 6
-// pwm style, 0 = hbridge, 1 = rc pwm, 2 = vnh2sp30
-uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 2
-
 #define port_fault_pin 7 // use pin 7 for optional fault
 #define starboard_fault_pin 8 // use pin 7 for optional fault
 // if switches pull this pin low, the motor is disengaged
@@ -185,15 +206,19 @@ uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 
 #define hbridge_b_bottom_pin 3
 #define hbridge_a_top_pin 9
 #define hbridge_b_top_pin 10
-#define enable_pin 10 // for vnh2sp30
+#if DRIVER==DRIVER_VNH2SP30
+#  define enable_pin 10
+#else
+#  undef enable_pin
+#endif
 
 // for direct mosfet mode, define how to turn on/off mosfets
 // do not use digitalWrite!
-#define a_top_on  PORTB |= _BV(PB1)
+#define a_top_on PORTB |= _BV(PB1)
 #define a_top_off PORTB &= ~_BV(PB1)
 #define a_bottom_on PORTD |= _BV(PD2)
 #define a_bottom_off PORTD &= ~_BV(PD2)
-#define b_top_on  PORTB |= _BV(PB2)
+#define b_top_on PORTB |= _BV(PB2)
 #define b_top_off PORTB &= ~_BV(PB2)
 #define b_bottom_on PORTD |= _BV(PD3)
 #define b_bottom_off PORTD &= ~_BV(PD3)
@@ -348,7 +373,6 @@ void setup()
 
     pinMode(shunt_sense_pin, INPUT_PULLUP);
     pinMode(low_current_pin, INPUT_PULLUP);
-    pinMode(pwm_style_pin, INPUT_PULLUP);
     pinMode(clutch_pin, INPUT_PULLUP);
     pinMode(voltage_sense_pin, INPUT_PULLUP);
 
@@ -376,9 +400,6 @@ void setup()
     pinMode(starboard_fault_pin, INPUT);
     digitalWrite(starboard_fault_pin, HIGH); /* enable internal pullups */
 
-    pinMode(pwm_style_pin, INPUT);
-    digitalWrite(pwm_style_pin, HIGH); /* enable internal pullups */
-
     pinMode(shunt_sense_pin, INPUT);
     digitalWrite(shunt_sense_pin, HIGH); /* enable internal pullups */
 
@@ -387,14 +408,6 @@ void setup()
 
     _delay_us(100); // time to settle
 
-    // test output type, pwm or h-bridge
-#ifndef VNH2SP30
-    pwm_style = digitalRead(pwm_style_pin);
-#endif
-    if(pwm_style) {
-        digitalWrite(pwm_output_pin, LOW); /* enable internal pullups */
-        pinMode(pwm_output_pin, OUTPUT);
-    }
     // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
     shunt_resistance = digitalRead(shunt_sense_pin);
     //shunt_resistance = 0;  // for test board which doesn't have pin grounded
@@ -402,13 +415,16 @@ void setup()
     // test current
     low_current = digitalRead(low_current_pin);
 
-#if 1
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
-    if(pwm_style == 2 || ratiometric_mode)
+#if DRIVER==DRIVER_VNH2SP30
+        adcref = _BV(REFS0); // 5v
+#else
+    if(ratiometric_mode)
         adcref = _BV(REFS0); // 5v
     else
         adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
+#endif
     ADMUX = adcref | _BV(MUX0);
     ADCSRA = _BV(ADEN) | _BV(ADIE); // enable adc with interrupts
 #if DIV_CLOCK==4
@@ -418,7 +434,6 @@ void setup()
     ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
 #endif
     ADCSRA |= _BV(ADSC); // start conversion
-#endif    
 }
 
 uint8_t in_bytes[3];
@@ -432,14 +447,20 @@ uint8_t rudder_sense = 0;
 
 // command is from 0 to 2000 with 1000 being neutral
 uint16_t lastpos = 1000;
+
+#if DRIVER==DRIVER_RC_PWM
 void position(uint16_t value)
 {
     lastpos = value;
-    if(pwm_style == 1)
 //        OCR1A = 1200/DIV_CLOCK + value * 6 / 5 / DIV_CLOCK;
         OCR1A = 1500/DIV_CLOCK + value * 3 / 2 / DIV_CLOCK;
     //OCR1A = 1350/DIV_CLOCK + value * 27 / 20 / DIV_CLOCK;
-    else if(pwm_style == 2) {
+}
+#elif DRIVER==DRIVER_VNH2SP30
+void position(uint16_t value)
+{
+    lastpos = value;
+    // FIXME: Should deindent code in these three position() functions
         OCR1A = abs((int)value - 1000) * DIV_CLOCK;
         if(value > 1040) {
             a_bottom_off;
@@ -451,7 +472,11 @@ void position(uint16_t value)
             a_bottom_off;
             b_bottom_off;
         }            
-    } else {
+}
+#elif DRIVER==DRIVER_HBRIDGE
+void position(uint16_t value)
+{
+    lastpos = value;
         uint16_t OCR1A_u = 16000, OCR1B_u = 16000, ICR1_u = 1000;
         // use 62.5 hz at full power to reduce losses
         // some cycling is required to refresh the bootstrap capacitor
@@ -515,8 +540,10 @@ void position(uint16_t value)
                 sei();
             }
         }
-    }
 }
+#else
+#  error unsupported value for DRIVER, add support for new drivers above.
+#endif
 
 uint16_t command_value = 1000;
 void stop()
@@ -579,17 +606,18 @@ void disengage()
 
 void detach()
 {
-    if(pwm_style) {
+#if DRIVER!=DRIVER_HBRIDGE
+        // RC PWM or VNH2SP30
         TCCR1A=0;
         TCCR1B=0;
         while(digitalRead(pwm_output_pin)); // wait for end of pwm if pulse is high
         TIMSK1 = 0;
-        if(pwm_style == 2) {
+#  if DRIVER==DRIVER_VNH2SP30
             a_bottom_off;
             b_bottom_off;
             digitalWrite(enable_pin, LOW);
-        }
-    } else {
+#  endif
+#elif DRIVER==DRIVER_HBRIDGE
         TCCR1A=0;
         TCCR1B=0;
         TIMSK1 = 0;
@@ -597,7 +625,9 @@ void detach()
         a_bottom_off;
         b_top_off;
         b_bottom_off;
-    }
+#else
+#  error unsupported value for DRIVER
+#endif
     TIMSK2 = 0;
     timeout = 128/DIV_CLOCK; // avoid overflow
 }
@@ -609,14 +639,14 @@ void engage()
         return;
     }
 
-    if(pwm_style == 1) {
+#if DRIVER==DRIVER_RC_PWM
         TCNT1 = 0x1fff;
         //Configure TIMER1
         TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
         TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
         ICR1=40000/DIV_CLOCK;  //fPWM=50Hz (Period = 20ms Standard).
         TIMSK1 = 0;
-    } else if(pwm_style == 2) {
+#elif DRIVER==DRIVER_VNH2SP30
         TCNT1 = 0;
         TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
         TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS10); //PRESCALER=0 MODE 14(FAST PWM)
@@ -636,7 +666,7 @@ void engage()
         pinMode(enable_pin, INPUT);
 
         digitalWrite(enable_pin, HIGH);
-    } else {
+#elif DRIVER==DRIVER_HBRIDGE
         //Configure TIMER1
         TIMSK1 = 0;
         TCNT1 = 0;
@@ -653,7 +683,9 @@ void engage()
         pinMode(hbridge_b_bottom_pin, OUTPUT);
         pinMode(hbridge_a_top_pin, OUTPUT);
         pinMode(hbridge_b_top_pin, OUTPUT);
-    }
+#else
+#  error unsupported value for DRIVER, add support for new drivers above.
+#endif
 
     position(1000);
     digitalWrite(clutch_pin, HIGH); // clutch
@@ -688,10 +720,12 @@ uint8_t adc_cnt;
 // has 6862 samples/s
 ISR(ADC_vect)
 {
-    if(pwm_style)
-        ADCSRA |= _BV(ADSC); // enable conversion
-    else
+#if DRIVER==DRIVER_HBRIDGE
         sei(); // enable nested interrupts to ensure correct operation
+#else
+        // RC PWM or VNH2SP30
+        ADCSRA |= _BV(ADSC); // enable conversion (h-bridge enable is at end of this fn)
+#endif
 
     uint16_t adcw = ADCW;
     if(++adc_cnt <= 3) // discard first few readings after changing channel
@@ -733,8 +767,9 @@ ISR(ADC_vect)
 #endif
     ADMUX = adcref | muxes[adc_counter];
 ret:;
-    if(!pwm_style)
+#if DRIVER==DRIVER_HBRIDGE
         ADCSRA |= _BV(ADSC); // enable conversion
+#endif
 }
 
 uint16_t CountADC(uint8_t index, uint8_t p)
@@ -788,9 +823,9 @@ uint16_t TakeAmps(uint8_t p)
 {
     uint32_t v = TakeADC(CURRENT, p);
 
-    if(pwm_style == 2) // VNH2SP30
-        return v * 9 / 34 / 16;
-    
+#ifdef DISABLE_CURRENT_SENSE
+    return v * 9 / 34 / 16;
+#else
     if(low_current) {
     // current units of 10mA
     // 275 / 128 = 100.0/1024/.05*1.1   for 0.05 ohm shunt
@@ -820,6 +855,7 @@ uint16_t TakeAmps(uint8_t p)
         return 0;
 
     return v;
+#endif
 }
 
 uint16_t TakeVolts(uint8_t p)
