@@ -119,7 +119,6 @@ PWR+             VIN
 #define DRIVER_HBRIDGE 1
 #define DRIVER_RC_PWM 2
 #define DRIVER_VNH2SP30 3
-#define DRIVER_NEW 4
 
 // You need to change this to the kind of driver you have.
 #define DRIVER DRIVER_NOT_SET
