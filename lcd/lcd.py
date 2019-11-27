@@ -858,11 +858,6 @@ class LCDClient():
 
         mode = self.last_val('ap.mode')
 
-        if self.last_val('servo.controller') == 'none':
-            if self.control['heading_command'] != 'no controller':
-                self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
-                self.control['heading_command'] = 'no controller'
-
         # display warning about any servo faults
         flags = self.last_val('servo.flags').split()
         warning = ''
@@ -881,6 +876,10 @@ class LCDClient():
             if self.control['heading_command'] != 'no wind':
                 self.fittext(rectangle(0, .4, 1, .4), _('WIND not detected'), True, black)
                 self.control['heading_command'] = 'no wind'
+        elif self.last_val('servo.controller') == 'none':
+            if self.control['heading_command'] != 'no controller':
+                self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
+                self.control['heading_command'] = 'no controller'
         else:
             # no warning, display the desired course or 'standby'
             if self.last_val('ap.enabled') != True:
