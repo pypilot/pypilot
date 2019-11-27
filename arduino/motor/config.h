@@ -151,13 +151,9 @@ enum {
  */
 #define DISABLE_TEMP_SENSE    // if no temp sensors avoid errors
 #define DISABLE_VOLTAGE_SENSE // if no voltage sense
+#define DISABLE_CURRENT_SENSE // if no motor current sensor is installed or used
 //#define DISABLE_RUDDER_SENSE  // if no rudder sense
 #define DISABLE_ENDSTOPS // if no endstops are installed we won't have a forward and reverse faults
-
-/*
- * Rudder configuration
- */
-#define RUDDER_POTI
 
 /*
  * Current configuration
@@ -170,10 +166,13 @@ enum {
  */
 #define PWM_DEADBAND 40
 #define VOLTAGE_RANGE 0 // 0 = 12 volts, 1 = 24 volts
-#define MAX_VOLTAGE = 1600 // 16 volts max by default
+#define VOLTAGE_MAX = 1600 // 16 volts max by default
 #define SHUNT_RESISTANCE 0 // if 0, we have 0.01 ohm, if 1 we have 0.05 ohm
 
 #define RUDDER_MAX_ADC 65535
 #define RUDDER_MIN_ADC 0
+#define TEMPERATURE_CONTROLLER_MAX 7000
+#define TEMPERATURE_MOTOR_MAX 7000
+#define CURRENT_MOTOR_MAX 2000
 
 #endif

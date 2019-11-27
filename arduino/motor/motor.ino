@@ -45,12 +45,12 @@
 uint16_t flags = 0, faults = 0;
 uint8_t serialin, packet_count = 0;
 
-uint16_t max_current = 2000; // 20 Amps
-uint16_t max_controller_temp= 7000; // 70C
-uint16_t max_motor_temp = 7000; // 70C
+// These variables hold values that can be changed by the controlling PyPilot remotely.
+uint16_t max_current = CURRENT_MOTOR_MAX; // 20 Amps
+uint16_t max_controller_temp= TEMPERATURE_CONTROLLER_MAX; // 70C
+uint16_t max_motor_temp = TEMPERATURE_MOTOR_MAX; // 70C
 uint8_t max_slew_speed = 15, max_slew_slow = 35; // 200 is full power in 1/10th of a second
-uint16_t rudder_min = 0, rudder_max = 65535;
-//uint8_t rudder_sense = 0;
+uint16_t rudder_min = RUDDER_MIN_ADC, rudder_max = RUDDER_MAX_ADC; // Analog rudder value between -100 and 100 full scale.
 
 uint8_t eeprom_read_addr = 0;
 uint8_t eeprom_read_end = 0;
@@ -67,7 +67,7 @@ uint8_t timeout = 0;
 uint32_t last_loop_cycle_millis = 0;
 
 /*
- * command_value is used throughout the program to store the desired rudder angle between 0 and 2000.
+ * command_value is used throughout the program to hold the rudder motor PWM between 0 and 2000 with 0 being PWM off.
  */
 uint16_t command_value = 1000;
 
@@ -485,16 +485,18 @@ void process_packet()
             // no forward command if fwd fault
             /*
              * This would mean, I drive into the endstop forward and I cannot back up unless I drive all
-             * the way back to center, right? What is that a good idea?
+             * the way back to center, right? Why is that a good idea?
              * Todo: What am I missing here?
+             * I think I'm missing that this is actually a PWM desired value. 1000 is no PWM and everything else is either CCW or CW
              */
             stop();
         else if((flags & (REV_FAULTPIN | MIN_RUDDER)) && value < 1000)
             // no reverse command if rev fault
             /*
              * This would mean, I drive into the endstop reverse and I cannot back out unless I drive all
-             * the way back to center, right? What is that a good idea?
+             * the way back to center, right? Why is that a good idea?
              * Todo: What am I missing here?
+             * I think I'm missing that this is actually a PWM desired value. 1000 is no PWM and everything else is either CCW or CW
              */
             stop();
         else { // Valid command received. Store value and engage controller.
@@ -529,10 +531,10 @@ void process_packet()
       break;
 #endif
     case RUDDER_MIN_CODE:
-        rudder_min = value;
+        rudder_min = value; // Todo: I need to understand what is happening with this value. It seems like it's not being used. Especially because it's not being stored or loaded at boot.
         break;
     case RUDDER_MAX_CODE:
-        rudder_max = value;
+        rudder_max = value; // Todo: I need to understand what is happening with this value. It seems like it's not being used. Especially because it's not being stored or loaded at boot.
         break;
     case DISENGAGE_CODE:
         if(serialin < 12)
@@ -670,9 +672,9 @@ void loop() // Must change
  * Observation: 0 to 2000 rudder value with 1000 being the center is actually the PWM value for the h-bridge
  * similar to an RC_Servo.
  * If at 1000, the rudder won't move. It's not going back to center. It just won't move any further.
- * If at 1500, it moved slowly towards one side and if at 500 it moved slowly to the other.
+ * If at 1500, it moves slowly towards one side and if at 500 it moves slowly to the other.
  * I wonder where the deadband is implemented because I can't see it here. PyPolit?
- * Todo: Correct my own comments to represent this new fact.
+ * Todo: Correct my own comments to represent this new fact (PWM from 0 to 2000 with 1000 being no PWM).
  */
     uint16_t v = TakeRudder();
     // if not positive, then rudder feedback has negative gain (reversed)
