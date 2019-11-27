@@ -173,4 +173,7 @@ enum {
 #define MAX_VOLTAGE = 1600 // 16 volts max by default
 #define SHUNT_RESISTANCE 0 // if 0, we have 0.01 ohm, if 1 we have 0.05 ohm
 
+#define RUDDER_MAX_ADC 65535
+#define RUDDER_MIN_ADC 0
+
 #endif
