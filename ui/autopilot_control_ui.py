@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ###########################################################################
-## Python code generated with wxFormBuilder (version Nov  2 2019)
+## Python code generated with wxFormBuilder (version 3.9.0 Nov 18 2019)
 ## http://www.wxformbuilder.org/
 ##
 ## PLEASE DO *NOT* EDIT THIS FILE!
@@ -18,9 +18,9 @@ import wx.glcanvas
 class AutopilotControlBase ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Autopilot Control", pos = wx.DefaultPosition, size = wx.Size( -1,400 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Autopilot Control", pos = wx.DefaultPosition, size = wx.Size( 444,400 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 
-#		self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
+		#self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
 
 		fgSizer5 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer5.AddGrowableCol( 0 )
@@ -293,9 +293,9 @@ class AutopilotControlBase ( wx.Frame ):
 class CalibrationDialogBase ( wx.Dialog ):
 
 	def __init__( self, parent ):
-		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Calibration", pos = wx.DefaultPosition, size = wx.Size( 640,650 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Calibration", pos = wx.DefaultPosition, size = wx.Size( 617,432 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
 
-#		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+		#self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 
 		fgSizer7 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer7.AddGrowableCol( 0 )
@@ -313,7 +313,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 
 		self.m_splitter1 = wx.SplitterWindow( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D|wx.SP_LIVE_UPDATE )
 		self.m_splitter1.SetSashGravity( 1 )
-		self.m_splitter1.SetMinimumPaneSize( 220 )
+		self.m_splitter1.SetMinimumPaneSize( 130 )
 
 		self.m_panel4 = wx.Panel( self.m_splitter1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer22 = wx.FlexGridSizer( 0, 2, 0, 0 )
@@ -323,6 +323,9 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer22.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
 		self.BoatPlot = wx.glcanvas.GLCanvas(self.m_panel3, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])
+		self.BoatPlot.SetMinSize( wx.Size( -1,100 ) )
+		self.BoatPlot.SetMaxSize( wx.Size( -1,500 ) )
+
 		fgSizer22.Add( self.BoatPlot, 0, wx.ALL|wx.EXPAND, 5 )
 
 
@@ -751,9 +754,9 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel71.SetSizer( fgSizer35 )
 		self.m_panel71.Layout()
 		fgSizer35.Fit( self.m_panel71 )
-		self.m_notebook.AddPage( self.m_panel71, u"rudder", False )
+		self.m_notebook.AddPage( self.m_panel71, u"rudder", True )
 		self.m_pSettings = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.m_notebook.AddPage( self.m_pSettings, u"settings", True )
+		self.m_notebook.AddPage( self.m_pSettings, u"settings", False )
 
 		fgSizer7.Add( self.m_notebook, 1, wx.EXPAND |wx.ALL, 5 )
 
