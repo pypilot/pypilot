@@ -131,7 +131,7 @@ PWR+             VIN
 #define dead_time \
     asm volatile ("nop"); \
     asm volatile ("nop"); \
-    asm volatile ("nop");
+    asm volatile ("nop"); \
     asm volatile ("nop");
 #elif DIV_CLOCK==2
 #define dead_time \
