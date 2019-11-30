@@ -154,6 +154,7 @@ enum {
 #define DISABLE_CURRENT_SENSE // if no motor current sensor is installed or used
 //#define DISABLE_RUDDER_SENSE  // if no rudder sense
 #define DISABLE_ENDSTOPS // if no endstops are installed we won't have a forward and reverse faults
+#define DISABLE_DEBUGGING_DISPLAY // If a debugging TFT display is attached to the controller, comment this out
 
 /*
  * Current configuration

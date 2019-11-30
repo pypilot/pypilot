@@ -53,4 +53,15 @@
 
 #define LED_PIN 13 // led is on when engaged
 
+
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+  #define TFT_CS   10
+  #define TFT_RST  9
+  #define TFT_DC   8
+  #define TFT_SCLK 13
+  #define TFT_MOSI 11
+  #define ENABLE_PIN 2   // Combined enable pin for both BTS7960
+#endif
+
 #endif

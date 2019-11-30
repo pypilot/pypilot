@@ -35,6 +35,13 @@
 #include "config.h"
 #include "crc.h"
 
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+  #include <Adafruit_GFX.h>    // Core graphics library
+  //#include <Adafruit_ST7735.h> // Hardware-specific library
+  #include <TFT_ST7735.h> // Hardware-specific library
+  #include <SPI.h>
+#endif
 /*
  * This program is meant to interface with pwm based motor controller either brushless or brushed, or a regular RC servo
  */
@@ -77,9 +84,21 @@ uint16_t command_value = 1000;
 uint16_t lastpos = 1000;
 
 
+#ifndef DISABLE_DEBUGGING_DISPLAY
+  // *************************************************************************************************** //
+  // ********************************* Display Variables *********************************************** //
+  // *************************************************************************************************** //
+  //Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+  TFT_ST7735 tft = TFT_ST7735();       // Invoke custom library - insanely fast alternative! https://github.com/Bodmer/TFT_ST7735
+#endif
 
 void setup() // Must change completely
 {
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+    displayInitScreen();
+#endif
+
     // Disable all interrupts
     cli();
 
@@ -184,16 +203,17 @@ void engage() // Must change completely
  * Take the desired value, compare with current value and create a new desired value
  * based on the allowed slew rate to move the rudder not faster than deemed safe.
  */
+ 
+#ifndef DISABLE_DEBUGGING_DISPLAY
+  int16_t oldDiff = 0;
+  int16_t oldCurValue = 0;
+#endif
 void update_command() // Will not be changed
 {
-    int16_t speed_rate = max_slew_speed;
-    // value of 20 is 1 second full range at 50hz
-    int16_t slow_rate = max_slew_slow;
-
-    //uint16_t cur_value = OCR1A * 2 / 3 - 1000;
-    uint16_t cur_value =  lastpos;
-
-    int16_t diff = (int)command_value - (int)cur_value;
+    int16_t speed_rate  = max_slew_speed;
+    int16_t slow_rate   = max_slew_slow; // value of 20 is 1 second full range at 50hz
+    uint16_t cur_value  =  lastpos;
+    int16_t diff        = (int)command_value - (int)cur_value;
 
     // limit motor speed change to stay within speed and slow slew rates
     if(diff > 0) {
@@ -212,6 +232,20 @@ void update_command() // Will not be changed
                 diff = -speed_rate;
     }
 
+#ifndef DISABLE_DEBUGGING_DISPLAY
+    String strBuffer = String("diff  : ") + oldDiff;
+    tftPrintText(strBuffer, 0, 30, 2, ST7735_BLACK);
+    oldDiff = diff;
+    strBuffer = String("diff  : ") + oldDiff;
+    tftPrintText(strBuffer, 0, 30, 2, ST7735_BLUE);
+    
+    strBuffer = String("curval: ") + oldCurValue;
+    tftPrintText(strBuffer, 0, 45, 2, ST7735_BLACK);
+    oldCurValue = cur_value;
+    strBuffer = String("curval: ") + oldCurValue;
+    tftPrintText(strBuffer, 0, 45, 2, ST7735_BLUE);
+#endif
+
     // Push the new value over to the position function
     position(cur_value + diff);
 }
@@ -220,25 +254,48 @@ void update_command() // Will not be changed
  * This is where the magic happens. Receive a command value and drive the corresponding motor controller
  * using the desired pwm setting.
  */
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+  int16_t oldValue = 0;
+  uint8_t old8bitValue = 0;
+#endif
+int16_t newValue = 0;
 void position(uint16_t value)
 {
-  // store the new value as the new last position
+  // store the new value as the new last position, used by update_command()
   lastpos = value;
+  newValue = abs((int)value - 1000);
   
   // Determine if value is bigger or smaller than 1000 plus deadzone
   if(value > 1000 + PWM_DEADBAND) {
     // Turn PWM for CCW operation on and the other off
-    analogWrite(RPWM_PIN, abs((int)value - 1000));
+    //analogWrite(RPWM_PIN, abs((int)value - 1000));
+    analogWrite(RPWM_PIN, (uint8_t)((255.0f/1000.0f) * (float)newValue));
     analogWrite(LPWM_PIN, 0);
   } else if(value < 1000 - PWM_DEADBAND) {
     // Turn PWM for CW operation on and the other off
     analogWrite(RPWM_PIN, 0);
-    analogWrite(LPWM_PIN, abs((int)value - 1000));
+    //analogWrite(LPWM_PIN, abs((int)value - 1000));
+    analogWrite(LPWM_PIN, (uint8_t)((255.0f/1000.0f) * (float)newValue));
   } else {
       // Nothing to do. We got about 1000 and need to turn the breaks on and PWM off
     analogWrite(RPWM_PIN, 0);
     analogWrite(LPWM_PIN, 0);
   }
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+    String strBuffer = String("oldVal: ") + oldValue;
+    tftPrintText(strBuffer, 0, 60, 2, ST7735_BLACK);
+    oldValue = newValue;
+    strBuffer = String("oldVal: ") + oldValue;
+    tftPrintText(strBuffer, 0, 60, 2, ST7735_BLUE);
+    
+    strBuffer = String("DACVal: ") + old8bitValue;
+    tftPrintText(strBuffer, 0, 75, 2, ST7735_BLACK);
+    old8bitValue = (uint8_t)((255.0f/1000.0f) * (float)oldValue);
+    strBuffer = String("DACVal: ") + old8bitValue;
+    tftPrintText(strBuffer, 0, 75, 2, ST7735_BLUE);
+#endif
 }
 
 /*
@@ -455,7 +512,12 @@ ISR(WDT_vect)
  * Read incoming packets, understand what needs to be done and execute command.
  * Byte 0 contains the command type.
  * Byte 1 and 2 contain the 16 bit value and needed to be OR'ed into one word.
- */
+ */ 
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+  uint16_t oldPWM = 0;
+#endif
+
 void process_packet()
 {
     flags |= SYNC;
@@ -501,6 +563,14 @@ void process_packet()
             stop();
         else { // Valid command received. Store value and engage controller.
             command_value = value;
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+            String strBuffer = String("PWMRAW: ") + oldPWM;
+            tftPrintText(strBuffer, 0, 15, 2, ST7735_BLACK);
+            oldPWM = command_value;
+            strBuffer = String("PWMRAW: ") + oldPWM;
+            tftPrintText(strBuffer, 0, 15, 2, ST7735_BLUE);
+#endif
             engage();
         }
         break;
@@ -574,8 +644,9 @@ void process_packet()
 /*
  * Main loop. Now it gets interesting.
  */
+uint16_t oldRudderPos = 0;
 void loop() // Must change
-{
+{    
     wdt_reset(); // strobe watchdog
 
 /*
@@ -588,6 +659,14 @@ void loop() // Must change
             if(++update_d >= 4) {
                 update_command(); // run the update function at roughly 30hz
                 update_d = 0;
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+                String strBuffer = String("RudRAW: ") + oldRudderPos;
+                tftPrintText(strBuffer, 0, 0, 2, ST7735_BLACK);
+                oldRudderPos = TakeRudder();
+                strBuffer = String("RudRAW: ") + oldRudderPos;
+                tftPrintText(strBuffer, 0, 0, 2, ST7735_BLUE);
+#endif
             }
         }
 
@@ -921,3 +1000,24 @@ void debug(char *fmt, ... ){
     va_end (args);
     Serial.print(buf);
 }
+
+
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+  void displayInitScreen(void)
+  {
+    //tft.initR(INITR_BLACKTAB);   // initialize a ST7735S chip, black tab  
+    tft.init();
+    tft.setRotation(1);
+    tft.fillScreen(ST7735_BLACK);
+  }
+  
+  void tftPrintText(String textBuffer, int x, int y, int textSize, int color)
+  {
+    if (textSize == 0) textSize = 1;
+    tft.setTextColor(color);
+    tft.setTextSize(textSize);
+    tft.setCursor(x, y);
+    tft.print(textBuffer.c_str());
+  }
+#endif
