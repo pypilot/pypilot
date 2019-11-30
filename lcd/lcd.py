@@ -865,9 +865,12 @@ class LCDClient():
             if flag.endswith('_FAULT'):
                 warning += flag[:-6] + ' '
 
-        if warning and self.control['heading_command'] != warning:
-            self.fittext(rectangle(0, .4, 1, .35), _(warning), True, black)
-            self.control['heading_command'] = warning
+        if warning:
+            warning = warning.lower()
+            warning += 'fault'
+            if self.control['heading_command'] != warning:
+                self.fittext(rectangle(0, .4, 1, .35), _(warning), True, black)
+                self.control['heading_command'] = warning
         elif mode == 'gps' and not self.have_gps():
             if self.control['heading_command'] != 'no gps':
                 self.fittext(rectangle(0, .4, 1, .4), _('GPS not detected'), True, black)
