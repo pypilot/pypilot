@@ -48,12 +48,12 @@ class BasicPilot(AutopilotPilot):
       self.Gain(name, default, 0, max_val)
         
     PosGain('P', .003, .02)  # position (heading error)
-    PosGain('I', 0, .1)      # integral
-    PosGain('D',  .1, 1.0)   # derivative (gyro)
-    PosGain('DD',  .05, 1.0) # rate of derivative
-    PosGain('PR',  0, .05)  # position root
-    PosGain('FF',  .5, 3.0) # feed forward
-    PosGain('R',  .1, 1.0)  # reactive
+    PosGain('I', 0.005, .1)      # integral
+    PosGain('D',  .09, 1.0)   # derivative (gyro)
+    PosGain('DD',  .075, 1.0) # rate of derivative
+    PosGain('PR',  .005, .05)  # position root
+    PosGain('FF',  .6, 3.0) # feed forward
+    PosGain('R',  0.0, 1.0)  # reactive
     self.reactive_time = self.Register(RangeProperty, 'Rtime', 1, 0, 3)
 
     self.reactive_value = self.Register(SensorValue, 'reactive_value', timestamp)
