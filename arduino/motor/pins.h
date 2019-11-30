@@ -10,6 +10,7 @@
  */
 
  #include "config.h"
+#include <Arduino.h>
 
 #ifndef __PINS_H__
 #define __PINS_H__
@@ -27,22 +28,22 @@
   #define RUDDER_PIN A2   // Analog input to measure the rudder position
 #endif
 
+#ifndef DISABLE_CURRENT_SENSE
+  #define CURRENT_SENSE_PIN_1 A0
+  #define CURRENT_SENSE_PIN_2 A1
+#endif
+
 #ifndef DISABLE_RUDDER_SENSE
   #define RUDDER_SENSE_PIN A2
 #endif
 
 #ifndef DISABLE_TEMP_SENSE
-  #define TEMPERATURE_CONTROLLER_SENSE_PIN_1 A3
-  #define TEMPERATURE_MOTOR_SENSE_PIN_2 A4
+  #define TEMPERATURE_CONTROLLER_SENSE_PIN A3
+  #define TEMPERATURE_MOTOR_SENSE_PIN A4
 #endif
 
 #ifndef DISABLE_VOLTAGE_SENSE
   #define VOLTAGE_SENSE_PIN A5
-#endif
-
-#ifndef DISABLE_CURRENT_SENSE
-  #define CURRENT_SENSE_PIN_1 A0
-  #define CURRENT_SENSE_PIN_2 A1
 #endif
 
 #ifndef DISABLE_ENDSTOPS
@@ -61,7 +62,7 @@
   #define TFT_DC   8
   #define TFT_SCLK 13
   #define TFT_MOSI 11
-  #define ENABLE_PIN 2   // Combined enable pin for both BTS7960
+  #define ENABLE_PIN 2   // Reassigned to make room for SPI Combined enable pin for both BTS7960
 #endif
 
 #endif

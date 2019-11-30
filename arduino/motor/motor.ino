@@ -34,6 +34,7 @@
 #include "pins.h"
 #include "config.h"
 #include "crc.h"
+#include "adc_filtering.h"
 
 
 #ifndef DISABLE_DEBUGGING_DISPLAY
@@ -285,16 +286,16 @@ void position(uint16_t value)
 
 #ifndef DISABLE_DEBUGGING_DISPLAY
     String strBuffer = String("oldVal: ") + oldValue;
-    tftPrintText(strBuffer, 0, 60, 2, ST7735_BLACK);
+    tftPrintText(strBuffer, 0, 60, 0, ST7735_BLACK);
     oldValue = newValue;
     strBuffer = String("oldVal: ") + oldValue;
-    tftPrintText(strBuffer, 0, 60, 2, ST7735_BLUE);
+    tftPrintText(strBuffer, 0, 60, 0, ST7735_BLUE);
     
     strBuffer = String("DACVal: ") + old8bitValue;
-    tftPrintText(strBuffer, 0, 75, 2, ST7735_BLACK);
+    tftPrintText(strBuffer, 0, 75, 0, ST7735_BLACK);
     old8bitValue = (uint8_t)((255.0f/1000.0f) * (float)oldValue);
     strBuffer = String("DACVal: ") + old8bitValue;
-    tftPrintText(strBuffer, 0, 75, 2, ST7735_BLUE);
+    tftPrintText(strBuffer, 0, 75, 0, ST7735_BLUE);
 #endif
 }
 
@@ -473,7 +474,8 @@ uint16_t TakeTemp(uint8_t index, uint8_t p)
  */
 uint16_t TakeRudder()
 {
-    return analogRead(RUDDER_PIN) << 6;
+    return getADCFilteredValue(RUDDER_ANGLE);
+    //return (65535.0f/1024.0f) * (analogRead(RUDDER_PIN));
 }
 
 /*
@@ -647,6 +649,8 @@ void process_packet()
 uint16_t oldRudderPos = 0;
 void loop() // Must change
 {    
+    static uint32_t last_loop_cycle_millis = 0;
+    static uint32_t adc_filter_cycle_millis = 0;
     wdt_reset(); // strobe watchdog
 
 /*
@@ -671,7 +675,13 @@ void loop() // Must change
         }
 
         timeout++;
-        last_loop_cycle_millis = millis(); // Store the time from here to next time
+        last_loop_cycle_millis = millis(); // Store the time from here to next iteration
+    }
+
+    if(millis() - adc_filter_cycle_millis > 10)
+    {
+      ADC_updateAndFilter(); // place another ADC value for each configured channel into the corresponding ring buffer
+      adc_filter_cycle_millis = millis(); // Store the time from here to next iteration
     }
 
 /*
@@ -1000,8 +1010,6 @@ void debug(char *fmt, ... ){
     va_end (args);
     Serial.print(buf);
 }
-
-
 
 #ifndef DISABLE_DEBUGGING_DISPLAY
   void displayInitScreen(void)
