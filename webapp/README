@@ -20,7 +20,8 @@ Optionaly, a port number can be specified in the first argument
     sudo python webapp.py 8080  
 ```
 
-Or provided from a json config file at ['port':8080] . 
+If none, the app will try to read the configuration file located at `~/.pypilot/webapp.conf` 
+The file must contain the a json array structured like this example `['port':8080]`. 
 
 If no port is specified, the default value is 80.
 
