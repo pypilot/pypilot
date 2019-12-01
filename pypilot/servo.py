@@ -209,7 +209,7 @@ class Servo(object):
         self.motor_temp = self.Register(SensorValue, 'motor_temp', timestamp)
 
         self.engaged = self.Register(BooleanValue, 'engaged', False)
-        self.max_current = self.Register(RangeSetting, 'max_current', 4, 0, 60, 'amps')
+        self.max_current = self.Register(RangeSetting, 'max_current', 7, 0, 60, 'amps')
         self.current.factor = self.Register(RangeProperty, 'current.factor', 1, 0.8, 1.2, persistent=True)
         self.current.offset = self.Register(RangeProperty, 'current.offset', 0, -1.2, 1.2, persistent=True)
         self.voltage.factor = self.Register(RangeProperty, 'voltage.factor', 1, 0.8, 1.2, persistent=True)
