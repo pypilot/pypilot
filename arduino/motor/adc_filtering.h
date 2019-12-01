@@ -1,3 +1,15 @@
+/*
+ * Author: Timo Birnschein (timo.birnschein@googlemail.com)
+ * Date: 2019/11/30
+ * Notes: This code implements a exponential moving average filter as described at 
+ * https://helpful.knobs-dials.com/index.php/Low-pass_filter
+ * All channels needed for the PyPolit are being read periodically, filtered and then provided
+ * to PyPilot uupon request.
+ * The APLHA values per channel can be configured to what is needed by the user.
+ * Current needs to be read quicker than anything else here. Temperature can be filtered a lot.
+ * Rudder may be reasonably slow.
+ */
+
 #ifndef __ADC_FILTERING__
 #define __ADC_FILTERING__
 
@@ -26,7 +38,7 @@ extern uint16_t *adcChannelFilterHistory[5];
 
 void ADC_initFilters(void);
 void ADC_updateAndFilter(void);
-int16_t getADCFilteredValue(uint8_t channel);
+uint16_t getADCFilteredValue(uint8_t channel);
 
 #ifdef __cplusplus
 }

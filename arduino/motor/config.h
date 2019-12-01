@@ -139,6 +139,8 @@ enum {
   CURRENT_RANGE=256*4, 
   BAD_FUSES=256*8};
 
+enum {CONTROLLER_TEMP, MOTOR_TEMP};
+
 /*
  * BOARD TYPE
  */
@@ -149,9 +151,9 @@ enum {
 /*
  * ATTACHED SENSORS
  */
-#define DISABLE_TEMP_SENSE    // if no temp sensors avoid errors
-#define DISABLE_VOLTAGE_SENSE // if no voltage sense
-#define DISABLE_CURRENT_SENSE // if no motor current sensor is installed or used
+//#define DISABLE_TEMP_SENSE    // if no temp sensors avoid errors
+//#define DISABLE_VOLTAGE_SENSE // if no voltage sense
+//#define DISABLE_CURRENT_SENSE // if no motor current sensor is installed or used
 //#define DISABLE_RUDDER_SENSE  // if no rudder sense
 #define DISABLE_ENDSTOPS // if no endstops are installed we won't have a forward and reverse faults
 
@@ -167,14 +169,47 @@ enum {
  * GENERAL CONFIGURATION VALUES
  */
 #define PWM_DEADBAND 40
-#define VOLTAGE_RANGE 0 // 0 = 12 volts, 1 = 24 volts
-#define VOLTAGE_MAX = 1600 // 16 volts max by default
-#define SHUNT_RESISTANCE 0 // if 0, we have 0.01 ohm, if 1 we have 0.05 ohm
 
-#define RUDDER_MAX_ADC 65535
 #define RUDDER_MIN_ADC 0
-#define TEMPERATURE_CONTROLLER_MAX 7000
-#define TEMPERATURE_MOTOR_MAX 7000
+#define RUDDER_MAX_ADC 65535
+#define TEMPERATURE_CONTROLLER_MAX 12000
+#define TEMPERATURE_MOTOR_MAX 12000
 #define CURRENT_MOTOR_MAX 2000
+#define SPEEDUP_SLEW_RATE 15
+#define SLOWDOWN_SLEW_RATE 30
+
+
+// *************************************************************************************************** //
+// ********************************* Thermocouple Variables ****************************************** //
+// *************************************************************************************************** //
+// Check https://learn.adafruit.com/thermistor/using-a-thermistor for more info
+// resistance at 25 degrees C
+#define THERMISTORNOMINAL 100000
+// temp. for nominal resistance (almost always 25 C)
+#define TEMPERATURENOMINAL 25
+// The beta coefficient of the thermistor (usually 3000-4000)
+#define BCOEFFICIENT 3950
+// the value of the 'other' resistor
+#define SERIESRESISTOR 4700
+
+// *************************************************************************************************** //
+// ********************************* Battery Voltage Measurement Variables *************************** //
+// *************************************************************************************************** //
+// Maximum input voltage on the supply pin
+#define VIN_MAX 18.0f
+// Maximum input voltage on the supply pin
+#define VIN_MIN 9.0f
+// Wow the ADC is configured to measure: 0V - 5V
+#define ADC_RANGE 5.0f
+// Bit deapth of the ADC being used
+#define BIT_DEPTH 1024.0f
+// Calcuulated voltage separation per bit
+#define V_SEPARATION ADC_RANGE / BIT_DEPTH
+// Voltage divider resistor 1
+#define R1_1 22000.0f
+// Voltage divider resistor 2
+#define R2_1 4700.0f
+// Constant calculated from resistor values for simplified voltage calculation
+#define RESISTOR_CONSTANT_1 (R2_1/(R1_1 + R2_1))
 
 #endif

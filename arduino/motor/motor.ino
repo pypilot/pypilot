@@ -57,8 +57,10 @@ uint8_t serialin, packet_count = 0;
 uint16_t max_current = CURRENT_MOTOR_MAX; // 20 Amps
 uint16_t max_controller_temp= TEMPERATURE_CONTROLLER_MAX; // 70C
 uint16_t max_motor_temp = TEMPERATURE_MOTOR_MAX; // 70C
-uint8_t max_slew_speed = 15, max_slew_slow = 35; // 200 is full power in 1/10th of a second
-uint16_t rudder_min = RUDDER_MIN_ADC, rudder_max = RUDDER_MAX_ADC; // Analog rudder value between -100 and 100 full scale.
+uint8_t max_slew_speed = SPEEDUP_SLEW_RATE;
+uint8_t max_slew_slow = SLOWDOWN_SLEW_RATE; // 200 is full power in 1/10th of a second
+uint16_t rudder_min = RUDDER_MIN_ADC;
+uint16_t rudder_max = RUDDER_MAX_ADC; // Analog rudder value between -100 and 100 full scale.
 
 uint8_t eeprom_read_addr = 0;
 uint8_t eeprom_read_end = 0;
@@ -73,6 +75,10 @@ uint8_t crcbytes[3];
 
 uint8_t timeout = 0;
 uint32_t last_loop_cycle_millis = 0;
+uint32_t last_loop_rudder_millis = 0;
+uint32_t last_loop_voltage_millis = 0;
+uint32_t last_loop_current_millis = 0;
+uint32_t last_loop_temperature_millis = 0;
 
 /*
  * command_value is used throughout the program to hold the rudder motor PWM between 0 and 2000 with 0 being PWM off.
@@ -352,145 +358,92 @@ void detach() // Must change completely
   timeout = 80; // avoid overflow
 }
 
-uint16_t TakeAmps(uint8_t p)
+uint16_t TakeAmps()
+{
+    uint32_t v = getADCFilteredValue(MOTOR_CURRENT);
+    return v * 9 / 34 / 16;
+}
+
+
+/*
+ * This function returns a filtered supply voltage measurement
+ */
+uint16_t TakeVolts()
+{
+    // Calculate a float value and then bring it into the format expected by PyPilot: 18V = 1800
+    return (uint16_t)((getADCFilteredValue(SUPPLY_VOLTAGE) * V_SEPARATION) / RESISTOR_CONSTANT_1 * 100.0f);
+}
+
+/*
+ * This function returns either controller or motor temperature.
+ * Equations based on https://learn.adafruit.com/thermistor/using-a-thermistor
+ */
+uint16_t TakeTemp(uint8_t index)
 {
   /*
-    uint32_t v = TakeADC(CURRENT, p);
-
-    if(pwm_style == 2) // VNH2SP30
-        return v * 9 / 34 / 16;
+  float adc_temp_value = 0;
+  float steinhart = 0;
+  
+  switch (index)
+  {
+    case CONTROLLER_TEMP:
+      adc_temp_value = getADCFilteredValue(CONTROLLER_TEMPERATURE);
+      break;
+    case MOTOR_TEMP:
+      adc_temp_value = getADCFilteredValue(MOTOR_TEMPERATURE);
+      break;
+    default:
+      adc_temp_value = 0; // Some out of bounds value was given.
+      break;
+  }
+  
+    // convert the value to resistance
+    adc_temp_value = 1023 / adc_temp_value - 1;
+    adc_temp_value = SERIESRESISTOR / adc_temp_value;
     
-    if(low_current) {
-    // current units of 10mA
-    // 275 / 128 = 100.0/1024/.05*1.1   for 0.05 ohm shunt
-    // 1375 / 128 = 100.0/1024/.01*1.1   for 0.01 ohm shunt
-        if(shunt_resistance)
-            v = v * 275 / 128 / 16;
-
-        if(v > 16)
-            v = v * 1375 / 128 / 16 + 16; // 550mA minimum
-        else
-            v = 0;
-    } else { // high current
-        if(v <= 16)
-            v = 0;
-        else  {
-            if(shunt_resistance)
-                //  .0005 ohm with 50x gain
-                // 275/64 = 100.0/1024/.0005/50*1.1
-                v = v * 275 / 64 / 16;
-            else
-                //  .0005 ohm with 200x gain (5v ref)
-                // 625/128 = 100.0/1024/.0005/200*5
-                v = v  * 625 / 128 / 16;
-        }
-    }
-    if(v == 0)
-        return 0;
-
-    return v;
-    */
-    return 0;
-}
-
-
-/*
- * This function measures an analogue value from a pin and uses an insane amount of magic numbers
- * without explanation to calculate the actual inout voltage.
- * This is based on how the reference voltage was configured.
- * Todo: Fix this.
- */
-uint16_t TakeVolts(uint8_t p)
-{
-  /*
-    // voltage in 10mV increments 1.1ref, 560 and 10k resistors
-    uint32_t v = TakeADC(VOLTAGE, p);
-
-    if(voltage_mode)
-        // 14135 / 3584 = 100.0/1024*10280/280*1.1
-        v = v * 14135 / 3584 / 16;
-    else if(ratiometric_mode) {
-        // 100.0/1024*115000/15000*5.0
-        v = v * 719 / 192 / 16;
-    } else
-        // 1815 / 896 = 100.0/1024*10560/560*1.1
-        v = v * 1815 / 896 / 16;
-
-    return v;
-    */
-    return 0;
-}
-
-/*
- * This function takes an analogue value from a pin and uses a formular to calculate one actual temperature.
- * This is based on how the reference voltage was configured.
- */
-uint16_t TakeTemp(uint8_t index, uint8_t p)
-{
-  /*
-    uint32_t v = TakeADC(index, p), R;
+    steinhart = adc_temp_value / THERMISTORNOMINAL;       // (R/Ro)
+    steinhart = log(steinhart);                           // ln(R/Ro)
+    steinhart /= BCOEFFICIENT;                            // 1/B * ln(R/Ro)
+    steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15);     // + (1/To)
+    steinhart = 1.0 / steinhart;                          // Invert
+    steinhart -= 273.15;                                  // convert to C
     
-    if(ratiometric_mode) {
-        // thermistors are 10k resistor to 5v, and 10k NTC to GND with 5.0v ref
-        // V = 5.0 * v / 1024
-        // V = R / (R + 10k) * 5.0
-        // x = 5.0 / 5.0 * v / 1024
-        // R = 10k * x / (1 - x)
-        // x = v / 1024
-        // R = 10k * v / (1024*16 - v)
-
-        R = 10000 * v / (16384 - v);  // resistance in ohms
-
-        //  I accidentally put 100k resistors on board: R = 100000 * v / (16384 - v);  // resistance in ohms
-    } else {
-        // thermistors are 100k resistor to 5v, and 10k NTC to GND with 1.1v ref
-        // V = 1.1 * v / 1024
-        // V = R / (R + 100k) * 5.0
-        // x = 1.1 / 5.0 * v / 1024
-        // R = 100k * x / (1 - x)
-        // R = 22000 * v / 1024 / (1 - 1.1 / 5.0 * v / 1024)
-
-        R = 100061 * v / (74464 - v);  // resistance in ohms
-    }
-    // T0 = 298, B = 3905, R0 = 10000
-    // T = 1 / (1 / T0 + 1/B * ln(R/R0))
-    // T = 1.0 / (1.0 / 298.0 + 1/3905.0 * math.log(R/10000.0)) - 273.0
-
-    // a reasonable approximation to avoid floating point math over our range:
-    // within 2 degrees from 30C to 80C
-    // T = 300000 / (R + 2600) + 2
-
-    // temperature in hundreths of degrees
-    return 30000000 / (R + 2600) + 200;
+    return (uint16_t)(steinhart * 100.0f);
     */
-    return 0;
-}
-
-/*
- * This function, without taking the configuration of the reference voltage into account, takes an analogue
- * value and calculates the rudder position from this. I assume it does this because it only gets called
- * when the ratiometric_mode is on.
- * Todo: Check ratiometric_mode is on
- */
-uint16_t TakeRudder()
-{
-    return getADCFilteredValue(RUDDER_ANGLE);
-    //return (65535.0f/1024.0f) * (analogRead(RUDDER_PIN));
+  uint16_t adc_temp_value = 0, R;
+  
+  switch (index)
+  {
+    case CONTROLLER_TEMP:
+      adc_temp_value = getADCFilteredValue(CONTROLLER_TEMPERATURE);
+      R = 10000 * adc_temp_value / (16384 - adc_temp_value);  // resistance in ohms
+      return 30000000 / (R + 2600) + 200;
+    case MOTOR_TEMP:
+      adc_temp_value = getADCFilteredValue(MOTOR_TEMPERATURE);
+      R = 10000 * adc_temp_value / (16384 - adc_temp_value);  // resistance in ohms
+      return 30000000 / (R + 2600) + 200;
+    default:
+      adc_temp_value = 0; // Some out of bounds value was given.
+      break;
+  }
 }
 
 /*
  * Returns internal temperature of MCU
+ * NOT IMPLEMENTED - DEPRICATED. Needs reimplementation
  */
-uint16_t TakeInternalTemp(uint8_t p)
+uint16_t TakeInternalTemp()
 {
-  /*
-    uint32_t v = TakeADC(INTERNAL_TEMP, p);
-    // voltage = v * 1.1 / 1023
-    // 25C = 314mV, 85C = 380mV
-    // T = 909*V - 260
-    return 611 * v / 100 - 26000;
-    */
+
     return 0;
+}
+
+/*
+ * This function, returns a filtered rudder angle between 0 and 65535 to PyPilot.
+ */
+uint16_t TakeRudder()
+{
+    return getADCFilteredValue(RUDDER_ANGLE);
 }
 
 /*
@@ -765,78 +718,86 @@ void loop() // Must change
  * I wonder where the deadband is implemented because I can't see it here. PyPolit?
  * Todo: Correct my own comments to represent this new fact (PWM from 0 to 2000 with 1000 being no PWM).
  */
-    uint16_t v = TakeRudder();
-    // if not positive, then rudder feedback has negative gain (reversed)
-    uint8_t pos = rudder_min < rudder_max;
-    
-    if((pos && v < rudder_min) || (!pos && v > rudder_min)) {
-        stop_rev();
-        flags |= MIN_RUDDER;
-    } else
-        flags &= ~MIN_RUDDER;
-    if((pos && v > rudder_max) || (!pos && v < rudder_max)) {
-        stop_fwd();
-        flags |= MAX_RUDDER;
-    } else
-        flags &= ~MAX_RUDDER;
+    if (millis() - last_loop_rudder_millis > 100)
+    {
+      uint16_t v = TakeRudder();
+      // if not positive, then rudder feedback has negative gain (reversed)
+      uint8_t pos = rudder_min < rudder_max;
+      
+      if((pos && v < rudder_min) || (!pos && v > rudder_min)) {
+          stop_rev();
+          flags |= MIN_RUDDER;
+      } else
+          flags &= ~MIN_RUDDER;
+      if((pos && v > rudder_max) || (!pos && v < rudder_max)) {
+          stop_fwd();
+          flags |= MAX_RUDDER;
+      } else
+          flags &= ~MAX_RUDDER;
+          
+      last_loop_rudder_millis = millis();
+    }
 #endif
 
+#ifndef DISABLE_CURRENT_SENSE
+    if (millis() - last_loop_current_millis > 2000)
+    {
+      uint16_t amps = TakeAmps(); 
+      if(amps >= max_current) {
+          stop();
+          faults |= OVERCURRENT;
+      } else
+          faults &= ~OVERCURRENT;
+      last_loop_current_millis = millis();
+    }
+#endif
+
+#ifndef DISABLE_VOLTAGE_SENSE
+    /* 
+     * Checks for BADVOLTAGE.
+     * Todo:  reimpplement a threashold for number of samples that need to be bad before raising BADVOLTAGE.
+     *        However, a low pass filter should be enough for the most part. The result should be similar.
+     */
+    if (millis() - last_loop_voltage_millis > 2000)
+    {
+      uint16_t volts = TakeVolts();
+      // voltage must be between min and max voltage
+      if(volts <= (uint16_t)(VIN_MIN * 100.0f) || volts >= (uint16_t)(VIN_MAX * 100.0f)) {
+          stop();
+          flags |= BADVOLTAGE;
+      } else
+          flags &= ~BADVOLTAGE;
+  
+      flags |= faults;
+      last_loop_voltage_millis = millis();
+    }
+#endif
+
+#ifndef DISABLE_TEMP_SENSE
+    /* 
+     * Checks for OVERTEMPERATURE.
+     * Todo:  Cannot be executed every single time. Arduino not fast enough, apparently.
+     */
+    if (millis() - last_loop_temperature_millis > 4000)
+    {
+      uint16_t controller_temp = TakeTemp(CONTROLLER_TEMP);
+      uint16_t motor_temp = TakeTemp(MOTOR_TEMP);
+      if(controller_temp >= max_controller_temp || motor_temp > max_motor_temp) {
+          stop();
+          flags |= OVERTEMP;
+      } else
+          flags &= ~OVERTEMP;
+      last_loop_rudder_millis = millis();
+    }
     /*
-    const int react_count = 600; // need 600 for .1 reaction
-    
-    if(CountADC(CURRENT, 1) > react_count) {
-        uint16_t amps = TakeAmps(1); 
-        if(amps >= max_current) {
-            stop();
-            faults |= OVERCURRENT;
-        } else
-            faults &= ~OVERCURRENT;
-    }
-
-    if(CountADC(VOLTAGE, 1) > react_count) {
-        uint16_t volts = TakeVolts(1);
-        if(volts >= 1800 && !voltage_mode && !voltage_sense) {
-            // switch to higher voltage
-            voltage_mode = 1; // higher voltage
-            digitalWrite(voltage_sense_pin, LOW);
-            pinMode(voltage_sense_pin, OUTPUT);
-            max_voltage = 3200; // 32 v max in 24v mode
-            delay(2);
-            TakeVolts(0); // clear readings
-            TakeVolts(1);
-        } else
-        // voltage must be between 9 and max voltage
-        if(volts <= 900 || volts >= max_voltage) {
-            stop();
-            flags |= BADVOLTAGE;
-        } else
-            flags &= ~BADVOLTAGE;
-    }
-
-    flags |= faults;
-
-    // test over temp
-    const int temp_react_count = 50; // 1 second
-    if(CountADC(CONTROLLER_TEMP, 1) > temp_react_count &&
-       CountADC(MOTOR_TEMP, 1) > temp_react_count) {
-        uint16_t controller_temp = TakeTemp(CONTROLLER_TEMP, 1);
-        uint16_t motor_temp = TakeTemp(MOTOR_TEMP, 1);
-        if(controller_temp >= max_controller_temp || motor_temp > max_motor_temp) {
-            stop();
-            flags |= OVERTEMP;
-        } else
-            flags &= ~OVERTEMP;
-
-        // 100C is max allowed temp, 117C is max measurable.
-        // 110C indicates software fault
-        
-        // Again, here we reset the controller. Who knows about this? Will PyPilot be notified about the reset?
-        if(controller_temp > 11000) {
-            stop();
-            asm volatile ("ijmp" ::"z" (0x0000)); // attempt soft reset
-        }
-    }
-    */
+     * Again, here we reset the controller. Who knows about this? Will PyPilot be notified about the reset?
+     * Todo: Investigate if resetting the controller actually makes sense. Restarting will not lower temperature
+     */
+    /*if(controller_temp > 11000) {
+        stop();
+        asm volatile ("ijmp" ::"z" (0x0000)); // attempt soft reset
+    }*/
+#endif
 
 /*
  * The next section sends one byte back to PyPilot. This byte is defined by out_sync_b.
@@ -863,49 +824,27 @@ void loop() // Must change
             code = FLAGS_CODE;
             break;
         case 1: case 4: case 7: case 11: case 14: case 17: case 21: case 24: case 27: case 31: case 34: case 37: case 40:
-            /*if(CountADC(CURRENT, 0) < 50)
-                return;
-
-            v = TakeAmps(0);
+            v = TakeAmps();
             code = CURRENT_CODE;
             serialin-=4; // fix current output rate to input rate
-            delay(1); // small dead time to break serial transmission
-            if(packet_count < 255)
-                packet_count++;
-            */
-            return; // We don't want to send anything at this point because I'm still debugging and rewriting
+            //delay(1); // small dead time to break serial transmission
             break;
         case 2: case 5: case 8: case 12: case 15: case 18: case 22: case 25: case 28: case 32: case 35: case 38: case 41:
             v = TakeRudder();
             code = RUDDER_SENSE_CODE;
             break;
         case 3: case 13: case 23: case 33:
-            /*if(CountADC(VOLTAGE, 0) < 2)
-                return;
-            v = TakeVolts(0);
+            v = TakeVolts();
             code = VOLTAGE_CODE;
-            */
-            return; // We don't want to send anything at this point because I'm still debugging and rewriting
             break;
         case 6:
-            /*if(CountADC(CONTROLLER_TEMP, 0)) {
-                v = TakeTemp(CONTROLLER_TEMP, 0);
-                code = CONTROLLER_TEMP_CODE;
-                break;
-            }
-            */
-            return; // We don't want to send anything at this point because I'm still debugging and rewriting
+            v = TakeTemp(CONTROLLER_TEMP);
+            code = CONTROLLER_TEMP_CODE;
+            break;
         case 9:
-            /*if(CountADC(MOTOR_TEMP, 0)) {
-                v = TakeTemp(MOTOR_TEMP, 0);
-                if(v > 1200) { // below 12C means no sensor connected, or too cold to care
-                    code = MOTOR_TEMP_CODE;
-                    break;
-                }
-            }
-            */
-            return; // We don't want to send anything at this point because I'm still debugging and rewriting
-
+            v = TakeTemp(MOTOR_TEMP);
+            code = MOTOR_TEMP_CODE;
+            break;
         case 16: case 26: case 36: /* eeprom reads */
             if(eeprom_read_addr != eeprom_read_end) {
                 uint8_t value;
