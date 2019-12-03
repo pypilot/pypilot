@@ -13,10 +13,28 @@
     </script>
 </head>
 <body>
-    <div style="position:fixed;bottom:-10">
-      <br>RFCode: <b><span id="rfcode"></span></b>
+  <div style="position:fixed;bottom:-10">
+    <h2>pypilot 433mhz RF remote setup</h2>
+    <p>Press button(s) on the remote then assign a command.
+      <table>
+        <tr><td><button id="engage">Engage</button></td><td><span id="actionengagecodes"></span></td></tr>
+    <tr><td><button id="disengage">Disengage</button></td><td><span id="actiondisengagecodes"></span></td></tr>
+    <tr><td><button id="m1">+1</button></td><td><span id="action1codes"></span></td></tr>
+    <tr><td><button id="m2">+2</button></td><td><span id="action2codes"></span></td></tr>
+    <tr><td><button id="m10">+10</button></td><td><span id="action10codes"></span></td></tr>
+    <tr><td><button id="m-1">-1</button></td><td><span id="action-1codes"></span></td></tr>
+    <tr><td><button id="m-2">-2</button></td><td><span id="action-2codes"></span></td></tr>
+    <tr><td><button id="m-10">-10</button></td><td><span id="action-10codes"></span></td></tr>
+    <tr><td><button id="compassmode">compass mode</button></td><td><span id="actioncompassmodecodes"></span></td></tr>
+    <tr><td><button id="gpsmode">gps mode</button></td><td><span id="actiongpsmodecodes"></span></td></tr>
+    <tr><td><button id="windmode">wind mode</button></td><td><span id="actionwindmodecodes"></span></td></tr>
+    <tr><td><button id="tackport">tack port</button></td><td><span id="actiontackportcodes"></span></td></tr>
+    <tr><td><button id="tackstarboard">tack starboard</button></td><td><span id="actiontackstarboardcodes"></span></td></tr>        
+</table>
+      <br>RF code: <b><span id="rfcode"></span></b>
+      <br>action: <b><span id="action"></span></b>
       <br>pypilot: <b><span id="pypilot"></span></b>
-      <br>RF Config Web App: <b><span id="connection"></span></b>
+      <br>rfconfig: <b><span id="connection"></span></b>
       <br>Web Server Latency: <b><span id="ping-pong"></span> ms</b>
     </div>
 </body>
