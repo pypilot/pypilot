@@ -674,23 +674,24 @@ public:
 const int rstPIN  = 5;    // RST
 const int  rsPIN  = 6;    // RS
 
-        static  int jlx1264reset=1;
+static  int jlx1264reset=1;
 class JLX12864G : public spilcd
 {
 public:
     JLX12864G() : spilcd(rstPIN, rsPIN) {}
     virtual ~JLX12864G() {}
     void refresh(int contrast, surface *s) {
-        if(jlx1264reset>0) {
+        if(jlx1264reset>0||1) {
             digitalWrite(rst, LOW);
             //delay(50);
-            usleep(50000);
+//            usleep(50000);
+                        usleep(500);
             digitalWrite(rst, HIGH);
 //  delay(50);
-            usleep(50000);
+            usleep(500);
             jlx1264reset--;
 
-            //          command(0xe2); // Soft Reset
+            command(0xe2); // Soft Reset
 //        command(0x2c); // Boost 1
 //        command(0x2e); // Boost 2
         command(0x2f); // Boost 3
@@ -699,6 +700,9 @@ public:
 //        command(0x20); // Trim Contrast value range can be set from 0 to 63
 //        command(0xa2); // 1/9 bias ratio
         }
+                  command(0xe2); // Soft Reset
+
+                  //command(0x2f); // Boost 3
         command(0xaf); // Open the display
         //      command(0xa0); // Column scanning order : from left to right
         //command(0xc8); // Line scan sequence : from top to bottom
@@ -746,14 +750,16 @@ public:
 
 static int spilcdsizes[][2] = {{48, 84}, {64, 128}};
 
-static int detectdriver() {
-    return 0;
+static int detect(int driver) {
+    if(driver == -1)
+        return 1;
+    return driver;
 }
 
-spiscreen::spiscreen()
-    : surface(spilcdsizes[detectdriver()][0], spilcdsizes[detectdriver()][1], 1, NULL)
+spiscreen::spiscreen(int driver)
+    : surface(spilcdsizes[detect(driver)][0], spilcdsizes[detect(driver)][1], 1, NULL)
 {
-    int driver = detectdriver();
+    driver = detect(driver);
     switch (driver) {
     case 0: disp = new PCD8544(); break;
     case 1: disp = new JLX12864G(); break;
