@@ -216,7 +216,7 @@ class Autopilot(object):
         except Exception as e:
             print('failed to load pilot', pilot_type, e)
 
-    pilot_names = map(lambda pilot : pilot.name, self.pilots)
+    pilot_names = list(map(lambda pilot : pilot.name, self.pilots))
     print('Loaded Pilots:', pilot_names)
     self.pilot = self.Register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True)
 

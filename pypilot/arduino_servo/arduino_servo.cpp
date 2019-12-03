@@ -127,6 +127,7 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
             rudder = NAN;
         else
             rudder = (uint16_t)value / 65472.0 - 0.5; // nominal range of -0.5 to 0.5
+        printf("value %d\n", value);
 
         return RUDDER;
     case FLAGS_CODE:
