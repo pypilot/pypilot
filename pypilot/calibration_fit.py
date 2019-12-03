@@ -99,7 +99,7 @@ def LinearFit(points):
     for i in range(3):
         zpoints[i] = map(lambda x : x[i], points)
         
-    data = numpy.array(zip(zpoints[0], zpoints[1], zpoints[2]))
+    data = numpy.array(list(zip(zpoints[0], zpoints[1], zpoints[2])))
     print('zpoints', zpoints[0])
     print('data', data)
     datamean = data.mean(axis=0)
@@ -761,10 +761,10 @@ def ExtraFit():
         n = [x[0]-sphere_fit[0], x[1]-sphere_fit[1], x[2]-sphere_fit[2]]
         q = [1 - vector.norm(beta[:3])] + list(beta[:3])
         q = angvec2quat(vector.norm(beta[:3]), beta[:3])
-        m = map(lambda v : rotvecquat(vector.normalize(v), q), zip(n[0], n[1], n[2]))
-#        m = map(lambda v : rot(v, beta), zip(n[0], n[1], n[2]))
+        m = map(lambda v : rotvecquat(vector.normalize(v), q), list(zip(n[0], n[1], n[2])))
+#        m = map(lambda v : rot(v, beta), list(zip(n[0], n[1], n[2])))
 
-        m = numpy.array(zip(*m))
+        m = numpy.array(list(zip(*m)))
         d = m[0]*x[3] + m[1]*x[4] + m[2]*x[5]
         return beta[3] - d
 
@@ -778,7 +778,7 @@ def ExtraFit():
         sphere_fit = numpy.array(sphere_fit)
         n = [x[0]-sphere_fit[0], x[1]-sphere_fit[1], x[2]-sphere_fit[2]]
         m = map(lambda v : rot(v, beta), zip(n[0], n[1], n[2]))
-        m = numpy.array(zip(*m))
+        m = numpy.array(list(zip(*m)))
 
         d = m[0]*x[3] + m[1]*x[4] + m[2]*x[5]
         return beta[3] - d
