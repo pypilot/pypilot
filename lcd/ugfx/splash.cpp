@@ -44,9 +44,18 @@ int main(int argc, char *argv[])
 {
     surface *framebuffer;
 #ifdef WIRINGPI    
-    if(argc > 1 && !strcmp(argv[1], "nokia5110"))
-        framebuffer = new spiscreen();
-    else
+    if(argc > 1) {
+        if(!strcmp(argv[1], "auto"))
+            framebuffer = new spiscreen(-1);
+        else if(!strcmp(argv[1], "nokia5110"))
+            framebuffer = new spiscreen(0);
+        else if(!strcmp(argv[1], "jlx12864"))
+            framebuffer = new spiscreen(1);
+        else {
+            printf("unknown lcd %s\n", argv[1]);
+            exit(1);
+        }
+    } else
 #endif
         framebuffer = new screen("/dev/fb0");
 
@@ -83,17 +92,17 @@ int main(int argc, char *argv[])
     framebuffer->blit(logom, 0, 0);
     framebuffer->refresh();
 
-#if 1
-    for(int i=0; i<20; i++) {
+#if 1 // for testing
+    while(1) {
         framebuffer->fill(0);
         framebuffer->refresh();
-        usleep(100000);
+        usleep(1000000);
         framebuffer->fill(255);
         framebuffer->refresh();
-        usleep(100000);
+        usleep(1000000);
         framebuffer->blit(logom, 0, 0);
         framebuffer->refresh();
-        usleep(100000);
+        usleep(1000000);
     }
 #endif
     delete framebuffer;
