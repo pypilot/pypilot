@@ -7,7 +7,7 @@ uint16_t adcChannelHistory[5] = {0,0,0,0,0};
 void ADC_initFilters(void)
 {
 #ifndef DISABLE_RUDDER_SENSE
-    adcChannels[0]        = analogRead(RUDDER_PIN) << 6;
+    adcChannels[0]        = analogRead(RUDDER_SENSE_PIN) << 6;
     adcChannelHistory[0]  = adcChannels[0];
 #endif
 #ifndef DISABLE_VOLTAGE_SENSE
@@ -43,7 +43,7 @@ void ADC_updateAndFilter(void)
   {
     case RUDDER_ANGLE:
 #ifndef DISABLE_RUDDER_SENSE
-      adcInputValue = analogRead(RUDDER_PIN) << 6;
+      adcInputValue = analogRead(RUDDER_SENSE_PIN) << 6;
       adcChannels[0] = (uint16_t)(ALPHA_RUDDER * (float)adcInputValue + (1 - ALPHA_RUDDER) * (float)adcChannelHistory[0]);
       adcChannelHistory[0] = adcChannels[0];
 #else

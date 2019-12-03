@@ -157,7 +157,8 @@ enum {CONTROLLER_TEMP, MOTOR_TEMP};
 //#define DISABLE_RUDDER_SENSE  // if no rudder sense
 #define DISABLE_ENDSTOPS // if no endstops are installed we won't have a forward and reverse faults
 
-#define DISABLE_DEBUGGING_DISPLAY // If a debugging TFT display is attached to the controller, comment this out
+//#define DISABLE_DEBUGGING_DISPLAY // If a debugging TFT display is attached to the controller, comment this out
+#define USE_STEINHART_TEMP_SENSING // If you want to use the much slower Steinhart calculation
 
 /*
  * Current configuration
@@ -165,15 +166,15 @@ enum {CONTROLLER_TEMP, MOTOR_TEMP};
 #define LOW_CURRENT // gives 2000 mA. Comment to get 4000 mA max current
 
 
-/*
- * GENERAL CONFIGURATION VALUES
- */
+// *************************************************************************************************** //
+// ********************************* GENERAL CONFIGURATION VALUES ************************************ //
+// *************************************************************************************************** //
 #define PWM_DEADBAND 40
 
 #define RUDDER_MIN_ADC 0
 #define RUDDER_MAX_ADC 65535
-#define TEMPERATURE_CONTROLLER_MAX 12000
-#define TEMPERATURE_MOTOR_MAX 12000
+#define TEMPERATURE_CONTROLLER_MAX 7000
+#define TEMPERATURE_MOTOR_MAX 7000
 #define CURRENT_MOTOR_MAX 2000
 #define SPEEDUP_SLEW_RATE 15
 #define SLOWDOWN_SLEW_RATE 30
@@ -196,14 +197,14 @@ enum {CONTROLLER_TEMP, MOTOR_TEMP};
 // ********************************* Battery Voltage Measurement Variables *************************** //
 // *************************************************************************************************** //
 // Maximum input voltage on the supply pin
-#define VIN_MAX 18.0f
+#define VIN_MAX 1800
 // Maximum input voltage on the supply pin
-#define VIN_MIN 9.0f
+#define VIN_MIN 900
 // Wow the ADC is configured to measure: 0V - 5V
 #define ADC_RANGE 5.0f
 // Bit deapth of the ADC being used
 #define BIT_DEPTH 1024.0f
-// Calcuulated voltage separation per bit
+// Calculated voltage separation per bit
 #define V_SEPARATION ADC_RANGE / BIT_DEPTH
 // Voltage divider resistor 1
 #define R1_1 22000.0f

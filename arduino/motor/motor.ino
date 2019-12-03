@@ -131,7 +131,7 @@ void setup() // Must change completely
     uint8_t lowBits      = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
     uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
     uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
-    uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
+    //uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS); // Unused
     
     if(lowBits != 0xFF || highBits != 0xda ||
        (extendedBits != 0xFD && extendedBits != 0xFC)
@@ -155,8 +155,8 @@ void setup() // Must change completely
     digitalWrite(REV_FAULT_PIN, HIGH); /* enable internal pullups */
 #endif
 
-    pinMode(LED_PIN, OUTPUT); // status LED
-    digitalWrite(LED_PIN, LOW);
+    pinMode(ENGAGE_LED_PIN, OUTPUT); // status LED
+    digitalWrite(ENGAGE_LED_PIN, LOW);
 
     _delay_us(100); // time to settle
 
@@ -200,7 +200,7 @@ void engage() // Must change completely
 #endif
 
     position(1000); // Not sure why position 1000 is called.
-    digitalWrite(LED_PIN, HIGH); // status LED
+    digitalWrite(ENGAGE_LED_PIN, HIGH); // status LED
     
     timeout = 0;
     flags |= ENGAGED;
@@ -338,7 +338,7 @@ void disengage() // Will not be changed
     stop();
     flags &= ~ENGAGED;
     timeout = 60; // detach in about 62ms
-    digitalWrite(LED_PIN, LOW); // status LED
+    digitalWrite(ENGAGE_LED_PIN, LOW); // status LED
 }
 
 /*
@@ -380,7 +380,7 @@ uint16_t TakeVolts()
  */
 uint16_t TakeTemp(uint8_t index)
 {
-  /*
+#ifdef USE_STEINHART_TEMP_SENSING
   float adc_temp_value = 0;
   float steinhart = 0;
   
@@ -409,7 +409,7 @@ uint16_t TakeTemp(uint8_t index)
     steinhart -= 273.15;                                  // convert to C
     
     return (uint16_t)(steinhart * 100.0f);
-    */
+#else
   uint16_t adc_temp_value = 0, R;
   
   switch (index)
@@ -426,6 +426,7 @@ uint16_t TakeTemp(uint8_t index)
       adc_temp_value = 0; // Some out of bounds value was given.
       break;
   }
+#endif
 }
 
 /*
@@ -446,7 +447,7 @@ uint16_t TakeRudder()
     return getADCFilteredValue(RUDDER_ANGLE);
 }
 
-/*
+/* 
  * This is the interrupt that is executed when the watch dog timer fires.
  * It also restarts the program by jumping back to start of code.
  * Todo: Will anyone be informed if this happens? There is no start code feedback over serial.
@@ -762,7 +763,7 @@ void loop() // Must change
     {
       uint16_t volts = TakeVolts();
       // voltage must be between min and max voltage
-      if(volts <= (uint16_t)(VIN_MIN * 100.0f) || volts >= (uint16_t)(VIN_MAX * 100.0f)) {
+      if(volts <= (uint16_t)(VIN_MIN) || volts >= (uint16_t)(VIN_MAX)) {
           stop();
           flags |= BADVOLTAGE;
       } else
@@ -827,7 +828,6 @@ void loop() // Must change
             v = TakeAmps();
             code = CURRENT_CODE;
             serialin-=4; // fix current output rate to input rate
-            //delay(1); // small dead time to break serial transmission
             break;
         case 2: case 5: case 8: case 12: case 15: case 18: case 22: case 25: case 28: case 32: case 35: case 38: case 41:
             v = TakeRudder();

@@ -19,13 +19,19 @@
 
 #endif
 
+#ifndef DISABLE_ENDSTOPS
+  // Hardware endstops for the rudder position
+  #define FWD_FAULT_PIN 2 // use pin 7 for optional fault
+  #define REV_FAULT_PIN 3 // use pin 8 for optional fault
+#endif
+
+
 #ifdef BOARD_IBT2_H_BRIDGE
+  #define ENABLE_PIN 4    // Combined enable pin for both BTS7960
   #define RPWM_PIN 5      // First PWM input to BTS7960 // Drives CCW
   #define LPWM_PIN 6      // Second PWM input to BTS7960 // Drives CW
-  #define ENABLE_PIN 10   // Combined enable pin for both BTS7960
   #define R_IS_PIN A0     // Analog input if used
   #define L_IS_PIN A1     // Analog input if used
-  #define RUDDER_PIN A2   // Analog input to measure the rudder position
 #endif
 
 #ifndef DISABLE_CURRENT_SENSE
@@ -46,23 +52,14 @@
   #define VOLTAGE_SENSE_PIN A5
 #endif
 
-#ifndef DISABLE_ENDSTOPS
-  // Hardware endstops for the rudder position
-  #define FWD_FAULT_PIN 7 // use pin 7 for optional fault
-  #define REV_FAULT_PIN 8 // use pin 8 for optional fault
-#endif
-
-#define LED_PIN 13 // led is on when engaged
-
-
+#define ENGAGE_LED_PIN 7 // led is on when engaged.
 
 #ifndef DISABLE_DEBUGGING_DISPLAY
-  #define TFT_CS   10
   #define TFT_RST  9
   #define TFT_DC   8
-  #define TFT_SCLK 13
+  #define TFT_CS   10
   #define TFT_MOSI 11
-  #define ENABLE_PIN 2   // Reassigned to make room for SPI Combined enable pin for both BTS7960
+  #define TFT_SCLK 13
 #endif
 
 #endif
