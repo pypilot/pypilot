@@ -681,14 +681,14 @@ public:
     JLX12864G() : spilcd(rstPIN, rsPIN) {}
     virtual ~JLX12864G() {}
     void refresh(int contrast, surface *s) {
-        if(jlx1264reset>0||1) {
+        if(jlx1264reset>0) {
             digitalWrite(rst, LOW);
             //delay(50);
-//            usleep(50000);
-                        usleep(500);
+            usleep(50000);
+//                        usleep(500);
             digitalWrite(rst, HIGH);
 //  delay(50);
-            usleep(500);
+            usleep(50000);
             jlx1264reset--;
 
             command(0xe2); // Soft Reset
@@ -700,13 +700,13 @@ public:
 //        command(0x20); // Trim Contrast value range can be set from 0 to 63
 //        command(0xa2); // 1/9 bias ratio
         }
-                  command(0xe2); // Soft Reset
+        //         command(0xe2); // Soft Reset
+
 
                   //command(0x2f); // Boost 3
         command(0xaf); // Open the display
         //      command(0xa0); // Column scanning order : from left to right
         //command(0xc8); // Line scan sequence : from top to bottom
-
     
         int i;
 
