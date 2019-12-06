@@ -59,8 +59,6 @@ uint16_t rudder_max = RUDDER_MAX_ADC; // Analog rudder value between -100 and 10
 uint8_t eeprom_read_addr = 0;
 uint8_t eeprom_read_end = 0;
 
-uint8_t adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
-
 uint8_t in_bytes[3];
 uint8_t sync_b = 0, in_sync_count = 0;
 
@@ -580,7 +578,15 @@ void loop() // Must change
  */
     if(timeout >= 128) // detach 160 ms later so esc gets stop
         detach();
-        
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+/*
+ * Display update for status variables
+ */
+  display_update();
+
+#endif
+
     /*
      * **************************** SERIAL INPUT ***********************************************
      * 1. Read 3 bytes

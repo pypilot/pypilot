@@ -54,7 +54,7 @@ void ADC_updateAndFilter(void)
     case SUPPLY_VOLTAGE:
 #ifndef DISABLE_VOLTAGE_SENSE
       adcInputValue = analogRead(VOLTAGE_SENSE_PIN);
-      adcChannels[1] = (uint16_t)(ALPHA_RUDDER * (float)adcInputValue + (1 - ALPHA_RUDDER) * (float)adcChannelHistory[1]);
+      adcChannels[1] = (uint16_t)(ALPHA_VOLTAGE * (float)adcInputValue + (1 - ALPHA_VOLTAGE) * (float)adcChannelHistory[1]);
       adcChannelHistory[1] = adcChannels[1];
 #else
       adcInputValue = 0;
@@ -64,7 +64,7 @@ void ADC_updateAndFilter(void)
     case MOTOR_CURRENT:
 #ifndef DISABLE_CURRENT_SENSE
       adcInputValue = analogRead(CURRENT_SENSE_PIN_1); // For now, I only use one of the two current pins of the IBT_2 h-bridge driver.
-      adcChannels[2] = (uint16_t)(ALPHA_RUDDER * (float)adcInputValue + (1 - ALPHA_RUDDER) * (float)adcChannelHistory[2]);
+      adcChannels[2] = (uint16_t)(ALPHA_CURRENT * (float)adcInputValue + (1 - ALPHA_CURRENT) * (float)adcChannelHistory[2]);
       adcChannelHistory[2] = adcChannels[2];
 #else
       adcInputValue = 0;
@@ -74,7 +74,7 @@ void ADC_updateAndFilter(void)
     case CONTROLLER_TEMPERATURE:
 #ifndef DISABLE_TEMP_SENSE
       adcInputValue = analogRead(TEMPERATURE_CONTROLLER_SENSE_PIN);
-      adcChannels[3] = (uint16_t)(ALPHA_RUDDER * (float)adcInputValue + (1 - ALPHA_RUDDER) * (float)adcChannelHistory[3]);
+      adcChannels[3] = (uint16_t)(ALPHA_TEMPCNTRL * (float)adcInputValue + (1 - ALPHA_TEMPCNTRL) * (float)adcChannelHistory[3]);
       adcChannelHistory[3] = adcChannels[3];
 #else
       adcInputValue = 0;
@@ -84,7 +84,7 @@ void ADC_updateAndFilter(void)
     case MOTOR_TEMPERATURE:
 #ifndef DISABLE_TEMP_SENSE
       adcInputValue = analogRead(TEMPERATURE_MOTOR_SENSE_PIN);
-      adcChannels[4] = (uint16_t)(ALPHA_RUDDER * (float)adcInputValue + (1 - ALPHA_RUDDER) * (float)adcChannelHistory[4]);
+      adcChannels[4] = (uint16_t)(ALPHA_TEMPMOTOR * (float)adcInputValue + (1 - ALPHA_TEMPMOTOR) * (float)adcChannelHistory[4]);
       adcChannelHistory[4] = adcChannels[4];
 #else
       adcInputValue = 0;

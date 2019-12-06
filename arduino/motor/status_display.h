@@ -12,6 +12,11 @@
 
 #include <stdint.h>
 
+#define DISPLAY_UPDATE_MS 500 // Delay in milliseconds between display updates
+
+#define X_OFFSET_FOR_STATUS 2 // Just for beautification of the display, an offset
+#define Y_OFFSET_FOR_STATUS 4 // Just for beautification of the display, an offset
+
 /*
  * Global variables to hold status information for the pypilot motor controller display
  */
@@ -20,7 +25,19 @@ extern TFT_ST7735 tft;
 
 extern unsigned long lastUpdateMillis;
 
-extern uint16_t display_rudder_ADC;
+extern uint16_t display_supply_voltage;
+extern uint16_t display_sensor_ADC;
+extern uint16_t display_sensor_scaled;
+extern uint8_t display_endstop_prt;
+extern uint8_t display_endstop_stb;
+extern uint8_t display_endstop_type;
+extern uint16_t display_motor_temperature;
+extern uint16_t display_controller_temperature;
+extern uint16_t display_motor_current;
+extern uint16_t display_motor_command;
+extern uint16_t display_motor_PWM;
+extern uint16_t display_flags;
+extern uint16_t display_faults;
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,6 +57,9 @@ void display_update(void);
  * Actually 
  */
 void display_PrintText(String textBuffer, int x, int y, int textSize, int color);
+
+void display_motor_engaged(void);
+void display_motor_disengaged(void);
 
 #ifdef __cplusplus
 }

@@ -1,7 +1,7 @@
 /*
  * Author: Timo Birnschein (timo.birnschein@googlemail.com)
  * Date: 2019/11/24
- * Credits: Where they are due: https://github.com/seandepagnier is the original code writer
+ * Credits: Where they are due: https://github.com/seandepagnier is the original author of the Pypilot motor code.
  */
 
 #ifndef __CONFIG_H__
