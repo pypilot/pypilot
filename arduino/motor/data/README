@@ -1,14 +1,11 @@
 This motor controller monitor receives commands over a serial port.
 
-This is a highly modified version of the original Pypilot Motor.ino by https://github.com/pypilot/pypilot
 
 It monitors voltage, current, temperature and fault pins, and
-outputs PWM to an IBT_2 H-Bridge driver available on the web for cheap.
+outputs PWM to command an ESC or drive gate drivers which drive an H-bridge.
 
-Configuration was completely changed and now happens though config.h.
-Please note, the code can be configured to output information on a tft display.
-This requires for the Adafruit display library to be installed, or, alternatively,
-the much better high speed library found here: https://github.com/Bodmer/TFT_ST7735
+If an esc is used, it may need to be reprogrammed to have forward and reverse,
+and brushed or brushless.
 
 Based on arduino nano.  The efuse byte should be set to enable the
 brown-out detector (BOD) not always enabled by default.  This is critical
