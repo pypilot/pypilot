@@ -13,7 +13,7 @@ from signalk.client import SignalKClient, SignalKClientFromArgs, ConnectionLost
 
 def round3(value):
     if type(value) == type([]):
-        return map(round3, value)
+        return list(map(round3, value))
     elif type(value) == type({}):
         ret = {}
         for each in value:

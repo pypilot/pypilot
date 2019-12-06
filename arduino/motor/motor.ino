@@ -43,6 +43,7 @@
 /*
  ******************************** Global Variables *************************************
  */
+
 uint16_t flags = 0, faults = 0;
 uint8_t serialin, packet_count = 0;
 
@@ -115,8 +116,8 @@ void setup() // Must change completely
     uint8_t lowBits      = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
     uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
     uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
-    //uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS); // Unused
-    
+    // uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS); // too many clones don't set lock bits and there is no spm
+
     if(lowBits != 0xFF || highBits != 0xda ||
        (extendedBits != 0xFD && extendedBits != 0xFC)
        // || lockBits != 0xCF // too many clones don't set lock bits and there is no spm
@@ -133,10 +134,10 @@ void setup() // Must change completely
     set_sleep_mode(SLEEP_MODE_IDLE); // wait for serial
 
 #ifndef DISABLE_ENDSTOPS
-    pinMode(FWD_FAULT_PIN, INPUT);
-    pinMode(REV_FAULT_PIN, INPUT);
-    digitalWrite(REV_FAULT_PIN, HIGH); /* enable internal pullups */
-    digitalWrite(REV_FAULT_PIN, HIGH); /* enable internal pullups */
+    pinMode(STBD_FAULT_PIN, INPUT);
+    pinMode(PORT_FAULT_PIN, INPUT);
+    digitalWrite(STBD_FAULT_PIN, HIGH); /* enable internal pullups */
+    digitalWrite(PORT_FAULT_PIN, HIGH); /* enable internal pullups */
 #endif
 
     pinMode(ENGAGE_LED_PIN, OUTPUT); // status LED
@@ -270,13 +271,13 @@ void stop()
  * Just stop. That's literally what these two functions do. There is no difference unless it's exactly 1000.
  * Then it does nothing.
  */
-void stop_fwd()
+void stop_port()
 {
     if(lastpos > 1000)
        stop();
 }
 
-void stop_rev()
+void stop_starboard()
 {
     if(lastpos < 1000)
        stop();
@@ -443,7 +444,7 @@ void process_packet()
     } break;
     case RESET_CODE:
         // reset overcurrent flag
-        flags &= ~OVERCURRENT;
+        flags &= ~OVERCURRENT_FAULT;
         break;
     case COMMAND_CODE:
         timeout = 0; // Reset timeout to make sure we're not resetting anything else
@@ -452,21 +453,15 @@ void process_packet()
         if(value > 2000); // out of range (can only be positive because it's a uint16_t)
             // unused range, invalid!!!
             // ignored
-        else if(flags & (OVERTEMP | OVERCURRENT | BADVOLTAGE));
+        else if(flags & (OVERTEMP_FAULT | OVERCURRENT_FAULT | BADVOLTAGE_FAULT));
             // no command because of overtemp or overcurrent or badvoltage
-        else if((flags & (FWD_FAULTPIN | MAX_RUDDER)) && value > 1000)
-            // no forward command if fwd fault
-            /*
-             * Todo: Needs alternative, configurable implementation using the rudder sensor. USE_RUDDER_SENSOR_FOR_ENDSTOPP_CHECK
-             */
+        else if((flags & (PORT_PIN_FAULT | MAX_RUDDER_FAULT)) && value > 1000)
             stop();
-        else if((flags & (REV_FAULTPIN | MIN_RUDDER)) && value < 1000)
-            // no reverse command if rev fault
-            /*
-             * Todo: Needs alternative, configurable implementation using the rudder sensor. USE_RUDDER_SENSOR_FOR_ENDSTOPP_CHECK
-             */
+            // no forward command if port fault
+        else if((flags & (STARBOARD_PIN_FAULT | MIN_RUDDER_FAULT)) && value < 1000)
             stop();
-        else { // Valid command received. Store value and engage controller.
+            // no starboard command if port fault
+        else {
             command_value = value;
             engage();
         }
@@ -632,17 +627,17 @@ void loop() // Must change
      * This only makes sense if these are actual fault pins. But there is no hint as to what these represent.
      */
     // test fault pins
-    if(!digitalRead(FWD_FAULT_PIN)) {
-        stop_fwd();
-        flags |= FWD_FAULTPIN;
+    if(!digitalRead(PORT_FAULT_PIN)) {
+        stop_port();
+        flags |= PORT_PIN_FAULT;
     } else
-      flags &= ~FWD_FAULTPIN;
+      flags &= ~PORT_PIN_FAULT;
 
-    if(!digitalRead(REV_FAULT_PIN)) {
-        stop_rev();
-        flags |= REV_FAULTPIN;
+    if(!digitalRead(STBD_FAULT_PIN)) {
+        stop_starboard();
+        flags |= STARBOARD_PIN_FAULT;
     } else
-      flags &= ~REV_FAULTPIN;
+      flags &= ~STARBOARD_PIN_FAULT;
 #endif
 
 #ifndef DISABLE_RUDDER_SENSE
@@ -662,15 +657,15 @@ void loop() // Must change
       uint8_t pos = rudder_min < rudder_max;
       
       if((pos && v < rudder_min) || (!pos && v > rudder_min)) {
-          stop_rev();
-          flags |= MIN_RUDDER;
+          stop_starboard();
+          flags |= MIN_RUDDER_FAULT;
       } else
-          flags &= ~MIN_RUDDER;
+          flags &= ~MIN_RUDDER_FAULT;
       if((pos && v > rudder_max) || (!pos && v < rudder_max)) {
-          stop_fwd();
-          flags |= MAX_RUDDER;
+          stop_port();
+          flags |= MAX_RUDDER_FAULT;
       } else
-          flags &= ~MAX_RUDDER;
+          flags &= ~MAX_RUDDER_FAULT;
           
       last_loop_rudder_millis = millis();
     }
@@ -682,16 +677,16 @@ void loop() // Must change
       uint16_t amps = TakeAmps(); 
       if(amps >= max_current) {
           stop();
-          faults |= OVERCURRENT;
+          faults |= OVERCURRENT_FAULT;
       } else
-          faults &= ~OVERCURRENT;
+          faults &= ~OVERCURRENT_FAULT;
       last_loop_current_millis = millis();
     }
 #endif
 
 #ifndef DISABLE_VOLTAGE_SENSE
     /* 
-     * Checks for BADVOLTAGE.
+     * Checks for BADVOLTAGE_FAULT.
      * Todo:  reimpplement a threashold for number of samples that need to be bad before raising BADVOLTAGE.
      *        However, a low pass filter should be enough for the most part. The result should be similar.
      */
@@ -701,9 +696,9 @@ void loop() // Must change
       // voltage must be between min and max voltage
       if(volts <= (uint16_t)(VIN_MIN) || volts >= (uint16_t)(VIN_MAX)) {
           stop();
-          flags |= BADVOLTAGE;
+          flags |= BADVOLTAGE_FAULT;
       } else
-          flags &= ~BADVOLTAGE;
+          flags &= ~BADVOLTAGE_FAULT;
   
       flags |= faults;
       last_loop_voltage_millis = millis();
@@ -721,9 +716,9 @@ void loop() // Must change
       uint16_t motor_temp = TakeTemp(MOTOR_TEMP);
       if(controller_temp >= max_controller_temp || motor_temp > max_motor_temp) {
           stop();
-          flags |= OVERTEMP;
+          flags |= OVERTEMP_FAULT;
       } else
-          flags &= ~OVERTEMP;
+          flags &= ~OVERTEMP_FAULT;
       last_loop_rudder_millis = millis();
     }
     /*

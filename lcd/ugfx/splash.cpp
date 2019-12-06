@@ -43,9 +43,11 @@ surface *load_version(int bypp)
 int main(int argc, char *argv[])
 {
     surface *framebuffer;
+#ifdef WIRINGPI    
     if(argc > 1 && !strcmp(argv[1], "nokia5110"))
         framebuffer = new spiscreen();
     else
+#endif
         framebuffer = new screen("/dev/fb0");
 
 #if 1
