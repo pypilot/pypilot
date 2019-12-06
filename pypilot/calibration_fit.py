@@ -100,6 +100,8 @@ def LinearFit(points):
         zpoints[i] = map(lambda x : x[i], points)
         
     data = numpy.array(zip(zpoints[0], zpoints[1], zpoints[2]))
+    print('zpoints', zpoints[0])
+    print('data', data)
     datamean = data.mean(axis=0)
     uu, dd, vv = numpy.linalg.svd(data - datamean)
 
@@ -441,11 +443,11 @@ class SigmaPoints(object):
 # calculate the largest angle in radians between any two measurements
 # for a given calibration bias and normal vector
 def ComputeCoverage(p, bias, norm):
-    q = vec2vec2quat(norm, [0, 0, 1])
+    q = quaternion.vec2vec2quat(norm, [0, 0, 1])
     def ang(p):
-        c = rotvecquat(vector.sub(p[:3], bias), q)
-        d = rotvecquat(p[3:6], q)
-        v = rotvecquat(c, vec2vec2quat(d, [0, 0, 1]))
+        c = quaternion.rotvecquat(vector.sub(p[:3], bias), q)
+        d = quaternion.rotvecquat(p[3:6], q)
+        v = quaternion.rotvecquat(c, quaternion.vec2vec2quat(d, [0, 0, 1]))
         v = vector.normalize(v)
         return math.degrees(math.atan2(v[1], v[0]))
     #, abs(math.degrees(math.acos(v[2])))

@@ -190,9 +190,14 @@ class EnumProperty(Property):
 
     def set(self, value):
         for choice in self.choices:
-            if str(choice) == str(value):
-                super(EnumProperty, self).set(value)
-                return
+            try: # accept floating point equivilent, 10.0 is 10
+                if float(choice) != float(value):
+                    continue
+            except:
+                if str(choice) != str(value):
+                    continue
+            super(EnumProperty, self).set(value)
+            return
         print('set', self.name, 'to invalid enum value', value)
 
 class BooleanValue(Value):

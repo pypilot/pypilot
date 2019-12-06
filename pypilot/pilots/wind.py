@@ -12,8 +12,11 @@ sys.path.append('..')
 from autopilot import AutopilotPilot, HeadingOffset, AutopilotGain, resolv
 from signalk.values import *
 
-# the wind pilot does not require a compass, instead
-# mixing gyro with wind directly
+# the wind pilot does not require a compass but does require a wind sensor.
+# it does not rely on the compass or calibration (unless in compass mode)
+# and is not affected by magnetic changes.   Even in compass mode this pilot
+# will follow wind shifts and only hold the general compass course
+
 class WindPilot(AutopilotPilot):
   def __init__(self, ap):
     super(WindPilot, self).__init__('wind', ap)
@@ -59,11 +62,18 @@ class WindPilot(AutopilotPilot):
 
     sensors = self.ap.sensors
     if sensors.gps.source.value != 'none':
+      gps_track  = sensors.gps.track.value
       # difference from gps to wind
-      self.gps_wind_offset.update(gps_track+wind)
+      self.gps_wind_offset.update(gps_track+wind, d)
 
       # compute offset between wind and true wind
-      offset = resolv(self.ap.truewind - wind, self.true_wind_compass_offset.value)
+      gps_speed = sensors.gps.speed.value
+      wind_speed = sensors.wind.speed.value
+      wind_direction = sensors.wind.direction.value
+      rd = math.radians(wind_direction)
+      windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
+      true_wind = math.degrees(math.atan2(windv[0], windv[1] - gps_speed))
+      offset = resolv(true_wind - wind, self.true_wind_wind_offset.value)
       d = .05
       self.true_wind_wind_offset.update(offset, d)
 
@@ -132,8 +142,6 @@ class WindPilot(AutopilotPilot):
         return
 
     # compute command
-    wind = ap.sensors.wind.value
-        
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
     gain_values = {'P': self.heading_error.value,

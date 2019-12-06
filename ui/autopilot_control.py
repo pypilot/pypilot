@@ -102,7 +102,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             self.cPilot.Append(pilot)
                 
         self.GetSizer().Fit(self)
-        self.SetSize(wx.Size(500, 580))
+        self.SetSize(wx.Size(570, 420))
 
         # add continuous value to avoid timeout
         if not 'ap.heading' in value_list:

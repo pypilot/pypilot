@@ -311,6 +311,7 @@ class Nmea(object):
     def read_serial_device(self, device, serial_msgs):
         t = time.time()
         line = device.readline()
+#        print ('line', line)
         if not line:
             return
         if self.process.sockets:
@@ -321,9 +322,10 @@ class Nmea(object):
                 # do not output nmea data over tcp faster than 5hz
                 # for each message time
                 # forward nmea lines from serial to tcp
+
                 dt = t-self.nmea_times[nmea_name] if nmea_name in self.nmea_times else -1
                 if dt>.2 or dt < 0:
-                    #self.process.pipe.send(line, False)
+                    self.process.pipe.send(line, False)
                     self.nmea_times[nmea_name] = t
 
         self.devices_lastmsg[device] = t
