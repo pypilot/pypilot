@@ -16,7 +16,7 @@
   *         would use external jumpers to configure this. A config.h would be preferable.
   *         I will eliminate all this external configuration stuff and concentrate on making this
   *         more human readible.
-  *         I will concentrate on the position, engage and disengage functions to implement my IBT-2.
+  *         I will concentrate on the position, engage and disengage functions to implement the IBT-2 driver.
   */
 
 #include <Arduino.h>
@@ -35,14 +35,7 @@
 #include "config.h"
 #include "crc.h"
 #include "adc_filtering.h"
-
-
-#ifndef DISABLE_DEBUGGING_DISPLAY
-  #include <Adafruit_GFX.h>    // Core graphics library
-  //#include <Adafruit_ST7735.h> // Hardware-specific library
-  #include <TFT_ST7735.h> // Hardware-specific library
-  #include <SPI.h>
-#endif
+#include "status_display.h"
 /*
  * This program is meant to interface with pwm based motor controller either brushless or brushed, or a regular RC servo
  */
@@ -90,20 +83,11 @@ uint16_t command_value = 1000;
  */
 uint16_t lastpos = 1000;
 
-
-#ifndef DISABLE_DEBUGGING_DISPLAY
-  // *************************************************************************************************** //
-  // ********************************* Display Variables *********************************************** //
-  // *************************************************************************************************** //
-  //Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
-  TFT_ST7735 tft = TFT_ST7735();       // Invoke custom library - insanely fast alternative! https://github.com/Bodmer/TFT_ST7735
-#endif
-
 void setup() // Must change completely
 {
 
 #ifndef DISABLE_DEBUGGING_DISPLAY
-    displayInitScreen();
+    display_init();
 #endif
 
     // Disable all interrupts
@@ -239,20 +223,6 @@ void update_command() // Will not be changed
                 diff = -speed_rate;
     }
 
-#ifndef DISABLE_DEBUGGING_DISPLAY
-    String strBuffer = String("diff  : ") + oldDiff;
-    tftPrintText(strBuffer, 0, 30, 2, ST7735_BLACK);
-    oldDiff = diff;
-    strBuffer = String("diff  : ") + oldDiff;
-    tftPrintText(strBuffer, 0, 30, 2, ST7735_BLUE);
-    
-    strBuffer = String("curval: ") + oldCurValue;
-    tftPrintText(strBuffer, 0, 45, 2, ST7735_BLACK);
-    oldCurValue = cur_value;
-    strBuffer = String("curval: ") + oldCurValue;
-    tftPrintText(strBuffer, 0, 45, 2, ST7735_BLUE);
-#endif
-
     // Push the new value over to the position function
     position(cur_value + diff);
 }
@@ -262,10 +232,6 @@ void update_command() // Will not be changed
  * using the desired pwm setting.
  */
 
-#ifndef DISABLE_DEBUGGING_DISPLAY
-  int16_t oldValue = 0;
-  uint8_t old8bitValue = 0;
-#endif
 int16_t newValue = 0;
 void position(uint16_t value)
 {
@@ -289,20 +255,6 @@ void position(uint16_t value)
     analogWrite(RPWM_PIN, 0);
     analogWrite(LPWM_PIN, 0);
   }
-
-#ifndef DISABLE_DEBUGGING_DISPLAY
-    String strBuffer = String("oldVal: ") + oldValue;
-    tftPrintText(strBuffer, 0, 60, 0, ST7735_BLACK);
-    oldValue = newValue;
-    strBuffer = String("oldVal: ") + oldValue;
-    tftPrintText(strBuffer, 0, 60, 0, ST7735_BLUE);
-    
-    strBuffer = String("DACVal: ") + old8bitValue;
-    tftPrintText(strBuffer, 0, 75, 0, ST7735_BLACK);
-    old8bitValue = (uint8_t)((255.0f/1000.0f) * (float)oldValue);
-    strBuffer = String("DACVal: ") + old8bitValue;
-    tftPrintText(strBuffer, 0, 75, 0, ST7735_BLUE);
-#endif
 }
 
 /*
@@ -358,6 +310,10 @@ void detach() // Must change completely
   timeout = 80; // avoid overflow
 }
 
+/*
+ * UNTESTED!
+ * Takes a filtered measurement and converts it into the format PPyPilot expects to send it out.
+ */
 uint16_t TakeAmps()
 {
     uint32_t v = getADCFilteredValue(MOTOR_CURRENT);
@@ -377,6 +333,7 @@ uint16_t TakeVolts()
 /*
  * This function returns either controller or motor temperature.
  * Equations based on https://learn.adafruit.com/thermistor/using-a-thermistor
+ * However, the original fixed point math version can also be used. See config.h for details
  */
 uint16_t TakeTemp(uint8_t index)
 {
@@ -441,6 +398,8 @@ uint16_t TakeInternalTemp()
 
 /*
  * This function, returns a filtered rudder angle between 0 and 65535 to PyPilot.
+ * Todo:  Needs scaling and offset! Currently, whatever value was measured at the potentiometer will be sent to PyPilot.
+ *        This results in values from -15 to 22 degrees which is not at all desireable.
  */
 uint16_t TakeRudder()
 {
@@ -470,10 +429,6 @@ ISR(WDT_vect)
  * Byte 1 and 2 contain the 16 bit value and needed to be OR'ed into one word.
  */ 
 
-#ifndef DISABLE_DEBUGGING_DISPLAY
-  uint16_t oldPWM = 0;
-#endif
-
 void process_packet()
 {
     flags |= SYNC;
@@ -502,35 +457,24 @@ void process_packet()
         else if((flags & (FWD_FAULTPIN | MAX_RUDDER)) && value > 1000)
             // no forward command if fwd fault
             /*
-             * This would mean, I drive into the endstop forward and I cannot back up unless I drive all
-             * the way back to center, right? Why is that a good idea?
-             * Todo: What am I missing here?
-             * I think I'm missing that this is actually a PWM desired value. 1000 is no PWM and everything else is either CCW or CW
+             * Todo: Needs alternative, configurable implementation using the rudder sensor. USE_RUDDER_SENSOR_FOR_ENDSTOPP_CHECK
              */
             stop();
         else if((flags & (REV_FAULTPIN | MIN_RUDDER)) && value < 1000)
             // no reverse command if rev fault
             /*
-             * This would mean, I drive into the endstop reverse and I cannot back out unless I drive all
-             * the way back to center, right? Why is that a good idea?
-             * Todo: What am I missing here?
-             * I think I'm missing that this is actually a PWM desired value. 1000 is no PWM and everything else is either CCW or CW
+             * Todo: Needs alternative, configurable implementation using the rudder sensor. USE_RUDDER_SENSOR_FOR_ENDSTOPP_CHECK
              */
             stop();
         else { // Valid command received. Store value and engage controller.
             command_value = value;
-
-#ifndef DISABLE_DEBUGGING_DISPLAY
-            String strBuffer = String("PWMRAW: ") + oldPWM;
-            tftPrintText(strBuffer, 0, 15, 2, ST7735_BLACK);
-            oldPWM = command_value;
-            strBuffer = String("PWMRAW: ") + oldPWM;
-            tftPrintText(strBuffer, 0, 15, 2, ST7735_BLUE);
-#endif
             engage();
         }
         break;
     case MAX_CURRENT_CODE: { // current in units of 10mA
+      /*
+       * Todo: Needs reimplpementation. Since I removed all external configuration this is depricated for this version of the software
+       */
 #ifdef LOW_CURRENT
         unsigned int max_max_current = 2000;
 #else
@@ -617,14 +561,6 @@ void loop() // Must change
             if(++update_d >= 4) {
                 update_command(); // run the update function at roughly 30hz
                 update_d = 0;
-
-#ifndef DISABLE_DEBUGGING_DISPLAY
-                String strBuffer = String("RudRAW: ") + oldRudderPos;
-                tftPrintText(strBuffer, 0, 0, 2, ST7735_BLACK);
-                oldRudderPos = TakeRudder();
-                strBuffer = String("RudRAW: ") + oldRudderPos;
-                tftPrintText(strBuffer, 0, 0, 2, ST7735_BLUE);
-#endif
             }
         }
 
@@ -949,22 +885,3 @@ void debug(char *fmt, ... ){
     va_end (args);
     Serial.print(buf);
 }
-
-#ifndef DISABLE_DEBUGGING_DISPLAY
-  void displayInitScreen(void)
-  {
-    //tft.initR(INITR_BLACKTAB);   // initialize a ST7735S chip, black tab  
-    tft.init();
-    tft.setRotation(1);
-    tft.fillScreen(ST7735_BLACK);
-  }
-  
-  void tftPrintText(String textBuffer, int x, int y, int textSize, int color)
-  {
-    if (textSize == 0) textSize = 1;
-    tft.setTextColor(color);
-    tft.setTextSize(textSize);
-    tft.setCursor(x, y);
-    tft.print(textBuffer.c_str());
-  }
-#endif
