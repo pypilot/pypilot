@@ -37,7 +37,19 @@ extern uint16_t display_motor_current;
 extern uint16_t display_motor_command;
 extern uint16_t display_motor_PWM;
 extern uint16_t display_flags;
-extern uint16_t display_faults;
+
+extern uint16_t display_supply_voltage_old;
+extern uint16_t display_sensor_ADC_old;
+extern uint16_t display_sensor_scaled_old;
+extern uint8_t display_endstop_prt_old;
+extern uint8_t display_endstop_stb_old;
+extern uint8_t display_endstop_type_old;
+extern uint16_t display_motor_temperature_old;
+extern uint16_t display_controller_temperature_old;
+extern uint16_t display_motor_current_old;
+extern uint16_t display_motor_command_old;
+extern uint16_t display_motor_PWM_old;
+extern uint16_t display_flags_old;
 
 #ifdef __cplusplus
 extern "C" {

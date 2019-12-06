@@ -44,7 +44,7 @@
  ******************************** Global Variables *************************************
  */
 
-uint16_t flags = 0, faults = 0;
+uint16_t flags = 0;
 uint8_t serialin, packet_count = 0;
 
 // These variables hold values that can be changed by the controlling PyPilot remotely.
@@ -187,6 +187,10 @@ void engage() // Must change completely
     
     timeout = 0;
     flags |= ENGAGED;
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+  display_motor_engaged();
+#endif
 }
 
 /*
@@ -195,8 +199,7 @@ void engage() // Must change completely
  */
  
 #ifndef DISABLE_DEBUGGING_DISPLAY
-  int16_t oldDiff = 0;
-  int16_t oldCurValue = 0;
+
 #endif
 void update_command() // Will not be changed
 {
@@ -231,12 +234,11 @@ void update_command() // Will not be changed
  * using the desired pwm setting.
  */
 
-int16_t newValue = 0;
 void position(uint16_t value)
 {
   // store the new value as the new last position, used by update_command()
   lastpos = value;
-  newValue = abs((int)value - 1000);
+  int16_t newValue = abs((int)value - 1000);
   
   // Determine if value is bigger or smaller than 1000 plus deadzone
   if(value > 1000 + PWM_DEADBAND) {
@@ -254,6 +256,10 @@ void position(uint16_t value)
     analogWrite(RPWM_PIN, 0);
     analogWrite(LPWM_PIN, 0);
   }
+  
+#ifndef DISABLE_DEBUGGING_DISPLAY
+  display_motor_PWM = newValue; 
+#endif
 }
 
 /*
@@ -290,6 +296,10 @@ void disengage() // Will not be changed
     flags &= ~ENGAGED;
     timeout = 60; // detach in about 62ms
     digitalWrite(ENGAGE_LED_PIN, LOW); // status LED
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+  display_motor_disengaged();
+#endif
 }
 
 /*
@@ -315,8 +325,14 @@ void detach() // Must change completely
  */
 uint16_t TakeAmps()
 {
-    uint32_t v = getADCFilteredValue(MOTOR_CURRENT);
-    return v * 9 / 34 / 16;
+    uint32_t amps = getADCFilteredValue(MOTOR_CURRENT);
+    amps = amps * 9 / 34 / 16;
+    
+#ifndef DISABLE_DEBUGGING_DISPLAY
+    display_motor_current = amps;
+#endif
+
+    return amps;
 }
 
 
@@ -325,8 +341,15 @@ uint16_t TakeAmps()
  */
 uint16_t TakeVolts()
 {
+  uint16_t voltage;
     // Calculate a float value and then bring it into the format expected by PyPilot: 18V = 1800
-    return (uint16_t)((getADCFilteredValue(SUPPLY_VOLTAGE) * V_SEPARATION) / RESISTOR_CONSTANT_1 * 100.0f);
+    voltage = (uint16_t)((getADCFilteredValue(SUPPLY_VOLTAGE) * V_SEPARATION) / RESISTOR_CONSTANT_1 * 100.0f);
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+    display_supply_voltage = voltage;
+#endif
+    
+    return voltage;
 }
 
 /*
@@ -339,7 +362,9 @@ uint16_t TakeTemp(uint8_t index)
 #ifdef USE_STEINHART_TEMP_SENSING
   float adc_temp_value = 0;
   float steinhart = 0;
-  
+
+  uint16_t temperature = 0;
+    
   switch (index)
   {
     case CONTROLLER_TEMP:
@@ -364,7 +389,23 @@ uint16_t TakeTemp(uint8_t index)
     steinhart = 1.0 / steinhart;                          // Invert
     steinhart -= 273.15;                                  // convert to C
     
-    return (uint16_t)(steinhart * 100.0f);
+    temperature = (uint16_t)(steinhart * 100.0f);
+
+#ifndef DISABLE_DEBUGGING_DISPLAY
+  switch (index)
+  {
+    case CONTROLLER_TEMP:
+      display_controller_temperature = temperature;
+      break;
+    case MOTOR_TEMP:
+      display_motor_temperature = temperature;
+      break;
+    default:
+      break;
+  }
+#endif
+
+    return temperature;
 #else
   uint16_t adc_temp_value = 0, R;
   
@@ -373,11 +414,19 @@ uint16_t TakeTemp(uint8_t index)
     case CONTROLLER_TEMP:
       adc_temp_value = getADCFilteredValue(CONTROLLER_TEMPERATURE);
       R = 10000 * adc_temp_value / (16384 - adc_temp_value);  // resistance in ohms
-      return 30000000 / (R + 2600) + 200;
+      temperature = 30000000 / (R + 2600) + 200;
+#ifndef DISABLE_DEBUGGING_DISPLAY
+      display_controller_temperature = temperature;
+#endif
+      return temperature;
     case MOTOR_TEMP:
       adc_temp_value = getADCFilteredValue(MOTOR_TEMPERATURE);
       R = 10000 * adc_temp_value / (16384 - adc_temp_value);  // resistance in ohms
-      return 30000000 / (R + 2600) + 200;
+      temperature = 30000000 / (R + 2600) + 200;
+#ifndef DISABLE_DEBUGGING_DISPLAY
+      display_motor_temperature = temperature;
+#endif
+      return temperature;
     default:
       adc_temp_value = 0; // Some out of bounds value was given.
       break;
@@ -402,7 +451,11 @@ uint16_t TakeInternalTemp()
  */
 uint16_t TakeRudder()
 {
-    return getADCFilteredValue(RUDDER_ANGLE);
+  uint16_t value = getADCFilteredValue(RUDDER_ANGLE);
+#ifndef DISABLE_DEBUGGING_DISPLAY
+      display_sensor_ADC = value;
+#endif
+    return value;
 }
 
 /* 
@@ -461,6 +514,9 @@ void process_packet()
             // no starboard command if port fault
         else {
             command_value = value;
+#ifndef DISABLE_DEBUGGING_DISPLAY
+            display_motor_command = value;
+#endif
             engage();
         }
         break;
@@ -537,7 +593,6 @@ void process_packet()
 /*
  * Main loop. Now it gets interesting.
  */
-uint16_t oldRudderPos = 0;
 void loop() // Must change
 {    
     static uint32_t last_loop_cycle_millis = 0;
@@ -580,6 +635,8 @@ void loop() // Must change
         detach();
 
 #ifndef DISABLE_DEBUGGING_DISPLAY
+
+  display_flags = flags;
 /*
  * Display update for status variables
  */
@@ -683,9 +740,9 @@ void loop() // Must change
       uint16_t amps = TakeAmps(); 
       if(amps >= max_current) {
           stop();
-          faults |= OVERCURRENT_FAULT;
+          flags |= OVERCURRENT_FAULT;
       } else
-          faults &= ~OVERCURRENT_FAULT;
+          flags &= ~OVERCURRENT_FAULT;
       last_loop_current_millis = millis();
     }
 #endif
@@ -706,7 +763,6 @@ void loop() // Must change
       } else
           flags &= ~BADVOLTAGE_FAULT;
   
-      flags |= faults;
       last_loop_voltage_millis = millis();
     }
 #endif
