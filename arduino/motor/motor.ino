@@ -780,12 +780,13 @@ void loop() // Must change
     {
       uint16_t controller_temp = TakeTemp(CONTROLLER_TEMP);
       uint16_t motor_temp = TakeTemp(MOTOR_TEMP);
-      if(controller_temp >= max_controller_temp || motor_temp > max_motor_temp) {
+      if(controller_temp >= max_controller_temp || motor_temp >= max_motor_temp) {
           stop();
           flags |= OVERTEMP_FAULT;
       } else
           flags &= ~OVERTEMP_FAULT;
-      last_loop_rudder_millis = millis();
+          
+      last_loop_temperature_millis = millis();
     }
     /*
      * Again, here we reset the controller. Who knows about this? Will PyPilot be notified about the reset?

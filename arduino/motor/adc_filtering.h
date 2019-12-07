@@ -22,8 +22,8 @@ extern "C" {
 #define ALPHA_RUDDER 0.15f
 #define ALPHA_VOLTAGE 0.15f
 #define ALPHA_CURRENT 0.3f
-#define ALPHA_TEMPCNTRL 0.015f
-#define ALPHA_TEMPMOTOR 0.015f
+#define ALPHA_TEMPCNTRL 0.15f
+#define ALPHA_TEMPMOTOR 0.15f
 
 enum {
   RUDDER_ANGLE = 0,
