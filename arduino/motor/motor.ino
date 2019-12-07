@@ -330,10 +330,10 @@ uint16_t TakeAmps()
     amps = amps * 85;
     
 #ifndef DISABLE_DEBUGGING_DISPLAY
-    display_motor_current = lastpos = 1000 ? 0 : amps;
+    display_motor_current = lastpos == 1000 ? 0 : amps;
 #endif
 
-    return lastpos = 1000 ? 0 : amps;
+    return (lastpos == 1000 ? 0 : amps) / 100;
 }
 
 
@@ -742,12 +742,13 @@ void loop() // Must change
 #ifndef DISABLE_CURRENT_SENSE
     if (millis() - last_loop_current_millis > 500)
     {
-      uint16_t amps = TakeAmps(); 
+      uint16_t amps = TakeAmps();
       if(amps >= max_current) {
           stop();
           flags |= OVERCURRENT_FAULT;
-      } else
+      } else {
           flags &= ~OVERCURRENT_FAULT;
+      }
       last_loop_current_millis = millis();
     }
 #endif

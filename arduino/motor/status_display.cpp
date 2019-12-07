@@ -105,8 +105,8 @@ void display_update(void)
       display_controller_temperature_old = display_controller_temperature;    
     }
     if (display_motor_current_old != display_motor_current){
-      display_PrintText(String(display_motor_current_old / 1000.0f),            X_OFFSET_FOR_STATUS + 102, Y_OFFSET_FOR_STATUS + 8 * 8, 0, ST7735_BLACK);
-      display_PrintText(String(display_motor_current / 1000.0f),                X_OFFSET_FOR_STATUS + 102, Y_OFFSET_FOR_STATUS + 8 * 8, 0, ST7735_YELLOW);
+      display_PrintText(String(display_motor_current_old / 10000.0f),            X_OFFSET_FOR_STATUS + 102, Y_OFFSET_FOR_STATUS + 8 * 8, 0, ST7735_BLACK);
+      display_PrintText(String(display_motor_current / 10000.0f),                X_OFFSET_FOR_STATUS + 102, Y_OFFSET_FOR_STATUS + 8 * 8, 0, ST7735_YELLOW);
       display_motor_current_old = display_motor_current;
     }
     if (display_motor_command_old != display_motor_command){
