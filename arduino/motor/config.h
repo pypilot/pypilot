@@ -184,4 +184,16 @@ enum {CONTROLLER_TEMP, MOTOR_TEMP};
 // Constant calculated from resistor values for simplified voltage calculation
 #define RESISTOR_CONSTANT_1 (R2_1/(R1_1 + R2_1))
 
+// *************************************************************************************************** //
+// ********************************* Motor Current Measurement Variables ***************************** //
+// *************************************************************************************************** //
+// Maximum input voltage on the supply pin
+#define A_MAX 4300
+// Voltage divider resistor 1
+#define R1_2 47000.0f
+// Voltage divider resistor 2
+#define R2_2 150000.0f
+// Constant calculated from resistor values for simplified voltage calculation
+#define RESISTOR_CONSTANT_2 (R2_1/(R1_1 + R2_1))
+
 #endif

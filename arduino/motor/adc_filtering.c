@@ -69,7 +69,7 @@ void ADC_updateAndFilter(void)
       adcInputValue = analogRead(CURRENT_SENSE_PIN_1); // read in one channel for current sensing
       
 #ifdef BOARD_IBT2_H_BRIDGE
-  uint16_t adcInputValue2 = analogRead(CURRENT_SENSE_PIN_1); // read second channel for current sensing the IBT_2 h_bridge driver
+  uint16_t adcInputValue2 = analogRead(CURRENT_SENSE_PIN_2); // read second channel for current sensing the IBT_2 h_bridge driver
 /*  
  *   Since we only store one current sensor value and filter on that, we need to decide which one we want to follow.
  *   In order to do that, check whether one is larger than the other and select the larger one.

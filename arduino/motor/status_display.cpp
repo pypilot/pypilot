@@ -46,9 +46,9 @@ void display_init(void)
   display_PrintText("Rudder Sensor ADC:",         X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
   display_PrintText("Rudder Sens. Scaled:",       X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
   display_PrintText("EndStop Sw:",                X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
-  display_PrintText("Endstop SW Type:",           X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
-  display_PrintText("Motor Temp:          deg C", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
-  display_PrintText("Controller Temp:     deg C", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
+  display_PrintText("Endstop Sw Type:",           X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
+  display_PrintText("Motor Temp:           degC", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
+  display_PrintText("Controller Temp:      degC", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
   display_PrintText("Motor Current:        Amps", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
   display_PrintText("Motor Command:",             X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
   display_PrintText("Motor PWM:",                 X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
@@ -61,7 +61,7 @@ void display_init(void)
 void display_update(void)
 {
   // Update display every 500 milliseconds
-  if (millis() - lastUpdateMillis > 500)
+  if (millis() - lastUpdateMillis > 250)
   {
     // Update your display stuff here
     if (display_supply_voltage_old != display_supply_voltage){
@@ -105,8 +105,8 @@ void display_update(void)
       display_controller_temperature_old = display_controller_temperature;    
     }
     if (display_motor_current_old != display_motor_current){
-      display_PrintText(String(display_motor_current_old),            X_OFFSET_FOR_STATUS + 102, Y_OFFSET_FOR_STATUS + 8 * 8, 0, ST7735_BLACK);
-      display_PrintText(String(display_motor_current),                X_OFFSET_FOR_STATUS + 102, Y_OFFSET_FOR_STATUS + 8 * 8, 0, ST7735_YELLOW);
+      display_PrintText(String(display_motor_current_old / 1000.0f),            X_OFFSET_FOR_STATUS + 102, Y_OFFSET_FOR_STATUS + 8 * 8, 0, ST7735_BLACK);
+      display_PrintText(String(display_motor_current / 1000.0f),                X_OFFSET_FOR_STATUS + 102, Y_OFFSET_FOR_STATUS + 8 * 8, 0, ST7735_YELLOW);
       display_motor_current_old = display_motor_current;
     }
     if (display_motor_command_old != display_motor_command){

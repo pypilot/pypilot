@@ -325,14 +325,15 @@ void detach() // Must change completely
  */
 uint16_t TakeAmps()
 {
-    uint32_t amps = getADCFilteredValue(MOTOR_CURRENT);
-    amps = amps * 9 / 34 / 16;
+    // calculating the voltage at the Isense input
+    uint16_t amps = (uint16_t)((getADCFilteredValue(MOTOR_CURRENT) * V_SEPARATION) / RESISTOR_CONSTANT_2 * 10.0f);
+    amps = amps * 85;
     
 #ifndef DISABLE_DEBUGGING_DISPLAY
-    display_motor_current = amps;
+    display_motor_current = lastpos = 1000 ? 0 : amps;
 #endif
 
-    return amps;
+    return lastpos = 1000 ? 0 : amps;
 }
 
 
@@ -739,7 +740,7 @@ void loop() // Must change
 #endif
 
 #ifndef DISABLE_CURRENT_SENSE
-    if (millis() - last_loop_current_millis > 2000)
+    if (millis() - last_loop_current_millis > 500)
     {
       uint16_t amps = TakeAmps(); 
       if(amps >= max_current) {
