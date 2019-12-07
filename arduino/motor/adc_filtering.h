@@ -40,6 +40,11 @@ void ADC_initFilters(void);
 void ADC_updateAndFilter(void);
 uint16_t getADCFilteredValue(uint8_t channel);
 
+/*
+ * Used to rescale an incorrectly scaled value and set its offset
+ */
+uint16_t rescaleValue16(uint16_t input, uint16_t minRange, uint16_t maxRange, uint16_t returnRange);
+
 #ifdef __cplusplus
 }
 #endif

@@ -451,7 +451,8 @@ uint16_t TakeInternalTemp()
  */
 uint16_t TakeRudder()
 {
-  uint16_t value = getADCFilteredValue(RUDDER_ANGLE);
+  //uint16_t value = getADCFilteredValue(RUDDER_ANGLE);
+  uint16_t value = rescaleValue16(getADCFilteredValue(RUDDER_ANGLE), RUDDER_MIN_ADC, RUDDER_MAX_ADC, 65535);
 #ifndef DISABLE_DEBUGGING_DISPLAY
       display_sensor_ADC = value;
 #endif

@@ -140,8 +140,8 @@ enum {CONTROLLER_TEMP, MOTOR_TEMP};
 // *************************************************************************************************** //
 #define PWM_DEADBAND 40
 
-#define RUDDER_MIN_ADC 0
-#define RUDDER_MAX_ADC 65535
+#define RUDDER_MIN_ADC 18350
+#define RUDDER_MAX_ADC 52950
 #define TEMPERATURE_CONTROLLER_MAX 7000
 #define TEMPERATURE_MOTOR_MAX 7000
 #define CURRENT_MOTOR_MAX 2000
