@@ -74,6 +74,7 @@ void display_PrintText(String textBuffer, int x, int y, int textSize, int color)
 
 void display_motor_engaged(void);
 void display_motor_disengaged(void);
+void display_binary_flags(void);
 
 #ifdef __cplusplus
 }

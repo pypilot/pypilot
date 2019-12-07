@@ -2,9 +2,10 @@
 
 TFT_ST7735 tft = TFT_ST7735();       // Invoke custom library - insanely fast alternative! https://github.com/Bodmer/TFT_ST7735
 // Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
-unsigned long lastUpdateMillis = 0;
-uint16_t display_rudder_ADC = 0;
 
+unsigned long lastUpdateMillis = 0;
+
+uint16_t display_rudder_ADC = 0;
 uint16_t display_supply_voltage = 0;
 uint16_t display_sensor_ADC = 0;
 uint16_t display_sensor_scaled = 0;
@@ -54,8 +55,13 @@ void display_init(void)
   display_PrintText("Motor Current:        Amps", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
   display_PrintText("Motor Command:",             X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
   display_PrintText("Motor PWM:",                 X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
+  
   display_PrintText("--------------------------", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
-  display_PrintText("Flags:", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
+  display_PrintText("         xxxx             ", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row * 8, 0, ST7735_DARKGREY);
+  display_PrintText("             FR    SPIE  Y", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row * 8, 0, ST7735_WHITE);
+  display_PrintText("               XM V    CT ", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_RED);
+  display_PrintText("Flags:",                     X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row * 8, 0, ST7735_WHITE);
+  display_PrintText("0b",                         X_OFFSET_FOR_STATUS + 42, Y_OFFSET_FOR_STATUS + row * 8, 0, ST7735_YELLOW);
   
   display_motor_disengaged();
 }
@@ -122,8 +128,7 @@ void display_update(void)
       display_motor_PWM_old = display_motor_PWM;
     }
     if (display_flags_old != display_flags){
-      display_PrintText("0b00000000 00000000",                        X_OFFSET_FOR_STATUS + 42, Y_OFFSET_FOR_STATUS + 12 * 8, 0, ST7735_BLACK);
-      display_PrintText("0b00000000 00000000",                        X_OFFSET_FOR_STATUS + 42, Y_OFFSET_FOR_STATUS + 12 * 8, 0, ST7735_YELLOW);
+      display_binary_flags();
       display_flags_old = display_flags;
     }
     
@@ -159,4 +164,29 @@ void display_motor_disengaged(void)
     display_PrintText("DISENGAGED", 50, 120, 0, ST7735_BLACK);
   }
   display_was_engaged = 0;
+}
+
+void display_binary_flags(void)
+{
+  uint8_t x_pos = 0;
+  //                       0b1234567812345678
+  for (unsigned int mask = 0b1000000000000000; mask; mask >>= 1) 
+  {
+    if (mask & display_flags_old) {
+      display_PrintText("1", X_OFFSET_FOR_STATUS + 54 + (x_pos * 6), Y_OFFSET_FOR_STATUS + 13 * 8, 0, ST7735_BLACK);
+    }
+    else {
+      display_PrintText("0", X_OFFSET_FOR_STATUS + 54 + (x_pos * 6), Y_OFFSET_FOR_STATUS + 13 * 8, 0, ST7735_BLACK);
+    }
+    
+    if (mask & display_flags) {
+      display_PrintText("1", X_OFFSET_FOR_STATUS + 54 + (x_pos++ * 6), Y_OFFSET_FOR_STATUS + 13 * 8, 0, ST7735_YELLOW);
+    }
+    else {
+      display_PrintText("0", X_OFFSET_FOR_STATUS + 54 + (x_pos++ * 6), Y_OFFSET_FOR_STATUS + 13 * 8, 0, ST7735_YELLOW);
+    }
+    // We want a space in between the bytes to make it visually more pleasing
+    if (x_pos == 8)
+      x_pos++;
+  }
 }

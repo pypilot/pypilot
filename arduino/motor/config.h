@@ -140,8 +140,8 @@ enum {CONTROLLER_TEMP, MOTOR_TEMP};
 // *************************************************************************************************** //
 #define PWM_DEADBAND 40
 
-#define RUDDER_MIN 1000 // The minimum value at which RUDDER_MIN flag is being set
-#define RUDDER_MAX 64535 // The maximum value at which RUDDER_MAX flag is being set
+#define RUDDER_MIN 5000 // The minimum value at which RUDDER_MIN flag is being set
+#define RUDDER_MAX 60535 // The maximum value at which RUDDER_MAX flag is being set
 #define RUDDER_MIN_ADC 18300 // Your actual minimum sensor value
 #define RUDDER_MAX_ADC 52950 // Your actual maximum sensor value. These two must be configured to your setup to work properly
 #define TEMPERATURE_CONTROLLER_MAX 7000 // 70 deg C

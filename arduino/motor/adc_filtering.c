@@ -138,6 +138,11 @@ uint16_t getADCFilteredValue(uint8_t channel)
 
 uint16_t rescaleValue16(uint16_t input, uint32_t minRange, uint32_t maxRange, uint32_t desiredRange)
 {
+  if (input < minRange)
+    return 0;
+  else if (input > maxRange)
+    return desiredRange;
+  
   uint32_t fullRange = maxRange - minRange;
   uint16_t factor = (uint16_t)((desiredRange << 10) / fullRange);
   
