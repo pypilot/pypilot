@@ -140,15 +140,15 @@ enum {CONTROLLER_TEMP, MOTOR_TEMP};
 // *************************************************************************************************** //
 #define PWM_DEADBAND 40
 
-#define RUDDER_MIN 1000
-#define RUDDER_MAX 64535
-#define RUDDER_MIN_ADC 18300
-#define RUDDER_MAX_ADC 52950
-#define TEMPERATURE_CONTROLLER_MAX 7000
-#define TEMPERATURE_MOTOR_MAX 7000
-#define CURRENT_MOTOR_MAX 2000
-#define SPEEDUP_SLEW_RATE 15
-#define SLOWDOWN_SLEW_RATE 30
+#define RUDDER_MIN 1000 // The minimum value at which RUDDER_MIN flag is being set
+#define RUDDER_MAX 64535 // The maximum value at which RUDDER_MAX flag is being set
+#define RUDDER_MIN_ADC 18300 // Your actual minimum sensor value
+#define RUDDER_MAX_ADC 52950 // Your actual maximum sensor value. These two must be configured to your setup to work properly
+#define TEMPERATURE_CONTROLLER_MAX 7000 // 70 deg C
+#define TEMPERATURE_MOTOR_MAX 7000 // 70 deg C
+#define CURRENT_MOTOR_MAX 2000 // don't allow more than 20Amps
+#define SPEEDUP_SLEW_RATE 15 // Slew rate when accelerating the motor / pump / linear actuator
+#define SLOWDOWN_SLEW_RATE 30 // Slew rate when decelerating the motor / pump / linear actuator
 
 
 // *************************************************************************************************** //
@@ -156,13 +156,13 @@ enum {CONTROLLER_TEMP, MOTOR_TEMP};
 // *************************************************************************************************** //
 // Check https://learn.adafruit.com/thermistor/using-a-thermistor for more info
 // resistance at 25 degrees C
-#define THERMISTORNOMINAL 100000
+#define THERMISTORNOMINAL 100000 // 100k thermistor
 // temp. for nominal resistance (almost always 25 C)
 #define TEMPERATURENOMINAL 25
 // The beta coefficient of the thermistor (usually 3000-4000)
 #define BCOEFFICIENT 3950
 // the value of the 'other' resistor
-#define SERIESRESISTOR 4700
+#define SERIESRESISTOR 4700 // 4.7k resistor
 
 // *************************************************************************************************** //
 // ********************************* Battery Voltage Measurement Variables *************************** //
