@@ -95,13 +95,13 @@ void display_update(void)
       display_endstop_type_old = display_endstop_type;
     }
     if (display_motor_temperature_old != display_motor_temperature){
-      display_PrintText(String(display_motor_temperature_old / 1000.0f), X_OFFSET_FOR_STATUS + 96, Y_OFFSET_FOR_STATUS + 6 * 8, 0, ST7735_BLACK);
-      display_PrintText(String(display_motor_temperature / 1000.0f),     X_OFFSET_FOR_STATUS + 96, Y_OFFSET_FOR_STATUS + 6 * 8, 0, ST7735_YELLOW);
+      display_PrintText(String(display_motor_temperature_old / 100.0f), X_OFFSET_FOR_STATUS + 96, Y_OFFSET_FOR_STATUS + 6 * 8, 0, ST7735_BLACK);
+      display_PrintText(String(display_motor_temperature / 100.0f),     X_OFFSET_FOR_STATUS + 96, Y_OFFSET_FOR_STATUS + 6 * 8, 0, ST7735_YELLOW);
       display_motor_temperature_old = display_motor_temperature;
     }
     if (display_controller_temperature_old != display_controller_temperature){
-      display_PrintText(String(display_controller_temperature_old / 1000.0f), X_OFFSET_FOR_STATUS + 96, Y_OFFSET_FOR_STATUS + 7 * 8, 0, ST7735_BLACK);
-      display_PrintText(String(display_controller_temperature / 1000.0f),     X_OFFSET_FOR_STATUS + 96, Y_OFFSET_FOR_STATUS + 7 * 8, 0, ST7735_YELLOW);
+      display_PrintText(String(display_controller_temperature_old / 100.0f), X_OFFSET_FOR_STATUS + 96, Y_OFFSET_FOR_STATUS + 7 * 8, 0, ST7735_BLACK);
+      display_PrintText(String(display_controller_temperature / 100.0f),     X_OFFSET_FOR_STATUS + 96, Y_OFFSET_FOR_STATUS + 7 * 8, 0, ST7735_YELLOW);
       display_controller_temperature_old = display_controller_temperature;    
     }
     if (display_motor_current_old != display_motor_current){

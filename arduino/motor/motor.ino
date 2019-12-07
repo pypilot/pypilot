@@ -379,15 +379,15 @@ uint16_t TakeTemp(uint8_t index)
   }
   
     // convert the value to resistance
-    adc_temp_value = 1023 / adc_temp_value - 1;
+    adc_temp_value = 1023.0f / adc_temp_value - 1;
     adc_temp_value = SERIESRESISTOR / adc_temp_value;
     
     steinhart = adc_temp_value / THERMISTORNOMINAL;       // (R/Ro)
     steinhart = log(steinhart);                           // ln(R/Ro)
     steinhart /= BCOEFFICIENT;                            // 1/B * ln(R/Ro)
-    steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15);     // + (1/To)
-    steinhart = 1.0 / steinhart;                          // Invert
-    steinhart -= 273.15;                                  // convert to C
+    steinhart += 1.0f / (TEMPERATURENOMINAL + 273.15);     // + (1/To)
+    steinhart = 1.0f / steinhart;                          // Invert
+    steinhart -= 273.15f;                                  // convert to C
     
     temperature = (uint16_t)(steinhart * 100.0f);
 
