@@ -70,13 +70,13 @@ void display_update(void)
       display_supply_voltage_old = display_supply_voltage;
     }
     if (display_sensor_ADC_old != display_sensor_ADC){
-      display_PrintText(String(display_sensor_ADC_old),               X_OFFSET_FOR_STATUS + 127, Y_OFFSET_FOR_STATUS + 2 * 8, 0, ST7735_BLACK);
-      display_PrintText(String(display_sensor_ADC),                   X_OFFSET_FOR_STATUS + 127, Y_OFFSET_FOR_STATUS + 2 * 8, 0, ST7735_YELLOW);
+      display_PrintText(String(display_sensor_ADC_old),               X_OFFSET_FOR_STATUS + 126, Y_OFFSET_FOR_STATUS + 2 * 8, 0, ST7735_BLACK);
+      display_PrintText(String(display_sensor_ADC),                   X_OFFSET_FOR_STATUS + 126, Y_OFFSET_FOR_STATUS + 2 * 8, 0, ST7735_YELLOW);
       display_sensor_ADC_old = display_sensor_ADC;    
     }
     if (display_sensor_scaled_old != display_sensor_scaled){
-      display_PrintText(String(display_sensor_scaled_old),            X_OFFSET_FOR_STATUS + 127, Y_OFFSET_FOR_STATUS + 3 * 8, 0, ST7735_BLACK);
-      display_PrintText(String(display_sensor_scaled),                X_OFFSET_FOR_STATUS + 127, Y_OFFSET_FOR_STATUS + 3 * 8, 0, ST7735_YELLOW);
+      display_PrintText(String(display_sensor_scaled_old),            X_OFFSET_FOR_STATUS + 126, Y_OFFSET_FOR_STATUS + 3 * 8, 0, ST7735_BLACK);
+      display_PrintText(String(display_sensor_scaled),                X_OFFSET_FOR_STATUS + 126, Y_OFFSET_FOR_STATUS + 3 * 8, 0, ST7735_YELLOW);
       display_sensor_scaled_old = display_sensor_scaled;
     }
     if (display_endstop_prt_old != display_endstop_prt){
