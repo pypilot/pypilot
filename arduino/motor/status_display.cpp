@@ -31,6 +31,8 @@ uint16_t display_motor_command_old = 1;
 uint16_t display_motor_PWM_old = 1;
 uint16_t display_flags_old = 1;
 
+extern uint8_t display_was_engaged = 1;
+
 void display_init(void)
 {
     //tft.initR(INITR_BLACKTAB);   // initialize a ST7735S chip, black tab  
@@ -38,8 +40,8 @@ void display_init(void)
   tft.setRotation(1);
   tft.fillScreen(ST7735_BLACK);
 
-  tft.fillRect(0, 0, 159, 8, ST7735_BLUE);
-  display_PrintText("   Pypilot Motor Status   ", 0, 0, 0, ST7735_WHITE);
+  tft.fillRect(0, 0, 159, 9, ST7735_BLUE);
+  display_PrintText("   Pypilot Motor Status   ", 0, 1, 0, ST7735_WHITE);
   
   uint8_t row = 1;
   display_PrintText("Supply Voltage:          V", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
@@ -141,12 +143,20 @@ void display_PrintText(String textBuffer, int x, int y, int textSize, int color)
 
 void display_motor_engaged(void)
 {
-  tft.fillRect(0, 119, 159, 127, ST7735_RED);
-  display_PrintText("ENGAGED", 60, 120, 0, ST7735_WHITE);
+  if(!display_was_engaged)
+  {
+    tft.fillRect(0, 119, 159, 127, ST7735_RED);
+    display_PrintText("ENGAGED", 60, 120, 0, ST7735_WHITE);
+  }
+  display_was_engaged = 1;
 }
 
 void display_motor_disengaged(void)
 {
-  tft.fillRect(0, 119, 159, 127, ST7735_GREEN);
-  display_PrintText("DISENGAGED", 50, 120, 0, ST7735_BLACK);
+  if(display_was_engaged)
+  {
+    tft.fillRect(0, 119, 159, 127, ST7735_GREEN);
+    display_PrintText("DISENGAGED", 50, 120, 0, ST7735_BLACK);
+  }
+  display_was_engaged = 0;
 }

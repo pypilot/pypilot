@@ -51,6 +51,8 @@ extern uint16_t display_motor_command_old;
 extern uint16_t display_motor_PWM_old;
 extern uint16_t display_flags_old;
 
+extern uint8_t display_was_engaged;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
