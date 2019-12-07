@@ -38,6 +38,9 @@ void ADC_updateAndFilter(void)
 {
   uint8_t filterNumber = 0;
   uint16_t adcInputValue = 0;
+#ifdef BOARD_IBT2_H_BRIDGE
+  uint16_t adcInputValue2 = 0; // only used for current sensing on the second channel
+#endif
   
   switch (filterNumber)
   {
@@ -63,7 +66,17 @@ void ADC_updateAndFilter(void)
       
     case MOTOR_CURRENT:
 #ifndef DISABLE_CURRENT_SENSE
-      adcInputValue = analogRead(CURRENT_SENSE_PIN_1); // For now, I only use one of the two current pins of the IBT_2 h-bridge driver.
+      adcInputValue = analogRead(CURRENT_SENSE_PIN_1); // read in one channel for current sensing
+      
+#ifdef BOARD_IBT2_H_BRIDGE
+  uint16_t adcInputValue2 = analogRead(CURRENT_SENSE_PIN_1); // read second channel for current sensing the IBT_2 h_bridge driver
+/*  
+ *   Since we only store one current sensor value and filter on that, we need to decide which one we want to follow.
+ *   In order to do that, check whether one is larger than the other and select the larger one.
+ */
+  adcInputValue = adcInputValue > adcInputValue2 ? adcInputValue : adcInputValue2;
+#endif
+
       adcChannels[2] = (uint16_t)(ALPHA_CURRENT * (float)adcInputValue + (1 - ALPHA_CURRENT) * (float)adcChannelHistory[2]);
       adcChannelHistory[2] = adcChannels[2];
 #else
