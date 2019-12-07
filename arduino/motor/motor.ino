@@ -53,8 +53,8 @@ uint16_t max_controller_temp= TEMPERATURE_CONTROLLER_MAX; // 70C
 uint16_t max_motor_temp = TEMPERATURE_MOTOR_MAX; // 70C
 uint8_t max_slew_speed = SPEEDUP_SLEW_RATE;
 uint8_t max_slew_slow = SLOWDOWN_SLEW_RATE; // 200 is full power in 1/10th of a second
-uint16_t rudder_min = RUDDER_MIN_ADC;
-uint16_t rudder_max = RUDDER_MAX_ADC; // Analog rudder value between -100 and 100 full scale.
+uint16_t rudder_min = RUDDER_MIN;
+uint16_t rudder_max = RUDDER_MAX; // Analog rudder value between -100 and 100 full scale.
 
 uint8_t eeprom_read_addr = 0;
 uint8_t eeprom_read_end = 0;
