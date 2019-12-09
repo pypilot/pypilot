@@ -1,0 +1,109 @@
+.toggle-button {
+    background-color: white;
+    margin: 0 10% 0 0;
+    border-radius: 30%;
+    border: 2px solid #D0D0D0;
+    height: 4vw;
+    cursor: pointer;
+    position: relative;
+    display: inline-block;
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    -moz-user-select: none;
+}
+.toggle-button button {
+    cursor: pointer;
+    outline: 0;
+    display:block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    border-radius: 100%;
+    background-color: white;
+    float: left;
+    margin: -3px 0 0 -3px;
+    border: 2px solid #D0D0D0;
+    transition: left 0.3s;
+}
+.toggle-button-selected {
+    background-color: #83B152;
+    border: .1vw solid #7DA652;
+}
+.toggle-button-selected button {
+    margin: 0;
+    border: none;
+    box-shadow: 0 0 4px rgba(0,0,0,0.1);
+}
+
+.center { text-align:center; }
+
+
+html, body{
+    min-height:100%;
+}
+
+body{
+    background-image: -webkit-linear-gradient(top, #edecec, #cecbc9);
+    background-image: linear-gradient(top, #edecec, #cecbc9);
+}
+
+.button{
+    background-image: -webkit-linear-gradient(top, #f4f1ee, #fff);
+    background-image: linear-gradient(top, #f4f1ee, #fff);
+    border-radius: 50%;
+    box-shadow: 0px 18px 20px 0px rgba(0, 0, 0, .3), inset 0px 4px 1px 1px white, inset 0px -3px 1px 1px rgba(204,198,197,.5);
+    /*    float:left;*/
+    margin: 0px 0px 0px 0;
+    position: relative;
+    -webkit-transition: all .1s linear;
+    transition: all .1s linear;
+}
+
+.button:after{
+    color:#e9e6e4;
+    content: "";
+    display: block;
+    text-decoration: none;
+    text-shadow: 0px -1px 1px #bdb5b4, 1px 1px 1px white;
+    position: absolute;
+}
+
+.button:active{
+    background-image: -webkit-linear-gradient(top, #efedec, #f7f4f4);
+    background-image: linear-gradient(top, #efedec, #f7f4f4);
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,.4), inset 0px -3px 1px 1px rgba(204,198,197,.5);
+}
+
+.button:active:after{
+    color:#dbd2d2;
+    text-shadow: 0px -1px 1px #bdb5b4, 0px 1px 1px white;
+}
+
+
+
+/* progress */
+.myProgress {
+    position: relative;
+    width: 100%;
+    height: 30px;
+    background-color: grey;
+}
+
+.myBar {
+    position: absolute;
+    width: 0%;
+    height: 100%;
+    background-color: green;
+}
+
+/* If you want the label inside the progress bar */
+.label {
+    text-align: center; /* If you want to center it */
+    line-height: 30px; /* Set the line-height to the same as the height of the progress bar container, to center it vertically */
+    color: white;
+}
+
+.tab {
+    display:none;
+}
