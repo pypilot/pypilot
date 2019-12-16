@@ -48,8 +48,8 @@ void display_init(void)
   display_PrintText("Supply Voltage:          V", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
   display_PrintText("Rudder Sensor ADC:",         X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
   display_PrintText("Rudder Sens. Scaled:",       X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
-  display_PrintText("EndStop Sw:",                X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
-  display_PrintText("Endstop Sw Type:",           X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
+  display_PrintText("EndStop Sw:",                X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE); // not implemented
+  display_PrintText("Endstop Sw Type:",           X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE); // not implemented
   display_PrintText("Motor Temp:           degC", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
   display_PrintText("Controller Temp:      degC", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
   display_PrintText("Motor Current:        Amps", X_OFFSET_FOR_STATUS, Y_OFFSET_FOR_STATUS + row++ * 8, 0, ST7735_WHITE);
@@ -73,8 +73,8 @@ void display_update(void)
   {
     // Update your display stuff here
     if (display_supply_voltage_old != display_supply_voltage){
-      display_PrintText(String(display_supply_voltage_old / 100.0f),  X_OFFSET_FOR_STATUS + 121, Y_OFFSET_FOR_STATUS + 1 * 8, 0, ST7735_BLACK);
-      display_PrintText(String(display_supply_voltage / 100.0f),      X_OFFSET_FOR_STATUS + 121, Y_OFFSET_FOR_STATUS + 1 * 8, 0, ST7735_YELLOW);
+      display_PrintText(String(display_supply_voltage_old / 100.0f),  X_OFFSET_FOR_STATUS + 120, Y_OFFSET_FOR_STATUS + 1 * 8, 0, ST7735_BLACK);
+      display_PrintText(String(display_supply_voltage / 100.0f),      X_OFFSET_FOR_STATUS + 120, Y_OFFSET_FOR_STATUS + 1 * 8, 0, ST7735_YELLOW);
       display_supply_voltage_old = display_supply_voltage;
     }
     if (display_sensor_ADC_old != display_sensor_ADC){
