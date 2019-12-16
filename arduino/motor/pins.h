@@ -28,8 +28,8 @@
 
 #ifdef BOARD_IBT2_H_BRIDGE
   #define ENABLE_PIN 4    // Combined enable pin for both BTS7960
-  #define RPWM_PIN 5      // First PWM input to BTS7960 // Drives CCW
-  #define LPWM_PIN 6      // Second PWM input to BTS7960 // Drives CW
+  #define RPWM_PIN 6      // First PWM input to BTS7960 // Drives CCW
+  #define LPWM_PIN 5      // Second PWM input to BTS7960 // Drives CW
   #define R_IS_PIN A0     // Analog input if used
   #define L_IS_PIN A1     // Analog input if used
 #endif
