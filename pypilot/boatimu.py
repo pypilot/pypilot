@@ -228,7 +228,6 @@ class QuaternionValue(ResettableValue):
     def __init__(self, name, initial, **kwargs):
       super(QuaternionValue, self).__init__(name, initial, **kwargs)
 
-
     def set(self, value):
       if value:
         value = quaternion.normalize(value)
@@ -256,8 +255,10 @@ class BoatIMU(object):
     self.period = 1.0/self.rate.value
 
     self.loopfreq = self.Register(LoopFreqValue, 'loopfreq', 0)
-    self.alignmentQ = self.Register(QuaternionValue, 'alignmentQ', [1, 0, 0, 0], persistent=True)
+    self.alignmentQ = self.Register(QuaternionValue, 'alignmentQ', [2**.5/2, -2**.5/2, 0, 0], persistent=True)
+    self.alignmentQ.last = False
     self.heading_off = self.Register(RangeProperty, 'heading_offset', 0, -180, 180, persistent=True)
+    self.heading_off.last = 3000 # invalid
 
     self.alignmentCounter = self.Register(Property, 'alignmentCounter', 0)
     self.last_alignmentCounter = False
@@ -313,7 +314,6 @@ class BoatIMU(object):
 
     self.last_imuread = time.time()
     self.lasttimestamp = 0
-    self.last_heading_off = 3000 # invalid
 
   def __del__(self):
     print('terminate imu process')
@@ -435,9 +435,13 @@ class BoatIMU(object):
           self.update_alignment(alignment)
 
       self.last_alignmentCounter = self.alignmentCounter.value
-    if self.heading_off.value != self.last_heading_off:
+
+    # if alignment or heading offset changed:
+    if self.heading_off.value != self.heading_off.last or
+    self.alignmentQ.value != self.alignmentQ.last:
       self.update_alignment(self.alignmentQ.value)
-      self.last_heading_off = self.heading_off.value
+      self.heading_off.last = self.heading_off.value
+      self.alignmentQ.last = self.alignmentQ.value
 
     result = self.auto_cal.UpdatedCalibration()
     
