@@ -40,12 +40,39 @@ surface *load_version(int bypp)
     #undef HEADER_PIXEL
 }
 
+uint32_t gp(surface *src, int x, int y)
+{
+    if(x >= src->width || y >= src->height)
+        return 255;
+    return src->getpixel(x, y);
+}
+
+// not very efficient but interpolate copy surface of difference sizes
+void stretch(surface *dest, surface *src)
+{
+    for(int y = 0; y<dest->height; y++)
+        for(int x=0; x<dest->width; x++) {
+            float xi = (float)x*src->width/dest->width;
+            float yi = (float)y*src->height/dest->height;
+            int xi0 = (int)xi, yi0 = (int)yi;
+            float xf = xi-xi0, yf = yi-yi0;
+            uint32_t c0 = (gp(src, xi0, yi0)*(1-xf) + gp(src, xi0+1, yi0)*xf);
+            uint32_t c1 = (gp(src, xi0, yi0+1)*(1-xf) + gp(src, xi0+1, yi0+1)*xf);
+            uint32_t c = c0*(1-yf) + c1*yf;
+                
+            if(c > 160)
+                c = 255;
+
+            dest->putpixel(x, y, c);
+        }
+}
+
 int main(int argc, char *argv[])
 {
     surface *framebuffer;
 #ifdef WIRINGPI    
     if(argc > 1) {
-        if(!strcmp(argv[1], "auto"))
+        if(!strcmp(argv[1], "spi"))
             framebuffer = new spiscreen(-1);
         else if(!strcmp(argv[1], "nokia5110"))
             framebuffer = new spiscreen(0);
@@ -79,13 +106,16 @@ int main(int argc, char *argv[])
 #endif    
     double facw = (float)framebuffer->width / logo->width, fach = (float)framebuffer->height / logo->height;
     float facf = facw < fach ? facw : fach;
-    surface *logom = new surface(framebuffer);
 
     int fac = facf;
 
     logo->blit(version, logo->width - version->width, logo->height - version->height);
 
-    logom->magnify(logo, fac);
+    surface *logom = new surface(framebuffer);
+    //logom->magnify(logo, fac);
+    stretch(logom, logo);
+
+    
     logom->invert(0, 0, logom->width, logom->height);
 
     framebuffer->fill(255);
