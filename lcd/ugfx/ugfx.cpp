@@ -683,11 +683,8 @@ public:
     void refresh(int contrast, surface *s) {
         if(jlx1264reset>0) {
             digitalWrite(rst, LOW);
-            //delay(50);
             usleep(50000);
-//                        usleep(500);
             digitalWrite(rst, HIGH);
-//  delay(50);
             usleep(50000);
             jlx1264reset--;
 
@@ -700,8 +697,7 @@ public:
 //        command(0x20); // Trim Contrast value range can be set from 0 to 63
 //        command(0xa2); // 1/9 bias ratio
         }
-        //         command(0xe2); // Soft Reset
-
+                  command(0xe2); // Soft Reset
 
                   //command(0x2f); // Boost 3
         command(0xaf); // Open the display
@@ -740,19 +736,28 @@ public:
 #else
             char *address = binary + i*128; //pointer
             write(spifd, address, 128);
-
 #endif
         }
      }
 };
 
-
-
 static int spilcdsizes[][2] = {{48, 84}, {64, 128}};
 
 static int detect(int driver) {
-    if(driver == -1)
-        return 1;
+    if(driver != -1)
+        return driver;
+    
+    FILE *f = fopen("/home/tc/.pypilot/lcddriver", "r");
+    if(!f)
+        return 0;
+    char drv[64];
+    fgets(drv, sizeof drv, f);
+    if(!strcmp(drv, "jlx12864"))
+        driver = 1;
+    else
+        driver = 0;
+    fclose(f);
+    
     return driver;
 }
 
