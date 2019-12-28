@@ -253,7 +253,7 @@ class BoatIMU(object):
     self.server = server
 
     self.rate = self.Register(EnumProperty, 'rate', 10, [10, 25], persistent=True)
-    self.period = 1.0/self.rate.value
+    self.period = 1.0/float(self.rate.value)
 
     self.loopfreq = self.Register(LoopFreqValue, 'loopfreq', 0)
     self.alignmentQ = self.Register(QuaternionValue, 'alignmentQ', [1, 0, 0, 0], persistent=True)
