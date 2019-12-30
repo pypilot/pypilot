@@ -15,15 +15,11 @@
 from __future__ import print_function
 import os, sys
 import time, math, multiprocessing, select
-from signalk.pipeserver import NonBlockingPipe
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import autopilot
-import calibration_fit
-import vector
-import quaternion
+import autopilot, calibration_fit, vector, quaternion
 from signalk.server import SignalKServer
-from signalk.pipeserver import SignalKPipeServer
+from signalk.pipeserver import SignalKPipeServer, NonBlockingPipe
 from signalk.values import *
 
 try:
@@ -437,8 +433,7 @@ class BoatIMU(object):
       self.last_alignmentCounter = self.alignmentCounter.value
 
     # if alignment or heading offset changed:
-    if self.heading_off.value != self.heading_off.last or
-    self.alignmentQ.value != self.alignmentQ.last:
+    if self.heading_off.value != self.heading_off.last or self.alignmentQ.value != self.alignmentQ.last:
       self.update_alignment(self.alignmentQ.value)
       self.heading_off.last = self.heading_off.value
       self.alignmentQ.last = self.alignmentQ.value
