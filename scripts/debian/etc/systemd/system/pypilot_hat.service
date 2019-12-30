@@ -1,10 +1,10 @@
 [Unit]
-Description=pypilot lcd
+Description=pypilot hat
 DefaultDependencies=false
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/sudo pypilot_lcd nokia5110
+ExecStart=/usr/bin/sudo pypilot_hat
 StandardOutput=syslog
 StandardError=syslog
 User=pi
