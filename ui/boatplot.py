@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+ #!/usr/bin/env python
 #
 #   Copyright (C) 2016 Sean D'Epagnier
 #
@@ -25,6 +25,7 @@ try:
 except Exception as e:
     print('failed to load pywavefront:', e)
     pywavefront = False
+
 
 from pypilot import quaternion
 

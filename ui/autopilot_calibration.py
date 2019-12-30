@@ -10,8 +10,11 @@
 from __future__ import print_function
 import tempfile, time, math, sys, subprocess, json, socket, os
 import wx, wx.glcanvas
-from ui import autopilot_control_ui
-from ui import calibration_plot, boatplot
+try:
+    import calibration_plot, boatplot, autopilot_control_ui
+except:
+    from ui import calibration_plot, boatplot, autopilot_control_ui
+
 import pypilot.quaternion
 import signalk.scope_wx
 from signalk.client import SignalKClient, ConnectionLost
