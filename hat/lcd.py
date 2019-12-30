@@ -14,28 +14,6 @@ import gettext
 import json
 _ = lambda x : x # initially no translation
     
-orangepi = False
-try:
-    import RPi.GPIO as GPIO
-    print('have gpio for raspberry pi')
-
-except ImportError:
-    try:
-        import OPi.GPIO as GPIO
-        orangepi = True
-        print('have gpio for orange pi')
-    except:
-        print('No gpio available')
-        GPIO = None
-
-try:
-    import pylirc as LIRC
-    print('have lirc for remote control')
-except:
-    print('no lirc available')
-    LIRC = None
-
-from signalk.client import SignalKClient
 from pypilot import quaternion
 
 from ugfx import ugfx
@@ -148,6 +126,7 @@ class RangeEdit():
             self.lcd.rectangle(sliderarea)
         except:
             pass
+
         # poll for updates
         if self.signalk:
             self.lcd.client.get(self.id)
@@ -160,64 +139,64 @@ class rectangle():
         self.x, self.y, self.width, self.height = x, y, width, height
 
 AUTO, MENU, UP, DOWN, SELECT, LEFT, RIGHT = range(7)
-keynames = {'auto': AUTO, 'menu': MENU, 'up': UP, 'down': DOWN, 'select': SELECT, 'left': LEFT, 'right': RIGHT}
 
-class LCDClient():
-    def __init__(self):
+class LCD():
+    def __init__(self, hat):
+        self.hat = hat
         self.config = {}
-        self.configfilename = os.getenv('HOME') + '/.pypilot/lcd.conf' 
+
         self.config['contrast'] = 60
         self.config['invert'] = False
         self.config['flip'] = False
         self.config['language'] = 'en'
         self.config['bigstep'] = 10
         self.config['smallstep'] = 1
-        self.config['lcd'] = 'default'
         self.gains = []
 
-        print('loading load config file:', self.configfilename)
-        try:
-            file = open(self.configfilename)
-            config = json.loads(file.readline())
-            for name in config:
-                self.config[name] = config[name]
-        except:
-            print('failed to load config file:', self.configfilename)
+        for name in hat.config['lcd']:
+            self.config[name] = hat.config['lcd'][name]
 
-        lcd = False
-        for possible_lcd in ['nokia5110', 'spi', 'default', 'none']:
-            if possible_lcd in sys.argv:
-                sys.argv.remove(possible_lcd)
-                lcd = possible_lcd
+        # set the driver to the one from hat eeprom
+        driver = 'default'
+        if self.hat.hatconfig:
+            driver = self.hat.hatconfig['lcd']['driver']
+            
+        for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'none']:
+            if pdriver in sys.argv:
+                sys.argv.remove(pdriver)
+                driver = pdriver
                 break
+            
+        self.config['driver'] = driver
+        print('Using driver', driver)
 
-        if lcd:
-            self.config['lcd'] = lcd
-        lcd = self.config['lcd']
-
-        print('Using lcd', lcd)
-
-        self.use_glut = False
-        if lcd == 'none':
-            screen = None
-        elif lcd == 'nokia5110':
-            screen = ugfx.spiscreen(0)
-        elif lcd == 'spi':
-            screen = ugfx.spiscreen()
-        else:
-            self.use_glut = 'DISPLAY' in os.environ
+        self.use_glut = 'DISPLAY' in os.environ
         
-            if self.use_glut:
-                print('using glut')
-                import glut
-                #screen = glut.screen((120, 210))
-                #screen = glut.screen((64, 128))
-                screen = glut.screen((48, 84))
-                #screen = glut.screen((96, 168))
-            else:
-                print('using framebuffer')
-                screen = ugfx.screen("/dev/fb0")
-
+        if driver == 'none':
+            screen = None
+        elif driver == 'nokia5110' or (driver == 'default' and not self.use_glut):
+            screen = ugfx.spiscreen(0)
+        elif driver == 'jlx12864':
+            screen = ugfx.spiscreen(1)
+        elif driver == 'glut' or (driver == 'default' and self.use_glut):
+            print('using glut')
+            import glut
+            #screen = glut.screen((120, 210))
+            #screen = glut.screen((64, 128))
+            screen = glut.screen((48, 84))
+            #screen = glut.screen((96, 168))
+            
+            from OpenGL.GLUT import glutKeyboardFunc, glutKeyboardUpFunc
+            from OpenGL.GLUT import glutSpecialFunc, glutSpecialUpFunc
+            
+            glutKeyboardFunc(self.glutkeydown)
+            glutKeyboardUpFunc(self.glutkeyup)
+            glutSpecialFunc(self.glutspecialdown)
+            glutSpecialUpFunc(self.glutspecialup)
+#        glutIgnoreKeyRepeat(True)
+        elif driver == 'framebuffer':
+            print('using framebuffer')
+            screen = ugfx.screen("/dev/fb0")
             if screen.width > 480:
                 screen.width = 480
                 screen.height= min(screen.height, 640)
@@ -230,13 +209,22 @@ class LCDClient():
 
             width = min(w, 48*mul)
             self.surface = ugfx.surface(width, int(width*h/w), screen.bypp, None)
-            self.frameperiod = .25 # 4 frames a second possible
 
+            # magnify to fill screen
+            self.mag = min(screen.width / self.surface.width, screen.height / self.surface.height)
+            if self.mag != 1:
+                print('magnifying lcd surface to fit screen')
+                self.magsurface = ugfx.surface(screen)
+
+            self.invsurface = ugfx.surface(self.surface)
+            
+            self.frameperiod = .25 # 4 frames a second possible
         else:
             self.surface = None
             self.frameperiod = 1
 
         self.screen = screen
+        
         self.set_language(self.config['language'])
         self.range_edit = False
 
@@ -244,72 +232,36 @@ class LCDClient():
                       'gps':     self.have_gps,
                       'wind':    self.have_wind,
                       'true wind': self.have_true_wind};
+
         self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
 
-        self.initial_gets = ['servo.speed.min', 'servo.speed.max', 'servo.max_current', 'servo.period', 'imu.alignmentCounter']
+        self.watchlist = ['ap.enabled', 'ap.mode', 'ap.pilot', 'ap.heading_command',
+                          'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
+                          'imu.compass.calibration', 'imu.compass.calibration.sigmapoints',
+                          'imu.compass.calibration.locked', 'imu.alignmentQ',
+                          'rudder.calibration_state']
+        self.initial_gets = ['servo.speed.min', 'servo.speed.max', 'servo.max_current',
+                             'servo.period', 'imu.alignmentCounter']
 
         self.create_mainmenu()
 
-        self.longsleep = 30
         self.display_page = self.display_connecting
         self.connecting_dots = 0
 
-        self.client = False
-
-        self.keystate = {}
         self.keypad = [False, False, False, False, False, False, False, False]
         self.keypadup = list(self.keypad)
 
         self.blink = black, white
         self.control = False
         self.wifi = False
-        
-        if orangepi:
-            self.pins = [11, 16, 13, 15, 12]
-        else:
-            self.pins = [17, 23, 27, 22, 18, 5, 6]
-
-        if GPIO:
-            if orangepi:
-                for pin in self.pins:
-                    cmd = 'gpio -1 mode ' + str(pin) + ' up'
-                    os.system(cmd)
-                GPIO.setmode(GPIO.BOARD)
-            else:
-                GPIO.setmode(GPIO.BCM)
-
-            for pin in self.pins:
-                try:
-                    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-                    pass
-                except RuntimeError:
-                    os.system("sudo chown tc /dev/gpiomem")
-                    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-                    
-                def cbr(channel):
-                    self.longsleep = 0
-
-                try:
-                    GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
-                except Exception as e:
-                    print('WARNING', e)
-
-        global LIRC
-        if LIRC:
-            try:
-                LIRC.init('pypilot')
-                self.lirctime = False
-            except:
-                print('failed to initialize lirc. is .lircrc missing?')
-                LIRC = None
 
     def get(self, name):
-        if self.client:
-            self.client.get(name)
+        if self.hat.client:
+            self.hat.client.get(name)
 
     def set_language(self, name):
         try:
-            language = gettext.translation('pypilot_lcdclient',
+            language = gettext.translation('pypilot_hat',
                                            os.path.abspath(os.path.dirname(__file__)) + '/locale',
                                            languages=[name], fallback=True)
             global _
@@ -327,50 +279,52 @@ class LCDClient():
             
     def create_mainmenu(self):
         def value_edit(name, desc, signalk_name, value=False):
-            min = self.value_list[signalk_name]['min']
-            max = self.value_list[signalk_name]['max']
+            min = self.hat.value_list[signalk_name]['min']
+            max = self.hat.value_list[signalk_name]['max']
             step = (max-min)/100.0
 
             def thunk():
-                self.range_edit=RangeEdit(name, desc, signalk_name,
-                                          True, self, min, max, step)
+                self.range_edit = RangeEdit(name, desc, signalk_name,
+                                            True, self, min, max, step)
                 return self.range_edit.display
 
             if value:
                 def last_val_num(name):
                     ret = self.last_val(name)
-                    if ret=='N/A':
+                    if ret == 'N/A':
                         return 0
                     return ret
 
                 return name, thunk, lambda : (last_val_num(signalk_name)-min) / (max - min), signalk_name
             return name, thunk
+
         def value_check(name, signalk_name):
             def thunk():
-                self.client.set(signalk_name, not self.last_val(signalk_name))
+                self.set(signalk_name, not self.last_val(signalk_name))
                 return self.display_menu
             return name, thunk, lambda : self.last_val(signalk_name), signalk_name
+
         def config_edit(name, desc, config_name, min, max, step):
             def thunk():
-                self.range_edit=RangeEdit(name, desc, config_name,
+                self.range_edit = RangeEdit(name, desc, config_name,
                                           False, self, min, max, step)
                 return self.range_edit.display
             return name, thunk
 
         def pilot():
             try:
-                pilots = self.value_list['ap.pilot']['choices']
+                pilots = self.hat.value_list['ap.pilot']['choices']
             except:
                 pilots = []
 
             def set_pilot(name):
                 def thunk():
-                    self.client.set('ap.pilot', name)
+                    self.set('ap.pilot', name)
                     self.menu = self.menu.adam()
                     return self.display_menu
                 return thunk
                 
-            self.menu = LCDMenu(self, _('Pilot'), map(lambda name : (name, set_pilot(name)), self.value_list['ap.pilot']['choices']), self.menu)
+            self.menu = LCDMenu(self, _('Pilot'), map(lambda name : (name, set_pilot(name)), self.hat.value_list['ap.pilot']['choices']), self.menu)
             index = 0
             for pilot in pilots:
                 if pilot == self.last_val('ap.pilot'):
@@ -381,11 +335,11 @@ class LCDClient():
 
         def curgains():
             ret = []
-            for name in self.value_list:
-                if 'AutopilotGain' in self.value_list[name]:
+            for name in self.hat.value_list:
+                if 'AutopilotGain' in self.hat.value_list[name]:
                     if 'ap.pilot.' in name:
                         s = name.split('.')
-                        if self.last_msg['ap.pilot'] == s[2]:
+                        if self.hat.last_msg['ap.pilot'] == s[2]:
                             ret.append(name)
                     else:
                         ret.append(name)
@@ -406,18 +360,18 @@ class LCDClient():
             return self.display_menu
 
         def level():
-            self.client.set('imu.alignmentCounter', 100)
+            self.set('imu.alignmentCounter', 100)
             return self.display_page
 
         def calibrate_rudder_feedback():
             options = []
             if 'rudder' in self.last_msg and \
-               'rudder.calibration_state' in self.value_list:
-                options = self.value_list['rudder.calibration_state']['choices']
+               'rudder.calibration_state' in self.hat.value_list:
+                options = self.hat.value_list['rudder.calibration_state']['choices']
                 options.remove('idle')
 
             self.menu = LCDMenu(self, _('Rudder') + '\n' + _('Feedback'),
-                                map(lambda option : (option, lambda : self.client.set('rudder.calibration_state', option)), options), self.menu)
+                                map(lambda option : (option, lambda : self.set('rudder.calibration_state', option)), options), self.menu)
 
             def display_rudder():
                 fit = self.fittext(rectangle(0, .5, 1, .25), str(self.last_val('rudder')))
@@ -448,7 +402,7 @@ class LCDClient():
             def mode():
                 def set_mode(name):
                     def thunk():
-                        self.client.set('ap.mode', name)
+                        self.set('ap.mode', name)
                         self.menu = self.menu.adam()
                         return self.display_control
                     return thunk
@@ -510,7 +464,6 @@ class LCDClient():
 
                 def select_wifi_ap_toggle(ap):
                     def thunk():
-                        print('modet', mode)
                         self.wifi_settings['mode'] = 'Master' if ap else 'Managed'
                         write()
                         return self.display_menu
@@ -574,13 +527,14 @@ class LCDClient():
                         return language()
                     return thunk
 
-                languages = [(_('English'), 'en'), (_('French'), 'fr'),
+                languages = [(_('English'), 'en'),
+                             (_('French'), 'fr'),
                              (_('Spanish'), 'es')]
                 index, selection = 0, 0
                 for lang in languages:
                     if lang[1] == self.config['language']:
                         selection = index
-                    index+=1
+                    index += 1
                 self.menu = LCDMenu(self, _('Language'), list(map(lambda lang : (lang[0], set_language(lang[1])), languages)), self.menu)
                 self.menu.selection = selection
             
@@ -696,57 +650,15 @@ class LCDClient():
                 px_width = int(max(1, min(w*width, h*width)))
                 self.surface.invert(box[0]+px_width, box[1]+px_width, box[2]-px_width, box[3]-px_width)
         
-    def connect(self):
-        self.display_page = self.display_connecting
-        
-        watchlist = ['ap.enabled', 'ap.mode', 'ap.pilot', 'ap.heading_command',
-                     'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
-                     'imu.compass.calibration', 'imu.compass.calibration.sigmapoints',
-                     'imu.compass.calibration.locked', 'imu.alignmentQ',
-                     'rudder.calibration_state']
-
-        poll_list = ['ap.heading']
-        self.last_msg = {}
-        for name in ['gps.source', 'wind.source']:
-            self.last_msg[name] = 'none'
-        self.last_msg['ap.heading_command'] = 0
-        self.last_msg['imu.heading_offset'] = 0
-
-        host = ''
-        if len(sys.argv) > 1:
-            host = sys.argv[1]
-        
-        def on_con(client):
-            self.value_list = client.list_values(10)
-
-            for name in watchlist:
-                client.watch(name)
-            for request in self.initial_gets:
-                client.get(request)
-
-        try:
-            self.client = SignalKClient(on_con, host)
-                
-            if self.value_list:
-                self.display_page = self.display_control
-                print('connected')
-            else:
-                client.disconnect()
-                raise 1
-        except Exception as e:
-            print(e)
-            self.client = False
-            time.sleep(1)
-
     def last_val(self, name):
-        if name in self.last_msg:
-            return self.last_msg[name]
+        if name in self.hat.last_msg:
+            return self.hat.last_msg[name]
         return 'N/A'
 
     def round_last_val(self, name, places):
         n = 10**places
         try:
-            return str(round(self.last_msg[name]*n)/n)
+            return str(round(self.hat.last_msg[name]*n)/n)
         except:
             return str(self.last_val(name))
             
@@ -922,26 +834,6 @@ class LCDClient():
             self.display_mode(self.control)
         self.display_wifi()
 
-    def display_select(self):
-        self.surface.fill(black)
-        def arrow(x1, y1, x2, y2):
-            self.line(x1, y1, x2, y2)
-            d, e = .3, .6
-            x, y = (1-d)*x1 + d*x2, (1-d)*y1 + d*y2
-            dx, dy = e*(x1-x), e*(y1-y)
-            self.line(x1, y1, x + dy, y - dx)
-            self.line(x1, y1, x - dy, y + dx)
-
-        self.fittext(rectangle(.1, .1, .8, .2), _('tack'))
-        arrow(.1, .1, .5, .1)
-        arrow(.9, .1, .5, .1)
-        self.fittext(rectangle(0, .4, .8, .2), _('mode'))
-        arrow(.9, .25, .9, .7)
-        arrow(.9, .7, .9, .25)
-
-        self.display_mode(False)
-        self.display_wifi()
-
     def display_menu(self):
         self.surface.fill(black)
         self.menu.display()
@@ -1023,7 +915,6 @@ class LCDClient():
             self.fittext(rectangle(0, y, 1, spacing+even), item, True)
             y += spacing + even
             even, odd = odd, even
-
 
     def display_calibrate_info(self):
         if self.info_page > 2:
@@ -1108,8 +999,8 @@ class LCDClient():
         self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
 
     def set(self, name, value):
-        if self.client:
-            self.client.set(name, value)
+        if self.hat.client:
+            self.hat.client.set(name, value)
 
     def menu_back(self):
         if self.menu.prev:
@@ -1117,7 +1008,7 @@ class LCDClient():
             return self.display_menu
         return self.display_control
             
-    def process_keys(self):                           
+    def process_keys(self):
         if self.keypadup[AUTO]: # AUTO
             if self.last_val('ap.enabled') == False and self.display_page == self.display_control:
                 self.set('ap.heading_command', self.last_val('ap.heading'))
@@ -1130,10 +1021,17 @@ class LCDClient():
             
         if self.keypadup[SELECT]:
             if self.display_page == self.display_control and self.surface:
-                self.display_page = self.display_select
+                # change mode
+                for t in range(len(self.modes_list)):
+                    #self.modes_list = [self.modes_list[-1]] + self.modes_list[:-1]
+                    self.modes_list = self.modes_list[1:] + [self.modes_list[0]]
+                    next_mode = self.modes_list[0]
+                    if next_mode != self.last_val('ap.mode') and \
+                       self.modes[next_mode]():
+                        self.set('ap.mode', next_mode)
+                        break
             else:
-                if self.display_page != self.display_select:
-                    self.menu = self.menu.adam() # reset to main menu
+                self.menu = self.menu.adam() # reset to main menu
                 self.display_page = self.display_control
 
         # for up and down keys providing acceration
@@ -1159,28 +1057,6 @@ class LCDClient():
                     self.set('ap.heading_command', cmd)
                 else:
                     self.set('servo.command', sign*(speed+8.0)/20)
-
-        elif self.display_page == self.display_select:
-            if self.keypadup[MENU] and self.last_val('ap.tack.state') != 'none':
-                self.client.set('ap.tack.state', 'none')
-            elif self.keypadup[LEFT]:
-                self.client.set('ap.tack.direction', 'port')
-                self.client.set('ap.tack.state', 'begin')
-            elif self.keypadup[RIGHT]:
-                self.client.set('ap.tack.direction', 'starboard')
-                self.client.set('ap.tack.state', 'begin')
-            elif self.keypadup[UP] or self.keypadup[DOWN]:
-                # change mode
-                for t in range(len(self.modes_list)):
-                    if self.keypadup[UP]:
-                        self.modes_list = [self.modes_list[-1]] + self.modes_list[:-1]
-                    else:
-                        self.modes_list = self.modes_list[1:] + [self.modes_list[0]]
-                    next_mode = self.modes_list[0]
-                    if next_mode != self.last_val('ap.mode') and \
-                       self.modes[next_mode]():
-                        self.client.set('ap.mode', next_mode)
-                        break
 
         elif self.display_page == self.display_menu:
             if self.keypadup[UP]:
@@ -1210,17 +1086,18 @@ class LCDClient():
                     self.save_config()
             elif updown:
                 self.range_edit.move(sign*speed*.1)
+
         elif self.display_page == self.display_connecting:
             pass # no keys handled for this page
         else:
             print('unknown display page', self.display_page)
 
-        for key in range(len(keynames)):
+        for key in range(len(self.keypad)):
             if self.keypadup[key]:
                 self.keypad[key] = self.keypadup[key] = False
 
     def key(self, k, down):
-        if k >= 0 and k < len(self.pins):
+        if k >= 0 and k < len(self.keypad):
             if down:
                 self.keypad[k] = True
             else:
@@ -1237,11 +1114,11 @@ class LCDClient():
         if k == 'q' or ord(k) == 27:
             exit(0)
         if k == ' ':
-            key = keynames['auto']
+            key = AUTO
         elif k == '\n':
-            key = keynames['menu']
+            key = MENU
         elif k == '\t':
-            key = keynames['select']
+            key = SELECT
         else:
             key = ord(k) - ord('1')
         self.key(key, down)
@@ -1255,176 +1132,37 @@ class LCDClient():
     def glutspecial(self, k, down=True):
         from OpenGL import GLUT as glut
         if k == glut.GLUT_KEY_UP:
-            self.key(keynames['up'], down)
+            self.key(UP, down)
         elif k == glut.GLUT_KEY_DOWN:
-            self.key(keynames['down'], down)
+            self.key(DOWN, down)
         elif k == glut.GLUT_KEY_LEFT:
-            self.key(keynames['left'], down)
+            self.key(LEFT, down)
         elif k == glut.GLUT_KEY_RIGHT:
-            self.key(keynames['right'], down)
+            self.key(RIGHT, down)
 
-    def idle(self):
-        self.get('ap.heading')
+    def poll(self):
+        if self.screen:
+            self.display()
 
-        if any(self.keypadup):
-            self.longsleep = 0
+            surface = self.surface
+            if self.config['invert']:
+                self.invsurface.blit(surface, 0, 0)
+                surface = self.invsurface
+                surface.invert(0, 0, surface.width, surface.height)
 
-        if any(self.keypad):
-            self.longsleep += 1
-        else:
-            self.longsleep += 10
-        while self.longsleep > 20:
-            dt = self.frameperiod / 10.0
-            time.sleep(dt)
-            self.longsleep -= 1
+            if self.mag != 1:
+                self.magsurface.magnify(surface, self.mag)
+                surface = magsurface
 
-        # read from keys
-        for pini in range(len(self.pins)):
-            pin = self.pins[pini]
-            value = True
+            self.screen.blit(surface, 0, 0, self.config['flip'])
+            self.screen.refresh()
 
-            if False:
-                f = open('/sys/class/gpio/gpio%d/value' % pin)
-                a = f.readline()
-                value = bool(int(a))
-            else:
-                if GPIO:
-                    value = GPIO.input(pin)
-
-            if not value and self.keypad[pini] > 0:
-                self.keypad[pini] += 1
-                
-            if pini in self.keystate and self.keystate[pini] != value:
-                if value:
-                    self.keypadup[pini] = True
-                else:
-                    self.keypad[pini] = 1
-
-            self.keystate[pini] = value
-
-        if LIRC:
-            if self.lirctime and time.time()- self.lirctime > .35:
-                self.keypad[self.lirckey] = 0
-                self.keypadup[self.lirckey] = True
-                self.lirctime = False
-                #print('keypad', self.keypad, self.keypadup)
-                
-            while True:
-                code = LIRC.nextcode(1)
-                if not code:
-                    break
-                #print('LIRC code', code) # tracking strange bug...
-                sys.stdout.flush() # update log so timestamp is accurate
-                repeat = code[0]['repeat']
-
-                lirc_mapping = {'up': UP, 'down': DOWN, 'left': LEFT, 'right': RIGHT,
-                                'power': AUTO, 'select': SELECT, 'mute': MENU, 'tab': MENU}
-                code = code[0]['config']
-                if not code in lirc_mapping:
-                    continue
-                pini = lirc_mapping[code]
-                if not self.surface and (pini == MENU or pini == SELECT):
-                    continue
-
-                if repeat == 1: # ignore first repeat
-                    #if self.lirctime:
-                    #    self.keypad[self.lirckey] = self.keypadup[self.lirckey] = False
-                    pass
-                else:
-                    if repeat == 0:
-                        if self.lirctime:
-                            self.keypad[self.lirckey] = 0
-                            self.keypadup[self.lirckey] = True
-                        self.keypad[pini] = 0
-                    self.lirckey = pini;
-                    self.keypad[pini] += 1
-                    self.lirctime = time.time()
+            if 'contrast' in self.config:
+                self.screen.contrast = int(self.config['contrast'])
 
         self.process_keys()
 
-        while True:
-            result = False
-            if not self.client:
-                self.connect()
-                break
-            try:
-                result = self.client.receive_single()
-            except Exception as e:
-                print('disconnected', e)
-                self.client = False
-
-            if not result:
-                break
-
-            name, data = result
-
-            if 'value' in data:
-                self.last_msg[name] = data['value']
-
-            for token in ['min', 'max', 'choices', 'AutopilotGain']:
-                if token in data:
-                    #print('name', name, token, ' = ', data[token])
-                    if not name in self.value_list:
-                        self.value_list[name] = {}
-                    self.value_list[name][token] = data[token]
-
-
-def main():
-    print('init...')
-
-    lcdclient = LCDClient()
-    screen = lcdclient.screen
-    if screen:
-        # magnify to fill screen
-        mag = min(screen.width / lcdclient.surface.width, screen.height / lcdclient.surface.height)
-        if mag != 1:
-            print("magnifying lcd surface to fit screen")
-            magsurface = ugfx.surface(screen)
-
-        invsurface = ugfx.surface(lcdclient.surface)
-        
-    def idle():
-        if screen:
-            lcdclient.display()
-
-            surface = lcdclient.surface
-            if lcdclient.config['invert']:
-                invsurface.blit(surface, 0, 0)
-                surface = invsurface
-                surface.invert(0, 0, surface.width, surface.height)
-
-            if mag != 1:
-                magsurface.magnify(surface, mag)
-                surface = magsurface
-                #        mag = 2
-                #surface.magnify(mag)
-
-            screen.blit(surface, 0, 0, lcdclient.config['flip'])
-            screen.refresh()
-
-            if 'contrast' in lcdclient.config:
-                screen.contrast = int(lcdclient.config['contrast'])
-
-        lcdclient.idle()
-
-    if lcdclient.use_glut:
-        from OpenGL.GLUT import glutMainLoop
-        from OpenGL.GLUT import glutIdleFunc
-        from OpenGL.GLUT import glutKeyboardFunc
-        from OpenGL.GLUT import glutKeyboardUpFunc
-        from OpenGL.GLUT import glutSpecialFunc
-        from OpenGL.GLUT import glutSpecialUpFunc
-
-        glutKeyboardFunc(lcdclient.glutkeydown)
-        glutKeyboardUpFunc(lcdclient.glutkeyup)
-        glutSpecialFunc(lcdclient.glutspecialdown)
-        glutSpecialUpFunc(lcdclient.glutspecialup)
-        glutIdleFunc(idle)
-#        glutIgnoreKeyRepeat(True)
-        glutMainLoop()
-    else:
-        while True:
-            idle()
-
-if __name__ == '__main__':
-    main()
+        if not self.hat.client:
+            self.display_page = self.display_connecting
+        elif self.display_page == self.display_connecting:
+            self.display_page = self.display_control

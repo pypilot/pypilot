@@ -10,12 +10,11 @@
 
 $(document).ready(function() {
     namespace = '';
-    $('#rfcode').text("N/A");
+    $('#code').text("N/A");
     // Connect to the Socket.IO server.
     var port = location.port;
-    port = webapp_port;
+    port = web_port;
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + port + namespace);
-
     //socket.emit('signalk', JSON.stringify({'name': name, 'method': 'get'}));
     // Event handler for new connections.
     socket.on('connect', function(msg) {
@@ -30,8 +29,8 @@ $(document).ready(function() {
         $('#pypilot').text(log);
     });
 
-    socket.on('rfcode', function(code) {
-        $('#rfcode').text(code);
+    socket.on('code', function(code) {
+        $('#code').text(code);
     });
 
     socket.on('action', function(action) {

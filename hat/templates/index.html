@@ -9,13 +9,14 @@
     <script type="text/javascript" src="static/rf_config.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script>
-      var webapp_port = {{webapp_port}};
+      var web_port = {{web_port}};
     </script>
 </head>
 <body>
   <div style="position:fixed;bottom:-10">
     <h2>pypilot 433mhz RF remote setup</h2>
     <p>Press button(s) on the remote then assign a command.
+      These commands are used with the LCD interface
       <table>
         <tr><td><button id="engage">Engage</button></td><td><span id="actionengagecodes"></span></td></tr>
     <tr><td><button id="disengage">Disengage</button></td><td><span id="actiondisengagecodes"></span></td></tr>
@@ -31,7 +32,7 @@
     <tr><td><button id="tackport">tack port</button></td><td><span id="actiontackportcodes"></span></td></tr>
     <tr><td><button id="tackstarboard">tack starboard</button></td><td><span id="actiontackstarboardcodes"></span></td></tr>        
 </table>
-      <br>RF code: <b><span id="rfcode"></span></b>
+      <br>code: <b><span id="code"></span></b>
       <br>action: <b><span id="action"></span></b>
       <br>pypilot: <b><span id="pypilot"></span></b>
       <br>rfconfig: <b><span id="connection"></span></b>

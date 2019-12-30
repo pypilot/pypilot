@@ -16,13 +16,10 @@ fonts = {}
 
 fontpath = os.path.abspath(os.getenv('HOME') + '/.pypilot/ugfxfonts/')
 
-                                                                                                    
-
 if not os.path.exists(fontpath):
     os.makedirs(fontpath)
 if not os.path.isdir(fontpath):
     raise 'ugfxfonts should be a directory'
-
 
 def draw(surface, pos, text, size, bw, crop=False):
     if not size in fonts:
