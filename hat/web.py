@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from flask import Flask, render_template, session, request
+from flask import Flask, render_template, request, Markup
 from flask_socketio import SocketIO, Namespace, emit, disconnect
 import time, math, select, os
 
@@ -27,7 +27,7 @@ class WebConfig(Namespace):
 
         acts = ''
         for action in actions:
-            acts += '<tr><td><button id="' + action.name + '">' + action.name + '</button></td><td><span id="action' + action.name + 'keys"></span></td></tr>'            
+            acts += Markup('<p><button id="' + action.name + '">' + action.name + '</button><span id="action' + action.name + 'keys"></span></p>')
 
         @app.route('/')
         def index():
@@ -84,6 +84,9 @@ class WebConfig(Namespace):
                 socketio.emit('key', 'N/A')
                 socketio.emit('action', '')
 
+            if not self.pipe:
+                continue
+            
             msg = self.pipe.recv()
             if msg:
                 if 'key' in msg:
@@ -102,4 +105,4 @@ def web_process(pipe, actions):
     socketio.run(app, debug=False, host='0.0.0.0', port=web_port)
     
 if __name__ == '__main__':
-    web_process(None)
+    web_process(None, [])

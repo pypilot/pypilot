@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from __future__ import print_function
 orangepi = False
 try:
     import RPi.GPIO as GPIO
@@ -24,7 +25,7 @@ except ImportError:
 class gpio(object):
     def __init__(self):
         self.keystate = {}
-        self.events = {}
+        self.events = []
 
         if orangepi:
             self.pins = [11, 16, 13, 15, 12]
@@ -72,16 +73,16 @@ class gpio(object):
                 if GPIO:
                      value = GPIO.input(pin)
 
-            if not value and self.keypad[pini] > 0:
-                self.keypad[pini] += 1
-                self.events['gpio%d'%pin] = (True, self.keypad[pini])
+            if not value and self.keystate[pini] > 0:
+                self.keystate[pini] += 1
 
-            if pini in self.keystate and self.keystate[pini] != value:
+            if not pini in self.keystate:
+                self.keystate[pini] = 1
+                
+            if not value or not self.keystate[pini]:
                 if value:
-                    self.keypadup[pini] = True
-                else:
-                    self.keypad[pini] = 1
-                self.events['gpio%d'%pin] = [not value, self.keypad[pini]]
+                    self.keystate[pini] = 0
+                self.events.append(['gpio%d'%pin, self.keystate[pini]])
 
             self.keystate[pini] = value
 
@@ -89,6 +90,6 @@ class gpio(object):
         if not self.events:
             return False
 
-        key = list(self.events)[0]
-        return [key] + self.events[key]
-
+        r = self.events[0]
+        self.events = self.events[1:]
+        return r

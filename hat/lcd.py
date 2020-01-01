@@ -147,6 +147,7 @@ class LCD():
 
         self.config['contrast'] = 60
         self.config['invert'] = False
+        self.config['backlight'] = 200
         self.config['flip'] = False
         self.config['language'] = 'en'
         self.config['bigstep'] = 10
@@ -170,15 +171,16 @@ class LCD():
         self.config['driver'] = driver
         print('Using driver', driver)
 
-        self.use_glut = 'DISPLAY' in os.environ
-        
+        use_glut = 'DISPLAY' in os.environ
+        self.use_glut = False
         if driver == 'none':
             screen = None
-        elif driver == 'nokia5110' or (driver == 'default' and not self.use_glut):
+        elif driver == 'nokia5110' or (driver == 'default' and not use_glut):
             screen = ugfx.spiscreen(0)
         elif driver == 'jlx12864':
             screen = ugfx.spiscreen(1)
-        elif driver == 'glut' or (driver == 'default' and self.use_glut):
+        elif driver == 'glut' or (driver == 'default' and use_glut):
+            self.use_glut = True
             print('using glut')
             import glut
             #screen = glut.screen((120, 210))
@@ -496,12 +498,13 @@ class LCD():
                                     self.menu)
                 return self.display_menu
 
-            def contrast():
-                self.range_edit = self.contrast_edit
-                return self.range_edit.display
-            
             def invert():
                 self.config['invert'] = not self.config['invert']
+                self.save_config()
+                return self.display_menu
+
+            def backlight():
+                self.config['backlight'] = not self.config['backlight']
                 self.save_config()
                 return self.display_menu
 
@@ -514,6 +517,7 @@ class LCD():
                 self.menu = LCDMenu(self, _('Display'),
                                     [config_edit(_('contrast'), '', 'contrast', 30, 90, 1),
                                      (_('invert'), invert),
+                                     config_edit(_('backlight'), '', 'backlight', 0, 200, 1),
                                      (_('flip'), flip)],
                                     self.menu)
                 return self.display_menu
@@ -1159,6 +1163,9 @@ class LCD():
 
             if 'contrast' in self.config:
                 self.screen.contrast = int(self.config['contrast'])
+
+            if 'backlight' in self.config:
+                self.hat.arduino.backlight = int(self.config['backlight'])
 
         self.process_keys()
 

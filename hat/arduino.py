@@ -16,17 +16,24 @@ from __future__ import print_function
 import os, sys, time, json
 import spidev
 from signalk.client import SignalKClient
+import crc
 
 try:
     import RPi.GPIO as GPIO
 except:
     GPIO = False
 
+SET_BACKLIGHT = 0xa1
+RF, IR, AR = 0xa1, 0x06, 0x9c;
+    
 class arduino(object):
     def __init__(self, config):
         self.spi = False
+        self.backlight = -1
+        self.packet_size = 6
+        self.next_packet = [0] * (self.packet_size - 1)
 
-        if 'arduino' in config:
+        if config and 'arduino' in config:
             self.config = config['arduino']
         else:
             self.config = False
@@ -43,11 +50,15 @@ class arduino(object):
         try:
             if device.startswith('/dev/spidev'):
                 # update flash if needed
-                filename = '.pypilot/pypilothat.hex'
-                if not self.verify(filename) and not self.write(filename):
-                    return
-                
-                port, slave = int(device[6]), int(device[8])
+                filename = os.getenv('HOME') + '/.pypilot/hat.hex'
+                # try to verify twice because sometimes this fails
+                if not self.verify(filename) and not self.verify(filename):
+                    if not self.write(filename) or not self.verify(filename):
+                        print('failed to verify or upload', filename)
+                        return
+
+                port, slave = int(device[11]), int(device[13])
+                print('spidev', port, slave)
                 self.spi = spidev.SpiDev()
                 self.spi.open(port, slave)
                 self.spi.max_speed_hz=5000
@@ -56,7 +67,7 @@ class arduino(object):
             exit(1)
 
     def close(self, e):
-        print('failed to read spi', e)
+        print('failed to read spi:', e)
         self.spi.close()
         self.spi = False
         
@@ -65,60 +76,109 @@ class arduino(object):
             self.open()
             return
 
+    def packet(self, d):
+        if len(d) != self.packet_size - 1:
+            raise 'invalid packet'
+        return d + [crc.crc8(d)]
+
+    def backlight(self, value):
+        if (self.backlight != value):
+            self.backlight = min(max(int(value), 0), 200)
+            self.next_packet = [SET_BACKLIGHT, 0, 0, 0, self.backlight]
+
     def read(self):
         if not self.spi:
-            return
-    
+            return False
+
+        s = self.packet_size-1
         try:
-            x = self.spi.xfer([0, 0, 0, 0])
+            x = self.spi.xfer(self.packet(self.next_packet))
+            self.next_packet = [0] * s
+
         except Exception as e:
             self.close(e)
-            return
+            return False
 
-        for i in range(4):
-            crc = crc8(x[:3])
-            if crc == x[3]:
+        for i in range(s+1):
+            if not any(x):
+                return False
+
+            ck = crc.crc8(x[:s])
+            if ck == x[s]:
                 break
 
-            if i == 3:
-                print('failed to syncronize to correct crc')
-                self.close(e)
-                return
+            if i == s:
+                print('failed to syncronize spi packet')
+                return False
                 
             try:
                 y = self.spi.xfer([0])
             except Exception as e:
                 self.close(e)
-                return
-            x = x[1:] + [y]
-                
+                return False
+            x = x[1:] + y
+
         command = x[0]
-        if command == 0:
-            return # no more events
+        if x[0] == RF:
+            key = 'rf%02X%02X%02X' % (x[1], x[2], x[3])
+            count = x[4]
+        elif x[0] == IR:
+            key = 'ir%d' % x[1]
+            count = x[4]
+        elif x[0] == AR:
+            key = 'gpio' % x[1]
+            count = x[4]
+        else:
+            return False
+        return key, count
 
-        if command == 1 or command == 2:
-            key = 'spikey'+x[1]
-            down = command == 1
-            count = x[2]
-            return key, down, count
 
-    def flash(filename, c):
+    def flash(self, filename, c):
         if not GPIO:
             return
 
+        resetpin = self.config['resetpin']
+        if resetpin.startswith('gpio'):
+            self.resetpin = int(resetpin[4:])
+        else:
+            print('invalid arduino reset pin:')
+            return True
+            
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(resetpin, GPIO.OUT)
-        GPIO.output(resetpin, 0)
+        GPIO.setup(self.resetpin, GPIO.OUT)
+        GPIO.output(self.resetpin, 0)
 
-        command = 'avrdude -P ' + self.config['device'] + '-u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 500000'
-        print('executing', command)
+        command = 'avrdude -P ' + self.config['device'] + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 500000'
+
         ret = os.system(command)
-        GPIO.output(resetpin, 1)
-        GPIO.setup(resetpin, GPIO.IN)
+        GPIO.output(self.resetpin, 1)
+        GPIO.setup(self.resetpin, GPIO.IN)
+        return not ret
 
+    def verify(self, filename):
+        return self.flash(filename, 'v')
 
-    def verify(filename):
-        return flash(filename, 'v')
+    def write(self, filename):
+        return self.flash(filename, 'w')
 
-    def write(filename):
-        return flash(filename, 'w')
+def main():
+    print('initializing arduino')
+    c = {'arduino':{'device':'/dev/spidev0.1',
+                           'resetpin':'gpio16'}}
+    ar = arduino(c)
+
+    print('opening...')
+    ar.open()
+
+    t0 = time.time()
+
+    while True:
+        ar.poll()
+        while True:
+            v = ar.read()
+            if v:
+                print('read', time.time()-t0 , v)
+        time.sleep(.01)
+    
+if __name__ == '__main__':
+    main()
