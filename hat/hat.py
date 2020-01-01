@@ -25,8 +25,8 @@ class ActionKeypad(Action):
         self.lcd = lcd
         self.index = index
 
-    def trigger(self, down, count):
-        self.lcd.keypadup[self.index] = not down
+    def trigger(self, count):
+        self.lcd.keypadup[self.index] = not count
         self.lcd.keypad[self.index] = count
         
 class ActionSignalK(Action):
@@ -35,18 +35,18 @@ class ActionSignalK(Action):
         self.signalk_name = signalk_name
         self.value = signalk_value
 
-    def trigger(self):
-        if self.hat.client:
+    def trigger(self, count):
+        if self.hat.client and not count:
             self.hat.client.set(self.signalk_name, self.value)
 
 class ActionEngage(ActionSignalK):
     def  __init__(self, hat):
         super(ActionEngage, self).__init__(hat, 'engage', 'ap.enabled', True)
 
-    def trigger(self):
+    def trigger(self, count):
         super(ActionEngage, self).trigger()
         # set heading to current heading
-        if self.hat.client:
+        if self.hat.client and not count:
             self.hat.client.set('ap.heading_command', self.last_val('ap.heading'))
             
 class ActionHeading(Action):
@@ -54,11 +54,12 @@ class ActionHeading(Action):
         super(ActionHeading, self).__init__(hat, str(offset))
         self.offset = offset
 
-    def trigger(self):
+    def trigger(self, count):
         if self.hat.client:
             if self.last_val('ap.enabled'):
-                self.client.set('ap.heading_command',
-                                self.last_val['ap.heading_command'] + self.offset)
+                if not count:
+                    self.client.set('ap.heading_command',
+                                    self.last_val['ap.heading_command'] + self.offset)
             else: # manual mode
                 self.servo_timeout = time.time() + abs(self.offset)**.5/2
                 self.client.set('servo.command', 1 if self.offset > 0 else -1)
@@ -100,7 +101,7 @@ class Hat(object):
 
             f.close()
         except Exception as e:
-            print('failed to load:', e)
+            print('failed to load', configfile, ':', e)
             print('assuming original 26 pin tinypilot')
             self.hatconfig = False
 
@@ -204,13 +205,15 @@ class Hat(object):
             self.client = False
             time.sleep(1)
 
-    def apply_code(self, key, down, count):
-        self.web.pipe.send({'key': key})
+    def apply_code(self, key, count):
+        if count:
+            self.longsleep = 0
 
+        self.web.pipe.send({'key': key})
         for action in self.actions:
             if key in action.keys:
                 self.web.pipe.send({'action': action.name})
-                action.trigger(down, count)
+                action.trigger(count)
             
     def poll(self):
         if not self.client:
@@ -249,13 +252,8 @@ class Hat(object):
                 r = i.read()
                 if not r:
                     break
-                key, down, count = r
+                print('apply', r)
                 self.apply_code(*r)
-
-                if not down:
-                    self.longsleep = 0
-                else:
-                    self.longsleep += 1
                 anycode = True
 
         if anycode == False:

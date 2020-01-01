@@ -38,10 +38,10 @@ class lirc(object):
             if not code:
                 break
 
-            count = code[0]['repeat']
+            count = code[0]['repeat']+1
             key = 'lirc' + code[0]['config']
 
             if count == 0:
-                return key, True, count
+                return key, count
             elif count == 2:
-                return key, False, count
+                return key, count

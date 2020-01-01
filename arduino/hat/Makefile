@@ -5,7 +5,7 @@
 # upload: make upload
 # serial monitor: make serial
 
-SKETCHNAME = pypilothat
+SKETCHNAME = hat
 #DEVICE = /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
 #DEVICE = /dev/ttyAMA0
 DEVICE = /dev/spidev0.1
@@ -74,6 +74,9 @@ upload: $(SKETCHNAME).cpp.hex
 	echo out > /sys/class/gpio/gpio16/direction
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:w:$(SKETCHNAME).cpp.hex -b $(BAUDRATE)
 	echo in > /sys/class/gpio/gpio16/direction
+
+install: $(SKETCHNAME).cpp.hex
+	cp $(SKETCHNAME).cpp.hex ~/.pypilot/$(SKETCHNAME).hex
 
 serial:
 	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5 38400
