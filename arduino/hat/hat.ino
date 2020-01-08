@@ -126,6 +126,10 @@ void setup() {
   digitalWrite(PWR_PIN, HIGH);
   
   rf.enableReceive(0);  // Receiver on interrupt 0 => that is pin #2
+
+  // turn backlight on
+  pinMode(A0, OUTPUT);
+  digitalWrite(A0, HIGH);
 }
 
 void loop() {
@@ -134,8 +138,7 @@ void loop() {
     if(spiin.pop_packet(d)) {
         if(d[0] == SET_BACKLIGHT) {
             // turn on backlight
-            pinMode(A0, OUTPUT);
-            digitalWrite(A0, HIGH);
+            backlight_value = d[1];
         }
     }
 

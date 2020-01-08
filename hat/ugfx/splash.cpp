@@ -124,15 +124,16 @@ int main(int argc, char *argv[])
 
 #if 1 // for testing
     while(1) {
-        framebuffer->fill(0);
+        usleep(1000000);
+/*        framebuffer->fill(0);
         framebuffer->refresh();
         usleep(1000000);
         framebuffer->fill(255);
         framebuffer->refresh();
         usleep(1000000);
+*/
         framebuffer->blit(logom, 0, 0);
         framebuffer->refresh();
-        usleep(1000000);
     }
 #endif
     delete framebuffer;
