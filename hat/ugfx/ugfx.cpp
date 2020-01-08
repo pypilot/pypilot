@@ -565,7 +565,8 @@ public:
 
     void command(uint8_t c) {
         digitalWrite (dc, LOW) ;	// Off
-        write(spifd, &c, 1);
+        //        write(spifd, &c, 1);
+        wiringPiSPIDataRW(0, &c, 1);
     }
 
     void reset() {
@@ -674,39 +675,36 @@ public:
 const int rstPIN  = 5;    // RST
 const int  rsPIN  = 6;    // RS
 
-static  int jlx1264reset=1;
 class JLX12864G : public spilcd
 {
 public:
     JLX12864G() : spilcd(rstPIN, rsPIN) {}
     virtual ~JLX12864G() {}
     void refresh(int contrast, surface *s) {
-        if(jlx1264reset>0) {
-            digitalWrite(rst, LOW);
-            usleep(50000);
-            digitalWrite(rst, HIGH);
-            usleep(50000);
-            jlx1264reset--;
+//        command(0x25); // Coarse Contrast, setting range is from 20 to 27
+//      command(0x81); // Trim Contrast
+//        command(0x1f); // Trim Contrast value range can be set from 0 to 63
 
-            command(0xe2); // Soft Reset
-//        command(0x2c); // Boost 1
-//        command(0x2e); // Boost 2
-        command(0x2f); // Boost 3
-//        command(0x23); // Coarse Contrast, setting range is from 20 to 27
-//        command(0x81); // Trim Contrast
-//        command(0x20); // Trim Contrast value range can be set from 0 to 63
-//        command(0xa2); // 1/9 bias ratio
-        }
-                  command(0xe2); // Soft Reset
+        unsigned char cmd[] = {0xe2, // Soft Reset
+                            0x2c, // Boost 1
+                            0x2e, // Boost 2
+                            0x2f, // Boost 3
+                            0xa2, // 1/9 bias ratio
+                            0xc0, // Line scan sequence : from top to bottom
+                            0xa0, // column scan order : from left to right
+                            0xa6, // not reverse
+                            0xa4, // not all on
+                            0x40, // start of first line
+                            0xaf}; // Open the display
 
-                  //command(0x2f); // Boost 3
-        command(0xaf); // Open the display
-        //      command(0xa0); // Column scanning order : from left to right
-        //command(0xc8); // Line scan sequence : from top to bottom
-    
+        digitalWrite (dc, LOW) ;	// Off
+        wiringPiSPIDataRW(0, cmd, sizeof cmd);
+
+        digitalWrite (dc, HIGH) ;	// Off
+
         int i;
 
-        char binary[128*64];//width*height/8];
+        unsigned char binary[128*64];//width*height/8];
         for(int col = 0; col<8; col++)
             for(int y = 0; y < 128; y++) {
                 int index = y + col*s->height;
@@ -723,20 +721,23 @@ public:
 //        for(int k=0; k<10; k++)
         for(i=0;i<8;i++)
         {
+            syncfs(spifd);
             command(0xb0+i);
             command(0x10);
             command(0x00);
+            syncfs(spifd);
             digitalWrite (dc, HIGH) ;	// Off
 #if 0
-            char *address = binary + i*128; //pointer
+            unsigned char *address = binary + i*128; //pointer
             for (unsigned int pos=0; pos<128; pos ++) {
-                char data[1] = {0xff};
+                char data[1] = {binary[i*128+pos]};
                 write(spifd, data, 1);
                 address++;
             }
 #else
-            char *address = binary + i*128; //pointer
-            write(spifd, address, 128);
+            unsigned char *address = binary + i*128; //pointer
+//            write(spifd, address, 128);
+            wiringPiSPIDataRW(0, address, 128);
 #endif
         }
      }
