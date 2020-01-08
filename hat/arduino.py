@@ -47,6 +47,9 @@ class arduino(object):
             return
 
         device = self.config['device']
+        if not device:
+            return
+
         try:
             if device.startswith('/dev/spidev'):
                 # update flash if needed
@@ -55,6 +58,7 @@ class arduino(object):
                 if not self.verify(filename) and not self.verify(filename):
                     if not self.write(filename) or not self.verify(filename):
                         print('failed to verify or upload', filename)
+                        self.config['device'] = False # prevent retry
                         return
 
                 port, slave = int(device[11]), int(device[13])
@@ -135,18 +139,19 @@ class arduino(object):
 
     def flash(self, filename, c):
         if not GPIO:
-            return
+            return False
 
         resetpin = self.config['resetpin']
-        if resetpin.startswith('gpio'):
-            self.resetpin = int(resetpin[4:])
-        else:
-            print('invalid arduino reset pin:')
-            return True
-            
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.resetpin, GPIO.OUT)
-        GPIO.output(self.resetpin, 0)
+
+        try:
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(self.resetpin, GPIO.OUT)
+            GPIO.output(self.resetpin, 0)
+        except Exception as e:
+            print('failed to setup gpio reset pin for arduino')
+            global GPIO
+            GPIO = False # prevent further tries
+            return False
 
         command = 'avrdude -P ' + self.config['device'] + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 500000'
 

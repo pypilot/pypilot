@@ -9,6 +9,8 @@
 
 from __future__ import print_function
 
+import time
+
 try:
     import RPi.GPIO as GPIO
     print('have gpio for raspberry pi')
@@ -24,17 +26,54 @@ except ImportError:
 
 class buzzer(object):
     def __init__(self, config):
-        if 'buzzer' in config:
+        self.alarmcount = 0
+        self.pwm = False
+        try:
             self.config = config['buzzer']
-        else:
-            self.config = False
+            pin = self.config['pin']
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(pin,GPIO.OUT)
+            self.pwm = GPIO.PWM(pin, 800)
+        except Exception as e:
+            print('failed to configure buzzer', e)
 
     def poll(self):
-        pass
-            
-    def buzz(self, frequency, duration):
-        if not self.config:
+        if not self.pwm:
             return
+        if self.alarmcount:
+            if self.alarmcount % 2: # odd
+                self.pwm.ChangeFrequency(1200)
+                self.pwm.start(50)
+            else:
+                self.pwm.stop()
+            self.alarmcount-=1
+        elif self.needbeep:
+            self.pwm.ChangeFrequency(1200)
+            self.pwm.start(50)
+            
+        else:
+            self.pwm.stop()
+        self.needbeep = False
+            
+    def beep(self):
+        self.needbeep = True
 
-        self.stop
-        pass # buzz here
+    def alarm(self):
+        if not self.alarmcount:
+            self.alarmcount = 3
+
+def main():
+    c = {'buzzer': {'pin':12}}
+    b = buzzer(c)
+
+    b.beep()
+    x = 0
+    while True:
+        b.poll()
+        time.sleep(.1)
+        if x > 10:
+            b.alarm()
+        x+=1
+
+if __name__ == '__main__':
+    main()
