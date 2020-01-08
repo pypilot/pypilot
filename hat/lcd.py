@@ -1099,6 +1099,7 @@ class LCD():
         for key in range(len(self.keypad)):
             if self.keypadup[key]:
                 self.keypad[key] = self.keypadup[key] = False
+                self.hat.buzzer.beep()
 
     def key(self, k, down):
         if k >= 0 and k < len(self.keypad):

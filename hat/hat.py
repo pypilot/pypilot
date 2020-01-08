@@ -126,9 +126,9 @@ class Hat(object):
         self.client = False
         self.lcd = lcd.LCD(self)
         self.gpio = gpio.gpio()
-        self.arduino = arduino.arduino(self.config)
+        self.arduino = arduino.arduino(self.hatconfig)
         self.lirc = lirc.lirc()
-        self.buzzer = buzzer.buzzer(self.config)
+        self.buzzer = buzzer.buzzer(self.hatconfig)
         
         # keypad for lcd interface
         self.actions = []
