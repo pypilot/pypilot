@@ -565,8 +565,7 @@ public:
 
     void command(uint8_t c) {
         digitalWrite (dc, LOW) ;	// Off
-        //        write(spifd, &c, 1);
-        wiringPiSPIDataRW(0, &c, 1);
+        write(spifd, &c, 1);
     }
 
     void reset() {
@@ -698,8 +697,7 @@ public:
                             0xaf}; // Open the display
 
         digitalWrite (dc, LOW) ;	// Off
-        wiringPiSPIDataRW(0, cmd, sizeof cmd);
-
+        write(spifd, cmd, sizeof cmd);
         digitalWrite (dc, HIGH) ;	// Off
 
         int i;
@@ -719,13 +717,12 @@ public:
             }
 
 //        for(int k=0; k<10; k++)
-        for(i=0;i<8;i++)
+        for(uint8_t i=0;i<8;i++)
         {
-            syncfs(spifd);
-            command(0xb0+i);
-            command(0x10);
-            command(0x00);
-            syncfs(spifd);
+            unsigned char c1 = 0xb0+i;
+            unsigned char cmd[] = {c1, 0x10, 0x00};
+            digitalWrite (dc, LOW) ;	// Off
+            write(spifd, cmd, sizeof cmd);
             digitalWrite (dc, HIGH) ;	// Off
 #if 0
             unsigned char *address = binary + i*128; //pointer
@@ -736,8 +733,7 @@ public:
             }
 #else
             unsigned char *address = binary + i*128; //pointer
-//            write(spifd, address, 128);
-            wiringPiSPIDataRW(0, address, 128);
+            write(spifd, address, 128);
 #endif
         }
      }
