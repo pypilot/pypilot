@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-
+import time
 LIRC = None
 try:
     import pylirc as LIRC
@@ -19,6 +19,10 @@ except:
 
 class lirc(object):
     def __init__(self):
+        self.events = []
+        self.lastkey = False
+        self.lasttime = time.time()
+
         global LIRC
         if LIRC:
             try:
@@ -29,11 +33,11 @@ class lirc(object):
                 LIRC = None
 
     def poll(self):
-        # handle timeout and key up here
-        pass
+        if not LIRC:
+            return
 
-    def read(self):
-        while LIRC:
+        t = time.time()
+        while True:
             code = LIRC.nextcode(1)
             if not code:
                 break
@@ -41,7 +45,13 @@ class lirc(object):
             count = code[0]['repeat']+1
             key = 'lirc' + code[0]['config']
 
-            if count == 0:
-                return key, count
-            elif count == 2:
-                return key, count
+            if self.lastkey and self.lastkey != key:
+                self.events.append((self.lastkey, 0))
+            self.lastkey = key
+            self.lasttime = t
+            self.events.append((key, count))
+
+        # timeout keyup
+        if self.lastkey and t - self.lasttime > .25:
+            self.events.append((self.lastkey, 0))
+            self.lastkey = False

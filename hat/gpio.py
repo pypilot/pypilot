@@ -30,7 +30,10 @@ class gpio(object):
         if orangepi:
             self.pins = [11, 16, 13, 15, 12]
         else:
-            self.pins = [17, 23, 27, 22, 18, 5, 6]
+            self.pins = [17, 23, 27, 22, 18, 5, 6, 26]
+
+        for pin in self.pins:
+            self.keystate[pin] = 0
 
         if not GPIO:
             return
@@ -51,9 +54,8 @@ class gpio(object):
                 os.system("sudo chown tc /dev/gpiomem")
                 GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
                     
-            def cbr(channel):
-                # more accurate timings?
-                pass
+            def cbr(pin):
+                self.evalkey(pin, GPIO.input(pin))
 
             try:
                 GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
@@ -61,8 +63,7 @@ class gpio(object):
                 print('WARNING', e)        
 
     def poll(self):                
-        for pini in range(len(self.pins)):
-            pin = self.pins[pini]
+        for pin in self.pins:
             value = True
 
             if False:
@@ -71,25 +72,17 @@ class gpio(object):
                 value = bool(int(a))
             else:
                 if GPIO:
-                     value = GPIO.input(pin)
+                    value = GPIO.input(pin)
 
-            if not value and self.keystate[pini] > 0:
-                self.keystate[pini] += 1
+            self.evalkey(pin, value)
 
-            if not pini in self.keystate:
-                self.keystate[pini] = 1
-                
-            if not value or not self.keystate[pini]:
-                if value:
-                    self.keystate[pini] = 0
-                self.events.append(['gpio%d'%pin, self.keystate[pini]])
-
-            self.keystate[pini] = value
-
-    def read(self):
-        if not self.events:
-            return False
-
-        r = self.events[0]
-        self.events = self.events[1:]
-        return r
+    def evalkey(self, pin, value):
+        if value:
+            if self.keystate[pin]:
+                self.keystate[pin] = 0
+            else:
+                return
+        else:
+            self.keystate[pin] += 1
+        self.events.append(['gpio%d'%pin, self.keystate[pin]])
+        
