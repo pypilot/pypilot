@@ -54,6 +54,7 @@ def draw(surface, pos, text, size, bw, crop=False):
             font[c] = ugfx.surface(filename.encode('utf-8'))
             if font[c].bypp != surface.bypp:
                 font[c] = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
+                print('store grey', filename)
                 font[c].store_grey(filename.encode('utf-8'))
 
         if pos:
@@ -65,7 +66,6 @@ def draw(surface, pos, text, size, bw, crop=False):
     return width, height+lineheight
 
 def create_character(fontpath, size, c, bypp, crop, bpp):
-    print("create", fontpath, size, c, bypp, crop, bpp)
     try:
         from PIL import Image
         from PIL import ImageDraw
@@ -99,7 +99,7 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
             v = int(round(data[i][0] / (255 / (1<<bpp))) * (255 / ((1<<bpp)-1)))
             data[i] = (v,v,v,v)
         image.putdata(data)
-    print ("IMAGE", image.size, bypp, type(image.tobytes()))
+
     return ugfx.surface(image.size[0], image.size[1], bypp, image.tobytes())
     
 if __name__ == '__main__':

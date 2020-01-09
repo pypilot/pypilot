@@ -54,7 +54,7 @@ class LCDMenu():
                     sliderarea.width *= val
                     self.lcd.rectangle(sliderarea)
                 if len(item) > 3:
-                    self.lcd.client.get(item[3]) # refresh value from server
+                    self.lcd.get(item[3]) # refresh value from server
             y += .15
             if y >= 1:
                 break
@@ -93,7 +93,7 @@ class RangeEdit():
         v = max(v, self.range[0])
         self.value = v
         if self.signalk:
-            self.lcd.client.set(self.id, v)
+            self.lcd.set(self.id, v)
         else:
             self.lcd.config[self.id] = v
         self.lastmovetime = time.time()
@@ -129,7 +129,7 @@ class RangeEdit():
 
         # poll for updates
         if self.signalk:
-            self.lcd.client.get(self.id)
+            self.lcd.get(self.id)
 
 white = ugfx.color(255, 255, 255)
 black = ugfx.color(0, 0, 0)
@@ -221,6 +221,7 @@ class LCD():
             self.invsurface = ugfx.surface(self.surface)
             
             self.frameperiod = .25 # 4 frames a second possible
+            self.lastframetime = 0
         else:
             self.surface = None
             self.frameperiod = 1
@@ -367,7 +368,8 @@ class LCD():
 
         def calibrate_rudder_feedback():
             options = []
-            if 'rudder' in self.last_msg and \
+            rudder = self.last_val('rudder')
+            if rudder != 'N/A' and rudder and \
                'rudder.calibration_state' in self.hat.value_list:
                 options = self.hat.value_list['rudder.calibration_state']['choices']
                 options.remove('idle')
@@ -783,6 +785,7 @@ class LCD():
                 warning += flag[:-6] + ' '
 
         if warning:
+            self.hat.buzzer.alarm()
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:
@@ -1039,35 +1042,37 @@ class LCD():
                 self.display_page = self.display_control
 
         # for up and down keys providing acceration
-        sign = -1 if self.keypad[DOWN] or self.keypadup[DOWN] or self.keypad[LEFT] or self.keypadup[LEFT] else 1
-        updownup = self.keypadup[UP] or self.keypadup[DOWN]
-        updownheld = self.keypad[UP] > 10 or self.keypad[DOWN] > 10
-        speed = float(1 if updownup else min(10, .004*max(self.keypad[UP], self.keypad[DOWN])**2.5))
+        down = self.keypad[DOWN] or self.keypadup[DOWN]
+        right = self.keypad[RIGHT] or self.keypadup[RIGHT]
+        updownup = self.keypadup[LEFT] or self.keypadup[RIGHT]
+        updownheld = self.keypad[LEFT] > 10 or self.keypad[RIGHT] > 10
+        speed = float(1 if updownup else min(10, .004*max(self.keypad[LEFT], self.keypad[RIGHT])**2.5))
         updown = updownheld or updownup
-        if self.keypadup[LEFT] or self.keypadup[RIGHT]:
+        if self.keypadup[UP] or self.keypadup[DOWN]:
             updown = True
             speed = 10
 
         if self.display_page == self.display_control:                
             if self.keypadup[MENU] and self.surface: # MENU
                 self.display_page = self.display_menu
-            elif updown: # LEFT/RIGHT
+            elif updown: # LEFT/RIGHT/UP/DOWN
+                sign = -1 if down or right else 1                
                 if self.last_val('ap.enabled'):
-                    if self.keypadup[LEFT] or self.keypadup[RIGHT]:
+                    if self.keypadup[UP] or self.keypadup[DOWN]:
                         speed = self.config['bigstep']
                     else:
-                        speed = self.config['smallstep']
+                        speed = self.config['smallstep']                        
                     cmd = self.last_val('ap.heading_command') + sign*speed
                     self.set('ap.heading_command', cmd)
                 else:
                     self.set('servo.command', sign*(speed+8.0)/20)
 
         elif self.display_page == self.display_menu:
-            if self.keypadup[UP]:
+            if self.keypadup[UP] or self.keypadup[LEFT]:
                 self.menu.selection -= 1
                 if self.menu.selection < 0:
                     self.menu.selection = len(self.menu.items)-1
-            elif self.keypadup[DOWN]:
+            elif self.keypadup[DOWN] or self.keypadup[RIGHT]:
                 self.menu.selection += 1
                 if self.menu.selection == len(self.menu.items):
                     self.menu.selection = 0
@@ -1089,6 +1094,7 @@ class LCD():
                 if not self.range_edit.signalk:
                     self.save_config()
             elif updown:
+                sign = -1 if down or not right else 1
                 self.range_edit.move(sign*speed*.1)
 
         elif self.display_page == self.display_connecting:
@@ -1145,28 +1151,36 @@ class LCD():
         elif k == glut.GLUT_KEY_RIGHT:
             self.key(RIGHT, down)
 
+    def draw(self):
+        self.display()
+
+        surface = self.surface
+        if self.config['invert']:
+            self.invsurface.blit(surface, 0, 0)
+            surface = self.invsurface
+            surface.invert(0, 0, surface.width, surface.height)
+
+        if self.mag != 1:
+            self.magsurface.magnify(surface, self.mag)
+            surface = magsurface
+
+        self.screen.blit(surface, 0, 0, self.config['flip'])
+        self.screen.refresh()
+
+        if 'contrast' in self.config:
+            self.screen.contrast = int(self.config['contrast'])
+
+        if 'backlight' in self.config:
+            self.hat.arduino.backlight = int(self.config['backlight'])
+
     def poll(self):
         if self.screen:
-            self.display()
-
-            surface = self.surface
-            if self.config['invert']:
-                self.invsurface.blit(surface, 0, 0)
-                surface = self.invsurface
-                surface.invert(0, 0, surface.width, surface.height)
-
-            if self.mag != 1:
-                self.magsurface.magnify(surface, self.mag)
-                surface = magsurface
-
-            self.screen.blit(surface, 0, 0, self.config['flip'])
-            self.screen.refresh()
-
-            if 'contrast' in self.config:
-                self.screen.contrast = int(self.config['contrast'])
-
-            if 'backlight' in self.config:
-                self.hat.arduino.backlight = int(self.config['backlight'])
+            t = time.time()
+            dt = t - self.lastframetime
+            if dt > self.frameperiod or dt < 0:
+                self.draw()
+                self.lastframetime = max(self.lastframetime+self.frameperiod,
+                                         t-self.frameperiod)
 
         self.process_keys()
 

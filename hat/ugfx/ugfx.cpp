@@ -101,24 +101,26 @@ surface::surface(const char* filename)
     if(!f)
         return;
 
-    uint16_t file_bypp, colors;
-    if(fread(&width, 2, 1, f) != 1 || fread(&height, 2, 1, f) != 1 ||
-       fread(&file_bypp, 2, 1, f) != 1 || fread(&colors, 2, 1, f) != 1) {
+    uint16_t width16, height16, bypp16, colors16;
+    if(fread(&width16, 2, 1, f) != 1 || fread(&height16, 2, 1, f) != 1 ||
+       fread(&bypp16, 2, 1, f) != 1 || fread(&colors16, 2, 1, f) != 1) {
         fprintf(stderr, "failed reading surface header\n");
         goto fail;
     }
 
+    width = width16;
+    height = height16;
+    bypp = bypp16;
     if(width*height > 65536) {
         fprintf(stderr, "invalid surface size\n");
         goto fail;
     }
     
     xoffset = yoffset = 0;
-    p = new char [width*height*file_bypp];
-    line_length = width*file_bypp;
-    bypp = file_bypp;
+    p = new char [width*height*bypp];
+    line_length = width*bypp;
 
-    if(colors != 1) // only greyscale supported
+    if(colors16 != 1) // only greyscale supported
         goto fail;  
 
     {
@@ -141,12 +143,12 @@ surface::surface(const char* filename)
             goto fail;
         }
 
-        if(file_bypp == 1)
+        if(bypp == 1)
             memcpy(p, gray_data, width*height);
-        else if(file_bypp == 2)
+        else if(bypp == 2)
             for(int i = 0; i<width*height; i++)
                 ((uint16_t*)p)[i] = color16gray(gray_data[i]);
-        else if(file_bypp == 4)
+        else if(bypp == 4)
             for(int i = 0; i<width*height; i++)
                 memset(p + 4*i, gray_data[i], 3);
         else
@@ -168,28 +170,34 @@ surface::~surface()
 
 void surface::store_grey(const char *filename)
 {
-    char gray_data[width*height];
-    for(unsigned int i=0; i<sizeof gray_data; i++)
+    FILE *f = fopen(filename, "w");
+    if(!f) {
+        fprintf(stderr, "failed to open for writing %s\n", filename);
+        return;
+    }
+
+    unsigned int datasize = width*height;
+    char grey_data[datasize];
+    for(unsigned int i=0; i<datasize; i++)
         if(bypp == 1)
-            gray_data[i] = p[i];
+            grey_data[i] = p[i];
         else if(bypp == 2)
-            gray_data[i] = p[2*i]&0xfc;
+            grey_data[i] = p[2*i]&0xfc;
         else if(bypp == 4)
-            gray_data[i] = p[4*i];
+            grey_data[i] = p[4*i];
         else
             fprintf(stderr, "bypp incompatible storing %s\n", filename);
 
-    FILE *f = fopen(filename, "w");
-    uint16_t colors = 1; // grey
-    fwrite(&width, 1, 2, f);
-    fwrite(&height, 1, 2, f);
-    fwrite(&bypp, 1, 2, f);
-    fwrite(&colors, 1, 2, f);
+    uint16_t width16 = width, height16 = height, bypp16 = bypp, colors16 = 1; // grey
+    fwrite(&width16, 2, 1, f);
+    fwrite(&height16, 2, 1, f);
+    fwrite(&bypp16, 2, 1, f);
+    fwrite(&colors16, 2, 1, f);
 
     char last = 0;
     uint8_t run = 0;
-    for(unsigned int i=0; i<sizeof gray_data; i++) {
-        if(gray_data[i] == last) {
+    for(unsigned int i=0; i<datasize; i++) {
+        if(grey_data[i] == last) {
             if(run == 255) {
                 fwrite(&run, 1, 1, f);
                 fwrite(&last, 1, 1, f);
@@ -201,14 +209,14 @@ void surface::store_grey(const char *filename)
                 fwrite(&run, 1, 1, f);
                 fwrite(&last, 1, 1, f);
             }
-            last = gray_data[i];
+            last = grey_data[i];
             run = 1;
         }
     }
     
     fwrite(&run, 1, 1, f);
     fwrite(&last, 1, 1, f);
-    uint32_t crc = cksum(gray_data, sizeof gray_data);
+    uint32_t crc = cksum(grey_data, datasize);
     fwrite(&crc, 1, 4, f);
     fclose(f);
 }
@@ -699,8 +707,6 @@ public:
         digitalWrite (dc, LOW) ;	// Off
         write(spifd, cmd, sizeof cmd);
         digitalWrite (dc, HIGH) ;	// Off
-
-        int i;
 
         unsigned char binary[128*64];//width*height/8];
         for(int col = 0; col<8; col++)

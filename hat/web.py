@@ -18,20 +18,48 @@ socketio = SocketIO(app, async_mode=None)
 web_port = 33333
 
 class WebConfig(Namespace):
-    def __init__(self, name, pipe, actions):
+    def __init__(self, name, pipe, keyspipe, actions):
         super(Namespace, self).__init__(name)
         socketio.start_background_task(target=self.background_thread)
         self.pipe = pipe
+        self.keyspipe = keyspipe
         self.actions = actions
-        self.pypilot = 'N/A'
+        self.status = 'N/A'
+
+        self.last_key = False
 
         acts = ''
+        names = Markup('[')
+        cols = 3
+        col = 0
+        acts += Markup('<p>Actions for LCD interface<table border=0>')
+        i = 0
         for action in actions:
-            acts += Markup('<p><button id="' + action.name + '">' + action.name + '</button><span id="action' + action.name + 'keys"></span></p>')
+            if i == 7:
+                acts += Markup('</tr></table>')
+                acts += Markup('<p>These actions do not depend on the display.')
+                acts += Markup('<table border=0>')
+                col = 0
+            i+=1
+    
+            if col == 0:
+                acts += Markup('<tr>')
+            acts += Markup('<td><button id="action_' + action.name + '">' +
+                           action.name + '</button></td><td><span id="action' +
+                           action.name + 'keys"></span></td>')
+            if col == cols-1:
+                acts += Markup('</tr>')
+                col = 0
+            else:
+                col += 1
+            names += Markup('"' + action.name + '", ')
+
+        acts += Markup('</table>')
+        names += Markup('""]')
 
         @app.route('/')
         def index():
-            return render_template('index.html', async_mode=socketio.async_mode, web_port=web_port, actionkeys = acts)
+            return render_template('index.html', async_mode=socketio.async_mode, web_port=web_port, actionkeys = acts, action_names = names)
 
     def on_ping(self):
         emit('pong')
@@ -40,19 +68,22 @@ class WebConfig(Namespace):
         if not self.last_key:
             return
 
+        action_keys = {}
         # remove this key from any actions
         for action in self.actions:
             while self.last_key in action.keys:
                 action.keys.remove(self.last_key)
+                action_keys[action.name] = action.keys
 
         # add the last key to the action
         for action in self.actions:
             if command == action.name:
                 action.keys.append(self.last_key)
+                action_keys[action.name] = action.keys
                 break
 
+        self.keyspipe.send(action_keys)
         self.emit_keys()
-        self.write_config()
 
     def emit_keys(self):
         for action in self.actions:
@@ -61,26 +92,25 @@ class WebConfig(Namespace):
         
     def on_connect(self):
         self.emit_keys()
-        socketio.emit('pypilot', self.pypilot)
+        socketio.emit('status', self.status)
         print('Client connected', request.sid)
 
     def on_disconnect(self):
-        socketio.emit('pypilot', self.pypilot)
+        socketio.emit('status', self.status)
         print('Client disconnected', request.sid)
 
     def background_thread(self):
-        last_key = False
+        print('processing web clients')
         last_key_time = time.time()
-        print('processing clients')
         x = 0
         polls_sent = {}
         while True:
-            socketio.sleep(.25)
+            socketio.sleep(.2)
 
             t = time.time()
             dtc = t - last_key_time
-            if dtc > 8 and last_key:
-                last_key = False
+            if dtc > 8 and self.last_key:
+                self.last_key = False
                 socketio.emit('key', 'N/A')
                 socketio.emit('action', '')
 
@@ -90,18 +120,17 @@ class WebConfig(Namespace):
             msg = self.pipe.recv()
             if msg:
                 if 'key' in msg:
-                    last_key = msg['key']
+                    self.last_key = msg['key']
                     last_key_time = time.time()
                 for name in msg:
-                    print('emit', name, str(msg[name]))
                     socketio.emit(name, str(msg[name]))
-                if 'pypilot' in msg:
-                    self.pypilot = msg['pypilot']
+                if 'status' in msg:
+                    self.status = msg['status']
 
-def web_process(pipe, actions):
+def web_process(pipe, keyspipe, actions):
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
-    socketio.on_namespace(WebConfig('', pipe, actions))
+    socketio.on_namespace(WebConfig('', pipe, keyspipe, actions))
     socketio.run(app, debug=False, host='0.0.0.0', port=web_port)
     
 if __name__ == '__main__':
