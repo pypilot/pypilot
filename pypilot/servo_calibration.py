@@ -407,7 +407,7 @@ class ServoCalibration(object):
         return self.server.Register(_type(*(['servo.calibration.' + name] + list(args)), **kwargs))
 
         def fault(self):
-            return (ServoFlags.OVERCURRENT | ServoFlags.FALTPIN) & self.servo.flags.value or \
+            return (ServoFlags.OVERCURRENT_FAULT | ServoFlags.FALTPIN) & self.servo.flags.value or \
                 not self.servo.engaged.value
     
     def poll(self):

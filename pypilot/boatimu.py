@@ -15,15 +15,11 @@
 from __future__ import print_function
 import os, sys
 import time, math, multiprocessing, select
-from signalk.pipeserver import NonBlockingPipe
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import autopilot
-import calibration_fit
-import vector
-import quaternion
+import autopilot, calibration_fit, vector, quaternion
 from signalk.server import SignalKServer
-from signalk.pipeserver import SignalKPipeServer
+from signalk.pipeserver import SignalKPipeServer, NonBlockingPipe
 from signalk.values import *
 
 try:
@@ -102,22 +98,37 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
       cal_poller = select.poll()
       cal_poller.register(cal_pipe, select.POLLIN)
 
+      avggyro = [0, 0, 0]
+      cycles = 0
+
       while True:
         t0 = time.time()
         
-        if rtimu.IMURead():
-          data = rtimu.getIMUData()
-          data['accel.residuals'] = list(rtimu.getAccelResiduals())
-          data['gyrobias'] = s.GyroBias
-          data['timestamp'] = t0 # imu timestamp is perfectly accurate
-          pipe.send(data, False)
-        else:
-          print('failed to read IMU!!!!!!!!!!!!!!')
-          break # reinitialize imu
+        if not rtimu.IMURead():
+            print('failed to read IMU!!!!!!!!!!!!!!')
+            break # reinitialize imu
+         
+        data = rtimu.getIMUData()
+        data['accel.residuals'] = list(rtimu.getAccelResiduals())
+        data['gyrobias'] = s.GyroBias
+        data['timestamp'] = t0 # imu timestamp is perfectly accurate
 
+        pipe.send(data, False)
+
+        if cycles * period < 100: # only the first 100 seconds after initializing
+          # see if gyro is out of range, sometimes the sensors read
+          # very high gyro readings and the sensors need to be reset by software
+          d = .05*period # filter constant
+          for i in range(3): # filter gyro vector
+            avggyro[i] = (1-d)*avggyro[i] + d*data['gyro'][i]
+          if abs(vector.norm(avggyro)) > .8: # 55 degrees/s
+            print ('too high standing gyro bias, resetting sensors', data['gyro'], avggyro, cycles)
+            break
+        cycles += 1
+        
         if cal_poller.poll(0):
           r = cal_pipe.recv()
-          
+
           #print('[imu process] new cal', new_cal)
           if r[0] == 'accel':
             s.AccelCalValid = True
@@ -130,7 +141,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
           #rtimu.resetFusion()
         
         dt = time.time() - t0
-        t = period - dt # 10hz
+        t = period - dt
 
         if t > 0 and t < period:
           time.sleep(t)
@@ -228,7 +239,6 @@ class QuaternionValue(ResettableValue):
     def __init__(self, name, initial, **kwargs):
       super(QuaternionValue, self).__init__(name, initial, **kwargs)
 
-
     def set(self, value):
       if value:
         value = quaternion.normalize(value)
@@ -256,8 +266,10 @@ class BoatIMU(object):
     self.period = 1.0/self.rate.value
 
     self.loopfreq = self.Register(LoopFreqValue, 'loopfreq', 0)
-    self.alignmentQ = self.Register(QuaternionValue, 'alignmentQ', [1, 0, 0, 0], persistent=True)
+    self.alignmentQ = self.Register(QuaternionValue, 'alignmentQ', [2**.5/2, -2**.5/2, 0, 0], persistent=True)
+    self.alignmentQ.last = False
     self.heading_off = self.Register(RangeProperty, 'heading_offset', 0, -180, 180, persistent=True)
+    self.heading_off.last = 3000 # invalid
 
     self.alignmentCounter = self.Register(Property, 'alignmentCounter', 0)
     self.last_alignmentCounter = False
@@ -313,7 +325,6 @@ class BoatIMU(object):
 
     self.last_imuread = time.time()
     self.lasttimestamp = 0
-    self.last_heading_off = 3000 # invalid
 
   def __del__(self):
     print('terminate imu process')
@@ -435,9 +446,12 @@ class BoatIMU(object):
           self.update_alignment(alignment)
 
       self.last_alignmentCounter = self.alignmentCounter.value
-    if self.heading_off.value != self.last_heading_off:
+
+    # if alignment or heading offset changed:
+    if self.heading_off.value != self.heading_off.last or self.alignmentQ.value != self.alignmentQ.last:
       self.update_alignment(self.alignmentQ.value)
-      self.last_heading_off = self.heading_off.value
+      self.heading_off.last = self.heading_off.value
+      self.alignmentQ.last = self.alignmentQ.value
 
     result = self.auto_cal.UpdatedCalibration()
     

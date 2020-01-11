@@ -5,7 +5,7 @@ The dependencies can be installed with "apt install" or sometimes 'pip install"
 server dependencies (required): python-gps python-serial libpython-dev python-numpy python-scipy swig
                     (recommended): ujson pyudev
 lcdclient dependencies: python-pil
-webapp dependencies: python-flask python-gevent-websocket
+web dependencies: python-flask python-gevent-websocket
 
 client dependencies (viewers control applications)
 apt: python-wxgtk3.0 python-opengl
@@ -74,4 +74,4 @@ signalk/scope_wx.py -- plot client with wx widgets (for checked listbox)
 
 lcd/client.py -- autopilot control interface using GPIO pins.
 
-webapp/webapp.py -- python flask application that runs a webserver providing remote autopilot control through a browser
+web/web.py -- python flask application that runs a webserver providing remote autopilot control through a browser
