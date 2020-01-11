@@ -102,7 +102,6 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
 
       while True:
         t0 = time.time()
-
         if not rtimu.IMURead():
             print('failed to read IMU!!!!!!!!!!!!!!')
             pipe.send(False)
@@ -111,7 +110,8 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
         data = rtimu.getIMUData()
         data['accel.residuals'] = list(rtimu.getAccelResiduals())
         data['gyrobias'] = s.GyroBias
-        data['timestamp'] = t0 # imu timestamp is perfectly accurate
+        #data['timestamp'] = t0 # imu timestamp is perfectly accurate
+        
         if compass_calibration_updated:
           data['compass_calibration_updated'] = True
           compass_calibration_updated = False
@@ -278,8 +278,10 @@ def heading_filter(lp, a, b):
 
 class BoatIMU(object):
   def __init__(self, server, *args, **keywords):
+    self.starttime = time.time()
     self.server = server
 
+    self.timestamp = server.Register(SensorValue('timestamp', 0))
     self.rate = self.Register(EnumProperty, 'rate', 10, [10, 25], persistent=True)
     self.period = 1.0/self.rate.value
 
@@ -314,7 +316,7 @@ class BoatIMU(object):
 
     self.auto_cal = calibration_fit.IMUAutomaticCalibration()
 
-    self.FirstTimeStamp = False
+    self.lasttimestamp = 0
 
     self.headingrate = self.heel = 0
     self.heading_lowpass_constant = self.Register(RangeProperty, 'heading_lowpass_constant', .1, .01, 1)
@@ -328,22 +330,20 @@ class BoatIMU(object):
     sensornames += directional_sensornames
     
     self.SensorValues = {}
-    timestamp = server.TimeStamp('imu')
     for name in sensornames:
-      self.SensorValues[name] = self.Register(SensorValue, name, timestamp, directional = name in directional_sensornames)
+      self.SensorValues[name] = self.Register(SensorValue, name, directional = name in directional_sensornames)
 
     # quaternion needs to report many more decimal places than other sensors
     sensornames += ['fusionQPose']
-    self.SensorValues['fusionQPose'] = self.Register(SensorValue, 'fusionQPose', timestamp, fmt='%.7f')
+    self.SensorValues['fusionQPose'] = self.Register(SensorValue, 'fusionQPose', fmt='%.7f')
     
     sensornames += ['gyrobias']
-    self.SensorValues['gyrobias'] = self.Register(SensorValue, 'gyrobias', timestamp, persistent=True)
+    self.SensorValues['gyrobias'] = self.Register(SensorValue, 'gyrobias', persistent=True)
 
     self.imu_process = multiprocessing.Process(target=imu_process, args=(imu_pipe,imu_cal_pipe, self.accel_calibration.value[0], self.compass_calibration.value[0], self.SensorValues['gyrobias'].value, self.period))
     self.imu_process.start()
 
     self.last_imuread = time.time()
-    self.lasttimestamp = 0
 
   def __del__(self):
     print('terminate imu process')
@@ -379,13 +379,11 @@ class BoatIMU(object):
       print('accel values invalid', data['accel'])
       return False
 
-    self.last_imuread = time.time()
+    t = time.time()
+    self.timestamp.set(t-self.starttime)
+
+    self.last_imuread = t
     self.loopfreq.strobe()
-
-    if not self.FirstTimeStamp:
-      self.FirstTimeStamp = data['timestamp']
-
-    data['timestamp'] -= self.FirstTimeStamp
 
     # apply alignment calibration
     gyro_q = quaternion.rotvecquat(data['gyro'], data['fusionQPose'])
@@ -427,7 +425,6 @@ class BoatIMU(object):
     data['headingraterate_lowpass'] = llp*data['headingraterate'] + (1-llp)*self.SensorValues['headingraterate_lowpass'].value
 
     # set sensors
-    self.server.TimeStamp('imu', data['timestamp'])
     for name in self.SensorValues:
       self.SensorValues[name].set(data[name])
 
