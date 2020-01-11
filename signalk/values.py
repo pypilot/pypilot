@@ -13,7 +13,6 @@ from signalk import kjson
 class Value(object):
     def __init__(self, name, initial, **kwargs):
         self.name = name
-        self.timestamp = False
         self.watchers = []
         self.persistent = False
         self.set(initial)
@@ -90,13 +89,9 @@ class StringValue(Value):
             strvalue = '"' + self.value + '"'
         return '{"' + self.name + '": {"value": ' + strvalue + '}}'
 
-class SensorValue(Value): # same as Value with added timestamp
-    def __init__(self, name, timestamp, initial=False, fmt='%.3f', **kwargs):
+class SensorValue(Value):
+    def __init__(self, name, initial=False, fmt='%.3f', **kwargs):
         super(SensorValue, self).__init__(name, initial, **kwargs)
-        if type(timestamp) != type('') and \
-           (type(timestamp) != type([]) or len(timestamp) != 1):
-            print('invalid timestamp', timestamp, 'for sensorvalue', name)
-        self.timestamp = timestamp
         self.directional = 'directional' in kwargs and kwargs['directional']
         self.fmt = fmt # round to 3 places unless overrideen
 
@@ -109,7 +104,7 @@ class SensorValue(Value): # same as Value with added timestamp
         value = self.value
         if type(value) == type(tuple()):
             value = list(value)
-        return '{"' + self.name + '": {"value": ' + round_value(value, self.fmt) + ', "timestamp": %.3f }}' % self.timestamp[0]
+        return '{"' + self.name + '": {"value": ' + round_value(value, self.fmt) + '}}'
 
 # a value that may be modified by external clients
 class Property(Value):

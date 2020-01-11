@@ -9,7 +9,8 @@
 
 import sys
 sys.path.append('..')
-from autopilot import AutopilotPilot, HeadingOffset, AutopilotGain, resolv
+from autopilot import HeadingOffset, resolv
+from pilot import AutopilotPilot, AutopilotGain
 from signalk.values import *
 
 # the wind pilot does not require a compass but does require a wind sensor.
@@ -22,15 +23,13 @@ class WindPilot(AutopilotPilot):
     super(WindPilot, self).__init__('wind', ap)
 
     # create filters
-    timestamp = self.ap.server.TimeStamp('ap')
-
     self.compass_wind_offset = HeadingOffset()
     self.gps_wind_offset = HeadingOffset()
     self.true_wind_wind_offset = HeadingOffset()
 
-    self.heading = self.Register(SensorValue, 'heading', timestamp, directional=True)
-    self.heading_error = self.Register(SensorValue, 'heading_error', timestamp)
-    self.heading_error_int = self.Register(SensorValue, 'heading_error_int', timestamp)
+    self.heading = self.Register(SensorValue, 'heading', directional=True)
+    self.heading_error = self.Register(SensorValue, 'heading_error')
+    self.heading_error_int = self.Register(SensorValue, 'heading_error_int')
     self.heading_error_int_time = time.time()
 
     # create simple pid filter

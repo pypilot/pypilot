@@ -16,11 +16,11 @@ from signalk.values import *
 import serialprobe
 from sensors import Sensor
 
-class GpsProcess(multiprocessing.Process):
+class gpsProcess(multiprocessing.Process):
     def __init__(self):
         # split pipe ends
         self.pipe, pipe = NonBlockingPipe('gpsprocess')
-        super(GpsProcess, self).__init__(target=self.gps_process, args=(pipe, ))
+        super(gpsProcess, self).__init__(target=self.gps_process, args=(pipe, ))
         self.devices = []
 
     def connect(self):
@@ -67,20 +67,18 @@ class GpsProcess(multiprocessing.Process):
             self.connect()
             self.read(pipe)
             
-class Gpsd(Sensor):
+class gpsd(Sensor):
     def __init__(self, server, sensors):
-        super(Gpsd, self).__init__(server, 'gps')
-
-        timestamp = server.TimeStamp('gps')
-        self.track = self.Register(SensorValue, 'track', timestamp, directional=True)
-        self.speed = self.Register(SensorValue, 'speed', timestamp)
+        super(gpsd, self).__init__(server, 'gps')
+        self.track = self.Register(SensorValue, 'track', directional=True)
+        self.speed = self.Register(SensorValue, 'speed')
         
         self.sensors = sensors
 
         self.process = False
         self.devices = []
 
-        self.process = GpsProcess()
+        self.process = gpsProcess()
         self.process.start()
         READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
         self.poller = select.poll()
@@ -89,7 +87,6 @@ class Gpsd(Sensor):
 
     def read(self):
         fix = self.process.pipe.recv()
-
         if 'device' in fix:
             device = fix['device']
             if device and not device in self.devices:
@@ -101,8 +98,8 @@ class Gpsd(Sensor):
         def fval(name):
             return fix[name] if name in fix else False
 
-        # use fix timestamp??
-        val = {'timestamp' : time.time(), 'track': fval('track'), 'speed': fval('speed'), 'device': fval('device')}
+        # use fix timestamp?
+        val = {'track': fval('track'), 'speed': fval('speed'), 'device': fval('device')}
         self.sensors.write('gps', val, 'gpsd')
 
     def poll(self):

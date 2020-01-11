@@ -9,7 +9,7 @@
 
 import sys
 sys.path.append('..')
-from autopilot import AutopilotPilot
+from pilot import AutopilotPilot
 
 # this pilot is an experiment to command the rudder
 # to an absolute position rather than relative speed
@@ -22,7 +22,6 @@ class AbsolutePilot(AutopilotPilot):
 
     # create simple pid filter
     self.gains = {}
-    timestamp = self.ap.server.TimeStamp('ap')
     self.PosGain('P', .05, 2)
     self.PosGain('I', 0, .05)
     self.PosGain('D', .2, 2)

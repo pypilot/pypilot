@@ -36,9 +36,7 @@ class BasicPilot(AutopilotPilot):
     super(BasicPilot, self).__init__('basic', ap)
 
     # create filters
-    timestamp = self.ap.server.TimeStamp('ap')
-
-    self.heading_command_rate = self.Register(SensorValue, 'heading_command_rate', timestamp)
+    self.heading_command_rate = self.Register(SensorValue, 'heading_command_rate')
     self.heading_command_rate.time = 0
     self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
 
@@ -54,7 +52,7 @@ class BasicPilot(AutopilotPilot):
     self.PosGain('R',  0.0, 1.0)  # reactive
     self.reactive_time = self.Register(RangeProperty, 'Rtime', 1, 0, 3)
 
-    self.reactive_value = self.Register(SensorValue, 'reactive_value', timestamp)
+    self.reactive_value = self.Register(SensorValue, 'reactive_value')
                                     
     self.last_heading_mode = False
 
