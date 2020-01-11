@@ -66,6 +66,7 @@ class SignalKScope(SignalKScopeBase):
         self.plot_reshape = False
 
     def on_con(self, client):
+        self.plot.on_con(client)
         self.plot.add_blank()
         for i in range(self.clValues.GetCount()):
             if self.clValues.IsChecked(i):
@@ -95,7 +96,7 @@ class SignalKScope(SignalKScopeBase):
             if not result:
                 break
 
-            if self.watches[result[0]]:
+            if self.watches[result[0]] or result[0] == 'timestamp':
                 if self.plot.read_data(result):
                     refresh = True
 
