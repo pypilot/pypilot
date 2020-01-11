@@ -146,7 +146,7 @@ class SignalKClient(object):
         try:
             if not self.poll(timeout):
                 return False
-        except:
+        except Exception as e:
             self.disconnected()
         dt = time.time()-t
         return self.receive_line(timeout - dt)
@@ -354,7 +354,11 @@ def main():
             if not continuous:
                 break
         exit()
-
+        
+    import signal
+    def quit(sign, frame):
+        exit(0)
+    signal.signal(signal.SIGINT, quit)
     while True:
         msg = client.receive_single(.1)
         if not msg:
