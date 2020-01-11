@@ -51,7 +51,7 @@ class trace(object):
 
         self.points.insert(0, (t, data))
         return True
-
+        
     def add_blank(self):
         if self.points:
             self.points.insert(0, (self.points[0][0], float('nan')))
@@ -185,6 +185,9 @@ class SignalKPlot():
         mindt = self.disptime / float(self.width)
         return t.add(timestamp, value, mindt) and t.visible
 
+    def on_con(self, client):
+        client.watch('timestamp')
+
     def add_blank(self, group=False):
         for t in self.traces:
             if not group or group == t.group:
@@ -192,10 +195,11 @@ class SignalKPlot():
 
     def read_data(self, msg):
         name, data = msg
-        if 'timestamp' in data:
-            timestamp = data['timestamp']
-        else:
-            timestamp = time.time()
+        if name == 'timestamp':
+            self.timestamp = data['value']
+            return
+        #timestamp = time.time()
+        timestamp = self.timestamp
 
         value = data['value']
         if type(value) == type([]):
@@ -414,6 +418,7 @@ def main():
 
     plot = SignalKPlot()
     def on_con(client):
+        plot.on_con(client)
         plot.add_blank()
     client = SignalKClientFromArgs(sys.argv, True, on_con)
     if not client.have_watches:
