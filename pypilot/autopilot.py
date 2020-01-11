@@ -160,13 +160,13 @@ class Autopilot(object):
     self.tack = tacking.Tack(self)
 
     self.gps_compass_offset = HeadingOffset()
-    self.gps_speed = self.Register(SensorValue, 'gps_speed', timestamp)
+    self.gps_speed = 0
 
     self.wind_compass_offset = HeadingOffset()
     self.true_wind_compass_offset = HeadingOffset()
     
     self.wind_direction = self.Register(SensorValue, 'wind_direction', timestamp, directional=True)
-    self.wind_speed = self.Register(SensorValue, 'wind_speed', timestamp)
+    self.wind_speed = 0
 
     self.runtime = self.Register(TimeValue, 'runtime') #, persistent=True)
 
@@ -228,17 +228,17 @@ class Autopilot(object):
       if self.sensors.gps.source.value != 'none':
           d = .002
           gps_speed = self.sensors.gps.speed.value
-          self.gps_speed.set((1-d)*self.gps_speed.value + d*gps_speed)
+          self.gps_speed = (1-d)*self.gps_speed + d*gps_speed
           if gps_speed > 1: # don't update gps offset below 1 knot
               gps_track  = self.sensors.gps.track.value
               # weight gps compass offset higher with more gps speed
-              d = .005*math.log(gps_speed + 1)
+              d = .005*math.log(self.gps_speed + 1)
               self.gps_compass_offset.update(gps_track - compass, d)
 
       if self.sensors.wind.source.value != 'none':
           d = .005
           wind_speed = self.sensors.wind.speed.value
-          self.wind_speed.set((1-d)*self.wind_speed.value + d*wind_speed)
+          self.wind_speed = (1-d)*self.wind_speed + d*wind_speed
           # weight wind direction more with higher wind speed
           d = .05*math.log(wind_speed/5.0 + 1.2)
           wind_direction = resolv(self.sensors.wind.direction.value, self.wind_direction.value)
@@ -247,9 +247,8 @@ class Autopilot(object):
           self.wind_compass_offset.update(wind_direction + compass, d)
 
           if self.sensors.gps.source.value != 'none':
-            true_wind = compute_true_wind(self.gps_speed.value,
-                                               self.wind_speed.value,
-                                               self.wind_direction.value)
+            true_wind = compute_true_wind(self.gps_speed, self.wind_speed,
+                                          self.wind_direction.value)
             offset = resolv(true_wind + compass, self.true_wind_compass_offset.value)
             d = .05
             self.true_wind_compass_offset.update(offset, d)
