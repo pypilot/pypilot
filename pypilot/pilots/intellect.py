@@ -7,16 +7,17 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-pool_size = 100 # how much data to accumulate before training
+import os, sys, time
 import tensorflow as tf
+from signalk.client import SignalKClient
 
 class History(object):
-  def __init__(self, meta):
-    self.meta = meta
+  def __init__(self, conf):
+    self.conf = conf
     self.data = []
 
   def samples(self):
-    return (self.meta['past']+self.meta['future'])*self.meta['rate']
+    return (self.conf['past']+self.conf['future'])*self.conf['rate']
 
   def put(self, data):
     self.data = (self.data+[data])[:self.samples()]
@@ -44,23 +45,23 @@ class Intellect(object):
     def __init__(self):
         self.train_x, self.train_y = [], []
         self.inputs = {}
-        self.history = History(meta)
         self.models = {}
-        self.meta = {'past': 10, # seconds of sensor data
+        self.conf = {'past': 10, # seconds of sensor data
                  'future': 3, # seconds to consider in the future
                  'sensors': ['imu.accel', 'imu.gyro', 'imu.heading', 'imu.headingrate', 'servo.current', 'servo.command'],
                  'actions':  ['servo.command'],
                  'predictions': ['imu.heading', 'imu.headingrate']}
-    self.state = {'ap.enabled': False,
-                   'ap.mode': 'none',
-                   'imu.rate': 0}
+        self.state = {'ap.enabled': False,
+                      'ap.mode': 'none',
+                      'imu.rate': 1}
+        self.history = History(self.conf)
 
-    self.sensor_timestamps = {}
-    for name in self.meta[sensors]:
-        self.sensor_timestamps[name] = 0
+        self.last_timestamp = {}
+        for name in self.conf['sensors']:
+            self.sensor_timestamps[name] = 0
 
     def load(self, mode):
-        model = build(self.meta)
+        model = build(self.conf)
         try:
             self.model.load_weights('~/.pypilot/intellect')
         except:
@@ -77,28 +78,29 @@ class Intellect(object):
         # predictions in the future
         predictions_data = inputs(self.history.data[present:], predictions)
     
-        meta = {'sensors': sensor, 'actions': actions, 'rate': rate, 'mode': self.mode,
+        conf = {'sensors': sensor, 'actions': actions, 'rate': rate, 'mode': self.mode,
                 'predictions': predictions, 'past': past, 'future': future}
-        if not self.model or self.model.meta == meta:
-            self.model = self.build(meta)
+        if not self.model or self.model.conf == conf:
+            self.model = self.build(conf)
             self.train_x, self.train_y = [], []
     
         self.train_x.append(sensors_data + actions_data)
         self.train_y.append(predictions_data)
 
+        pool_size = 100 # how much data to accumulate before training
         if len(self.train_x) >= pool_size:        
             self.model.fit(train_x, train_y, epochs=4)
             self.train_x, self.train_y = [], []
 
-    def build(self, meta):
-        input_size = meta['rate']*(meta['past']*len(meta['sensors']) + meta['future']*len(meta['actions']))
-        output_size = meta['rate']*meta['future']*len(meta['predictions'])
+    def build(self, conf):
+        input_size = conf['rate']*(conf['past']*len(conf['sensors']) + conf['future']*len(conf['actions']))
+        output_size = conf['rate']*conf['future']*len(conf['predictions'])
         input = tf.keras.layers.Input(shape=(input_size,), name='input_layer')
         hidden = tf.keras.layers.Dense(16*output_size, activation='relu')(input)
         output = tf.keras.layers.Dense(output_size, activation='tanh')(hidden)
         self.model = tf.keras.Model(inputs=input, outputs=output)
         self.model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
-        self.model.meta = meta
+        self.model.conf = conf
 
     def save(self, filename):
         converter = tf.lite.TFLiteConverter.from_keras_model(self.model)
@@ -106,26 +108,26 @@ class Intellect(object):
         try:
           import json
           f = open(filename, 'w')
-          meta['model_filename'] = filename + '.tflite_model'
-          f.write(json.dumps(meta))
+          conf['model_filename'] = filename + '.tflite_model'
+          f.write(json.dumps(conf))
           f.close()
-          f = open(meta['model_filename'], 'w')
+          f = open(conf['model_filename'], 'w')
           f.write(tflite_model)
           f.close()
         except Exception as e:
           print('failed to save', f)
 
     def receive_single(self, name, msg):
-        value = msg[name]['value']
+        value = msg['value']
         if name in self.state:
             self.state[name] = value
             return
 
-        if name in self.meta['sensors'] and self.state['enabled']:
-            timestamp = msg[name]['timestamp']
+        if name in self.conf['sensors'] and (1 or self.state['ap.enabled']):
+            timestamp = msg['timestamp']
 
             dt = timestamp - self.sensor_timestamps[name]
-            dte = abs(dt - 1/self.state['rate'])
+            dte = abs(dt - 1.0/float(self.state['imu.rate']))
             if dte > .05:
                 self.history.data = []
                 self.inputs = {}
@@ -134,24 +136,28 @@ class Intellect(object):
             if name in self.inputs:
                 print('input already for', name, self.inputs[name], name, timestamp)
 
-            self.inputs[name] = value, timestamp
+            self.inputs[name] = value
             # see if we have all sensor values, and if so store in the history
             if all(map(lambda sensor : sensor in inputs, sensors)):                  
                 s = ''
                 for name in inputs:
-                    s += name + ' ' + inputs[name][1]
+                    s += name + ' ' + inputs[name]
                     print('input', time.time(), s)
                 self.history.put(inputs)
                 self.train()
                 self.inputs = {}
 
-    def recieve(self, msg):
-        for name in msg:
-            self.recieve_single(name, msg[name])
-            
+    def receive(self):
+        msg = self.client.receive_single(1)
+        while msg:
+            name, value = msg
+            self.receive_single(name, value)
+            msg = self.client.receive_single(-1)
+
     def run_replay(self, filename):
         try:
-            f = open(sys.argv[1])
+            f = open(filename)
+            print('opened replay file', filename)
             while True:
                 line = f.readline()
                 if not line:
@@ -162,27 +168,40 @@ class Intellect(object):
             return False
             
     def run(self):
+      host = 'localhost'
       if len(sys.argv) > 1:
-          if run_replay(sys.argv[1]):
+          if self.run_replay(sys.argv[1]):
               return
-          # couldn't load try to connect
-      watches = sensors + list(self.state)
-      self.client = SignalKClientFromArgs(sys.argv, watches)
+          host = sys.argv[1]
+      # couldn't load try to connect
+      watches = self.conf['sensors'] + list(self.state)
+      def on_con(client):
+        for name in watches:
+          client.watch(name)
+
       t0 = time.time()
 
+      self.client = False
       while True:
-          msg = client.receive_single(1)
-          if msg:
-              intellect.receive(msg)
+          #try:
+          if 1:
+              if not self.client:
+                  print('connecting to', host)
+                  self.client = SignalKClient(on_con, host, autoreconnect=False)
+              self.receive()
+          #except Exception as e:
+          #    print('error', e)
+          #    self.client = False
+          #    time.sleep(1)
               
           if time.time() - t0 > 600:
-              filename = os.getenv('HOME')+'/.pypilot/intellect_'+self.meta['mode']+'.conf'
+              filename = os.getenv('HOME')+'/.pypilot/intellect_'+self.conf['mode']+'.conf'
               self.save(filename)
               
           # find cpu usage of training process
-          cpu = ps.cpu_percent()
-          if cpu > 50:
-              print('learning cpu very high', cpu)
+          #cpu = ps.cpu_percent()
+          #if cpu > 50:
+          #    print('learning cpu very high', cpu)
           
 def main():
     intellect = Intellect()
