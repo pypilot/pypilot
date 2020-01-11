@@ -217,8 +217,8 @@ class Servo(object):
         self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 60, 45, 100, persistent=True)
         self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
 
-        self.max_slew_speed = self.Register(RangeProperty, 'max_slew_speed', 18, 0, 100, persistent=True)
-        self.max_slew_slow = self.Register(RangeProperty, 'max_slew_slow', 28, 0, 100, persistent=True)
+        self.max_slew_speed = self.Register(RangeSetting, 'max_slew_speed', 18, 0, 100, '')
+        self.max_slew_slow = self.Register(RangeSetting, 'max_slew_slow', 28, 0, 100, '')
         self.gain = self.Register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
         self.period = self.Register(RangeSetting, 'period', .4, .1, 3, 'sec')
         self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
@@ -239,7 +239,7 @@ class Servo(object):
 
         self.rawcommand = self.Register(SensorValue, 'raw_command', timestamp)
 
-        self.use_eeprom = self.Register(BooleanValue, 'use_eeprom', True)
+        self.use_eeprom = self.Register(BooleanValue, 'use_eeprom', True, persistent=True)
 
         self.position.inttime = time.time()
         self.position.amphours = 0
@@ -587,10 +587,14 @@ class Servo(object):
         if result & ServoTelemetry.MOTOR_TEMP:
             self.motor_temp.set(self.driver.motor_temp)
         if result & ServoTelemetry.RUDDER:
-            if self.driver.rudder and not math.isnan(self.driver.rudder):
-                data = {'angle': self.driver.rudder, 'timestamp' : t,
-                        'device': self.device.path}
-                self.sensors.write('rudder', data, 'servo')
+            if self.driver.rudder:
+                if math.isnan(self.driver.rudder): # rudder no longer valid
+                    if self.sensors.rudder.source.value == 'servo':
+                        self.sensors.lostsensor(self.sensors.rudder)
+                else:
+                    data = {'angle': self.driver.rudder, 'timestamp' : t,
+                            'device': self.device.path}
+                    self.sensors.write('rudder', data, 'servo')
         if result & ServoTelemetry.CURRENT:
             # apply correction
             corrected_current = self.current.factor.value*self.driver.current

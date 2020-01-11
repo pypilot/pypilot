@@ -1,10 +1,10 @@
 [Unit]
-Description=pypilot web
+Description=pypilot hat
 DefaultDependencies=false
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/sudo pypilot_web
+ExecStart=/usr/bin/sudo pypilot_hat
 StandardOutput=syslog
 StandardError=syslog
 User=pi

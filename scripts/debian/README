@@ -32,7 +32,7 @@ cd ../..
 # this makes pypilot access point "pypilot"
 sudo systemctl enable pypilot
 sudo systemctl enable pypilot_lcd
-sudo systemctl enable pypilot_webapp
+sudo systemctl enable pypilot_web
 
 sudo systemctl enable hostapd
 sudo systemctl enable dnsmasq

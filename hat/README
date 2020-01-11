@@ -1,0 +1,12 @@
+This directory contains scripts to implement an autopilot control interface using the gpio pins.There is by default an eeprom on i2c0 (pin 0 and 1).  The hat eeprom is programmed and can specify alternate hardware configuration.
+
+The default hardware has bcm (pins):
+
+- keys with switch to ground gpio   (17, 27, 22, 18, 23, 5, 6, 26)
+- lirc (4)
+- imu i2c (2, 3)
+- uart communication (14, 15)
+- lcd spi (8, 9, 10, 11, 24, 25)
+- piezo electric buzzer (12)
+- arduino mini (7, 9, 10, 11, 27)
+

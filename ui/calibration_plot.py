@@ -101,7 +101,7 @@ class CalibrationPlot(object):
         glPushMatrix()
 
         if not self.fusionQPose:
-            return
+            return [0, 0, 1]
 
         down = [0, 0, 1]
         q = [1, 0, 0, 0]
@@ -279,7 +279,7 @@ class CompassCalibrationPlot(CalibrationPlot):
             glVertex3fv(list(map(lambda x, y :-x*cal_sphere[3]+y, down, cal_sphere[:3])))
             glVertex3fv(list(map(lambda x, y : x*cal_sphere[3]+y, down, cal_sphere[:3])))
         except Exception as e:
-            print('ERROR!' .accel, cal_sphere, e)
+            print('ERROR!', down, cal_sphere, e)
         glEnd()
         self.draw_points()
 
