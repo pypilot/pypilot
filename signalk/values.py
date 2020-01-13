@@ -126,8 +126,8 @@ class ResettableValue(Property):
         return 'ResettableValue'
 
     def set(self, value):
-	if not value:
-	        value = self.initial # override value
+        if not value:
+            value = self.initial # override value
         super(ResettableValue, self).set(value)
 
 class RangeProperty(Property):
