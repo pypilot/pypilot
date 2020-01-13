@@ -443,8 +443,8 @@ class SigmaPoints(object):
         if time.time() - oldest_sigma.time >= 60:
             self.sigma_points.remove(oldest_sigma)
 
-# calculate the largest angle in radians between any two measurements
-# for a given calibration bias and normal vector
+# calculate how well these datapoints cover the space by
+# counting how many 20 degree segments have at least 1 datapoint
 def ComputeCoverage(p, bias, norm):
     q = quaternion.vec2vec2quat(norm, [0, 0, 1])
     def ang(p):
@@ -455,8 +455,8 @@ def ComputeCoverage(p, bias, norm):
         return math.degrees(math.atan2(v[1], v[0]))
     #, abs(math.degrees(math.acos(v[2])))
 
-    spacing = 20 # 20 degrees
-    angles = [False] * (360 / spacing)
+    spacing = 20 # 20 degree segments
+    angles = [False] * int(360 / spacing)
     count = 0
     for a in lmap(ang, p):
         i = int(resolv(a, 180) / spacing)
@@ -519,7 +519,7 @@ def FitCompass(compass_cal, compass_calibration, norm):
 
     if not c:
         return
-        
+
     coverage = ComputeCoverage(p, c[0][:3], norm)
     if coverage < 12: # require 240 degrees
         debug('calibration: not enough coverage:', coverage)
