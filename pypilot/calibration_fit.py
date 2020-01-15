@@ -393,7 +393,7 @@ class SigmaPoints(object):
             if vector.dist2(point.sensor, sensor) < self.sigma:
                 point.add_measurement(sensor, down)
                 if ind > 0:
-                    # put at front of list to speed up future tests
+                    # move toward front of list to speed up future tests
                     self.sigma_points = self.sigma_points[:ind-1] + [point] + \
                                         [self.sigma_points[ind-1]] + self.sigma_points[ind+1:]
                 return
@@ -436,6 +436,7 @@ class SigmaPoints(object):
         for sigma in self.sigma_points:
             if sigma.time < oldest_sigma.time:
                 oldest_sigma = sigma
+
         # don't remove if < 1 minute old
         if time.time() - oldest_sigma.time >= 60:
             self.sigma_points.remove(oldest_sigma)
