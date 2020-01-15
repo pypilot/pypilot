@@ -668,8 +668,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
             # reconnect client tcp socket
             nmea_socket = self.last_values['nmea.socket']
             if self.client_socket:
-                self.addresses[self.client_socket] != nmea_socket
-                if self.client_socket.nmea_socket != :
+                if self.client_socket.nmea_socket != nmea_socket
                     self.client_socket.socket.close() # address has changed, close connection
             else:
                 if nmea_socket and  t5 - last_client_connect > 10:
@@ -677,8 +676,8 @@ class NmeaBridgeProcess(multiprocessing.Process):
                     try:
                         host, port = nmea_socket.split(':')
                     except Exception as e:
-                        print('failed to create nmea socket as host:port:', nmea_socket, e)
-                        self.last_values['nmea.socket'] = ''
+                        print('failed to create nmea socket as host:port', nmea_socket, e)
+                        self.last_values['nmea.socket'] = '' # don't try until changed
                     
                         try:
                             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -686,8 +685,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
                             s.connect((host, port))
                             print('connected to', host, port, 'in' time.time() - tc0)
                             self.client_socket = self.new_socket_connection(s, nmea_socket)
+                            self.client_socket.nmea_socket = nmea_socket
                         except Exception as e:
-                            print('failed to connect')
+                            print('failed to connect', e)
                             self.client_socket = False
             
             t6 = time.time()
