@@ -65,33 +65,40 @@ if tinypilot:
     def wifi():
         networking = '/home/tc/.pypilot/networking.txt'
 
-        if request.method == 'POST':
-            try:
-                f = open(networking, 'w')
-                f.write('mode='+request.form['mode']+'\n')
-                f.write('ssid='+request.form['ssid']+'\n')
-                f.write('key='+request.form['key']+'\n')
-                f.close()
-            except Exception as e:
-                print('exception!', e)
-
-        mode, ssid, key = 'Master', 'pypilot', '' # defauls
+        wifi = {'mode': 'Master', 'ssid': 'pypilot', 'psk': '', 'client_ssid': '', 'client_psk': ''}
         try:
             f = open(networking, 'r')
             while True:
                 l = f.readline()
                 if not l:
                     break
-                if l.startswith('mode='):
-                    mode = l[5:].strip()
-                elif l.startswith('ssid='):
-                    ssid = l[5:].strip()
-                elif l.startswith('key='):
-                    key = l[4:].strip()
+                try:
+                    name, value = l.split('=')
+                    wifi[name] = value
+                except Exception as e:
+                    print('failed to parse line in networking.txt', l)
             f.close()
         except:
             pass
-        return render_template('wifi.html', async_mode=socketio.async_mode, wifi_mode=mode, wifi_ssid=ssid, wifi_key=key, mode_managed_selected= 'selected' if mode == 'Managed' else '')
+
+        if request.method == 'POST':
+            try:
+                for name in request.form:
+                    cname = name
+                    if request.form['mode'] == 'Managed':
+                        cname = 'client_' + name
+                    wifi[cname] = request.form[name]
+
+                f = open(networking, 'w')
+                for name in wifi:
+                    f.write(name'='+wifi[name]+'\n')
+                f.close()
+
+                os.shell('/opt/networking.sh')
+            except Exception as e:
+                print('exception!', e)
+
+        return render_template('wifi.html', async_mode=socketio.async_mode, wifi=wifi)
 
 
 class MyNamespace(Namespace):
