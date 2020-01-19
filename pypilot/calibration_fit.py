@@ -25,6 +25,9 @@ def debug(*args):
 '''
 calibration_fit_period = 20  # run every 20 seconds
 
+def mapl(*cargs):
+    return list(map(*cargs))
+
 def FitLeastSq(beta0, f, zpoints, dimensions=1):
     try:
         import scipy.optimize
@@ -114,14 +117,14 @@ def LinearFit(points):
     max_plane_dev = 0
     for p in data:
         t = vector.dot(p, line_fit[1]) - vector.dot(line_fit[0], line_fit[1])
-        q = map(lambda o, n : o + t*n, line_fit[0], line_fit[1])
+        q = mapl(lambda o, n : o + t*n, line_fit[0], line_fit[1]))
         v = vector.sub(p, q)
         d = vector.dot(v, v)
         max_line_dev = max(d, max_line_dev)
         line_dev += d
 
         t = vector.dot(p, plane_fit[1]) - vector.dot(plane_fit[0], plane_fit[1])
-        v = list(map(lambda b : t*b, plane_fit[1]))
+        v = mapl(lambda b : t*b, plane_fit[1]))
         d = vector.dot(v, v)
         max_plane_dev = max(d, max_plane_dev)
         plane_dev += d
@@ -181,11 +184,11 @@ def FitPointsCompass(points, current, norm):
     minc = [1000, 1000, 1000]
     maxc = [-1000, -1000, -1000]
     for p in points:
-        minc = list(map(min, p[:3], minc))
-        maxc = list(map(max, p[:3], maxc))
+        minc = mapl(min, p[:3], minc))
+        maxc = mapl(max, p[:3], maxc))
 
-    guess = map(lambda a, b : (a+b)/2, minc, maxc)
-    diff = map(lambda a, b : b-a, minc, maxc)
+    guess = mapl(lambda a, b : (a+b)/2, minc, maxc))
+    diff = mapl(lambda a, b : b-a, minc, maxc))
     guess.append((diff[0]+diff[1]+diff[2])/3)
     debug('initial guess', guess)
 
@@ -211,7 +214,7 @@ def FitPointsCompass(points, current, norm):
     '''
 
     def f_new_sphere1(beta, x):
-        bias = map(lambda x, n: x + beta[0]*n, initial[:3], norm)
+        bias = mapl(lambda x, n: x + beta[0]*n, initial[:3], norm))
         b = numpy.matrix(map(lambda a, b : a - b, x[:3], bias))
         m = list(numpy.array(b.transpose()))
         r0 = map(lambda y : beta[1] - vector.norm(y), m)
@@ -332,7 +335,7 @@ def FitPointsCompass(points, current, norm):
 
 
 def avg(fac, v0, v1):
-    return list(map(lambda a, b : (1-fac)*a + fac*b, v0, v1))
+    return mapl(lambda a, b : (1-fac)*a + fac*b, v0, v1))
 
 class SigmaPoint(object):
     def __init__(self, sensor, down):
@@ -468,8 +471,8 @@ def FitAccel(accel_cal):
     if len(p) < 5:
         return False
 
-    mina = map(min, *p)
-    maxa = map(max, *p)
+    mina = mapl(min, *p))
+    maxa = mapl(max, *p))
     diff = vector.sub(maxa[:3], mina[:3])
     #print('accelfit', diff)
 
@@ -606,14 +609,14 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
                 if dist > .1: # reset compass cal from large change in accel bias
                     compass_cal.Reset()
                 accel_calibration = fit[0]
-                fit_output.send(('accel', fit, map(lambda p : p.sensor, accel_cal.sigma_points)), False)
+                fit_output.send(('accel', fit, mapl(lambda p : p.sensor, accel_cal.sigma_points))), False)
 
 
         compass_cal.RemoveOlder(60*60) # 60 minutes
 
         fit = FitCompass(compass_cal, compass_calibration, norm)
         if fit:
-            fit_output.send(('compass', fit, map(lambda p : p.sensor + p.down, compass_cal.sigma_points)), False)
+            fit_output.send(('compass', fit, mapl(lambda p : p.sensor + p.down, compass_cal.sigma_points))), False)
             compass_calibration = fit[0]
 
 class IMUAutomaticCalibration(object):
