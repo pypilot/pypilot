@@ -95,6 +95,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             client.watch(name)
 
     def on_con(self, client):
+        # clear out plots
+        self.accel_calibration_plot.points = []
+        self.compass_calibration_plot.points = []
+
         values = client.list_values()
 
         if not self.settings:
