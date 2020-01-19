@@ -526,7 +526,8 @@ def FitCompass(compass_cal, compass_calibration, norm):
         if c == fit[1]: # must have had 3d fit to use 1d fit
             return
         debug('insufficient coverage, use 1d fit')
-        return # no 1d fit
+        c = fit[0]
+        return # for now disallow 1d fit
 
     # make sure the magnitude is sane
     mag = c[0][3]
