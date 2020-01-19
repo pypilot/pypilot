@@ -20,7 +20,7 @@ Optionaly, a port number can be specified in the first argument
     sudo python web.py 8080  
 ```
 
-Or provided from a json config file at ['port':8080] . 
+Or provided from a json config file at {"port":8080} .
 
 If no port is specified, the default value is 80.
 
