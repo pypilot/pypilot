@@ -100,6 +100,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
 
       avggyro = [0, 0, 0]
       cycles = 0
+      compass_calibration_updated = False
 
       while True:
         t0 = time.time()
@@ -112,6 +113,9 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
         data['accel.residuals'] = list(rtimu.getAccelResiduals())
         data['gyrobias'] = s.GyroBias
         data['timestamp'] = t0 # imu timestamp is perfectly accurate
+        if compass_calibration_updated:
+          data['compass_calibration_updated'] = True
+          compass_calibration_updated = False
 
         pipe.send(data, False)
 
@@ -136,6 +140,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
             s.AccelCalMin = b[0] - t, b[1] - t, b[2] - t
             s.AccelCalMax = b[0] + t, b[1] + t, b[2] + t
           elif r[0] == 'compass':
+            compass_calibration_updated = True
             s.CompassCalEllipsoidValid = True
             s.CompassCalEllipsoidOffset = tuple(r[1][0][:3])
           #rtimu.resetFusion()
@@ -369,8 +374,6 @@ class BoatIMU(object):
 
     data['timestamp'] -= self.FirstTimeStamp
 
-    #data['accel_comp'] = quaternion.rotvecquat(vector.sub(data['accel'], down), self.alignmentQ.value)
-
     # apply alignment calibration
     gyro_q = quaternion.rotvecquat(data['gyro'], data['fusionQPose'])
 
@@ -420,7 +423,7 @@ class BoatIMU(object):
       accel = list(data['accel'])
     if not self.compass_calibration.locked.value:
       down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(origfusionQPose))
-      compass = list(data['compass']) + down
+      compass = list(data['compass'])
     if accel or compass:
       self.auto_cal.AddPoint((accel, compass, down))
 

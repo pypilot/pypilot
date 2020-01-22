@@ -47,7 +47,6 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
         return False
 
     try:
-#    if True:
         Model = scipy.odr.Model(f, implicit=1)
         Data = scipy.odr.RealData(zpoints, dimensions)
         Odr = scipy.odr.ODR(Data, Model, beta0, maxit = 1000)
@@ -103,8 +102,6 @@ def LinearFit(points):
         zpoints[i] = lmap(lambda x : x[i], points)
         
     data = numpy.array(list(zip(zpoints[0], zpoints[1], zpoints[2])))
-    #print('zpoints', zpoints[0])
-    #print('data', data)
     datamean = data.mean(axis=0)
     uu, dd, vv = numpy.linalg.svd(data - datamean)
 
@@ -158,7 +155,7 @@ def FitPointsAccel(points):
     if not sphere3d_fit or sphere3d_fit[3] < 0:
         print('FitLeastSq sphere failed!!!! ', len(points))
         return False
-    #debug('sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
+    debug('accel sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
     return sphere3d_fit
 
 def FitPointsCompass(points, current, norm):
@@ -338,7 +335,7 @@ def avg(fac, v0, v1):
     return lmap(lambda a, b : (1-fac)*a + fac*b, v0, v1)
 
 class SigmaPoint(object):
-    def __init__(self, sensor, down):
+    def __init__(self, sensor, down=False):
         self.sensor = sensor
         self.down = down
         self.count = 1
@@ -348,7 +345,8 @@ class SigmaPoint(object):
         self.count += 1
         fac = max(1/self.count, .01)
         self.sensor = avg(fac, self.sensor, sensor)
-        self.down = avg(fac, self.down, down)
+        if down:
+            self.down = avg(fac, self.down, down)
         self.time = time.time()
 
 # store averaged sensore measurements over time for
@@ -365,14 +363,16 @@ class SigmaPoints(object):
         self.sigma_points = []
         self.lastpoint = False
 
-    def Points(self):
-        p = []
-        for sigma in self.sigma_points:
-            p.append(sigma.sensor + sigma.down)
-        return p
+    def Points(self, down=False):
+        def pt(p):
+            if down:
+                return p.sensor + p.down
+            else:
+                p.sensor
+        return lmap(pt, self.sigma_points)
 
     # store a new sensor
-    def AddPoint(self, sensor, down):
+    def AddPoint(self, sensor, down=False):
         if not self.lastpoint:
             self.lastpoint = SigmaPoint(sensor, down)
             return
@@ -387,8 +387,6 @@ class SigmaPoints(object):
 
         # use lastpoint as better sample
         sensor, down = self.lastpoint.sensor, self.lastpoint.down
-        for i in range(3):
-            down[i] /= self.lastpoint.count
         self.lastpoint = False
 
         ind = 0
@@ -404,28 +402,28 @@ class SigmaPoints(object):
 
         index = len(self.sigma_points)
         p = SigmaPoint(sensor, down)
-        if index == self.max_sigma_points:
-            # replace point that is closest to other points
-            minweighti = 0
-            minweight = 1e20
-            for i in range(len(self.sigma_points)):
-                for j in range(len(self.sigma_points)):
-                    if i == j:
-                        continue
-                    dist = vector.dist(self.sigma_points[i].sensor, self.sigma_points[j].sensor)
-                    count = min(self.sigma_points[i].count, 100)
-                    dt = time.time() - self.sigma_points[i].time
-                    weight = dist * count**.2 * 1/dt**.1
-                    #print('ij', i, j, dist, count, dt, weight)
-                    if weight < minweight:
-                        minweighti = i
-                        minweight = weight
-
-            #print('replace', minweighti, self.sigma_points[minweighti].count, time.time() - self.sigma_points[minweighti].time)
-            self.sigma_points[minweighti] = p
+        if index < self.max_sigma_points:
+            self.sigma_points.append(p)
             return
 
-        self.sigma_points.append(p)
+        # replace point that is closest to other points
+        minweighti = 0
+        minweight = 1e20
+        for i in range(len(self.sigma_points)):
+            for j in range(len(self.sigma_points)):
+                if i == j:
+                    continue
+                dist = vector.dist(self.sigma_points[i].sensor, self.sigma_points[j].sensor)
+                count = min(self.sigma_points[i].count, 100)
+                dt = time.time() - self.sigma_points[i].time
+                weight = dist * count**.2 * 1/dt**.1
+
+                if weight < minweight:
+                    minweighti = i
+                    minweight = weight
+
+            self.sigma_points[minweighti] = p
+            return
 
     def RemoveOlder(self, dt=3600):
         p = []
@@ -490,7 +488,7 @@ def FitAccel(accel_cal):
     return [fit, dev]
 
 def FitCompass(compass_cal, compass_calibration, norm):
-    p = compass_cal.Points()
+    p = compass_cal.Points(True)
     #print('compassfit count', len(p))
     if len(p) < 8:
         return False
@@ -545,9 +543,8 @@ def FitCompass(compass_cal, compass_calibration, norm):
     # test points for deviation, all must fall on a sphere
     deviation = c[1]
     if deviation[0] > .15 or deviation[1] > 3:
-        debug('bad fit:', deviation)
         curdeviation = ComputeDeviation(p, compass_calibration)
-        debug('cur dev', curdeviation)
+        debug('bad fit:', deviation, 'cur dev:', curdeviation)
         # if compass_calibration calibration is really terrible
         if deviation[0]/curdeviation[0] + deviation[1]/curdeviation[1] < 2.5 or curdeviation[0] > .2 or curdeviation[1] > 10:
             debug('allowing bad fit')
@@ -560,9 +557,7 @@ def FitCompass(compass_cal, compass_calibration, norm):
     if vector.dist2(c[0], compass_calibration) < .1:
         debug('insufficient change in bias, calibration already ok')
         debug('coverage', coverage, 'new fit:', c)
-
     return c
-
 
 def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass_calibration):
     import os
@@ -573,10 +568,8 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
 
     accel_cal = SigmaPoints(.05**2, 12, 12)
     compass_cal = SigmaPoints(1**2, 18, 4)
-    #down_sigma = .05 # distance between down vectors
 
     norm = [0, 0, 1]
-
     while True:
         t = time.time()
         addedpoint = False
@@ -585,8 +578,7 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
             if p:
                 accel, compass, down = p
                 if accel:
-                    accel_cal.AddPoint(accel, list(accel))
-                    #print('add', len(accel_cal.sigma_points))
+                    accel_cal.AddPoint(accel)
                 if compass and down:
                     compass_cal.AddPoint(compass, down)
                 addedpoint = True
@@ -597,7 +589,6 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
                 break
             norm = n
             compass_cal.Reset()
-            #print('set norm', norm)
 
         if not addedpoint: # don't bother to run fit if no new data
             continue
@@ -607,17 +598,15 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
         if fit: # reset compass sigmapoints on accel cal
             dist = vector.dist(fit[0][:3], accel_calibration[:3])
             if dist > .01: # only update when bias changes more than this
-                if dist > .1: # reset compass cal from large change in accel bias
+                if dist > .08: # reset compass cal from large change in accel bias
                     compass_cal.Reset()
                 accel_calibration = fit[0]
-                fit_output.send(('accel', fit, lmap(lambda p : p.sensor, accel_cal.sigma_points)), False)
-
+                fit_output.send(('accel', fit, accel_cal.sigma_points.Points()), False)
 
         compass_cal.RemoveOlder(60*60) # 60 minutes
-
         fit = FitCompass(compass_cal, compass_calibration, norm)
         if fit:
-            fit_output.send(('compass', fit, lmap(lambda p : p.sensor + p.down, compass_cal.sigma_points)), False)
+            fit_output.send(('compass', fit, compass_cal.sigma_points.Points()), False)
             compass_calibration = fit[0]
 
 class IMUAutomaticCalibration(object):
@@ -628,7 +617,6 @@ class IMUAutomaticCalibration(object):
         self.fit_output, fit_output = NonBlockingPipe('fit output', True)
 
         self.process = multiprocessing.Process(target=CalibrationProcess, args=(points, norm_pipe, fit_output, accel_calibration, compass_calibration))
-        #print('start cal process')
         self.process.start()
 
     def __del__(self):
@@ -643,9 +631,8 @@ class IMUAutomaticCalibration(object):
     
     def UpdatedCalibration(self):
         result = self.fit_output.recv()
-        # use new bias fit
         if result:
-            self.cal_pipe.send(result)
+            self.cal_pipe.send(result) # inform imu process of new calibration
         return result
 
 def ExtraFit():

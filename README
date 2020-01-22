@@ -1,6 +1,6 @@
 Installing:
 
-The dependencies can be installed with "apt install" or sometimes 'pip install"
+The dependencies can be installed with 'apt install' or sometimes 'pip install"
 
 server dependencies (required): python-gps python-serial libpython-dev python-numpy python-scipy swig
                     (recommended): ujson pyudev
@@ -9,6 +9,7 @@ web dependencies: python-flask python-gevent-websocket
 
 client dependencies (viewers control applications)
 apt: python-wxgtk3.0 python-opengl
+  or python3-wxgtk4.0 python3-opengl
 pip: pyglet pywavefront
 
 
