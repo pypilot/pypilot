@@ -15,7 +15,6 @@ import math
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 
-
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import os.path
 from signalk.server import *
@@ -258,7 +257,6 @@ class Autopilot(object):
     import atexit
     atexit.register(lambda : cleanup('atexit'))
     
-    self.lastdata = False
     self.lasttime = time.time()
 
     # read initial value from imu as this takes time
@@ -319,7 +317,7 @@ class Autopilot(object):
             d = .05
             self.true_wind_compass_offset.update(offset, d)
     
-  def fix_compass_calibration_change(self):
+  def fix_compass_calibration_change(self, data):
       headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
       t0 = time.time()
       dt = t0 - self.lasttime
@@ -327,10 +325,9 @@ class Autopilot(object):
       #if the compass gets a new fix, or the alignment changes,
       # update the autopilot command so the course remains constant
       self.compass_change = 0
-      data = self.lastdata
       if data:
-        if 'calupdate' in data and self.last_heading:
-          # with compass calibration updates, adjust the autopilot heading_command
+        if 'compass_calibration_updated' in data and self.last_heading:
+          # with compass calibration updates, adjust the compass offset to hold the same course
           # to prevent actual course change
           last_heading = resolv(self.last_heading, data['heading'])
           self.compass_change += data['heading'] - headingrate*dt - last_heading
@@ -390,16 +387,15 @@ class Autopilot(object):
               break
           time.sleep(self.boatimu.period/10)
 
-      if not data and self.lastdata:
+      if not data:
           print('autopilot failed to read imu at time:', time.time())
 
-      self.lastdata = data
       t0 = time.time()
 
       # set autopilot timestamp
-      self.server.TimeStamp('ap', time.time()-self.starttime)
+      self.server.TimeStamp('ap', t0-self.starttime)
 
-      self.fix_compass_calibration_change()
+      self.fix_compass_calibration_change(data)
       self.compute_offsets()
 
       pilot = None
