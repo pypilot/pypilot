@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -13,16 +13,7 @@ import vector, resolv, quaternion
 resolv = resolv.resolv
 
 from signalk.pipeserver import NonBlockingPipe
-
-def debug(*args):
-    pass
-'''
-def debug(*args):
-    for a in args:
-        sys.stdout.write(str(a))
-        sys.stdout.write(' ')
-    sys.stdout.write('\n')
-'''
+    
 calibration_fit_period = 20  # run every 20 seconds
 
 def lmap(*cargs):
@@ -45,7 +36,6 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
     except:
         print('failed to load scientific library, cannot perform calibration update!')
         return False
-
     try:
         Model = scipy.odr.Model(f, implicit=1)
         Data = scipy.odr.RealData(zpoints, dimensions)
@@ -133,7 +123,7 @@ def LinearFit(points):
     plane = [plane_fit, plane_dev**.5, max_plane_dev**.5]
     return line, plane
 
-def FitPointsAccel(points):
+def FitPointsAccel(debug, points):
     zpoints = [[], [], []]
     for i in range(3):
         zpoints[i] = lmap(lambda x : x[i], points)
@@ -158,7 +148,7 @@ def FitPointsAccel(points):
     debug('accel sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
     return sphere3d_fit
 
-def FitPointsCompass(points, current, norm):
+def FitPointsCompass(debug, points, current, norm):
     # ensure current and norm are float
     current = lmap(float, current)
     norm = lmap(float, norm)
@@ -357,6 +347,11 @@ class SigmaPoints(object):
         self.max_sigma_points = max_sigma_points
         self.min_count = min_count
         self.Reset()
+        self.last_sigma = False
+
+    def Updated(self):
+        if self.sigma == self.last_sigma:
+            return False
 
     # forget all knowledge of stored sensor points
     def Reset(self):
@@ -463,7 +458,7 @@ def ComputeCoverage(p, bias, norm):
             count += 1
     return count
 
-def FitAccel(accel_cal):
+def FitAccel(debug,accel_cal):
     p = accel_cal.Points()
     debug('accelfit count', len(p))
     if len(p) < 5:
@@ -478,7 +473,7 @@ def FitAccel(accel_cal):
         return # require sufficient range on all axes
     if sum(diff) < 4.5:
         return # require more spread
-    fit = FitPointsAccel(p)
+    fit = FitPointsAccel(debug, p)
 
     if abs(1-fit[3]) > .1:
         debug('scale factor out of range', fit)
@@ -487,14 +482,14 @@ def FitAccel(accel_cal):
     dev = ComputeDeviation(p, fit)
     return [fit, dev]
 
-def FitCompass(compass_cal, compass_calibration, norm):
+def FitCompass(debug, compass_cal, compass_calibration, norm):
     p = compass_cal.Points(True)
     #print('compassfit count', len(p))
     if len(p) < 8:
         return False
 
     debug('FitPointsCompass', p, compass_calibration, norm)
-    fit = FitPointsCompass(p, compass_calibration, norm)
+    fit = FitPointsCompass(debug, p, compass_calibration, norm)
     if not fit:
         return
     debug('compass fit', fit)
@@ -559,7 +554,7 @@ def FitCompass(compass_cal, compass_calibration, norm):
         debug('coverage', coverage, 'new fit:', c)
     return c
 
-def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass_calibration):
+def CalibrationProcess(cal_pipe):
     import os
     if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
       print('warning, failed to make calibration process idle, trying renice')
@@ -567,73 +562,78 @@ def CalibrationProcess(points, norm_pipe, fit_output, accel_calibration, compass
           print('warning, failed to renice calibration process')
 
     accel_cal = SigmaPoints(.05**2, 12, 12)
-    compass_cal = SigmaPoints(1**2, 18, 4)
+    compass_cal = SigmaCal_Pipe(1**2, 18, 4)
 
     norm = [0, 0, 1]
+
+    def on_con(client):
+        client.watch('imu.alignmentQ')
+
+    client = SignalKClient(on_con, 'localhost', autoreconnect=True)
+    def debug(name):
+        def debug_by_name(*args):
+            s = ''
+            for a in args:
+                s += a + ' '
+            #print('calibration log ' + name + ': ' + a)
+            client.set('imu.'name+'.calibration.log', s)
+        return debug_by_name
+    
     while True:
         t = time.time()
         addedpoint = False
         while time.time() - t < calibration_fit_period:
-            p = points.recv(1)
+            # receive signalk messages
+            msg = client.recieve()
+            for name in msg:
+                value = msg[name]['value']
+                if name == 'imu.alignmentQ':
+                    norm = quaternion.rotvecquat([0, 0, 1], value)
+                    compass_cal.Reset()
+
+            # receive calibration data
+            p = cal_pipe.recv(1)
             if p:
-                accel, compass, down = p
-                if accel:
-                    accel_cal.AddPoint(accel)
-                if compass and down:
-                    compass_cal.AddPoint(compass, down)
-                addedpoint = True
-
-        while True:
-            n = norm_pipe.recv()
-            if not n:
-                break
-            norm = n
-            compass_cal.Reset()
-
+                if 'accel' in p:
+                    accel_cal.AddPoint(p['accel'])
+                    addedpoint = True
+                if 'compass' in p:
+                    compass_cal.AddPoint(p['compass'], p['down'])
+                    addedpoint = True
+                    
         if not addedpoint: # don't bother to run fit if no new data
             continue
 
         accel_cal.RemoveOlder(10*60) # 10 minutes
-        fit = FitAccel(accel_cal)
+        fit = FitAccel(debug('accel'), accel_cal)
         if fit: # reset compass sigmapoints on accel cal
             dist = vector.dist(fit[0][:3], accel_calibration[:3])
             if dist > .01: # only update when bias changes more than this
                 if dist > .08: # reset compass cal from large change in accel bias
                     compass_cal.Reset()
                 accel_calibration = fit[0]
-                fit_output.send(('accel', fit, accel_cal.sigma_points.Points()), False)
+                client.set('imu.accel.calibration', fit)
 
         compass_cal.RemoveOlder(60*60) # 60 minutes
-        fit = FitCompass(compass_cal, compass_calibration, norm)
+        fit = FitCompass(debug('compass')compass_cal, compass_calibration, norm)
         if fit:
-            fit_output.send(('compass', fit, compass_cal.sigma_points.Points()), False)
+            client.set('imu.compass.calibration', fit)
             compass_calibration = fit[0]
 
-class IMUAutomaticCalibration(object):
-    def __init__(self, cal_pipe, accel_calibration, compass_calibration):
-        self.cal_pipe = cal_pipe
-        points, self.points = NonBlockingPipe('points pipe', True)
-        norm_pipe, self.norm_pipe = NonBlockingPipe('norm pipe', True)
-        self.fit_output, fit_output = NonBlockingPipe('fit output', True)
+        # send updated sigmapoints as well
+        for cal in [accel_cal, compass_cal]:
+            if cal.Updated()
+                client.set('imu.' + name + '.calibration.sigmapoints', cal.sigma)
 
-        self.process = multiprocessing.Process(target=CalibrationProcess, args=(points, norm_pipe, fit_output, accel_calibration, compass_calibration))
+class IMUAutomaticCalibration(object):
+    def __init__(self, accel_calibration, compass_calibration):
+        self.cal_pipe, cal_pipe = NonBlockingPipe('nmea pipe', True)
+        self.process = multiprocessing.Process(target=CalibrationProcess, args=(cal_pipe,))
         self.process.start()
 
     def __del__(self):
         print('terminate calibration process')
         self.process.terminate()
-
-    def AddPoint(self, point):
-        self.points.send(point, False)
-
-    def SetNorm(self, norm):
-        self.norm_pipe.send(norm)
-    
-    def UpdatedCalibration(self):
-        result = self.fit_output.recv()
-        if result:
-            self.cal_pipe.send(result) # inform imu process of new calibration
-        return result
 
 def ExtraFit():
     ellipsoid_fit = False
