@@ -95,12 +95,10 @@ class SignalKServer(object):
 
     def Register(self, value):
         if value.persistent and value.name in self.persistent_data:
-            #value.value = self.persistent_data[value.name]
             v = self.persistent_data[value.name]
             if isinstance(v, numbers.Number):
                 v = float(v) # convert any numeric to floating point
-            value.set(v)
-            #print('persist', value.name, ' = ', value.value)
+            value.set(v) # set persistent value
 
         if value.name in self.values:
             print('warning, registering existing value:', value.name)
@@ -110,7 +108,7 @@ class SignalKServer(object):
 
     def TimeStamp(self, name, t=False):
         if not name in self.timestamps:
-            self.timestamps[name] = [t, name]
+            self.timestamps[name] = [t]
         else:
             self.timestamps[name][0] = t
         return self.timestamps[name]

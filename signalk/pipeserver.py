@@ -121,6 +121,8 @@ class SignalKPipeServerClient(SignalKServer):
             if name == '_register':
                 self.Register(value)
             elif name in self.timestamps:
+                if name in values:
+                    print('timestamp collides with name of value!', name)
                 self.TimeStamp(name, value)
             else:
                 values[name] = value
@@ -185,7 +187,7 @@ class SignalKPipeServer(object):
       self.ResetPersistentState()
 
     def ResetPersistentState(self):
-      self.persistent_timeout = time.time()+600
+      self.persistent_timeout = time.time()+300
       self.persistent_sets = {}
 
     def queue_send(self, value):
@@ -219,7 +221,6 @@ class SignalKPipeServer(object):
     def HandleRequest(self, request):
       method = request['method']
       name = request['name']
-
       if method == 'get':
         self.queue_send(self.values[name])
       elif method == 'set':

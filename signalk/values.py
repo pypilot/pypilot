@@ -110,7 +110,7 @@ class SensorValue(Value): # same as Value with added timestamp
         if type(value) == type(tuple()):
             value = list(value)
         return '{"' + self.name + '": {"value": ' + round_value(value, self.fmt) + ', "timestamp": %.3f }}' % self.timestamp[0]
-    
+
 # a value that may be modified by external clients
 class Property(Value):
     def __init__(self, name, initial, **kwargs):
