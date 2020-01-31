@@ -293,6 +293,12 @@ def SignalKClientFromArgs(argv, watch, f_con=False):
         for arg in watches:
             if '=' in arg:
                 arg, value = arg.split('=')
+                try:
+                    fval = float(value)
+                    if float(str(fval)) == fval:
+                        value = fval
+                except:
+                    pass
                 client.set(arg, value)
             if watch:
                 client.watch(arg)
