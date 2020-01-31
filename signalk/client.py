@@ -229,9 +229,9 @@ class SignalKClient(object):
         self.socket.send(request)
 
     def watch(self, name, value=True):
-        self.get(name)
-        request = {'method' : 'watch', 'name' : name, 'value' : value}
-        self.send(request)
+        if value:
+            self.get(name)
+        self.send({'method' : 'watch', 'name' : name, 'value' : value})
 
     def print_values(self, timeout, info=False):
         t0 = time.time()
@@ -292,7 +292,6 @@ def SignalKClientFromArgs(argv, watch, f_con=False):
     def on_con(client):
         for arg in watches:
             if watch:
-                #print('watch', arg)
                 client.watch(arg)
             else:
                 client.get(arg)
