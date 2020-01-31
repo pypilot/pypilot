@@ -502,7 +502,18 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.AccelCalibration = wx.glcanvas.GLCanvas(self.m_panel7, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])
 		fgSizer81.Add( self.AccelCalibration, 0, wx.ALL|wx.EXPAND, 5 )
 
-		fgSizer1911 = wx.FlexGridSizer( 0, 3, 0, 0 )
+		fgSizer362 = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgSizer362.AddGrowableCol( 0 )
+		fgSizer362.AddGrowableCol( 1 )
+		fgSizer362.SetFlexibleDirection( wx.BOTH )
+		fgSizer362.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		self.tAccelCalibrationLog = wx.TextCtrl( self.m_panel7, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,-1 ), wx.TE_MULTILINE|wx.TE_READONLY )
+		self.tAccelCalibrationLog.SetMinSize( wx.Size( 240,-1 ) )
+
+		fgSizer362.Add( self.tAccelCalibrationLog, 0, wx.ALL|wx.EXPAND, 5 )
+
+		fgSizer1911 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer1911.AddGrowableCol( 0 )
 		fgSizer1911.SetFlexibleDirection( wx.BOTH )
 		fgSizer1911.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
@@ -535,28 +546,31 @@ class CalibrationDialogBase ( wx.Dialog ):
 
 		fgSizer1911.Add( fgSizer101, 1, wx.EXPAND, 5 )
 
-		fgSizer271 = wx.FlexGridSizer( 0, 1, 0, 0 )
+		fgSizer271 = wx.FlexGridSizer( 0, 3, 0, 0 )
 		fgSizer271.SetFlexibleDirection( wx.BOTH )
 		fgSizer271.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
 		self.m_button101 = wx.Button( self.m_panel7, wx.ID_ANY, u"Clear", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer271.Add( self.m_button101, 0, wx.ALL, 5 )
 
-		self.cbAccelCalibrationLocked = wx.CheckBox( self.m_panel7, wx.ID_ANY, u"calibratiion locked", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.cbAccelCalibrationLocked = wx.CheckBox( self.m_panel7, wx.ID_ANY, u"calibration locked", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer271.Add( self.cbAccelCalibrationLocked, 0, wx.ALL, 5 )
-
-
-		fgSizer1911.Add( fgSizer271, 1, wx.EXPAND, 5 )
 
 		m_sdbSizer11 = wx.StdDialogButtonSizer()
 		self.m_sdbSizer11OK = wx.Button( self.m_panel7, wx.ID_OK )
 		m_sdbSizer11.AddButton( self.m_sdbSizer11OK )
 		m_sdbSizer11.Realize();
 
-		fgSizer1911.Add( m_sdbSizer11, 1, wx.EXPAND, 5 )
+		fgSizer271.Add( m_sdbSizer11, 1, wx.EXPAND, 5 )
 
 
-		fgSizer81.Add( fgSizer1911, 1, wx.EXPAND, 5 )
+		fgSizer1911.Add( fgSizer271, 1, wx.EXPAND, 5 )
+
+
+		fgSizer362.Add( fgSizer1911, 1, wx.EXPAND, 5 )
+
+
+		fgSizer81.Add( fgSizer362, 1, wx.EXPAND, 5 )
 
 
 		self.m_panel7.SetSizer( fgSizer81 )
@@ -573,10 +587,21 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.CompassCalibration = wx.glcanvas.GLCanvas(self.m_panel1, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])
 		fgSizer8.Add( self.CompassCalibration, 0, wx.ALL|wx.EXPAND, 5 )
 
-		fgSizer191 = wx.FlexGridSizer( 0, 3, 0, 0 )
+		fgSizer191 = wx.FlexGridSizer( 0, 2, 0, 0 )
 		fgSizer191.AddGrowableCol( 0 )
+		fgSizer191.AddGrowableCol( 1 )
 		fgSizer191.SetFlexibleDirection( wx.BOTH )
 		fgSizer191.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		self.tCompassCalibrationLog = wx.TextCtrl( self.m_panel1, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE|wx.TE_READONLY )
+		self.tCompassCalibrationLog.SetMinSize( wx.Size( 240,-1 ) )
+
+		fgSizer191.Add( self.tCompassCalibrationLog, 0, wx.ALL|wx.EXPAND, 5 )
+
+		fgSizer351 = wx.FlexGridSizer( 0, 1, 0, 0 )
+		fgSizer351.AddGrowableCol( 0 )
+		fgSizer351.SetFlexibleDirection( wx.BOTH )
+		fgSizer351.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
 		fgSizer10 = wx.FlexGridSizer( 0, 2, 0, 0 )
 		fgSizer10.AddGrowableCol( 1 )
@@ -604,27 +629,31 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer10.Add( self.stCompassCalAge, 0, wx.ALL|wx.EXPAND, 5 )
 
 
-		fgSizer191.Add( fgSizer10, 1, wx.EXPAND, 5 )
+		fgSizer351.Add( fgSizer10, 1, wx.EXPAND, 5 )
 
-		fgSizer27 = wx.FlexGridSizer( 0, 1, 0, 0 )
+		fgSizer27 = wx.FlexGridSizer( 1, 0, 0, 0 )
 		fgSizer27.SetFlexibleDirection( wx.BOTH )
 		fgSizer27.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
 		self.m_button10 = wx.Button( self.m_panel1, wx.ID_ANY, u"Clear", wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer27.Add( self.m_button10, 0, wx.ALL, 5 )
 
-		self.cbCompassCalibrationLocked = wx.CheckBox( self.m_panel1, wx.ID_ANY, u"calibratiion locked", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.cbCompassCalibrationLocked = wx.CheckBox( self.m_panel1, wx.ID_ANY, u"calibration locked", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.cbCompassCalibrationLocked.SetValue(True)
 		fgSizer27.Add( self.cbCompassCalibrationLocked, 0, wx.ALL, 5 )
-
-
-		fgSizer191.Add( fgSizer27, 1, wx.EXPAND, 5 )
 
 		m_sdbSizer1 = wx.StdDialogButtonSizer()
 		self.m_sdbSizer1OK = wx.Button( self.m_panel1, wx.ID_OK )
 		m_sdbSizer1.AddButton( self.m_sdbSizer1OK )
 		m_sdbSizer1.Realize();
 
-		fgSizer191.Add( m_sdbSizer1, 1, wx.EXPAND, 5 )
+		fgSizer27.Add( m_sdbSizer1, 1, wx.EXPAND, 5 )
+
+
+		fgSizer351.Add( fgSizer27, 1, wx.EXPAND, 5 )
+
+
+		fgSizer191.Add( fgSizer351, 1, wx.EXPAND, 5 )
 
 
 		fgSizer8.Add( fgSizer191, 1, wx.EXPAND, 5 )
