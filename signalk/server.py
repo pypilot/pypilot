@@ -15,7 +15,7 @@ from signalk.values import *
 from signalk.bufferedsocket import LineBufferedNonBlockingSocket
 
 DEFAULT_PORT = 21311
-max_connections = 20
+max_connections = 30
 default_persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
 
 def LoadPersistentData(persistent_path, server=True):
@@ -25,7 +25,6 @@ def LoadPersistentData(persistent_path, server=True):
         file.close()
     except Exception as e:
         print('failed to load', persistent_path, e)
-        print('WARNING Alignment and other data lost!!!!!!!!!')
 
         if server:
             # log failing to load persistent data

@@ -38,7 +38,7 @@ class LCDMenu():
     def display(self):
         fit = self.lcd.fittext(rectangle(0, 0, 1, .25), self.name)
         sy = y = fit[1] + .03
-        items = min(int((1 - y)/.15)+1, len(self.items))
+        items = min(int((1 - y)/.15), len(self.items))
         scroll = max(self.selection - int(items/2), 0)
         scroll = min(scroll, len(self.items) - items)
         for item in self.items[scroll:]:
@@ -143,19 +143,13 @@ AUTO, MENU, UP, DOWN, SELECT, LEFT, RIGHT = range(7)
 class LCD():
     def __init__(self, hat):
         self.hat = hat
-        self.config = {}
+        default = {'contrast': 60, 'invert': False, 'backlight': 200,
+                   'flip': False, 'language': 'en', 'bigstep': 10,
+                   'smallstep': 1};
 
-        self.config['contrast'] = 60
-        self.config['invert'] = False
-        self.config['backlight'] = 200
-        self.config['flip'] = False
-        self.config['language'] = 'en'
-        self.config['bigstep'] = 10
-        self.config['smallstep'] = 1
-        self.gains = []
-
-        for name in hat.config['lcd']:
-            self.config[name] = hat.config['lcd'][name]
+        for name in default:
+            if not name in self.hat.config:
+                self.hat.config[name] = default[name]
 
         # set the driver to the one from hat eeprom
         driver = 'default'
@@ -168,7 +162,6 @@ class LCD():
                 driver = pdriver
                 break
             
-        self.config['driver'] = driver
         print('Using driver', driver)
 
         use_glut = 'DISPLAY' in os.environ
@@ -228,7 +221,7 @@ class LCD():
 
         self.screen = screen
         
-        self.set_language(self.config['language'])
+        self.set_language(self.hat.config['language'])
         self.range_edit = False
 
         self.modes = {'compass': self.have_compass,
@@ -248,14 +241,14 @@ class LCD():
 
         self.create_mainmenu()
 
-        self.display_page = self.display_connecting
+        self.display_page = self.display_control
         self.connecting_dots = 0
 
         self.keypad = [False, False, False, False, False, False, False, False]
         self.keypadup = list(self.keypad)
 
         self.blink = black, white
-        self.control = False
+        self.control = False # used to keep track of what is drawn on screen to avoid redrawing it
         self.wifi = False
 
     def get(self, name):
@@ -271,14 +264,10 @@ class LCD():
             _ = language.ugettext
         except Exception as e:
             print('no languages', e)
-        self.config['language'] = name
+        self.hat.config['language'] = name
 
-    def save_config(self):
-        try:
-            file = open(self.configfilename, 'w')
-            file.write(json.dumps(self.config) + '\n')
-        except IOError:
-            print('failed to save config file:', self.configfilename)
+    def write_config(self):
+        self.hat.write_config
             
     def create_mainmenu(self):
         def value_edit(name, desc, signalk_name, value=False):
@@ -432,7 +421,6 @@ class LCD():
                                      value_edit(_('period'), _('seconds'), 'servo.period')],
                                     self.menu)
                 return self.display_menu
-
             
             def wifi():
                 self.wifi = True
@@ -443,7 +431,8 @@ class LCD():
                     return display_no_wifi
 
                 networking = '/home/tc/.pypilot/networking.txt'
-                self.wifi_settings = {'mode': 'Master', 'ssid': 'pypilot', 'key':''} # defauls
+                default = {'mode': 'Master', 'ssid': 'pypilot', 'key':'', 'client_ssid': 'pypilot', 'client_key': ''} # defaults
+                self.wifi_settings = default
                 try:
                     f = open(networking, 'r')
                     while True:
@@ -457,7 +446,7 @@ class LCD():
                 except:
                     pass
 
-                def write():
+                def update():
                     try:
                         f = open(networking, 'w')
                         for setting in self.wifi_settings:
@@ -465,30 +454,33 @@ class LCD():
                         f.close()
                     except Exception as e:
                         print('exception writing', networking, ':', e)
+                    os.system('/opt/networking.sh')
 
-                def select_wifi_ap_toggle(ap):
+                def select_wifi_ap_toggle():
                     def thunk():
-                        self.wifi_settings['mode'] = 'Master' if ap else 'Managed'
-                        write()
+                        ap = self.wifi_settings['mode'] == 'Master'
+                        self.wifi_settings['mode'] = 'Managed' if ap else 'Master'
+                        update()
                         return self.display_menu
-                    return [thunk, lambda : (self.wifi_settings['mode'] == 'Master') == ap]
+                    return [thunk, lambda : self.wifi_settings['mode'] == 'Master']
 
-                def select_wifi_encrypt():
-                    def thunk():
-                        self.wifi_settings['key'] = ''
-                        write()
-                        return self.display_menu
-                    return [thunk, lambda : not not self.wifi_settings['key']]
-
-                def reboot():
-                    os.system('sudo reboot')
+                def select_wifi_defaults():
+                    self.wifi_settings = default
+                    update()
                     return self.display_menu
 
+                def wifi_remote():
+                    def thunk():
+                        self.hat.config['remote'] = not self.hat.config['remote']
+                        self.hat.write_config()
+                        self.hat.client = False
+                        return self.display_menu
+                    return [thunk, lambda : self.hat.config['remote']]
+
                 self.menu = LCDMenu(self, _('WIFI'),
-                                    [['AP'] + select_wifi_ap_toggle(True),
-                                     [_('Client')] + select_wifi_ap_toggle(False),
-                                     [_('Encrypt')] + select_wifi_encrypt(),
-                                     (_('Reboot'), reboot)], self.menu)
+                                    [['AP'] + select_wifi_ap_toggle(),
+                                     [_('defaults'), select_wifi_defaults],
+                                     [_('remote')] + wifi_remote()], self.menu)
                 return self.display_menu
 
 
@@ -501,18 +493,18 @@ class LCD():
                 return self.display_menu
 
             def invert():
-                self.config['invert'] = not self.config['invert']
-                self.save_config()
+                self.hat.config['invert'] = not self.hat.config['invert']
+                self.write_config()
                 return self.display_menu
 
             def backlight():
-                self.config['backlight'] = not self.config['backlight']
-                self.save_config()
+                self.hat.config['backlight'] = not self.hat.config['backlight']
+                self.write_config()
                 return self.display_menu
 
             def flip():
-                self.config['flip'] = not self.config['flip']
-                self.save_config()
+                self.hat.config['flip'] = not self.hat.config['flip']
+                self.write_config()
                 return self.display_menu
 
             def display():
@@ -528,7 +520,7 @@ class LCD():
                 def set_language(name):
                     def thunk():
                         self.set_language(name)
-                        self.save_config()
+                        self.write_config()
                         self.create_mainmenu()
                         return language()
                     return thunk
@@ -538,7 +530,7 @@ class LCD():
                              (_('Spanish'), 'es')]
                 index, selection = 0, 0
                 for lang in languages:
-                    if lang[1] == self.config['language']:
+                    if lang[1] == self.hat.config['language']:
                         selection = index
                     index += 1
                 self.menu = LCDMenu(self, _('Language'), list(map(lambda lang : (lang[0], set_language(lang[1])), languages)), self.menu)
@@ -719,13 +711,21 @@ class LCD():
 
         if self.wifi != wifi:
             wifirect = rectangle(.3, .9, .6, .12)
-            if wifi:           
-                self.fittext(wifirect, 'WIFI')
+            if wifi:
+                text = 'WIFI'
+                if self.hat.config['remote']:
+                    text += ' R'
+                self.fittext(wifirect, text)
             else:
                 self.surface.box(*(self.convrect(wifirect) + [black]))
             self.wifi = wifi
     
     def display_control(self):
+        if not self.hat.client:
+            self.display_connecting()
+            self.control = False
+            return
+
         if not self.control:
             self.surface.fill(black)
             self.control = {'heading': '   ', 'heading_command': '   ', 'mode': False}
@@ -1059,9 +1059,9 @@ class LCD():
                 sign = -1 if down or right else 1                
                 if self.last_val('ap.enabled'):
                     if self.keypadup[UP] or self.keypadup[DOWN]:
-                        speed = self.config['bigstep']
+                        speed = self.hat.config['bigstep']
                     else:
-                        speed = self.config['smallstep']                        
+                        speed = self.hat.config['smallstep']                        
                     cmd = self.last_val('ap.heading_command') + sign*speed
                     self.set('ap.heading_command', cmd)
                 else:
@@ -1092,7 +1092,7 @@ class LCD():
             if self.keypadup[MENU]:
                 self.display_page = self.display_menu
                 if not self.range_edit.signalk:
-                    self.save_config()
+                    self.write_config()
             elif updown:
                 sign = -1 if down or not right else 1
                 self.range_edit.move(sign*speed*.1)
@@ -1155,7 +1155,7 @@ class LCD():
         self.display()
 
         surface = self.surface
-        if self.config['invert']:
+        if self.hat.config['invert']:
             self.invsurface.blit(surface, 0, 0)
             surface = self.invsurface
             surface.invert(0, 0, surface.width, surface.height)
@@ -1164,14 +1164,14 @@ class LCD():
             self.magsurface.magnify(surface, self.mag)
             surface = magsurface
 
-        self.screen.blit(surface, 0, 0, self.config['flip'])
+        self.screen.blit(surface, 0, 0, self.hat.config['flip'])
         self.screen.refresh()
 
-        if 'contrast' in self.config:
-            self.screen.contrast = int(self.config['contrast'])
+        if 'contrast' in self.hat.config:
+            self.screen.contrast = int(self.hat.config['contrast'])
 
-        if 'backlight' in self.config:
-            self.hat.arduino.backlight = int(self.config['backlight'])
+        if 'backlight' in self.hat.config:
+            self.hat.arduino.backlight = int(self.hat.config['backlight'])
 
     def poll(self):
         if self.screen:
@@ -1183,8 +1183,3 @@ class LCD():
                                          t-self.frameperiod)
 
         self.process_keys()
-
-        if not self.hat.client:
-            self.display_page = self.display_connecting
-        elif self.display_page == self.display_connecting:
-            self.display_page = self.display_control

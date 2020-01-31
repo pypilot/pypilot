@@ -222,7 +222,7 @@ class NMEASocket(object):
         self.failcountmsg = 1
 
         global nmeasocketuid
-        self.uid = nmeasocketuid #connection.fileno()
+        self.uid = nmeasocketuid
         nmeasocketuid += 1
 
     def recv(self):
@@ -264,13 +264,15 @@ class NMEASocket(object):
 
             self.out_buffer = self.out_buffer[count:]
         except Exception as e:
-            print ('excep', e)
+            print('exception flusing nmea socket', e)
             self.out_buffer = ''
             self.socket.close()
 
 class Nmea(object):
     def __init__(self, server, sensors):
         self.server = server
+
+        server.Register(Property('nmea.client', '', persistent=True))
         self.sensors = sensors
         self.process = NmeaBridgeProcess()
         self.process.start()
@@ -479,6 +481,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
         super(NmeaBridgeProcess, self).__init__(target=self.process, args=(pipe,))
 
     def setup_watches(self, watch=True):
+        print('setup wiatches', watch)
         watchlist = ['gps.source', 'wind.source', 'rudder.source', 'apb.source']
         for name in watchlist:
             self.client.watch(name, watch)
@@ -502,8 +505,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 msgs[name] = msg
                 return
 
-    def new_socket_connection(self, server):
-        connection, address = server.accept()
+    def new_socket_connection(self, connection, address):
         max_connections = 10
         if len(self.sockets) == max_connections:
             connection.close()
@@ -523,8 +525,11 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         self.poller.register(sock.socket, select.POLLIN)
         #print('new nmea connection:', address, sock.uid)
+        return sock
 
     def socket_lost(self, sock, fd):
+        if sock == self.client_socket:
+            self.client_socket = False
         #print('lost nmea connection:', self.addresses[sock])
         try:
             self.sockets.remove(sock)
@@ -547,31 +552,50 @@ class NmeaBridgeProcess(multiprocessing.Process):
         except Exception as e:
             print('nmea failed to remove fd', e)
 
+        try:
+            del self.addresses[sock]
+        except Exception as e:
+            print('nmea failed to remove address', e)
+
         sock.close()
 
-    def client_message(self, name, value):
-        self.last_values[name] = value
+    def connect_client(self, nmea_client):
+        host, port = nmea_client.split(':')
+        port = int(port)
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tc0 = time.time()
+            s.connect((host, port))
+            print('connected to', host, port, 'in', time.time() - tc0, 'seconds')
+            self.client_socket = self.new_socket_connection(s, nmea_client)
+            self.client_socket.nmea_client = nmea_client
+        except Exception as e:
+            print('failed to connect to', nmea_client, ':', e)
+            self.client_socket = False
 
     def process(self, pipe):
         import os
         self.pipe = pipe
         self.sockets = []
+
         def on_con(client):
             print('nmea ready for connections')
             if self.sockets:
                 self.setup_watches()
-
+            client.watch('nmea.client')
+        
         while True:
             time.sleep(2)
             try:
                 self.client = SignalKClient(on_con, 'localhost', autoreconnect=True)
                 break
-            except:
-                pass
+            except Exception as e:
+                print('nmea process failed to connect signalk', e)
 
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setblocking(0)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.client_socket = False
 
         port = DEFAULT_PORT
         try:
@@ -583,7 +607,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
 
         server.listen(5)
 
-        self.last_values = {'gps.source' : 'none', 'wind.source' : 'none', 'rudder.source': 'none', 'apb.source': 'none'}
+        self.last_values = {'gps.source' : 'none', 'wind.source' : 'none', 'rudder.source': 'none', 'apb.source': 'none', 'nmea.client': ''}
         self.addresses = {}
         cnt = 0
 
@@ -611,13 +635,14 @@ class NmeaBridgeProcess(multiprocessing.Process):
                         exit(2)
                     self.socket_lost(sock, fd)
                 elif sock == server:
-                    self.new_socket_connection(server)
+                    self.new_socket_connection(*server.accept())
                 elif sock == pipe:
                     while True: # receive all messages in pipe
                         msg = self.pipe.recv()
                         if not msg:
                             break
                         msg += '\r\n'
+                        # relay nmea message from server to all tcp sockets
                         for sock in self.sockets:
                             sock.send(msg)
                             pass
@@ -632,28 +657,47 @@ class NmeaBridgeProcess(multiprocessing.Process):
                             self.receive_nmea(line, 'socket' + str(sock.uid), msgs)
                 else:
                     print('nmea bridge unhandled poll flag', flag)
-
             t2 = time.time()
-            if msgs:
-                if self.pipe.send(msgs): ## try , False
-                    msgs = {}
 
+            # send any parsed nmea messages the server might care about
+            if msgs:
+                if self.pipe.send(msgs):
+                    msgs = {}
             t3 = time.time()
+
+            # receive signalk messages
             try:
                 signalk_msgs = self.client.receive()
                 for name in signalk_msgs:
-                    self.client_message(name, signalk_msgs[name]['value'])
+                    value = signalk_msgs[name]['value']
+                    self.last_values[name] = value
             except Exception as e:
                 print('nmea exception receiving:', e)
-
             t4 = time.time()
+
+            # flush sockets
             for sock in self.sockets:
                 sock.flush()
             t5 = time.time()
 
-            if t5-t1 > .1:
-                print('nmea process loop too slow:', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
+            # reconnect client tcp socket
+            nmea_client = self.last_values['nmea.client']
+            if self.client_socket:
+                if self.client_socket.nmea_client != nmea_client:
+                    self.client_socket.socket.close() # address has changed, close connection
+            elif nmea_client:
+                try:
+                    self.connect_client(nmea_client)
+                except Exception as e:
+                    print('failed to create nmea socket as host:port', nmea_client, e)
+                    self.last_values['nmea.client'] = '' # don't try until changed
+                                
+            t6 = time.time()
+
+            # run tcp nmea traffic at rate of 10hz
+            if t6-t1 > .1:
+                print('nmea process loop too slow:', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
             else:
-                dt = .1 - (t5 - t0)
+                dt = .1 - (t6 - t0)
                 if dt > 0 and dt < .1:
                     time.sleep(dt)

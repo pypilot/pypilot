@@ -1,24 +1,43 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-    <title>tinypilot wifi setup</title>
+  <title>tinypilot wifi setup</title>
 </head>
 <body>
   <p>Tinypilot Wireless Configuration
-    <form action="{{ url_for('wifi') }}", method="post">
-      <select name="mode" value="{{ wifi_mode }}">
+    <form action="{{ url_for('wifi') }}" method="post">
+      <select name="mode" onchange="wifi_mode()">
         <option value="Master">Master (AP)</option>
         <option value="Managed" {{ mode_managed_selected }}>Managed (client)</option>
       </select>
       <p>SSID
-        <input type="text" name="ssid" value="{{ wifi_ssid }}">
+        <input type="text" name="ssid">
       <p>Key (leave blank for no encryption)
         <input type="text" name="key" value="{{ wifi_key }}">
       <p>
         <input type="submit" value="Submit">
-      <p>After submit, reboot tinypilot to use new network values
+
       <p>If there is a problem, edit the file /.pypilot/networking.txt
     </form>
-<a href="/">Back</a>
+    <a href="/">Back</a>
+
+  <script>
+    wifi = {{ wifi }};
+    function wifi_mode() {
+      if(document.getElementsByName('mode')[0].value == "Master") {
+        ssid = wifi['ssid'];
+        psk = wifi['psk'];
+      } else {
+        ssid = wifi['client_ssid'];
+        psk = wifi['client_psk'];
+      }
+
+      document.getElementsByName('ssid')[0].value = ssid;
+      document.getElementsByName('psk')[0].value = psk;
+    }
+
+    document.getElementsByName('mode')[0].value = wifi['mode'];
+    wifi_mode();
+  </script>
 </body>
 </html>
