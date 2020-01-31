@@ -14,6 +14,7 @@ from autopilot import AutopilotPilot
 class SimplePilot(AutopilotPilot):
   def __init__(self, ap):
     super(SimplePilot, self).__init__('simple', ap)
+    self.disabled = False # IMPORTANT:  remove this line enable the simple pilot
 
     # create simple pid filter
     self.gains = {}
