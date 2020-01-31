@@ -13,6 +13,7 @@ import vector, resolv, quaternion
 resolv = resolv.resolv
 
 from signalk.pipeserver import NonBlockingPipe
+from signalk.client import SignalKClient
     
 calibration_fit_period = 20  # run every 20 seconds
 
@@ -347,11 +348,13 @@ class SigmaPoints(object):
         self.max_sigma_points = max_sigma_points
         self.min_count = min_count
         self.Reset()
-        self.last_sigma = False
+        self.updated = False
 
     def Updated(self):
-        if self.sigma == self.last_sigma:
-            return False
+        if self.updated:
+            self.updated = False
+            return True
+        return False
 
     # forget all knowledge of stored sensor points
     def Reset(self):
@@ -363,7 +366,8 @@ class SigmaPoints(object):
             if down:
                 return p.sensor + p.down
             else:
-                p.sensor
+                return p.sensor
+
         return lmap(pt, self.sigma_points)
 
     # store a new sensor
@@ -389,12 +393,13 @@ class SigmaPoints(object):
             if vector.dist2(point.sensor, sensor) < self.sigma:
                 point.add_measurement(sensor, down)
                 if ind > 0:
-                    # put at front of list to speed up future tests
+                    # move toward front of list to speed up future tests
                     self.sigma_points = self.sigma_points[:ind-1] + [point] + \
                                         [self.sigma_points[ind-1]] + self.sigma_points[ind+1:]
                 return
             ind += 1
 
+        self.updated = True
         index = len(self.sigma_points)
         p = SigmaPoint(sensor, down)
         if index < self.max_sigma_points:
@@ -412,13 +417,11 @@ class SigmaPoints(object):
                 count = min(self.sigma_points[i].count, 100)
                 dt = time.time() - self.sigma_points[i].time
                 weight = dist * count**.2 * 1/dt**.1
-
                 if weight < minweight:
                     minweighti = i
                     minweight = weight
 
-            self.sigma_points[minweighti] = p
-            return
+        self.sigma_points[minweighti] = p
 
     def RemoveOlder(self, dt=3600):
         p = []
@@ -432,6 +435,7 @@ class SigmaPoints(object):
         for sigma in self.sigma_points:
             if sigma.time < oldest_sigma.time:
                 oldest_sigma = sigma
+
         # don't remove if < 1 minute old
         if time.time() - oldest_sigma.time >= 60:
             self.sigma_points.remove(oldest_sigma)
@@ -458,20 +462,19 @@ def ComputeCoverage(p, bias, norm):
             count += 1
     return count
 
-def FitAccel(debug,accel_cal):
+def FitAccel(debug, accel_cal):
     p = accel_cal.Points()
-    debug('accelfit count', len(p))
     if len(p) < 5:
         return False
 
     mina = lmap(min, *p)
     maxa = lmap(max, *p)
     diff = vector.sub(maxa[:3], mina[:3])
-    #print('accelfit', diff)
-
     if min(*diff) < 1.2:
+        debug('need more range', min(*diff))
         return # require sufficient range on all axes
     if sum(diff) < 4.5:
+        debug('need more spread', sum(diff))
         return # require more spread
     fit = FitPointsAccel(debug, p)
 
@@ -484,15 +487,13 @@ def FitAccel(debug,accel_cal):
 
 def FitCompass(debug, compass_cal, compass_calibration, norm):
     p = compass_cal.Points(True)
-    #print('compassfit count', len(p))
     if len(p) < 8:
         return False
 
-    debug('FitPointsCompass', p, compass_calibration, norm)
     fit = FitPointsCompass(debug, p, compass_calibration, norm)
     if not fit:
         return
-    debug('compass fit', fit)
+    debug('FitCompass', fit)
 
     g_required_dev = .5 # must have more than this to allow 1d or 3d fit
     gpoints = []
@@ -518,7 +519,7 @@ def FitCompass(debug, compass_cal, compass_calibration, norm):
         debug('calibration: not enough coverage:', coverage)
         if c == fit[1]: # must have had 3d fit to use 1d fit
             return
-        debug('insufficient coverage, use 1d fit')
+        debug('insufficient coverage:', coverage, ' need 12')
         c = fit[0]
         return # for now disallow 1d fit
 
@@ -562,21 +563,30 @@ def CalibrationProcess(cal_pipe):
           print('warning, failed to renice calibration process')
 
     accel_cal = SigmaPoints(.05**2, 12, 12)
-    compass_cal = SigmaCal_Pipe(1**2, 18, 4)
+    compass_cal = SigmaPoints(1**2, 18, 4)
+    accel_calibration = [0, 0, 0, 1]
 
     norm = [0, 0, 1]
-
     def on_con(client):
         client.watch('imu.alignmentQ')
+        client.watch('imu.compass.calibration')
 
-    client = SignalKClient(on_con, 'localhost', autoreconnect=True)
+    while True:
+        time.sleep(2)
+        try:
+            client = SignalKClient(on_con, 'localhost', autoreconnect=True)
+            break
+        except Exception as e:
+            print('nmea process failed to connect signalk', e)
+
     def debug(name):
         def debug_by_name(*args):
             s = ''
             for a in args:
-                s += a + ' '
+                s += str(a) + ' '
             #print('calibration log ' + name + ': ' + a)
-            client.set('imu.'name+'.calibration.log', s)
+            if client:
+                client.set('imu.'+name+'.calibration.log', s)
         return debug_by_name
     
     while True:
@@ -584,12 +594,14 @@ def CalibrationProcess(cal_pipe):
         addedpoint = False
         while time.time() - t < calibration_fit_period:
             # receive signalk messages
-            msg = client.recieve()
+            msg = client.receive()
             for name in msg:
                 value = msg[name]['value']
-                if name == 'imu.alignmentQ':
+                if name == 'imu.alignmentQ' and value:
                     norm = quaternion.rotvecquat([0, 0, 1], value)
                     compass_cal.Reset()
+                elif name == 'imu.compass.calibration':
+                    compass_calibration = value[0]
 
             # receive calibration data
             p = cal_pipe.recv(1)
@@ -600,6 +612,16 @@ def CalibrationProcess(cal_pipe):
                 if 'compass' in p:
                     compass_cal.AddPoint(p['compass'], p['down'])
                     addedpoint = True
+
+
+            # send updated sigmapoints as well
+            cals = {'accel': accel_cal, 'compass': compass_cal}
+            for name in cals:
+                cal = cals[name]
+                if cal.Updated():
+                    points = cal.Points()
+                    client.set('imu.' + name + '.calibration.sigmapoints', points)
+
                     
         if not addedpoint: # don't bother to run fit if no new data
             continue
@@ -615,19 +637,14 @@ def CalibrationProcess(cal_pipe):
                 client.set('imu.accel.calibration', fit)
 
         compass_cal.RemoveOlder(60*60) # 60 minutes
-        fit = FitCompass(debug('compass')compass_cal, compass_calibration, norm)
+        fit = FitCompass(debug('compass'), compass_cal, compass_calibration, norm)
         if fit:
             client.set('imu.compass.calibration', fit)
             compass_calibration = fit[0]
 
-        # send updated sigmapoints as well
-        for cal in [accel_cal, compass_cal]:
-            if cal.Updated()
-                client.set('imu.' + name + '.calibration.sigmapoints', cal.sigma)
-
 class IMUAutomaticCalibration(object):
-    def __init__(self, accel_calibration, compass_calibration):
-        self.cal_pipe, cal_pipe = NonBlockingPipe('nmea pipe', True)
+    def __init__(self):
+        self.cal_pipe, cal_pipe = NonBlockingPipe('cal pipe', True)
         self.process = multiprocessing.Process(target=CalibrationProcess, args=(cal_pipe,))
         self.process.start()
 

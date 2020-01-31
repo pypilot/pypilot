@@ -291,6 +291,9 @@ def SignalKClientFromArgs(argv, watch, f_con=False):
 
     def on_con(client):
         for arg in watches:
+            if '=' in arg:
+                arg, value = arg.split('=')
+                client.set(arg, value)
             if watch:
                 client.watch(arg)
             else:
@@ -320,7 +323,9 @@ def nice_str(value):
 # each value, printing them
 def main():
     if '-h' in sys.argv:
-        print('usage', sys.argv[0], '[host] -i -c -h [NAME]...')
+        print('usage', sys.argv[0], '[host] -i -c -h [NAME[=VALUE]]...')
+        print('eg:', sys.argv[0], '-i imu.compass')
+        print('   ', sys.argv[0], 'servo.max_slew_speed=10')
         print('-i', 'print info about each value type')
         print('-c', 'continuous watch')
         print('-h', 'show this message')
