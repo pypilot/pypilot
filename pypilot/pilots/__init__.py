@@ -19,6 +19,7 @@ for module in os.listdir(os.path.dirname(__file__)):
             print('ERROR loading', module, e1, ', ', e2)
             continue
     try:
-        default.append(mod.pilot)
+        if not mod.pilot.disabled:
+            default.append(mod.pilot)
     except Exception:
         print('pilot not defined in', module)
