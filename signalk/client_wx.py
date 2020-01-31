@@ -215,10 +215,11 @@ class MainFrame(wx.Frame):
 
                 if name in self.controls:
                     try:
-                        if str(type(self.controls[name])) == "<class 'wx._controls.Choice'>":
+                        t = str(type(self.controls[name]))
+                        if t == "<class 'wx._controls.Choice'>" or t == "<class 'wx._core.Choice'>":
                             if not self.controls[name].SetStringSelection(value):
                                 print('warning, invalid choice value specified')
-                        elif str(type(self.controls[name])) == "<class 'wx._controls.Slider'>":
+                        elif t == "<class 'wx._controls.Slider'>" or t == "<class 'wx._core.Slider'>":
                             r = self.sliderrange[name]
                             self.controls[name].SetValue(float(value - r[0])/(r[1]-r[0])*1000)
                         else:
