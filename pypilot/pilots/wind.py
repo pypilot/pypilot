@@ -36,21 +36,11 @@ class WindPilot(AutopilotPilot):
     # create simple pid filter
     self.gains = {}
     self.lastenabled = False
-
-    def Gain(name, default, min_val, max_val, compute=None):
-      if not compute:
-        compute = lambda value : value * self.gains[name]['apgain'].value
-      self.gains[name] = {'apgain': self.Register(AutopilotGain, name, default, min_val, max_val),
-                          'sensor': self.Register(SensorValue, name+'gain', timestamp),
-                          'compute': compute}
-
-    def PosGain(name, default, max_val):
-      Gain(name, default, 0, max_val)
         
-    PosGain('P', .003, .02)  # position (heading error)
-    PosGain('I', 0, .1)      # integral
-    PosGain('D',  .1, 1.0)   # derivative (gyro)
-    PosGain('DD',  .05, 1.0)  # position root
+    self.PosGain('P', .003, .02)  # position (heading error)
+    self.PosGain('I', 0, .1)      # integral
+    self.PosGain('D',  .1, 1.0)   # derivative (gyro)
+    self.PosGain('DD',  .05, 1.0)  # position root
 
   def compute_offsets(self):
     # compute the difference from wind to other headings

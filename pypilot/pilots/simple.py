@@ -9,7 +9,7 @@
 
 import sys
 sys.path.append('..')
-from autopilot import AutopilotPilot
+from pilot import AutopilotPilot
 
 class SimplePilot(AutopilotPilot):
   def __init__(self, ap):
