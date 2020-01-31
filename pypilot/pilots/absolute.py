@@ -23,10 +23,10 @@ class AbsolutePilot(AutopilotPilot):
     # create simple pid filter
     self.gains = {}
     timestamp = self.ap.server.TimeStamp('ap')
-    self.Gain('P', .05, 0, 2)
-    self.Gain('I', 0, 0, .05)
-    self.Gain('D', .2, 0, 2)
-    self.Gain('DD',  0, 0, 1) # rate of derivative
+    self.PosGain('P', .05, 2)
+    self.PosGain('I', 0, .05)
+    self.PosGain('D', .2, 2)
+    self.PosGain('DD',  0, 1) # rate of derivative
 
   def process(self, reset):
     ap = self.ap

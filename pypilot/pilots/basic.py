@@ -9,7 +9,8 @@
 
 import sys
 sys.path.append('..')
-from autopilot import AutopilotPilot, resolv
+from pilot import AutopilotPilot
+from resolv import resolv
 from signalk.values import *
 
 class TimedQueue(object):
@@ -43,17 +44,14 @@ class BasicPilot(AutopilotPilot):
 
     # create simple pid filter
     self.gains = {}
-
-    def PosGain(name, default, max_val):
-      self.Gain(name, default, 0, max_val)
         
-    PosGain('P', .003, .02)  # position (heading error)
-    PosGain('I', 0.005, .1)      # integral
-    PosGain('D',  .09, 1.0)   # derivative (gyro)
-    PosGain('DD',  .075, 1.0) # rate of derivative
-    PosGain('PR',  .005, .05)  # position root
-    PosGain('FF',  .6, 3.0) # feed forward
-    PosGain('R',  0.0, 1.0)  # reactive
+    self.PosGain('P', .003, .02)  # position (heading error)
+    self.PosGain('I', 0.005, .1)      # integral
+    self.PosGain('D',  .09, 1.0)   # derivative (gyro)
+    self.PosGain('DD',  .075, 1.0) # rate of derivative
+    self.PosGain('PR',  .005, .05)  # position root
+    self.PosGain('FF',  .6, 3.0) # feed forward
+    self.PosGain('R',  0.0, 1.0)  # reactive
     self.reactive_time = self.Register(RangeProperty, 'Rtime', 1, 0, 3)
 
     self.reactive_value = self.Register(SensorValue, 'reactive_value', timestamp)
