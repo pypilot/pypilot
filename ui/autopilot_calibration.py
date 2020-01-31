@@ -73,13 +73,17 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         if not client:
             return
 
+        def calwatch(name):
+            name = 'imu.' + name
+            return [name + '.calibration', name + '.calibration.age',
+                    name, name + '.calibration.sigmapoints',
+                    name + '.calibration.locked', name + '.calibration.log']
+        
         watchlist = [
             ['imu.fusionQPose', 'imu.alignmentCounter', 'imu.heading',
              'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading_offset'],
-            ['imu.accel.calibration', 'imu.accel.calibration.age', 'imu.accel',
-             'imu.accel.calibration.sigmapoints', 'imu.accel.calibration.locked'],
-            ['imu.fusionQPose', 'imu.compass.calibration', 'imu.compass.calibration.age', 'imu.compass',
-             'imu.compass.calibration.sigmapoints', 'imu.compass.calibration.locked'],
+            calwatch('accel'),
+            calwatch('compass') + ['imu.fusionQPose'],
             ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity',
              'rudder.range', 'servo.flags']]
 
@@ -221,17 +225,21 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 self.stAccelCalAge.SetLabel(str(value))
             elif name == 'imu.accel.calibration.locked':
                 self.cbAccelCalibrationLocked.SetValue(value)
+            elif name == 'imu.accel.calibration.log':
+                self.tAccelCalibrationLog.WriteText(value+'\n')
 
         elif self.m_notebook.GetSelection() == 2:
             self.compass_calibration_plot.read_data(msg)
             if name == 'imu.compass':
                 self.CompassCalibration.Refresh()
             elif name == 'imu.compass.calibration':
-                self.stCompassCal.SetLabel(str(round3(value[0])))
+                self.stCompassCal.SetLabel(str(round3(value)))
             elif name == 'imu.compass.calibration.age':
                 self.stCompassCalAge.SetLabel(str(value))
             elif name == 'imu.compass.calibration.locked':
                 self.cbCompassCalibrationLocked.SetValue(value)
+            elif name == 'imu.compass.calibration.log':
+                self.tCompassCalibrationLog.WriteText(value+'\n')
         
         elif self.m_notebook.GetSelection() == 3:
             if name == 'rudder.angle':
