@@ -19,14 +19,17 @@ from signalk.pipeserver import NonBlockingPipe
 samples = 50 # 5 seconds at 10hz
 num_inputs = 12
 
-def LoadModel():
-  print('load mode')
-  model = BuildModel()
-  try:
-    self.model.load_weights('~/.pypilot/learning_weights')
-  except:
-    return model
-  
+class History(object):
+  def __init__(self, meta):
+    self.meta = meta
+    self.data = []
+
+  def samples(self):
+    return (self.meta['past']+self.meta['future'])*self.meta['rate']
+
+  def put(self, data):
+    self.data = (self.data+[data])[:self.samples()]
+
 class LearningPilot(AutopilotPilot):
   def __init__(self, ap):
     super(LearningPilot, self).__init__('learning', ap)
@@ -45,6 +48,17 @@ class LearningPilot(AutopilotPilot):
     self.initialized = False
     self.start_time = time.time()
 
+  def loss(predictions, actions):
+    heading = predictions['imu.heading']
+    headingrate = predictions['imu.headingrate']
+    return self.P.value*heading + self.D.value*headingrate + self.W.value*actions['servo.command']**2
+    
+  def load():
+    try:
+      f = open('filename')
+      self.meta = json.loads(f.read())
+    except Exception as e:
+      print('failed to load model')
 
   def process(self, reset):
     ap = self.ap
@@ -54,20 +68,12 @@ class LearningPilot(AutopilotPilot):
         return
       self.initialize()
 
-    P = ap.heading_error.value
-    D = ap.boatimu.SensorValues['headingrate_lowpass'].value
-    accel = ap.boatimu.SensorValues['accel'].value
-    gyro = ap.boatimu.SensorValues['gyro'].value
-    wind = ap.sensors.wind
-
-    # input data
-    data = [P, D] + list(accel) + list(gyro)
-    data += [ap.servo.voltage.value/24, ap.servo.current.value/20]
-    data += [wind.direction.value/360, wind.speed.value/60]
-
-    # training data
-    lag_samples = int(self.lag.value/self.ap.boatimu.rate.value)
-    self.history.put(data, samples + lag_samples)
+    data = {}
+    for sensor in self.meta['sensors']:
+      v = self.ap.server.values[sensor].value:
+      if v:
+        data[sensor] = v
+    self.history.put(data)
 
     learning_history = self.history.data[lag_samples:]
     if len(learning_history) == samples:
@@ -82,7 +88,6 @@ class LearningPilot(AutopilotPilot):
       data = {'input': learning_history[0], 'error': e, 'uid': self.model_uid}
       self.learning_pipe.send(data)
 
-      history = self.history.data[:samples]
       if len(history) == samples:
         if self.model_pipe_poller.poll():
           tflite_model, self.model_uid = self.model_pipe.recv()
@@ -110,4 +115,5 @@ class LearningPilot(AutopilotPilot):
     if ap.enabled.value and len(self.history.data) >= samples:
         ap.servo.command.set(command)
 
+        
 pilot = LearningPilot
