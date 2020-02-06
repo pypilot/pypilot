@@ -10,25 +10,10 @@
 from signalk.values import Value
 
 import sys, multiprocessing, select
-#import tensorflow as tf
 sys.path.append('..')
 from autopilot import AutopilotPilot, AutopilotGain
 from signalk.values import *
 from signalk.pipeserver import NonBlockingPipe
-
-samples = 50 # 5 seconds at 10hz
-num_inputs = 12
-
-class History(object):
-  def __init__(self, meta):
-    self.meta = meta
-    self.data = []
-
-  def samples(self):
-    return (self.meta['past']+self.meta['future'])*self.meta['rate']
-
-  def put(self, data):
-    self.data = (self.data+[data])[:self.samples()]
 
 class LearningPilot(AutopilotPilot):
   def __init__(self, ap):
