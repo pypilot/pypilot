@@ -38,7 +38,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.host = sys.argv[1]
 
         self.client = False
-
         self.accel_calibration_plot = calibration_plot.AccelCalibrationPlot()
         self.accel_calibration_glContext =  wx.glcanvas.GLContext(self.AccelCalibration)
 
@@ -367,7 +366,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         if event.Dragging():
             dx, dy = pos[0] - self.lastmouse[0], pos[1] - self.lastmouse[1]
             q = pypilot.quaternion.angvec2quat((dx**2 + dy**2)**.4/180*math.pi, [dy, dx, 0])
-            
             self.boat_plot.Q = pypilot.quaternion.multiply(q, self.boat_plot.Q)
             self.BoatPlot.Refresh()
             self.lastmouse = pos
