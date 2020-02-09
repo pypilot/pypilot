@@ -396,8 +396,7 @@ class SigmaPoints(object):
                 point.add_measurement(sensor, down)
                 if ind > 0:
                     # move toward front of list to speed up future tests
-                    self.sigma_points = self.sigma_points[:ind-1] + [point] + \
-                                        [self.sigma_points[ind-1]] + self.sigma_points[ind+1:]
+                    self.sigma_points = self.sigma_points[:ind-1] + [point] + [self.sigma_points[ind-1]] + self.sigma_points[ind+1:]
                 return
             ind += 1
 
@@ -410,7 +409,8 @@ class SigmaPoints(object):
             return
 
 
-        # replace point that is closest to other points                             mindi = 0
+        # replace point that is closest to other points
+        mindi = 0
         mind = 1e20
         for i in range(len(self.sigma_points)):
             dt = time.time() - self.sigma_points[i].time
