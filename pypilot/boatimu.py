@@ -124,8 +124,12 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
         d = .05*period # filter constant
         for i in range(3): # filter gyro vector
             avggyro[i] = (1-d)*avggyro[i] + d*data['gyro'][i]
-        if abs(vector.norm(avggyro)) > .8: # 55 degrees/s
-            print ('too high standing gyro bias, resetting sensors', data['gyro'], avggyro)
+        if vector.norm(avggyro) > .8: # 55 degrees/s
+            print('too high standing gyro bias, resetting sensors', data['gyro'], avggyro)
+            break
+        # detects the problem even faster:
+        if any(map(lambda x : abs(x) > 1000, data['compass'])):
+            print('compass out of range, resetting', data['compass'])
             break
         
         if cal_poller.poll(0):
