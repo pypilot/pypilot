@@ -187,7 +187,8 @@ class SignalKPlot():
 
     def on_con(self, client):
         client.watch('timestamp')
-
+        self.add_blank()
+        
     def add_blank(self, group=False):
         for t in self.traces:
             if not group or group == t.group:
@@ -419,7 +420,7 @@ def main():
     plot = SignalKPlot()
     def on_con(client):
         plot.on_con(client)
-        plot.add_blank()
+
     client = SignalKClientFromArgs(sys.argv, True, on_con)
     if not client.have_watches:
         usage()
