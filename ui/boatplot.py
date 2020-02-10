@@ -1,4 +1,4 @@
- #!/usr/bin/env python
+#!/usr/bin/env python
 #
 #   Copyright (C) 2016 Sean D'Epagnier
 #
@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import math, json, numpy
 try:
     import Image
@@ -23,9 +22,8 @@ try:
     import pywavefront
     from pywavefront import visualization
 except Exception as e:
-    print('failed to load pywavefront:', e)
+    print 'failed to load pywavefront:', e
     pywavefront = False
-
 
 from pypilot import quaternion
 
@@ -34,7 +32,7 @@ class BoatPlot():
         # looking at boat from nice angle
         self.Q = [-0.32060682, -0.32075041, 0.73081691, -0.51013437]
         #self.Q = [1, 0, 0, 0]
-        self.Scale = 3
+        self.Scale = 2
         self.compasstex = 0
         self.obj = False
         self.texture_compass = True
@@ -47,21 +45,6 @@ class BoatPlot():
         os.chdir(os.path.abspath(path))
 
     def display(self, fusionQPose):
-        width, height = self.dim
-        glViewport(0, 0, width, height)
-
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        if width < 10 or height < 10:
-            print('boatplot: invalid display dimensions', width, height)
-            return
-        
-        ar = 0.5 * width / height
-        glFrustum(-ar, ar, -0.5, 0.5, 2.0, 300.0)
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-
-        
         glClearColor(0, .2, .7, 0)
         glClearDepth(100)
         
@@ -108,8 +91,8 @@ class BoatPlot():
             try:
                 self.obj = pywavefront.Wavefront('Vagabond.obj')
             except Exception as e:
-                print('Vagabond.obj failed to load', e)
-                print('Did you add the pypilot_data repository?')
+                print 'Vagabond.obj failed to load', e
+                print 'Did you add the pypilot_data repository?'
 
         glEnable(GL_DEPTH_TEST)
         if self.texture_compass:
@@ -159,7 +142,7 @@ class BoatPlot():
             try:
                 img = Image.open('compass.png')
             except:
-                print('compass.png not found, texture compass cannot be used')
+                print 'compass.png not found, texture compass cannot be used'
                 self.texture_compass = False
                 return
 
@@ -192,7 +175,14 @@ class BoatPlot():
         glDisable(GL_TEXTURE_2D)
 
     def reshape(self, width, height):
-        self.dim = width, height
+        glViewport(0, 0, width, height)
+
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        ar = 0.5 * width / height
+        glFrustum(-ar, ar, -0.5, 0.5, 2.0, 300.0)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
 
 if __name__ == '__main__':
     plot = BoatPlot()
