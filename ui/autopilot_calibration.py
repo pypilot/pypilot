@@ -156,6 +156,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.timer.Start(50)
         except ConnectionLost:
             self.client = False
+        except Exception as e:
+            print(e)
 
     def request_msg(self, event):
         if not self.client:

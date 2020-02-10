@@ -51,7 +51,7 @@ class LearningPilot(AutopilotPilot):
 
     data = {}
     for sensor in self.meta['sensors']:
-      v = self.ap.server.values[sensor].value:
+      v = self.ap.server.values[sensor].value
       if v:
         data[sensor] = v
     self.history.put(data)

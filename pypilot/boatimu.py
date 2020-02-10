@@ -34,7 +34,7 @@ def imu_process(pipe, cal_pipe, accel_cal, compass_cal, gyrobias, period):
         time.sleep(10)
   
     #print 'imu on', os.getpid()
-    if os.system('sudo chrt -pf 2 %d 2>&1 > /dev/null' % os.getpid()):
+    if os.system('sudo chrt -pf 99 %d 2>&1 > /dev/null' % os.getpid()):
       print('warning, failed to make imu process realtime')
 
     #os.system("sudo renice -10 %d" % os.getpid())
