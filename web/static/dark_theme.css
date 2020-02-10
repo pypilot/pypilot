@@ -1,4 +1,82 @@
+/*  Colors definitions:
+ *  
+ *  Background-color: #222D32
+ *  Hr: #253036
+ *  Passive underline blue #33689c
+ *  Active underline blue #2694f3
+ *
+ *  Active text white
+ *  Passive text 97a2a8
+ *
+ *  Font Roboto
+ * 
+ */
+
+@font-face {
+    font-family: Roboto;
+    src:url("/static/font/Roboto-Regular.ttf");
+}
+
+/* Defaults values*/
 body[theme="dark"] {
-  background-color: #33393b;
-  background-image: none;
+	background-color: #222D32;
+	background-image: none;
+	font-family: "Roboto", sans-serif;
+}
+
+
+
+/*TAB STYLING */
+
+/* Style the tab bar */
+body[theme="dark"] .tabRow {
+	background-color: #222D32;
+}
+
+/* Style the buttons that are used to open the tab content */
+body[theme="dark"] .tabItem {
+	cursor: pointer;
+	float:left;
+	margin: 5px 40px;
+	text-decoration: none;
+  	color:#97a2a8;
+	border-bottom: 3px solid #253036;
+}
+
+/* Hillight active Tab */
+body[theme="dark"] .tabItem div.active {
+	color:white;
+	border-bottom: 3px solid #33689c;
+}
+
+/* Animate each tab on hover */
+body[theme="dark"] tabItem:hover,
+body[theme="dark"] .tabItem div:hover {
+	transition: 0.2s;
+	border-bottom: 3px solid #2694f3 ;
+  	color:white;
+}
+
+
+
+/*HEADER TAB */
+
+body[theme="dark"] #headerTab {
+	position: fixed;
+	z-index: 800;
+	width: 100%;
+	top: 0px;
+	left: 0px;
+}
+
+body[theme="dark"] #headerTab .tabItem {
+	width:20%;
+	margin: auto 0px;
+	text-align: center;
+	display:inline-block;
+}
+
+body[theme="dark"] .tabItem div {
+	overflow:hidden;
+	text-overflow: ellipsis;
 }

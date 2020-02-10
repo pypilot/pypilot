@@ -17,10 +17,11 @@
     tablinks = document.getElementsByClassName("tablink");
     for (i = 0; i < x.length; i++) {
         tablinks[i].className = tablinks[i].className.replace(" w3-red", "");
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
     }
     document.getElementById(tabName).style.display = "block";
       evt.currentTarget.firstElementChild.className += " w3-red";
-
+      evt.currentTarget.firstElementChild.className += " active";
       currentTab = tabName;
   }
   currentTab="Control";
@@ -533,7 +534,7 @@ $(document).ready(function() {
     function setTheme(){
         themeName = $('input.theme_option:checked').val()
         $('body').attr('theme', themeName )
-        
+
         // The w3 framework use !important 213 times. So it's impossible to cascade over it. Therefor it must be disabled.
         if(themeName == 'dark'){
             $("link[href*='w3.css']").prop('disabled', true);
@@ -542,7 +543,7 @@ $(document).ready(function() {
         }
         return themeName
     }
-    
+
     // Set theme at load and everytime theme option is changed. 
     setTheme()
     $('.theme_option').on('click', function(){ setTheme() })
