@@ -16,20 +16,20 @@
 </head>
 <body>
   <div class="w3-container font-resizable3">
-    <div class="w3-row">
-      <a href="javascript:void(0)" onclick="openTab(event, 'Control');">
-        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey w3-red font-resizable">Control</div>
+    <div id="headerTab" class="w3-row tabRow">
+      <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Control');">
+        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey w3-red font-resizable active">Control</div>
       </a>
-      <a href="javascript:void(0)" onclick="openTab(event, 'Gain');">
+      <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Gain');">
         <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey font-resizable">Gain</div>
       </a>
-      <a href="javascript:void(0)" onclick="openTab(event, 'Calibration');">
+      <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Calibration');">
         <div class="w3-col s4 m3 l3 tablink w3-hover-light-grey font-resizable">Calibration</div>
       </a>
-      <a href="javascript:void(0)" onclick="openTab(event, 'Configuration');">
+      <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Configuration');">
         <div class="w3-col s6 m3 l3 tablink w3-hover-light-grey font-resizable">Configuration</div>
       </a>
-      <a href="javascript:void(0)" onclick="openTab(event, 'Statistics');">
+      <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Statistics');">
         <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey font-resizable">Statistics</div>
       </a>
     </div>
