@@ -3,6 +3,7 @@
 <head>
     <title>pypilot control</title>
     <link rel="stylesheet" type="text/css" href="static/index.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="static/dark_theme.css" media="screen" />
     <link rel="stylesheet" type="text/css" href="static/w3.css" />
     <script type="text/javascript" src="static/jquery.min.js"></script>
     <script type="text/javascript" src="static/socket.io.min.js"></script>
@@ -122,6 +123,11 @@
       <br>Servo Flags: <b><span id="servoflags"></span></b>
       <br>Autopilot Errors: <b><span id="aperrors0"></span> <span id="aperrors1"></span></b>
       <br>Web Server Latency: <b><span id="ping-pong"></span> ms</b>
+      <div id='theme_selector' class="configuration_item">
+        <spawn calss="value_name">Display:</spawn>
+        <label for="theme_clear" class="theme_name">Clear&nbsp;</label><input type="radio" name="theme" class="theme_option" id="theme_clear" value="clear">
+        <label for="theme_dark"  class="theme_name">Dark&nbsp; </label><input type="radio" name="theme" class="theme_option" id="theme_dark"  value="dark" >
+      </div>
     </div>
 </body>
 </html>

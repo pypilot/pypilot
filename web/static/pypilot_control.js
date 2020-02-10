@@ -519,6 +519,15 @@ $(document).ready(function() {
             $(this).css('left', w/12+"px")
         });
     }
+
+    // On load, trigger CSS selector for specified theme (if the browser remember last user selection).
+    $('body').attr('theme', $('input.theme_option:checked').val() )
+
+    // On click, trigger CSS selector for specified theme.
+    $('.theme_option').on('click', function(){
+        $('body').attr('theme', $('input.theme_option:checked').val() )
+    })
+
     $(window).resize(window_resize);
     window_resize();
 });
