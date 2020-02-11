@@ -3,7 +3,8 @@
 from __future__ import print_function
 default = []
 
-import os
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import importlib
 
@@ -18,11 +19,15 @@ for module in os.listdir(os.path.dirname(__file__)):
         try:
             mod = importlib.import_module(module[:-3])
         except Exception as e2:
-            print('ERROR loading', module, e1, ', ', e2)
+            print('ERROR loading', module, e1, ' ', e2)
             continue
     try:
         if mod.pilot.disabled:
             continue
     except:
         pass
-    default.append(mod.pilot)
+
+    try:
+        default.append(mod.pilot)
+    except:
+        pass
