@@ -2,13 +2,17 @@
  *  
  *  Background-color: #222D32
  *  Hr: #253036
- *  Passive underline blue #33689c
- *  Active underline blue #2694f3
+ *
+ *  Passive underline blue
+ *	& Passive button blue  #33689c
+ *  Active underline blue
+ *  & Active button blue #2694f3
  *
  *  Active text white
  *  Passive text 97a2a8
+ *  Slider bg gray 485359
  *
- *  Font Roboto
+ *  Font Roboto regular
  * 
  */
 
@@ -22,6 +26,7 @@ body[theme="dark"] {
 	background-color: #222D32;
 	background-image: none;
 	font-family: "Roboto", sans-serif;
+	color: #97a2a8;
 }
 
 
@@ -36,25 +41,78 @@ body[theme="dark"] .tabRow {
 /* Style the buttons that are used to open the tab content */
 body[theme="dark"] .tabItem {
 	cursor: pointer;
-	float:left;
+	float: left;
 	margin: 5px 40px;
 	text-decoration: none;
-  	color:#97a2a8;
+  	color: #97a2a8;
 	border-bottom: 3px solid #253036;
 }
 
 /* Hillight active Tab */
 body[theme="dark"] .tabItem div.active {
-	color:white;
-	border-bottom: 3px solid #33689c;
+	color: white;
+	border-bottom: 4px solid #33689c;
 }
 
 /* Animate each tab on hover */
 body[theme="dark"] tabItem:hover,
 body[theme="dark"] .tabItem div:hover {
 	transition: 0.2s;
-	border-bottom: 3px solid #2694f3 ;
-  	color:white;
+	border-bottom: 4px solid #2694f3 ;
+  	color: white;
+}
+
+body[theme="dark"] .tab {
+	margin-top: 32px;
+}
+
+
+/* TOGGLE BUTTON */
+
+/* Style the "hole" of the slider button, default status background light here is red, assuming button location on left */
+body[theme="dark"] .toggle-button{
+	border-radius: 9000px; /*Some javascript is forcing dynamic height in px. Outragous value is needed here*/
+	border: inherit;
+	background-color: #485359;
+	box-shadow: -10px -2px 20px #c62323 inset;
+	transition: 2s;
+}
+
+/* On mouse hover turn the, status background light off, assuming button location on left */
+body[theme="dark"] .toggle-button:hover{
+	border-radius: 9000px;
+	border: inherit;
+	background-color: #485359;
+	box-shadow: -10px -2px 10px rgba(0, 0, 0, .5) inset;
+}
+
+/* Style the toggle button */
+body[theme="dark"] .toggle-button button{
+	border-radius: 9000px;
+	background-color: #33689c;
+	margin: 0;
+	border: 1px solid #2694f3;
+	box-shadow: 1px 2px 4px rgba(0, 0, 0, .5);
+	font-weight: bolder;
+	transition: 0.2s;
+	text-shadow: 0px 0px 40px #ffffff63;
+}
+
+/* Invert colors on mouse hover */
+body[theme="dark"] .toggle-button button:hover{
+	background-color: #2694f3;
+	border: 2px solid #33689c;
+}
+
+/* turn status background light here is green, assuming button location on right */
+body[theme="dark"] .toggle-button-selected {
+	box-shadow: 10px -2px 20px #36ca00 inset;
+}
+
+/* On mouse hover turn the, status background light off, assuming button location on right */
+body[theme="dark"] .toggle-button-selected:hover {
+	box-shadow: 10px -2px 20px #36ca00 inset;
+	box-shadow: 10px -2px 10px rgba(0, 0, 0, .5) inset;
 }
 
 
@@ -67,16 +125,18 @@ body[theme="dark"] #headerTab {
 	width: 100%;
 	top: 0px;
 	left: 0px;
+	box-shadow: 0px 2px 5px 1px rgba(0, 0, 0, .2);
 }
 
 body[theme="dark"] #headerTab .tabItem {
 	width:20%;
 	margin: auto 0px;
 	text-align: center;
-	display:inline-block;
+	display: inline-block;
+	box-shadow: 0px 2px 5px 1px rgba(0, 0, 0, .2) inset;
 }
 
 body[theme="dark"] .tabItem div {
-	overflow:hidden;
+	overflow: hidden;
 	text-overflow: ellipsis;
 }
