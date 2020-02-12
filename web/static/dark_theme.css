@@ -5,12 +5,14 @@
  *
  *  Passive underline blue
  *	& Passive button blue  #33689c
+ *
  *  Active underline blue
  *  & Active button blue #2694f3
  *
  *  Active text white
  *  Passive text 97a2a8
- *  Slider bg gray 485359
+ *  Slider bg gray
+    & <select> BG 485359
  *
  *  Font Roboto regular
  * 
@@ -21,17 +23,31 @@
     src:url("/static/font/Roboto-Regular.ttf");
 }
 
-/* Defaults values*/
+/* DEFAULT VALUES */
+
 body[theme="dark"] {
 	background-color: #222D32;
 	background-image: none;
 	font-family: "Roboto", sans-serif;
 	color: #97a2a8;
+	font-size: 3vw; /*Most of it is overrided by some javascript that do inline style injection, Only here for fallback cases*/
+}
+
+body[theme="dark"] div.w3-container {
+	width: 100%;
+}
+
+/* Overriding inline style injection. */
+body[theme="dark"] #star2,
+body[theme="dark"] #star10 {
+	/*float:none !important; */ /* Don't do it until html is ordered correctly*/
 }
 
 
 
-/*TAB STYLING */
+/*
+ * TAB STYLING 
+ */
 
 /* Style the tab bar */
 body[theme="dark"] .tabRow {
@@ -55,7 +71,6 @@ body[theme="dark"] .tabItem div.active {
 }
 
 /* Animate each tab on hover */
-body[theme="dark"] tabItem:hover,
 body[theme="dark"] .tabItem div:hover {
 	transition: 0.2s;
 	border-bottom: 4px solid #2694f3 ;
@@ -64,22 +79,28 @@ body[theme="dark"] .tabItem div:hover {
 
 body[theme="dark"] .tab {
 	margin-top: 32px;
+	overflow-x: hidden;
 }
 
 
-/* TOGGLE BUTTON */
+
+/*
+ * TOGGLE BUTTON 
+ */
 
 /* Style the "hole" of the slider button, default status background light here is red, assuming button location on left */
-body[theme="dark"] .toggle-button{
+body[theme="dark"] .toggle-button {
 	border-radius: 9000px; /*Some javascript is forcing dynamic height in px. Outragous value is needed here*/
 	border: inherit;
 	background-color: #485359;
 	box-shadow: -10px -2px 20px #c62323 inset;
-	transition: 2s;
+	transition: 1s;
+	float: left;
+	margin-left: 5%;
 }
 
 /* On mouse hover turn the, status background light off, assuming button location on left */
-body[theme="dark"] .toggle-button:hover{
+body[theme="dark"] .toggle-button:hover {
 	border-radius: 9000px;
 	border: inherit;
 	background-color: #485359;
@@ -87,7 +108,7 @@ body[theme="dark"] .toggle-button:hover{
 }
 
 /* Style the toggle button */
-body[theme="dark"] .toggle-button button{
+body[theme="dark"]  button {
 	border-radius: 9000px;
 	background-color: #33689c;
 	margin: 0;
@@ -99,9 +120,15 @@ body[theme="dark"] .toggle-button button{
 }
 
 /* Invert colors on mouse hover */
-body[theme="dark"] .toggle-button button:hover{
+body[theme="dark"] button:hover {
 	background-color: #2694f3;
 	border: 2px solid #33689c;
+}
+
+/* white the text and invert shadow on click */
+body[theme="dark"] button:active {
+	text-shadow: 0px 0px 40px #ffffff;
+	box-shadow: 0px 2px 5px 1px rgba(255, 255, 255, .2);
 }
 
 /* turn status background light here is green, assuming button location on right */
@@ -117,7 +144,60 @@ body[theme="dark"] .toggle-button-selected:hover {
 
 
 
-/*HEADER TAB */
+/*
+ * DATABLOCK CONTAINER
+ */
+
+/* Container */
+body[theme="dark"] .data_block {
+	display: inline-block;
+}
+
+/* The Label of the nave:value pair */
+body[theme="dark"] .data_block .data_label {
+	float: left;
+	clear: left;
+}
+
+/* The value of the name:value pair */
+body[theme="dark"] .data_block .data_value {
+	float: right;
+	font-weight: bold;
+}
+
+
+
+
+/* 
+ * DROPDOWN OPRION SELECTOR 
+ */
+
+body[theme="dark"] select {
+	margin: 15px;
+	font-size: 3.5vw;
+    background-color: transparent;
+    color: #97a2a8;
+	border: 0px;
+	border-bottom: 3px solid #33689c;
+	border-right: 7px solid #33689c;
+	border-radius:0px  5px  5px  0px;
+	padding-left: 20px;
+	padding-right: 10px;
+	padding-bottom: 5px;
+	text-align: center;
+	transition: 0.2s;
+}
+
+body[theme="dark"] select:hover {
+	/*color: white;*/ /*Breaks in chromium*/
+	border-color:  #2694f3;
+}
+
+
+
+/* 
+ * ID BASED THEME OVERRIDE.
+ */
 
 body[theme="dark"] #headerTab {
 	position: fixed;
@@ -139,4 +219,62 @@ body[theme="dark"] #headerTab .tabItem {
 body[theme="dark"] .tabItem div {
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+body[theme="dark"] #heading_info {
+	margin: auto 5% auto auto;
+	float: right;
+}
+
+body[theme="dark"] #mode {
+	margin-left: 0px;
+}
+
+body[theme="dark"] #heading_mode_container {
+	width: 100%;
+	clear:both;
+	margin-left: 5%;
+}
+
+
+
+
+body[theme="dark"] #steer_buttons_container {
+	margin-top: 10px;
+	margin-left: 0.1%;
+	margin-right: 0.1%;
+	padding-top: 10px;
+	padding-left: 5px;
+	padding-right: 5px;
+	border: 1px solid #253036;
+	background-color: #2a353b;
+	box-shadow: 0px 2px 5px 1px rgba(0, 0, 0, .2);
+	border-radius: 3px;
+	overflow: hidden;
+}
+
+body[theme="dark"] #steer_buttons_container div {
+    display: inline-block;
+    width: 50%;
+}
+
+body[theme="dark"] #steer_buttons_container div:first-child {
+    float: left;
+}
+
+body[theme="dark"] #steer_buttons_container span {
+	float: none;
+}
+
+body[theme="dark"] #steer_buttons_container button{
+	background-image: none;
+	margin-left: 0.5%;
+	margin-right: 0.5%;
+	background-color: #2694f3;
+	border: 2px solid #0c364f;
+}
+
+body[theme="dark"] #steer_buttons_container button:hover {
+	background-color: #2694f3;
+	border: 2px solid #33689c;
 }
