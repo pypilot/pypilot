@@ -85,10 +85,10 @@ setup (name = 'pypilot',
                'pypilot_hat=hat.hat:main',
                'pypilot_control=ui.autopilot_control:main',
                'pypilot_calibration=ui.autopilot_calibration:main',
-               'signalk_client=signalk.client:main',
-               'signalk_scope=signalk.scope:main',
-               'signalk_client_wx=signalk.client_wx:main',
-               'signalk_scope_wx=signalk.scope_wx:main',
+               'pypilot_client=pypilot.client:main',
+               'pypilot_scope=pypilot.scope:main',
+               'pypilot_client_wx=pypilot.client_wx:main',
+               'pypilot_scope_wx=pypilot.scope_wx:main',
                ]
         }
        )
