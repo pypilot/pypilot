@@ -242,6 +242,14 @@ body[theme="dark"] #heading_mode_container {
 	margin-left: 5%;
 }
 
+body[theme="dark"]  #configuration_container .w3-col {
+	display:inline-block;
+	width:25%;
+}
+
+body[theme="dark"]  #configuration_container .w3-row {
+	clear:both;
+}
 
 
 /* Steer button styling */
@@ -290,3 +298,6 @@ body[theme="dark"] #steer_buttons_container button:active {
 	text-shadow: 0px 0px 40px #ffffff;
 	box-shadow: 0px 2px 5px 1px rgba(255, 255, 255, .2);
 }
+
+
+
