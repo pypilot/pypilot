@@ -7,9 +7,21 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import os, sys, time, math
-import tensorflow as tf
+import os, sys, time, math, json
 from signalk.client import SignalKClient
+
+class stopwatch(object):
+    def __init__(self):
+        self.total = 0
+        self.starttime = False
+    def start(self):
+        self.starttime = time.time()
+    def stop(self):
+        self.total += time.time() - self.starttime
+    def time(self):
+      if not self.starttime:
+        return 0
+      return self.total + time.time() - self.starttime
 
 # convenience
 def rate(conf):
@@ -65,7 +77,8 @@ def norm_sensor(name, value):
     return norm_value(value)
 
 class Intellect(object):
-    def __init__(self):
+    def __init__(self, host):
+        self.host = host
         self.train_x, self.train_y = [], []
         self.inputs = {}
         self.conf = {'past': 5, # seconds of sensor data
@@ -76,9 +89,15 @@ class Intellect(object):
                      'state': {'ap.mode': 'none', 'imu.rate': 1}}
         self.ap_enabled = False
         self.history = History(self.conf)
-
         self.lasttimestamp = 0
         self.firsttimestamp = False
+        self.record_file = False
+        self.playback_file = False
+
+        self.loading = stopwatch()
+        self.fitting = stopwatch()
+        self.totaltime = stopwatch()
+        self.totaltime.start()
         
     def load(self, mode):
         model = build(self.conf)
@@ -89,7 +108,6 @@ class Intellect(object):
   
     def train(self):
         if len(self.history.data) != self.history.samples():
-            print('train', len(self.history.data), self.history.samples())
             return # not enough data in history yet
         present = rate(self.conf)*self.conf['past']
         # inputs are the sensors and predictions over past time
@@ -106,34 +124,43 @@ class Intellect(object):
         self.train_y.append(predictions_data)
 
         if not self.model:
-            print('build')
+            self.loading.start()
             self.build(len(self.train_x[0]), len(self.train_y[0]))
+            self.loading.stop()
 
-        pool_size = 1000 # how much data to accumulate before training
+        pool_size = 6000 # how much data to accumulate before training
         l = len(self.train_x)
         if l < pool_size:
-            if l%10 == 0:
-              print('l', l)
+            if l%100 == 0:
+                sys.stdout.write('pooling... ' + str(l) + '\r')
+                sys.stdout.flush()
             return
         print('fit', len(self.train_x), len(self.train_x[0]), len(self.train_y), len(self.train_y[0]))
         #print('trainx', self.train_x[0])
         #print('trainy', self.train_y[0])
-        self.model.fit(self.train_x, self.train_y, epochs=40)
+        self.fitting.start()
+        history = self.model.fit(self.train_x, self.train_y, epochs=8)
+        self.fitting.stop()
+        mse = history.history['mse']
+        print('mse', mse)
         self.train_x, self.train_y = [], []
 
     def build(self, input_size, output_size):
-        conf = self.conf        
+        conf = self.conf
+        print('loading...')
+        import tensorflow as tf
+        print('building...')
         input = tf.keras.layers.Input(shape=(input_size,), name='input_layer')
-        hidden = tf.keras.layers.Dense(64, activation='relu')(input)
-        output = tf.keras.layers.Dense(output_size, activation='relu')(hidden)
+        #hidden1 = tf.keras.layers.Dense(256, activation='relu')(input)
+        hidden2 = tf.keras.layers.Dense(16, activation='relu')(input)
+        output = tf.keras.layers.Dense(output_size, activation='tanh')(hidden2)
         self.model = tf.keras.Model(inputs=input, outputs=output)
-        self.model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+        self.model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mse'])
 
     def save(self, filename):
         converter = tf.lite.TFLiteConverter.from_keras_model(self.model)
         tflite_model = converter.convert()
         try:
-          import json
           f = open(filename, 'w')
           conf['model_filename'] = filename + '.tflite_model'
           f.write(json.dumps(conf))
@@ -144,12 +171,9 @@ class Intellect(object):
         except Exception as e:
           print('failed to save', f)
 
-    def receive_single(self, name, msg):
-        value = msg['value']
-
+    def receive_single(self, name, value):
         if name == 'ap.enabled':
-          self.ap_enabled = value
-                     
+            self.ap_enabled = value                   
         elif name in self.conf['state']:
             self.conf['state'][name] = value
             self.history.data = []
@@ -162,13 +186,13 @@ class Intellect(object):
         elif name == 'timestamp':
             t0 = time.time()
             if not self.firsttimestamp:
-              self.firsttimestamp = value, t0
+                self.firsttimestamp = value, t0
             else:
-              first_value, first_t0 = self.firsttimestamp
-              dt = value - first_value
-              dtl = t0 - first_t0
-              if(abs(dt-dtl) > 10.0):
-                print('computation not keep up!!', dtl-dt)
+                first_value, first_t0 = self.firsttimestamp
+                dt = value - first_value
+                dtl = t0 - first_t0
+                if(dtl-dt > 10.0):
+                    print('computation not keep up!!', dtl-dt)
               
             dt = value - self.lasttimestamp
             self.lasttimestamp = value
@@ -186,71 +210,122 @@ class Intellect(object):
             self.train()
 
     def receive(self):
+        if self.playback_file:
+            line = self.playback_file.readline()
+            if not line:
+                print('end of file')
+                exit(0)
+            msg = json.loads(line)
+            for name in msg:
+                self.receive_single(name, msg[name])
+            return
+          
+        if not self.client:
+            print('connecting to', self.host)
+            # couldn't load try to connect
+            watches = self.conf['sensors'] + list(self.conf['state'])
+            watches.append('ap.enabled')
+            watches.append('timestamp')
+            def on_con(client):
+                for name in watches:
+                    client.watch(name)
+            
+            self.client = SignalKClient(on_con, self.host, autoreconnect=False)
         msg = self.client.receive_single(1)
         while msg:
-            name, value = msg
-            self.receive_single(name, value)
+            if self.record_file:
+                d = {msg[0]: msg[1]['value']}
+                self.record_file.write(json.dumps(d)+'\n')
+                self.record_file.lines += 1
+                if self.record_file.lines%100 == 0:
+                    sys.stdout.write('recording ' + str(self.record_file.lines) + '\r')
+                    sys.stdout.flush()
+            else:
+                name, data = msg
+                value = data['value']
+                self.receive_single(name, value)
             msg = self.client.receive_single(-1)
 
-    def run_replay(self, filename):
+    def record(self, filename):
         try:
-            f = open(filename)
-            print('opened replay file', filename)
-            while True:
-                line = f.readline()
-                if not line:
-                    f.close()
-                    return True
-                intellect.receive(json.loads(line))
+            self.record_file = open(filename, 'w')
+            self.record_file.lines = 0
         except Exception as e:
-            return False
-            
+            print('unable to open for recording', filename, e)
+
+    def playback(self, filename):
+        try:
+            self.playback_file = open(filename)
+        except Exception as e:
+            print('failed to open replay file', filename, e)
+
     def run(self):
+      from signal import signal
+      def cleanup(a, b):
+          print('time spent loading', self.loading.time())
+          print('time spent fitting', self.fitting.time())
+          print('time spent total', self.totaltime.time())
+          exit(0)
+      signal(2, cleanup)
       # ensure we sample all predictions
       for p in self.conf['predictions']:
           if not p in self.conf['sensors']:
-              print('adding prediction', p)
+              #print('adding prediction', p)
               self.conf['sensors'].append(p)
       
-      host = 'localhost'
-      if len(sys.argv) > 1:
-          if self.run_replay(sys.argv[1]):
-              return
-          host = sys.argv[1]
-      # couldn't load try to connect
-      watches = self.conf['sensors'] + list(self.conf['state'])
-      watches.append('ap.enabled')
-      watches.append('timestamp')
-      def on_con(client):
-        for name in watches:
-          client.watch(name)
-
       t0 = time.time()
 
       self.client = False
       while True:
           #try:
-          if 1:
-              if not self.client:
-                  print('connecting to', host)
-                  self.client = SignalKClient(on_con, host, autoreconnect=False)
-              self.receive()
+          self.receive()
           #except Exception as e:
           #    print('error', e)
           #    self.client = False
           #    time.sleep(1)
               
           if time.time() - t0 > 600:
-              filename = os.getenv('HOME')+'/.pypilot/intellect_'+self.conf['mode']+'.conf'
+              def st():
+                  state = self.conf['state']['ap.mode']
+                  r = ''
+                  for n in d:
+                      r += n[-1] + str(d[n])
+                  return r
+              filename = os.getenv('HOME')+'/.pypilot/intellect_'+st()+'.conf'
               self.save(filename)
               
           # find cpu usage of training process
           #cpu = ps.cpu_percent()
           #if cpu > 50:
           #    print('learning cpu very high', cpu)
-          
+
 def main():
-    intellect = Intellect()
+      
+    try:
+        import getopt
+        args, host = getopt.getopt(sys.argv[1:], 'p:r:h')
+        if host:
+            host = host[0]
+        else:
+            host = 'localhost'
+    except Exception as e:
+        print('failed to parse command line arguments:', e)
+        return
+
+    intellect = Intellect(host)
+    for arg in args:
+        name, value = arg
+        if name == '-h':
+            print(sys.argv[0] + ' [ARGS] [HOST]\n')
+            print('-p filename -- playback from filename instead of live')
+            print('-r filename -- record to file data for playback, no processing')
+            print('-h          -- Display this message')
+            return
+        elif name == '-p':
+            intellect.playback(value)
+        elif name == '-r':
+            intellect.record(value)
+  
     intellect.run()
 
 if __name__ == '__main__':
