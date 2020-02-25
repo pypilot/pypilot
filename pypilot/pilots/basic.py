@@ -9,7 +9,7 @@
 
 from pilot import AutopilotPilot
 from resolv import resolv
-from signalk.values import *
+from pypilot.values import *
 
 class TimedQueue(object):
   def __init__(self, length):

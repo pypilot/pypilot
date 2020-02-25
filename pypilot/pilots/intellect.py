@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os, sys, time, math, json
-from signalk.client import SignalKClient
+from pypilot.client import pypilotClient
 
 class stopwatch(object):
     def __init__(self):
@@ -230,7 +230,7 @@ class Intellect(object):
                 for name in watches:
                     client.watch(name)
             
-            self.client = SignalKClient(on_con, self.host, autoreconnect=False)
+            self.client = pypilotClient(on_con, self.host, autoreconnect=False)
         msg = self.client.receive_single(1)
         while msg:
             if self.record_file:

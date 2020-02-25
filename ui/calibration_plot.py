@@ -9,7 +9,7 @@
 
 from __future__ import print_function
 import time, sys
-from signalk.client import SignalKClient
+from pypilot.client import pypilotClient
 import json, math, numpy
 from pypilot import quaternion
 from pypilot import vector
@@ -293,7 +293,7 @@ if __name__ == '__main__':
         for name in watchlist:
             client.watch(name)
         
-    client = SignalKClient(on_con, host, autoreconnect=True)
+    client = pypilotClient(on_con, host, autoreconnect=True)
     plot = CompassCalibrationPlot()
 
     def display():

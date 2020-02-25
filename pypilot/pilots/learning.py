@@ -7,12 +7,10 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from signalk.values import Value
-
 import multiprocessing, select
 from pilot import AutopilotPilot, AutopilotGain
-from signalk.values import *
-from signalk.pipeserver import NonBlockingPipe
+from pypilot.values import * # needed?
+#from pypilot.pipeserver import NonBlockingPipe
 
 class LearningPilot(AutopilotPilot):
   def __init__(self, ap):

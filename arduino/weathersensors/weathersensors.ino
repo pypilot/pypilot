@@ -7,7 +7,7 @@
  */
 
 /* this program interfaces with the bmp280 pressure sensor and outputs
-   calibrated signalk data over serial at 38400 baud
+   calibrated nmea0183 data over serial at 38400 baud
  */
 
 /* anemometer wires

@@ -13,7 +13,7 @@ from flask import Flask, render_template, session, request, Markup
 
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
-from signalk.server import LineBufferedNonBlockingSocket
+from pypilot.server import LineBufferedNonBlockingSocket
 
 pypilot_web_port=80
 if len(sys.argv) > 1:
@@ -109,8 +109,8 @@ class MyNamespace(Namespace):
         self.client = False
         self.polls = {}
 
-    def connect_signalk(self):
-        print('connect signalk...')
+    def connect_pypilot(self):
+        print('connect pypilot...')
         connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socketio.emit('flush') # unfortunately needed to awaken socket for client messages
         try:
@@ -118,7 +118,7 @@ class MyNamespace(Namespace):
         except:
             socketio.sleep(2)
             return
-        print('connected to pypilot signalk')
+        print('connected to pypilot server')
 
         self.client = LineBufferedNonBlockingSocket(connection)
         self.client.send('{"method": "list"}\n')
@@ -170,7 +170,7 @@ class MyNamespace(Namespace):
                    or not self.client.recv():
                     print('client disconnected')
                     self.client.socket.close()
-                    socketio.emit('signalk_disconnect', self.list_values)
+                    socketio.emit('pypilot_disconnect', self.list_values)
                     self.client = False
                     continue
 
@@ -180,23 +180,23 @@ class MyNamespace(Namespace):
                         if not line:
                             break
                         #print('line',  line.rstrip())
-                        socketio.emit('signalk', line.rstrip())
+                        socketio.emit('pypilot', line.rstrip())
                     except Exception as e:
                         socketio.emit('log', line)
                         print('error: ', e, line.rstrip())
                         break
             else:
                 if self.polls:
-                    self.connect_signalk()
+                    self.connect_pypilot()
                 if self.client:
-                    socketio.emit('signalk_connect', self.list_values)
+                    socketio.emit('pypilot_connect', self.list_values)
 
 
-    def on_signalk(self, message):
+    def on_pypilot(self, message):
         if self.client:
             self.client.send(message + '\n')
 
-    def on_signalk_poll(self, message):
+    def on_pypilot_poll(self, message):
         #print('message', message)
         if message == 'clear':
             self.polls[request.sid] = {}
@@ -215,7 +215,7 @@ class MyNamespace(Namespace):
         print('Client connected', request.sid)
         self.polls[request.sid] = {}
         if self.client:
-            socketio.emit('signalk_connect', self.list_values)
+            socketio.emit('pypilot_connect', self.list_values)
 
     def on_disconnect(self):
         #client = self.clients[request.sid].client
@@ -226,7 +226,7 @@ class MyNamespace(Namespace):
             if self.client:
                 self.client.socket.close()
                 self.client = False
-                print('closed signalk client')
+                print('closed pypilot client')
         print('Client disconnected', request.sid, len(self.polls))
 
 socketio.on_namespace(MyNamespace(''))

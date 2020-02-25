@@ -10,7 +10,7 @@
 from __future__ import print_function
 import time, os, sys
 import json
-from signalk.client import SignalKClient
+from pypilot.client import pypilotClient
 import lcd, gpio, arduino, lirc, buzzer
 
 class Action(object):
@@ -29,17 +29,17 @@ class ActionKeypad(Action):
         self.lcd.keypadup[self.index] = not count
         self.lcd.keypad[self.index] = count
         
-class ActionSignalK(Action):
-    def  __init__(self, hat, name, signalk_name, signalk_value):
-        super(ActionSignalK, self).__init__(hat, name)
-        self.signalk_name = signalk_name
-        self.value = signalk_value
+class ActionPypilot(Action):
+    def  __init__(self, hat, name, pypilot_name, pypilot_value):
+        super(ActionPypilot, self).__init__(hat, name)
+        self.pypilot_name = pypilot_name
+        self.value = pypilot_value
 
     def trigger(self, count):
         if self.hat.client and not count:
-            self.hat.client.set(self.signalk_name, self.value)
+            self.hat.client.set(self.pypilot_name, self.value)
 
-class ActionEngage(ActionSignalK):
+class ActionEngage(ActionPypilot):
     def  __init__(self, hat):
         super(ActionEngage, self).__init__(hat, 'engage', 'ap.enabled', True)
 
@@ -65,7 +65,7 @@ class ActionHeading(Action):
             self.servo_timeout = time.time() + abs(self.offset)**.5/2
             self.hat.client.set('servo.command', 1 if self.offset > 0 else -1)
             
-class ActionTack(ActionSignalK):
+class ActionTack(ActionPypilot):
     def  __init__(self, hat, name, direction):
         super(ActionTack, self).__init__(hat, name, 'ap.tack.state', 'begin')
         self.direction = direction
@@ -118,7 +118,7 @@ class Web(object):
     def poll(self):
         if not self.process:
             import multiprocessing
-            from signalk.pipeserver import NonBlockingPipe
+            from pypilot.pipeserver import NonBlockingPipe
             self.pipe, pipe = NonBlockingPipe('webpipe', True)
             keyspipe, self.keyspipe = NonBlockingPipe('webkeyspipe', True)
             self.process = multiprocessing.Process(target=web_process, args=(pipe, keyspipe, self.hat.actions))
@@ -186,16 +186,16 @@ class Hat(object):
 
         # stateless actions for autopilot control
         self.actions += [ActionEngage(self),
-                         ActionSignalK(self, 'disengage', 'ap.enabled', False),
+                         ActionPypilot(self, 'disengage', 'ap.enabled', False),
                          ActionHeading(self, 1),
                          ActionHeading(self, -1),
                          ActionHeading(self, 2),
                          ActionHeading(self, -2),
                          ActionHeading(self, 10),
                          ActionHeading(self, -10),
-                         ActionSignalK(self, 'compassmode', 'ap.mode', 'compass'),
-                         ActionSignalK(self, 'gpsmode', 'ap.mode', 'gps'),
-                         ActionSignalK(self, 'windmode', 'ap.mode', 'wind'),
+                         ActionPypilot(self, 'compassmode', 'ap.mode', 'compass'),
+                         ActionPypilot(self, 'gpsmode', 'ap.mode', 'gps'),
+                         ActionPypilot(self, 'windmode', 'ap.mode', 'wind'),
                          ActionTack(self, 'tackport', 'port'),
                          ActionTack(self, 'tackstarboard', 'starboard')]
 
@@ -241,7 +241,7 @@ class Hat(object):
                 client.get(request)
 
         try:
-            self.client = SignalKClient(on_con, host)
+            self.client = pypilotClient(on_con, host)
             if self.value_list:
                 print('connected')
                 self.web.set_status('connected')

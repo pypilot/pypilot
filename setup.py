@@ -15,7 +15,7 @@ except ImportError:
     from distutils.core import setup, Extension
 
 linebuffer_module = Extension('_linebuffer',
-                        sources=['signalk/linebuffer/linebuffer.cpp', 'signalk/linebuffer/linebuffer.i'],
+                        sources=['pypilot/linebuffer/linebuffer.cpp', 'pypilot/linebuffer/linebuffer.i'],
                         extra_compile_args=['-Wno-unused-result'],
                         swig_opts=['-c++']
 )
@@ -70,9 +70,9 @@ setup (name = 'pypilot',
        license = 'GPLv3',
        author="Sean D'Epagnier",
        url='http://pypilot.org/',
-       packages=find_packages() if find_packages else ['pypilot', 'pypilot/pilots', 'pypilot/arduino_servo', 'ui', 'hat', 'web', 'signalk', 'signalk/linebuffer', 'hat/ugfx'],
+       packages=find_packages() if find_packages else ['pypilot', 'pypilot/pilots', 'pypilot/arduino_servo', 'ui', 'hat', 'web', 'pypilot/linebuffer', 'hat/ugfx'],
        ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module],
-#       py_modules = ['pypilot/arduino_servo', 'signalk/linebuffer/linebuffer'],
+#       py_modules = ['pypilot/arduino_servo', 'pypilot/linebuffer/linebuffer'],
        package_data={'hat': ['font.ttf', 'static/*', 'templates/*'] + locale_files,
                      'ui': ['*.png', '*.mtl', '*.obj'],
                      'web': ['static/*', 'templates/*']},
@@ -86,9 +86,8 @@ setup (name = 'pypilot',
                'pypilot_control=ui.autopilot_control:main',
                'pypilot_calibration=ui.autopilot_calibration:main',
                'pypilot_client=pypilot.client:main',
-               'pypilot_scope=pypilot.scope:main',
-               'pypilot_client_wx=pypilot.client_wx:main',
-               'pypilot_scope_wx=pypilot.scope_wx:main',
+               'pypilot_scope=ui.scope_wx:main',
+               'pypilot_client_wx=ui.client_wx:main'
                ]
         }
        )

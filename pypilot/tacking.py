@@ -7,8 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from signalk.values import *
-from pypilot.resolv import *
+from values import *
+from resolv import *
 
 class TackSensorLog(object):
   def __init__(self, threshold):

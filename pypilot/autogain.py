@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import sys, time
-from signalk.client import SignalKClient
+from pypilot.client import PypilotClient
 
 # list must be already sorted
 def unique(l):
@@ -55,7 +55,7 @@ class autogain(object):
 
         while True:
             try:
-                self.client = SignalKClient(on_con, host, autoreconnect=True)
+                self.client = PypilotClient(on_con, host, autoreconnect=True)
                 break
             except:
                 time.sleep(2)

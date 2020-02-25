@@ -43,19 +43,19 @@ $(document).ready(function() {
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + port + namespace);
     
     function get(name) {
-        socket.emit('signalk', JSON.stringify({'name': name, 'method': 'get'}));
+        socket.emit('pypilot', JSON.stringify({'name': name, 'method': 'get'}));
     }
 
     function watch(name) {
         get(name);
-        socket.emit('signalk', JSON.stringify({'name': name, 'method': 'watch'}));
+        socket.emit('pypilot', JSON.stringify({'name': name, 'method': 'watch'}));
     }
 
     function poll(name) {
-        socket.emit('signalk_poll', JSON.stringify({'name': name, 'method': 'get'}));
+        socket.emit('pypilot_poll', JSON.stringify({'name': name, 'method': 'get'}));
     }
 /*    function unwatch(name) {
-        socket.emit('signalk', {'name': name, 'method': 'watch', 'value': '0'});
+        socket.emit('pypilot', {'name': name, 'method': 'watch', 'value': '0'});
     }*/
     
     // Event handler for new connections.
@@ -65,7 +65,7 @@ $(document).ready(function() {
 
     var servo_command = 0, servo_command_timeout=0;
     var gains = [];
-    socket.on('signalk_connect', function(msg) {
+    socket.on('pypilot_connect', function(msg) {
         var list_values = JSON.parse(msg)
         $('#connection').text('Connected')
         $('#aperrors0').text("");
@@ -91,7 +91,7 @@ $(document).ready(function() {
         $('#gain_container').append('</select></div>')
 
         $('#pilot').change(function(event) {
-            signalk_set('ap.pilot', $('#pilot').val)
+            pypilot_set('ap.pilot', $('#pilot').val)
         });
 
         
@@ -109,7 +109,7 @@ $(document).ready(function() {
             var iname = 'gains'+i;
             $('#gain_container').append('<br>'+gains[i]+' <input type="range" id="' + iname + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" style="width:'+w*3/4+'px" name="'+name+'"></input><span id="' + iname + 'label"></span><br>');
             $('#'+iname).change(function(event) {
-                signalk_set('ap.'+this.name, this.valueAsNumber);
+                pypilot_set('ap.'+this.name, this.valueAsNumber);
                 block_polling = 2;
             });
         }
@@ -121,7 +121,7 @@ $(document).ready(function() {
         watch('imu.compass_calibration_locked');
         $('#calibration_locked').change(function(event) {
             check = $('#calibration_locked').prop('checked');
-            signalk_set('imu.compass_calibration_locked', check);
+            pypilot_set('imu.compass_calibration_locked', check);
             block_polling = 2;
         });
 
@@ -150,7 +150,7 @@ $(document).ready(function() {
 
             $('#configuration_container').append('<div class="w3-row"><div class="w3-col s4 m4 l4">' + name + '</div><div class="w3-col s3 m3 l3"><input type="range" id="'+iname+'" min="' + min + '" max="' + max + '" step=".01" value="2" style="width: 240px" name="'+name+'"></input></div><div class="w3-col s2 m2 l2"><span id="'+ iname+'label"></span></div><div class="w3-col s3 m3 l3">' + unit + '</div></div>');
             $('#'+iname).change(function(event) {
-                signalk_set(this.name, this.valueAsNumber);
+                pypilot_set(this.name, this.valueAsNumber);
                 block_polling = 2;
             });
         }
@@ -163,23 +163,23 @@ $(document).ready(function() {
         watch('servo.controller');
         watch('servo.flags');
 
-        setTimeout(poll_signalk, 1000)
+        setTimeout(poll_pypilot, 1000)
 
         block_polling = 0;
         last_poll_Tab = -1;
     });
 
-    socket.on('signalk_disconnect', function(msg) {
+    socket.on('pypilot_disconnect', function(msg) {
         $('#connection').text('Disconnected')
     });
 
     // we poll rather than watch some values to avoid excessive cpu in browser
-    function poll_signalk() {
-        setTimeout(poll_signalk, 1000)
+    function poll_pypilot() {
+        setTimeout(poll_pypilot, 1000)
         if(servo_command_timeout > 0) {
             if(servo_command_timeout-- <= 0)
                 servo_command = 0;
-            signalk_set('servo.command', servo_command);
+            pypilot_set('servo.command', servo_command);
         }
 
         if(block_polling > 0) {
@@ -193,7 +193,7 @@ $(document).ready(function() {
             return;
 
         last_poll_Tab = tab;
-        socket.emit('signalk_poll', 'clear');
+        socket.emit('pypilot_poll', 'clear');
         
         if(tab == 'Control') {
             poll('ap.heading');
@@ -251,7 +251,7 @@ $(document).ready(function() {
     var heading_set_time = new Date().getTime();
     var heading_local_command;
     var last_data = {}
-    socket.on('signalk', function(msg) {
+    socket.on('pypilot', function(msg) {
         if(block_polling > 0) {
             return;
         }
@@ -395,17 +395,17 @@ $(document).ready(function() {
             $('#servoflags').text(data['servo.flags']['value']);
     });
     
-    signalk_set = function(name, value) {
-        socket.emit('signalk', JSON.stringify({'name': name, 'method': 'set', 'value': value}));
+    pypilot_set = function(name, value) {
+        socket.emit('pypilot', JSON.stringify({'name': name, 'method': 'set', 'value': value}));
     }
 
     // Control
     $('.toggle-button').click(function(event) {
         if($(this).hasClass('toggle-button-selected')) {
-            signalk_set('ap.enabled', false)
+            pypilot_set('ap.enabled', false)
         } else {
-            signalk_set('ap.heading_command', heading)
-            signalk_set('ap.enabled', true)
+            pypilot_set('ap.heading_command', heading)
+            pypilot_set('ap.enabled', true)
         }
     });
     
@@ -416,7 +416,7 @@ $(document).ready(function() {
                 heading_local_command = heading_command;
             heading_set_time = new Date().getTime();
             heading_local_command += x;
-            signalk_set('ap.heading_command', heading_local_command);
+            pypilot_set('ap.heading_command', heading_local_command);
         } else {
             if(x != 0) {
                 sign = x > 0 ? 1 : -1;
@@ -427,7 +427,7 @@ $(document).ready(function() {
     }
 
     $('#mode').change(function(event) {
-        signalk_set('ap.mode', $('#mode').val());
+        pypilot_set('ap.mode', $('#mode').val());
     });
     
     $('#port10').click(function(event) { move(-10); });
@@ -439,33 +439,33 @@ $(document).ready(function() {
 
     // Calibration
     $('#level').click(function(event) {
-        signalk_set('imu.alignmentCounter', 100);
-        signalk_set('imu.alignmentType', 'level');
+        pypilot_set('imu.alignmentCounter', 100);
+        pypilot_set('imu.alignmentType', 'level');
         return false;
     });
 
     $('#imu_heading_offset').change(function(event) {
-        signalk_set('imu.heading_offset', $('#imu_heading_offset').value());
+        pypilot_set('imu.heading_offset', $('#imu_heading_offset').value());
     });
 
     $('#rudder_centered').click(function(event) {
-        signalk_set('rudder.calibration_state', 'centered');
+        pypilot_set('rudder.calibration_state', 'centered');
     });
 
     $('#rudder_port_range').click(function(event) {
-        signalk_set('rudder.calibration_state', 'port range');
+        pypilot_set('rudder.calibration_state', 'port range');
     });
 
     $('#rudder_starboard_range').click(function(event) {
-        signalk_set('rudder.calibration_state', 'starboard range');
+        pypilot_set('rudder.calibration_state', 'starboard range');
     });
 
     $('#rudder_reset').click(function(event) {
-        signalk_set('rudder.calibration_state', 'reset');
+        pypilot_set('rudder.calibration_state', 'reset');
     });
     
     $('#rudder_range').change(function(event) {
-        signalk_set('rudder.range', $('#rudder_range').value());
+        pypilot_set('rudder.range', $('#rudder_range').value());
     });
 
     // Configuration
@@ -483,7 +483,7 @@ $(document).ready(function() {
 
     // Statistics
     $('#reset_amp_hours').click(function(event) {
-        signalk_set('servo.amp_hours', 0);
+        pypilot_set('servo.amp_hours', 0);
         return false;
     });
     

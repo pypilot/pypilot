@@ -15,7 +15,7 @@
 from __future__ import print_function
 import os, sys, time, json
 import spidev
-from signalk.client import SignalKClient
+from pypilot.client import pypilotClient
 import crc
 
 try:

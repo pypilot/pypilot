@@ -9,10 +9,10 @@
 
 from __future__ import print_function
 import select, socket, time, numbers
-import signalk.kjson
+import kjson
 import fcntl, os
-from signalk.values import *
-from signalk.bufferedsocket import LineBufferedNonBlockingSocket
+from pypilot.values import *
+from pypilot.bufferedsocket import LineBufferedNonBlockingSocket
 
 DEFAULT_PORT = 21311
 max_connections = 30
@@ -49,7 +49,7 @@ def LoadPersistentData(persistent_path, server=True):
         file.close()
     return persistent_data
     
-class SignalKServer(object):
+class pypilotServer(object):
     def __init__(self, port=DEFAULT_PORT, persistent_path=default_persistent_path):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setblocking(0)
@@ -119,7 +119,7 @@ class SignalKServer(object):
         value = self.values[name]
 
         if method == 'get':
-            socket.send(value.get_signalk() + '\n')
+            socket.send(value.get_pypilot() + '\n')
         elif method == 'set':
             if value.client_can_set:
                 value.set(data['value'])
@@ -175,7 +175,7 @@ class SignalKServer(object):
             if socket == self.server_socket:
                 connection, address = socket.accept()
                 if len(self.sockets) == max_connections:
-                    print('signalk server: max connections reached!!!', len(self.sockets))
+                    print('pypilot server: max connections reached!!!', len(self.sockets))
                     self.RemoveSocket(self.sockets[0]) # dump first socket??
 
                 socket = LineBufferedNonBlockingSocket(connection)
@@ -208,7 +208,7 @@ class SignalKServer(object):
           try:
               self.server_socket.bind(('0.0.0.0', self.port))
           except:
-              print('signalk_server: bind failed; already running a server?')
+              print('pypilot_server: bind failed; already running a server?')
               time.sleep(1)
               return
 
@@ -229,8 +229,8 @@ class SignalKServer(object):
       self.PollSockets()
 
 if __name__ == '__main__':
-    server = SignalKServer()
-    print('signalk demo server, try running signalk_client')
+    server = pypilotServer()
+    print('pypilot demo server, try running pypilot_client')
     clock = server.Register(Value('clock', 0))
     test = server.Register(Property('test', 1234))
     while True:

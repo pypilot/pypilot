@@ -10,8 +10,8 @@
 from __future__ import print_function
 
 import socket, select, sys, os, time
-from signalk import kjson
-from bufferedsocket import LineBufferedNonBlockingSocket
+from pypilot import kjson
+from pypilot.bufferedsocket import LineBufferedNonBlockingSocket
 
 DEFAULT_PORT = 21311
 
@@ -35,7 +35,7 @@ except:
 class ConnectionLost(Exception):
     pass
 
-class SignalKClient(object):
+class pypilotClient(object):
     def __init__(self, f_on_connected, host=False, port=False, autoreconnect=False, have_watches=False):
         self.autoreconnect = autoreconnect
 
@@ -49,7 +49,7 @@ class SignalKClient(object):
         except Exception as e:
             print('os not supported')
             configfilepath = '/.pypilot/'
-        self.configfilename = configfilepath + 'signalk.conf'
+        self.configfilename = configfilepath + 'pypilot_client.conf'
         self.write_config = False
 
         try:
@@ -294,7 +294,7 @@ class SignalKClient(object):
                 print(name, '=', result)
         return True
 
-def SignalKClientFromArgs(argv, watch, f_con=False):
+def pypilotClientFromArgs(argv, watch, f_con=False):
     host = port = False
     watches = argv[1:]
     if len(argv) > 1:
@@ -327,7 +327,7 @@ def SignalKClientFromArgs(argv, watch, f_con=False):
         if f_con:
             f_con(client)
             
-    return SignalKClient(on_con, host, port, autoreconnect=True, have_watches=watches)
+    return pypilotClient(on_con, host, port, autoreconnect=True, have_watches=watches)
 
 # ujson makes very ugly results like -0.28200000000000003
 # round all floating point to 8 places here
@@ -365,7 +365,7 @@ def main():
     if info:
         sys.argv.remove('-i')
         
-    client = SignalKClientFromArgs(sys.argv, continuous)
+    client = pypilotClientFromArgs(sys.argv, continuous)
     if not client.have_watches:
         while True:
             if not client.print_values(10, info):

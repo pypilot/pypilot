@@ -12,8 +12,8 @@
 
 from __future__ import print_function
 import time
-from signalk.server import SignalKServer, DEFAULT_PORT, default_persistent_path, LoadPersistentData
-from signalk.values import *
+from pypilot.server import pypilotServer, DEFAULT_PORT, default_persistent_path, LoadPersistentData
+from pypilot.values import *
 import multiprocessing
 import select
 
@@ -55,9 +55,9 @@ def NonBlockingPipe(name, recvfailok=False):
   pipe = multiprocessing.Pipe()
   return NonBlockingPipeEnd(pipe[0], name+'[0]', recvfailok), NonBlockingPipeEnd(pipe[1], name+'[1]', recvfailok)
 
-class SignalKPipeServerClient(SignalKServer):
+class pypilotPipeServerClient(pypilotServer):
     def __init__(self, pipe, port, persistent_path):
-      super(SignalKPipeServerClient, self).__init__(port, persistent_path)
+      super(pypilotPipeServerClient, self).__init__(port, persistent_path)
       self.watches = {}
       self.gets = {}
       self.pipe = pipe
@@ -65,15 +65,15 @@ class SignalKPipeServerClient(SignalKServer):
     def __del__(self):
       while self.HandlePipeMessage():
         pass
-      super(SignalKPipeServerClient, self).__del__()
+      super(pypilotPipeServerClient, self).__del__()
 
     def Register(self, value):
-      super(SignalKPipeServerClient, self).Register(value)
+      super(pypilotPipeServerClient, self).Register(value)
       self.gets[value.name] = []
       return value
     
     def RemoveSocket(self, socket):
-      super(SignalKPipeServerClient, self).RemoveSocket(socket)
+      super(pypilotPipeServerClient, self).RemoveSocket(socket)
       for name in self.values:
           if not self.values[name].watchers and name in self.watches:
               self.pipe.send({'method': 'watch', 'name': name, 'value': False})
@@ -86,7 +86,7 @@ class SignalKPipeServerClient(SignalKServer):
 
         if method == 'get':
           if name in self.watches: # already have recent value in this process
-            socket.send(value.get_signalk() + '\n')
+            socket.send(value.get_pypilot() + '\n')
           else:
             self.gets[name].append(socket)
             self.pipe.send(data)
@@ -94,7 +94,7 @@ class SignalKPipeServerClient(SignalKServer):
             data['value'] # throw exception if there is no value field
             self.pipe.send(data)
         elif method == 'watch':
-          super(SignalKPipeServerClient, self).HandleNamedRequest(socket, data)
+          super(pypilotPipeServerClient, self).HandleNamedRequest(socket, data)
           watch = data['value'] if 'value' in data else True
           if watch:
             if not name in self.watches:
@@ -123,7 +123,7 @@ class SignalKPipeServerClient(SignalKServer):
 
             # send to any clients who requested this value (get request)
             if self.gets[name]:
-              response = value.get_signalk() + '\n'
+              response = value.get_pypilot() + '\n'
               for socket in self.gets[name]:
                   if not socket in value.watchers:
                       socket.send(response)
@@ -132,7 +132,7 @@ class SignalKPipeServerClient(SignalKServer):
 
 def pipe_server_process(pipe, port, persistent_path):
     #print('pipe server on', os.getpid())
-    server = SignalKPipeServerClient(pipe, port, persistent_path)
+    server = pypilotPipeServerClient(pipe, port, persistent_path)
     # handle only pipe messages (to get all registrations) for first second
     t0 = time.time()
     while time.time() - t0 < 2:
@@ -147,9 +147,9 @@ def pipe_server_process(pipe, port, persistent_path):
         time.sleep(.1)
 
 
-class SignalKPipeServer(object):
+class pypilotPipeServer(object):
     def __init__(self, port=DEFAULT_PORT, persistent_path=default_persistent_path):
-        self.pipe, process_pipe = NonBlockingPipe('signalkpipeserver', True)
+        self.pipe, process_pipe = NonBlockingPipe('pypilotpipeserver', True)
     
         self.values = {}
         self.sets = []
@@ -237,8 +237,8 @@ class SignalKPipeServer(object):
     
 if __name__ == '__main__':
     print('pipe server demo')
-    server = SignalKPipeServer()
-#    server = SignalKServer()
+    server = pypilotPipeServer()
+#    server = pypilotServer()
     test_sensor = server.Register(SensorValue('sensor'))
     clock = server.Register(Value('clock', 0))
     test_property = server.Register(Property('test_property', 100))

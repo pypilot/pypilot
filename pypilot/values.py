@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os, time, math
-from signalk import kjson
+import kjson
 
 class Value(object):
     def __init__(self, name, initial, **kwargs):
@@ -29,7 +29,7 @@ class Value(object):
         if self.value != value:
             self.set(value)
 
-    def get_signalk(self):
+    def get_pypilot(self):
         if type(self.value) == type('') or type(self.value) == type(u''):
             return '{"' + self.name + '": {"value": "' + self.value + '"}}'
         return '{"' + self.name + '": {"value": ' + str(self.value) + '}}'
@@ -40,7 +40,7 @@ class Value(object):
 
     def send(self):
         if self.watchers:
-            request = self.get_signalk() + '\n'
+            request = self.get_pypilot() + '\n'
             for socket in self.watchers:
                 socket.send(request)
 
@@ -48,7 +48,7 @@ class JSONValue(Value):
     def __init__(self, name, initial, **kwargs):
       super(JSONValue, self).__init__(name, initial, **kwargs)
 
-    def get_signalk(self):
+    def get_pypilot(self):
         return '{"' + self.name + '": {"value": ' + kjson.dumps(self.value) + '}}'
 
 
@@ -75,14 +75,14 @@ class RoundedValue(Value):
     def __init__(self, name, initial, **kwargs):
       super(RoundedValue, self).__init__(name, initial, **kwargs)
       
-    def get_signalk(self):
+    def get_pypilot(self):
       return '{"' + self.name + '": {"value": ' + round_value(self.value, '%.3f') + '}}'
 
 class StringValue(Value):
     def __init__(self, name, initial, **kwargs):
         super(StringValue, self).__init__(name, initial, **kwargs)
 
-    def get_signalk(self):
+    def get_pypilot(self):
         if type(self.value) == type(False):
             strvalue = 'true' if self.value else 'false'
         else:
@@ -100,7 +100,7 @@ class SensorValue(Value):
             return {'type': 'SensorValue', 'directional': True}
         return 'SensorValue'
 
-    def get_signalk(self):
+    def get_pypilot(self):
         value = self.value
         if type(value) == type(tuple()):
             value = list(value)
@@ -136,7 +136,7 @@ class RangeProperty(Property):
     def type(self):
         return {'type' : 'RangeProperty', 'min' : self.min_value, 'max' : self.max_value}
 
-    def get_signalk(self):
+    def get_pypilot(self):
         return '{"' + self.name + ('": {"value": %.4f}}' % self.value)
         
     def set(self, value):
@@ -179,9 +179,6 @@ class EnumProperty(Property):
     def type(self):
         return {'type' : 'EnumProperty', 'choices' : self.choices}
 
-#    def get_signalk(self):
-#        return '{"' + self.name + '": {"value": "' + str(self.value) + '"}}'
-
     def set(self, value):
         for choice in self.choices:
             try: # accept floating point equivilent, 10.0 is 10
@@ -198,7 +195,7 @@ class BooleanValue(Value):
     def __init__(self, name, initial, **kwargs):
         super(BooleanValue, self).__init__(name, initial, **kwargs)
 
-    def get_signalk(self):
+    def get_pypilot(self):
         strvalue = 'true' if self.value else 'false'
         return '{"' + self.name + '": {"value": ' + strvalue + '}}'
 
@@ -209,7 +206,7 @@ class BooleanProperty(Property):
     def type(self):
         return 'BooleanProperty'
 
-    def get_signalk(self):
+    def get_pypilot(self):
         strvalue = 'true' if self.value else 'false'
         return '{"' + self.name + '": {"value": ' + strvalue + '}}'
 

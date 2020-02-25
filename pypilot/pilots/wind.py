@@ -9,7 +9,7 @@
 
 from autopilot import HeadingOffset, resolv
 from pilot import AutopilotPilot, AutopilotGain
-from signalk.values import *
+from pypilot.values import *
 
 # the wind pilot does not require a compass but does require a wind sensor.
 # it does not rely on the compass or calibration (unless in compass mode)

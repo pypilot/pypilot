@@ -17,15 +17,13 @@ pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import os.path
-from signalk.server import *
-from signalk.pipeserver import SignalKPipeServer
-from signalk.values import *
-
+from server import *
+from pipeserver import pypilotPipeServer
+from values import *
 from boatimu import *
 from resolv import *
 import tacking, servo
-from pypilot.version import strversion
-#from pypilot.sensors import Sensors
+from version import strversion
 from sensors import Sensors
 
 def minmax(value, r):
@@ -121,8 +119,8 @@ class Autopilot(object):
         elif s != 9:
             signal.signal(s, cleanup)
 
-#    self.server = SignalKServer()
-    self.server = SignalKPipeServer()
+#    self.server = pypilotServer()
+    self.server = pypilotPipeServer()
     self.boatimu = BoatIMU(self.server)
     self.sensors = Sensors(self.server)
     self.servo = servo.Servo(self.server, self.sensors)

@@ -18,9 +18,9 @@ import time, math, multiprocessing, select
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import calibration_fit, vector, quaternion
-from signalk.server import SignalKServer
-from signalk.pipeserver import SignalKPipeServer, NonBlockingPipe
-from signalk.values import *
+from pypilot.server import pypilotServer
+from pypilot.pipeserver import pypilotPipeServer, NonBlockingPipe
+from pypilot.values import *
 
 try:
   import RTIMU
@@ -213,7 +213,7 @@ class TimeValue(StringValue):
       self.total += time.time() - self.start
       self.stopped = True
 
-    def get_signalk(self):
+    def get_pypilot(self):
         if abs(self.value - self.lastage_value) > 1: # to reduce cpu, if the time didn't change by a second
             self.lastage_value = self.value
             self.lastage = readable_timespan(self.value)
@@ -235,7 +235,7 @@ class AgeValue(StringValue):
           self.lastupdate_value = t
           self.send()
 
-    def get_signalk(self):
+    def get_pypilot(self):
         dt = max(0, time.time() - self.value)
         if abs(dt - self.dt) > 1:
             self.dt = dt
@@ -503,8 +503,8 @@ class BoatIMUServer():
         elif s != 9:
             signal.signal(s, cleanup)
 
-    #  server = SignalKServer()
-    self.server = SignalKPipeServer()
+    #  server = pypilotServer()
+    self.server = pypilotPipeServer()
     self.boatimu = BoatIMU(self.server)
 
     self.childpids = [self.boatimu.imu_process.pid, self.boatimu.auto_cal.process.pid,

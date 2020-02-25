@@ -12,8 +12,8 @@ import sys, time, multiprocessing, math, numpy
 import vector, resolv, quaternion
 resolv = resolv.resolv
 
-from signalk.pipeserver import NonBlockingPipe
-from signalk.client import SignalKClient
+from pypilot.pipeserver import NonBlockingPipe
+from pypilot.client import pypilotClient
     
 calibration_fit_period = 20  # run every 20 seconds
 
@@ -586,10 +586,10 @@ def CalibrationProcess(cal_pipe):
     while True:
         time.sleep(2)
         try:
-            client = SignalKClient(on_con, 'localhost', autoreconnect=True)
+            client = pypilotClient(on_con, 'localhost', autoreconnect=True)
             break
         except Exception as e:
-            print('nmea process failed to connect signalk', e)
+            print('nmea process failed to connect pypilot', e)
 
     def debug(name):
         def debug_by_name(*args):
@@ -604,7 +604,7 @@ def CalibrationProcess(cal_pipe):
         t = time.time()
         addedpoint = False
         while time.time() - t < calibration_fit_period:
-            # receive signalk messages
+            # receive pypilot messages
             msg = client.receive()
             for name in msg:
                 value = msg[name]['value']

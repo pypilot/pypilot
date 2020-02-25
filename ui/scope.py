@@ -15,7 +15,7 @@ import math
 import time
 import sys
 
-from signalk.client import SignalKClientFromArgs
+from pypilot.client import pypilotClientFromArgs
 
 class trace(object):
     colors = [[1, 0, 0], [0, 1, 0], [1, 1, 0],
@@ -122,11 +122,11 @@ class trace(object):
         if norm <= 0:
             return
 
-        for i in range(1, SignalKPlot.NUM_X_DIV):
-            x = float(i) / SignalKPlot.NUM_X_DIV
+        for i in range(1, pypilotPlot.NUM_X_DIV):
+            x = float(i) / pypilotPlot.NUM_X_DIV
             self.rasterpos([x, .95])
             period = 3/math.exp(x) # incorrect!!
-            SignalKPlot.drawputs(str(period))
+            pypilotPlot.drawputs(str(period))
 
         glPushMatrix()
         glBegin(GL_LINE_STRIP)
@@ -136,7 +136,7 @@ class trace(object):
         glPopMatrix()
 
 
-class SignalKPlot():
+class pypilotPlot():
     NUM_X_DIV = 5
     NUM_Y_DIV = 6
 
@@ -220,7 +220,7 @@ class SignalKPlot():
     @staticmethod
     def drawputs(str):
         for c in str:
-            glutBitmapCharacter(SignalKPlot.FONT, ctypes.c_int(ord(c)))
+            glutBitmapCharacter(pypilotPlot.FONT, ctypes.c_int(ord(c)))
 
     # because glutbitmapcharacter doesn't get the glcolor unless the raster position is set
     def synccolor(self):
@@ -239,13 +239,13 @@ class SignalKPlot():
         glLineStipple(1, 0x0011)
         glBegin(GL_LINES)
 
-        for i in range(1, SignalKPlot.NUM_X_DIV):
-            x = float(i) / SignalKPlot.NUM_X_DIV
+        for i in range(1, pypilotPlot.NUM_X_DIV):
+            x = float(i) / pypilotPlot.NUM_X_DIV
             glVertex2d(x, 0)
             glVertex2d(x, 1)
             
-        for i in range(1, SignalKPlot.NUM_Y_DIV):
-            y = float(i) / SignalKPlot.NUM_Y_DIV
+        for i in range(1, pypilotPlot.NUM_Y_DIV):
+            y = float(i) / pypilotPlot.NUM_Y_DIV
             glVertex2d(0, y)
             glVertex2d(1, y)
        
@@ -263,7 +263,7 @@ class SignalKPlot():
         for t in self.traces:
             glColor3dv(t.color)
             self.synccolor()
-            SignalKPlot.drawputs("%d " % i)
+            pypilotPlot.drawputs("%d " % i)
             i+=1
 
         glColor3dv(self.curtrace.color)
@@ -273,16 +273,16 @@ class SignalKPlot():
         if len(self.curtrace.points):
             val = self.curtrace.points[0][1]
 
-        SignalKPlot.drawputs("name: %s offset: %g  value: %g  visible: %s  " % \
+        pypilotPlot.drawputs("name: %s offset: %g  value: %g  visible: %s  " % \
                  (self.curtrace.name, self.curtrace.offset, val, 'T' if self.curtrace.visible else 'F'))
         glColor3d(1, 1, 1)
         #self.synccolor()
-        SignalKPlot.drawputs("scale: %g  time: %g  " % (self.scale, self.disptime))
+        pypilotPlot.drawputs("scale: %g  time: %g  " % (self.scale, self.disptime))
         
         glColor3dv(self.curtrace.color)
         #self.synccolor()
         
-        SignalKPlot.drawputs("noise: %g" % self.curtrace.noise())
+        pypilotPlot.drawputs("noise: %g" % self.curtrace.noise())
 
     def init(self, value_list):
         glClearColor (0.0, 0.0, 0.0, 0.0)
@@ -313,7 +313,7 @@ class SignalKPlot():
         glTranslated(self.disptime, .5, 0)
 
         glTranslated(0, .5, 0) # center on 0 ??
-        glScaled(1, 2/(self.scale * SignalKPlot.NUM_Y_DIV), 1)
+        glScaled(1, 2/(self.scale * pypilotPlot.NUM_Y_DIV), 1)
 
         glLineWidth(1)
 
@@ -417,11 +417,11 @@ def main():
     if len(sys.argv) < 2:
         usage()
 
-    plot = SignalKPlot()
+    plot = pypilotPlot()
     def on_con(client):
         plot.on_con(client)
 
-    client = SignalKClientFromArgs(sys.argv, True, on_con)
+    client = pypilotClientFromArgs(sys.argv, True, on_con)
     if not client.have_watches:
         usage()
     

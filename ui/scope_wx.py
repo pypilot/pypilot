@@ -9,9 +9,9 @@
 
 import wx, wx.glcanvas, sys, socket, time
 from OpenGL.GL import *
-from signalk.scope_ui import SignalKScopeBase
-from signalk.client import SignalKClient, SignalKClientFromArgs, ConnectionLost
-from signalk.scope import SignalKPlot
+from scope_ui import pypilotScopeBase
+from pypilot.client import pypilotClient, pypilotClientFromArgs, ConnectionLost
+from scope import pypilotPlot
 
 def wxglutkeypress(event, special, key):
     translation = { wx.WXK_UP : GLUT_KEY_UP, wx.WXK_DOWN : GLUT_KEY_DOWN, \
@@ -27,17 +27,17 @@ def wxglutkeypress(event, special, key):
                 k = k.lower()
             key(k, event.GetPosition().x, event.GetPosition().y)
 
-class SignalKScope(SignalKScopeBase):
+class pypilotScope(pypilotScopeBase):
     def __init__(self):
-        super(SignalKScope, self).__init__(None)
+        super(pypilotScope, self).__init__(None)
 
-        self.plot = SignalKPlot()
+        self.plot = pypilotPlot()
         self.glContext =  wx.glcanvas.GLContext(self.glArea)
 
         def on_con(client):
             self.plot.on_con(client)
 
-        self.client = SignalKClientFromArgs(sys.argv[:2], True, on_con)
+        self.client = pypilotClientFromArgs(sys.argv[:2], True, on_con)
         self.host_port = self.client.host_port
         self.client.autoreconnect = False
         self.value_list = self.client.list_values()
@@ -80,7 +80,7 @@ class SignalKScope(SignalKScopeBase):
         if not self.client:
             try:
                 host, port = self.host_port
-                self.client = SignalKClient(self.on_con, host, port, autoreconnect=False)
+                self.client = pypilotClient(self.on_con, host, port, autoreconnect=False)
                 self.timer.Start(100)
             except socket.error:
                 self.timer.Start(1000)
@@ -205,7 +205,7 @@ from OpenGL.GLUT import *
 def main():
     glutInit(sys.argv)
     app = wx.App()
-    SignalKScope().Show()
+    pypilotScope().Show()
     app.MainLoop()
 
 if __name__ == '__main__':

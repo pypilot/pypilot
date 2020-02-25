@@ -16,9 +16,9 @@ except:
     from ui import calibration_plot, boatplot, autopilot_control_ui
 
 import pypilot.quaternion
-import signalk.scope_wx
-from signalk.client import SignalKClient, ConnectionLost
-from signalk.client_wx import round3
+import scope_wx
+from pypilot.client import pypilotClient, ConnectionLost
+from client_wx import round3
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -55,7 +55,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=self.ID_MESSAGES)
 
         self.heading_offset_timer = wx.Timer(self, self.ID_HEADING_OFFSET)
-        self.Bind(wx.EVT_TIMER, lambda e : self.sHeadingOffset.SetValue(round3(self.signalk_heading_offset)), id = self.ID_HEADING_OFFSET)
+        self.Bind(wx.EVT_TIMER, lambda e : self.sHeadingOffset.SetValue(round3(self.pypilot_heading_offset)), id = self.ID_HEADING_OFFSET)
 
         self.have_rudder = False
 
@@ -144,7 +144,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def receive_messages(self, event):
         if not self.client:
             try:
-                self.client = SignalKClient(self.on_con, self.host, autoreconnect=False)
+                self.client = pypilotClient(self.on_con, self.host, autoreconnect=False)
             except socket.error:
                 self.timer.Start(5000)
                 return
@@ -213,7 +213,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             elif name == 'imu.heading':
                 self.stHeading.SetLabel(str(round3(value)))
             elif name == 'imu.heading_offset':
-                self.signalk_heading_offset = value
+                self.pypilot_heading_offset = value
                 self.heading_offset_timer.Start(1000, True)
 
         elif self.m_notebook.GetSelection() == 1:
@@ -277,7 +277,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.onKeyPress(event, self.compass_calibration_plot)
         
     def onKeyPress( self, event, plot ):
-        signalk.scope_wx.wxglutkeypress(event, plot.special, plot.key)
+        scope_wx.wxglutkeypress(event, plot.special, plot.key)
 
     def onClearAccel( self, event ):
         self.accel_calibration_plot.points = []
@@ -402,7 +402,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onIMUScope( self, event ):
         host, port = self.client.host_port
-        args = ['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/scope_wx.py', host + ':' + str(port),
+        args = ['python', os.path.abspath(os.path.dirname(__file__)) + 'scope_wx.py', host + ':' + str(port),
                 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading']
         subprocess.Popen(args)
 

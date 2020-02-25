@@ -7,7 +7,7 @@
 
 from __future__ import print_function
 import time, sys, json, os
-from signalk.client import SignalKClient
+from pypilot.client import pypilotClient
 from servo import *
 
 import threading
@@ -464,7 +464,7 @@ if __name__ == '__main__':
     import serialprobe
     print('Servo Server')
     printconsole = True
-    server = SignalKServer()
+    server = pypilotServer()
     serial_probe = serialprobe.SerialProbe()
     servo = Servo(server, serial_probe)
     servo.servo_calibration.run = True

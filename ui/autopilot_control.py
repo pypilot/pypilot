@@ -10,7 +10,7 @@
 from __future__ import print_function
 import wx, sys, subprocess, socket, os, time
 from ui import autopilot_control_ui
-from signalk.client import *
+from pypilot.client import *
 
 class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     ID_MESSAGES = 1000
@@ -146,7 +146,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         if not self.client:
             self.stStatus.SetLabel('No Connection')
             try:
-                self.client = SignalKClient(self.on_con, self.host, autoreconnect=False)
+                self.client = pypilotClient(self.on_con, self.host, autoreconnect=False)
                 self.timer.Start(100)
                 self.lastmsgtime = time.time()
 
@@ -381,10 +381,10 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.client.set('servo.position_command', 0)
 
     def onScope( self, event ):
-        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/scope_wx.py'] + sys.argv[1:])
+        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + 'scope_wx.py'] + sys.argv[1:])
 	
     def onClient( self, event ):
-        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/client_wx.py'] + sys.argv[1:])
+        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + 'client_wx.py'] + sys.argv[1:])
 	
     def onCalibration( self, event ):
         subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/autopilot_calibration.py'] + sys.argv[1:])

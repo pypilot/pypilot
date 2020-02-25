@@ -8,12 +8,12 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-from signalk.server import *
-from signalk.values import *
+from pypilot.server import *
+from pypilot.values import *
 from pypilot.resolv import resolv
 
 # favor lower priority sources
-source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'signalk' : 4, 'none' : 5}
+source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'tcp-pypilot' : 4, 'none' : 5}
 
 class Sensor(object):
     def __init__(self, server, name):
@@ -165,7 +165,7 @@ class Sensors(object):
 if __name__ == '__main__':
     if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
       print('warning, failed to make sensor process realtime')
-    server = SignalKServer()
+    server = pypilotServer()
     sensors = Sensors(server)
 
     while True:

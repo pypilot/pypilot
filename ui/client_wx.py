@@ -9,7 +9,7 @@
 
 from __future__ import print_function
 import wx, sys, math, subprocess, os, socket
-from signalk.client import SignalKClient, SignalKClientFromArgs, ConnectionLost
+from pypilot.client import pypilotClient, pypilotClientFromArgs, ConnectionLost
 
 def round3(value):
     if type(value) == type([]):
@@ -25,10 +25,10 @@ def round3(value):
 
 class MainFrame(wx.Frame):
     def __init__(self):
-        wx.Frame.__init__(self, None, title="signalk client", size=(1000, 600))
+        wx.Frame.__init__(self, None, title="pypilot client", size=(1000, 600))
 
         self.value_list = []
-        self.client = SignalKClientFromArgs(sys.argv, True, self.on_con)
+        self.client = pypilotClientFromArgs(sys.argv, True, self.on_con)
         self.host_port = self.client.host_port
         self.client.autoreconnect = False
 
@@ -170,7 +170,7 @@ class MainFrame(wx.Frame):
             self.client.get(name)
 
     def on_con(self, client):
-        self.SetTitle("signalk client - Connected")
+        self.SetTitle("pypilot client - Connected")
         for name in sorted(self.value_list):
             t = self.value_list[name]['type']
             if t != 'SensorValue':
@@ -182,7 +182,7 @@ class MainFrame(wx.Frame):
         if not self.client:
             try:
                 host, port = self.host_port
-                self.client = SignalKClient(self.on_con, host, port, autoreconnect=False)
+                self.client = pypilotClient(self.on_con, host, port, autoreconnect=False)
                 self.timer.Start(100)
             except socket.error:
                 self.timer.Start(1000)
@@ -193,7 +193,7 @@ class MainFrame(wx.Frame):
             try:
                 result = self.client.receive()
             except ConnectionLost:
-                self.SetTitle("signalk client - Disconnected")
+                self.SetTitle("pypilot client - Disconnected")
                 self.client = False
                 return
             except:

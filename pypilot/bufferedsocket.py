@@ -11,7 +11,7 @@ from __future__ import print_function
 import time, select
 
 try:
-  from signalk.linebuffer import linebuffer
+  from pypilot.linebuffer import linebuffer
   #class LineBufferedNonBlockingSocket(linebuffer.LineBuffer):
   class LineBufferedNonBlockingSocket(object):
     def __init__(self, connection):
@@ -37,7 +37,7 @@ try:
     def send(self, data):
         self.out_buffer += data
         if len(self.out_buffer) > 65536:
-            print('overflow in signalk socket')
+            print('overflow in pypilot socket')
             self.socket.close()
     
     def flush(self):
@@ -46,7 +46,7 @@ try:
         try:
             if not self.pollout.poll(0):
                 if self.sendfail_cnt >= self.sendfail_msg:
-                    print('signalk socket failed to send', self.sendfail_cnt)
+                    print('pypilot socket failed to send', self.sendfail_cnt)
                     self.sendfail_msg *= 10
                 self.sendfail_cnt += 1
 
@@ -64,7 +64,7 @@ try:
                 self.socket.close()
             self.out_buffer = self.out_buffer[count:]
         except Exception as e:
-            print('signalk socket exception', e)
+            print('pypilot socket exception', e)
             self.socket.close()
 except Exception as e:
   print('falling back to python nonblocking socket', e)

@@ -9,7 +9,7 @@
 
 from __future__ import print_function
 import math
-from signalk.values import *
+from pypilot.values import *
 from sensors import Sensor
 
 class Rudder(Sensor):

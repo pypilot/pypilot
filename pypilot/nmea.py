@@ -26,10 +26,9 @@ DEFAULT_PORT = 20220
 import sys, select, time, socket
 import multiprocessing
 import serial
-from signalk.client import SignalKClient
-from signalk.server import SignalKServer
-from signalk.values import *
-from signalk.pipeserver import NonBlockingPipe
+from pypilot.client import pypilotClient
+from pypilot.values import *
+from pypilot.pipeserver import NonBlockingPipe
 from sensors import source_priority
 import serialprobe
 
@@ -194,7 +193,7 @@ class LineBufferedSerialDevice(object):
             self.in_buffer = lines.pop()
             self.in_lines += lines
 
-from signalk.linebuffer import linebuffer
+from pypilot.linebuffer import linebuffer
 class NMEASerialDevice(object):
     def __init__(self, path):
         self.device = serial.Serial(*path)
@@ -587,10 +586,10 @@ class NmeaBridgeProcess(multiprocessing.Process):
         while True:
             time.sleep(2)
             try:
-                self.client = SignalKClient(on_con, 'localhost', autoreconnect=True)
+                self.client = pypilotClient(on_con, 'localhost', autoreconnect=True)
                 break
             except Exception as e:
-                print('nmea process failed to connect signalk', e)
+                print('nmea process failed to connect pypilot', e)
 
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setblocking(0)
@@ -665,11 +664,11 @@ class NmeaBridgeProcess(multiprocessing.Process):
                     msgs = {}
             t3 = time.time()
 
-            # receive signalk messages
+            # receive pypilot messages
             try:
-                signalk_msgs = self.client.receive()
-                for name in signalk_msgs:
-                    value = signalk_msgs[name]['value']
+                pypilot_msgs = self.client.receive()
+                for name in pypilot_msgs:
+                    value = pypilot_msgs[name]['value']
                     self.last_values[name] = value
             except Exception as e:
                 print('nmea exception receiving:', e)

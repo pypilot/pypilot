@@ -15,7 +15,7 @@ $(document).ready(function() {
     var port = location.port;
     port = web_port;
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + port + namespace);
-    //socket.emit('signalk', JSON.stringify({'name': name, 'method': 'get'}));
+    //socket.emit('pypilot', JSON.stringify({'name': name, 'method': 'get'}));
     // Event handler for new connections.
     socket.on('connect', function(msg) {
         $('#connection').text('connected')

@@ -11,8 +11,8 @@ from __future__ import print_function
 import os, math, sys
 import time, json
 
-from signalk.server import SignalKServer
-from signalk.values import *
+from pypilot.server import pypilotServer
+from pypilot.values import *
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import autopilot
 import select
@@ -156,7 +156,7 @@ class ServoFlags(Value):
         self.update((self.value | ServoFlags.STARBOARD_FAULT) \
                     & ~ServoFlags.PORT_FAULT)
         
-    def get_signalk(self):
+    def get_pypilot(self):
         return '{"' + self.name + '": {"value": "' + self.strvalue() + '"}}'
 
 class ServoTelemetry(object):
@@ -710,7 +710,7 @@ def main():
             test(sys.argv[i+1], int(sys.argv[i+2]))
     
     print('Servo Server')
-    server = SignalKServer()
+    server = pypilotServer()
 
     from sensors import Sensors
     sensors = Sensors(server)

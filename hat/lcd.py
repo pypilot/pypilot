@@ -65,21 +65,21 @@ class LCDMenu():
             self.display_hook()
 
 class RangeEdit():
-    def __init__(self, name, desc, id, signalk, lcd, minval, maxval, step):
+    def __init__(self, name, desc, id, pypilot, lcd, minval, maxval, step):
         self.name = name
         if type(desc) == type('') or type(desc) == type(u''):
             self.desc = lambda : desc
         else:
             self.desc = desc
         self.id = id
-        self.signalk = signalk
+        self.pypilot = pypilot
         self.range = minval, maxval, step
         self.lcd = lcd
-        self.value = lcd.last_val(id) if signalk else lcd.config[id]
+        self.value = lcd.last_val(id) if pypilot else lcd.config[id]
         self.lastmovetime = 0
      
     def move(self, delta):
-        if self.signalk: #config items rounded to integer
+        if self.pypilot: #config items rounded to integer
             v = self.value + delta*self.range[2]
         else:
             if delta > 0:
@@ -92,7 +92,7 @@ class RangeEdit():
         v = min(v, self.range[1])
         v = max(v, self.range[0])
         self.value = v
-        if self.signalk:
+        if self.pypilot:
             self.lcd.set(self.id, v)
         else:
             self.lcd.config[self.id] = v
@@ -105,7 +105,7 @@ class RangeEdit():
 
         # update name
         if time.time()-self.lastmovetime > 1:
-            if self.signalk:
+            if self.pypilot:
                 self.value = self.lcd.last_val(self.id)
         
         v = self.value
@@ -128,7 +128,7 @@ class RangeEdit():
             pass
 
         # poll for updates
-        if self.signalk:
+        if self.pypilot:
             self.lcd.get(self.id)
 
 white = ugfx.color(255, 255, 255)
@@ -271,13 +271,13 @@ class LCD():
         self.hat.write_config
             
     def create_mainmenu(self):
-        def value_edit(name, desc, signalk_name, value=False):
-            min = self.hat.value_list[signalk_name]['min']
-            max = self.hat.value_list[signalk_name]['max']
+        def value_edit(name, desc, pypilot_name, value=False):
+            min = self.hat.value_list[pypilot_name]['min']
+            max = self.hat.value_list[pypilot_name]['max']
             step = (max-min)/100.0
 
             def thunk():
-                self.range_edit = RangeEdit(name, desc, signalk_name,
+                self.range_edit = RangeEdit(name, desc, pypilot_name,
                                             True, self, min, max, step)
                 return self.range_edit.display
 
@@ -288,14 +288,14 @@ class LCD():
                         return 0
                     return ret
 
-                return name, thunk, lambda : (last_val_num(signalk_name)-min) / (max - min), signalk_name
+                return name, thunk, lambda : (last_val_num(pypilot_name)-min) / (max - min), pypilot_name
             return name, thunk
 
-        def value_check(name, signalk_name):
+        def value_check(name, pypilot_name):
             def thunk():
-                self.set(signalk_name, not self.last_val(signalk_name))
+                self.set(pypilot_name, not self.last_val(pypilot_name))
                 return self.display_menu
-            return name, thunk, lambda : self.last_val(signalk_name), signalk_name
+            return name, thunk, lambda : self.last_val(pypilot_name), pypilot_name
 
         def config_edit(name, desc, config_name, min, max, step):
             def thunk():
@@ -1099,7 +1099,7 @@ class LCD():
         elif self.range_edit and self.display_page == self.range_edit.display:
             if testkeydown(MENU):
                 self.display_page = self.display_menu
-                if not self.range_edit.signalk:
+                if not self.range_edit.pypilot:
                     self.write_config()
             elif updown:
                 sign = -1 if down or not right else 1

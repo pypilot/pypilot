@@ -8,11 +8,9 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-import multiprocessing, time, socket
-from signalk.pipeserver import NonBlockingPipe
-import select
-
-from signalk.values import *
+import multiprocessing, time, socket, select
+from pipeserver import NonBlockingPipe
+from values import *
 import serialprobe
 from sensors import Sensor
 
