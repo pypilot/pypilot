@@ -8,10 +8,10 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
+
 import socket, select, sys, os, time
 from signalk import kjson
-from signalk.values import *
-from signalk.bufferedsocket import LineBufferedNonBlockingSocket
+from bufferedsocket import LineBufferedNonBlockingSocket
 
 DEFAULT_PORT = 21311
 
@@ -20,21 +20,35 @@ try:
 except:
     pass
 
+try:
+    IOError
+except:
+    class IOError(Exception):
+        pass
+
+try:
+    ourPOLLNVAL = select.POLLNVAL
+except:
+    print('select.POLLNVAL not defined, using 32')
+    ourPOLLNVAL = 32
+    
 class ConnectionLost(Exception):
     pass
-
-#POLLRDHUP = 0x2000
 
 class SignalKClient(object):
     def __init__(self, f_on_connected, host=False, port=False, autoreconnect=False, have_watches=False):
         self.autoreconnect = autoreconnect
 
         config = {}
-        configfilepath = os.getenv('HOME') + '/.pypilot/'
-        if not os.path.exists(configfilepath):
-            os.makedirs(configfilepath)
-        if not os.path.isdir(configfilepath):
-            raise configfilepath + 'should be a directory'
+        try:
+            configfilepath = os.getenv('HOME') + '/.pypilot/'
+            if not os.path.exists(configfilepath):
+                os.makedirs(configfilepath)
+            if not os.path.isdir(configfilepath):
+                raise configfilepath + 'should be a directory'
+        except Exception as e:
+            print('os not supported')
+            configfilepath = '/.pypilot/'
         self.configfilename = configfilepath + 'signalk.conf'
         self.write_config = False
 
@@ -78,7 +92,10 @@ class SignalKClient(object):
                 else:
                     port = DEFAULT_PORT
             try:
-                connection = socket.create_connection((host, port), 1)
+                #connection = socket.create_connection((host, port), 1)
+                connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                connection.settimeout(1)
+                connection.connect((host, port))
             except:
                 print('connect failed to %s:%d' % (host, port))
                 raise
@@ -104,22 +121,24 @@ class SignalKClient(object):
         self.values = []
         self.msg_queue = []
         self.poller = select.poll()
-        if self.socket:
-            fd = self.socket.socket.fileno()
-        else:
-            fd = self.serial.fileno()
-        self.poller.register(fd, select.POLLIN)
-        self.f_on_connected(self)
+        #if self.socket:
+        #    fd = self.socket.socket.fileno()
+        #else:
+        #    fd = self.serial.fileno()
+        #self.poller.register(fd, select.POLLIN)
+        self.poller.register(self.socket.socket, select.POLLIN)
 
+        
+        self.f_on_connected(self)
 
     def poll(self, timeout = 0):        
         t0 = time.time()
         self.socket.flush()
-        events = self.poller.poll(1000.0 * timeout)
+        events = self.poller.poll(int(1000 * timeout))
         if events != []:
             event = events.pop()
             fd, flag = event
-            if flag & (select.POLLERR | select.POLLNVAL):
+            if flag & (select.POLLERR | ourPOLLNVAL):
                 raise ConnectionLost
             if flag & select.POLLIN:
                 if self.socket and not self.socket.recv():
@@ -147,6 +166,7 @@ class SignalKClient(object):
             if not self.poll(timeout):
                 return False
         except Exception as e:
+            print('exception', e)
             self.disconnected()
         dt = time.time()-t
         return self.receive_line(timeout - dt)

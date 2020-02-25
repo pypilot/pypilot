@@ -9,10 +9,11 @@
 
 from __future__ import print_function
 import time, select
-from signalk.linebuffer import linebuffer
 
-#class LineBufferedNonBlockingSocket(linebuffer.LineBuffer):
-class LineBufferedNonBlockingSocket(object):
+try:
+  from signalk.linebuffer import linebuffer
+  #class LineBufferedNonBlockingSocket(linebuffer.LineBuffer):
+  class LineBufferedNonBlockingSocket(object):
     def __init__(self, connection):
         connection.setblocking(0)
         #//fcntl.fcntl(connection.fileno(), fcntl.F_SETFD, os.O_NONBLOCK)
@@ -65,8 +66,9 @@ class LineBufferedNonBlockingSocket(object):
         except Exception as e:
             print('signalk socket exception', e)
             self.socket.close()
-
-class LineBufferedNonBlockingSocketPython(object):
+except Exception as e:
+  print('falling back to python nonblocking socket', e)
+  class LineBufferedNonBlockingSocket(object):
     def __init__(self, connection):
         connection.setblocking(0)
         self.socket = connection

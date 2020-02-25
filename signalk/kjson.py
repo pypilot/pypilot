@@ -10,7 +10,7 @@
 try:
     import ujson
     loads, dumps = ujson.loads, ujson.dumps
-except:
-    print('WARNING: python ujson library failed, parsing will consume more cpu')
-    import json
+except Exception as e:
+    print('WARNING: python ujson library failed, parsing will consume more cpu', e)
+    import json as kjson
     loads, dumps = json.loads, json.dumps
