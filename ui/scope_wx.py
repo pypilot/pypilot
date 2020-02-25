@@ -9,8 +9,10 @@
 
 import wx, wx.glcanvas, sys, socket, time
 from OpenGL.GL import *
-from scope_ui import pypilotScopeBase
 from pypilot.client import pypilotClient, pypilotClientFromArgs, ConnectionLost
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from scope_ui import pypilotScopeBase
 from scope import pypilotPlot
 
 def wxglutkeypress(event, special, key):

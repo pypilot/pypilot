@@ -21,7 +21,7 @@ from OpenGL.GL import *
 point_count=200
 recent_point_count=20
 
-from ui.shape import *
+from shape import *
 
 def TranslateAfter(x, y, z):
     m = glGetFloatv(GL_MODELVIEW_MATRIX)

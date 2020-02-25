@@ -58,11 +58,20 @@ for walk in os.walk('hat/locale'):
 
 from pypilot import version
 
-find_packages = False
+packages = ['pypilot', 'pypilot/pilots', 'pypilot/arduino_servo', 'ui', 'pypilot/hat', 'web', 'pypilot/linebuffer', 'hat/ugfx']
 try:
     from setuptools import find_packages
+    packages = find_packages()
 except:
     pass
+
+# ensure all packages are under pypilot
+package_dirs = {}
+for package in list(packages):
+    if not package.startswith('pypilot'):
+        packages.remove(package)
+        packages.append('pypilot.'+package)
+        package_dirs['pypilot.'+package] = package.replace('.', '/')
 
 setup (name = 'pypilot',
        version = version.strversion,
@@ -70,24 +79,24 @@ setup (name = 'pypilot',
        license = 'GPLv3',
        author="Sean D'Epagnier",
        url='http://pypilot.org/',
-       packages=find_packages() if find_packages else ['pypilot', 'pypilot/pilots', 'pypilot/arduino_servo', 'ui', 'hat', 'web', 'pypilot/linebuffer', 'hat/ugfx'],
+       packages=packages,
+       package_dir=package_dirs,
        ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module],
-#       py_modules = ['pypilot/arduino_servo', 'pypilot/linebuffer/linebuffer'],
-       package_data={'hat': ['font.ttf', 'static/*', 'templates/*'] + locale_files,
-                     'ui': ['*.png', '*.mtl', '*.obj'],
-                     'web': ['static/*', 'templates/*']},
+       package_data={'pypilot.hat': ['font.ttf', 'static/*', 'templates/*'] + locale_files,
+                     'pypilot.ui': ['*.png', '*.mtl', '*.obj'],
+                     'pypilot.web': ['static/*', 'templates/*']},
        entry_points={
            'console_scripts': [
                'pypilot=pypilot.autopilot:main',
                'pypilot_boatimu=pypilot.boatimu:main',
                'pypilot_servo=pypilot.servo:main',
-               'pypilot_web=web.web:main',
-               'pypilot_hat=hat.hat:main',
-               'pypilot_control=ui.autopilot_control:main',
-               'pypilot_calibration=ui.autopilot_calibration:main',
+               'pypilot_web=pypilot.web.web:main',
+               'pypilot_hat=pypilot.hat.hat:main',
+               'pypilot_control=pypilot.ui.autopilot_control:main',
+               'pypilot_calibration=pypilot.ui.autopilot_calibration:main',
                'pypilot_client=pypilot.client:main',
-               'pypilot_scope=ui.scope_wx:main',
-               'pypilot_client_wx=ui.client_wx:main'
+               'pypilot_scope=pypilot.ui.scope_wx:main',
+               'pypilot_client_wx=pypilot.ui.client_wx:main'
                ]
         }
        )

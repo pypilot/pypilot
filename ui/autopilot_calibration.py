@@ -10,11 +10,8 @@
 from __future__ import print_function
 import tempfile, time, math, sys, subprocess, json, socket, os
 import wx, wx.glcanvas
-try:
-    import calibration_plot, boatplot, autopilot_control_ui
-except:
-    from ui import calibration_plot, boatplot, autopilot_control_ui
-
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import calibration_plot, boatplot, autopilot_control_ui
 import pypilot.quaternion
 import scope_wx
 from pypilot.client import pypilotClient, ConnectionLost

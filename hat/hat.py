@@ -11,6 +11,8 @@ from __future__ import print_function
 import time, os, sys
 import json
 from pypilot.client import pypilotClient
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import lcd, gpio, arduino, lirc, buzzer
 
 class Action(object):
