@@ -10,7 +10,7 @@
 # autopilot base handles reading from the imu (boatimu)
 
 from __future__ import print_function
-import sys, getopt, os
+import sys, os
 import math
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
