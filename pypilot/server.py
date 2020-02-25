@@ -9,7 +9,7 @@
 
 from __future__ import print_function
 import select, socket, time, numbers
-from pypilot import kjson
+from pypilot import json
 import fcntl, os
 from pypilot.values import *
 from pypilot.bufferedsocket import LineBufferedNonBlockingSocket
@@ -21,7 +21,7 @@ default_persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
 def LoadPersistentData(persistent_path, server=True):
     try:
         file = open(persistent_path)
-        persistent_data = kjson.loads(file.read())
+        persistent_data = json.loads(file.read())
         file.close()
     except Exception as e:
         print('failed to load', persistent_path, e)
@@ -35,7 +35,7 @@ def LoadPersistentData(persistent_path, server=True):
 
         try:
             file = open(persistent_path + '.bak')
-            persistent_data = kjson.loads(file.read())
+            persistent_data = json.loads(file.read())
             file.close()
             return persistent_data
         except Exception as e:
@@ -45,7 +45,7 @@ def LoadPersistentData(persistent_path, server=True):
     if server:
         # backup persistent_data if it loaded with success
         file = open(persistent_path + '.bak', 'w')
-        file.write(kjson.dumps(persistent_data)+'\n')
+        file.write(json.dumps(persistent_data)+'\n')
         file.close()
     return persistent_data
     
@@ -86,7 +86,7 @@ class pypilotServer(object):
                 
         try:
             file = open(self.persistent_path, 'w')
-            file.write(kjson.dumps(self.persistent_data).replace(',', ',\n')+'\n')
+            file.write(json.dumps(self.persistent_data).replace(',', ',\n')+'\n')
             file.close()
         except Exception as e:
             print('failed to write', self.persistent_path, e)
@@ -111,7 +111,7 @@ class pypilotServer(object):
             if type(t) == type(''):
                 t = {'type' : t}
             msg[value] = t
-        socket.send(kjson.dumps(msg) + '\n')
+        socket.send(json.dumps(msg) + '\n')
 
     def HandleNamedRequest(self, socket, data):
         method = data['method']
@@ -136,7 +136,7 @@ class pypilotServer(object):
             socket.send('invalid method: ' + method + ' for ' + name + '\n')
         
     def HandleRequest(self, socket, request):
-        data = kjson.loads(request)
+        data = json.loads(request)
         if data['method'] == 'list':
             self.ListValues(socket)
         else:

@@ -10,7 +10,7 @@
 from __future__ import print_function
 
 import socket, select, sys, os, time
-from pypilot import kjson
+from pypilot import json
 from pypilot.bufferedsocket import LineBufferedNonBlockingSocket
 
 DEFAULT_PORT = 21311
@@ -54,7 +54,7 @@ class pypilotClient(object):
 
         try:
             file = open(self.configfilename)
-            config = kjson.loads(file.readline())
+            config = json.loads(file.readline())
             file.close()
                 
         except Exception as e:
@@ -109,7 +109,7 @@ class pypilotClient(object):
         if self.write_config:
             try:
                 file = open(self.configfilename, 'w')
-                file.write(kjson.dumps(self.write_config) + '\n')
+                file.write(json.dumps(self.write_config) + '\n')
                 file.close()
                 self.write_config = False
             except IOError:
@@ -147,13 +147,13 @@ class pypilotClient(object):
         return False
 
     def send(self, request):
-        self.socket.send(kjson.dumps(request)+'\n')
+        self.socket.send(json.dumps(request)+'\n')
 
     def receive_line(self, timeout = 0):
         line = self.socket.readline()
         if line:
             try:
-                msg = kjson.loads(line.rstrip())
+                msg = json.loads(line.rstrip())
             except:
                 raise Exception('invalid message from server:', line)
             return msg
@@ -388,12 +388,12 @@ def main():
             # split on separate lines if not continuous
             name, value = msg
             if info:
-                print(kjson.dumps({name: value}))
+                print(json.dumps({name: value}))
             else:
                 print(name, '=', nice_str(value['value']))
             return
         if info:
-            print(kjson.dumps(msg))
+            print(json.dumps(msg))
         else:
             first = True
             name, value = msg
