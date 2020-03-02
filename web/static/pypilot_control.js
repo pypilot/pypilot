@@ -250,15 +250,13 @@ $(document).ready(function() {
     var heading_command = 0;
     var heading_set_time = new Date().getTime();
     var heading_local_command;
-    var last_data = {}
+    var last_rudder_data = {}
     socket.on('pypilot', function(msg) {
         if(block_polling > 0) {
             return;
         }
 
         data = JSON.parse(msg);
-        for(var name in data)
-            last_data[name] = data[name]['value'];
 
         if('ap.heading' in data) {
             heading = data['ap.heading']['value'];
@@ -337,20 +335,23 @@ $(document).ready(function() {
             $('#imu_heading_offset').val(data['imu.heading_offset']['value']);
         if('imu.compass_calibration_locked' in data)
             $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']['value']);
+        var rudder_dict = {'rudder.offset': 'Offset',
+                           'rudder.scale': 'Scale',
+                           'rudder.nonlinearity': 'Non Linearity'};
         if('rudder.angle' in data) {
             $('#rudder').text(data['rudder.angle']['value']);
             $('#rudder').append('<p>')
-            var dict = {'rudder.offset': 'Offset',
-                        'rudder.scale': 'Scale',
-                        'rudder.nonlinearity': 'Non Linearity'};
-            for(var d in dict)
-                if(d in last_data)
-                    $('#rudder').append(' ' + dict[d] + ' ' + Math.round(100*last_data[d])/100);
+            for(var name in rudder_dict)
+                if(name in last_rudder_data)
+                    $('#rudder').append(' ' + rudder_dict[name] + ' ' + Math.round(100*last_rudder_data[name])/100);
         }
+
+        for(var name in rudder_dict)
+            if(name in data)
+                last_rudder_data[name] = data[name]['value'];
 
         if('rudder.range' in data)
             $('#rudder_range').val(data['rudder.range']['value']);
-            
 
         // configuration
         for(i=0; i < conf_names.length; i++) {
