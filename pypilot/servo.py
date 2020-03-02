@@ -8,8 +8,8 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-import os, math, sys
-import time, json
+import os, math, sys, time
+from pypilot import pyjson
 
 from pypilot.server import pypilotServer
 from pypilot.values import *
@@ -679,14 +679,14 @@ class Servo(object):
             filename = Servo.calibration_filename
             print('loading servo calibration', filename)
             file = open(filename)
-            self.calibration.set(json.loads(file.readline()))
+            self.calibration.set(pyjson.loads(file.readline()))
         except:
             print('WARNING: using default servo calibration!!')
             self.calibration.set(False)
 
     def save_calibration(self):
         file = open(Servo.calibration_filename, 'w')
-        file.write(json.dumps(self.calibration))
+        file.write(pyjson.dumps(self.calibration))
 
 def test(device_path, baud):
     from arduino_servo.arduino_servo import ArduinoServo

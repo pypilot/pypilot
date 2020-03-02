@@ -589,7 +589,7 @@ def CalibrationProcess(cal_pipe):
             client = pypilotClient(on_con, 'localhost', autoreconnect=True)
             break
         except Exception as e:
-            print('nmea process failed to connect pypilot', e)
+            print('calibration process failed to connect pypilot', e)
 
     def debug(name):
         def debug_by_name(*args):

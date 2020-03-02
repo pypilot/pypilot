@@ -7,7 +7,7 @@
 
 from __future__ import print_function
 import sys, os, time
-import json
+from pypilot import pyjson
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 
@@ -164,7 +164,7 @@ def lastworkingdevice(name):
     filename = pypilot_dir + name + 'device'
     try:
         file = open(filename, 'r')
-        lastdevice = json.loads(file.readline().rstrip())
+        lastdevice = pyjson.loads(file.readline().rstrip())
         file.close()
 
         # ensure lastdevice defines path and baud here
@@ -303,7 +303,7 @@ def success(name, device):
     print('serialprobe success:', filename, device)
     try:
         file = open(filename, 'w')
-        file.write(json.dumps(device) + '\n')
+        file.write(pyjson.dumps(device) + '\n')
         file.close()
 
     except:

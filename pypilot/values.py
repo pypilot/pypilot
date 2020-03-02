@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os, time, math
-from pypilot import json
+from pypilot import pyjson
 
 class Value(object):
     def __init__(self, name, initial, **kwargs):
@@ -49,7 +49,7 @@ class JSONValue(Value):
       super(JSONValue, self).__init__(name, initial, **kwargs)
 
     def get_pypilot(self):
-        return '{"' + self.name + '": {"value": ' + json.dumps(self.value) + '}}'
+        return '{"' + self.name + '": {"value": ' + pyjson.dumps(self.value) + '}}'
 
 
 def round_value(value, fmt):

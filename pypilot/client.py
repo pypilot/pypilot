@@ -10,7 +10,7 @@
 from __future__ import print_function
 
 import socket, select, sys, os, time
-from pypilot import json
+from pypilot import pyjson
 from pypilot.bufferedsocket import LineBufferedNonBlockingSocket
 
 DEFAULT_PORT = 21311
@@ -54,7 +54,7 @@ class pypilotClient(object):
 
         try:
             file = open(self.configfilename)
-            config = json.loads(file.readline())
+            config = pyjson.loads(file.readline())
             file.close()
                 
         except Exception as e:
@@ -94,7 +94,8 @@ class pypilotClient(object):
             try:
                 #connection = socket.create_connection((host, port), 1)
                 connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                connection.settimeout(1)
+                connection.settimeout(10)
+                print('connect', host, port)
                 connection.connect((host, port))
             except:
                 print('connect failed to %s:%d' % (host, port))
@@ -109,7 +110,7 @@ class pypilotClient(object):
         if self.write_config:
             try:
                 file = open(self.configfilename, 'w')
-                file.write(json.dumps(self.write_config) + '\n')
+                file.write(pyjson.dumps(self.write_config) + '\n')
                 file.close()
                 self.write_config = False
             except IOError:
@@ -147,13 +148,13 @@ class pypilotClient(object):
         return False
 
     def send(self, request):
-        self.socket.send(json.dumps(request)+'\n')
+        self.socket.send(pyjson.dumps(request)+'\n')
 
     def receive_line(self, timeout = 0):
         line = self.socket.readline()
         if line:
             try:
-                msg = json.loads(line.rstrip())
+                msg = pyjson.loads(line.rstrip())
             except:
                 raise Exception('invalid message from server:', line)
             return msg
@@ -235,7 +236,7 @@ class pypilotClient(object):
         return False
 
     def get(self, name):
-        request = {'method' : 'get', 'name' : name}
+        request = {'method': 'get', 'name' : name}
         self.send(request)
 
     def set(self, name, value):
@@ -388,12 +389,12 @@ def main():
             # split on separate lines if not continuous
             name, value = msg
             if info:
-                print(json.dumps({name: value}))
+                print(pyjson.dumps({name: value}))
             else:
                 print(name, '=', nice_str(value['value']))
             return
         if info:
-            print(json.dumps(msg))
+            print(pyjson.dumps(msg))
         else:
             first = True
             name, value = msg

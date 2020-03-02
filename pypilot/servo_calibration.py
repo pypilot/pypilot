@@ -6,7 +6,8 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-import time, sys, json, os
+import time, sys, os
+import json
 from pypilot.client import pypilotClient
 from servo import *
 
