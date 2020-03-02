@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os, sys, time, math, json
+import struct, lzma
 from pypilot.client import pypilotClient
 
 class stopwatch(object):
@@ -39,6 +40,18 @@ class History(object):
   def put(self, data):
     self.data = (self.data+[data])[:self.samples()]
 
+class records(object):
+    def __init__(self):
+        self.d = {}
+
+    def id(self, name, record_file):
+        if not name in self.d:
+            i = len(self.d)
+            hdr = struct.pack('hhh', 0, i, len(name))
+            record_file.write(str(hdr) + name)
+            self.d[name] = i
+        return self.d[name]
+    
 def inputs(history, names):
     def select(values, names):
       data = []
@@ -92,6 +105,7 @@ class Intellect(object):
         self.lasttimestamp = 0
         self.firsttimestamp = False
         self.record_file = False
+        self.records = records()
         self.playback_file = False
 
         self.loading = stopwatch()
@@ -233,21 +247,43 @@ class Intellect(object):
             self.client = pypilotClient(on_con, self.host, autoreconnect=False)
         msg = self.client.receive_single(1)
         while msg:
+            name, data = msg
+            value = data['value']
             if self.record_file:
-                d = {msg[0]: msg[1]['value']}
-                self.record_file.write(json.dumps(d)+'\n')
-                self.record_file.lines += 1
-                if self.record_file.lines%100 == 0:
-                    sys.stdout.write('recording ' + str(self.record_file.lines) + '\r')
-                    sys.stdout.flush()
+                self.record_data(name, value)
             else:
-                name, data = msg
-                value = data['value']
                 self.receive_single(name, value)
             msg = self.client.receive_single(-1)
 
+    def record_data(self, name, value):
+        self.record_file.write(json.dumps({name: value}))
+        self.record_file.write('\n')
+        return
+
+        i = self.records.id(value, self.record_file)
+        data = struct.pack('h', i)
+        if type(value) == type(''):
+            data += struct.pack('hh', 0, self.records.id(value, self.record_file))
+        elif type(value) == type(1.0):
+            data += struct.pack('hf', 1, value)
+        elif type(value) == type([]):
+            if not all(map(lambda x : type(x) == type(float()), value)):
+                print('unhandled type in array for storage', value)
+            else:
+                data += struct.pack('h'+str(len(value))+'f', len(value), *value)
+        else:
+            print('unhandled storage for type', value)
+            data = ''
+                    
+        self.record_file.write(str(data))
+        self.record_file.lines += 1
+        if self.record_file.lines%100 == 0:
+            sys.stdout.write('recording ' + str(self.record_file.lines) + '\r')
+            sys.stdout.flush()
+
     def record(self, filename):
         try:
+            #self.record_file = lzma.open(filename, 'wt', encoding='ascii')
             self.record_file = open(filename, 'w')
             self.record_file.lines = 0
         except Exception as e:
@@ -255,7 +291,7 @@ class Intellect(object):
 
     def playback(self, filename):
         try:
-            self.playback_file = open(filename)
+            self.playback_file = open(filename, 'rb')
         except Exception as e:
             print('failed to open replay file', filename, e)
 
@@ -285,13 +321,11 @@ class Intellect(object):
           #    time.sleep(1)
               
           if time.time() - t0 > 600:
-              def st():
-                  state = self.conf['state']['ap.mode']
-                  r = ''
-                  for n in d:
-                      r += n[-1] + str(d[n])
-                  return r
-              filename = os.getenv('HOME')+'/.pypilot/intellect_'+st()+'.conf'
+              filename = os.getenv('HOME')+'/.pypilot/intellect_'
+              state = self.conf['state']
+              for n in state:
+                  filename += '_' + state[n]
+              filename += '.conf'
               self.save(filename)
               
           # find cpu usage of training process
