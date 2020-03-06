@@ -381,10 +381,10 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.client.set('servo.position_command', 0)
 
     def onScope( self, event ):
-        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + 'scope_wx.py'] + sys.argv[1:])
+        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/scope_wx.py'] + sys.argv[1:])
 	
     def onClient( self, event ):
-        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + 'client_wx.py'] + sys.argv[1:])
+        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/client_wx.py'] + sys.argv[1:])
 	
     def onCalibration( self, event ):
         subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/autopilot_calibration.py'] + sys.argv[1:])
