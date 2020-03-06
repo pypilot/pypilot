@@ -7,8 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import os, time, math
-from pypilot import json
+import os, time, math, json
 
 class Value(object):
     def __init__(self, name, initial, **kwargs):

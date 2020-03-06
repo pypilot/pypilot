@@ -9,8 +9,7 @@
 
 from __future__ import print_function
 
-import socket, select, sys, os, time
-from pypilot import json
+import socket, select, sys, os, time, json
 from pypilot.bufferedsocket import LineBufferedNonBlockingSocket
 
 DEFAULT_PORT = 21311
