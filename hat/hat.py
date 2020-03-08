@@ -172,7 +172,7 @@ class Hat(object):
         self.longsleep = 30
         self.last_msg = {}
 
-        self.client = False
+        self.connect()
         self.lcd = lcd.LCD(self)
         self.gpio = gpio.gpio()
         self.arduino = arduino.arduino(self.hatconfig)
@@ -207,6 +207,26 @@ class Hat(object):
 
         self.web = Web(self)
 
+    def connect(self):
+        for name in ['gps.source', 'wind.source']:
+            self.last_msg[name] = 'none'
+        self.last_msg['ap.enabled'] = False
+        self.last_msg['ap.heading_command'] = 0
+        self.last_msg['imu.heading_offset'] = 0
+
+        if self.config['remote']:
+            host = self.config['host']
+        else:
+            host = 'localhost'
+
+        self.client = pypilotClient(host)
+        self.value_list = client.list_values()
+        print('connected')
+
+        self.watchlist = ['ap.enabled', 'ap.heading_command'] + self.lcd.watchlist
+        for name in self.watchlist:
+            client.watch(name)
+
     def write_config(self):
         actions = {}
         for action in self.actions:
@@ -219,43 +239,6 @@ class Hat(object):
             file.write(json.dumps(self.config) + '\n')
         except IOError:
             print('failed to save config file:', self.configfilename)
-
-    def connect(self):
-        for name in ['gps.source', 'wind.source']:
-            self.last_msg[name] = 'none'
-        self.last_msg['ap.enabled'] = False
-        self.last_msg['ap.heading_command'] = 0
-        self.last_msg['imu.heading_offset'] = 0
-
-        if self.config['remote']:
-            host = self.config['host']
-        else:
-            host = 'localhost'
-        
-        def on_con(client):
-            self.value_list = client.list_values(10)
-
-            self.watchlist = ['ap.enabled', 'ap.heading_command'] + self.lcd.watchlist
-            for name in self.watchlist:
-                client.watch(name)
-
-            for request in self.lcd.initial_gets:
-                client.get(request)
-
-        try:
-            self.client = pypilotClient(on_con, host)
-            if self.value_list:
-                print('connected')
-                self.web.set_status('connected')
-            else:
-                self.client.disconnect()
-                print('no value list!')
-                self.client = False
-                self.web.set_status('disconnected')
-        except Exception as e:
-            print('hat exception', e)
-            self.client = False
-            time.sleep(1)
 
     def apply_code(self, key, count):
         if count:
@@ -270,17 +253,16 @@ class Hat(object):
                 action.trigger(count)
             
     def poll(self):
-        if not self.client:
-            self.connect()
+        self.client.poll()
 
-        while self.client:
-            result = False
-            try:
-                result = self.client.receive_single()
-            except Exception as e:
-                print('disconnected', e)
-                self.client = False
-
+        # cleanup so this is not triggered
+        if self.client.connection:
+            self.web.set_status('connected')
+        else:
+            self.web.set_status('disconnected')
+            
+        while True:
+            result = self.client.receive_single()
             if not result:
                 break
 

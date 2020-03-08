@@ -421,9 +421,7 @@ def main():
     def on_con(client):
         plot.on_con(client)
 
-    client = pypilotClientFromArgs(sys.argv, True, on_con)
-    if not client.have_watches:
-        usage()
+    client = pypilotClientFromArgs(sys.argv)
     
     print('connected')
     def idle():

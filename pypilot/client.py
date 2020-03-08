@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -10,22 +10,17 @@
 from __future__ import print_function
 
 import socket, select, sys, os, time
-from pypilot import pyjson
-from pypilot.bufferedsocket import LineBufferedNonBlockingSocket
+import pyjson
+from bufferedsocket import LineBufferedNonBlockingSocket
+from values import Value
 
-DEFAULT_PORT = 21311
-
-try:
-    import serial
-except:
-    pass
+DEFAULT_PORT = 23322
 
 try:
     IOError
 except:
     class IOError(Exception):
         pass
-
 try:
     ourPOLLNVAL = select.POLLNVAL
 except:
@@ -35,9 +30,91 @@ except:
 class ConnectionLost(Exception):
     pass
 
+class Watch(object):
+    def __init__(self, value, period):
+        self.value = value
+        self.period = period
+        self.time = time.time()
+
+class ClientWatch(Value):
+    def __init__(self, values, client):
+        super(ClientWatch, self).__init__('watch', {})
+        self.values = values
+        self.client = client
+
+    def set(self, values):
+        for name in values:
+            value = self.values[name]
+            period = values[name]
+            if period is True or period is False:
+                value.watch = period
+            else:
+                value.watch = Watch(self, period)
+                value.pwatch = True
+            if value.watch:
+                self.client.send(name + '=' + value.get_msg() + '\n')
+
+class ClientValues(Value):
+    def __init__(self, client):
+        self.value = False
+        super(ClientValues, self).__init__('values', False)
+        self.client = client
+        self.values = {'values': self}
+        self.values['watch'] = ClientWatch(self.values, client)
+        self.pqwatches = []
+
+    def set(self, values):
+        if type(self.value) == type(False):
+            self.value = values
+        else:
+            for name in values:
+                self.value[name] = values[name]
+
+    def send_watches(self):
+        t0 = time.time()
+        i = 0
+        while i < len(self.pqwatches):
+            watch = self.pqwatches[i]
+            if t0 >= watch.time-watch.period and t0 < watch.time:
+                break # no more are ready
+            i += 1
+            self.client.send(watch.name + '=' + watch.value.get_msg() + '\n')
+            watch.time = t0+watch.period
+            watch.value.pwatch = True
+        # remove watches handled
+        self.pqwatches = self.pqwatches[i:]
+            
+    def insert_watch(self, watch):
+        if watch in self.pqwatches:
+            print('error, watch should not be in pqwatches')
+            return
+        i = 0
+        while i < len(self.pqwatches):
+            if self.pqwatches[i].time > watch.time:
+                break
+            i += 1
+        self.pqwatches.insert(i, watch)
+
+    def register(self, value):
+        if value.name in self.values:
+            print('warning, registering existing value:', value.name)
+        self.values[value.name] = value
+
+    def get_msg(self):
+        info = {}
+        for name in self.values:
+            if name != 'values' and name != 'watch':
+                info[name] = self.values[name].info
+        self.client.wvalues = {}
+        return pyjson.dumps(info)
+
 class pypilotClient(object):
-    def __init__(self, f_on_connected, host=False, port=False, autoreconnect=False, have_watches=False):
-        self.autoreconnect = autoreconnect
+    def __init__(self, host=False):
+        self.values = ClientValues(self)
+        self.wvalues = {}
+        self.watches = {}
+        self.wwatches = {}
+        self.received = []
 
         config = {}
         try:
@@ -50,7 +127,6 @@ class pypilotClient(object):
             print('os not supported')
             configfilepath = '/.pypilot/'
         self.configfilename = configfilepath + 'pypilot_client.conf'
-        self.write_config = False
 
         try:
             file = open(self.configfilename)
@@ -61,294 +137,206 @@ class pypilotClient(object):
             print('failed to read config file:', self.configfilename, e)
             config = {}
 
+        if host:
+            if ':' in host:
+                i = host.index(':')
+                config['host'] = host[:i]
+                config['port'] = host[i+1:]
+            else:
+                config['host'] = host
         if not 'host' in config:
             config['host'] = '127.0.0.1'
+
+        if not 'port' in config:
+            config['port'] = DEFAULT_PORT
+        self.config = config
             
-        if not host:
-            host = config['host']
-
-        if config['host'] != host:
-            self.write_config = config
-            self.write_config['host'] = host
-
-        if not host:
-            host = 'pypilot'
-            print('host not specified using host', host)
-
-        if '/dev' in host: # serial port
-            device, baud = host, port
-            if not baud or baud == 21311:
-                baud = 9600
-            connection = serial.Serial(device, baud)
-            cmd = 'stty -F ' + device + ' icanon iexten'
-            print('running', cmd)
-            os.system(cmd)
+        if type(host) != type(''):
+            print('client pipe connected')
+            self.connection = host
         else:
-            if not port:
-                if ':' in host:
-                    i = host.index(':')
-                    host = host[:i]
-                    port = host[i+1:]
-                else:
-                    port = DEFAULT_PORT
-            try:
-                #connection = socket.create_connection((host, port), 1)
-                connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                connection.settimeout(10)
-                print('connect', host, port)
-                connection.connect((host, port))
-            except:
-                print('connect failed to %s:%d' % (host, port))
-                raise
-
-            self.host_port = host, port
-        self.f_on_connected = f_on_connected
-        self.have_watches = have_watches
-        self.onconnected(connection)
+            self.connection = False # connect later
 
     def onconnected(self, connection):
-        if self.write_config:
-            try:
-                file = open(self.configfilename, 'w')
-                file.write(pyjson.dumps(self.write_config) + '\n')
-                file.close()
-                self.write_config = False
-            except IOError:
-                print('failed to write config file:', self.configfilename)
-            except Exception as e:
-                print('Exception writing config file:', self.configfilename, e)
-
-        self.socket = LineBufferedNonBlockingSocket(connection)
-        self.values = []
-        self.msg_queue = []
-        self.poller = select.poll()
-        #if self.socket:
-        #    fd = self.socket.socket.fileno()
-        #else:
-        #    fd = self.serial.fileno()
-        #self.poller.register(fd, select.POLLIN)
-        self.poller.register(self.socket.socket, select.POLLIN)
-
+        # write config if connection succeeds
+        try:
+            file = open(self.configfilename, 'w')
+            file.write(pyjson.dumps(self.config) + '\n')
+            file.close()
+            self.write_config = False
+        except IOError:
+            print('failed to write config file:', self.configfilename)
+        except Exception as e:
+            print('Exception writing config file:', self.configfilename, e)
         
-        self.f_on_connected(self)
+        self.connection = LineBufferedNonBlockingSocket(connection)
+        self.poller = select.poll()
+        self.poller.register(self.connection.socket, select.POLLIN)
 
-    def poll(self, timeout = 0):        
-        t0 = time.time()
-        self.socket.flush()
-        events = self.poller.poll(int(1000 * timeout))
+        self.wwatches = self.watches
+
+    def poll(self, timeout = 0):
+        if not self.connection:
+            if not self.connect():
+                return
+            
+        # inform server of any watches we have
+        if self.values.watch and self.wvalues:
+            self.connection.send('values=' + pyjson.dumps(self.wvalues) + '\n')
+            self.wvalues = {}
+        
+        if self.wwatches:
+            self.connection.send('watch=' + pyjson.dumps(self.wwatches) + '\n')
+            self.wwatches = {}
+
+        # send any delayed watched values
+        self.values.send_watches()
+
+        # flush output
+        self.connection.flush()
+
+        try:
+            events = self.poller.poll(int(1000 * timeout))
+        except Exception as e:
+            print('exception polling', e)
+            self.disconnected()
+            return
+
         if events != []:
             event = events.pop()
             fd, flag = event
             if flag & (select.POLLERR | ourPOLLNVAL):
-                raise ConnectionLost
+                disconnected()
             if flag & select.POLLIN:
-                if self.socket and not self.socket.recv():
-                    raise ConnectionLost
-                return True
+                if self.connection and not self.connection.recv():
+                    self.disconnected()
+
+        # read incoming data line by line
+        while True:
+            line = self.connection.readline()
+            if not line:
+                return
+            try:
+                name, data = line.rstrip().split('=', 1)
+                if name == 'error':
+                    print('server error', data)
+                    continue
+                else:
+                    value = pyjson.loads(data)
+                    if name in self.values.values:
+                        self.values.values[name].set(value)
+                        continue
+            except Exception as e:
+                print('invalid message from server:', line)
+                print('reason', e)
+                raise Exception
+            self.received.append((name, value))
+
+    # polls at least as long as timeout
+    def disconnected(self):
+        self.connection.socket.close()
+        raise ConnectionLost
+
+    def connect(self, verbose=True):
+        try:
+            host_port = self.config['host'], self.config['port']
+            connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            connection.settimeout(3)
+            connection.connect(host_port)
+        except Exception as e:
+            if verbose:
+                print('connect failed to %s:%d' % host_port)
+                print('reason', e)
+            return False
+        self.onconnected(connection)
+        return True
+    
+    def receive_single(self):
+        if self.received:
+            ret = self.received[0]
+            self.received = self.received[1:]
+            return ret
         return False
 
-    def send(self, request):
-        self.socket.send(pyjson.dumps(request)+'\n')
-
-    def receive_line(self, timeout = 0):
-        line = self.socket.readline()
-        if line:
-            try:
-                msg = pyjson.loads(line.rstrip())
-            except:
-                raise Exception('invalid message from server:', line)
-            return msg
-
-        if timeout < 0:
-            return False
-
-        t = time.time()
-        try:
-            if not self.poll(timeout):
-                return False
-        except Exception as e:
-            print('exception', e)
-            self.disconnected()
-        dt = time.time()-t
-        return self.receive_line(timeout - dt)
-
-    def disconnected(self):
-        self.socket.socket.close()
-        if not self.autoreconnect:
-            raise ConnectionLost
-                
-        connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        while True:
-            print('Disconnected.  Reconnecting in 3...')
-            time.sleep(3)
-            try:
-                connection.connect(self.host_port)
-                print('Connected.')
-                break
-            except:
-                continue
-
-        self.onconnected(connection)
-
-    def receive(self, timeout = 0):
+    def receive(self):
+        self.poll()
         ret = {}
-        msg = self.receive_single(timeout)
-        while msg:
+        for msg in self.received:
             name, value = msg
             ret[name] = value
-            msg = self.receive_single(-1)
+        self.received = []
         return ret
 
-    def receive_single(self, timeout = 0):
-        if len(self.msg_queue) > 0:
-            msg = self.msg_queue[0]
-            self.msg_queue = self.msg_queue[1:]
-            return msg
-        
-        line = self.receive_line(timeout)
-        if line:
-            self.msg_queue += self.flatten_line(line)
-            return self.receive_single(-1)
-        return False
-
-    def flatten_line(self, line, name_prefix=''):
-        msgs = []
-        for name in line:
-            msg = line[name]
-            if type(msg) == type({}):
-                if 'value' in msg or 'type' in msg:
-                    msgs.append((name_prefix + name, msg))
-                else:
-                    msgs += self.flatten_line(msg, name_prefix + name + '/')
-        return msgs
-
-    def list_values(self, timeout=10):
-        request = {'method' : 'list'}
-        self.send(request)
-        
-        t0 = t = time.time()
-        while t - t0 <= timeout:
-            t = time.time()
-            try:
-                return self.receive(timeout-t+t0)
-            except Exception as e:
-                print(e)
-        return False
-
-    def get(self, name):
-        request = {'method': 'get', 'name' : name}
-        self.send(request)
-
+    def send(self, msg):
+        if self.connection:
+            self.connection.send(msg)
+    
     def set(self, name, value):
         # quote strings
         if type(value) == type('') or type(value) == type(u''):
             value = '"' + value + '"'
         elif type(value) == type(True):
             value = 'true' if value else 'false'
-                                        
-        request = '{"method": "set", "name": "' + name + '", "value": ' + str(value) + '}\n'
-        self.socket.send(request)
+        self.send(name + '=' + str(value) + '\n')
 
     def watch(self, name, value=True):
-        if value:
-            self.get(name)
-        self.send({'method' : 'watch', 'name' : name, 'value' : value})
+        self.watches[name] = value
+        self.wwatches[name] = value
 
-    def print_values(self, timeout, info=False):
+    def register(self, value):
+        self.wvalues[value.name] = value
+        self.values.register(value)
+        value.client = self
+        return value
+
+    def list_values(self, timeout=10):
         t0 = time.time()
-        if not self.values:
-            self.values = self.list_values(timeout)
-            if not self.values:
-                return False
+        self.watch('values')
+        while True:
+            self.poll(timeout)
+            if type(self.values.value) != type(False):
+                return self.values.value
+        return False
 
-        names = sorted(self.values)
-            
-        count = 0
-        results = {}
-        while count < len(self.values):
-            if names:
-                self.get(names.pop())
-            else:
-                time.sleep(.1)
+    def info(self, name):
+        return self.values.value[name]
 
-            if time.time()-t0 >= timeout:
-                return False
-            while True:
-                msg = self.receive_single()
-                if not msg:
-                    break
-                name, value = msg
-                if name in results:
-                    break
-                count+=1
-                
-                results[name] = value
+def pypilotClientFromArgs(args, period=True):
+    host = False
+    if len(args) > 1:
+        host = args[1]
 
-        for name in sorted(results):
-            if info:
-                print(name, self.values[name], results[name])
-            else:
-                maxlen = 80
-                result = str(results[name]['value'])
-                if len(name) + len(result) + 3  > maxlen:
-                    result = result[:80 - len(name) - 7] + ' ...'
-                print(name, '=', result)
-        return True
+    client = pypilotClient(host)
+    if not client.connect(False):
+        if host:
+            client = pypilotClient()
+            watches = args[1:]
+            client.connect()
+        if not client.connection:
+            print('failed to connect')
+            exit(1)
 
-def pypilotClientFromArgs(argv, watch, f_con=False):
-    host = port = False
-    watches = argv[1:]
-    if len(argv) > 1:
-        if ':' in argv[1]:
-            i = argv[1].index(':')
-            host = argv[1][:i]
-            port = int(argv[1][i+1:])
-            watches = watches[1:]
-        else:
-            c = argv[1].count('.')
-            if c == 0 or c == 3: # host or ip address
-                host = argv[1]
-                watches = watches[1:]
+    # set any value specified with path=value
+    for arg in args[2:]:
+        if '=' in arg:
+            self.send(arg + '\n')
+            arg, value = line.rstrip().split('=', 1)
+        watches.append(arg)
 
-    def on_con(client):
-        for arg in watches:
-            if '=' in arg:
-                arg, value = arg.split('=')
-                try:
-                    fval = float(value)
-                    if float(str(fval)) == fval:
-                        value = fval
-                except:
-                    pass
-                client.set(arg, value)
-            if watch:
-                client.watch(arg)
-            else:
-                client.get(arg)
-        if f_con:
-            f_con(client)
-            
-    return pypilotClient(on_con, host, port, autoreconnect=True, have_watches=watches)
-
-# ujson makes very ugly results like -0.28200000000000003
-# round all floating point to 8 places here
-def nice_str(value):
-    if type(value) == type([]):
-        s = '['
-        if len(value):
-            s += nice_str(value[0])
-        for v in value[1:]:
-            s += ', ' + nice_str(v)
-        s += ']'
-        return s
-    if type(value) == type(1.0):
-        return '%.8g' % value
-    return str(value)
-
+    # args without = are watched
+    for name in watches:
+        client.watch(name, period)
+    return client
+    
 # this simple test client for an autopilot server
 # connects, enumerates the values, and then requests
 # each value, printing them
 def main():
+    import signal
+    def quit(sign, frame):
+        exit(0)
+    signal.signal(signal.SIGINT, quit)
+
     if '-h' in sys.argv:
         print('usage', sys.argv[0], '[host] -i -c -h [NAME[=VALUE]]...')
         print('eg:', sys.argv[0], '-i imu.compass')
@@ -358,52 +346,55 @@ def main():
         print('-h', 'show this message')
         exit(0)
 
-    continuous = '-c' in sys.argv
+    args = list(sys.argv)
+    continuous = '-c' in args
     if continuous:
-        sys.argv.remove('-c')
+        args.remove('-c')
 
-    info = '-i' in sys.argv
+    info = '-i' in args
     if info:
-        sys.argv.remove('-i')
+        args.remove('-i')
         
-    client = pypilotClientFromArgs(sys.argv, continuous)
-    if not client.have_watches:
-        while True:
-            if not client.print_values(10, info):
-                print('timed out')
+    period = True if continuous else 100 # 100 second period to just get the value once
+    client = pypilotClientFromArgs(args, period)
+    if not client.watches: # retrieve all values
+        watches = client.list_values()
+        for name in watches:
+            client.watch(name, period)
+
+    if not continuous:
+        values = {}
+        t0 = time.time()
+        while len(values) < len(client.watches):
+            dt = time.time() - t0
+            if dt > 10:
+                print('timeout retrieving values')
                 exit(1)
-            if not continuous:
-                break
-        exit()
-        
-    import signal
-    def quit(sign, frame):
-        exit(0)
-    signal.signal(signal.SIGINT, quit)
-    while True:
-        msg = client.receive_single(.1)
-        if not msg:
-            continue
-        
-        if not continuous:
-            # split on separate lines if not continuous
-            name, value = msg
+                    
+            client.poll(.1)
+            msgs = client.receive()
+            values = {**values, **msgs}
+            
+        names = sorted(values)
+        for name in names:
             if info:
-                print(pyjson.dumps({name: value}))
+                print(name, client.info(name), '=', values[name])
             else:
-                print(name, '=', nice_str(value['value']))
-            return
-        if info:
-            print(pyjson.dumps(msg))
-        else:
-            first = True
-            name, value = msg
-            if first:
-                first = False
-            else:
-                sys.stdout.write(', ')
-            sys.stdout.write(name + ' = ' + nice_str(value['value']))
-            print('') # newline
+                maxlen = 76
+                result = name + ' = ' + str(values[name])
+                if len(result) > maxlen:
+                    result = result[:maxlen] + ' ...'
+                print(result)
+    else:
+        while True:
+            client.poll(1)
+            msg = client.receive_single()
+            if msg:
+                name, data = msg
+                if info:
+                    print(name, client.info(name), '=', data)
+                else:
+                    print(name, '=', data)
 
 if __name__ == '__main__':
     main()

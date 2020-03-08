@@ -11,7 +11,7 @@ from __future__ import print_function
 import os, math, sys, time
 from pypilot import pyjson
 
-from pypilot.server import pypilotServer
+from pypilot.client import pypilotClient
 from pypilot.values import *
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import autopilot
@@ -183,62 +183,62 @@ class TimedProperty(Property):
 class Servo(object):
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
 
-    def __init__(self, server, sensors):
-        self.server = server
+    def __init__(self, client, sensors):
+        self.client = client
         self.sensors = sensors
         self.lastdir = 0 # doesn't matter
 
         self.servo_calibration = ServoCalibration(self)
-        self.calibration = self.Register(JSONValue, 'calibration', {})
+        self.calibration = self.register(JSONValue, 'calibration', {})
         self.load_calibration()
 
-        self.command = self.Register(TimedProperty, 'command')
-        self.position_command = self.Register(TimedProperty, 'position_command')
+        self.command = self.register(TimedProperty, 'command')
+        self.position_command = self.register(TimedProperty, 'position_command')
 
-        self.speed_gain = self.Register(RangeProperty, 'speed_gain', 0, 0, 1)
-        self.duty = self.Register(SensorValue, 'duty')
+        self.speed_gain = self.register(RangeProperty, 'speed_gain', 0, 0, 1)
+        self.duty = self.register(SensorValue, 'duty')
 
-        self.faults = self.Register(ResettableValue, 'faults', 0, persistent=True)
+        self.faults = self.register(ResettableValue, 'faults', 0, persistent=True)
 
         # power usage
-        self.voltage = self.Register(SensorValue, 'voltage')
-        self.current = self.Register(SensorValue, 'current')
+        self.voltage = self.register(SensorValue, 'voltage')
+        self.current = self.register(SensorValue, 'current')
         self.current.lasttime = time.time()
-        self.controller_temp = self.Register(SensorValue, 'controller_temp')
-        self.motor_temp = self.Register(SensorValue, 'motor_temp')
+        self.controller_temp = self.register(SensorValue, 'controller_temp')
+        self.motor_temp = self.register(SensorValue, 'motor_temp')
 
-        self.engaged = self.Register(BooleanValue, 'engaged', False)
-        self.max_current = self.Register(RangeSetting, 'max_current', 7, 0, 60, 'amps')
-        self.current.factor = self.Register(RangeProperty, 'current.factor', 1, 0.8, 1.2, persistent=True)
-        self.current.offset = self.Register(RangeProperty, 'current.offset', 0, -1.2, 1.2, persistent=True)
-        self.voltage.factor = self.Register(RangeProperty, 'voltage.factor', 1, 0.8, 1.2, persistent=True)
-        self.voltage.offset = self.Register(RangeProperty, 'voltage.offset', 0, -1.2, 1.2, persistent=True)
-        self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 60, 45, 100, persistent=True)
-        self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
+        self.engaged = self.register(BooleanValue, 'engaged', False)
+        self.max_current = self.register(RangeSetting, 'max_current', 7, 0, 60, 'amps')
+        self.current.factor = self.register(RangeProperty, 'current.factor', 1, 0.8, 1.2, persistent=True)
+        self.current.offset = self.register(RangeProperty, 'current.offset', 0, -1.2, 1.2, persistent=True)
+        self.voltage.factor = self.register(RangeProperty, 'voltage.factor', 1, 0.8, 1.2, persistent=True)
+        self.voltage.offset = self.register(RangeProperty, 'voltage.offset', 0, -1.2, 1.2, persistent=True)
+        self.max_controller_temp = self.register(RangeProperty, 'max_controller_temp', 60, 45, 100, persistent=True)
+        self.max_motor_temp = self.register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
 
-        self.max_slew_speed = self.Register(RangeSetting, 'max_slew_speed', 18, 0, 100, '')
-        self.max_slew_slow = self.Register(RangeSetting, 'max_slew_slow', 28, 0, 100, '')
-        self.gain = self.Register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
-        self.period = self.Register(RangeSetting, 'period', .4, .1, 3, 'sec')
-        self.compensate_current = self.Register(BooleanProperty, 'compensate_current', False, persistent=True)
-        self.compensate_voltage = self.Register(BooleanProperty, 'compensate_voltage', False, persistent=True)
-        self.amphours = self.Register(ResettableValue, 'amp_hours', 0, persistent=True)
-        self.watts = self.Register(SensorValue, 'watts')
+        self.max_slew_speed = self.register(RangeSetting, 'max_slew_speed', 18, 0, 100, '')
+        self.max_slew_slow = self.register(RangeSetting, 'max_slew_slow', 28, 0, 100, '')
+        self.gain = self.register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
+        self.period = self.register(RangeSetting, 'period', .4, .1, 3, 'sec')
+        self.compensate_current = self.register(BooleanProperty, 'compensate_current', False, persistent=True)
+        self.compensate_voltage = self.register(BooleanProperty, 'compensate_voltage', False, persistent=True)
+        self.amphours = self.register(ResettableValue, 'amp_hours', 0, persistent=True)
+        self.watts = self.register(SensorValue, 'watts')
 
-        self.speed = self.Register(SensorValue, 'speed')
-        self.speed.min = self.Register(RangeSetting, 'speed.min', 100, 0, 100, '%')
-        self.speed.max = self.Register(RangeSetting, 'speed.max', 100, 0, 100, '%')
+        self.speed = self.register(SensorValue, 'speed')
+        self.speed.min = self.register(RangeSetting, 'speed.min', 100, 0, 100, '%')
+        self.speed.max = self.register(RangeSetting, 'speed.max', 100, 0, 100, '%')
 
-        self.position = self.Register(SensorValue, 'position')
+        self.position = self.register(SensorValue, 'position')
         self.position.elp = 0
         self.position.set(0)
-        self.position.p = self.Register(RangeProperty, 'position.p', .15, .01, 1, persistent=True)
-        self.position.i = self.Register(RangeProperty, 'position.i', 0, 0, .1, persistent=True)
-        self.position.d = self.Register(RangeProperty, 'position.d', .02, 0, .1, persistent=True)
+        self.position.p = self.register(RangeProperty, 'position.p', .15, .01, 1, persistent=True)
+        self.position.i = self.register(RangeProperty, 'position.i', 0, 0, .1, persistent=True)
+        self.position.d = self.register(RangeProperty, 'position.d', .02, 0, .1, persistent=True)
 
-        self.rawcommand = self.Register(SensorValue, 'raw_command')
+        self.rawcommand = self.register(SensorValue, 'raw_command')
 
-        self.use_eeprom = self.Register(BooleanValue, 'use_eeprom', True, persistent=True)
+        self.use_eeprom = self.register(BooleanValue, 'use_eeprom', True, persistent=True)
 
         self.position.inttime = time.time()
         self.position.amphours = 0
@@ -247,22 +247,22 @@ class Servo(object):
         self.windup_change = 0
 
         self.disengaged = True
-        self.disengage_on_timeout = self.Register(BooleanValue, 'disengage_on_timeout', True, persistent=True)
+        self.disengage_on_timeout = self.register(BooleanValue, 'disengage_on_timeout', True, persistent=True)
         self.force_engaged = False
 
         self.last_zero_command_time = self.command_timeout = time.time()
         self.driver_timeout_start = 0
 
-        self.state = self.Register(StringValue, 'state', 'none')
+        self.state = self.register(StringValue, 'state', 'none')
 
-        self.controller = self.Register(StringValue, 'controller', 'none')
-        self.flags = self.Register(ServoFlags, 'flags')
+        self.controller = self.register(StringValue, 'controller', 'none')
+        self.flags = self.register(ServoFlags, 'flags')
 
         self.driver = False
         self.raw_command(0)
 
-    def Register(self, _type, name, *args, **kwargs):
-        return self.server.Register(_type(*(['servo.' + name] + list(args)), **kwargs))
+    def register(self, _type, name, *args, **kwargs):
+        return self.client.register(_type(*(['servo.' + name] + list(args)), **kwargs))
 
     def send_command(self):
         t = time.time()
@@ -709,12 +709,13 @@ def main():
                 exit(1)
             test(sys.argv[i+1], int(sys.argv[i+2]))
     
-    print('Servo Server')
+    print('Servo Client')
     server = pypilotServer()
+    client = pypilotClient()
 
     from sensors import Sensors
-    sensors = Sensors(server)
-    servo = Servo(server, sensors)
+    sensors = Sensors(client)
+    servo = Servo(client, sensors)
     servo.max_current.set(10)
 
     period = .1
@@ -727,7 +728,8 @@ def main():
             print('voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', sensors.rudder.angle.value, 'flags', servo.flags.strvalue())
             #print(servo.command.value, servo.speed.value, servo.windup)
             pass
-        server.HandleRequests()
+        client.poll()
+        server.poll()
 
         dt = period - time.time() + lastt
         if dt > 0 and dt < period:
@@ -735,7 +737,6 @@ def main():
             lastt += period
         else:
             lastt = time.time()
-
 
 if __name__ == '__main__':
     main()

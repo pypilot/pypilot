@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -8,49 +8,42 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os, time, math
-from pypilot import pyjson
+import pyjson
+
 
 class Value(object):
     def __init__(self, name, initial, **kwargs):
         self.name = name
-        self.watchers = []
-        self.persistent = False
+        self.watch = False
         self.set(initial)
-        self.client_can_set = False
 
-        # value is stored to config file
+        self.info = {'type': 'Value'}
+        # if persistent argument make the server store/load this value regularly
         if 'persistent' in kwargs and kwargs['persistent']:
-            self.persistent = True
-
-    def type(self):
-        return 'Value'
+            self.info['persistent'] = True
 
     def update(self, value):
         if self.value != value:
             self.set(value)
 
-    def get_pypilot(self):
-        if type(self.value) == type('') or type(self.value) == type(u''):
-            return '{"' + self.name + '": {"value": "' + self.value + '"}}'
-        return '{"' + self.name + '": {"value": ' + str(self.value) + '}}'
+    def get_msg(self):
+        return str(self.value)
 
     def set(self, value):
         self.value = value
-        self.send()
-
-    def send(self):
-        if self.watchers:
-            request = self.get_pypilot() + '\n'
-            for socket in self.watchers:
-                socket.send(request)
+        if self.watch:
+            if type(self.watch) == type(True):
+                self.client.send(self.name+'='+pyjson.dumps(value)+'\n')
+            elif self.pwatch:
+                self.client.values.insert_watch(self.watch)
+                self.pwatch = False
 
 class JSONValue(Value):
     def __init__(self, name, initial, **kwargs):
       super(JSONValue, self).__init__(name, initial, **kwargs)
 
-    def get_pypilot(self):
-        return '{"' + self.name + '": {"value": ' + pyjson.dumps(self.value) + '}}'
-
+    def get_msg(self):
+        return pyjson.dumps(self.value)
 
 def round_value(value, fmt):
     if type(value) == type([]):
@@ -73,16 +66,16 @@ def round_value(value, fmt):
 
 class RoundedValue(Value):
     def __init__(self, name, initial, **kwargs):
-      super(RoundedValue, self).__init__(name, initial, **kwargs)
+        super(RoundedValue, self).__init__(name, initial, **kwargs)
       
-    def get_pypilot(self):
-      return '{"' + self.name + '": {"value": ' + round_value(self.value, '%.3f') + '}}'
+    def get_msg(self):
+        return round_value(self.value, '%.3f')
 
 class StringValue(Value):
     def __init__(self, name, initial, **kwargs):
         super(StringValue, self).__init__(name, initial, **kwargs)
 
-    def get_pypilot(self):
+    def get_msg(self):
         if type(self.value) == type(False):
             strvalue = 'true' if self.value else 'false'
         else:
@@ -95,22 +88,21 @@ class SensorValue(Value):
         self.directional = 'directional' in kwargs and kwargs['directional']
         self.fmt = fmt # round to 3 places unless overrideen
 
-    def type(self):
+        self.info['type'] = 'SensorValue'
         if self.directional:
-            return {'type': 'SensorValue', 'directional': True}
-        return 'SensorValue'
+            self.info['directional'] = True
 
-    def get_pypilot(self):
+    def get_msg(self):
         value = self.value
         if type(value) == type(tuple()):
             value = list(value)
-        return '{"' + self.name + '": {"value": ' + round_value(value, self.fmt) + '}}'
+        return round_value(value, self.fmt)
 
 # a value that may be modified by external clients
 class Property(Value):
     def __init__(self, name, initial, **kwargs):
         super(Property, self).__init__(name, initial, **kwargs)
-        self.client_can_set = True
+        self.info['writable'] = True
 
 class ResettableValue(Property):
     def __init__(self, name, initial, **kwargs):
@@ -118,7 +110,7 @@ class ResettableValue(Property):
         super(ResettableValue, self).__init__(name, initial, **kwargs)
 
     def type(self):
-        return 'ResettableValue'
+        return {'type': 'ResettableValue'}
 
     def set(self, value):
         if not value:
@@ -133,11 +125,12 @@ class RangeProperty(Property):
             print('invalid initial value for range property', name, initial)
         super(RangeProperty, self).__init__(name, initial, **kwargs)
 
-    def type(self):
-        return {'type' : 'RangeProperty', 'min' : self.min_value, 'max' : self.max_value}
+        self.info['type'] = 'RangeProperty'
+        self.info['min'] = self.min_value
+        self.info['max'] = self.max_value
 
-    def get_pypilot(self):
-        return '{"' + self.name + ('": {"value": %.4f}}' % self.value)
+    def get_msg(self):
+        return '%.4f' % self.value
         
     def set(self, value):
         if value >= self.min_value and value <= self.max_value:
@@ -154,11 +147,8 @@ class RangeSetting(RangeProperty):
         self.units = units
         super(RangeSetting, self).__init__(name, initial, min_value, max_value, persistent=True)
 
-    def type(self):
-        d = super(RangeSetting, self).type()
-        d['type'] = 'RangeSetting'
-        d['units'] = self.units
-        return d
+        self.info['type'] = 'RangeSetting'
+        self.info['units'] = self.units
         
 class HeadingProperty(RangeProperty):
     def __init__(self, name, initial):
@@ -175,9 +165,8 @@ class EnumProperty(Property):
     def __init__(self, name, initial, choices, **kwargs):
         self.choices = choices
         super(EnumProperty, self).__init__(name, initial, **kwargs)
-
-    def type(self):
-        return {'type' : 'EnumProperty', 'choices' : self.choices}
+        self.info['type'] = 'EnumProperty'
+        self.info['choices'] = self.choices
 
     def set(self, value):
         for choice in self.choices:
@@ -189,26 +178,20 @@ class EnumProperty(Property):
                     continue
             super(EnumProperty, self).set(value)
             return
-        print('set', self.name, 'to invalid enum value', value)
+        print('invalid set', self.name, '=', value)
 
 class BooleanValue(Value):
     def __init__(self, name, initial, **kwargs):
         super(BooleanValue, self).__init__(name, initial, **kwargs)
 
-    def get_pypilot(self):
-        strvalue = 'true' if self.value else 'false'
-        return '{"' + self.name + '": {"value": ' + strvalue + '}}'
+    def get_msg(self):
+        return 'true' if self.value else 'false'
 
-class BooleanProperty(Property):
+class BooleanProperty(BooleanValue):
     def __init__(self, name, initial, **kwargs):
         super(BooleanProperty, self).__init__(name, initial, **kwargs)
-
-    def type(self):
-        return 'BooleanProperty'
-
-    def get_pypilot(self):
-        strvalue = 'true' if self.value else 'false'
-        return '{"' + self.name + '": {"value": ' + strvalue + '}}'
+        self.info['writable'] = True
+        self.info['type'] = 'BooleanProperty'
 
     def set(self, value):
         super(BooleanProperty, self).set(not not value)

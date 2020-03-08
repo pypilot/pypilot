@@ -284,16 +284,15 @@ class CompassCalibrationPlot(CalibrationPlot):
         self.draw_points()
 
 if __name__ == '__main__':
-    host = ''
+    host = False
     if len(sys.argv) > 1:
         host = sys.argv[1]
 
-    def on_con(client):
-        watchlist = ['imu.accel', 'imu.compass', 'imu.compass.calibration', 'imu.compass.calibration', 'imu.compass.calibration.sigmapoints', 'imu.fusionQPose', 'imu.alignmentQ']
-        for name in watchlist:
-            client.watch(name)
+    watchlist = ['imu.accel', 'imu.compass', 'imu.compass.calibration', 'imu.compass.calibration', 'imu.compass.calibration.sigmapoints', 'imu.fusionQPose', 'imu.alignmentQ']
+    client = pypilotClient(host)
+    for name in watchlist:
+        client.watch(name)
         
-    client = pypilotClient(on_con, host, autoreconnect=True)
     plot = CompassCalibrationPlot()
 
     def display():
@@ -314,11 +313,9 @@ if __name__ == '__main__':
 
     n = 0
     def idle():
+        client.poll()
         while True:
-            result = False
-            if client:
-                result = client.receive_single()
-
+            result = client.receive_single()
             if not result:
                 time.sleep(.01)
                 return

@@ -15,7 +15,6 @@
 from __future__ import print_function
 import os, sys, time, json
 import spidev
-from pypilot.client import pypilotClient
 import crc
 
 try:

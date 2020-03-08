@@ -13,7 +13,7 @@ import vector, resolv, quaternion
 resolv = resolv.resolv
 
 from pypilot.pipeserver import NonBlockingPipe
-from pypilot.client import pypilotClient
+from client import pypilotClient
     
 calibration_fit_period = 20  # run every 20 seconds
 
@@ -493,8 +493,8 @@ def FitAccel(debug, accel_cal):
     dev = ComputeDeviation(p, fit)
     return [fit, dev]
 
-def FitCompass(debug, compass_cal, compass_calibration, norm):
-    p = compass_cal.Points(True)
+def FitCompass(debug, compass_points, compass_calibration, norm):
+    p = compass_points.Points(True)
     if len(p) < 8:
         return False
 
@@ -556,7 +556,7 @@ def FitCompass(debug, compass_cal, compass_calibration, norm):
         if deviation[0]/curdeviation[0] + deviation[1]/curdeviation[1] < 2.5 or curdeviation[0] > .2 or curdeviation[1] > 10:
             debug('allowing bad fit')
         else:
-            compass_cal.RemoveOldest()  # remove oldest point if too much deviation
+            compass_points.RemoveOldest()  # remove oldest point if too much deviation
             return # don't use this fit
 
     # if the bias has not sufficiently changed,
@@ -567,6 +567,47 @@ def FitCompass(debug, compass_cal, compass_calibration, norm):
 
     return c
 
+
+class CalibrationProperty(RoundedValue):
+  def __init__(self, name, server, default):
+    self.default = default
+    self.client_can_set = True
+    super(CalibrationProperty, self).__init__(name+'.calibration', default, persistent=True)
+
+  def set(self, value):
+    if not value:
+      value = self.default
+    try:
+      if self.value and self.locked.value:
+        return
+      self.age.reset()
+    except:
+      pass # startup before locked is initiated
+    super(CalibrationProperty, self).set(value)
+
+class AgeValue(StringValue):
+    def __init__(self, name, **kwargs):
+        super(AgeValue, self).__init__(name, time.time(), **kwargs)
+        self.dt = max(0, time.time() - self.value)
+        self.lastupdate_value = -1
+        self.lastage = ''
+
+    def reset(self):
+        self.set(time.time())
+
+    def update(self):
+        t = time.time()
+        if abs(t - self.lastupdate_value) > 1:
+          self.lastupdate_value = t
+          self.send()
+
+    def get_pypilot(self):
+        dt = max(0, time.time() - self.value)
+        if abs(dt - self.dt) > 1:
+            self.dt = dt
+            self.lastage = readable_timespan(dt)
+        return self.lastage
+
 def CalibrationProcess(cal_pipe):
     import os
     if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
@@ -574,22 +615,30 @@ def CalibrationProcess(cal_pipe):
       if os.system("renice 20 %d" % os.getpid()):
           print('warning, failed to renice calibration process')
 
-    accel_cal = SigmaPoints(.05**2, 12, 10)
-    compass_cal = SigmaPoints(1.1**2, 24, 3)
-    accel_calibration = [0, 0, 0, 1]
+    accel_points = SigmaPoints(.05**2, 12, 10)
+    compass_points = SigmaPoints(1.1**2, 24, 3)
 
     norm = [0, 0, 1]
-    def on_con(client):
-        client.watch('imu.alignmentQ')
-        client.watch('imu.compass.calibration')
 
-    while True:
-        time.sleep(2)
-        try:
-            client = pypilotClient(on_con, 'localhost', autoreconnect=True)
-            break
-        except Exception as e:
-            print('calibration process failed to connect pypilot', e)
+    client = pypilotClient('localhost')
+
+    def RegisterCalibration(name, default):
+        calibration = self.Register(CalibrationProperty, name, server, default)
+        calibration.age = self.Register(AgeValue, name+'.calibration.age', persistent=True)
+        calibration.locked = self.Register(BooleanProperty, name+'.calibration.locked', False, persistent=True)
+        calibration.sigmapoints = self.Register(RoundedValue, name+'.calibration.sigmapoints', False)
+        calibration.log = self.Register(Property, name+'.calibration.log', '')
+        return calibration
+
+    self.accel_calibration = RegisterCalibration('accel', [[0, 0, 0, 1], 1])
+    self.compass_calibration = RegisterCalibration('compass', [[0, 0, 0, 30, 0], [1, 1], 0])
+    
+    client.watch('imu.alignmentQ')
+
+    if not cal_pipe:
+        client.watch('imu.accel')
+        client.watch('imu.compass')
+        client.watch('imu.down')
 
     def debug(name):
         def debug_by_name(*args):
@@ -607,59 +656,47 @@ def CalibrationProcess(cal_pipe):
             # receive pypilot messages
             msg = client.receive()
             for name in msg:
-                value = msg[name]['value']
+                value = msg[name]
                 if name == 'imu.alignmentQ' and value:
                     norm = quaternion.rotvecquat([0, 0, 1], value)
-                    compass_cal.Reset()
-                elif name == 'imu.compass.calibration':
-                    compass_calibration = value[0]
+                    compass_points.Reset()
+                elif name == 'imu.accel':
+                    accel_points.AddPoint(value)
+                    addedpoint = True
+                elif name == 'imu.compass' and down:
+                    compass_points.AddPoint(value, down)
+                    addedpoint = True
+                elif name == 'imu.down':
+                    down = value
 
             # receive calibration data
             p = cal_pipe.recv(1)
             if p:
                 if 'accel' in p:
-                    accel_cal.AddPoint(p['accel'])
+                    accel_points.AddPoint(p['accel'])
                     addedpoint = True
                 if 'compass' in p:
-                    compass_cal.AddPoint(p['compass'], p['down'])
+                    compass_points.AddPoint(p['compass'], p['down'])
                     addedpoint = True
 
+            accel_calibration.age.update()
+            compass_calibration.age.update()
 
-            # send updated sigmapoints as well
-            cals = {'accel': accel_cal, 'compass': compass_cal}
-            for name in cals:
-                cal = cals[name]
-                if cal.Updated():
-                    points = cal.Points()
-                    client.set('imu.' + name + '.calibration.sigmapoints', points)                    
         if not addedpoint: # don't bother to run fit if no new data
             continue
 
-        accel_cal.RemoveOlder(10*60) # 10 minutes
-        fit = FitAccel(debug('accel'), accel_cal)
+        accel_points.RemoveOlder(10*60) # 10 minutes
+        fit = FitAccel(debug('accel'), accel_points)
         if fit: # reset compass sigmapoints on accel cal
-            dist = vector.dist(fit[0][:3], accel_calibration[:3])
+            dist = vector.dist(fit[0][:3], accel_calibration.value[0][:3])
             if dist > .01: # only update when bias changes more than this
                 if dist > .08: # reset compass cal from large change in accel bias
-                    compass_cal.Reset()
-                accel_calibration = fit[0]
-                client.set('imu.accel.calibration', fit)
+                    compass_points.Reset()
 
-        compass_cal.RemoveOlder(20*60) # 20 minutes
-        fit = FitCompass(debug('compass'), compass_cal, compass_calibration, norm)
+        compass_points.RemoveOlder(20*60) # 20 minutes
+        fit = FitCompass(debug('compass'), compass_points, compass_calibration.value[0], norm)
         if fit:
-            client.set('imu.compass.calibration', fit)
-            compass_calibration = fit[0]
-
-class IMUAutomaticCalibration(object):
-    def __init__(self):
-        self.cal_pipe, cal_pipe = NonBlockingPipe('cal pipe', True)
-        self.process = multiprocessing.Process(target=CalibrationProcess, args=(cal_pipe,))
-        self.process.start()
-
-    def __del__(self):
-        print('terminate calibration process')
-        self.process.terminate()
+            compass_calibration.set(fit)
 
 def ExtraFit():
     ellipsoid_fit = False

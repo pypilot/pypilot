@@ -26,7 +26,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     ID_MESSAGES = 1000
     ID_CALIBRATE_SERVO = 1001
     ID_HEADING_OFFSET = 1002
-    ID_REQUEST_MSG = 1003
 
     def __init__(self):
         super(CalibrationDialog, self).__init__(None)
@@ -56,51 +55,19 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.have_rudder = False
 
-        self.request_msg_timer = wx.Timer(self, self.ID_REQUEST_MSG)
-        self.Bind(wx.EVT_TIMER, self.request_msg, id=self.ID_REQUEST_MSG)
-        self.request_msg_timer.Start(250)
-        
         self.fusionQPose = [1, 0, 0, 0]
         self.controltimes = {}
 
         self.settings = {}
 
-    def set_watches(self, client):
-        if not client:
-            return
+        self.client = pypilotClient(self.host)
+        self.set_watches()
 
-        def calwatch(name):
-            name = 'imu.' + name
-            return [name + '.calibration', name + '.calibration.age',
-                    name, name + '.calibration.sigmapoints',
-                    name + '.calibration.locked', name + '.calibration.log']
-        
-        watchlist = [
-            ['imu.fusionQPose', 'imu.alignmentCounter', 'imu.heading',
-             'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading_offset'],
-            calwatch('accel'),
-            calwatch('compass') + ['imu.fusionQPose', 'imu.alignmentQ'],
-            ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity',
-             'rudder.range', 'servo.flags']]
-
-        watchlist.append(list(self.settings))
-
-        pageindex = 0
-        for pagelist in watchlist:
-            for name in pagelist:
-                client.watch(name, False)
-
-        pageindex = self.m_notebook.GetSelection()
-        for name in watchlist[pageindex]:
-            client.watch(name)
-
-    def on_con(self, client):
         # clear out plots
         self.accel_calibration_plot.points = []
         self.compass_calibration_plot.points = []
 
         values = client.list_values()
-
         if not self.settings:
             fgSettings = wx.FlexGridSizer( 0, 3, 0, 0 )
             fgSettings.AddGrowableCol( 1 )
@@ -136,15 +103,40 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             b = wx.Button( self.m_pSettings, wx.ID_OK )
             fgSettings.Add ( b, 1, wx.ALIGN_RIGHT, 5)
 
-        self.set_watches(client)
-
-    def receive_messages(self, event):
+    def set_watches(self):
         if not self.client:
-            try:
-                self.client = pypilotClient(self.on_con, self.host, autoreconnect=False)
-            except socket.error:
-                self.timer.Start(5000)
-                return
+            return
+
+        def calwatch(name):
+            name = 'imu.' + name
+            return [name + '.calibration', name + '.calibration.age',
+                    name, name + '.calibration.sigmapoints',
+                    name + '.calibration.locked', name + '.calibration.log']
+        
+        watchlist = [
+            ['imu.fusionQPose', 'imu.alignmentCounter', 'imu.heading',
+             'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading_offset'],
+            calwatch('accel'),
+            calwatch('compass') + ['imu.fusionQPose', 'imu.alignmentQ'],
+            ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity', ('rudder.angle', 1),
+             'rudder.range', 'servo.flags']]
+            
+        pageindex = self.m_notebook.GetSelection()
+        for i in range(len(pagelist)):
+            pagelist = watchlist[i]
+            for name in watchlist[pageindex]:
+                if i == pageindex:
+                    if type(name) == type(()):
+                        name, watch = name
+                    else:
+                        watch = True
+                else:
+                    watch = False
+                        
+                client.watch(name, watch)
+            
+    def receive_messages(self, event):
+        self.client.poll()
         try:
             msg = self.client.receive_single()
             while msg:
@@ -155,15 +147,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.client = False
         except Exception as e:
             print(e)
-
-    def request_msg(self, event):
-        if not self.client:
-            return
-
-        page_gets = [[], [], [], ['rudder.angle'], []]
-        i = self.m_notebook.GetSelection()
-        for name in page_gets[i]:
-            self.client.get(name)
 
     def UpdateControl(self, control, update):
         t = time.time()

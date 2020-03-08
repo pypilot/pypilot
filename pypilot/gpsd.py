@@ -12,13 +12,12 @@ import multiprocessing, time, socket, select
 from pipeserver import NonBlockingPipe
 from values import *
 import serialprobe
-from sensors import Sensor
 
 class gpsProcess(multiprocessing.Process):
     def __init__(self):
         # split pipe ends
-        self.pipe, pipe = NonBlockingPipe('gpsprocess')
-        super(gpsProcess, self).__init__(target=self.gps_process, args=(pipe, ))
+        self.pipe, pipe = NonBlockingPipe('gps_pipe')
+        super(gpsProcess, self).__init__(target=self.gps_process, args=(pipe,))
         self.devices = []
 
     def connect(self):
@@ -66,17 +65,16 @@ class gpsProcess(multiprocessing.Process):
             self.read(pipe)
             
 class gpsd(Sensor):
-    def __init__(self, server, sensors):
-        super(gpsd, self).__init__(server, 'gps')
-        self.track = self.Register(SensorValue, 'track', directional=True)
-        self.speed = self.Register(SensorValue, 'speed')
-        
-        self.sensors = sensors
+    def __init__(self, ap):
+        super(gpsd, self).__init__(ap, 'gps')
+        self.track = self.register(SensorValue, 'track', directional=True)
+        self.speed = self.register(SensorValue, 'speed')
 
         self.process = False
         self.devices = []
 
         self.process = gpsProcess()
+
         self.process.start()
         READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
         self.poller = select.poll()
@@ -98,7 +96,7 @@ class gpsd(Sensor):
 
         # use fix timestamp?
         val = {'track': fval('track'), 'speed': fval('speed'), 'device': fval('device')}
-        self.sensors.write('gps', val, 'gpsd')
+        self.ap.sensors.write('gps', val, 'gpsd')
 
     def poll(self):
         while True:
@@ -113,7 +111,6 @@ class gpsd(Sensor):
                         print('nmea got flag for gpsd pipe:', flag)
                     else:
                         self.read()
-
 
     def update(self, data):
         self.track.set(data['track'])

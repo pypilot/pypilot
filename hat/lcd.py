@@ -236,9 +236,8 @@ class LCD():
                           'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
                           'imu.compass.calibration', 'imu.compass.calibration.sigmapoints',
                           'imu.compass.calibration.locked', 'imu.alignmentQ',
-                          'rudder.calibration_state']
-        self.initial_gets = ['servo.speed.min', 'servo.speed.max', 'servo.max_current',
-                             'servo.period', 'imu.alignmentCounter']
+                          'rudder.calibration_state', 'servo.speed.min', 'servo.speed.max',
+                          'servo.max_current', 'servo.period', 'imu.alignmentCounter']
 
         self.create_mainmenu()
 
@@ -722,7 +721,7 @@ class LCD():
             self.wifi = wifi
     
     def display_control(self):
-        if not self.hat.client:
+        if not self.hat.client.connection:
             self.display_connecting()
             self.control = False
             return

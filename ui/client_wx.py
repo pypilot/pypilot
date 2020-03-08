@@ -9,7 +9,7 @@
 
 from __future__ import print_function
 import wx, sys, math, subprocess, os, socket
-from pypilot.client import pypilotClient, pypilotClientFromArgs, ConnectionLost
+from pypilot.client import pypilotClient
 
 def round3(value):
     if type(value) == type([]):
@@ -28,9 +28,11 @@ class MainFrame(wx.Frame):
         wx.Frame.__init__(self, None, title="pypilot client", size=(1000, 600))
 
         self.value_list = []
-        self.client = pypilotClientFromArgs(sys.argv, True, self.on_con)
-        self.host_port = self.client.host_port
-        self.client.autoreconnect = False
+        host = ''
+        if len(sys.argv) > 1:
+            host = sys.argv[1]
+        self.client = pypilotClient(host)
+        self.connected = False
 
         ssizer = wx.FlexGridSizer(0, 1, 0, 0)
         ssizer.AddGrowableRow( 0 )
@@ -50,7 +52,12 @@ class MainFrame(wx.Frame):
         self.controls = {}
         self.sliderrange = {}
         self.value_list = self.client.list_values()
-        self.on_con(self.client)
+        for name in sorted(self.value_list):
+            t = self.value_list[name]['type']
+            watch = True
+            if t == 'SensorValue':
+                watch=2 # update only every 2 seconds
+                client.watch(name, watch)
 
         for name in sorted(self.value_list):
             sizer.Add( wx.StaticText(self.scrolledWindow, wx.ID_ANY, name), 0, wx.ALL, 5 )
@@ -73,7 +80,7 @@ class MainFrame(wx.Frame):
 
                     cbname = name
                     def oncheck(event):
-                        self.client.set(cbname, cb.GetValue() )
+                        self.client.set(cbname, cb.GetValue())
                     cb.Bind( wx.EVT_CHECKBOX, oncheck )
                 proc()
 
@@ -114,7 +121,7 @@ class MainFrame(wx.Frame):
                     self.controls[name] = c
                     cname = name
                     def onchoice(event):
-                        self.client.set(cname, str(c.GetStringSelection()) )
+                        self.client.set(cname, str(c.GetStringSelection()))
                     c.Bind( wx.EVT_CHOICE, onchoice )
                 proc()
 
@@ -166,47 +173,22 @@ class MainFrame(wx.Frame):
         self.Refresh()
         
     def Refresh(self):
-        for name in self.value_list:
-            self.client.get(name)
-
-    def on_con(self, client):
-        self.SetTitle("pypilot client - Connected")
-        for name in sorted(self.value_list):
-            t = self.value_list[name]['type']
-            if t != 'SensorValue':
-                client.watch(name)
-            else:
-                client.get(name)
+        print('refresh does nothing')
         
     def receive_messages(self, event):
-        if not self.client:
-            try:
-                host, port = self.host_port
-                self.client = pypilotClient(self.on_con, host, port, autoreconnect=False)
-                self.timer.Start(100)
-            except socket.error:
-                self.timer.Start(1000)
-                return
-
-        while True:
-            result = False
-            try:
-                result = self.client.receive()
-            except ConnectionLost:
+        if self.client.connected != self.connected:
+            self.connected = self.client.connected
+            if self.connected:
+                self.SetTitle("pypilot client - Connected")
+            else:
                 self.SetTitle("pypilot client - Disconnected")
-                self.client = False
-                return
-            except:
-                pass
+        while True:
+            result = self.client.receive()
             if not result:
                 break
 
             for name in result:
-                if not 'value' in result[name]:
-                    print('no value', result)
-                    raise 'no value'
-
-                value = round3(result[name]['value'])
+                value = round3(result[name])
 
                 strvalue = str(value)
                 if len(strvalue) > 50:

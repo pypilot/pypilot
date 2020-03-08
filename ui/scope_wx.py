@@ -9,7 +9,7 @@
 
 import wx, wx.glcanvas, sys, socket, time, os
 from OpenGL.GL import *
-from pypilot.client import pypilotClient, pypilotClientFromArgs, ConnectionLost
+from pypilot.client import pypilotClientFromArgs
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from scope_ui import pypilotScopeBase
@@ -39,7 +39,7 @@ class pypilotScope(pypilotScopeBase):
         def on_con(client):
             self.plot.on_con(client)
 
-        self.client = pypilotClientFromArgs(sys.argv[:2], True, on_con)
+        self.client = pypilotClientFromArgs(sys.argv)
         self.host_port = self.client.host_port
         self.client.autoreconnect = False
         self.value_list = self.client.list_values()
@@ -60,8 +60,6 @@ class pypilotScope(pypilotScopeBase):
                     watches.remove(name)
         for arg in watches:
             print('value not found:', arg)
-
-        self.on_con(self.client)
 
         self.timer = wx.Timer(self, wx.ID_ANY)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
@@ -89,15 +87,9 @@ class pypilotScope(pypilotScopeBase):
                 return
 
         refresh = False
+        self.client.poll()
         while True:
-            result = False
-            try:
-                result = self.client.receive_single()
-            except ConnectionLost:
-                self.client = False
-                return
-            except:
-                pass
+            result = self.client.receive_single()
             if not result:
                 break
 

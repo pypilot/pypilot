@@ -32,7 +32,7 @@ try:
         return self.b.recv()
         
     def readline(self):
-        return self.b.line()
+      return self.b.line()
 
     def send(self, data):
         self.out_buffer += data
@@ -76,6 +76,9 @@ except Exception as e:
         self.no_newline_pos = 0
         self.out_buffer = ''
 
+    def close(self):
+        self.socket.close()
+        
     def send(self, data):
         self.out_buffer += data
 
@@ -97,7 +100,11 @@ except Exception as e:
 
     def recv(self):
         size = 4096
-        data = self.socket.recv(size)
+        try:
+          data = self.socket.recv(size).decode()
+        except Exception as e:
+          print('error receiving data', e)
+          return False
 
         l = len(data)
         if l == 0:
@@ -111,10 +118,12 @@ except Exception as e:
     def readline(self):
         while self.no_newline_pos < len(self.in_buffer):
             c = self.in_buffer[self.no_newline_pos]
-            if c=='\n':
-                ret = self.in_buffer[:self.no_newline_pos]
+            if c=='\n' or c=='\r':
+                ret = self.in_buffer[:self.no_newline_pos]+'\n'
                 self.in_buffer = self.in_buffer[self.no_newline_pos+1:]
-                self.no_newline_pos = 0
-                return ret
+                if self.no_newline_pos:
+                  self.no_newline_pos = 0
+                  return ret
+                continue
             self.no_newline_pos += 1
         return ''

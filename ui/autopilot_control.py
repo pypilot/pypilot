@@ -39,9 +39,18 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.timer = wx.Timer(self, self.ID_MESSAGES)
         self.timer.Start(100)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=self.ID_MESSAGES)
+        self.init()
 
 
-    def on_con(self, client):
+    def init(self):
+        self.stStatus.SetLabel('No Connection')
+        self.client = pypilotClient(self.host)
+
+        self.lastmsgtime = time.time()
+
+        self.tbAP.SetValue(False)
+        self.set_mode_color()
+        
         self.fgGains.Clear(True)
         self.watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
                           'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
@@ -49,7 +58,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                           'gps.source', 'wind.source',
                           'servo.controller', 'servo.engaged', 'servo.flags',
                           'rudder.angle']
-        value_list = client.list_values()
+        value_list = self.client.list_values()
         self.gains = {}
         pilots = {}
         for name in value_list:
@@ -110,20 +119,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         
         for name in self.watchlist:
             if name in value_list:
-                client.watch(name)
+                self.client.watch(name)
 
-    def watch(self, name):
-        if not name in self.watchlist:
-            self.watchlist.append(name)
-        if self.client:
-            self.client.watch(name)
-
-    def unwatch(self, name):
-        if name in self.watchlist:
-            self.watchlist.remove(name)
-        if self.client:
-            self.client.watch(name, False)
-                
     def servo_command(self, command):
         if self.lastcommand != command or command != 0:
             self.lastcommand = command
@@ -142,20 +139,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             color = wx.RED
         self.tbAP.SetForegroundColour(color)
 
-    def receive_messages(self, event):
-        if not self.client:
-            self.stStatus.SetLabel('No Connection')
-            try:
-                self.client = pypilotClient(self.on_con, self.host, autoreconnect=False)
-                self.timer.Start(100)
-                self.lastmsgtime = time.time()
-
-                self.tbAP.SetValue(False)
-                self.set_mode_color()
-            except socket.error:
-                self.timer.Start(5000)
-                return
-            
+    def receive_messages(self, event):            
         command = self.sCommand.GetValue()
         if command != 0:
             if self.tbAP.GetValue():
@@ -180,19 +164,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                time.time() - gain['last_change'] > 1:
                 gain['slider'].SetValue(gain['sliderval'])
 
-
-        try:
-            msgs = self.client.receive()
-        except ConnectionLost:
-            self.client = False
-            return
-
-        if not msgs:
-            if time.time() - self.lastmsgtime > 2:
-                print('message timeout')
-                self.client = False
-            return
-
+        msgs = self.client.receive()
         self.lastmsgtime = time.time()
 
         for name in msgs:
@@ -290,7 +262,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 print('warning: unhandled message "%s"' % name)
 
     def onAP( self, event ):
-        self.client.set('servo.raw_command', 0)
         if self.tbAP.GetValue():
             self.client.set('ap.heading_command', self.heading)
             self.client.set('ap.enabled', True)

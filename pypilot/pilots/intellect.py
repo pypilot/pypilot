@@ -233,19 +233,9 @@ class Intellect(object):
             for name in msg:
                 self.receive_single(name, msg[name])
             return
-          
-        if not self.client:
-            print('connecting to', self.host)
-            # couldn't load try to connect
-            watches = self.conf['sensors'] + list(self.conf['state'])
-            watches.append('ap.enabled')
-            watches.append('timestamp')
-            def on_con(client):
-                for name in watches:
-                    client.watch(name)
-            
-            self.client = pypilotClient(on_con, self.host, autoreconnect=False)
-        msg = self.client.receive_single(1)
+
+        self.client.poll(1)
+        msg = self.client.receive_single()
         while msg:
             name, data = msg
             value = data['value']
@@ -311,14 +301,15 @@ class Intellect(object):
       
       t0 = time.time()
 
-      self.client = False
+      print('connecting to', self.host)
+      self.client = pypilotClient(self.host)
+
+      watches = self.conf['sensors'] + list(self.conf['state']) + 'ap.enabled' + 'timestamp'
+      for name in watches:
+          client.watch(name)
+
       while True:
-          #try:
           self.receive()
-          #except Exception as e:
-          #    print('error', e)
-          #    self.client = False
-          #    time.sleep(1)
               
           if time.time() - t0 > 600:
               filename = os.getenv('HOME')+'/.pypilot/intellect_'
