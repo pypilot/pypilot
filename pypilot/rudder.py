@@ -19,7 +19,7 @@ class Rudder(Sensor):
         self.angle = self.Register(SensorValue, 'angle')
         self.speed = self.Register(SensorValue, 'speed')
         self.last = 0
-        self.last_time = time.time()
+        self.last_time = time.monotonic()
         self.offset = self.Register(Value, 'offset', 0.0, persistent=True)
         self.scale = self.Register(Value, 'scale', 100.0, persistent=True)
         self.nonlinearity = self.Register(Value, 'nonlinearity',  0.0, persistent=True)
@@ -147,7 +147,7 @@ class Rudder(Sensor):
                 self.autogain_state='idle'
                 self.calibration_state.set('idle')
 
-            t = time.time()
+            t = time.monotonic()
             if self.autogain_state=='idle':
                 self.gain.set(1)
                 self.autogain_state='fwd'
@@ -174,7 +174,7 @@ class Rudder(Sensor):
             if self.autogain_state=='rev':
                 self.command.set(-1)
                 if abs(self.value) >= rng:
-                    dt = time.time() - self.autogain_time
+                    dt = time.monotonic() - self.autogain_time
                     #print('hardover', dt, 'with', rng/dt, 'deg/s')
                     # 5 deg/s is gain of 1
 
@@ -216,7 +216,7 @@ class Rudder(Sensor):
         angle = round(angle, 2) # 2 decimal for rudder angle is enough
         self.angle.set(angle)
 
-        t = time.time()
+        t = time.monotonic()
         dt = t - self.last_time
 
         if dt > 1:

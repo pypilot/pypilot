@@ -28,7 +28,7 @@ class WindPilot(AutopilotPilot):
     self.heading = self.Register(SensorValue, 'heading', directional=True)
     self.heading_error = self.Register(SensorValue, 'heading_error')
     self.heading_error_int = self.Register(SensorValue, 'heading_error_int')
-    self.heading_error_int_time = time.time()
+    self.heading_error_int_time = time.monotonic()
 
     # create simple pid filter
     self.gains = {}

@@ -32,7 +32,7 @@ class gpsProcess(multiprocessing.Process):
                 time.sleep(3)
 
     def read(self, pipe):
-        lasttime = time.time()
+        lasttime = time.monotonic()
         while True:
             try:
                 gpsdata = self.gpsd.next()
@@ -44,14 +44,14 @@ class gpsProcess(multiprocessing.Process):
                         self.devices.append(device)
 
                 if self.gpsd.fix.mode == 3 and \
-                   time.time() - lasttime > .25:
+                   time.monotonic() - lasttime > .25:
                     fix = {}
                     #fix['time'] = self.gpsd.fix.time
                     fix['track'] = self.gpsd.fix.track
                     fix['speed'] = self.gpsd.fix.speed * 1.944 # knots
                     fix['device'] = device
                     pipe.send(fix, False)
-                    lasttime = time.time()
+                    lasttime = time.monotonic()
 
             except StopIteration:
                 print('lost connection to gpsd')

@@ -149,7 +149,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             print(e)
 
     def UpdateControl(self, control, update):
-        t = time.time()
+        t = time.monotonic()
         if not control in self.controltimes or t - self.controltimes[control] > .5:
             update()
             self.controltimes[control] = t

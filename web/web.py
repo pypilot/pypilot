@@ -134,7 +134,7 @@ class MyNamespace(Namespace):
             for sid in self.polls:
                 for poll in self.polls[sid]:
                     polls[poll] = True
-            t = time.time()
+            t = time.monotonic()
             for message in polls:
                 if not message in polls_sent or \
                    t - polls_sent[message] > 1:

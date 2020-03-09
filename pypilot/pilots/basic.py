@@ -17,7 +17,7 @@ class TimedQueue(object):
     self.length = length
 
   def add(self, data):
-    t = time.time()
+    t = time.monotonic()
     while self.data and self.data[0][1] < t-self.length:
       self.data = self.data[1:]
     self.data.append((data, t))
@@ -55,7 +55,7 @@ class BasicPilot(AutopilotPilot):
     self.last_heading_mode = False
 
   def process(self, reset):
-    t = time.time()
+    t = time.monotonic()
     ap = self.ap
     if reset:
         self.heading_command_rate.set(0)

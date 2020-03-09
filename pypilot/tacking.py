@@ -13,11 +13,11 @@ from resolv import *
 class TackSensorLog(object):
   def __init__(self, threshold):
     self.log = []
-    self.time = time.time()
+    self.time = time.monotonic()
     self.threshold = threshold
 
   def update(self, value):
-    t = time.time()
+    t = time.monotonic()
     dt = t - self.time
     # limit update rate
     if dt < .25:
@@ -78,7 +78,7 @@ class Tack(object):
     self.count = self.Register(ResettableValue, 'count', 0, persistent=True)
     self.direction = self.Register(EnumProperty, 'direction', 'port', ['port', 'starboard'])
     self.current_direction = 'port' # so user can't change while tacking
-    self.time = time.time()
+    self.time = time.monotonic()
 
     self.wind_log = TackSensorLog(12)
     self.heel_log = TackSensorLog(7)
@@ -87,7 +87,7 @@ class Tack(object):
     return self.ap.server.Register(_type(*(['ap.tack.' + name] + list(args)), **kwargs))
 
   def process(self):
-    t = time.time()
+    t = time.monotonic()
     ap = self.ap
 
     # disengage cancels any tacking

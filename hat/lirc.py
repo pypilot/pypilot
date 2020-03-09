@@ -21,7 +21,7 @@ class lirc(object):
     def __init__(self):
         self.events = []
         self.lastkey = False
-        self.lasttime = time.time()
+        self.lasttime = time.monotonic()
 
         global LIRC
         if LIRC:
@@ -36,7 +36,7 @@ class lirc(object):
         if not LIRC:
             return
 
-        t = time.time()
+        t = time.monotonic()
         while True:
             code = LIRC.nextcode(1)
             if not code:

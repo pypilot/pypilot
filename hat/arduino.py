@@ -175,14 +175,14 @@ def main():
     print('opening...')
     ar.open()
 
-    t0 = time.time()
+    t0 = time.monotonic()
 
     while True:
         ar.poll()
         while True:
             v = ar.read()
             if v:
-                print('read', time.time()-t0 , v)
+                print('read', time.monotonic()-t0 , v)
         time.sleep(.01)
     
 if __name__ == '__main__':

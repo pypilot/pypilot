@@ -35,6 +35,9 @@ class Value(object):
             if type(self.watch) == type(True):
                 self.client.send(self.name+'='+pyjson.dumps(value)+'\n')
             elif self.pwatch:
+                t0 = time.monotonic()
+                if t0 >= self.watch.time:
+                    self.watch.time = t0 # watch already expired, increment time
                 self.client.values.insert_watch(self.watch)
                 self.pwatch = False
 
@@ -80,7 +83,7 @@ class StringValue(Value):
             strvalue = 'true' if self.value else 'false'
         else:
             strvalue = '"' + self.value + '"'
-        return '{"' + self.name + '": {"value": ' + strvalue + '}}'
+        return strvalue
 
 class SensorValue(Value):
     def __init__(self, name, initial=False, fmt='%.3f', **kwargs):

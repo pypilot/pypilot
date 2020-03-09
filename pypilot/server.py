@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -10,25 +10,17 @@
 from __future__ import print_function
 import select, socket, time, numbers
 import pyjson
-import fcntl, os
+import os
 from bufferedsocket import LineBufferedNonBlockingSocket
+from nonblockingpipe import LineBufferedNonBlockingPipe
+import heapq
+import multiprocessing
 
 DEFAULT_PORT = 23322
 max_connections = 30
 default_persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
 server_persistent_period = 60 # store data every 60 seconds
-
-class pypilotSocket(LineBufferedNonBlockingSocket):
-    def __init__(self, connection):
-        super(pypilotSocket, self).__init__(connection)
-        self.cwatches = {'values': True} # always watch client values
-
-    def flush(self):
-        # write combined watches to client
-        if self.cwatches:
-            self.send('watch=' + pyjson.dumps(self.cwatches) + '\n')
-            self.cwatches = {}
-        super(pypilotSocket, self).flush()
+use_multiprocessing = True
 
 class Watch(object):
     def __init__(self, value, connection, period):
@@ -42,7 +34,7 @@ class pypilotValue(object):
         self.values = values
         self.name = name
         self.info = info
-        self.lasttime = time.time()
+        self.lasttime = time.monotonic()
         self.connection = connection
         self.watching = False # is False, or the period, so 0 rather than True
 
@@ -54,19 +46,23 @@ class pypilotValue(object):
         return self.msg
         
     def set(self, msg, connection):
-        t0 = time.time()
+        t0 = time.monotonic()
         if self.connection == connection:
             # received new value from owner, inform watchers
             self.msg = msg
 
-            for watch in self.awatches:
+            if self.awatches:
+                watch = self.awatches[0]
                 if watch.period == 0:
                     for connection in watch.connections:
                         connection.send(msg)
-                    break
-            for watch in self.pwatches:
-                self.values.insert_watch(watch)
-            self.pwatches = []
+
+                for watch in self.pwatches:
+                    if t0 >= watch.time:
+                        watch.time = t0
+                    self.values.insert_watch(watch)
+                self.pwatches = []
+
         elif self.connection: # inform owner of change if we are not owner
             if 'writable' in self.info and self.info['writable']:
                 self.connection.send(msg)
@@ -92,8 +88,8 @@ class pypilotValue(object):
                 print("ERRORRRR  no connections in watch")
             if watching is False or watch.period < watching:
                 watching = watch.period
-
-        if watching != self.watching:
+                
+        if watching is not self.watching:
             self.watching = watching
             if watching == 0:
                 watching = True
@@ -115,6 +111,7 @@ class pypilotValue(object):
         if connection == self.connection:
             connection.send('error=can not add watch for own value: ' + self.name + '\n')
             return
+        
         if period is False: # period is False: remove watch
             if not self.unwatch(connection, True):
                 # inform client there was no watch
@@ -134,7 +131,10 @@ class pypilotValue(object):
 
             # need a new watch for this unique period
             watch = Watch(self, connection, period)
-            self.awatches.append(watch)
+            if period == 0: # make sure period 0 is always at start of list
+                self.awatches.insert(0, watch)
+            else:
+                self.awatches.append(watch)
             self.calculate_watch_period()
             if period:
                 self.pwatches.append(watch)
@@ -158,13 +158,14 @@ class ServerWatch(pypilotValue):
             values[name].watch(connection, watches[name])
 
 class ServerValues(pypilotValue):
-    def __init__(self, persistent_path):
+    def __init__(self):
         super(ServerValues, self).__init__(self, 'values', {}, None)
-        self.persistent_path = persistent_path
         self.values = {'values': self, 'watch': ServerWatch(self)}
+        self.pipevalues = {}
         self.msg = 'new'
         self.load()
         self.pqwatches = [] # priority queue of watches
+        self.last_send_watches = 0
 
     def get_msg(self):
         if not self.msg or self.msg == 'new':
@@ -179,23 +180,28 @@ class ServerValues(pypilotValue):
                 notsingle = True
             self.msg = msg + '}\n'
         return self.msg
+
+    def sleep_time(self):
+        # sleep until the first value in heap is ready
+        if not self.pqwatches:
+            return None
+        return self.pqwatches[0][0] - time.monotonic()
             
     def send_watches(self):
-        t0 = time.time()
-        i = 0
-        while i < len(self.pqwatches):
-            watch = self.pqwatches[i]
-            if t0 >= watch.time-watch.period and t0 < watch.time:
+        t0 = time.monotonic()
+        while self.pqwatches:
+            if t0 < self.pqwatches[0][0]:
                 break # no more are ready
-            i += 1
+            t, i, watch = heapq.heappop(self.pqwatches) # pop first element
             if not watch.connections:
                 continue # forget this watch
             for connection in watch.connections:
                 connection.send(watch.value.get_msg())
-            watch.time = t0+watch.period
+            watch.time += watch.period
             watch.value.pwatches.append(watch) # put back on value periodic watch list
-        # remove watches handled
-        self.pqwatches = self.pqwatches[i:]
+            
+    def insert_watch(self, watch):
+        heapq.heappush(self.pqwatches, (watch.time, time.monotonic(), watch))
 
     def remove(self, connection):
         for name in self.values:
@@ -204,18 +210,6 @@ class ServerValues(pypilotValue):
                 value.connection = False
                 continue
             value.remove_watches(connection)
-            
-    def insert_watch(self, watch):
-        if watch in self.pqwatches:
-            print('error, watch should not be in pqwatches')
-            return
-
-        i = 0
-        while i < len(self.pqwatches):
-            if self.pqwatches[i].time > watch.time:
-                break
-            i += 1
-        self.pqwatches.insert(i, watch)
             
     def set(self, msg, connection):
         name, data = msg.rstrip().split('=', 1)        
@@ -229,7 +223,7 @@ class ServerValues(pypilotValue):
                 else:
                     value.connection = connection
                     value.info = info # update info
-                    value.watching = (False,)
+                    value.watching = False
                     value.calculate_watch_period()
                 continue
             value = pypilotValue(self, name, info, connection)
@@ -269,29 +263,29 @@ class ServerValues(pypilotValue):
     def load(self):
         self.persistent_data = {}
         try:
-            self.load_file(open(self.persistent_path))
+            self.load_file(open(default_persistent_path))
         except Exception as e:
-            print('failed to load', self.persistent_path, e)
+            print('failed to load', default_persistent_path, e)
             # log failing to load persistent data
             persist_fail = os.getenv('HOME') + '/.pypilot/persist_fail'
             file = open(persist_fail, 'a')
-            file.write(str(time.time()) + ' ' + str(e) + '\n')
+            file.write(str(time.monotonic()) + ' ' + str(e) + '\n')
             file.close()
 
             try:
-                self.load_file(open(self.persistent_path + '.bak'))
+                self.load_file(open(default_persistent_path + '.bak'))
                 return
             except Exception as e:
                 print('backup data failed as well', e)
             return
 
         # backup persistent_data if it loaded with success
-        file = open(self.persistent_path + '.bak', 'w')
+        file = open(default_persistent_path + '.bak', 'w')
         file.write(pyjson.dumps(self.persistent_data)+'\n')
         file.close()
 
     def store(self):
-        self.persistent_timeout = time.time() + server_persistent_period
+        self.persistent_timeout = time.monotonic() + server_persistent_period
         need_store = False
         for name in self.values:
             value = self.values[name]
@@ -304,7 +298,7 @@ class ServerValues(pypilotValue):
         if not need_store:
             return                
         try:
-            file = open(self.persistent_path, 'w')
+            file = open(default_persistent_path, 'w')
             for name in self.persistent_data:
                 file.write(self.persistent_data[name])
             file.close()
@@ -312,104 +306,169 @@ class ServerValues(pypilotValue):
             print('failed to write', self.persistent_path, e)
 
 class pypilotServer(object):
-    def __init__(self, port=DEFAULT_PORT, persistent_path=default_persistent_path):
+    def __init__(self):
+        self.pipes = []
+        self.poll = self.init
+        self.multiprocessing = use_multiprocessing
+
+    def pipe(self):
+        if self.poll != self.init:
+            print('pipe clients must be created before the server is run')
+
+        pipe0, pipe1 = LineBufferedNonBlockingPipe('pypilotServer pipe' + str(len(self.pipes)), self.multiprocessing)
+        self.pipes.append(pipe1)
+        return pipe0
+
+    def noop(self, timeout=0):
+        pass # in multiprocessing poll is a no op
+        
+    def run(self):
+        print('pypilotServer on', os.getpid())
+        # if server is in a separate process
+        self.multiprocessing = False
+        self.init()
+        while True:
+            dt = self.values.sleep_time()
+            #t0 = time.monotonic()
+            self.poll(dt)
+            #print('times', time.monotonic() - t0, dt)
+
+    def init(self, timeout=0):
+        if self.multiprocessing:
+            self.process = multiprocessing.Process(target=self.run)
+            self.process.start()
+            self.poll = self.noop
+            return
+
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setblocking(0)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        self.port = port        
+        self.port = DEFAULT_PORT
         self.sockets = []
-        self.persistent_timeout = time.time() + server_persistent_period
-        self.values = ServerValues(persistent_path)
+        self.fd_to_pipe = {}
 
+        self.persistent_timeout = time.monotonic() + server_persistent_period
+        self.values = ServerValues()
 
         try:
             self.server_socket.bind(('0.0.0.0', self.port))
         except:
             print('pypilot_server: bind failed; already running a server?')
-            time.sleep(1)
-            return
+            exit(1)
 
+        # listen for tcp sockets
         self.server_socket.listen(5)
-        self.init = True
-        self.fd_to_socket = {self.server_socket.fileno() : self.server_socket}
+        fd = self.server_socket.fileno()
+        self.fd_to_connection = {fd: self.server_socket}
         self.poller = select.poll()
-        self.poller.register(self.server_socket, select.POLLIN)
+        self.poller.register(fd, select.POLLIN)
+
+        # setup pipes
+        for pipe in self.pipes:
+            fd = pipe.fileno()
+            if fd: # fd is 0 for non multiprocessed
+                self.poller.register(fd, select.POLLIN)
+                self.fd_to_connection[fd] = pipe
+                self.fd_to_pipe[fd] = pipe
+            pipe.cwatches = {'values': True} # server always watches client values 
+        
+        self.poll = self.handle_requests # initialized, now handle requests when polling
 
     def __del__(self):
+        if self.multiprocessing:
+            return
         self.values.store()
         self.server_socket.close()
         for socket in self.sockets:
             socket.socket.close()
 
-    def HandleRequest(self, socket, request):
-        self.values.HandleRequest(request, socket)
+    def HandleRequest(self, connection, request):
+        self.values.HandleRequest(request, connection)
 
     def RemoveSocket(self, socket):
         self.sockets.remove(socket)
 
         found = False
-        for fd in self.fd_to_socket:
-            if socket == self.fd_to_socket[fd]:
-                del self.fd_to_socket[fd]
+        for fd in self.fd_to_connection:
+            if socket == self.fd_to_connection[fd]:
+                del self.fd_to_connection[fd]
                 self.poller.unregister(fd)
                 found = True
                 break
 
-        socket.socket.close()
         if not found:
-            print('socket not found in fd_to_socket')
+            print('socket not found in fd_to_connection')
 
+        socket.socket.close()
         self.values.remove(socket)
-        
-    def poll(self):        
-        t1 = time.time()
-        #print('store', t1 - self.persistent_timeout)
-        if t1 < self.persistent_timeout - server_persistent_period:
-            print('clock skew detected, resetting persistent timeout')
-            self.persistent_timeout = time.time() + server_persistent_period
 
-        if t1 >= self.persistent_timeout:
+    def handle_requests(self, timeout=0):
+        t0 = time.monotonic()
+        #print('store', t0 - self.persistent_timeout)
+        if t0 < self.persistent_timeout - server_persistent_period:
+            print('clock skew detected, resetting persistent timeout')
+            self.persistent_timeout = time.monotonic() + server_persistent_period
+
+        if t0 >= self.persistent_timeout:
             self.values.store()
-            if time.time() - t1 > .1:
-                print('persistent store took too long!', time.time() - t1)
+            if time.monotonic() - t0 > .1:
+                print('persistent store took too long!', time.monotonic() - t0)
                 return
 
-        events = self.poller.poll(0)
+        if timeout:
+            timeout *= 1000 # milliseconds
+
+        events = self.poller.poll(timeout)
         while events:
             event = events.pop()
             fd, flag = event
-            socket = self.fd_to_socket[fd]
-            if socket == self.server_socket:
-                connection, address = socket.accept()
+                                    
+            connection = self.fd_to_connection[fd]
+            if connection == self.server_socket:
+                connection, address = connection.accept()
                 if len(self.sockets) == max_connections:
                     print('pypilot server: max connections reached!!!', len(self.sockets))
                     self.RemoveSocket(self.sockets[0]) # dump first socket??
-
-                socket = pypilotSocket(connection)
+                socket = LineBufferedNonBlockingSocket(connection)
+                
                 self.sockets.append(socket)
                 fd = socket.socket.fileno()
-                self.fd_to_socket[fd] = socket
+                socket.cwatches = {'values': True} # server always watches client values 
+
+                self.fd_to_connection[fd] = socket
                 self.poller.register(fd, select.POLLIN)
             elif flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
-                self.RemoveSocket(socket)
+                self.RemoveSocket(connection)
             elif flag & select.POLLIN:
-                if not socket.recv():
-                    self.RemoveSocket(socket)
+                if fd in self.fd_to_pipe:
+                    while True:
+                        line = connection.readline()
+                        if not line:
+                            break
+                        self.HandleRequest(connection, line)
+                    continue
+                if not connection.recv():
+                    self.RemoveSocket(connection)
+                    continue
                 while True:
-                    line = socket.readline()
+                    line = connection.readline()
                     if not line:
                         break
-                    if True:
-                        self.HandleRequest(socket, line)
-                    else:
-                     try:
-                        self.HandleRequest(socket, line)
-                     except Exception as e:
-                        print('invalid request from socket', line)
+                    try:
+                        self.HandleRequest(connection, line)
+                    except Exception as e:
+                        print('invalid request from connection', line)
                         print(e)
-                        socket.send('invalid request: ' + line + '\n')
+                        connection.send('invalid request: ' + line + '\n')
 
+        for pipe in self.pipes:
+            while True:
+                line = pipe.readline()
+                if not line:
+                    break
+                self.HandleRequest(pipe, line)
+                        
         # send periodic watches
         self.values.send_watches()
 
@@ -417,39 +476,43 @@ class pypilotServer(object):
         for socket in self.sockets:
             socket.flush()
 
+        # send watches
+        for connection in self.sockets + self.pipes:
+            if connection.cwatches:
+                connection.send('watch=' + pyjson.dumps(connection.cwatches) + '\n')
+                connection.cwatches = {}
+
 if __name__ == '__main__':
     server = pypilotServer()
-
     from client import pypilotClient
     from values import *
-    client1 = pypilotClient()
+    client1 = pypilotClient(server.pipe()) # direct pipe to server
     clock = client1.register(Value('clock', 0))
     test1 = client1.register(Property('test', 1234))
-    client1.watch('test2')
+    client1.watch('test2', 10)
 
-    client2 = pypilotClient()
+    client2 = pypilotClient('localhost') # tcp socket connection
     test2 = client2.register(Property('test2', [1,2,3,4]))
-    client2.watch('clock')
+    client2.watch('clock', 1)
 
+    client3 = pypilotClient('localhost')
+    client3.watch('clock', 3)    
+
+    def print_msgs(name, msgs):
+        for msg in msgs:
+            print(name, msg, msgs[msg])
+    
     print('pypilot demo server')
-    t0 = time.time()
+    t00 = t0 = time.monotonic()
     while True:
         server.poll()
+        print_msgs('client1', client1.receive())
+        print_msgs('client2', client2.receive())
+        print_msgs('client3', client3.receive())
 
-        msgs = client1.receive()
-        if msgs:
-            print('client1:', msgs)
-
-        msgs = client2.receive()
-        if msgs:
-            print('client2:', msgs)
-
-        time.sleep(.1)
-        dt = time.time() - t0
-        if dt > 1:
-            clock.set(clock.value+1)
-            t0 += 1
-            print('clock', clock.value)
+        time.sleep(.004)
+        dt = time.monotonic() - t0
+        if dt > .01:
+            clock.set(time.monotonic()-t00)
+            t0 += .01
             test2.set(123)
-
-        

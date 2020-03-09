@@ -36,15 +36,15 @@ class trace(object):
     def add(self, t, data, mindt):
         # update previous timestamps based on downtime
         if self.points and math.isnan(self.points[0][1]):
-            dt = time.time() - t - self.timeoff
+            dt = time.monotonic() - t - self.timeoff
             self.timeoff = False
             for i in range(len(self.points)):
                 point = self.points[i]
                 self.points[i] = point[0]-dt, point[1]
 
                 
-        if not self.timeoff or self.timeoff < time.time() - t or self.timeoff > time.time() - t + 1:
-            self.timeoff = time.time() - t
+        if not self.timeoff or self.timeoff < time.monotonic() - t or self.timeoff > time.monotonic() - t + 1:
+            self.timeoff = time.monotonic() - t
             
         elif self.points and t-self.points[0][0]<mindt:
             return False
@@ -93,7 +93,7 @@ class trace(object):
         if not self.visible or not self.timeoff:
             return
 
-        t = time.time() - self.timeoff
+        t = time.monotonic() - self.timeoff
         
         glPushMatrix()
 
@@ -199,7 +199,7 @@ class pypilotPlot():
         if name == 'timestamp':
             self.timestamp = data['value']
             return
-        #timestamp = time.time()
+        #timestamp = time.monotonic()
         timestamp = self.timestamp
 
         value = data['value']

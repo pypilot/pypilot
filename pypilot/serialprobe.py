@@ -118,19 +118,19 @@ def enumerate_devices():
     global monitor
     global starttime
     if devices == 'init':
-        starttime = time.time()
+        starttime = time.monotonic()
         devices = scan_devices()
         
     if monitor:
         import signal
-        t1 = time.time()
+        t1 = time.monotonic()
         if monitor.poll(0):
             while monitor.poll(0): # flush events
                 pass
             devices = scan_devices()
     else:
         # delay monitor slightly to ensure startup speed
-        if time.time() > starttime and pyudev == 'init':
+        if time.monotonic() > starttime and pyudev == 'init':
             import signal
             try:
                 import signal
@@ -148,7 +148,7 @@ def enumerate_devices():
                     print('no pyudev module! will scan usb devices every probe!', e)
                     pyudevwarning = True
                 # try pyudev again in 20 seconds if it is delayed loading
-                starttime = time.time() + 20
+                starttime = time.monotonic() + 20
                 #pyudev = False
         devices = scan_devices()
     return devices
@@ -181,7 +181,7 @@ def probe(name, bauds, timeout=5):
     global devices
     global probes
     
-    t0 = time.time()
+    t0 = time.monotonic()
     if not name in probes:
         probes[name] = {'time': 0, 'device': False, 'probe last': True}
     probe = probes[name]
@@ -212,10 +212,10 @@ def probe(name, bauds, timeout=5):
     probe['probe last'] = True # next time try last working device if this fails
 
     # find a new device
-    #t1 = time.time()
+    #t1 = time.monotonic()
     devices = enumerate_devices()
 
-    #print('enumtime', time.time() - t1, devices)
+    #print('enumtime', time.monotonic() - t1, devices)
 
     # find next device index to probe
     try:
@@ -312,8 +312,8 @@ def success(name, device):
 if __name__ == '__main__':
     print('testing serial probe')
     while True:
-        t0 = time.time()
+        t0 = time.monotonic()
         device = probe('test', [9600], timeout=2)
         if device:
-            print('return', device, time.time() - t0)
+            print('return', device, time.monotonic() - t0)
         time.sleep(1)

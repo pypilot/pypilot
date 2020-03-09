@@ -330,7 +330,7 @@ class SigmaPoint(object):
         self.sensor = sensor
         self.down = down
         self.count = 1
-        self.time = time.time()
+        self.time = time.monotonic()
 
     def add_measurement(self, sensor, down):
         self.count += 1
@@ -338,7 +338,7 @@ class SigmaPoint(object):
         self.sensor = avg(fac, self.sensor, sensor)
         if down:
             self.down = avg(fac, self.down, down)
-        self.time = time.time()
+        self.time = time.monotonic()
 
 # store averaged sensore measurements over time for
 # calibration curve fitting
@@ -413,7 +413,7 @@ class SigmaPoints(object):
         mindi = 0
         mind = 1e20
         for i in range(len(self.sigma_points)):
-            dt = time.time() - self.sigma_points[i].time
+            dt = time.monotonic() - self.sigma_points[i].time
             d = []
             for j in range(len(self.sigma_points)):
                 if i == j:
@@ -434,7 +434,7 @@ class SigmaPoints(object):
     def RemoveOlder(self, dt=3600):
         p = []
         for sigma in self.sigma_points:
-            if time.time() - sigma.time < dt:
+            if time.monotonic() - sigma.time < dt:
                 p.append(sigma)
         self.sigma_points = p
 
@@ -445,7 +445,7 @@ class SigmaPoints(object):
                 oldest_sigma = sigma
 
         # don't remove if < 1 minute old
-        if time.time() - oldest_sigma.time >= 60:
+        if time.monotonic() - oldest_sigma.time >= 60:
             self.sigma_points.remove(oldest_sigma)
 
 # calculate how well these datapoints cover the space by
@@ -587,23 +587,23 @@ class CalibrationProperty(RoundedValue):
 
 class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
-        super(AgeValue, self).__init__(name, time.time(), **kwargs)
-        self.dt = max(0, time.time() - self.value)
+        super(AgeValue, self).__init__(name, time.monotonic(), **kwargs)
+        self.dt = 0
         self.lastupdate_value = -1
         self.lastage = ''
 
     def reset(self):
-        self.set(time.time())
+        self.set(time.monotonic())
 
     def update(self):
-        t = time.time()
-        if abs(t - self.lastupdate_value) > 1:
+        t = time.monotonic()
+        if t - self.lastupdate_value > 1:
           self.lastupdate_value = t
           self.send()
 
     def get_pypilot(self):
-        dt = max(0, time.time() - self.value)
-        if abs(dt - self.dt) > 1:
+        dt = time.monotonic() - self.value
+        if dt - self.dt > 1:
             self.dt = dt
             self.lastage = readable_timespan(dt)
         return self.lastage
@@ -650,9 +650,9 @@ def CalibrationProcess(cal_pipe):
         return debug_by_name
     
     while True:
-        t = time.time()
+        t = time.monotonic()
         addedpoint = False
-        while time.time() - t < calibration_fit_period:
+        while time.monotonic() - t < calibration_fit_period:
             # receive pypilot messages
             msg = client.receive()
             for name in msg:

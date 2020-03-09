@@ -102,13 +102,13 @@ class WebConfig(Namespace):
 
     def background_thread(self):
         print('web process on port', web_port)
-        last_key_time = time.time()
+        last_key_time = time.monotonic()
         x = 0
         polls_sent = {}
         while True:
             socketio.sleep(.2)
 
-            t = time.time()
+            t = time.monotonic()
             dtc = t - last_key_time
             if dtc > 8 and self.last_key:
                 self.last_key = False
@@ -122,7 +122,7 @@ class WebConfig(Namespace):
             if msg:
                 if 'key' in msg:
                     self.last_key = msg['key']
-                    last_key_time = time.time()
+                    last_key_time = time.monotonic()
                 for name in msg:
                     socketio.emit(name, str(msg[name]))
                 if 'status' in msg:

@@ -12,13 +12,9 @@ import time, select
 
 try:
   from pypilot.linebuffer import linebuffer
-  #class LineBufferedNonBlockingSocket(linebuffer.LineBuffer):
   class LineBufferedNonBlockingSocket(object):
     def __init__(self, connection):
         connection.setblocking(0)
-        #//fcntl.fcntl(connection.fileno(), fcntl.F_SETFD, os.O_NONBLOCK)
-        # somehow it's much slower to baseclass ?!?
-        #super(LineBufferedNonBlockingSocket, self).__init__(connection.fileno())
         self.b = linebuffer.LineBuffer(connection.fileno())
 
         self.socket = connection
@@ -28,6 +24,9 @@ try:
         self.sendfail_msg = 1
         self.sendfail_cnt = 0
 
+    def fileno(self):
+        return self.socket.fileno()
+        
     def recv(self):
         return self.b.recv()
         
@@ -53,9 +52,9 @@ try:
                 if self.sendfail_cnt > 100:
                     self.socket.close()
                 return
-            t0 = time.time()
+            t0 = time.monotonic()
             count = self.socket.send(self.out_buffer.encode())
-            t1 = time.time()
+            t1 = time.monotonic()
 
             if t1-t0 > .1:
                 print('socket send took too long!?!?', t1-t0)

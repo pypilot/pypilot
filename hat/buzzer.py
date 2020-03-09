@@ -60,7 +60,7 @@ class buzzer(object):
         self.needbeep = 1
 
     def alarm(self):
-        t = time.time()
+        t = time.monotonic()
         if t - self.lastalarmtime < 3:
             return
         self.lastalarmtime = t

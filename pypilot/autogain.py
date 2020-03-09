@@ -92,12 +92,12 @@ class autogain(object):
 
     def log(self):
         print('logging for', self.searchval)
-        t0 = time.time()
+        t0 = time.monotonic()
         self.total = {}
         for var in self.variables:
             self.total[var] = {'total': 0, 'count': 0}
-        while time.time() - t0 < self.period:
-            self.read_messages(time.time() - t0 > self.settle_period)
+        while time.monotonic() - t0 < self.period:
+            self.read_messages(time.monotonic() - t0 > self.settle_period)
             time.sleep(.05)
 
         for var in self.variables:

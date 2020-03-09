@@ -96,7 +96,7 @@ class RangeEdit():
             self.lcd.set(self.id, v)
         else:
             self.lcd.config[self.id] = v
-        self.lastmovetime = time.time()
+        self.lastmovetime = time.monotonic()
 
     def display(self):
         self.lcd.surface.fill(black)
@@ -104,7 +104,7 @@ class RangeEdit():
         self.lcd.fittext(rectangle(0, .3, 1, .3), self.desc(), True)
 
         # update name
-        if time.time()-self.lastmovetime > 1:
+        if time.monotonic()-self.lastmovetime > 1:
             if self.pypilot:
                 self.value = self.lcd.last_val(self.id)
         
@@ -969,7 +969,7 @@ class LCD():
 
             self.fittext(rectangle(0, .3, 1, .7), raw)
         else:
-            mod = int(time.time()%11)/3
+            mod = int(time.monotonic()%11)/3
             self.fittext(rectangle(0, .24, 1, .15), 'sigma plot')
             cal = self.last_val('imu.compass.calibration')[0]
             m = cal[3]
@@ -1182,9 +1182,9 @@ class LCD():
 
     def poll(self):
         if self.screen:
-            t = time.time()
+            t = time.monotonic()
             dt = t - self.lastframetime
-            if dt > self.frameperiod or dt < 0:
+            if dt > self.frameperiod:
                 self.draw()
                 self.lastframetime = max(self.lastframetime+self.frameperiod,
                                          t-self.frameperiod)

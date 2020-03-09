@@ -134,8 +134,8 @@ def pipe_server_process(pipe, port, persistent_path):
     #print('pipe server on', os.getpid())
     server = pypilotPipeServerClient(pipe, port, persistent_path)
     # handle only pipe messages (to get all registrations) for first second
-    t0 = time.time()
-    while time.time() - t0 < 2:
+    t0 = time.monotonic()
+    while time.monotonic() - t0 < 2:
       while server.HandlePipeMessage():
         pass
       time.sleep(.1)
@@ -153,7 +153,7 @@ class pypilotPipeServer(object):
     
         self.values = {}
         self.sets = []
-        self.last_recv = time.time()
+        self.last_recv = time.monotonic()
 
         self.persistent_data = LoadPersistentData(persistent_path, False)
         self.ResetPersistentState()
@@ -174,7 +174,7 @@ class pypilotPipeServer(object):
       self.ResetPersistentState()
 
     def ResetPersistentState(self):
-      self.persistent_timeout = time.time()+300
+      self.persistent_timeout = time.monotonic()+300
       self.persistent_sets = {}
 
     def queue_send(self, value):
@@ -213,18 +213,18 @@ class pypilotPipeServer(object):
           self.values[name].watchers = request['value']
         
     def HandleRequests(self):
-        t0 = time.time()
+        t0 = time.monotonic()
         if t0 >= self.persistent_timeout:
             self.SetPersistentValues()
 
-        ta = time.time()
+        ta = time.monotonic()
         while self.sets:
             if self.pipe.send(self.sets[:20], False):
                 self.sets = self.sets[20:]
             else:
                 break
 
-        dta = time.time() - ta
+        dta = time.monotonic() - ta
         if dta > .02:
             print('too long to send sets down pipe', dta, l)
 

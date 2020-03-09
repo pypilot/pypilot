@@ -33,14 +33,14 @@ class Sensor(object):
            data['device'] != self.device:
             return False
 
-        #timestamp = data['timestamp'] if 'timestamp' in data else time.time()-self.starttime
+        #timestamp = data['timestamp'] if 'timestamp' in data else time.monotonic()-self.starttime
         self.update(data)
                 
         if self.source.value != source:
             print('found', self.name, 'on', source, data['device'])
             self.source.set(source)
             self.device = data['device']
-        self.lastupdate = time.time()
+        self.lastupdate = time.monotonic()
         
         return True
 
@@ -77,13 +77,13 @@ class APB(Sensor):
         self.xte = self.register(SensorValue, 'xte')
         # 300 is 30 degrees for 1/10th mile
         self.gain = self.register(RangeProperty, 'xte.gain', 300, 0, 3000, persistent=True)
-        self.last_time = time.time()
+        self.last_time = time.monotonic()
 
     def reset(self):
         self.xte.update(0)
 
     def update(self, data):
-        t = time.time()
+        t = time.monotonic()
         if t - self.last_time < .5: # only accept apb update at 2hz
             return
 
@@ -129,7 +129,7 @@ class Sensors(object):
         self.rudder.poll()
 
         # timeout sources
-        t = time.time()
+        t = time.monotonic()
         for name in self.sensors:
             sensor = self.sensors[name]
             if sensor.source.value == 'none':

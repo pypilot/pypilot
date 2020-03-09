@@ -51,7 +51,7 @@ class IMU(object):
             data = self.read()
             pipe.send(data, not data)
             self.poll()
-            dt = time.time() - t0
+            dt = time.monotonic() - t0
             t = period.value - dt
             if t > 0 and t < period:
                 time.sleep(t)
@@ -113,7 +113,7 @@ class IMU(object):
         self.compass_calibration_updated = False
 
     def read(self):
-        t0 = time.time()
+        t0 = time.monotonic()
         if not rtimu.IMURead():
             print('failed to read IMU!')
             self.init() # reinitialize imu
@@ -163,12 +163,12 @@ class LoopFreqValue(Value):
     def __init__(self, name, initial):
         super(LoopFreqValue, self).__init__(name, initial)
         self.loopc = 0
-        self.t0 = time.time()
+        self.t0 = time.monotonic()
 
     def strobe(self):
         self.loopc += 1
         if self.loopc == 10:
-            t1 = time.time()
+            t1 = time.monotonic()
             self.set(self.loopc/(t1-self.t0))
             self.t0 = t1
             self.loopc = 0
@@ -197,11 +197,11 @@ class TimeValue(StringValue):
     def reset(self):
         self.lastupdate_value = 0
         self.total = 0
-        self.start = time.time()
+        self.start = time.monotonic()
         self.set(0)
 
     def update(self):
-        t = time.time()
+        t = time.monotonic()
         if self.stopped:
             self.stopped = False
             self.start = t
@@ -214,7 +214,7 @@ class TimeValue(StringValue):
     def stop(self):
       if self.stopped:
         return
-      self.total += time.time() - self.start
+      self.total += time.monotonic() - self.start
       self.stopped = True
 
     def get_pypilot(self):
@@ -248,7 +248,7 @@ def heading_filter(lp, a, b):
 
 class BoatIMU(object):
     def __init__(self, client, *args, **keywords):
-        self.starttime = time.time()
+        self.starttime = time.monotonic()
         self.client = client
 
         self.timestamp = client.register(SensorValue('timestamp', 0))
@@ -295,7 +295,7 @@ class BoatIMU(object):
 
         self.imu = IMU(False)
 
-        self.last_imuread = time.time()
+        self.last_imuread = time.monotonic()
 
     def __del__(self):
         print('terminate imu process')
@@ -327,7 +327,7 @@ class BoatIMU(object):
     def read(self):
         data = self.IMUread()
         if not data:
-            if time.time() - self.last_imuread > 1 and self.loopfreq.value:
+            if time.monotonic() - self.last_imuread > 1 and self.loopfreq.value:
                 print('IMURead failed!')
                 self.loopfreq.set(0)
                 for name in self.SensorValues:
@@ -339,7 +339,7 @@ class BoatIMU(object):
             print('accel values invalid', data['accel'])
             return False
   
-        t = time.time()
+        t = time.monotonic()
         self.timestamp.set(t-self.starttime)
   
         self.last_imuread = t
@@ -433,10 +433,10 @@ class BoatIMU(object):
 
 def main():
     server = pypilotServer()
-    client = pypilotClient('localhost')
+    client = pypilotClient(server.pipe())
     boatimu = BoatIMU(client)
-    
-    t00 = time.time()
+
+    t00 = time.monotonic()
     quiet = '-q' in sys.argv
 
     while True:
@@ -454,11 +454,11 @@ def main():
         data = boatimu.poll()
 
         while True:
-            dt = boatimu.period - (time.time() - self.t00)
-            if dt <= 0 or dt >= boatimu.period:
+            dt = boatimu.period - (time.monotonic() - self.t00)
+            if dt >= boatimu.period:
                 break
             time.sleep(dt)
-        self.t00 = time.time()
+        self.t00 = time.monotonic()
             
 if __name__ == '__main__':
     main()

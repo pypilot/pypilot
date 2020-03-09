@@ -255,14 +255,14 @@ class Nmea(object):
         self.device_fd = {}
 
         self.nmea_times = {}
-        self.last_imu_time = time.time()
-        self.last_rudder_time = time.time()
+        self.last_imu_time = time.monotonic()
+        self.last_rudder_time = time.monotonic()
 
         self.devices = []
         self.devices_lastmsg = {}
         self.probedevice = None
 
-        self.start_time = time.time()
+        self.start_time = time.monotonic()
 
     def __del__(self):
         print('terminate nmea process')
@@ -284,7 +284,7 @@ class Nmea(object):
                 self.sensors.write(name, msgs[name], 'tcp')
                 
     def read_serial_device(self, device, serial_msgs):
-        t = time.time()
+        t = time.monotonic()
         line = device.readline()
         if not line:
             return
@@ -298,7 +298,7 @@ class Nmea(object):
                 # forward nmea lines from serial to tcp
 
                 dt = t-self.nmea_times[nmea_name] if nmea_name in self.nmea_times else -1
-                if dt>.2 or dt < 0:
+                if dt > .2:
                     self.process.pipe.send(line, False)
                     self.nmea_times[nmea_name] = t
 
@@ -336,10 +336,10 @@ class Nmea(object):
         device.close()
             
     def poll(self):
-        t0 = time.time()
+        t0 = time.monotonic()
         self.probe_serial()
 
-        t1 = time.time()
+        t1 = time.monotonic()
         # handle tcp nmea messages
         serial_msgs = {}
         while True:
@@ -360,42 +360,42 @@ class Nmea(object):
                 else:
                     self.remove_serial_device(self.device_fd[fd])
 
-        t2 = time.time()
+        t2 = time.monotonic()
         for name in serial_msgs:
             self.sensors.write(name, serial_msgs[name], 'serial')
-        t3 = time.time()
+        t3 = time.monotonic()
                 
         for device in self.devices:
             # timeout serial devices
             if not device:
                 continue
-            dt = time.time() - self.devices_lastmsg[device]
+            dt = time.monotonic() - self.devices_lastmsg[device]
             if dt > 2:
                 if dt < 3:
                     print('serial device dt', dt, device.path, 'is another process accessing it?')
             if dt > 15: # no data for 15 seconds
                 print('serial device timed out', dt, device)
                 self.remove_serial_device(device)
-        t4 = time.time()
+        t4 = time.monotonic()
 
         # send nmea messages to sockets at 2hz
-        dt = time.time() - self.last_imu_time
-        if self.process.sockets and (dt > .5 or dt < 0) and \
+        dt = time.monotonic() - self.last_imu_time
+        if self.process.sockets and dt > .5 and \
            'imu.pitch' in self.client.values:
             self.send_nmea('APXDR,A,%.3f,D,PTCH' % self.client.values['imu.pitch'].value)
             self.send_nmea('APXDR,A,%.3f,D,ROLL' % self.client.values['imu.roll'].value)
             self.send_nmea('APHDM,%.3f,M' % self.client.values['imu.heading_lowpass'].value)
-            self.last_imu_time = time.time()
+            self.last_imu_time = time.monotonic()
 
         # should we output gps?  for now no
             
         # limit to 5hz output of wind and rudder
-        t = time.time()
+        t = time.monotonic()
         for name in ['wind', 'rudder'] if self.process.sockets else []:
             dt = t - self.nmea_times[name] if name in self.nmea_times else -1
             source = self.sensors.sensors[name].source.value
             # only output to tcp if we have a better source
-            if (dt > .2 or dt < 0) and source_priority[source] < source_priority['tcp']:
+            if dt > .2 and source_priority[source] < source_priority['tcp']:
                 if name == 'wind':
                     wind = self.sensors.wind
                     self.send_nmea('APMWV,%.3f,R,%.3f,N,A' % (wind.direction.value, wind.speed.value))
@@ -403,11 +403,11 @@ class Nmea(object):
                     self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
                 self.nmea_times[name] = t
             
-        t5 = time.time()
+        t5 = time.monotonic()
         if not self.process.multiprocessing:
             self.process.poll()
         
-        t6 = time.time()
+        t6 = time.monotonic()
         if t6 - t0 > .1 and self.start_time - t0 > 1:
             print('nmea poll times', self.start_time-t0, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
             
@@ -422,11 +422,11 @@ class Nmea(object):
             if self.probedevicepath:
                 try:
                     self.probedevice = NMEASerialDevice(self.probedevicepath)
-                    self.probetime = time.time()
+                    self.probetime = time.monotonic()
                 except serial.serialutil.SerialException:
                     print('failed to open', self.probedevicepath, 'for nmea data')
                     pass
-        elif time.time() - self.probetime > 5:
+        elif time.monotonic() - self.probetime > 5:
             print('nmea serial probe timeout', self.probedevicepath)
             self.probedevice = None # timeout
         else:
@@ -442,7 +442,7 @@ class Nmea(object):
                     fd = self.probedevice.device.fileno()
                     self.device_fd[fd] = self.probedevice
                     self.poller.register(fd, select.POLLIN)
-                    self.devices_lastmsg[self.probedevice] = time.time()
+                    self.devices_lastmsg[self.probedevice] = time.monotonic()
                     self.probedevice = None
 
     def send_nmea(self, msg):
@@ -554,9 +554,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
         port = int(port)
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            tc0 = time.time()
+            tc0 = time.monotonic()
             s.connect((host, port))
-            print('connected to', host, port, 'in', time.time() - tc0, 'seconds')
+            print('connected to', host, port, 'in', time.monotonic() - tc0, 'seconds')
             self.client_socket = self.new_socket_connection(s, self.nmea_client)
             self.client_socket.nmea_client = self.nmea_client
         except Exception as e:
@@ -615,9 +615,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 sock.send(msg)
 
     def poll(self, timeout=0):
-        t0 = time.time()
+        t0 = time.monotonic()
         events = self.poller.poll(timeout)
-        t1 = time.time()
+        t1 = time.monotonic()
         while events:
             fd, flag = events.pop()
             sock = self.fd_to_socket[fd]
@@ -648,13 +648,13 @@ class NmeaBridgeProcess(multiprocessing.Process):
         if not self.mp:
             self.recieve_pipe()
                 
-        t2 = time.time()
+        t2 = time.monotonic()
 
         # send any parsed nmea messages the server might care about
         if self.msgs:
             if self.pipe.send(msgs):
                 self.msgs = {}
-        t3 = time.time()
+        t3 = time.monotonic()
 
         # receive pypilot messages
         try:
@@ -664,12 +664,12 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 self.last_values[name] = value
         except Exception as e:
             print('nmea exception receiving:', e)
-        t4 = time.time()
+        t4 = time.monotonic()
 
         # flush sockets
         for sock in self.sockets:
             sock.flush()
-        t5 = time.time()
+        t5 = time.monotonic()
 
         # reconnect client tcp socket
         if self.client_socket:
@@ -682,12 +682,13 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 print('failed to create nmea socket as host:port', self.nmea_client.value, e)
                 self.last_values['nmea.client'] = '' # don't try until changed
                                 
-        t6 = time.time()
+        t6 = time.monotonic()
 
         # run tcp nmea traffic at rate of 10hz
-        if t6-t1 > .1:
+        period = period
+        if t6-t1 > :
             print('nmea process loop too slow:', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
         else:
-            dt = .1 - (t6 - t0)
-            if dt > 0 and dt < .1:
+            dt = period - (t6 - t0)
+            if dt > 0:
                 time.sleep(dt)

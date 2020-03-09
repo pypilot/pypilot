@@ -64,7 +64,7 @@ class ActionHeading(Action):
                 self.hat.client.set('ap.heading_command',
                                     self.hat.last_msg['ap.heading_command'] + self.offset)
         else: # manual mode
-            self.servo_timeout = time.time() + abs(self.offset)**.5/2
+            self.servo_timeout = time.monotonic() + abs(self.offset)**.5/2
             self.hat.client.set('servo.command', 1 if self.offset > 0 else -1)
             
 class ActionTack(ActionPypilot):
@@ -166,8 +166,8 @@ class Hat(object):
         except Exception as e:
             print('config failed:', e)
 
-        self.lastpollheading = time.time()
-        self.servo_timeout = time.time() + 1
+        self.lastpollheading = time.monotonic()
+        self.servo_timeout = time.monotonic() + 1
         
         self.longsleep = 30
         self.last_msg = {}
@@ -292,7 +292,7 @@ class Hat(object):
 
         time.sleep(.1)
         # poll heading once per second if not enabled
-        t = time.time()
+        t = time.monotonic()
         dtp = t - self.lastpollheading
         if self.client and dtp > 1 and not self.last_msg['ap.enabled']:
             self.client.get('ap.heading')

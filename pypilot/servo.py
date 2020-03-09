@@ -177,7 +177,7 @@ class TimedProperty(Property):
         super(TimedProperty, self).__init__(name, 0)
 
     def set(self, value):
-        self.time = time.time()
+        self.time = time.monotonic()
         return super(TimedProperty, self).set(value)
 
 class Servo(object):
@@ -203,7 +203,7 @@ class Servo(object):
         # power usage
         self.voltage = self.register(SensorValue, 'voltage')
         self.current = self.register(SensorValue, 'current')
-        self.current.lasttime = time.time()
+        self.current.lasttime = time.monotonic()
         self.controller_temp = self.register(SensorValue, 'controller_temp')
         self.motor_temp = self.register(SensorValue, 'motor_temp')
 
@@ -240,7 +240,7 @@ class Servo(object):
 
         self.use_eeprom = self.register(BooleanValue, 'use_eeprom', True, persistent=True)
 
-        self.position.inttime = time.time()
+        self.position.inttime = time.monotonic()
         self.position.amphours = 0
 
         self.windup = 0
@@ -250,7 +250,7 @@ class Servo(object):
         self.disengage_on_timeout = self.register(BooleanValue, 'disengage_on_timeout', True, persistent=True)
         self.force_engaged = False
 
-        self.last_zero_command_time = self.command_timeout = time.time()
+        self.last_zero_command_time = self.command_timeout = time.monotonic()
         self.driver_timeout_start = 0
 
         self.state = self.register(StringValue, 'state', 'none')
@@ -265,7 +265,7 @@ class Servo(object):
         return self.client.register(_type(*(['servo.' + name] + list(args)), **kwargs))
 
     def send_command(self):
-        t = time.time()
+        t = time.monotonic()
 
         if not self.disengage_on_timeout.value:
             self.disengaged = False
@@ -274,7 +274,7 @@ class Servo(object):
             print('cal thread')
             return
 
-        t = time.time()
+        t = time.monotonic()
         dp = t - self.position_command.time
         dc = t - self.command.time
 
@@ -288,8 +288,8 @@ class Servo(object):
                 return
         elif self.command.value and not self.fault():
             timeout = 1 # command will expire after 1 second
-            if time.time() - self.command.time > timeout:
-                #print('servo command timeout', time.time() - self.command.time)
+            if time.monotonic() - self.command.time > timeout:
+                #print('servo command timeout', time.monotonic() - self.command.time)
                 self.command.set(0)
             self.disengaged = False
         self.do_command(self.command.value)
@@ -319,7 +319,7 @@ class Servo(object):
             #print('timeout', t - self.command_timeout)
             if self.disengage_on_timeout.value and \
                not self.force_engaged and \
-               time.time() - self.command_timeout > self.period.value*3:
+               time.monotonic() - self.command_timeout > self.period.value*3:
                 self.disengaged = True
             self.raw_command(0)
             return
@@ -336,7 +336,7 @@ class Servo(object):
             return # abort
 
         # compute time and dt
-        t = time.time()
+        t = time.monotonic()
         dt = t - self.position.inttime
         self.position.inttime = t
 
@@ -450,7 +450,7 @@ class Servo(object):
             self.state.update('forward')
             self.lastdir = 1
 
-        t = time.time()
+        t = time.monotonic()
         if command == 0:
             # only send at .2 seconds when command is zero for more than a second
             if t > self.command_timeout + 1 and t - self.last_zero_command_time < .2:
@@ -478,10 +478,10 @@ class Servo(object):
                     self.driver_timeout_start = 0
                 elif command:
                     if self.driver_timeout_start:
-                        if time.time() - self.driver_timeout_start > 1:
+                        if time.monotonic() - self.driver_timeout_start > 1:
                             self.flags.setbit(ServoFlags.DRIVER_TIMEOUT)
                     else:
-                        self.driver_timeout_start = time.time()
+                        self.driver_timeout_start = time.monotonic()
                         
     def reset(self):
         if self.driver:
@@ -541,7 +541,7 @@ class Servo(object):
                 self.send_driver_params()
                 self.device = device
                 self.device.path = device_path[0]
-                self.lastpolltime = time.time()
+                self.lastpolltime = time.monotonic()
 
         if not self.driver:
             return
@@ -554,7 +554,7 @@ class Servo(object):
             self.close_driver()
             return
         
-        t = time.time()
+        t = time.monotonic()
         if result == 0:
             d = t - self.lastpolltime
             if d > 5: # correct for clock skew
@@ -695,7 +695,7 @@ def test(device_path, baud):
     device.timeout=0 #nonblocking
     fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
     driver = ArduinoServo(device.fileno())
-    t0 = time.time()
+    t0 = time.monotonic()
     if driver.initialize(baud):
         print('arduino servo found')
         exit(0)
@@ -711,7 +711,7 @@ def main():
     
     print('Servo Client')
     server = pypilotServer()
-    client = pypilotClient()
+    client = pypilotClient(server)
 
     from sensors import Sensors
     sensors = Sensors(client)
@@ -719,7 +719,7 @@ def main():
     servo.max_current.set(10)
 
     period = .1
-    start = lastt = time.time()
+    start = lastt = time.monotonic()
     while True:
         servo.poll()
         sensors.poll()
@@ -731,12 +731,12 @@ def main():
         client.poll()
         server.poll()
 
-        dt = period - time.time() + lastt
+        dt = period - time.monotonic() + lastt
         if dt > 0 and dt < period:
             time.sleep(dt)
             lastt += period
         else:
-            lastt = time.time()
+            lastt = time.monotonic()
 
 if __name__ == '__main__':
     main()

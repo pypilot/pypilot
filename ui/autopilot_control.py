@@ -46,7 +46,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.stStatus.SetLabel('No Connection')
         self.client = pypilotClient(self.host)
 
-        self.lastmsgtime = time.time()
+        self.lastmsgtime = time.monotonic()
 
         self.tbAP.SetValue(False)
         self.set_mode_color()
@@ -100,7 +100,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 def make_ongain(gain):
                     def do_gain(event):
                         gain['need_update'] = True
-                        gain['last_change'] = time.time()
+                        gain['last_change'] = time.monotonic()
                     return do_gain
                 slider.Bind( wx.EVT_SCROLL, make_ongain(gain) )
                 
@@ -161,11 +161,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 gain['need_update'] = False
                 
             if gain['slider'].GetValue() != gain['sliderval'] and \
-               time.time() - gain['last_change'] > 1:
+               time.monotonic() - gain['last_change'] > 1:
                 gain['slider'].SetValue(gain['sliderval'])
 
         msgs = self.client.receive()
-        self.lastmsgtime = time.time()
+        self.lastmsgtime = time.monotonic()
 
         for name in msgs:
             data = msgs[name]

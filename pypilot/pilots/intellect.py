@@ -16,13 +16,13 @@ class stopwatch(object):
         self.total = 0
         self.starttime = False
     def start(self):
-        self.starttime = time.time()
+        self.starttime = time.monotonic()
     def stop(self):
-        self.total += time.time() - self.starttime
+        self.total += time.monotonic() - self.starttime
     def time(self):
       if not self.starttime:
         return 0
-      return self.total + time.time() - self.starttime
+      return self.total + time.monotonic() - self.starttime
 
 # convenience
 def rate(conf):
@@ -198,7 +198,7 @@ class Intellect(object):
             self.inputs[name] = norm_sensor(name, value)
 
         elif name == 'timestamp':
-            t0 = time.time()
+            t0 = time.monotonic()
             if not self.firsttimestamp:
                 self.firsttimestamp = value, t0
             else:
@@ -299,7 +299,7 @@ class Intellect(object):
               #print('adding prediction', p)
               self.conf['sensors'].append(p)
       
-      t0 = time.time()
+      t0 = time.monotonic()
 
       print('connecting to', self.host)
       self.client = pypilotClient(self.host)
@@ -311,7 +311,7 @@ class Intellect(object):
       while True:
           self.receive()
               
-          if time.time() - t0 > 600:
+          if time.monotonic() - t0 > 600:
               filename = os.getenv('HOME')+'/.pypilot/intellect_'
               state = self.conf['state']
               for n in state:

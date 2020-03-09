@@ -10,6 +10,7 @@
 from __future__ import print_function
 
 import socket, select, sys, os, time
+import heapq
 import pyjson
 from bufferedsocket import LineBufferedNonBlockingSocket
 from values import Value
@@ -34,7 +35,7 @@ class Watch(object):
     def __init__(self, value, period):
         self.value = value
         self.period = period
-        self.time = time.time()
+        self.time = time.monotonic()
 
 class ClientWatch(Value):
     def __init__(self, values, client):
@@ -49,7 +50,7 @@ class ClientWatch(Value):
             if period is True or period is False:
                 value.watch = period
             else:
-                value.watch = Watch(self, period)
+                value.watch = Watch(value, period)
                 value.pwatch = True
             if value.watch:
                 self.client.send(name + '=' + value.get_msg() + '\n')
@@ -61,6 +62,7 @@ class ClientValues(Value):
         self.client = client
         self.values = {'values': self}
         self.values['watch'] = ClientWatch(self.values, client)
+        self.wvalues = {}
         self.pqwatches = []
 
     def set(self, values):
@@ -71,50 +73,44 @@ class ClientValues(Value):
                 self.value[name] = values[name]
 
     def send_watches(self):
-        t0 = time.time()
-        i = 0
-        while i < len(self.pqwatches):
-            watch = self.pqwatches[i]
-            if t0 >= watch.time-watch.period and t0 < watch.time:
+        t0 = time.monotonic()
+        while self.pqwatches:
+            if t0 < self.pqwatches[0][0]:
                 break # no more are ready
-            i += 1
-            self.client.send(watch.name + '=' + watch.value.get_msg() + '\n')
+            t, watch = heapq.heappop(self.pqwatches) # pop first element
+            self.client.send(watch.value.name + '=' + watch.value.get_msg() + '\n')
             watch.time = t0+watch.period
             watch.value.pwatch = True
-        # remove watches handled
-        self.pqwatches = self.pqwatches[i:]
             
     def insert_watch(self, watch):
-        if watch in self.pqwatches:
-            print('error, watch should not be in pqwatches')
-            return
-        i = 0
-        while i < len(self.pqwatches):
-            if self.pqwatches[i].time > watch.time:
-                break
-            i += 1
-        self.pqwatches.insert(i, watch)
+        heapq.heappush(self.pqwatches, (watch.time, watch))
 
     def register(self, value):
         if value.name in self.values:
             print('warning, registering existing value:', value.name)
+        self.wvalues[value.name] = value.info
         self.values[value.name] = value
 
     def get_msg(self):
-        info = {}
-        for name in self.values:
-            if name != 'values' and name != 'watch':
-                info[name] = self.values[name].info
-        self.client.wvalues = {}
-        return pyjson.dumps(info)
+        ret = pyjson.dumps(self.wvalues)
+        self.wvalues = {}
+        return ret
 
 class pypilotClient(object):
-    def __init__(self, host=False):
+    def __init__(self, host=False):        
         self.values = ClientValues(self)
-        self.wvalues = {}
         self.watches = {}
         self.wwatches = {}
         self.received = []
+
+        if host and type(host) != type(''):
+            # host is the server object
+            self.connection = host
+            self.poller = select.poll()
+            fd = self.connection.fileno()
+            if fd:
+                self.poller.register(fd, select.POLLIN)
+            return
 
         config = {}
         try:
@@ -151,11 +147,7 @@ class pypilotClient(object):
             config['port'] = DEFAULT_PORT
         self.config = config
             
-        if type(host) != type(''):
-            print('client pipe connected')
-            self.connection = host
-        else:
-            self.connection = False # connect later
+        self.connection = False # connect later
 
     def onconnected(self, connection):
         # write config if connection succeeds
@@ -172,19 +164,17 @@ class pypilotClient(object):
         self.connection = LineBufferedNonBlockingSocket(connection)
         self.poller = select.poll()
         self.poller.register(self.connection.socket, select.POLLIN)
-
         self.wwatches = self.watches
+        for name in self.values.values:
+            if name != 'values' and name != 'watch':
+                self.values.wvalues[name] = self.values.values[name].info
 
     def poll(self, timeout = 0):
         if not self.connection:
-            if not self.connect():
+            if not self.connect(False):
                 return
             
         # inform server of any watches we have
-        if self.values.watch and self.wvalues:
-            self.connection.send('values=' + pyjson.dumps(self.wvalues) + '\n')
-            self.wvalues = {}
-        
         if self.wwatches:
             self.connection.send('watch=' + pyjson.dumps(self.wwatches) + '\n')
             self.wwatches = {}
@@ -195,25 +185,30 @@ class pypilotClient(object):
         # flush output
         self.connection.flush()
 
-        try:
-            events = self.poller.poll(int(1000 * timeout))
-        except Exception as e:
-            print('exception polling', e)
-            self.disconnected()
-            return
+        if self.connection.fileno():
+            try:
+                events = self.poller.poll(int(1000 * timeout))
+            except Exception as e:
+                print('exception polling', e)
+                self.disconnected()
+                return
 
-        if events != []:
-            event = events.pop()
-            fd, flag = event
-            if flag & (select.POLLERR | ourPOLLNVAL):
-                disconnected()
+            if not events:
+                return # no data ready
+            
+            fd, flag = events.pop()
             if flag & select.POLLIN:
                 if self.connection and not self.connection.recv():
-                    self.disconnected()
+                    self.disconnected() # recv returns 0 means connection closed
+                    return
+            else: # other flags indicate disconnect
+                self.disconnected()
 
         # read incoming data line by line
         while True:
+            t0 = time.monotonic()
             line = self.connection.readline()
+#            print("clr", self.connection, time.monotonic()-t0)
             if not line:
                 return
             try:
@@ -221,16 +216,17 @@ class pypilotClient(object):
                 if name == 'error':
                     print('server error', data)
                     continue
-                else:
-                    value = pyjson.loads(data)
-                    if name in self.values.values:
-                        self.values.values[name].set(value)
-                        continue
+                value = pyjson.loads(data)
             except Exception as e:
                 print('invalid message from server:', line)
                 print('reason', e)
                 raise Exception
-            self.received.append((name, value))
+
+            if name in self.values.values:
+                self.values.values[name].set(value)
+            else:
+                self.received.append((name, value))
+                
 
     # polls at least as long as timeout
     def disconnected(self):
@@ -248,6 +244,7 @@ class pypilotClient(object):
                 print('connect failed to %s:%d' % host_port)
                 print('reason', e)
             return False
+
         self.onconnected(connection)
         return True
     
@@ -284,13 +281,12 @@ class pypilotClient(object):
         self.wwatches[name] = value
 
     def register(self, value):
-        self.wvalues[value.name] = value
         self.values.register(value)
         value.client = self
         return value
 
     def list_values(self, timeout=10):
-        t0 = time.time()
+        t0 = time.monotonic()
         self.watch('values')
         while True:
             self.poll(timeout)
@@ -364,9 +360,9 @@ def main():
 
     if not continuous:
         values = {}
-        t0 = time.time()
+        t0 = time.monotonic()
         while len(values) < len(client.watches):
-            dt = time.time() - t0
+            dt = time.monotonic() - t0
             if dt > 10:
                 print('timeout retrieving values')
                 exit(1)

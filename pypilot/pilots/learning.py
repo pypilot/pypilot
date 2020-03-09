@@ -24,7 +24,7 @@ class LearningPilot(AutopilotPilot):
     self.servo_rules = self.Register(BooleanProperty, 'servo_rules', True)
 
     self.initialized = False
-    self.start_time = time.time()
+    self.start_time = time.monotonic()
 
   def loss(predictions, actions):
     heading = predictions['imu.heading']
@@ -42,7 +42,7 @@ class LearningPilot(AutopilotPilot):
     ap = self.ap
 
     if not self.initialized:
-      if time.time() - self.start_time < 2:
+      if time.monotonic() - self.start_time < 2:
         return
       self.initialize()
 
@@ -72,22 +72,22 @@ class LearningPilot(AutopilotPilot):
           open('converted.tflite', 'wb').write(tflite_model)
 
         if self.model_uid:
-          t0 = time.time()
+          t0 = time.monotonic()
           interpreter = tf.lite.Interpreter(model_path="converted.tflite")
-          t1 = time.time()
+          t1 = time.monotonic()
           interpreter.allocate_tensors()
-          t2 = time.time()
+          t2 = time.monotonic()
           input_details = interpreter.get_input_details()
           output_details = interpreter.get_output_details()
-          t3 = time.time()
+          t3 = time.monotonic()
           input_shape = input_details[0]['shape']
           print ('input details', input_details)
-          t4 = time.time()
+          t4 = time.monotonic()
           interpreter.set_tensor(input_details[0]['index'], np.array(history))
           interpreter.invoke()
-          t5 = time.time()
+          t5 = time.monotonic()
           output_data = interpreter.get_tensor(output_details[0]['index'])
-          t6 = time.time()
+          t6 = time.monotonic()
           print('interpreter timings', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
       
     if ap.enabled.value and len(self.history.data) >= samples:

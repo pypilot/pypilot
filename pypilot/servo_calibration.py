@@ -107,7 +107,7 @@ def ServoCalibrationThread(calibration):
             exit(1)
 
     def average_power(self, timeout):
-        start = time.time()
+        start = time.monotonic()
         self.log = []
         time.sleep(timeout)
         power, avgc, avgv = 0, 0, 0
@@ -132,30 +132,30 @@ def ServoCalibrationThread(calibration):
             sys.stdout.flush()
             self.average_power(1) # wait to reset and cool
         print('start')
-        t0 = time.time()
+        t0 = time.monotonic()
         transitions = 0
         #print('run', raw_cmd, period)
         while True:
             def period_command(raw_cmd):
-                t = time.time()
-                while time.time() - t <= period - .05:
+                t = time.monotonic()
+                while time.monotonic() - t <= period - .05:
                     command(raw_cmd)
-                    if self.fault() and time.time() - t0 > 3:
+                    if self.fault() and time.monotonic() - t0 > 3:
                         return True
                     #print('idle current', idle_current, self.data['servo.current'])
-                    if time.time() - t0 > 3 and self.data['servo.current'] > 1.6 * idle_current:
+                    if time.monotonic() - t0 > 3 and self.data['servo.current'] > 1.6 * idle_current:
                         #print('max current', self.data['servo.current'], idle_current)
                         return True
                     time.sleep(.1)
                 return False
 
-            t1 = time.time()
+            t1 = time.monotonic()
             transitions += 1
             if period_command(raw_cmd):
                 break
             period_command(0)
 
-        dt = t1-t0 + (time.time() - t1)*2
+        dt = t1-t0 + (time.monotonic() - t1)*2
         current, voltage, t = self.average_power(0)
         power = current*voltage*dt
         truespeed = 1/dt
