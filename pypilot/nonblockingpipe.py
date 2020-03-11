@@ -27,8 +27,12 @@ class NonBlockingPipeEnd(object):
     def flush(self):
         pass
 
+    def close(self):
+        self.pipe.close()
+
     def recv(self, timeout=0):
-        if self.pipe.poll(timeout):
+#        if self.pipe.poll(timeout):
+        if self.pollin.poll(0):
             return self.pipe.recv()
         if not self.recvfailok:
             print('error pipe block on recv!', self.name)

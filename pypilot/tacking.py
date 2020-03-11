@@ -68,23 +68,23 @@ class Tack(object):
     # waiting - waiting delay seconds before beginning to tack
     # tacking - rudder is moving at tack rate until threshold
     
-    self.state = self.Register(EnumProperty, 'state', 'none', ['none', 'begin', 'waiting', 'tacking'])
-    self.timeout = self.Register(Value, 'timeout', 0)
+    self.state = self.register(EnumProperty, 'state', 'none', ['none', 'begin', 'waiting', 'tacking'])
+    self.timeout = self.register(Value, 'timeout', 0)
 
-    self.delay = self.Register(RangeSetting, 'delay', 0, 0, 60, 'sec')
-    self.angle = self.Register(RangeSetting, 'angle', 100, 10, 180, 'deg')
-    self.rate = self.Register(RangeSetting, 'rate', 20, 1, 100, 'deg/s')
-    self.threshold = self.Register(RangeSetting, 'threshold', 50, 10, 100, '%')
-    self.count = self.Register(ResettableValue, 'count', 0, persistent=True)
-    self.direction = self.Register(EnumProperty, 'direction', 'port', ['port', 'starboard'])
+    self.delay = self.register(RangeSetting, 'delay', 0, 0, 60, 'sec')
+    self.angle = self.register(RangeSetting, 'angle', 100, 10, 180, 'deg')
+    self.rate = self.register(RangeSetting, 'rate', 20, 1, 100, 'deg/s')
+    self.threshold = self.register(RangeSetting, 'threshold', 50, 10, 100, '%')
+    self.count = self.register(ResettableValue, 'count', 0, persistent=True)
+    self.direction = self.register(EnumProperty, 'direction', 'port', ['port', 'starboard'])
     self.current_direction = 'port' # so user can't change while tacking
     self.time = time.monotonic()
 
     self.wind_log = TackSensorLog(12)
     self.heel_log = TackSensorLog(7)
 
-  def Register(self, _type, name, *args, **kwargs):
-    return self.ap.server.Register(_type(*(['ap.tack.' + name] + list(args)), **kwargs))
+  def register(self, _type, name, *args, **kwargs):
+    return self.ap.client.register(_type(*(['ap.tack.' + name] + list(args)), **kwargs))
 
   def process(self):
     t = time.monotonic()

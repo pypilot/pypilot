@@ -26,6 +26,9 @@ try:
 
     def fileno(self):
         return self.socket.fileno()
+
+    def close(self):
+        self.socket.close()
         
     def recv(self):
         return self.b.recv()
@@ -65,12 +68,14 @@ try:
         except Exception as e:
             print('pypilot socket exception', e)
             self.socket.close()
+  
 except Exception as e:
   print('falling back to python nonblocking socket', e)
   class LineBufferedNonBlockingSocket(object):
     def __init__(self, connection):
         connection.setblocking(0)
         self.socket = connection
+        self.b = False # in python
         self.in_buffer = ''
         self.no_newline_pos = 0
         self.out_buffer = ''

@@ -34,7 +34,7 @@ class BasicPilot(AutopilotPilot):
     super(BasicPilot, self).__init__('basic', ap)
 
     # create filters
-    self.heading_command_rate = self.Register(SensorValue, 'heading_command_rate')
+    self.heading_command_rate = self.register(SensorValue, 'heading_command_rate')
     self.heading_command_rate.time = 0
     self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
 
@@ -48,9 +48,9 @@ class BasicPilot(AutopilotPilot):
     self.PosGain('PR',  .005, .05)  # position root
     self.PosGain('FF',  .6, 3.0) # feed forward
     self.PosGain('R',  0.0, 1.0)  # reactive
-    self.reactive_time = self.Register(RangeProperty, 'Rtime', 1, 0, 3)
+    self.reactive_time = self.register(RangeProperty, 'Rtime', 1, 0, 3)
 
-    self.reactive_value = self.Register(SensorValue, 'reactive_value')
+    self.reactive_value = self.register(SensorValue, 'reactive_value')
                                     
     self.last_heading_mode = False
 
@@ -70,7 +70,7 @@ class BasicPilot(AutopilotPilot):
     if not ap.enabled.value: 
       compute = False
       for gain in self.gains:
-        if self.gains[gain]['sensor'].watchers:
+        if self.gains[gain]['sensor'].watch:
           compute = True
           break
       if not compute:

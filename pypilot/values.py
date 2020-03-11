@@ -32,8 +32,8 @@ class Value(object):
     def set(self, value):
         self.value = value
         if self.watch:
-            if type(self.watch) == type(True):
-                self.client.send(self.name+'='+pyjson.dumps(value)+'\n')
+            if self.watch.period == 0 and False:   # disable immediate
+                self.client.send(self.name+'='+self.get_msg()+'\n')
             elif self.pwatch:
                 t0 = time.monotonic()
                 if t0 >= self.watch.time:

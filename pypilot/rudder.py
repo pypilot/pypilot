@@ -13,19 +13,19 @@ from pypilot.values import *
 from sensors import Sensor
 
 class Rudder(Sensor):
-    def __init__(self, server):
-        super(Rudder, self).__init__(server, 'rudder')
+    def __init__(self, client):
+        super(Rudder, self).__init__(client, 'rudder')
 
-        self.angle = self.Register(SensorValue, 'angle')
-        self.speed = self.Register(SensorValue, 'speed')
+        self.angle = self.register(SensorValue, 'angle')
+        self.speed = self.register(SensorValue, 'speed')
         self.last = 0
         self.last_time = time.monotonic()
-        self.offset = self.Register(Value, 'offset', 0.0, persistent=True)
-        self.scale = self.Register(Value, 'scale', 100.0, persistent=True)
-        self.nonlinearity = self.Register(Value, 'nonlinearity',  0.0, persistent=True)
-        self.calibration_state = self.Register(EnumProperty, 'calibration_state', 'idle', ['idle', 'reset', 'centered', 'starboard range', 'port range', 'auto gain'])
+        self.offset = self.register(Value, 'offset', 0.0, persistent=True)
+        self.scale = self.register(Value, 'scale', 100.0, persistent=True)
+        self.nonlinearity = self.register(Value, 'nonlinearity',  0.0, persistent=True)
+        self.calibration_state = self.register(EnumProperty, 'calibration_state', 'idle', ['idle', 'reset', 'centered', 'starboard range', 'port range', 'auto gain'])
         self.calibration_raw = {}
-        self.range = self.Register(RangeProperty, 'range',  45, 10, 100, persistent=True)
+        self.range = self.register(RangeProperty, 'range',  45, 10, 100, persistent=True)
         self.lastrange = 0
         self.minmax = -.5, .5
         self.autogain_state = 'idle'
@@ -180,7 +180,6 @@ class Rudder(Sensor):
 
                     gain = min(max(5*dt/rng, .5), 2)
                     if self.angle.value < 0:
-#                            print('negative gain detected')
                         gain = -gain
                     self.gain.set(gain)
                     idle()

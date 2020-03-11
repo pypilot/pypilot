@@ -47,13 +47,15 @@ class ClientWatch(Value):
         for name in values:
             value = self.values[name]
             period = values[name]
-            if period is True or period is False:
-                value.watch = period
+            if period is False:
+                value.watch = False
             else:
+                if period is True:
+                    period = 0
                 value.watch = Watch(value, period)
                 value.pwatch = True
-            if value.watch:
-                self.client.send(name + '=' + value.get_msg() + '\n')
+                
+                self.client.send(name + '=' + value.get_msg() + '\n') # initial send
 
 class ClientValues(Value):
     def __init__(self, client):
@@ -77,13 +79,13 @@ class ClientValues(Value):
         while self.pqwatches:
             if t0 < self.pqwatches[0][0]:
                 break # no more are ready
-            t, watch = heapq.heappop(self.pqwatches) # pop first element
+            t, i, watch = heapq.heappop(self.pqwatches) # pop first element
             self.client.send(watch.value.name + '=' + watch.value.get_msg() + '\n')
             watch.time = t0+watch.period
-            watch.value.pwatch = True
+            watch.value.pwatch = True # can watch again once updated
             
     def insert_watch(self, watch):
-        heapq.heappush(self.pqwatches, (watch.time, watch))
+        heapq.heappush(self.pqwatches, (watch.time, time.monotonic(), watch))
 
     def register(self, value):
         if value.name in self.values:
@@ -105,7 +107,8 @@ class pypilotClient(object):
 
         if host and type(host) != type(''):
             # host is the server object
-            self.connection = host
+            self.server = host
+            self.connection = host.pipe()
             self.poller = select.poll()
             fd = self.connection.fileno()
             if fd:
@@ -169,7 +172,7 @@ class pypilotClient(object):
             if name != 'values' and name != 'watch':
                 self.values.wvalues[name] = self.values.values[name].info
 
-    def poll(self, timeout = 0):
+    def poll(self, timeout=0):
         if not self.connection:
             if not self.connect(False):
                 return
@@ -230,7 +233,7 @@ class pypilotClient(object):
 
     # polls at least as long as timeout
     def disconnected(self):
-        self.connection.socket.close()
+        self.connection.close()
         raise ConnectionLost
 
     def connect(self, verbose=True):
@@ -255,8 +258,8 @@ class pypilotClient(object):
             return ret
         return False
 
-    def receive(self):
-        self.poll()
+    def receive(self, timeout=0):
+        self.poll(timeout)
         ret = {}
         for msg in self.received:
             name, value = msg
@@ -369,7 +372,9 @@ def main():
                     
             client.poll(.1)
             msgs = client.receive()
-            values = {**values, **msgs}
+            for name in msgs:
+                values[name] = msgs[name]
+
             
         names = sorted(values)
         for name in names:

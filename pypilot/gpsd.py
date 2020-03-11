@@ -9,7 +9,7 @@
 
 from __future__ import print_function
 import multiprocessing, time, socket, select
-from pipeserver import NonBlockingPipe
+from nonblockingpipe import NonBlockingPipe
 from values import *
 import serialprobe
 
@@ -17,7 +17,7 @@ class gpsProcess(multiprocessing.Process):
     def __init__(self):
         # split pipe ends
         self.pipe, pipe = NonBlockingPipe('gps_pipe')
-        super(gpsProcess, self).__init__(target=self.gps_process, args=(pipe,))
+        super(gpsProcess, self).__init__(target=self.gps_process, args=(pipe,), daemon=True)
         self.devices = []
 
     def connect(self):
@@ -30,6 +30,9 @@ class gpsProcess(multiprocessing.Process):
                 return
             except socket.error:
                 time.sleep(3)
+            except Exception as e:
+                print('gpsd error:', e)
+                time.sleep(600)
 
     def read(self, pipe):
         lasttime = time.monotonic()
@@ -58,29 +61,24 @@ class gpsProcess(multiprocessing.Process):
                 break
 
     def gps_process(self, pipe):
-        import os
-        #print('gps on', os.getpid())
         while True:
             self.connect()
             self.read(pipe)
-            
-class gpsd(Sensor):
-    def __init__(self, ap):
-        super(gpsd, self).__init__(ap, 'gps')
-        self.track = self.register(SensorValue, 'track', directional=True)
-        self.speed = self.register(SensorValue, 'speed')
 
-        self.process = False
-        self.devices = []
+
+class gpsd(object):
+    def __init__(self, sensors):
+        self.sensors = sensors
+        self.devices = [] # list of devices used
 
         self.process = gpsProcess()
-
         self.process.start()
+
         READ_ONLY = select.POLLIN | select.POLLHUP | select.POLLERR
         self.poller = select.poll()
         self.poller.register(self.process.pipe.fileno(), READ_ONLY)
         self.fd = self.process.pipe.fileno()
-
+            
     def read(self):
         fix = self.process.pipe.recv()
         if 'device' in fix:
@@ -96,7 +94,7 @@ class gpsd(Sensor):
 
         # use fix timestamp?
         val = {'track': fval('track'), 'speed': fval('speed'), 'device': fval('device')}
-        self.ap.sensors.write('gps', val, 'gpsd')
+        self.sensors.write('gps', val, 'gpsd')
 
     def poll(self):
         while True:
@@ -108,19 +106,11 @@ class gpsd(Sensor):
                 fd, flag = event
                 if fd == self.fd:
                     if flag != select.POLLIN:
-                        print('nmea got flag for gpsd pipe:', flag)
+                        print('got flag for gpsd pipe:', flag)
+
                     else:
                         self.read()
-
-    def update(self, data):
-        self.track.set(data['track'])
-        self.speed.set(data['speed'])
-
-    def reset(self):
-        self.track.set(False)
-        self.speed.set(False)
-        
-
+            
 if __name__ == '__main__':
     import gps
     gpsd = gps.gps(mode=gps.WATCH_ENABLE)

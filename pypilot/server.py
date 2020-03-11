@@ -20,7 +20,7 @@ DEFAULT_PORT = 23322
 max_connections = 30
 default_persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
 server_persistent_period = 60 # store data every 60 seconds
-use_multiprocessing = True
+use_multiprocessing = True # run server in a separate process
 
 class Watch(object):
     def __init__(self, value, connection, period):
@@ -30,7 +30,7 @@ class Watch(object):
         self.time = 0 # send first update immediate
 
 class pypilotValue(object):
-    def __init__(self, values, name, info, connection):
+    def __init__(self, values, name, info={}, connection=False, msg=False):
         self.values = values
         self.name = name
         self.info = info
@@ -40,7 +40,7 @@ class pypilotValue(object):
 
         self.awatches = [] # all watches
         self.pwatches = [] # periodic watches limited in period
-        self.msg = False
+        self.msg = msg
 
     def get_msg(self):
         return self.msg
@@ -154,7 +154,7 @@ class ServerWatch(pypilotValue):
         for name in watches:
             if not name in values:
                 # watching value not yet registered, add it so we can watch it
-                values[name] = pypilotValue(self.values, name, {}, False)
+                values[name] = pypilotValue(self.values, name)
             values[name].watch(connection, watches[name])
 
 class ServerValues(pypilotValue):
@@ -166,6 +166,7 @@ class ServerValues(pypilotValue):
         self.load()
         self.pqwatches = [] # priority queue of watches
         self.last_send_watches = 0
+        self.persistent_timeout = time.monotonic() + server_persistent_period
 
     def get_msg(self):
         if not self.msg or self.msg == 'new':
@@ -220,11 +221,12 @@ class ServerValues(pypilotValue):
                 value = self.values[name]
                 if value.connection:
                     connection.send('error=value already held: ' + name + '\n')
-                else:
-                    value.connection = connection
-                    value.info = info # update info
-                    value.watching = False
-                    value.calculate_watch_period()
+                value.connection = connection
+                value.info = info # update info
+                value.watching = False
+                if value.msg:
+                    connection.send(value.get_msg()) # send value
+                value.calculate_watch_period()
                 continue
             value = pypilotValue(self, name, info, connection)
             if 'persistent' in info and info['persistent']:
@@ -255,8 +257,17 @@ class ServerValues(pypilotValue):
     def load_file(self, f):
         line = f.readline()
         while line:
-            name, data = line.rstrip().split('=', 1)
+            name, data = line.split('=', 1)
             self.persistent_data[name] = line
+            if name in self.values:
+                value = self.values[name]
+                if value.connection:
+                    connection.send(line)
+                else:
+                    value.msg = line
+                    
+            self.values[name] = pypilotValue(self.values, name, msg=line)
+            
             line = f.readline()
         f.close()
         
@@ -269,7 +280,7 @@ class ServerValues(pypilotValue):
             # log failing to load persistent data
             persist_fail = os.getenv('HOME') + '/.pypilot/persist_fail'
             file = open(persist_fail, 'a')
-            file.write(str(time.monotonic()) + ' ' + str(e) + '\n')
+            file.write(str(time.time()) + ' ' + str(e) + '\n')
             file.close()
 
             try:
@@ -308,24 +319,22 @@ class ServerValues(pypilotValue):
 class pypilotServer(object):
     def __init__(self):
         self.pipes = []
-        self.poll = self.init
         self.multiprocessing = use_multiprocessing
+        self.initialized = False
+        self.process=False
 
     def pipe(self):
-        if self.poll != self.init:
-            print('pipe clients must be created before the server is run')
+        if self.initialized:
+            print('direct pipe clients must be created before the server is run')
+            exit(0)
 
         pipe0, pipe1 = LineBufferedNonBlockingPipe('pypilotServer pipe' + str(len(self.pipes)), self.multiprocessing)
         self.pipes.append(pipe1)
         return pipe0
-
-    def noop(self, timeout=0):
-        pass # in multiprocessing poll is a no op
         
     def run(self):
         print('pypilotServer on', os.getpid())
         # if server is in a separate process
-        self.multiprocessing = False
         self.init()
         while True:
             dt = self.values.sleep_time()
@@ -333,13 +342,15 @@ class pypilotServer(object):
             self.poll(dt)
             #print('times', time.monotonic() - t0, dt)
 
-    def init(self, timeout=0):
+    def init_process(self):
         if self.multiprocessing:
-            self.process = multiprocessing.Process(target=self.run)
+            self.process = multiprocessing.Process(target=self.run, daemon=True)
             self.process.start()
-            self.poll = self.noop
-            return
+        else:
+            self.init()
 
+    def init(self):
+        self.process = 'main process'
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setblocking(0)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -348,14 +359,15 @@ class pypilotServer(object):
         self.sockets = []
         self.fd_to_pipe = {}
 
-        self.persistent_timeout = time.monotonic() + server_persistent_period
         self.values = ServerValues()
 
-        try:
-            self.server_socket.bind(('0.0.0.0', self.port))
-        except:
-            print('pypilot_server: bind failed; already running a server?')
-            exit(1)
+        while True:
+            try:
+                self.server_socket.bind(('0.0.0.0', self.port))
+                break
+            except:
+                print('pypilot_server: bind failed; already running a server?')
+                time.sleep(3)                
 
         # listen for tcp sockets
         self.server_socket.listen(5)
@@ -364,24 +376,27 @@ class pypilotServer(object):
         self.poller = select.poll()
         self.poller.register(fd, select.POLLIN)
 
-        # setup pipes
-        for pipe in self.pipes:
-            fd = pipe.fileno()
-            if fd: # fd is 0 for non multiprocessed
+        # setup direct pipe clients
+        print('server setup has', len(self.pipes), 'pipes')
+        if self.multiprocessing:
+            for pipe in self.pipes:
+                fd = pipe.fileno()
                 self.poller.register(fd, select.POLLIN)
                 self.fd_to_connection[fd] = pipe
                 self.fd_to_pipe[fd] = pipe
-            pipe.cwatches = {'values': True} # server always watches client values 
-        
-        self.poll = self.handle_requests # initialized, now handle requests when polling
+                pipe.cwatches = {'values': True} # server always watches client values
+
+        self.initialized = True
 
     def __del__(self):
-        if self.multiprocessing:
+        if not self.initialized:
             return
         self.values.store()
         self.server_socket.close()
         for socket in self.sockets:
-            socket.socket.close()
+            socket.close()
+        for pipe in self.pipes:
+            pipe.close()
 
     def HandleRequest(self, connection, request):
         self.values.HandleRequest(request, connection)
@@ -400,17 +415,18 @@ class pypilotServer(object):
         if not found:
             print('socket not found in fd_to_connection')
 
-        socket.socket.close()
+        socket.close()
         self.values.remove(socket)
 
-    def handle_requests(self, timeout=0):
-        t0 = time.monotonic()
-        #print('store', t0 - self.persistent_timeout)
-        if t0 < self.persistent_timeout - server_persistent_period:
-            print('clock skew detected, resetting persistent timeout')
-            self.persistent_timeout = time.monotonic() + server_persistent_period
+    def poll(self, timeout=0):
+        # server is in subprocess
+        if self.process != 'main process':
+            if not self.process:
+                self.init_process()
+            return
 
-        if t0 >= self.persistent_timeout:
+        t0 = time.monotonic()
+        if t0 >= self.values.persistent_timeout:
             self.values.store()
             if time.monotonic() - t0 > .1:
                 print('persistent store took too long!', time.monotonic() - t0)
@@ -433,12 +449,15 @@ class pypilotServer(object):
                 socket = LineBufferedNonBlockingSocket(connection)
                 
                 self.sockets.append(socket)
-                fd = socket.socket.fileno()
+                fd = socket.fileno()
                 socket.cwatches = {'values': True} # server always watches client values 
 
                 self.fd_to_connection[fd] = socket
                 self.poller.register(fd, select.POLLIN)
             elif flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
+                if not connection in self.sockets:
+                    print('internal pipe closed, server exiting')
+                    exit(0)
                 self.RemoveSocket(connection)
             elif flag & select.POLLIN:
                 if fd in self.fd_to_pipe:
@@ -462,12 +481,15 @@ class pypilotServer(object):
                         print(e)
                         connection.send('invalid request: ' + line + '\n')
 
-        for pipe in self.pipes:
-            while True:
-                line = pipe.readline()
-                if not line:
-                    break
-                self.HandleRequest(pipe, line)
+        #
+        if not self.multiprocessing:
+            # these pipes are not pollable
+            for pipe in self.pipes:
+                while True:
+                    line = pipe.readline()
+                    if not line:
+                        break
+                    self.HandleRequest(pipe, line)
                         
         # send periodic watches
         self.values.send_watches()
@@ -486,7 +508,7 @@ if __name__ == '__main__':
     server = pypilotServer()
     from client import pypilotClient
     from values import *
-    client1 = pypilotClient(server.pipe()) # direct pipe to server
+    client1 = pypilotClient(server) # direct pipe to server
     clock = client1.register(Value('clock', 0))
     test1 = client1.register(Property('test', 1234))
     client1.watch('test2', 10)

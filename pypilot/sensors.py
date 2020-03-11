@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -8,20 +8,22 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-from pypilot.client import *
-from pypilot.values import *
-from pypilot.resolv import resolv
+from client import *
+from values import *
+from resolv import resolv
+
+from gpsd import gpsd
 
 # favor lower priority sources
-source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'tcp-pypilot' : 4, 'none' : 5}
+source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'none' : 5}
 
 class Sensor(object):
-    def __init__(self, ap, name):
-        self.source = ap.register(StringValue(name + '.source', 'none'))
+    def __init__(self, client, name):
+        self.source = client.register(StringValue(name + '.source', 'none'))
         self.lastupdate = 0
         self.device = None
         self.name = name
-        self.ap = ap
+        self.client = client
             
     def write(self, data, source):
         if source_priority[self.source.value] < source_priority[source]:
@@ -51,11 +53,11 @@ class Sensor(object):
         raise 'update should be overloaded'
 
     def register(self, _type, name, *args, **kwargs):
-        return self.ap.client.register(_type(*([self.name + '.' + name] + list(args)), **kwargs))
+        return self.client.register(_type(*([self.name + '.' + name] + list(args)), **kwargs))
 
 class Wind(Sensor):
-    def __init__(self, ap):
-        super(Wind, self).__init__(ap, 'wind')
+    def __init__(self, client):
+        super(Wind, self).__init__(client, 'wind')
 
         self.direction = self.register(SensorValue, 'direction', directional=True)
         self.speed = self.register(SensorValue, 'speed')
@@ -71,8 +73,8 @@ class Wind(Sensor):
         self.speed.set(False)
 
 class APB(Sensor):
-    def __init__(self, ap):
-        super(APB, self).__init__(ap, 'apb')
+    def __init__(self, client):
+        super(APB, self).__init__(client, 'apb')
         self.track = self.register(SensorValue, 'track', directional=True)
         self.xte = self.register(SensorValue, 'xte')
         # 300 is 30 degrees for 1/10th mile
@@ -80,7 +82,7 @@ class APB(Sensor):
         self.last_time = time.monotonic()
 
     def reset(self):
-        self.xte.update(0)
+       self.xte.update(0)
 
     def update(self, data):
         t = time.monotonic()
@@ -91,10 +93,10 @@ class APB(Sensor):
         self.track.update(data['track'])
         self.xte.update(data['xte'])
 
-        if not self.ap.enabled.value:
+        if not self.client.values['ap.enabled'].value:
             return
 
-        mode = self.ap.values['ap.mode']
+        mode = self.client.values['ap.mode'].value
         if mode.value != data['mode']:
             # for GPAPB, ignore message on wrong mode
             if data['**'] == 'GP':
@@ -107,25 +109,40 @@ class APB(Sensor):
         if abs(heading_command.value - command) > .1:
             heading_command.set(command)
 
-    
+class gps(Sensor):
+    def __init__(self, client):
+        super(gps, self).__init__(client, 'gps')
+        self.track = self.register(SensorValue, 'track', directional=True)
+        self.speed = self.register(SensorValue, 'speed')
+
+    def update(self, data):
+        self.track.set(data['track'])
+        self.speed.set(data['speed'])
+
+    def reset(self):
+        self.track.set(False)
+        self.speed.set(False)
+
 class Sensors(object):
-    def __init__(self, ap):
-        from gpsd import gpsd
+    def __init__(self, client):
         from rudder import Rudder
         from nmea import Nmea
         
-        self.ap = ap
-        self.nmea = Nmea(ap, self)
-        self.gps = gpsd(ap, self)
-        self.wind = Wind(ap)
-        self.rudder = Rudder(ap)
-        self.apb = APB(ap)
+        self.client = client
+        self.nmea = Nmea(self)
+        self.gpsd = gpsd(self)
+        
+        self.gps = gps(client)
+        self.wind = Wind(client)
+        self.rudder = Rudder(client)
+        self.apb = APB(client)
 
         self.sensors = {'gps': self.gps, 'wind': self.wind, 'rudder': self.rudder, 'apb': self.apb}
 
     def poll(self):
-        self.gps.poll()
         self.nmea.poll()
+        self.gpsd.poll()
+
         self.rudder.poll()
 
         # timeout sources

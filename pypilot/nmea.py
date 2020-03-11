@@ -28,7 +28,7 @@ import multiprocessing
 import serial
 from client import pypilotClient
 from values import *
-from pypilot.pipeserver import NonBlockingPipe
+from nonblockingpipe import LineBufferedNonBlockingPipe
 from sensors import source_priority
 import serialprobe
 
@@ -186,71 +186,35 @@ class NMEASerialDevice(object):
 nmeasocketuid = 0
 class NMEASocket(object):
     def __init__(self, connection):
-        connection.setblocking(0)
-        self.socket = connection
-        self.b = linebuffer.LineBuffer(connection.fileno())
-        self.out_buffer = ''
-        self.pollout = select.poll()
-        self.pollout.register(connection, select.POLLOUT)
-        self.sendfailcount = 0
-        self.failcountmsg = 1
+        super(NMEASocket, self).__init__(connection)
 
         global nmeasocketuid
         self.uid = nmeasocketuid
         nmeasocketuid += 1
-
-    def recv(self):
-        return self.b.recv()
-
+        
     def readline(self):
-        return self.b.readline_nmea()
-
-    def close(self):
-        self.socket.close()
-
-    def send(self, data):
-        self.out_buffer += data
-        if len(self.out_buffer) > 4096:
-            print('nmea socket out_buffer overflow')
-            self.out_buffer = data
-
-    def flush(self):
-        if not len(self.out_buffer):
-            return
-        try:
-            if not self.pollout.poll(0):
-                self.sendfailcount += 1
-                if self.sendfailcount == self.failcountmsg:
-                    print('nmea socket', self.socket.fileno(), 'failed to send', self.sendfailcount)
-                    self.failcountmsg *= 10 # print(only at 1, 10, 100 etc frequency)
-                    
-                self.out_buffer = '' # drop nmea data
-                if self.sendfailcount > 100:
-                    print('closing nmea socket', self.socket.fileno())
-                    self.socket.close() # fail to send too many times, close socket
-                return
-            count = self.socket.send(self.out_buffer.encode())
-            if count < 0:
-                print('nmea socket send error')
-                self.out_buffer = ''
-                self.socket.close()
-                return
-
-            self.out_buffer = self.out_buffer[count:]
-        except Exception as e:
-            print('exception flusing nmea socket', e)
-            self.out_buffer = ''
-            self.socket.close()
+        if self.b: # optimized version in c
+            return self.b.readline_nmea()
+        line = self.readline()
+        if not line:
+            return False
+        if len(line) > 4 and line[0] == '$':
+            cksum = int(buf[-2:])
+            if cksum == nmea_cksum(line[1:-2]):
+                return line
+        return self.readline()
 
 class Nmea(object):
-    def __init__(self, client, sensors):
-        self.client = client
+    def __init__(self, sensors):
+        self.client = sensors.client
 
         self.sensors = sensors
-        self.process = NmeaBridgeProcess(sensors.ap.multiprocessing)
+        self.nmea_bridge = nmeaBridge(self.client.server)
+        self.pipe = self.nmea_bridge.nmea_pipe
+        self.sockets = False
 
         self.poller = select.poll()
-        self.process_fd = self.process.pipe.fileno()
+        self.process_fd = self.pipe.fileno()
         self.poller.register(self.process_fd, select.POLLIN)
         self.device_fd = {}
 
@@ -265,16 +229,17 @@ class Nmea(object):
         self.start_time = time.monotonic()
 
     def __del__(self):
-        print('terminate nmea process')
-        self.process.terminate()
+        #print('terminate nmea process')
+        #self.process.terminate()
+        pass
 
     def read_process_pipe(self):
-        msgs = self.process.pipe.recv()
+        msgs = self.pipe.recv()
         if type(msgs) == type('string'):
             if msgs == 'sockets':
-                self.process.sockets = True
+                self.sockets = True
             elif msgs == 'nosockets':
-                self.process.sockets = False
+                self.sockets = False
             elif msgs[:10] == 'lostsocket':
                 self.sensors.lostdevice(msgs[4:])
             else:
@@ -288,7 +253,7 @@ class Nmea(object):
         line = device.readline()
         if not line:
             return
-        if self.process.sockets:
+        if self.sockets:
             nmea_name = line[:6]
             # we output mwv and rsa messages after calibration
             # do not relay apb messages
@@ -299,7 +264,7 @@ class Nmea(object):
 
                 dt = t-self.nmea_times[nmea_name] if nmea_name in self.nmea_times else -1
                 if dt > .2:
-                    self.process.pipe.send(line, False)
+                    self.pipe.send(line, False)
                     self.nmea_times[nmea_name] = t
 
         self.devices_lastmsg[device] = t
@@ -380,7 +345,7 @@ class Nmea(object):
 
         # send nmea messages to sockets at 2hz
         dt = time.monotonic() - self.last_imu_time
-        if self.process.sockets and dt > .5 and \
+        if self.sockets and dt > .5 and \
            'imu.pitch' in self.client.values:
             self.send_nmea('APXDR,A,%.3f,D,PTCH' % self.client.values['imu.pitch'].value)
             self.send_nmea('APXDR,A,%.3f,D,ROLL' % self.client.values['imu.roll'].value)
@@ -391,7 +356,7 @@ class Nmea(object):
             
         # limit to 5hz output of wind and rudder
         t = time.monotonic()
-        for name in ['wind', 'rudder'] if self.process.sockets else []:
+        for name in ['wind', 'rudder'] if self.sockets else []:
             dt = t - self.nmea_times[name] if name in self.nmea_times else -1
             source = self.sensors.sensors[name].source.value
             # only output to tcp if we have a better source
@@ -404,8 +369,8 @@ class Nmea(object):
                 self.nmea_times[name] = t
             
         t5 = time.monotonic()
-        if not self.process.multiprocessing:
-            self.process.poll()
+        if not self.nmea_bridge.process:
+            self.nmea_bridge.poll()
         
         t6 = time.monotonic()
         if t6 - t0 > .1 and self.start_time - t0 > 1:
@@ -447,30 +412,19 @@ class Nmea(object):
 
     def send_nmea(self, msg):
         line = '$' + msg + ('*%02X' % nmea_cksum(msg))
-        self.process.pipe.send(line, False)
-
-class PipeQueue(object):
-    def __init__(self):
-        self.data = []
-    def send(self, data):
-        self.data.append(data)
-    def recv(self):
-        if not self.data:
-            return False
-        ret = self.data[0]
-        self.data = self.data[1:]
-        return ret
+        self.pipe.send(line, False)
         
-class NmeaBridgeProcess(multiprocessing.Process):
-    def __init__(self, mp):
-        self.sockets = False
-        self.mp = mp
-        if mp:
-            self.pipe, pipe = NonBlockingPipe('nmea pipe', True)
-            super(NmeaBridgeProcess, self).__init__(target=self.process, args=(pipe,))
-            self.start()
+class nmeaBridge(object):
+    def __init__(self, server):
+        self.client = pypilotClient(server)
+        self.multiprocessing = server.multiprocessing
+        self.nmea_pipe, self.pipe = LineBufferedNonBlockingPipe('nmea pipe', self.multiprocessing)
+        if self.multiprocessing:
+            self.process = multiprocessing.Process(target=self.nmea_process, daemon=True)
+            self.process.start()
         else:
-            self.setup(PipeQueue())
+            self.process = False
+            self.setup()
 
     def setup_watches(self, watch=True):
         watchlist = ['gps.source', 'wind.source', 'rudder.source', 'apb.source']
@@ -563,19 +517,20 @@ class NmeaBridgeProcess(multiprocessing.Process):
             print('failed to connect to', self.nmea_client, ':', e)
             self.client_socket = False
 
-    def process(self, pipe):
-        self.setup(pipe, True)
+    def nmea_process(self):
+        self.setup()
         while True:
             timeout = 100 if self.sockets else 10000
-            self.poll(timeout)
+            self.process_poll(timeout)
 
-    def setup(self, pipe)
-        import os
-        self.pipe = pipe
+    def poll(self):
+        if not self.process:
+            self.process_poll(0)
+
+    def setup(self):
         self.sockets = []
 
-        self.client = pypilotClient('localhost')
-        self.nmea_client = client.register(Property('nmea.client', '', persistent=True))
+        self.nmea_client = self.client.register(Property('nmea.client', '', persistent=True))
 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setblocking(0)
@@ -583,11 +538,13 @@ class NmeaBridgeProcess(multiprocessing.Process):
         self.client_socket = False
 
         port = DEFAULT_PORT
-        try:
-            self.server.bind(('0.0.0.0', port))
-        except:
-            print('nmea_bridge: bind failed.')
-            exit(1)
+        while True:
+            try:
+                self.server.bind(('0.0.0.0', port))
+                break
+            except:
+                print('nmea server on port %d: bind failed.', port)
+            time.sleep(1)
         print('listening on port', port, 'for nmea connections')
 
         self.server.listen(5)
@@ -599,9 +556,9 @@ class NmeaBridgeProcess(multiprocessing.Process):
         self.poller = select.poll()
         self.poller.register(self.server, select.POLLIN)
         self.fd_to_socket = {self.server.fileno() : self.server}
-        if self.mp:
-            self.poller.register(pipe, select.POLLIN)
-            self.fd_to_socket[pipe.fileno()] = pipe
+        if self.multiprocessing:
+            self.poller.register(self.pipe, select.POLLIN)
+            self.fd_to_socket[self.pipe.fileno()] = self.pipe
 
         self.msgs = {}
 
@@ -614,7 +571,7 @@ class NmeaBridgeProcess(multiprocessing.Process):
             for sock in self.sockets:
                 sock.send(msg)
 
-    def poll(self, timeout=0):
+    def process_poll(self, timeout=0):
         t0 = time.monotonic()
         events = self.poller.poll(timeout)
         t1 = time.monotonic()
@@ -625,13 +582,13 @@ class NmeaBridgeProcess(multiprocessing.Process):
                 if sock == self.server:
                     print('nmea bridge lost server connection')
                     exit(2)
-                if sock == pipe:
+                if sock == self.pipe:
                     print('nmea bridge pipe to autopilot')
                     exit(2)
                 self.socket_lost(sock, fd)
             elif sock == self.server:
                 self.new_socket_connection(*self.server.accept())
-            elif sock == pipe:
+            elif sock == self.pipe:
                 self.recieve_pipe()
             elif flag & select.POLLIN:
                 if not sock.recv():
@@ -685,10 +642,8 @@ class NmeaBridgeProcess(multiprocessing.Process):
         t6 = time.monotonic()
 
         # run tcp nmea traffic at rate of 10hz
-        period = period
-        if t6-t1 > :
+        if t6-t0 > period:
             print('nmea process loop too slow:', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
         else:
             dt = period - (t6 - t0)
-            if dt > 0:
-                time.sleep(dt)
+            time.sleep(dt)

@@ -10,14 +10,13 @@
 # autopilot base handles reading from the imu (boatimu)
 
 from __future__ import print_function
-import sys, os
-import math
+import sys, os, math
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import os.path
-from server import *
+from server import pypilotServer
+from client import pypilotClient
 from values import *
 from boatimu import *
 from resolv import *
@@ -93,12 +92,10 @@ class Autopilot(object):
   def __init__(self):
     super(Autopilot, self).__init__()
 
-    multiprocessing = False
-
-    self.server = pypilotServer(multiprocessing)
-    self.client = pypilotClient(server)
-    self.boatimu = BoatIMU(server)
-    self.sensors = Sensors(self)
+    self.server = pypilotServer()
+    self.client = pypilotClient(self.server)
+    self.boatimu = BoatIMU(self.client)
+    self.sensors = Sensors(self.client)
     self.servo = servo.Servo(self.client, self.sensors)
     self.version = self.register(Value, 'version', 'pypilot' + ' ' + strversion)
     self.heading_command = self.register(HeadingProperty, 'heading_command', 0)
@@ -141,6 +138,7 @@ class Autopilot(object):
     self.wind_speed = 0
 
     self.runtime = self.register(TimeValue, 'runtime') #, persistent=True)
+    self.timings = self.register(Value, 'timings', False)
 
     device = '/dev/watchdog0'
     self.watchdog_device = False
@@ -152,7 +150,6 @@ class Autopilot(object):
 
     if os.system('sudo chrt -pf 99 %d 2>&1 > /dev/null' % os.getpid()):
         print('warning, failed to make autopilot process realtime')
-
     
     self.lasttime = time.monotonic()
 
@@ -166,7 +163,7 @@ class Autopilot(object):
           self.watchdog_device.close()
 
   def register(self, _type, name, *args, **kwargs):
-    return self.client.register(_type(*(['ap.' + name] + list(args)), **kwargs))
+      return self.client.register(_type(*(['ap.' + name] + list(args)), **kwargs))
 
   def adjust_mode(self, pilot):
       # if the mode must change
@@ -213,12 +210,12 @@ class Autopilot(object):
       # update the autopilot command so the course remains constant
       self.compass_change = 0
       if data:
-        if 'compass_calibration_updated' in data and self.last_heading:
-          # with compass calibration updates, adjust the compass offset to hold the same course
-          # to prevent actual course change
-          last_heading = resolv(self.last_heading, data['heading'])
-          self.compass_change += data['heading'] - headingrate*dt - last_heading
-        self.last_heading = data['heading']
+          if 'compass_calibration_updated' in data and self.last_heading:
+              # with compass calibration updates, adjust the compass offset to hold the same course
+              # to prevent actual course change
+              last_heading = resolv(self.last_heading, data['heading'])
+              self.compass_change += data['heading'] - headingrate*dt - last_heading
+          self.last_heading = data['heading']
 
       # if heading offset alignment changed, keep same course
       if self.last_heading_off != self.boatimu.heading_off.value:
@@ -231,8 +228,8 @@ class Autopilot(object):
           self.wind_compass_offset.value += self.compass_change
           self.true_wind_compass_offset.value += self.compass_change
           if self.mode.value == 'compass':
-            heading_command = self.heading_command.value + self.compass_change
-            self.heading_command.set(resolv(heading_command, 180))
+              heading_command = self.heading_command.value + self.compass_change
+              self.heading_command.set(resolv(heading_command, 180))
           
   def compute_heading_error(self, t):
       heading = self.heading.value
@@ -262,14 +259,26 @@ class Autopilot(object):
       self.heading_error_int_time = t
       # int error +- 1, from 0 to 1500 deg/s
       self.heading_error_int.set(minmax(self.heading_error_int.value + \
-                                        (self.heading_error.value/1500)*dt, 1))
-          
+                                        (self.heading_error.value/1500)*dt, 1))          
   def iteration(self):
       data = False
-      t00 = time.monotonic()
-      # set timestamp
+      t0 = time.monotonic()
+
+      self.server.poll()
+      msgs = self.client.receive()
+      for msg in msgs:
+          print('autopilot main process received:', msg, msgs[msg])
+      t1 = time.monotonic()
+      if t1 - t0 > self.boatimu.period/2:
+          print('server/client is running too _slowly_', t5-t4)
+
+      self.sensors.poll()
+      t2 = time.monotonic()
+      if t2-t1 > self.boatimu.period/2:
+          print('sensors is running too _slowly_', t2-t1)
+      
       for tries in range(14): # try 14 times to read from imu 
-          data = self.boatimu.IMURead()
+          data = self.boatimu.read()
           if data:
               break
           time.sleep(self.boatimu.period/10)
@@ -277,14 +286,17 @@ class Autopilot(object):
       if not data:
           print('autopilot failed to read imu at time:', time.monotonic())
 
-      t0 = time.monotonic()
+      t3 = time.monotonic()
+      if t3-t2 > self.boatimu.period/2 and data:
+          print('read imu running too _slowly_', t3-t2)
+
       self.fix_compass_calibration_change(data, t0)
       self.compute_offsets()
 
-      pilot = None
+      pilot = None # select pilot
       for p in self.pilots:
-        if p.name == self.pilot.value or not pilot:
-          pilot = p
+          if p.name == self.pilot.value or not pilot:
+              pilot = p
 
       self.adjust_mode(pilot)
       pilot.compute_heading()
@@ -311,44 +323,33 @@ class Autopilot(object):
       # servo can only disengage under manual control
       self.servo.force_engaged = self.enabled.value
 
-      t1 = time.monotonic()
-      if t1-t0 > self.boatimu.period/2:
-          print('Autopilot routine is running too _slowly_', t1-t0, self.boatimu.period/2)
+      t4 = time.monotonic()
+      if t4-t3 > self.boatimu.period/2:
+          print('Autopilot routine is running too _slowly_', t4-t3)
 
       self.servo.poll()
-      t2 = time.monotonic()
-      if t2-t1 > self.boatimu.period/2:
-          print('servo is running too _slowly_', t2-t1)
-
-      self.sensors.poll()
-
-      t4 = time.monotonic()
-      if t4 - t2 > self.boatimu.period/2:
-          print('sensors is running too _slowly_', t4-t2)
-
-      self.server.poll()
-      self.client.poll()
       t5 = time.monotonic()
-      if t5 - t4 > self.boatimu.period/2:
-          print('server is running too _slowly_', t5-t4)
+      if t5-t4 > self.boatimu.period/2:
+          print('servo is running too _slowly_', t5-t4)
 
+      self.timings.set([t1-t0, t2-t1, t3-t2, t4-t3, t5-t4])
+          
       if self.watchdog_device:
           self.watchdog_device.write('c')
 
-      while True:
-          dt = self.boatimu.period - (time.monotonic() - t00)
-          if dt >= self.boatimu.period:
+      while True: # sleep remainder of period
+          dt = self.boatimu.period - (time.monotonic() - t0)
+          if dt >= self.boatimu.period or dt <= 0:
               break
           time.sleep(dt)
 
-
-  def run(self):
+def main():
     # setup all processes to exit on any signal
-    self.childpids = []
+    childpids = []
     def cleanup(signal_number, frame=None):
         print('got signal', signal_number, 'cleaning up')
-        while self.childpids:
-            pid = self.childpids.pop()
+        while childpids:
+            pid = childpids.pop()
             os.kill(pid, signal.SIGTERM) # get backtrace
         sys.stdout.flush()
         if signal_number != 'atexit':
@@ -365,36 +366,17 @@ class Autopilot(object):
         if s == 13:
             signal.signal(s, printpipewarning)
         elif s != 9:
-            signal.signal(s, cleanup)
-        
-    self.childpids = [self.boatimu.imu_process.pid, self.boatimu.auto_cal.process.pid,
-                      self.sensors.nmea.process.pid, self.sensors.gps.process.pid]
+            #signal.signal(s, cleanup)
+            pass
 
+    ap = Autopilot()
 
-    
-        
     signal.signal(signal.SIGCHLD, cleanup)
     import atexit
     atexit.register(lambda : cleanup('atexit'))
-      
-          
-
-
-class AutomaticCalibration(object):
-    def __init__(self):
-        self.cal_pipe, cal_pipe = NonBlockingPipe('cal pipe', True)
-        self.process = multiprocessing.Process(target=CalibrationProcess, args=(cal_pipe,))
-        self.process.start()
-
-    def __del__(self):
-        print('terminate calibration process')
-        self.process.terminate()
-
-
-def main():
-    Autopilot ap
-    ap.run()
     
+    while True:
+        ap.iteration()
 
 if __name__ == '__main__':
     main()

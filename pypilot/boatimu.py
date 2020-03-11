@@ -18,9 +18,10 @@ import time, math, multiprocessing, select
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import calibration_fit, vector, quaternion
-from pypilot.server import pypilotServer
-from pypilot.pipeserver import pypilotPipeServer, NonBlockingPipe
-from pypilot.values import *
+from client import pypilotClient
+from values import *
+
+from nonblockingpipe import NonBlockingPipe
 
 try:
     import RTIMU
@@ -29,46 +30,27 @@ except ImportError:
     print('RTIMU library not detected, please install it')
 
 class IMU(object):
-    def __init__(self, mp):
-        if mp:
+    def __init__(self, server):
+        self.client = pypilotClient(server)
+        self.multiprocessing = server.multiprocessing
+        if self.multiprocessing:
             self.pipe, pipe = NonBlockingPipe('imu_pipe')
-            process = multiprocessing.Process(target=self.process, args=(pipe))
+            self.process = multiprocessing.Process(target=self.process, args=(pipe,), daemon=True)
             self.process.start()
-        else:
-            self.setup()
-          
-    def process(self, pipe):
-        if not RTIMU:
-            while True:
-                time.sleep(10)
-
-        if os.system('sudo chrt -pf 99 %d 2>&1 > /dev/null' % os.getpid()):
-            print('warning, failed to make imu process realtime')
-
+            return
         self.setup()
-        while True:
-            self.init()
-            data = self.read()
-            pipe.send(data, not data)
-            self.poll()
-            dt = time.monotonic() - t0
-            t = period.value - dt
-            if t > 0 and t < period:
-                time.sleep(t)
-            else:
-                print('imu process failed to keep time', t)
-
+          
     def setup(self):
-        self.client = pypilotClient('localhost')
         self.client.watch('imu.accel.calibration')
         self.client.watch('imu.compass.calibration')
 
         SETTINGS_FILE = "RTIMULib"
+        print("Using settings file " + SETTINGS_FILE + ".ini")
         s = RTIMU.Settings(SETTINGS_FILE)
         s.FusionType = 1
         s.CompassCalValid = False
 
-        s.CompassCalEllipsoidOffset = tuple(compass_cal[:3])  
+        s.CompassCalEllipsoidOffset = (0, 0, 0)
         s.CompassCalEllipsoidValid = True
         s.MPU925xAccelFsr = 0 # +- 2g
         s.MPU925xGyroFsr = 0 # +- 250 deg/s
@@ -86,41 +68,64 @@ class IMU(object):
 
         s.KalmanRk, s.KalmanQ = .002, .001
         self.s = s
+        while not self.init():
+            time.sleep(1)
 
     def init(self):
-        print("Using settings file " + SETTINGS_FILE + ".ini")
         self.s.IMUType = 0 # always autodetect imu
-        rtimu = RTIMU.RTIMU(s)
+        rtimu = RTIMU.RTIMU(self.s)
         if rtimu.IMUName() == 'Null IMU':
             print('no IMU detected... try again')
-            time.sleep(1)
-            continue
+            return False
       
         print("IMU Name: " + rtimu.IMUName())
 
         if not rtimu.IMUInit():
             print("ERROR: IMU Init Failed, no inertial data available")
-            time.sleep(1)
-            continue
+            return False
 
         # this is a good time to set any fusion parameters
         rtimu.setSlerpPower(.01)
         rtimu.setGyroEnable(True)
         rtimu.setAccelEnable(True)
         rtimu.setCompassEnable(True)
+        self.rtimu = rtimu
 
         self.avggyro = [0, 0, 0]
         self.compass_calibration_updated = False
+        return True
+
+    def process(self, pipe):
+        if not RTIMU:
+            while True:
+                time.sleep(10) # do nothing
+
+        if os.system('sudo chrt -pf 99 %d 2>&1 > /dev/null' % os.getpid()):
+            print('warning, failed to make imu process realtime')
+        else:
+            print('made imu process realtime')
+
+        self.setup()
+        while True:
+            data = self.read()
+            pipe.send(data, not data)
+            self.poll()
+            dt = time.monotonic() - t0
+            t = period.value - dt
+            if t > 0 and t < period:
+                time.sleep(t)
+            else:
+                print('imu process failed to keep time', t)
 
     def read(self):
         t0 = time.monotonic()
-        if not rtimu.IMURead():
+        if not self.rtimu.IMURead():
             print('failed to read IMU!')
             self.init() # reinitialize imu
             return False 
          
-        data = rtimu.getIMUData()
-        data['accel.residuals'] = list(rtimu.getAccelResiduals())
+        data = self.rtimu.getIMUData()
+        data['accel.residuals'] = list(self.rtimu.getAccelResiduals())
         data['gyrobias'] = s.GyroBias
         #data['timestamp'] = t0 # imu timestamp is perfectly accurate
         
@@ -128,9 +133,11 @@ class IMU(object):
             data['compass_calibration_updated'] = True
             self.compass_calibration_updated = False
 
+        self.lastdata = data
         return data
 
     def poll(self):
+        data = self.lastdata
         # see if gyro is out of range, sometimes the sensors read
         # very high gyro readings and the sensors need to be reset by software
         # this is probably a bug in the underlying driver with fifo misalignment
@@ -139,11 +146,12 @@ class IMU(object):
             avggyro[i] = (1-d)*avggyro[i] + d*data['gyro'][i]
         if vector.norm(avggyro) > .8: # 55 degrees/s
             print('too high standing gyro bias, resetting sensors', data['gyro'], avggyro)
-            break
+            self.init()
+            
         # detects the problem even faster:
         if any(map(lambda x : abs(x) > 1000, data['compass'])):
             print('compass out of range, resetting', data['compass'])
-            break
+            self.init()
 
         msgs = client.receive()
         for name in msgs:
@@ -209,7 +217,7 @@ class TimeValue(StringValue):
         self.value = self.total + t - self.start
         if abs(self.value - self.lastupdate_value) > 1:
           self.lastupdate_value = self.value
-          self.send()
+          self.set(self.value)
 
     def stop(self):
       if self.stopped:
@@ -217,11 +225,11 @@ class TimeValue(StringValue):
       self.total += time.monotonic() - self.start
       self.stopped = True
 
-    def get_pypilot(self):
+    def get_msg(self):
         if abs(self.value - self.lastage_value) > 1: # to reduce cpu, if the time didn't change by a second
             self.lastage_value = self.value
             self.lastage = readable_timespan(self.value)
-        return self.lastage
+        return '"'+self.lastage+'"'
 
 class QuaternionValue(ResettableValue):
     def __init__(self, name, initial, **kwargs):
@@ -247,7 +255,7 @@ def heading_filter(lp, a, b):
     return result
 
 class BoatIMU(object):
-    def __init__(self, client, *args, **keywords):
+    def __init__(self, client):
         self.starttime = time.monotonic()
         self.client = client
 
@@ -266,8 +274,7 @@ class BoatIMU(object):
 
         self.uptime = self.register(TimeValue, 'uptime')
     
-        self.poller = select.poll()
-        self.poller.register(self.imu_pipe, select.POLLIN)
+        self.auto_cal = calibration_fit.AutomaticCalibrationProcess(client.server)
 
         self.lasttimestamp = 0
 
@@ -293,17 +300,18 @@ class BoatIMU(object):
         sensornames += ['gyrobias']
         self.SensorValues['gyrobias'] = self.register(SensorValue, 'gyrobias', persistent=True)
 
-        self.imu = IMU(False)
+        self.imu = IMU(client.server)
 
         self.last_imuread = time.monotonic()
 
     def __del__(self):
-        print('terminate imu process')
-        self.imu_process.terminate()
+        #print('terminate imu process')
+        #self.imu.process.terminate()
+        pass
 
     def register(self, _type, name, *args, **kwargs):
         value = _type(*(['imu.' + name] + list(args)), **kwargs)
-        return self.server.register(value)
+        return self.client.register(value)
       
     def update_alignment(self, q):
         a2 = 2*math.atan2(q[3], q[0])
@@ -312,20 +320,22 @@ class BoatIMU(object):
         o = quaternion.angvec2quat(off*math.pi/180, [0, 0, 1])
         self.alignmentQ.update(quaternion.normalize(quaternion.multiply(q, o)))
 
-    def IMUread(self):
-        if self.imu.mp:
-            data = False
-            while self.poller.poll(0): # read all the data from the pipe
-                data = self.imu_pipe.recv()
-            return data
-        return self.imu.read()
+    def read(self):
+        if self.imu.multiprocessing:
+            lastdata = False
+            while True:
+                data = self.imu.pipe.recv()
+                if not data:
+                    return lastdata
+                lastdata = data
+        return self.imu.IMUread()
 
     def poll(self):
-        if not self.imu.mp:
+        if not self.imu.multiprocessing:
             self.imu.poll()
 
-    def read(self):
-        data = self.IMUread()
+    def IMUread(self):
+        data = self.imu.IMUread()
         if not data:
             if time.monotonic() - self.last_imuread > 1 and self.loopfreq.value:
                 print('IMURead failed!')
@@ -417,48 +427,50 @@ class BoatIMU(object):
             self.heading_off.last = self.heading_off.value
             self.alignmentQ.last = self.alignmentQ.value
 
+
+        if self.auto_cal.cal_pipe:
+            cal_data = {}
+            if not self.accel_calibration.locked.value:
+                cal_data['accel'] = list(data['accel'])
+            if not self.compass_calibration.locked.value:
+                cal_data['compass'] = list(data['compass'])
+                cal_data['down'] = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(origfusionQPose))
+
+            if cal_data:
+                self.auto_cal.cal_pipe.send(cal_data)
+
         return data
 
-      '''
-    cal_data = {}
-    if not self.accel_calibration.locked.value:
-        cal_data['accel'] = list(data['accel'])
-    if not self.compass_calibration.locked.value:
-        cal_data['compass'] = list(data['compass'])
-        cal_data['down'] = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(origfusionQPose))
-
-    if cal_data:
-        self.auto_cal.cal_pipe.send(cal_data)
-      '''
-
+# print line without newline
+def printline(*args):
+    for a in args:
+        sys.stdout.write(str(a))
+        sys.stdout.write(' ')
+    sys.stdout.write('\r')
+    sys.stdout.flush()
+    
 def main():
+    from server import pypilotServer
     server = pypilotServer()
-    client = pypilotClient(server.pipe())
+    client = pypilotClient(server)
     boatimu = BoatIMU(client)
 
-    t00 = time.monotonic()
     quiet = '-q' in sys.argv
 
     while True:
-        self.server.poll()
-        self.client.poll()
+        t0 = time.monotonic()
+        server.poll()
+        client.poll()
         data = boatimu.read()
         if data and not quiet:
-            def line(*args):
-                for a in args:
-                    sys.stdout.write(str(a))
-                    sys.stdout.write(' ')
-                sys.stdout.write('\r')
-                sys.stdout.flush()
-            line('pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading'])
-        data = boatimu.poll()
-
+            printline('pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading'])
+        boatimu.poll()
         while True:
-            dt = boatimu.period - (time.monotonic() - self.t00)
+            dt = boatimu.period - (time.monotonic() - t0)
             if dt >= boatimu.period:
                 break
-            time.sleep(dt)
-        self.t00 = time.monotonic()
+            if dt > 0:
+                time.sleep(dt)
             
 if __name__ == '__main__':
     main()

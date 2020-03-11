@@ -17,11 +17,11 @@ class LearningPilot(AutopilotPilot):
     super(LearningPilot, self).__init__('learning', ap)
     # create filters
     # gains for training pilot
-    self.P = self.Register(AutopilotGain, 'P', .001, .0001, .01)
-    self.D = self.Register(AutopilotGain, 'D', .03, .01, .1)
-    self.W = self.Register(AutopilotGain, 'W', 0, 0, .1)
+    self.P = self.register(AutopilotGain, 'P', .001, .0001, .01)
+    self.D = self.register(AutopilotGain, 'D', .03, .01, .1)
+    self.W = self.register(AutopilotGain, 'W', 0, 0, .1)
 
-    self.servo_rules = self.Register(BooleanProperty, 'servo_rules', True)
+    self.servo_rules = self.register(BooleanProperty, 'servo_rules', True)
 
     self.initialized = False
     self.start_time = time.monotonic()

@@ -9,15 +9,13 @@
 
 from __future__ import print_function
 import os, math, sys, time
-from pypilot import pyjson
+import select, serial
 
-from pypilot.client import pypilotClient
-from pypilot.values import *
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import pyjson
+from client import pypilotClient
+from values import *
 import autopilot
-import select
-import serial
-from servo_calibration import *
 import serialprobe
 
 import fcntl
@@ -105,7 +103,7 @@ class ServoFlags(Value):
     def __init__(self, name):
         super(ServoFlags, self).__init__(name, 0)
           
-    def strvalue(self):
+    def get_msg(self):
         ret = ''
         if self.value & self.SYNC:
             ret += 'SYNC '
@@ -155,9 +153,7 @@ class ServoFlags(Value):
     def starboard_fault(self):
         self.update((self.value | ServoFlags.STARBOARD_FAULT) \
                     & ~ServoFlags.PORT_FAULT)
-        
-    def get_pypilot(self):
-        return '{"' + self.name + '": {"value": "' + self.strvalue() + '"}}'
+
 
 class ServoTelemetry(object):
     FLAGS = 1
@@ -188,7 +184,7 @@ class Servo(object):
         self.sensors = sensors
         self.lastdir = 0 # doesn't matter
 
-        self.servo_calibration = ServoCalibration(self)
+        #self.servo_calibration = ServoCalibration(self)
         self.calibration = self.register(JSONValue, 'calibration', {})
         self.load_calibration()
 
@@ -269,10 +265,6 @@ class Servo(object):
 
         if not self.disengage_on_timeout.value:
             self.disengaged = False
-
-        if self.servo_calibration.thread.is_alive():
-            print('cal thread')
-            return
 
         t = time.monotonic()
         dp = t - self.position_command.time
@@ -546,8 +538,6 @@ class Servo(object):
         if not self.driver:
             return
 
-        self.servo_calibration.poll()
-                
         result = self.driver.poll()
         if result == -1:
             print('servo lost')
@@ -709,25 +699,25 @@ def main():
                 exit(1)
             test(sys.argv[i+1], int(sys.argv[i+2]))
     
-    print('Servo Client')
+    print('pypilot Servo')
+    from server import pypilotServer
     server = pypilotServer()
     client = pypilotClient(server)
 
-    from sensors import Sensors
+    from sensors import Sensors # for rudder feedback
     sensors = Sensors(client)
     servo = Servo(client, sensors)
-    servo.max_current.set(10)
 
     period = .1
     start = lastt = time.monotonic()
     while True:
-        servo.poll()
-        sensors.poll()
 
         if servo.controller.value != 'none':
             print('voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', sensors.rudder.angle.value, 'flags', servo.flags.strvalue())
-            #print(servo.command.value, servo.speed.value, servo.windup)
             pass
+
+        servo.poll()
+        sensors.poll()
         client.poll()
         server.poll()
 
