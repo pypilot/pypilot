@@ -42,65 +42,12 @@ socketio = SocketIO(app, async_mode=async_mode)
 
 DEFAULT_PORT = 21311
 
-# determine if we are on tinypilot if piCore is in uname -r
-import tempfile, subprocess, os
-temp = tempfile.mkstemp()
-p=subprocess.Popen(['uname', '-r'], stdout=temp[0], close_fds=True)
-p.wait()
-f = os.fdopen(temp[0], 'r')
-f.seek(0)
-kernel_release = f.readline().rstrip()
-f.close()
+import networking
 
-tinypilot = 'piCore' in kernel_release
-
-# javascript uses lowercase bool, easier to use int
-tinypilot = 1 if tinypilot else 0
 
 @app.route('/')
 def index():
-    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot)
-
-if tinypilot:
-    @app.route('/wifi', methods=['GET', 'POST'])
-    def wifi():
-        networking = '/home/tc/.pypilot/networking.txt'
-
-        wifi = {'mode': 'Master', 'ssid': 'pypilot', 'psk': '', 'client_ssid': 'pypilot', 'client_psk': ''}
-        try:
-            f = open(networking, 'r')
-            while True:
-                l = f.readline()
-                if not l:
-                    break
-                try:
-                    name, value = l.split('=')
-                    wifi[name] = value.rstrip()
-                except Exception as e:
-                    print('failed to parse line in networking.txt', l)
-            f.close()
-        except:
-            pass
-
-        if request.method == 'POST':
-            try:
-                for name in request.form:
-                    cname = name
-                    if request.form['mode'] == 'Managed':
-                        cname = 'client_' + name
-                    wifi[cname] = str(request.form[name])
-
-                f = open(networking, 'w')
-                for name in wifi:
-                    f.write(name+'='+wifi[name]+'\n')
-                f.close()
-
-                os.system('/opt/networking.sh')
-            except Exception as e:
-                print('exception!', e)
-
-        return render_template('wifi.html', async_mode=socketio.async_mode, wifi=Markup(wifi))
-
+    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=networking.tinypilot)
 
 class pypilotWeb(Namespace):
     def __init__(self, name):
@@ -143,7 +90,15 @@ def main():
     import os
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
-    socketio.run(app, debug=False, host='0.0.0.0', port=pypilot_web_port)
+    port = pypilot_web_port
+    while True:
+        try:
+            socketio.run(app, debug=False, host='0.0.0.0', port=port)
+            break
+        except PermissionError as e:
+            print('failed to run socket io on port', port, e)
+            port +=8000 - 80
+            print('trying port', port)
 
 if __name__ == '__main__':
     main()

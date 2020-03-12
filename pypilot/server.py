@@ -9,12 +9,11 @@
 
 from __future__ import print_function
 import select, socket, time, numbers
+import sys, os, heapq
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pyjson
-import os
 from bufferedsocket import LineBufferedNonBlockingSocket
 from nonblockingpipe import LineBufferedNonBlockingPipe
-import heapq
-import multiprocessing
 
 DEFAULT_PORT = 23322
 max_connections = 30
@@ -344,6 +343,7 @@ class pypilotServer(object):
 
     def init_process(self):
         if self.multiprocessing:
+            import multiprocessing
             self.process = multiprocessing.Process(target=self.run, daemon=True)
             self.process.start()
         else:
@@ -481,7 +481,6 @@ class pypilotServer(object):
                         print(e)
                         connection.send('invalid request: ' + line + '\n')
 
-        #
         if not self.multiprocessing:
             # these pipes are not pollable
             for pipe in self.pipes:

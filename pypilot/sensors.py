@@ -15,7 +15,7 @@ from resolv import resolv
 from gpsd import gpsd
 
 # favor lower priority sources
-source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'none' : 5}
+source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'signalk' : 4, 'none' : 5}
 
 class Sensor(object):
     def __init__(self, client, name):
@@ -64,7 +64,8 @@ class Wind(Sensor):
         self.offset = self.register(RangeSetting, 'offset', 0, -180, 180, 'deg')
 
     def update(self, data):
-        self.direction.set(resolv(data['direction'] + self.offset.value, 180))
+        if 'direction' in data:
+            self.direction.set(resolv(data['direction'] + self.offset.value, 180))
         if 'speed' in data:
             self.speed.set(data['speed'])
 
@@ -127,11 +128,15 @@ class Sensors(object):
     def __init__(self, client):
         from rudder import Rudder
         from nmea import Nmea
-        
-        self.client = client
+        from signalk import signalk
+
+        # services that can receive sensor data
         self.nmea = Nmea(self)
+        self.signalk = signalk(self)
         self.gpsd = gpsd(self)
-        
+
+        # actual sensors supported
+        self.client = client
         self.gps = gps(client)
         self.wind = Wind(client)
         self.rudder = Rudder(client)
@@ -141,6 +146,7 @@ class Sensors(object):
 
     def poll(self):
         self.nmea.poll()
+        self.signalk.poll()
         self.gpsd.poll()
 
         self.rudder.poll()

@@ -175,6 +175,7 @@ class pypilotClient(object):
     def poll(self, timeout=0):
         if not self.connection:
             if not self.connect(False):
+                time.sleep(timeout)
                 return
             
         # inform server of any watches we have
