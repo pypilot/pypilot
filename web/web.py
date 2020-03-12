@@ -51,9 +51,9 @@ f = os.fdopen(temp[0], 'r')
 f.seek(0)
 kernel_release = f.readline().rstrip()
 f.close()
-#print('kernel_release', kernel_release)
+
 tinypilot = 'piCore' in kernel_release
-#print('tinypilot', tinypilot)
+
 # javascript uses lowercase bool, easier to use int
 tinypilot = 1 if tinypilot else 0
 
@@ -102,111 +102,42 @@ if tinypilot:
         return render_template('wifi.html', async_mode=socketio.async_mode, wifi=Markup(wifi))
 
 
-class MyNamespace(Namespace):
+class pypilotWeb(Namespace):
     def __init__(self, name):
         super(Namespace, self).__init__(name)
         socketio.start_background_task(target=self.background_thread)
-        self.client = False
-        self.polls = {}
-
-    def connect_pypilot(self):
-        print('connect pypilot...')
-        connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        socketio.emit('flush') # unfortunately needed to awaken socket for client messages
-        try:
-            connection.connect(('localhost', DEFAULT_PORT))
-        except:
-            socketio.sleep(2)
-            return
-        print('connected to pypilot server')
-
-        self.client = pypilotClient()
-        self.list_values = self.client.list_values()
+        self.clients = {}
 
     def background_thread(self):
         print('processing clients')
         x = 0
-        polls_sent = {}
         while True:
             socketio.sleep(.25)
             sys.stdout.flush() # update log
-            polls = {}
-            for sid in self.polls:
-                for poll in self.polls[sid]:
-                    polls[poll] = True
-            t = time.monotonic()
-            for message in polls:
-                if not message in polls_sent or \
-                   t - polls_sent[message] > 1:
-                    #print('msg', message)
-                    self.client.send(message + '\n')
-                    polls_sent[message] = t
-                    
-            self.client.flush()
-
-            events = self.poller.poll(0)
-            if not events:
-                continue
-                
-            event = events.pop()
-            fd, flag = event
-            if flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL) \
-               or not self.client.recv():
-                print('client disconnected')
-                self.client.socket.close()
-                socketio.emit('pypilot_disconnect', self.list_values)
-                self.client = False
-                continue
-
-            while True:
-                try:
-                    line = self.client.readline()
-                    if not line:
-                        break
-                    #print('line',  line.rstrip())
-                    socketio.emit('pypilot', line.rstrip())
-                except Exception as e:
-                    socketio.emit('log', line)
-                    print('error: ', e, line.rstrip())
-                    break
+            for sid in self.clients:
+                client = self.clients[sid]
+                msgs = self.client.receive()
+                socketio.emit('pypilot', msgs, room=sid)
 
     def on_pypilot(self, message):
-        if self.client:
-            self.client.send(message + '\n')
-
-    def on_pypilot_poll(self, message):
-        #print('message', message)
-        if message == 'clear':
-            self.polls[request.sid] = {}
-            return
-        self.polls[request.sid][message] = True               
-
-    #def on_disconnect_request(self):
-    #    disconnect()
+        self.clients[request.sid].send(message + '\n')
 
     def on_ping(self):
         emit('pong')
 
     def on_connect(self):
-        #self.clients[request.sid] = Connection()
-        #print('Client connected', request.sid, len(self.clients))
+        client = pypilotClient()
+        socketio.emit('pypilot_connect', client.list_values())
+        self.clients[request.sid] = client
         print('Client connected', request.sid)
-        self.polls[request.sid] = {}
-        socketio.emit('pypilot_connect', self.list_values)
 
     def on_disconnect(self):
-        #client = self.clients[request.sid].client
-        #if client:
-        #    client.socket.close()
-        del self.polls[request.sid]
-        if not self.polls:
-            if self.client:
-                self.client.socket.close()
-                self.client = False
-                print('closed pypilot client')
-        print('Client disconnected', request.sid, len(self.polls))
+        client = self.clients[request.sid].client
+        client.connection.close()
+        del self.clients[request.sid]
+        print('Client disconnected', request.sid)
 
-socketio.on_namespace(MyNamespace(''))
+socketio.on_namespace(pypilotWeb(''))
 
 def main():
     import os

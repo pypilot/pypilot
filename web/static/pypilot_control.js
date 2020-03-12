@@ -73,7 +73,6 @@ $(document).ready(function() {
         $('#pilot').change(function(event) {
             pypilot_set('ap.pilot', $('#pilot').val)
         });
-
         
         gains = [];
         for (var name in list_values)
@@ -179,7 +178,6 @@ $(document).ready(function() {
     window.setInterval(function() {
         start_time = (new Date).getTime();
         socket.emit('ping');
-//        $('#log').append("ping" + "<br>");
     }, 5000);
     
     // Handler for the "pong" message. When the pong is received, the
@@ -204,7 +202,7 @@ $(document).ready(function() {
         data = JSON.parse(msg);
 
         if('ap.heading' in data) {
-            heading = data['ap.heading']['value'];
+            heading = data['ap.heading'];
             if(heading.toString()=="false")
                 $('#aperrors0').text('compass or gyro failure!');
             else
@@ -213,7 +211,7 @@ $(document).ready(function() {
             $('#heading').text(Math.round(10*heading)/10);
         }
         if('ap.enabled' in data) {
-            if(data['ap.enabled']['value']) {
+            if(data['ap.enabled']) {
                 var w = $(window).width();
                 $('#tb_engaged button').css('left', w/12+"px");
                 $('#tb_engaged').addClass('toggle-button-selected');
@@ -233,19 +231,19 @@ $(document).ready(function() {
             }
         }
         if('ap.mode' in data) {
-            value = data['ap.mode']['value'];
+            value = data['ap.mode'];
             $('#mode').val(value);
         }
 
         if('ap.pilot' in data) {
-            value= data['ap.pilot']['value'];
+            value= data['ap.pilot'];
             $('#pilot').val(value);
         }
 
         for (var i = 0; i<gains.length; i++)
             if('ap.' + gains[i] in data) {
                 data = data['ap.' + gains[i]]
-                value = data['value'];
+                value = data;
                 var iname = 'gains'+i;
                 if(value != $('#' + iname).valueAsNumber) {
                     $('#' + iname).val(value);
@@ -257,11 +255,11 @@ $(document).ready(function() {
                 }
             }
         if('ap.heading_command' in data) {
-            heading_command = data['ap.heading_command']['value'];
+            heading_command = data['ap.heading_command'];
             $('#heading_command').text(Math.round(heading_command));
         }
         if('servo.engaged' in data) {
-            if(data['servo.engaged']['value'])
+            if(data['servo.engaged'])
                 $('#servo_engaged').text('Engaged');
             else
                 $('#servo_engaged').text('Disengaged');
@@ -269,22 +267,22 @@ $(document).ready(function() {
 
         // calibration
         if('imu.heading' in data)
-            $('#imu_heading').text(data['imu.heading']['value']);
+            $('#imu_heading').text(data['imu.heading']);
         if('imu.pitch' in data)
-            $('#pitch').text(data['imu.pitch']['value']);
+            $('#pitch').text(data['imu.pitch']);
         if('imu.roll' in data)
-            $('#roll').text(data['imu.roll']['value']);
+            $('#roll').text(data['imu.roll']);
         if('imu.alignmentCounter' in data)
-            $('.myBar').width((100-data['imu.alignmentCounter']['value'])+'%');
+            $('.myBar').width((100-data['imu.alignmentCounter'])+'%');
         if('imu.heading_offset' in data)
-            $('#imu_heading_offset').val(data['imu.heading_offset']['value']);
+            $('#imu_heading_offset').val(data['imu.heading_offset']);
         if('imu.compass_calibration_locked' in data)
-            $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']['value']);
+            $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']);
         var rudder_dict = {'rudder.offset': 'Offset',
                            'rudder.scale': 'Scale',
                            'rudder.nonlinearity': 'Non Linearity'};
         if('rudder.angle' in data) {
-            $('#rudder').text(data['rudder.angle']['value']);
+            $('#rudder').text(data['rudder.angle']);
             $('#rudder').append('<p>')
             for(var name in rudder_dict)
                 if(name in last_rudder_data)
@@ -293,15 +291,15 @@ $(document).ready(function() {
 
         for(var name in rudder_dict)
             if(name in data)
-                last_rudder_data[name] = data[name]['value'];
+                last_rudder_data[name] = data[name];
 
         if('rudder.range' in data)
-            $('#rudder_range').val(data['rudder.range']['value']);
+            $('#rudder_range').val(data['rudder.range']);
 
         // configuration
         for(i=0; i < conf_names.length; i++) {
             if(conf_names[i] in data) {
-                value = data[conf_names[i]]['value'];
+                value = data[conf_names[i]];
                 var iname = 'confname'+i;
                 $('#' + iname).val(value);
                 $('#' + iname + 'label').text(value);
@@ -310,27 +308,27 @@ $(document).ready(function() {
 
         // statistics
         if('servo.amp_hours' in data) {
-            value = data['servo.amp_hours']['value'];
+            value = data['servo.amp_hours'];
             $('#amp_hours').text(Math.round(1e4*value)/1e4);
         }
 
         if('servo.voltage' in data) {
-            value = data['servo.voltage']['value'];
+            value = data['servo.voltage'];
             $('#voltage').text(Math.round(1e3*value)/1e3);
         }
         
         if('servo.controller_temp' in data) {
-            value = data['servo.controller_temp']['value'];
+            value = data['servo.controller_temp'];
             $('#controller_temp').text(value);
         }
 
         if('ap.runtime' in data) {
-            value = data['ap.runtime']['value'];
+            value = data['ap.runtime'];
             $('#runtime').text(value);
         }
 
         if('servo.controller' in data) {
-            value = data['servo.controller']['value'];
+            value = data['servo.controller'];
             if(value == 'none')
                 $('#aperrors1').text('no motor controller!');
             else
@@ -338,14 +336,14 @@ $(document).ready(function() {
         }
 
         if('servo.flags' in data)
-            $('#servoflags').text(data['servo.flags']['value']);
+            $('#servoflags').text(data['servo.flags']);
     });
     
     function pypilot_set(name, value) {
         socket.emit('pypilot', name + '=' + JSON.stringify(value));
     }
 
-    function pypilot_watch(name, period) {
+    function pypilot_watch(name, period=true) {
         socket.emit('pypilot', 'watch=' + JSON.stringify(period));
     }
 
@@ -454,7 +452,6 @@ $(document).ready(function() {
         watch_nice(conf_names, tab == 'Configuration', 1);
         watch_nice(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'servo.engaged', tab == 'Statistics', 1);
     }
-
     
     function openTab(name) {
         var i;

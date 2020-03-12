@@ -211,7 +211,6 @@ class pypilotClient(object):
         while True:
             t0 = time.monotonic()
             line = self.connection.readline()
-#            print("clr", self.connection, time.monotonic()-t0)
             if not line:
                 return
             try:
