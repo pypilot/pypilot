@@ -40,7 +40,7 @@ if tinypilot:
             try:
                 for name in request.form:
                     cname = name
-                    if request.form['mode'] == 'Managed':
+                    if name != 'mode' and request.form['mode'] == 'Managed':
                         cname = 'client_' + name
                     wifi[cname] = str(request.form[name])
 
