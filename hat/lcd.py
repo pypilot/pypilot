@@ -53,8 +53,6 @@ class LCDMenu():
                     self.lcd.rectangle(sliderarea, .015)
                     sliderarea.width *= val
                     self.lcd.rectangle(sliderarea)
-                if len(item) > 3:
-                    self.lcd.get(item[3]) # refresh value from server
             y += .15
             if y >= 1:
                 break
@@ -127,9 +125,6 @@ class RangeEdit():
         except:
             pass
 
-        # poll for updates
-        if self.pypilot:
-            self.lcd.get(self.id)
 
 white = ugfx.color(255, 255, 255)
 black = ugfx.color(0, 0, 0)
@@ -143,10 +138,11 @@ AUTO, MENU, UP, DOWN, SELECT, LEFT, RIGHT = range(7)
 class LCD():
     def __init__(self, hat):
         self.hat = hat
+
         self.config = hat.config['lcd']
         default = {'contrast': 60, 'invert': False, 'backlight': 200,
                    'flip': False, 'language': 'en', 'bigstep': 10,
-                   'smallstep': 1, 'remote': False};
+                   'smallstep': 1};
 
         for name in default:
             if not name in self.config:
@@ -231,7 +227,6 @@ class LCD():
                       'true wind': self.have_true_wind};
 
         self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
-
         self.watchlist = ['ap.enabled', 'ap.mode', 'ap.pilot', 'ap.heading_command',
                           'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
                           'imu.compass.calibration', 'imu.compass.calibration.sigmapoints',
@@ -251,9 +246,14 @@ class LCD():
         self.control = False # used to keep track of what is drawn on screen to avoid redrawing it
         self.wifi = False
 
-    def get(self, name):
-        if self.hat.client:
-            self.hat.client.get(name)
+        self.connect()
+
+    def connect(self):
+        self.last_msg = {}
+        if self.client:
+            self.client.disconnect()
+        self.client = pypilotClient(hat.client.config['host'])
+        self.client.list_values()
 
     def set_language(self, name):
         try:
@@ -268,11 +268,14 @@ class LCD():
 
     def write_config(self):
         self.hat.write_config
+
+    def value_list(self):
+        return self.client.values.value
             
     def create_mainmenu(self):
         def value_edit(name, desc, pypilot_name, value=False):
-            min = self.hat.value_list[pypilot_name]['min']
-            max = self.hat.value_list[pypilot_name]['max']
+            min = self.value_list()[pypilot_name]['min']
+            max = self.value_list()[pypilot_name]['max']
             step = (max-min)/100.0
 
             def thunk():
@@ -305,7 +308,7 @@ class LCD():
 
         def pilot():
             try:
-                pilots = self.hat.value_list['ap.pilot']['choices']
+                pilots = self.value_list()['ap.pilot']['choices']
             except:
                 pilots = []
 
@@ -316,7 +319,7 @@ class LCD():
                     return self.display_menu
                 return thunk
                 
-            self.menu = LCDMenu(self, _('Pilot'), map(lambda name : (name, set_pilot(name)), self.hat.value_list['ap.pilot']['choices']), self.menu)
+            self.menu = LCDMenu(self, _('Pilot'), map(lambda name : (name, set_pilot(name)), self.value_list()['ap.pilot']['choices']), self.menu)
             index = 0
             for pilot in pilots:
                 if pilot == self.last_val('ap.pilot'):
@@ -327,11 +330,11 @@ class LCD():
 
         def curgains():
             ret = []
-            for name in self.hat.value_list:
-                if 'AutopilotGain' in self.hat.value_list[name]:
+            for name, value in self.value_list().items():
+                if 'AutopilotGain' in value:
                     if 'ap.pilot.' in name:
                         s = name.split('.')
-                        if self.hat.last_msg['ap.pilot'] == s[2]:
+                        if self.hat.last_val('ap.pilot') == s[2]:
                             ret.append(name)
                     else:
                         ret.append(name)
@@ -359,23 +362,22 @@ class LCD():
             options = []
             rudder = self.last_val('rudder')
             if rudder != 'N/A' and rudder and \
-               'rudder.calibration_state' in self.hat.value_list:
-                options = self.hat.value_list['rudder.calibration_state']['choices']
+               'rudder.calibration_state' in self.value_list():
+                options = self.value_list()['rudder.calibration_state']['choices']
                 options.remove('idle')
 
             self.menu = LCDMenu(self, _('Rudder') + '\n' + _('Feedback'),
                                 map(lambda option : (option, lambda : self.set('rudder.calibration_state', option)), options), self.menu)
 
             def display_rudder():
-                fit = self.fittext(rectangle(0, .5, 1, .25), str(self.last_val('rudder')))
-                self.get('rudder.angle')
+                fit = self.fittext(rectangle(0, .5, 1, .25), str(self.last_val('rudder.angle')))
+                self.watch('rudder.angle')
 
             self.menu.display_hook = display_rudder
             return self.display_menu
         
         def calibrate():
             def getheading():
-                self.get('imu.heading')
                 try:
                     return '%.1f' % self.last_val('imu.heading')
                 except:
@@ -471,9 +473,10 @@ class LCD():
 
                 def wifi_remote():
                     def thunk():
-                        self.config['remote'] = not self.config['remote']
+                        self.hat.config['remote'] = not self.hat.config['remote']
                         self.hat.write_config()
-                        self.hat.client = False
+                        self.hat.connect()
+                        self.connect()
                         return self.display_menu
                     return [thunk, lambda : self.config['remote']]
 
@@ -648,9 +651,12 @@ class LCD():
                 px_width = int(max(1, min(w*width, h*width)))
                 self.surface.invert(box[0]+px_width, box[1]+px_width, box[2]-px_width, box[3]-px_width)
         
-    def last_val(self, name):
-        if name in self.hat.last_msg:
-            return self.hat.last_msg[name]
+    def last_val(self, name, period=self.frameperiod):
+        if name in self.watches:
+            print('rewatch', name)
+        self.watches[name] = period
+        if name in self.last_msg:
+            return self.last_msg[name]
         return 'N/A'
 
     def round_last_val(self, name, places):
@@ -721,7 +727,7 @@ class LCD():
             self.wifi = wifi
     
     def display_control(self):
-        if not self.hat.client.connection:
+        if not self.client.connection:
             self.display_connecting()
             self.control = False
             return
@@ -764,17 +770,15 @@ class LCD():
                 self.surface.box(*(self.convrect(rectangle(x, pos[1], .34, .4)) + [black]))
                 self.text((x, pos[1]), num[i], size, True)
 
-        if self.last_val('ap.heading') == 0: # if heading zero maybe failed
-            self.get('imu.loopfreq')
-            if self.last_val('imu.loopfreq') == 0:
-                r = rectangle(0, 0, 1, .92)
-                self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
-                self.control['heading'] = 'no imu'
-                self.control['heading_command'] = 'no imu'
-                return
-        else:
-            draw_big_number((0,0), self.last_val('ap.heading'), self.control['heading'])
-            self.control['heading'] = self.last_val('ap.heading')
+        if self.last_val('imu.loopfreq', 1) == 0:
+            r = rectangle(0, 0, 1, .92)
+            self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
+            self.control['heading'] = 'no imu'
+            self.control['heading_command'] = 'no imu'
+            return
+
+        draw_big_number((0,0), self.last_val('ap.heading'), self.control['heading'])
+        self.control['heading'] = self.last_val('ap.heading')
 
         mode = self.last_val('ap.mode')
 
@@ -855,12 +859,9 @@ class LCD():
             r.width = 1-float(counter)/100
             r.height = .25
             self.invertrectangle(r)
-        self.get('imu.alignmentCounter')
             
         self.fittext(rectangle(0, .86, .5, .14), self.round_last_val('imu.pitch', 1))
         self.fittext(rectangle(.5, .86, .5, .14), self.round_last_val('imu.heel', 1))
-        self.get('imu.pitch')
-        self.get('imu.heel')
 
     def display_connecting(self):
         self.surface.fill(black)
@@ -890,33 +891,23 @@ class LCD():
             runtime = self.last_val('ap.runtime')[:7]
             ah = self.round_last_val('servo.amp_hours', 3)
             items = [_('Watts'), v, _('Amp Hours'), ah, _('runtime'), runtime]
-            self.get('servo.watts')
-            self.get('servo.amp_hours')
-            self.get('ap.runtime')
         elif self.info_page == 1:
             spacing = .11
             v = self.round_last_val('servo.voltage', 3)
             rate = self.round_last_val('imu.loopfreq', 0)
             uptime = self.last_val('imu.uptime')[:7]
             items = [_('voltage'), v, _('rate'), rate, _('uptime'), uptime]
-            self.get('servo.voltage')
-            self.get('imu.loopfreq')
-            self.get('imu.uptime')
         elif self.info_page == 2:
             spacing = .11
             ct = self.round_last_val('servo.controller_temp', 2)
             mt = self.round_last_val('servo.motor_temp', 2)
             faults = self.round_last_val('servo.faults', 0)
             items = [_('cont temp'), ct, _('motor temp'), mt, _('faults'), faults]
-            self.get('servo.controller_temp')
-            self.get('servo.motor_temp')
-            self.get('servo.faults')
         else:
             spacing = .18
             ver = self.last_val('ap.version')
 
             items = [_('version'), ver, _('author'), "Sean D'Epagnier"]
-            self.get('ap.version')
 
         even, odd = 0, .05
         for item in items:
@@ -955,8 +946,6 @@ class LCD():
             self.fittext(rectangle(0, .42, 1, .23), deviationstr)
             self.fittext(rectangle(0, .66, 1, .14), deviation[0] + ' ' + dim + 'd')
             self.fittext(rectangle(0, .8, 1, .2), self.last_val('imu.compass.calibration.age')[:7])
-            
-            self.get('imu.compass.calibration.age')
 
         elif self.info_page == 1:
             try:
@@ -1007,8 +996,7 @@ class LCD():
         self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
 
     def set(self, name, value):
-        if self.hat.client:
-            self.hat.client.set(name, value)
+        self.client.set(name, value)
 
     def menu_back(self):
         if self.menu.prev:
@@ -1022,13 +1010,16 @@ class LCD():
                 self.keypad[key]=2
                 return True
             return False
-        
+
+        watch('ap.enabled')
+        watch('ap.heading', 0.5)
+
         if self.keypadup[AUTO]: # AUTO
             if self.last_val('ap.enabled') == False and self.display_page == self.display_control:
                 self.set('ap.heading_command', self.last_val('ap.heading'))
                 self.set('ap.enabled', True)
             else:
-                self.set('servo.command', 0) #stop
+                self.set('servo.command', 0) # stop
                 self.set('ap.enabled', False)
         
             self.display_page = self.display_control
@@ -1186,7 +1177,15 @@ class LCD():
             dt = t - self.lastframetime
             if dt > self.frameperiod:
                 self.draw()
+
                 self.lastframetime = max(self.lastframetime+self.frameperiod,
                                          t-self.frameperiod)
 
+        self.client.update_watches(watches)
+        msgs = self.client.receive()
+        for msg in msgs:
+            name, value = msg
+            self.last_msg[name] = value
+                
+        self.watches = {}
         self.process_keys()

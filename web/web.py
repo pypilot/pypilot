@@ -13,10 +13,11 @@ from flask import Flask, render_template, session, request, Markup
 
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
-from pypilot.server import LineBufferedNonBlockingSocket
+
+from pypilot.client import pypilotClient
 from pypilot import pyjson
 
-pypilot_web_port=80
+pypilot_web_port=8000
 if len(sys.argv) > 1:
     pypilot_web_port=int(sys.argv[1])
 else:
@@ -59,10 +60,16 @@ class pypilotWeb(Namespace):
         print('processing clients')
         x = 0
         while True:
+            print('thread')
             socketio.sleep(.25)
             sys.stdout.flush() # update log
             for sid in self.clients:
                 client = self.clients[sid]
+                values = client.values.list()
+                if values:
+                    socketio.emit('pypilot_values', values, room=sid)
+                if not client.connection:
+                    socketio.emit('pypilot_disconnect', room=sid)
                 msgs = self.client.receive()
                 socketio.emit('pypilot', msgs, room=sid)
 
@@ -73,16 +80,16 @@ class pypilotWeb(Namespace):
         emit('pong')
 
     def on_connect(self):
-        client = pypilotClient()
-        socketio.emit('pypilot_connect', client.list_values())
-        self.clients[request.sid] = client
         print('Client connected', request.sid)
+        client = pypilotClient()
+        client.watch('values')
+        self.clients[request.sid] = client
 
     def on_disconnect(self):
-        client = self.clients[request.sid].client
-        client.connection.close()
-        del self.clients[request.sid]
         print('Client disconnected', request.sid)
+        client = self.clients[request.sid].client
+        client.disconnect()
+        del self.clients[request.sid]
 
 socketio.on_namespace(pypilotWeb(''))
 

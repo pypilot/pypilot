@@ -93,11 +93,10 @@ class WebConfig(Namespace):
         
     def on_connect(self):
         self.emit_keys()
-        socketio.emit('status', self.status)
         print('Client connected', request.sid)
+        socketio.emit('status', self.status)
 
     def on_disconnect(self):
-        socketio.emit('status', self.status)
         print('Client disconnected', request.sid)
 
     def background_thread(self):
@@ -127,6 +126,7 @@ class WebConfig(Namespace):
                     socketio.emit(name, str(msg[name]))
                 if 'status' in msg:
                     self.status = msg['status']
+                    socketio.emit('status', self.status)
 
 def web_process(pipe, keyspipe, actions):
     path = os.path.dirname(__file__)

@@ -11,6 +11,7 @@ from __future__ import print_function
 
 import socket, select, sys, os, time
 import heapq
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pyjson
 from bufferedsocket import LineBufferedNonBlockingSocket
 from values import Value
@@ -66,13 +67,22 @@ class ClientValues(Value):
         self.values['watch'] = ClientWatch(self.values, client)
         self.wvalues = {}
         self.pqwatches = []
+        self.updated = False
 
+    def list(self):
+        if self.updated:
+            self.updated = False
+            return self.value
+        return False
+        
     def set(self, values):
-        if type(self.value) == type(False):
+        self.updated = True
+        if self.value is False:
             self.value = values
         else:
             for name in values:
                 self.value[name] = values[name]
+                
 
     def send_watches(self):
         t0 = time.monotonic()
@@ -194,7 +204,7 @@ class pypilotClient(object):
                 events = self.poller.poll(int(1000 * timeout))
             except Exception as e:
                 print('exception polling', e)
-                self.disconnected()
+                self.disconnect()
                 return
 
             if not events:
@@ -203,10 +213,10 @@ class pypilotClient(object):
             fd, flag = events.pop()
             if flag & select.POLLIN:
                 if self.connection and not self.connection.recv():
-                    self.disconnected() # recv returns 0 means connection closed
+                    self.disconnect() # recv returns 0 means connection closed
                     return
             else: # other flags indicate disconnect
-                self.disconnected()
+                self.disconnect()
 
         # read incoming data line by line
         while True:
@@ -229,12 +239,11 @@ class pypilotClient(object):
                 self.values.values[name].set(value)
             else:
                 self.received.append((name, value))
-                
 
     # polls at least as long as timeout
-    def disconnected(self):
+    def disconnect(self):
         self.connection.close()
-        raise ConnectionLost
+        self.connection = False
 
     def connect(self, verbose=True):
         try:
@@ -280,22 +289,35 @@ class pypilotClient(object):
         self.send(name + '=' + str(value) + '\n')
 
     def watch(self, name, value=True):
-        self.watches[name] = value
+        if value is False:
+            del self.watches[name]
+        elif name in self.watches and self.watches[name] is value:
+            return
+        else:
+            self.watches[name] = value
         self.wwatches[name] = value
+
+    def update_watches(self, watches):
+        for name in list(self.watches):
+            if not name in watches:
+                self.watch(name, False)
+        for name, period in watches.items():
+            self.watch(name, period)
 
     def register(self, value):
         self.values.register(value)
         value.client = self
         return value
 
-    def list_values(self, timeout=10):
-        t0 = time.monotonic()
-        self.watch('values')
-        while True:
-            self.poll(timeout)
-            if type(self.values.value) != type(False):
-                return self.values.value
-        return False
+    def list_values(self, timeout=0):
+        self.
+watch('values')
+        t0, dt, ret = time.monotonic(), timeout, False
+        while not ret and dt > 0:
+            self.poll(dt)
+            ret = self.values.list()
+            dt = timeout - (t0-time.monotonic())
+        return ret
 
     def info(self, name):
         return self.values.value[name]

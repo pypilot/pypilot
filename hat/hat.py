@@ -114,6 +114,9 @@ class Web(object):
             self.pipe.send(value)
 
     def set_status(self, value):
+        if self.status == value:
+            return
+        print('status', value)
         self.status = value
         self.send({'status': value})
 
@@ -166,10 +169,8 @@ class Hat(object):
         except Exception as e:
             print('config failed:', e)
 
-        self.lastpollheading = time.monotonic()
         self.servo_timeout = time.monotonic() + 1
         
-        self.longsleep = 30
         self.last_msg = {}
 
         self.connect()
@@ -208,11 +209,11 @@ class Hat(object):
         self.web = Web(self)
 
     def connect(self):
-        for name in ['gps.source', 'wind.source']:
-            self.last_msg[name] = 'none'
+        if self.client:
+            self.client.disconnect()
+
         self.last_msg['ap.enabled'] = False
         self.last_msg['ap.heading_command'] = 0
-        self.last_msg['imu.heading_offset'] = 0
 
         if self.config['remote']:
             host = self.config['host']
@@ -220,12 +221,9 @@ class Hat(object):
             host = 'localhost'
 
         self.client = pypilotClient(host)
-        self.value_list = client.list_values()
-        print('connected')
-
-        self.watchlist = ['ap.enabled', 'ap.heading_command'] + self.lcd.watchlist
+        self.watchlist = ['ap.enabled', 'ap.heading_command']
         for name in self.watchlist:
-            client.watch(name)
+            self.client.watch(name)
 
     def write_config(self):
         actions = {}
@@ -241,9 +239,6 @@ class Hat(object):
             print('failed to save config file:', self.configfilename)
 
     def apply_code(self, key, count):
-        if count:
-            self.longsleep = 0
-
         if count == 1:
             self.web.send({'key': key})
         for action in self.actions:
@@ -253,29 +248,15 @@ class Hat(object):
                 action.trigger(count)
             
     def poll(self):
-        self.client.poll()
-
-        # cleanup so this is not triggered
         if self.client.connection:
             self.web.set_status('connected')
         else:
             self.web.set_status('disconnected')
             
-        while True:
-            result = self.client.receive_single()
-            if not result:
-                break
-
-            name, data = result
-            if 'value' in data:
-                self.last_msg[name] = data['value']
-
-            for token in ['min', 'max', 'choices', 'AutopilotGain']:
-                if token in data:
-                    # print('name', name, token, ' = ', data[token])
-                    if not name in self.value_list:
-                        self.client.value_list[name] = {}
-                    self.client.value_list[name][token] = data[token]
+        msgs = self.client.receive()
+        for msg in msgs:
+            name, value = msg
+            self.last_msg[name] = value
 
         for i in [self.lcd, self.buzzer, self.web]:
             i.poll()
@@ -291,12 +272,9 @@ class Hat(object):
                 self.apply_code(*r)
 
         time.sleep(.1)
-        # poll heading once per second if not enabled
-        t = time.monotonic()
-        dtp = t - self.lastpollheading
-        if self.client and dtp > 1 and not self.last_msg['ap.enabled']:
-            self.client.get('ap.heading')
-            self.lastpollheading = t
+
+        # receive heading once per second if autopilot is not enabled
+        self.client.watch('ap.heading', False if self.last_msg['ap.enabled'] else 1)
 
         # timeout manual move
         if self.servo_timeout:

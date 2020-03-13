@@ -46,8 +46,33 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.stStatus.SetLabel('No Connection')
         self.client = pypilotClient(self.host)
 
-        self.lastmsgtime = time.monotonic()
+        # add continuous value to avoid timeout
+        if not 'ap.heading' in value_list:
+            self.watchlist.append('servo.current')
+        
+        for name in self.watchlist:
+            if name in value_list:
+                self.client.watch(name)
 
+    def servo_command(self, command):
+        if self.lastcommand != command or command != 0:
+            self.lastcommand = command
+            self.client.set('servo.command', command)
+
+    def send_gain(self, name, gain):
+        slidervalue = gain['slider'].GetValue() / 1000.0 * (gain['max'] - gain['min']) + gain['min']
+        self.client.set(name, slidervalue)
+
+    def set_mode_color(self):
+        modecolors = {'compass': wx.GREEN, 'gps': wx.YELLOW,
+                      'wind': wx.BLUE, 'true wind': wx.CYAN}
+        if self.tbAP.GetValue() and self.mode in modecolors:
+            color = modecolors[self.mode]
+        else:
+            color = wx.RED
+        self.tbAP.SetForegroundColour(color)
+
+    def enumerate_controls(self, value_list):
         self.tbAP.SetValue(False)
         self.set_mode_color()
         
@@ -58,7 +83,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                           'gps.source', 'wind.source',
                           'servo.controller', 'servo.engaged', 'servo.flags',
                           'rudder.angle']
-        value_list = self.client.list_values()
         self.gains = {}
         pilots = {}
         for name in value_list:
@@ -112,33 +136,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 
         self.GetSizer().Fit(self)
         self.SetSize(wx.Size(570, 420))
-
-        # add continuous value to avoid timeout
-        if not 'ap.heading' in value_list:
-            self.watchlist.append('servo.current')
         
-        for name in self.watchlist:
-            if name in value_list:
-                self.client.watch(name)
-
-    def servo_command(self, command):
-        if self.lastcommand != command or command != 0:
-            self.lastcommand = command
-            self.client.set('servo.command', command)
-
-    def send_gain(self, name, gain):
-        slidervalue = gain['slider'].GetValue() / 1000.0 * (gain['max'] - gain['min']) + gain['min']
-        self.client.set(name, slidervalue)
-
-    def set_mode_color(self):
-        modecolors = {'compass': wx.GREEN, 'gps': wx.YELLOW,
-                      'wind': wx.BLUE, 'true wind': wx.CYAN}
-        if self.tbAP.GetValue() and self.mode in modecolors:
-            color = modecolors[self.mode]
-        else:
-            color = wx.RED
-        self.tbAP.SetForegroundColour(color)
-
+        
     def receive_messages(self, event):            
         command = self.sCommand.GetValue()
         if command != 0:
@@ -164,8 +163,12 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                time.monotonic() - gain['last_change'] > 1:
                 gain['slider'].SetValue(gain['sliderval'])
 
+
+        value_list = self.client.list_values()
+        if value_list:
+            self.enumerate_controls(value_list)
+                
         msgs = self.client.receive()
-        self.lastmsgtime = time.monotonic()
 
         for name in msgs:
             data = msgs[name]

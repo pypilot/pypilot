@@ -26,8 +26,6 @@ def round3(value):
 class MainFrame(wx.Frame):
     def __init__(self):
         wx.Frame.__init__(self, None, title="pypilot client", size=(1000, 600))
-
-        self.value_list = []
         host = ''
         if len(sys.argv) > 1:
             host = sys.argv[1]
@@ -42,7 +40,38 @@ class MainFrame(wx.Frame):
 
         self.scrolledWindow = wx.ScrolledWindow(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.HSCROLL|wx.VSCROLL )
         self.scrolledWindow.SetScrollRate(5, 5)
+
+        ssizer.Add(self.scrolledWindow, 1, wx.EXPAND | wx.ALL, 5)
+
+        bsizer = wx.FlexGridSizer(1, 0, 0, 0)
+        self.bRefresh = wx.Button(self, wx.ID_ANY, 'Refresh')
+        self.bRefresh.Bind( wx.EVT_BUTTON, self.Refresh )
+        bsizer.Add(self.bRefresh)
+
+        self.bScope = wx.Button(self, wx.ID_ANY, 'Scope')
+        self.bScope.Bind( wx.EVT_BUTTON,
+                          lambda event :
+                          subprocess.Popen(['python',
+                                            os.path.abspath(os.path.dirname(__file__)) +
+                                            '/' + 'scope_wx.py'] + sys.argv[1:]))
+        bsizer.Add(self.bScope)
+
+        self.bClose = wx.Button(self, wx.ID_ANY, 'Close')
+        self.bClose.Bind( wx.EVT_BUTTON, exit )
+        bsizer.Add(self.bClose)
+
+        ssizer.Add(bsizer, 1, wx.EXPAND)
         
+        self.SetSizer(ssizer)
+        self.Layout()
+
+        self.timer = wx.Timer(self, wx.ID_ANY)
+        self.timer.Start(500)
+        self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
+
+        self.Refresh()
+
+    def layout_widgets(self, value_list):
         sizer = wx.FlexGridSizer(0, 3, 0, 0)
         sizer.AddGrowableCol( 2 )
         sizer.SetFlexibleDirection( wx.BOTH )
@@ -51,7 +80,6 @@ class MainFrame(wx.Frame):
         self.values = {}
         self.controls = {}
         self.sliderrange = {}
-        self.value_list = self.client.list_values()
         for name in sorted(self.value_list):
             t = self.value_list[name]['type']
             watch = True
@@ -137,51 +165,28 @@ class MainFrame(wx.Frame):
 
             else:
                 sizer.Add( wx.StaticText(self.scrolledWindow, wx.ID_ANY, ''))
-
-        self.scrolledWindow.SetSizer(sizer)
-        self.scrolledWindow.Layout()
-
-        sizer.Fit(self.scrolledWindow)
-        ssizer.Add(self.scrolledWindow, 1, wx.EXPAND | wx.ALL, 5)
-
-        bsizer = wx.FlexGridSizer(1, 0, 0, 0)
-        self.bRefresh = wx.Button(self, wx.ID_ANY, 'Refresh')
-        self.bRefresh.Bind( wx.EVT_BUTTON, self.Refresh )
-        bsizer.Add(self.bRefresh)
-
-        self.bScope = wx.Button(self, wx.ID_ANY, 'Scope')
-        self.bScope.Bind( wx.EVT_BUTTON,
-                          lambda event :
-                          subprocess.Popen(['python',
-                                            os.path.abspath(os.path.dirname(__file__)) +
-                                            '/' + 'scope_wx.py'] + sys.argv[1:]))
-        bsizer.Add(self.bScope)
-
-        self.bClose = wx.Button(self, wx.ID_ANY, 'Close')
-        self.bClose.Bind( wx.EVT_BUTTON, exit )
-        bsizer.Add(self.bClose)
-
-        ssizer.Add(bsizer, 1, wx.EXPAND)
-        
-        self.SetSizer(ssizer)
-        self.Layout()
-
-        self.timer = wx.Timer(self, wx.ID_ANY)
-        self.timer.Start(500)
-        self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
-
-        self.Refresh()
+        return sizer
         
     def Refresh(self):
         print('refresh does nothing')
         
     def receive_messages(self, event):
-        if self.client.connected != self.connected:
-            self.connected = self.client.connected
+        if self.client.connection != self.connected:
+            self.connected = self.client.connection
             if self.connected:
                 self.SetTitle("pypilot client - Connected")
             else:
                 self.SetTitle("pypilot client - Disconnected")
+
+        value_list = self.client.list_values()
+        if value_list:
+            sizer = self.layout_widgets(value_list)
+
+            self.scrolledWindow.SetSizer(sizer)
+            self.scrolledWindow.Layout()
+
+            sizer.Fit(self.scrolledWindow)
+                
         while True:
             result = self.client.receive()
             if not result:

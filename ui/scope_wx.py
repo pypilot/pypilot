@@ -41,25 +41,6 @@ class pypilotScope(pypilotScopeBase):
 
         self.client = pypilotClientFromArgs(sys.argv)
         self.host_port = self.client.host_port
-        self.client.autoreconnect = False
-        self.value_list = self.client.list_values()
-        self.plot.init(self.value_list)
-        self.watches = {}
-
-        watches = sys.argv[1:]
-        for name in sorted(self.value_list):
-            if self.value_list[name]['type'] != 'SensorValue':
-                continue
-
-            i = self.clValues.Append(name)
-            self.watches[name] = False
-            for arg in watches:
-                if arg == name:
-                    self.clValues.Check(i, True)
-                    self.watches[name] = True
-                    watches.remove(name)
-        for arg in watches:
-            print('value not found:', arg)
 
         self.timer = wx.Timer(self, wx.ID_ANY)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
@@ -76,15 +57,29 @@ class pypilotScope(pypilotScopeBase):
                 client.watch(self.clValues.GetString(i))
                 self.watches[self.clValues.GetString(i)] = True
 
+    def enumerate_values(self, value_list):
+        self.watches = {}
+        watches = sys.argv[1:]
+        for name in sorted(self.value_list):
+            if self.value_list[name]['type'] != 'SensorValue':
+                continue
+
+            i = self.clValues.Append(name)
+            self.watches[name] = False
+            for arg in watches:
+                if arg == name:
+                    self.clValues.Check(i, True)
+                    self.watches[name] = True
+                    watches.remove(name)
+        for arg in watches:
+            print('value not found:', arg)
+        
+                
     def receive_messages(self, event):
-        if not self.client:
-            try:
-                host, port = self.host_port
-                self.client = pypilotClient(self.on_con, host, port, autoreconnect=False)
-                self.timer.Start(100)
-            except socket.error:
-                self.timer.Start(1000)
-                return
+        value_list = self.client.list_values()
+        if value_list:
+            self.enumerate_values(value_list)
+            self.plot.init(value_list)
 
         refresh = False
         self.client.poll()

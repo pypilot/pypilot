@@ -58,8 +58,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.fusionQPose = [1, 0, 0, 0]
         self.controltimes = {}
 
-        self.settings = {}
-
         self.client = pypilotClient(self.host)
         self.set_watches()
 
@@ -67,41 +65,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.accel_calibration_plot.points = []
         self.compass_calibration_plot.points = []
 
-        values = client.list_values()
-        if not self.settings:
-            fgSettings = wx.FlexGridSizer( 0, 3, 0, 0 )
-            fgSettings.AddGrowableCol( 1 )
-            fgSettings.SetFlexibleDirection( wx.BOTH )
-            fgSettings.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-            self.m_pSettings.SetSizer( fgSettings )
-            self.m_pSettings.Layout()
-            fgSettings.Fit( self.m_pSettings )
-
-            lvalues = list(values)
-            lvalues.sort()
-            for name in lvalues:
-                if 'units' in values[name]:
-                    v = values[name]
-                    def proc():
-                        s = wx.SpinCtrlDouble(self.m_pSettings, wx.ID_ANY)
-                        s.SetRange(v['min'], v['max'])
-                        s.SetIncrement(min(1, (v['max'] - v['min']) / 100.0))
-                        s.SetDigits(-math.log(s.GetIncrement()) / math.log(10) + 1)
-                        self.settings[name] = s
-                        fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, name), 0, wx.ALL, 5)
-                        fgSettings.Add(s, 0, wx.ALL | wx.EXPAND, 5)
-                        fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, v['units']), 0, wx.ALL, 5)
-
-                        sname = name
-                        def onspin(event):
-                            self.client.set(sname, s.GetValue())
-                        s.Bind( wx.EVT_SPINCTRLDOUBLE, onspin )
-                    proc()
-            fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-            fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-            b = wx.Button( self.m_pSettings, wx.ID_OK )
-            fgSettings.Add ( b, 1, wx.ALIGN_RIGHT, 5)
 
     def set_watches(self):
         if not self.client:
@@ -134,9 +97,49 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                     watch = False
                         
                 client.watch(name, watch)
+
+    def enumerate_settings(self, values):
+        fgSettings = wx.FlexGridSizer( 0, 3, 0, 0 )
+        fgSettings.AddGrowableCol( 1 )
+        fgSettings.SetFlexibleDirection( wx.BOTH )
+        fgSettings.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+        self.m_pSettings.SetSizer( fgSettings )
+        self.m_pSettings.Layout()
+        fgSettings.Fit( self.m_pSettings )
+
+        lvalues = list(values)
+        lvalues.sort()
+        for name in lvalues:
+            if 'units' in values[name]:
+                v = values[name]
+                def proc():
+                    s = wx.SpinCtrlDouble(self.m_pSettings, wx.ID_ANY)
+                    s.SetRange(v['min'], v['max'])
+                    s.SetIncrement(min(1, (v['max'] - v['min']) / 100.0))
+                    s.SetDigits(-math.log(s.GetIncrement()) / math.log(10) + 1)
+                    self.settings[name] = s
+                    fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, name), 0, wx.ALL, 5)
+                    fgSettings.Add(s, 0, wx.ALL | wx.EXPAND, 5)
+                    fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, v['units']), 0, wx.ALL, 5)
+                    
+                    sname = name
+                    def onspin(event):
+                        self.client.set(sname, s.GetValue())
+                    s.Bind( wx.EVT_SPINCTRLDOUBLE, onspin )
+                proc()
+        fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+        fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+        b = wx.Button( self.m_pSettings, wx.ID_OK )
+        fgSettings.Add ( b, 1, wx.ALIGN_RIGHT, 5)
             
     def receive_messages(self, event):
         self.client.poll()
+
+        values_list = client.list_values()
+        if values_list:
+            self.enumerate_settings(values_list)
+        
         try:
             msg = self.client.receive_single()
             while msg:

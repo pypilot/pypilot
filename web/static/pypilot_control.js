@@ -45,7 +45,7 @@ $(document).ready(function() {
     // Event handler for new connections.
     var servo_command = 0, servo_command_timeout=0;
     var gains = [];
-    socket.on('pypilot_connect', function(msg) {
+    socket.on('pypilot_values', function(msg) {
         var list_values = JSON.parse(msg)
         $('#connection').text('Connected')
         $('#aperrors0').text("");
@@ -450,7 +450,7 @@ $(document).ready(function() {
         watch_nice(apgains, tab == 'Gain', 1);
         watch_nice(['imu.heading', 'imu.pitch', 'imu.roll', 'rudder.angle'], tab == 'Calibration', .5);
         watch_nice(conf_names, tab == 'Configuration', 1);
-        watch_nice(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'servo.engaged', tab == 'Statistics', 1);
+        watch_nice(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'servo.engaged'], tab == 'Statistics', 1);
     }
     
     function openTab(name) {
