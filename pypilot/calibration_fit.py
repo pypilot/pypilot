@@ -132,7 +132,7 @@ def FitPointsAccel(debug, points):
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
     if point_max_dev < .1:
-        debug('insufficient data for accel fit', point_dev, point_max_dev, '< 1')
+        debug('insufficient data for accel fit %.1f %.1f < 1' % (point_dev, point_max_dev))
         return False
 
     def f_sphere3(beta, x):
@@ -161,7 +161,7 @@ def FitPointsCompass(debug, points, current, norm):
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
     if point_max_dev < 9:
-        debug('0d fit, insufficient data', point_dev, point_max_dev, '< 9')
+        debug('0d fit, insufficient data %.1f %.1f < 9' % (point_dev, point_max_dev))
         return False
 
     line, plane = LinearFit(points)
@@ -223,7 +223,7 @@ def FitPointsCompass(debug, points, current, norm):
         #print('new sphere1 fit', new_sphere1d_fit)
 
     if line_max_dev < 2:
-        debug('line fit found, insufficient data', line_dev, line_max_dev)
+        debug('line fit found, insufficient data %.1f %.1f' % (line_dev, line_max_dev))
         return False
     
     # 2d sphere fit across normal vector
