@@ -64,13 +64,13 @@ try:
     def flush(self):
         if self.udp_out_buffer:
             try:
-            if not self.udp_socket:
-                  self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                  count = self.udp_socket.sendto(self.udp_out_buffer.encode(), (self.address[0], self.udp_port))
+                if not self.udp_socket:
+                    self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                count = self.udp_socket.sendto(self.udp_out_buffer.encode(), (self.address[0], self.udp_port))
             except Exception as e:
-                  print('udp socket failed to send', e)
-                  count = 0
-                  self.close()
+                print('udp socket failed to send', e)
+                count = 0
+                self.close()
             if count != len(self.udp_out_buffer):
                 print(_('failed to send udp packet'), self.address)
             self.udp_out_buffer = ''
