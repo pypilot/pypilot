@@ -144,13 +144,9 @@ class Autopilot(object):
             #print('got signal', signal_number, 'cleaning up')
             if signal_number == signal.SIGCHLD:
                 pid = os.waitpid(-1, 0)
-                #print('pid', pid)
-                if self.boatimu.auto_cal.process and pid[0] == self.boatimu.auto_cal.process.pid:
-                    print('calibration process exited: ok')
-                    self.boatimu.auto_cal.process = False
-                    return
+                #print('sigchld waitpid', pid)
 
-            if signal_number != 'atexit':
+            if signal_number != 'atexit': # don't get this signal again
                 signal.signal(signal_number, signal.SIG_IGN)
 
             while self.childprocesses:
@@ -159,10 +155,10 @@ class Autopilot(object):
                     pid = process.pid
                     #print('kill', pid, process)
                     try:
-                        #os.kill(pid, signal.SIGTERM) # get backtrace
-                        os.kill(pid, 2)
+                        os.kill(pid, signal.SIGTERM) # get backtrace
                     except Exception as e:
-                        print('kill failed', e)
+                        pass
+                        #print('kill failed', e)
             sys.stdout.flush()
             if signal_number != 'atexit':
                 raise KeyboardInterrupt # to get backtrace on all processes
@@ -364,7 +360,7 @@ class Autopilot(object):
 
         self.servo.poll()
         t5 = time.monotonic()
-        if t5-t4 > period/2:
+        if t5-t4 > period/2 and self.servo.driver:
             print('servo is running too _slowly_', t5-t4)
 
         self.timings.set([t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t5-t0])
