@@ -106,14 +106,13 @@ class Web(Process):
     def set_status(self, value):
         if self.status == value:
             return
-        print('status', value)
         self.status = value
         self.send({'status': value})
 
     def create(self):
         def process(pipe, action_keys):
             while True:
-                time.sleep(15) # delay loading web
+                #time.sleep(10) # delay loading web and wait until modules are loaded
                 try:
                     import web
                     web.web_process(pipe, action_keys)
@@ -130,13 +129,15 @@ class Web(Process):
         msg = self.pipe.recv()
         if msg:
             for name in msg:
-                if name.startswith('nmea_') and self.hat.arduino:
-                    print('got nmea', msg)
-                    self.hat.arduino.set_nmea(name[5:], msg[name])
+                value = msg[name]
+                if name.startswith('arduino.') and self.hat.arduino:
+                    self.hat.arduino.config(name[8:], value)
+                elif name == 'pi.ir':
+                    self.hat.lirc.enabled = value
                 else:
                     for action in self.hat.actions:
                         if name == action.name:
-                            action.keys = msg[name]
+                            action.keys = value
 
             self.hat.write_config()
 
@@ -145,12 +146,16 @@ class Arduino(Process):
         super(Arduino, self).__init__(hat)
         self.voltage = {'vcc': 5, 'vin': 3.3}
         self.status = 'Not Connected'
+        self.backlight = None
 
-    def set_nmea(self, name, value):
-        self.send(('nmea', (name, value)))
+    def config(self, name, value):
+        print('arduino config', name, value)
+        self.send((name, value))
 
     def set_backlight(self, value, polarity):
-        self.send(('backlight', (value, polarity)))
+        if value != self.backlight:
+            self.backlight = value
+            self.send(('backlight', (value, polarity)))
 
     def set_buzzer(self, duration, frequency):
         self.send(('buzzer', (duration, frequency)))
@@ -207,7 +212,7 @@ class Hat(object):
             hatconfig = {'lcd':{'driver':'nokia5110',
                                 'port':'/dev/spidev0.0'},
                          'lirc':'gpio4'}
-            if True: # for test
+            if False: # for test
                 hatconfig['lcd']['driver'] = 'jlx12864'
                 hatconfig['arduino'] = {'device':'/dev/spidev0.1',
                                         'resetpin':16,

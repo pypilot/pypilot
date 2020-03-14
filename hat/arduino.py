@@ -13,7 +13,6 @@
 # spi port.
 
 import os, sys, time, socket, errno, select
-import lircd
 
 REWIND=0xab # reset state
 READ_SERIAL = 0xb9 # read next serial byte
@@ -60,6 +59,8 @@ class arduino(object):
         if not self.hatconfig:
             print('No hat config, arduino not found')
 
+        if not 'ir' in config:
+            self.config['ir'] = False
         if not 'nmea' in config:
             self.config['nmea'] = {'in': False, 'out': False, 'baud': 38400}
 
@@ -269,11 +270,8 @@ class arduino(object):
                 
             if cmd == RF:
                 key = 'rf' + key
-            elif cmd == IR:
+            elif cmd == IR and config['ir']:
                 key = 'ir' + key
-                if lircd.LIRC.version:
-                    print('received IR decoded from arduino, disable LIRC')
-                    lircd.LIRC.version = 0 # disable lircd if we get ir from arduino
             elif cmd == GP:
                 key = 'gpio_ext' + key
             elif cmd == VOLTAGE:
@@ -389,11 +387,13 @@ def arduino_process(pipe, config):
             except Exception as e:
                 print('pipe recv failed!!\n')
                 return
-            if cmd == 'nmea':
-                name, v = value
-                a.config['nmea'][name] = v
+            if cmd.startswith('nmea'):
+                name = cmd[5:]
+                a.config['nmea'][name] = value
                 if name == 'baud':
                     a.set_baud()
+            elif cmd == 'ir':
+                a.config['ir'] = value
             elif cmd == 'backlight':
                 a.set_backlight(*value)
             elif cmd == 'buzzer':

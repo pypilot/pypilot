@@ -10,71 +10,81 @@
 import time
 import threading
 
-LIRC = None
-LIRC_version = 0
-
 # load lirc in background thread because it takes more than
-# 2 seconds and this is an unreasonable startup delay
+# 2 seconds and this is an unreasonable delay
 class LoadLIRC(threading.Thread):
     def __init__(self):
         super(LoadLIRC, self).__init__()
         self.version = 0
 
     def run(self):
-        try:
-            time.sleep(1)
-            t0 = time.monotonic()
-            import lirc as LIRC
-            self.LIRC = LIRC
-            self.version = 2
-            print('have lirc for remote control', time.monotonic()-t0)
-        except Exception as e:
-            print('failed to load lirc', e)
+        while True:
             try:
-                import pylirc as LIRC
+                time.sleep(1)
+                t0 = time.monotonic()
+                import lirc as LIRC
                 self.LIRC = LIRC
-                self.version = 1
-                print('have old lirc for remote control')
+                self.version = 2
+                print('have lirc for remote control', time.monotonic()-t0)
             except Exception as e:
-                print('no lirc available', e)
+                print('failed to load lirc', e)
+                try:
+                    import pylirc as LIRC
+                    self.LIRC = LIRC
+                    self.version = 1
+                    print('have old lirc for remote control')
+                except Exception as e:
+                    print('no lirc available', e)
 
-        try:
-            if self.version == 1:
-                LIRC.init('pypilot')
-            elif self.version == 2:
-                self.lircd = LIRC.RawConnection()
-        except Exception as e:
-            print('failed to initialize lirc. is .lircrc missing?', e)
-            self.version = 0
-
-LIRC = LoadLIRC()
-LIRC.start()
+            try:
+                if self.version == 1:
+                    LIRC.init('pypilot')
+                    break
+                elif self.version == 2:
+                    self.lircd = LIRC.RawConnection()
+                    break
+            except Exception as e:
+                print('failed to initialize lirc. is .lircrc missing?', e)
+            time.sleep(10)
 
 class lirc(object):
     def __init__(self):
         self.lastkey = False
         self.lasttime = time.time()
+        self.enabled = False
+        self.LIRC = None
 
     def poll(self):
-        if LIRC.isAlive() or not LIRC.version:
+        if not self.LIRC:
+            if self.enabled:
+                self.LIRC = LoadLIRC()
+                self.LIRC.start()
+            else:
+                return []
+                
+        if self.LIRC.isAlive() or not self.LIRC.version:
             return []
 
         t = time.monotonic()
         events = []
-        while LIRC.version:
-            if LIRC.version == 1:
-                code = LIRC.LIRC.nextcode(0)
+        while self.LIRC.version:
+            if self.LIRC.version == 1:
+                code = self.LIRC.LIRC.nextcode(0)
                 if not code:
                     break
                 count = code[0]['repeat']+1
-            elif LIRC.version == 2:
-                code = LIRC.lircd.readline(0)
+            elif self.LIRC.version == 2:
+                code = self.LIRC.lircd.readline(0)
                 if not code:
                     break
                 codes = code.split()
                 count = int(codes[1], 16)+1
                 key = codes[2]
 
+            # continue to read from lirc but do not send event
+            if not self.enabled:
+                continue
+                
             if self.lastkey and self.lastkey != key:
                 events.append((self.lastkey, 0))
             self.lastkey = key

@@ -64,16 +64,24 @@ $(document).ready(function() {
         socket.emit('keys', 'default');
     });
 
-    $('#nmea_in').click(function(event) {
-        socket.emit('config', {'nmea_in': document.getElementById('nmea_in').checked});
+    function config_ir() {
+        socket.emit('config', {'pi.ir': document.getElementById('pi_ir').checked});
+        socket.emit('config', {'arduino.ir': document.getElementById('arduino_ir').checked});
+    }
+
+    $('#pi_ir').click(config_ir);
+    $('#arduino_ir').click(config_ir);
+    
+    $('#arduino_nmea_in').click(function(event) {
+        socket.emit('config', {'arduino.nmea.in': document.getElementById('arduino_nmea_in').checked});
+    });
+    
+    $('#arduino_nmea_out').click(function(event) {
+        socket.emit('config', {'arduino.nmea.out': document.getElementById('arduino_nmea_out').checked});
     });
 
-    $('#nmea_out').click(function(event) {
-        socket.emit('config', {'nmea_out': document.getElementById('nmea_out').checked});
-    });
-
-    $('#nmea_baud').click(function(event) {
-        socket.emit('config', {'nmea_baud': document.getElementById('nmea_baud').value});
+    $('#arduino_nmea_baud').click(function(event) {
+        socket.emit('config', {'arduino.nmea.baud': document.getElementById('arduino_nmea_baud').value});
     });
 
     // Interval function that tests message latency by sending a "ping"
