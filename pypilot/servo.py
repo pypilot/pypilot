@@ -538,9 +538,9 @@ class Servo(object):
 
     def poll(self):
         if not self.driver:
-            device_path = serialprobe.probe('servo', [38400], 2)
+            device_path = serialprobe.probe('servo', [38400], 5)
             if device_path:
-                #print('servo probe', device_path)
+                print('servo probe', device_path, time.monotonic())
                 try:
                     device = serial.Serial(*device_path)
                 except Exception as e:
@@ -573,9 +573,7 @@ class Servo(object):
         t = time.monotonic()
         if result == 0:
             d = t - self.lastpolltime
-            if d > 5: # correct for clock skew
-                self.lastpolltime = t
-            elif d > 4:
+            if d > 4:
                 #print('servo timeout', d)
                 self.close_driver()
         else:
