@@ -7,8 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
-import select, socket, time, numbers
+import select, socket, time
+import numbers
 import sys, os, heapq
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pyjson
@@ -30,7 +30,7 @@ class Watch(object):
 
 class pypilotValue(object):
     def __init__(self, values, name, info={}, connection=False, msg=False):
-        self.values = values
+        self.server_values = values
         self.name = name
         self.info = info
         self.lasttime = time.monotonic()
@@ -59,7 +59,7 @@ class pypilotValue(object):
                 for watch in self.pwatches:
                     if t0 >= watch.time:
                         watch.time = t0
-                    self.values.insert_watch(watch)
+                    self.server_values.insert_watch(watch)
                 self.pwatches = []
 
         elif self.connection: # inform owner of change if we are not owner
@@ -144,16 +144,15 @@ class pypilotValue(object):
 class ServerWatch(pypilotValue):
     def __init__(self, values):
         super(ServerWatch, self).__init__(values, 'watch', {}, None)
-        self.values = values
 
     def set(self, msg, connection):
         name, data = msg.rstrip().split('=', 1)        
         watches = pyjson.loads(data)
-        values = self.values.values
+        values = self.server_values.values
         for name in watches:
             if not name in values:
                 # watching value not yet registered, add it so we can watch it
-                values[name] = pypilotValue(self.values, name)
+                values[name] = pypilotValue(self.server_values, name)
             values[name].watch(connection, watches[name])
 
 class ServerValues(pypilotValue):
@@ -265,7 +264,7 @@ class ServerValues(pypilotValue):
                 else:
                     value.msg = line
                     
-            self.values[name] = pypilotValue(self.values, name, msg=line)
+            self.values[name] = pypilotValue(self, name, msg=line)
             
             line = f.readline()
         f.close()
@@ -313,7 +312,7 @@ class ServerValues(pypilotValue):
                 file.write(self.persistent_data[name])
             file.close()
         except Exception as e:
-            print('failed to write', self.persistent_path, e)
+            print('failed to write', default_persistent_path, e)
 
 class pypilotServer(object):
     def __init__(self):
@@ -378,13 +377,13 @@ class pypilotServer(object):
 
         # setup direct pipe clients
         print('server setup has', len(self.pipes), 'pipes')
-        if self.multiprocessing:
-            for pipe in self.pipes:
+        for pipe in self.pipes:
+            if self.multiprocessing:
                 fd = pipe.fileno()
                 self.poller.register(fd, select.POLLIN)
                 self.fd_to_connection[fd] = pipe
                 self.fd_to_pipe[fd] = pipe
-                pipe.cwatches = {'values': True} # server always watches client values
+            pipe.cwatches = {'values': True} # server always watches client values
 
         self.initialized = True
 
@@ -428,7 +427,8 @@ class pypilotServer(object):
         t0 = time.monotonic()
         if t0 >= self.values.persistent_timeout:
             self.values.store()
-            if time.monotonic() - t0 > .1:
+            dt = time.monotonic() - t0
+            if dt > .1:
                 print('persistent store took too long!', time.monotonic() - t0)
                 return
 

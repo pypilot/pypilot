@@ -651,7 +651,9 @@ class LCD():
                 px_width = int(max(1, min(w*width, h*width)))
                 self.surface.invert(box[0]+px_width, box[1]+px_width, box[2]-px_width, box[3]-px_width)
         
-    def last_val(self, name, period=self.frameperiod):
+    def last_val(self, name, period=-1):
+        if period is -1:
+            period = self.frameperiod
         if name in self.watches:
             print('rewatch', name)
         self.watches[name] = period

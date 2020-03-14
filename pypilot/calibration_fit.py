@@ -595,6 +595,11 @@ class AgeValue(StringValue):
     def reset(self):
         self.set(time.monotonic())
 
+    def set(self, value):
+        print("ageval set", self.name, value, type(value))
+        super(AgeValue, self).set(value)
+        
+        
     def update(self):
         t = time.monotonic()
         if t - self.lastupdate_value > 1:
@@ -606,23 +611,11 @@ class AgeValue(StringValue):
         if abs(dt - self.dt) > 1:
             self.dt = dt
             self.lastage = boatimu.readable_timespan(dt)
-        return self.lastage
-
-class AutomaticCalibrationProcess(multiprocessing.Process):
-    def __init__(self, server):
-        #self.cal_pipe, cal_pipe = NonBlockingPipe('cal pipe', True)
-        self.cal_pipe, cal_pipe = False, False # use client
-        client = pypilotClient(server)
-        super(AutomaticCalibrationProcess, self).__init__(target=CalibrationProcess, args=(cal_pipe, client), daemon=True)
-        self.start()
-
-    def __del__(self):
-        print('terminate calibration process')
-        self.terminate()
+        return '"'+self.lastage+'"'
 
 def RegisterCalibration(client, name, default):
     calibration = client.register(CalibrationProperty(name, default))
-    calibration.age = client.register(AgeValue(name+'.calibration.age', persistent=True))
+    calibration.age = client.register(AgeValue(name+'.calibration.age'))
     calibration.locked = client.register(BooleanProperty(name+'.calibration.locked', False, persistent=True))
     calibration.sigmapoints = client.register(RoundedValue(name+'.calibration.sigmapoints', False))
     calibration.log = client.register(Property(name+'.calibration.log', ''))

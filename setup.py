@@ -35,11 +35,11 @@ except:
         import OPi.GPIO
         ugfx_libraries=['wiringPi']
     except:
-        print('no wiring library for ugfx')
+        print('no RPi.GPIO library for ugfx')
         ugfx_libraries=[]
         ugfx_defs = []
 
-ugfx_module = Extension('_ugfx',
+ugfx_module = Extension('pypilot/hat/_ugfx',
                         sources=['hat/ugfx/ugfx.cpp',
                                  'hat/ugfx/ugfx.i'],
                         extra_compile_args=['-Wno-unused-result'] + ugfx_defs,

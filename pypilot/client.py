@@ -230,6 +230,8 @@ class pypilotClient(object):
                     print('server error', data)
                     continue
                 value = pyjson.loads(data)
+            except ValueError:
+                print('va erropr', data)
             except Exception as e:
                 print('invalid message from server:', line)
                 print('reason', e)
@@ -310,8 +312,7 @@ class pypilotClient(object):
         return value
 
     def list_values(self, timeout=0):
-        self.
-watch('values')
+        self.watch('values')
         t0, dt, ret = time.monotonic(), timeout, False
         while not ret and dt > 0:
             self.poll(dt)

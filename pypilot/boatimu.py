@@ -17,7 +17,8 @@ import os, sys
 import time, math, multiprocessing, select
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import calibration_fit, vector, quaternion
+t0=time.monotonic()
+import vector, quaternion
 from client import pypilotClient
 from values import *
 
@@ -43,6 +44,7 @@ class IMU(object):
     def setup(self):
         self.client.watch('imu.accel.calibration')
         self.client.watch('imu.compass.calibration')
+        self.client.watch('imu.rate')
 
         SETTINGS_FILE = "RTIMULib"
         print("Using settings file " + SETTINGS_FILE + ".ini")
@@ -70,6 +72,8 @@ class IMU(object):
         self.s = s
         while not self.init():
             time.sleep(1)
+        self.lastdata = False
+        self.period = .1
 
     def init(self):
         self.s.IMUType = 0 # always autodetect imu
@@ -89,6 +93,7 @@ class IMU(object):
         rtimu.setGyroEnable(True)
         rtimu.setAccelEnable(True)
         rtimu.setCompassEnable(True)
+        time.sleep(.1)
         self.rtimu = rtimu
 
         self.avggyro = [0, 0, 0]
@@ -107,12 +112,13 @@ class IMU(object):
 
         self.setup()
         while True:
+            t0 = time.monotonic()
             data = self.read()
             pipe.send(data, not data)
             self.poll()
             dt = time.monotonic() - t0
-            t = period.value - dt
-            if t > 0 and t < period:
+            t = self.period - dt
+            if t > 0 and t < self.period:
                 time.sleep(t)
             else:
                 print('imu process failed to keep time', t)
@@ -126,34 +132,18 @@ class IMU(object):
          
         data = self.rtimu.getIMUData()
         data['accel.residuals'] = list(self.rtimu.getAccelResiduals())
-        data['gyrobias'] = s.GyroBias
+        data['gyrobias'] = self.s.GyroBias
         #data['timestamp'] = t0 # imu timestamp is perfectly accurate
         
         if self.compass_calibration_updated:
             data['compass_calibration_updated'] = True
             self.compass_calibration_updated = False
 
-        self.lastdata = data
+        self.lastdata = list(data['gyro']), list(data['compass'])
         return data
 
     def poll(self):
-        data = self.lastdata
-        # see if gyro is out of range, sometimes the sensors read
-        # very high gyro readings and the sensors need to be reset by software
-        # this is probably a bug in the underlying driver with fifo misalignment
-        d = .05*period.value # filter constant
-        for i in range(3): # filter gyro vector
-            avggyro[i] = (1-d)*avggyro[i] + d*data['gyro'][i]
-        if vector.norm(avggyro) > .8: # 55 degrees/s
-            print('too high standing gyro bias, resetting sensors', data['gyro'], avggyro)
-            self.init()
-            
-        # detects the problem even faster:
-        if any(map(lambda x : abs(x) > 1000, data['compass'])):
-            print('compass out of range, resetting', data['compass'])
-            self.init()
-
-        msgs = client.receive()
+        msgs = self.client.receive()
         for name in msgs:
             value = msgs[name]
             if name == 'imu.accel.calibration':
@@ -166,6 +156,27 @@ class IMU(object):
                 self.s.CompassCalEllipsoidValid = True
                 self.s.CompassCalEllipsoidOffset = tuple(value[0][:3])
                 #rtimu.resetFusion()
+            elif name == 'imu.rate':
+                self.period = 1.0/value
+
+        if not self.lastdata:
+            return
+        gyro, compass = self.lastdata
+
+        # see if gyro is out of range, sometimes the sensors read
+        # very high gyro readings and the sensors need to be reset by software
+        # this is probably a bug in the underlying driver with fifo misalignment
+        d = .05*self.period # filter constant
+        for i in range(3): # filter gyro vector
+            self.avggyro[i] = (1-d)*self.avggyro[i] + d*gyro[i]
+        if vector.norm(self.avggyro) > .8: # 55 degrees/s
+            print('too high standing gyro bias, resetting sensors', gyro, self.avggyro)
+            self.init()
+
+        # detects the problem even faster:
+        if any(map(lambda x : abs(x) > 1000, compass)):
+            print('compass out of range, resetting', compass)
+            self.init()
 
 class LoopFreqValue(Value):
     def __init__(self, name, initial):
@@ -254,6 +265,23 @@ def heading_filter(lp, a, b):
         result += 360
     return result
 
+def CalibrationProcess(cal_pipe, client):
+    import calibration_fit
+    calibration_fit.CalibrationProcess(cal_pipe, client)
+
+class AutomaticCalibrationProcess(multiprocessing.Process):
+    def __init__(self, server):
+        #self.cal_pipe, cal_pipe = NonBlockingPipe('cal pipe', True)
+        self.cal_pipe, cal_pipe = False, False # use client
+        client = pypilotClient(server)
+        super(AutomaticCalibrationProcess, self).__init__(target=CalibrationProcess, args=(cal_pipe, client), daemon=True)
+        self.start()
+
+    def __del__(self):
+        print('terminate calibration process')
+        self.terminate()
+
+
 class BoatIMU(object):
     def __init__(self, client):
         self.starttime = time.monotonic()
@@ -261,7 +289,6 @@ class BoatIMU(object):
 
         self.timestamp = client.register(SensorValue('timestamp', 0))
         self.rate = self.register(EnumProperty, 'rate', 10, [10, 25], persistent=True)
-        self.period = 1.0/self.rate.value
 
         self.loopfreq = self.register(LoopFreqValue, 'loopfreq', 0)
         self.alignmentQ = self.register(QuaternionValue, 'alignmentQ', [2**.5/2, -2**.5/2, 0, 0], persistent=True)
@@ -274,7 +301,7 @@ class BoatIMU(object):
 
         self.uptime = self.register(TimeValue, 'uptime')
     
-        self.auto_cal = calibration_fit.AutomaticCalibrationProcess(client.server)
+        self.auto_cal = AutomaticCalibrationProcess(client.server)
 
         self.lasttimestamp = 0
 
@@ -320,7 +347,7 @@ class BoatIMU(object):
         o = quaternion.angvec2quat(off*math.pi/180, [0, 0, 1])
         self.alignmentQ.update(quaternion.normalize(quaternion.multiply(q, o)))
 
-    def read(self):
+    def IMUread(self):
         if self.imu.multiprocessing:
             lastdata = False
             while True:
@@ -328,14 +355,15 @@ class BoatIMU(object):
                 if not data:
                     return lastdata
                 lastdata = data
-        return self.imu.IMUread()
+        return self.imu.read()
 
     def poll(self):
+        self.period = 1.0/self.rate.value
         if not self.imu.multiprocessing:
             self.imu.poll()
 
-    def IMUread(self):
-        data = self.imu.IMUread()
+    def read(self):
+        data = self.IMUread()
         if not data:
             if time.monotonic() - self.last_imuread > 1 and self.loopfreq.value:
                 print('IMURead failed!')
@@ -467,7 +495,7 @@ def main():
         boatimu.poll()
         while True:
             dt = boatimu.period - (time.monotonic() - t0)
-            if dt >= boatimu.period:
+            if dt < 0:
                 break
             if dt > 0:
                 time.sleep(dt)
