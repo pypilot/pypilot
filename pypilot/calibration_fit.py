@@ -615,12 +615,6 @@ def RegisterCalibration(client, name, default):
     return calibration
         
 def CalibrationProcess(cal_pipe, client):
-    import os
-    if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
-        print('warning, failed to make calibration process idle, trying renice')
-    if os.system("renice 20 %d" % os.getpid()):
-        print('warning, failed to renice calibration process')
-
     accel_points = SigmaPoints(.05**2, 12, 10)
     compass_points = SigmaPoints(1.1**2, 24, 3)
 

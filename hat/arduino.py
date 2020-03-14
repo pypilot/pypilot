@@ -288,7 +288,7 @@ class arduino(object):
         if time.monotonic() < self.nmea_connect_time:
             return
 
-        self.nmea_connect_time += 4
+        self.nmea_connect_time += 8
         nmea = self.config['nmea']
         if not nmea['in'] and not nmea['out']:
             return
