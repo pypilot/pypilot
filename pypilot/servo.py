@@ -543,7 +543,7 @@ class Servo(object):
                 try:
                     device = serial.Serial(*device_path)
                 except Exception as e:
-                    print('failed to open servo on:', device_path, e)
+                    #print('failed to open servo on:', device_path, e)
                     return
 
                 try:
@@ -575,7 +575,7 @@ class Servo(object):
             if d > 5: # correct for clock skew
                 self.lastpolltime = t
             elif d > 4:
-                print('servo timeout', d)
+                #print('servo timeout', d)
                 self.close_driver()
         else:
             self.lastpolltime = t

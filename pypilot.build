@@ -75,7 +75,7 @@ rm -rf $INSDIR/*pyc
 
 # Delete *.pyc files
 
-find $TMPDIR/ -name *.pyc | xargs rm -r
+#find $TMPDIR/ -name *.pyc | xargs rm -r
 
 # Adjust directory access rigths
 

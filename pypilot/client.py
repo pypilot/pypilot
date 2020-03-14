@@ -48,7 +48,7 @@ class ClientWatch(Value):
             else:
                 if period is True:
                     period = 0
-                if not value.watch:
+                if not value.watch or value.watch.period > period:
                     self.client.send(name + '=' + value.get_msg() + '\n') # initial send
                 value.watch = Watch(value, period)
                 value.pwatch = True
@@ -76,11 +76,12 @@ class ClientValues(Value):
             if t0 < self.pqwatches[0][0]:
                 break # no more are ready
             t, i, watch = heapq.heappop(self.pqwatches) # pop first element
-            self.client.send(watch.value.name + '=' + watch.value.get_msg() + '\n')
-            watch.time += watch.period
-            if watch.time < t0:
-                watch.time = t0
-            watch.value.pwatch = True # can watch again once updated
+            if watch.value.watch == watch:
+                self.client.send(watch.value.name + '=' + watch.value.get_msg() + '\n')
+                watch.time += watch.period
+                if watch.time < t0:
+                    watch.time = t0
+                watch.value.pwatch = True # can watch again once updated
             
     def insert_watch(self, watch):
         heapq.heappush(self.pqwatches, (watch.time, time.monotonic(), watch))
@@ -163,6 +164,7 @@ class pypilotClient(object):
         self.connection_in_progress = False
 
     def onconnected(self):
+        print('connected to pypilot server', time.time())
         self.last_values_list = False
         
         # write config if connection succeeds
@@ -194,7 +196,6 @@ class pypilotClient(object):
                     fd, flag = events.pop()
                     if not (flag & select.POLLOUT):
                         # hung hup
-                        print('hup')
                         self.connection_in_progress.close()
                         self.connection_in_progress = False
                         return
@@ -372,41 +373,36 @@ class pypilotClient(object):
     def info(self, name):
         return self.values.value[name]
 
-def pypilotClientFromArgs(args, period=True):
-    host = False
-    if len(args) > 1:
-        if not args[1].startswith('-'):
-            host = args[1]
-            args.remove(args[1])
-
+def pypilotClientFromArgs(values, period=True, host=False):
     client = pypilotClient(host)
     if not client.connect(True):
         print('failed to connect to', host)
         exit(1)
 
-    rargs = []
-    for arg in args[1:]:
-        if not arg.startswith('-'):
-            rargs.append(arg)
-
     # set any value specified with path=value
-    watches = []
+    watches = {}
     sets = False
-    for arg in rargs:
+    for arg in values:
         if '=' in arg:
             name, value = arg.split('=', 1)
-            client.send(arg + '\n')
+            try: # make string if it won't load
+                pyjson.loads(value)
+            except:
+                value = pyjson.dumps(value)
+                
+            client.send(name + '=' + value + '\n')
             sets = True
+            watches[name] = True
         else:
             name = arg
-        watches.append(name)
+            watches[name] = period
 
     if sets:
         client.poll(1)
-        time.sleep(.5) # todo: wait until value set to what we set or fail
+        #time.sleep(.2) # is this needed?
         
     for name in watches:
-        client.watch(name, period)
+        client.watch(name, watches[name])
 
     return client
 
@@ -437,20 +433,32 @@ def main():
     signal.signal(signal.SIGINT, quit)
 
     if '-h' in sys.argv:
-        print('usage', sys.argv[0], '[host] -i -c -h [NAME[=VALUE]]...')
+        print('usage', sys.argv[0], '[-s host] -i -c -h [NAME[=VALUE]]...')
         print('eg:', sys.argv[0], '-i imu.compass')
         print('   ', sys.argv[0], 'servo.max_slew_speed=10')
+        print('-s', 'set the host or ip address')
         print('-i', 'print info about each value type')
         print('-c', 'continuous watch')
         print('-h', 'show this message')
         exit(0)
 
-    args = list(sys.argv)
+    args = list(sys.argv)[1:]
+    host = False
+    if '-s' in args:
+        i = args.index('-s')
+        host = args[i+1]
+        args = args[:i+1] + args[i+2:]
+
     continuous = '-c' in args
     info = '-i' in args
-        
-    period = True if continuous else 100 # 100 second period to just get the value once
-    client = pypilotClientFromArgs(args, period)
+
+    watches = []
+    for arg in args:
+        if arg[0] != '-':
+            watches.append(arg)
+
+    period = True if continuous else 10
+    client = pypilotClientFromArgs(watches, period, host)
     if client.watches: # retrieve all values
         watches = list(client.watches)
         if info:
@@ -505,3 +513,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

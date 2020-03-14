@@ -288,9 +288,15 @@ def CalibrationProcess(cal_pipe, client):
         print('warning, failed to make calibration process idle, trying renice')
     if os.system("renice 20 %d" % os.getpid()):
         print('warning, failed to renice calibration process')
-    import calibration_fit
     print('calibration process', os.getpid())
-    calibration_fit.CalibrationProcess(cal_pipe, client)
+    while True:
+        try:
+            import calibration_fit
+            calibration_fit.CalibrationProcess(cal_pipe, client)
+        except Exception as e:
+            print('failed import calibration fit', e)
+            time.sleep(10) # maybe numpy isn't ready yet
+        
 
 class AutomaticCalibrationProcess(multiprocessing.Process):
     def __init__(self, server):

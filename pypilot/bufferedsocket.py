@@ -87,7 +87,7 @@ try:
             count = self.socket.send(self.out_buffer.encode())
             t1 = time.monotonic()
 
-            if t1-t0 > .02:
+            if t1-t0 > .03:
                 print('socket send took too long!?!?', self.address, t1-t0, len(self.out_buffer))
             if count < 0:
                 print('socket send error', self.address, count)

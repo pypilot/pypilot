@@ -65,7 +65,10 @@ class pypilotValue(object):
 
         elif self.connection: # inform owner of change if we are not owner
             if 'writable' in self.info and self.info['writable']:
+                name, data = msg.rstrip().split('=', 1)
+                pyjson.loads(data) # validate data
                 self.connection.write(msg)
+                self.msg = False
             else: # inform key can not be set arbitrarily
                 connection.write('error='+self.name+' is not writable\n')
 
@@ -96,7 +99,7 @@ class pypilotValue(object):
             if self.connection:
                 self.connection.cwatches[self.name] = watching
                 if watching is False:
-                    self.msg = False # server no longer tracking value
+                    self.msg = None # server no longer tracking value
 
     def unwatch(self, connection, recalc):
         for watch in self.awatches:
@@ -121,11 +124,12 @@ class pypilotValue(object):
             return
         
         if period is True:
-            period = 0 # True is same as a period of 0, for fastest watch
+            period = 0 # True is same as a period of 0, for continuous watch
 
         # unwatch by removing
         watching = self.unwatch(connection, False)
-        if not watching and self.msg:
+
+        if not watching and self.msg and period >= self.watching:
             connection.write(self.get_msg()) # initial retrieval
 
         for watch in self.awatches:
@@ -283,13 +287,13 @@ class ServerValues(pypilotValue):
             self.values[name] = value
             self.msg = 'new'
 
-            msg = False # inform watching clients of updated values
-            for watch in self.awatches:
-                for c in watch.connections:
-                    if c != connection:
-                        if not msg:
-                            msg = 'values=' + pyjson.dumps(values) + '\n'
-                        c.write(msg)
+        msg = False # inform watching clients of updated values
+        for watch in self.awatches:
+            for c in watch.connections:
+                if c != connection:
+                    if not msg:
+                        msg = 'values=' + pyjson.dumps(values) + '\n'
+                    c.write(msg)
 
     def HandleRequest(self, msg, connection):
         name, data = msg.split('=', 1)
@@ -313,9 +317,8 @@ class ServerValues(pypilotValue):
             if name in self.values:
                 value = self.values[name]
                 if value.connection:
+                    print('does this ever hit?? ,.wqiop pasm2;')
                     connection.write(line)
-                else:
-                    value.msg = line
                     
             self.values[name] = pypilotValue(self, name, msg=line)
             
