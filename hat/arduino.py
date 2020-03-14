@@ -326,7 +326,7 @@ class arduino(object):
             return False
 
         command = 'avrdude -P ' + self.hatconfig['device'] + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 500000'
-
+        print('cmd', command)
         ret = os.system(command)
         GPIO.output(self.resetpin, 1)
         GPIO.setup(self.resetpin, GPIO.IN)
