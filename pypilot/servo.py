@@ -539,11 +539,12 @@ class Servo(object):
     def poll(self):
         if not self.driver:
             device_path = serialprobe.probe('servo', [38400], 1)
+            print('servo probe', device_path)
             if device_path:
                 try:
                     device = serial.Serial(*device_path)
                 except Exception as e:
-                    #print('failed to open servo on:', device_path, e)
+                    print('failed to open servo on:', device_path, e)
                     return
 
                 try:
@@ -555,7 +556,7 @@ class Servo(object):
                     return
                 #print('driver', device_path, device)
                 from arduino_servo.arduino_servo import ArduinoServo
-                self.driver = ArduinoServo(device.fileno(), device_path[1])
+                self.driver = ArduinoServo(device.fileno())
                 self.send_driver_params()
                 self.device = device
                 self.device.path = device_path[0]
@@ -703,26 +704,36 @@ class Servo(object):
         file = open(Servo.calibration_filename, 'w')
         file.write(pyjson.dumps(self.calibration))
 
-def test(device_path, baud):
+def test(device_path):
     from arduino_servo.arduino_servo import ArduinoServo
     print('probing arduino servo on', device_path)
-    device = serial.Serial(device_path, baud)
+    while True:
+        try:
+            device = serial.Serial(device_path, 38400)
+            break;
+        except Exception as e:
+            print(e)
+            time.sleep(.5)
+        
     device.timeout=0 #nonblocking
     fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
     driver = ArduinoServo(device.fileno())
     t0 = time.monotonic()
-    if driver.initialize(baud):
-        print('arduino servo found')
-        exit(0)
+    for x in range(1000):
+        r = driver.poll()
+        if r:
+            print('arduino servo detected')
+            exit(0)
+        time.sleep(.1)
     exit(1)
         
 def main():
     for i in range(len(sys.argv)):
         if sys.argv[i] == '-t':
-            if len(sys.argv) < i + 3:
-                print('device and baud needed for option -t')
+            if len(sys.argv) < i + 2:
+                print('device needed for option -t')
                 exit(1)
-            test(sys.argv[i+1], int(sys.argv[i+2]))
+            test(sys.argv[i+1])
     
     print('pypilot Servo')
     from server import pypilotServer
