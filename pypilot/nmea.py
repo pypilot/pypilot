@@ -27,7 +27,8 @@ import multiprocessing
 import serial
 from client import pypilotClient
 from values import *
-from nonblockingpipe import LineBufferedNonBlockingPipe
+from nonblockingpipe import NonBlockingPipe
+from bufferedsocket import LineBufferedNonBlockingSocket
 from sensors import source_priority
 import serialprobe
 
@@ -162,7 +163,7 @@ def parse_nmea_apb(line):
             xte = -xte
         return 'apb', {'mode': mode, 'track':  track, 'xte': xte, '**': line[1:3] == 'GP'}
     except Exception as e:
-        print('ex', e)
+        print('exception parsing apb', e, line)
         return False
 
 nmea_parsers = {'gps': parse_nmea_gps, 'wind': parse_nmea_wind, 'rudder': parse_nmea_rudder, 'apb': parse_nmea_apb}
@@ -183,9 +184,9 @@ class NMEASerialDevice(object):
         self.device.close()
 
 nmeasocketuid = 0
-class NMEASocket(object):
-    def __init__(self, connection):
-        super(NMEASocket, self).__init__(connection)
+class NMEASocket(LineBufferedNonBlockingSocket):
+    def __init__(self, connection, address):
+        super(NMEASocket, self).__init__(connection, address)
 
         global nmeasocketuid
         self.uid = nmeasocketuid
@@ -209,12 +210,14 @@ class Nmea(object):
 
         self.sensors = sensors
         self.nmea_bridge = nmeaBridge(self.client.server)
-        self.pipe = self.nmea_bridge.nmea_pipe
+        self.process = self.nmea_bridge.process
+        self.pipe = self.nmea_bridge.pipe_out
         self.sockets = False
 
         self.poller = select.poll()
         self.process_fd = self.pipe.fileno()
         self.poller.register(self.process_fd, select.POLLIN)
+
         self.device_fd = {}
 
         self.nmea_times = {}
@@ -242,7 +245,7 @@ class Nmea(object):
             elif msgs[:10] == 'lostsocket':
                 self.sensors.lostdevice(msgs[4:])
             else:
-                print('handled nmea pipe string')
+                print('unhandled nmea pipe string', msgs)
         else:
             for name in msgs:
                 self.sensors.write(name, msgs[name], 'tcp')
@@ -263,7 +266,7 @@ class Nmea(object):
 
                 dt = t-self.nmea_times[nmea_name] if nmea_name in self.nmea_times else -1
                 if dt > .2:
-                    self.pipe.send(line, False)
+                    self.pipe.send(line)
                     self.nmea_times[nmea_name] = t
 
         self.devices_lastmsg[device] = t
@@ -344,11 +347,12 @@ class Nmea(object):
 
         # send nmea messages to sockets at 2hz
         dt = time.monotonic() - self.last_imu_time
+        values = self.client.values.values
         if self.sockets and dt > .5 and \
-           'imu.pitch' in self.client.values:
-            self.send_nmea('APXDR,A,%.3f,D,PTCH' % self.client.values['imu.pitch'].value)
-            self.send_nmea('APXDR,A,%.3f,D,ROLL' % self.client.values['imu.roll'].value)
-            self.send_nmea('APHDM,%.3f,M' % self.client.values['imu.heading_lowpass'].value)
+           'imu.pitch' in values:
+            self.send_nmea('APXDR,A,%.3f,D,PTCH' % values['imu.pitch'].value)
+            self.send_nmea('APXDR,A,%.3f,D,ROLL' % values['imu.roll'].value)
+            self.send_nmea('APHDM,%.3f,M' % values['imu.heading_lowpass'].value)
             self.last_imu_time = time.monotonic()
 
         # should we output gps?  for now no
@@ -411,13 +415,13 @@ class Nmea(object):
 
     def send_nmea(self, msg):
         line = '$' + msg + ('*%02X' % nmea_cksum(msg))
-        self.pipe.send(line, False)
+        self.pipe.send(line)
         
 class nmeaBridge(object):
     def __init__(self, server):
         self.client = pypilotClient(server)
         self.multiprocessing = server.multiprocessing
-        self.nmea_pipe, self.pipe = LineBufferedNonBlockingPipe('nmea pipe', self.multiprocessing)
+        self.pipe, self.pipe_out = NonBlockingPipe('nmea pipe', self.multiprocessing)
         if self.multiprocessing:
             self.process = multiprocessing.Process(target=self.nmea_process, daemon=True)
             self.process.start()
@@ -460,7 +464,7 @@ class nmeaBridge(object):
             self.setup_watches()
             self.pipe.send('sockets')
 
-        sock = NMEASocket(connection)
+        sock = NMEASocket(connection, address)
         self.sockets.append(sock)
 
         self.addresses[sock] = address
@@ -517,16 +521,11 @@ class nmeaBridge(object):
             self.client_socket = False
 
     def nmea_process(self):
-        self.process = True
         self.setup()
         while True:
             t0 = time.monotonic()
             timeout = 100 if self.sockets else 10000
-            self.process_poll(timeout)
-
-    def poll(self):
-        if not self.process:
-            self.process_poll(0)
+            self.poll(timeout)
 
     def setup(self):
         self.sockets = []
@@ -570,9 +569,9 @@ class nmeaBridge(object):
                 return
             # relay nmea message from server to all tcp sockets
             for sock in self.sockets:
-                sock.send(msg)
+                sock.send(msg + '\r\n')
 
-    def process_poll(self, timeout=0):
+    def poll(self, timeout=0):
         t0 = time.monotonic()
         events = self.poller.poll(timeout)
         t1 = time.monotonic()
@@ -595,7 +594,7 @@ class nmeaBridge(object):
             elif sock == self.pipe:
                 self.receive_pipe()
             elif flag & select.POLLIN:
-                if not sock.recv():
+                if not sock.recvdata():
                     self.socket_lost(sock, fd)
                 else:
                     while True:
@@ -614,7 +613,8 @@ class nmeaBridge(object):
 
         # send any parsed nmea messages the server might care about
         if self.msgs:
-            if self.pipe.send(msgs):
+            print('msgs', self.msgs)
+            if self.pipe.send(self.msgs):
                 self.msgs = {}
         t3 = time.monotonic()
 
@@ -622,7 +622,7 @@ class nmeaBridge(object):
         try:
             pypilot_msgs = self.client.receive()
             for name in pypilot_msgs:
-                value = pypilot_msgs[name]['value']
+                value = pypilot_msgs[name]
                 self.last_values[name] = value
         except Exception as e:
             print('nmea exception receiving:', e)

@@ -22,10 +22,7 @@ LDFLAGS = -Os -Wl,--gc-sections -lm
 
 ARDUINO_SRCS = \
 $(ARDUINO_PATH)/libraries/Wire/Wire.cpp \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/avr-libc/realloc.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/avr-libc/malloc.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_digital.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_analog.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_shift.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_pulse.c \
@@ -34,27 +31,21 @@ $(ARDUINO_PATH)/hardware/arduino/cores/arduino/new.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/WString.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/Stream.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/Print.cpp \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/HardwareSerial.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/WMath.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/main.cpp \
-/usr/share/arduino/libraries/SPI/SPI.cpp \
+$(ARDUINO_PATH)/libraries/SPI/SPI.cpp \
 $(ARDUINO_PATH)/libraries/Wire/utility/twi.c \
 
 IRLib2_SRCS = \
 IRLib2/IRLibRecvPCI/IRLibRecvPCI.cpp \
 IRLib2/IRLib2/IRLibRecvBase.cpp \
-IRLib2/IRLib2/IRLibRecvLoop.cpp \
 IRLib2/IRLib2/IRLibDecodeBase.cpp \
-IRLib2/IRLibFreq/IRLibFreq.cpp \
-IRLib2/IRLibProtocols/IRLibSendBase.cpp \
-IRLib2/IRLibProtocols/IRLibSAMD21.cpp \
-IRLib2/IRLibProtocols/IRLibSAMD51.cpp \
-IRLib2/IRLibProtocols/IRLibProtocols.cpp \
 IRLib2/IRLibProtocols/IRLibHardware.cpp \
-IRLib2/IRLibRecv/IRLibRecv.cpp
 
 
-SRCS = $(ARDUINO_SRCS) $(IRLib2_SRCS) RCSwitch.cpp
+
+
+SRCS = $(ARDUINO_SRCS) $(IRLib2_SRCS) RCSwitch.cpp wiring.c
 
 OBJSC = $(SRCS:.cpp=.o)
 OBJSD = $(OBJSC:.c=.o)
@@ -79,7 +70,7 @@ obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 
 AVRDUDE = sudo avrdude
 BOOTLOADER = linuxspi
-BAUDRATE = 500000
+BAUDRATE = 1000000
 upload: $(SKETCHNAME).cpp.hex
 	echo 16 > /sys/class/gpio/export || echo ok
 	echo in > /sys/class/gpio/gpio16/direction
@@ -96,18 +87,23 @@ download:
 install: $(SKETCHNAME).cpp.hex
 	cp $(SKETCHNAME).cpp.hex ~/.pypilot/$(SKETCHNAME).hex
 
+setfuses:
+	echo 16 > /sys/class/gpio/export || echo ok
+	echo out > /sys/class/gpio/gpio16/direction
+	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -b $(BAUDRATE) -Ulock:w:0xff:m -Uefuse:w:0xfd:m -Uhfuse:w:0xDA:m -Ulfuse:w:0xFF:m 
+	echo in > /sys/class/gpio/gpio16/direction
+
 serial:
 	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5 38400
 	cat $(DEVICE)
+
+clean:
+	rm -rf obj objs
 
 %.o : %.cpp
 	mkdir -p obj/$(@:.o=)
 	$(CXX) $(CXXFLAGS) -c $< -o obj/$@
 
 %.o : %.c
-	mkdir -p obj$(@:.o=)
-	$(CC) $(CXXFLAGS) -c $< -o obj$@
-
-
-charset.h: make_charset.py font.ttf
-	python make_charset.py > charset.h
+	mkdir -p obj/$(@:.o=)
+	$(CC) $(CXXFLAGS) -c $< -o obj/$@

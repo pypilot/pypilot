@@ -64,7 +64,7 @@ class gpio(object):
             except Exception as e:
                 print('WARNING', e)        
 
-    def poll(self):                
+    def poll(self):
         for pin in self.pins:
             value = True
 
@@ -77,14 +77,16 @@ class gpio(object):
                     value = GPIO.input(pin)
 
             self.evalkey(pin, value)
+        events = self.events
+        self.events = []
+        return events
 
     def evalkey(self, pin, value):
         if value:
             if self.keystate[pin]:
                 self.keystate[pin] = 0
             else:
-                return
+                return []
         else:
             self.keystate[pin] += 1
-        self.events.append(['gpio%d'%pin, self.keystate[pin]])
-        
+        self.events.append(('gpio%d'%pin, self.keystate[pin]))

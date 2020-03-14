@@ -13,7 +13,7 @@ import boatimu
 resolv = resolv.resolv
 
 from values import *
-from client import pypilotClient
+from client import pypilotClientFromArgs
     
 calibration_fit_period = 20  # run every 20 seconds
 
@@ -846,7 +846,7 @@ def ExtraFit():
 
 def main():
     print('running remote calibration')
-    client = pypilotClient(sys.argv[1])
+    client = pypilotClientFromArgs(sys.argv)
     CalibrationProcess(False, client)
 
 if __name__ == '__main__':

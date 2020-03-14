@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+#
+#   Copyright (C) 2020 Sean D'Epagnier
+#
+# This Program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.  
+
 # determine if we are on tinypilot if piCore is in uname -r
 import tempfile, subprocess, os
 temp = tempfile.mkstemp()
@@ -15,7 +24,10 @@ tinypilot = 1 if tinypilot else 0
 
 
 # for tinypilot provide wifi config
-if tinypilot:
+def wifi(app):
+    if not tinypilot:
+        return
+    
     @app.route('/wifi', methods=['GET', 'POST'])
     def wifi():
         networking = '/home/tc/.pypilot/networking.txt'

@@ -27,7 +27,7 @@ try:
     from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
 except Exception as e:
     print('signalk: failed to import zeroconf, autodetection not possible')
-    print('try pip3 install zeroconf')
+    print('try pip3 install zeroconf or apt install python3-zeroconf')
     dependencies = False
 
 try:
@@ -76,23 +76,34 @@ class signalk(object):
         if not dependencies:
             return
         
-        def on_service_change(zeroconf, service_type, name, state_change):
-            if state_change is not ServiceStateChange.Added:
-                return
-            info = zeroconf.get_service_info(service_type, name)
-            if not info:
-                return
-            properties = {}
-            for name, value in info.properties.items():
-                properties[name.decode()] = value.decode()
-            if properties['swname'] == 'signalk-server':
-                self.signalk_host_port = socket.inet_ntoa(info.addresses[0]) + ':' + str(info.port)
-                print('signalk server found', self.signalk_host_port)
-        
-        self.zeroconf = Zeroconf()
-        self.browser = ServiceBrowser(self.zeroconf, "_http._tcp.local.", handlers=[on_service_change])
+        class MyListener:
+            def __init__(self, signalk):
+                self.signalk = signalk
+            
+            def remove_service(self, zeroconf, type, name):
+                print("Service %s removed" % (name,))
 
-        self.signalk_host_port = 'localhost:3000'
+            def add_service(self, zeroconf, type, name):
+                info = zeroconf.get_service_info(type, name)
+                if not info:
+                    return
+                properties = {}
+                for name, value in info.properties.items():
+                    properties[name.decode()] = value.decode()
+                if properties['swname'] == 'signalk-server':
+                    try:
+                        host_port = socket.inet_ntoa(info.addresses[0]) + ':' + str(info.port)
+                    except Exception as e:
+                        host_port = socket.inet_ntoa(info.address) + ':' + str(info.port)
+                    self.signalk.signalk_host_port = host_port
+                    print('signalk server found', host_port)
+
+        zeroconf = Zeroconf()
+        listener = MyListener(self)
+        browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
+        #zeroconf.close()
+    
+        #self.signalk_host_port = 'localhost:3000'
         self.initialized = True
 
     def probe_signalk(self):
@@ -111,7 +122,7 @@ class signalk(object):
             from websocket import create_connection
         except Exception as e:
             print('signalk cannot create connection:', e)
-            print('try pip3 install websocket-client')
+            print('try pip3 install websocket-client or apt install python3-websocket')
             return
 
         self.subscriptions = [] # track signalk subscriptions
@@ -142,6 +153,7 @@ class signalk(object):
 
         if not self.signalk_ws_url:
             #zeroconf.close()  # takes a long time
+            print('probe')
             self.probe_signalk()
             return
 
@@ -184,6 +196,7 @@ class signalk(object):
         while True:
             try:
                 msg = self.ws.recv()
+                print('sigk', msg)
             except:
                 break
             self.receive_signalk(msg)

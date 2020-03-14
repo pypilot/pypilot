@@ -34,8 +34,10 @@ try:
 
     def close(self):
         self.socket.close()
+        if self.udp_socket:
+          self.udp_socket.close()
         
-    def recv(self):
+    def recvdata(self):
         return self.b.recv()
         
     def readline(self):

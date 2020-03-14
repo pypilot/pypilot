@@ -42,7 +42,9 @@ socketio = SocketIO(app, async_mode=async_mode)
 
 DEFAULT_PORT = 21311
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import networking
+networking.wifi(app)
 
 @app.route('/')
 def index():

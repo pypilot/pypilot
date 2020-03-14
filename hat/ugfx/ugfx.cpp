@@ -1,3 +1,4 @@
+
 /* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
@@ -12,6 +13,17 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "ugfx.h"
+
+//#define INTERNAL_FONTS
+
+#ifdef INTERNAL_FONTS
+//#define ICACHE_RODATA_ATTR  __attribute__((section(".drom.text")))
+//#define PROGMEM   ICACHE_RODATA_ATTR
+#define PROGMEM
+extern "C" {
+#include "fonts.h"
+}
+#endif
 
 static uint16_t color16(uint32_t c)
 {
@@ -72,7 +84,7 @@ surface::surface(int w, int h, int internal_bypp, const char *data32)
     } else if(bypp == 4)
         memcpy(p, data32, 4*width*height);
     else
-        ;//        fprintf(stderr, "bypp incompatible with input data\n");
+        fprintf(stderr, "bypp incompatible with input data\n");
 }
 
 uint32_t cksum(const char *gray_data, int size)
@@ -93,71 +105,122 @@ surface::surface(const char* filename, int tbypp)
     width = height = bypp = 0;
     p = NULL;
 
+#ifdef INTERNAL_FONTS
+    const struct character *c = 0;
+    int cp = 0;
+    for(int i=0; i<(sizeof fonts)/(sizeof *fonts); i++)
+        if(!memcmp(fonts[i]->fn, filename, 3)) {
+            const struct font *f = fonts[i];
+            for(int j=0; j< f->count; j++) {
+                const character *ch = f->characters + j;
+                if(!strcmp(ch->cn, filename+3)) {
+                    c = ch;
+                    break;
+                }
+            }
+            break;
+        }
+    if(!c)
+        return;
+#else
     FILE *f = fopen(filename, "r");
     if(!f)
-        return;
+         return;
+#endif
+    bypp = tbypp;
 
     uint16_t width16, height16, bypp16, colors16;
-    if(fread(&width16, 2, 1, f) != 1 || fread(&height16, 2, 1, f) != 1 ||
-       fread(&bypp16, 2, 1, f) != 1 || fread(&colors16, 2, 1, f) != 1) {
+    uint8_t d[8];
+#ifdef INTERNAL_FONTS
+    memcpy(d, c->data, 8);
+    cp+=8;
+#else
+    if(fread(&d, 8, 1, f) != 1) {
         fprintf(stderr, "failed reading surface header\n");
         goto fail;
     }
+#endif
+    width16 = *(uint16_t*)(d+0);
+    height16 = *(uint16_t*)(d+2);
+    bypp16 = *(uint16_t*)(d+4);
+    colors16 = *(uint16_t*)(d+6);
 
     width = width16;
     height = height16;
-    bypp = tbypp;
+
     if(width*height > 65536) {
         fprintf(stderr, "invalid surface size\n");
         goto fail;
     }
     
     xoffset = yoffset = 0;
-    p = new char [width*height*bypp];
     line_length = width*bypp;
 
-    if(colors16 != 1) // only greyscale supported
-        goto fail;  
+    
+    p = new char [width*height*bypp];
 
+
+    if(colors16 != 1) // only greyscale supported
+        goto fail;
+    if(1)
     {
-        char gray_data[width*height];
+        int sz = width * height;
         unsigned int i=0;
-        while(i<sizeof gray_data) {
+        while(i<sz) {
             uint8_t run, value;
+#ifdef INTERNAL_FONTS
+            if(cp >= c->len-1) {
+                fprintf(stderr, "end of data\n");
+                break;
+            }
+            run = c->data[cp++];
+            value = c->data[cp++];
+#else
             if(fread(&run, 1, 1, f) != 1 || fread(&value, 1, 1, f) != 1) {
-//                fprintf(stderr, "failed reading surface data\n");
+                fprintf(stderr, "failed reading surface data\n");
                 goto fail;
             }
-            while(run-- > 0)
-                gray_data[i++] = value;
+#endif            
+            while(run-- > 0) {
+                if(i >= sz) {
+                    fprintf(stderr, "outside grey range\n");
+                    break;
+                }
+                if(bypp == 1)
+                    p[i++] = value;
+/*                else if(bypp == 2)
+                    for(int i = 0; i<width*height; i++)
+                        ((uint16_t*)p)[i] = color16gray(gray_data[i]);
+                else if(bypp == 4)
+                    for(int i = 0; i<width*height; i++)
+                    memset(p + 4*i, gray_data[i], 3);*/
+                else
+                    fprintf(stderr, "bypp incompatible reading %s\n", filename);
+
+            }
         }
 
-        uint32_t computed_crc = cksum(gray_data, sizeof gray_data);
+        uint32_t computed_crc = 0;//cksum(gray_data, sizeof gray_data);
         uint32_t crc = 0;
+#ifdef INTERNAL_FONTS
+#else
         if(fread(&crc, 4, 1, f) != 1 || computed_crc != crc) {
-//            printf("crc doesn't match %x %x\n", computed_crc, crc);
-            goto fail;
+            //fprintf(stderr, "crc doesn't match %x %x\n", computed_crc, crc);
+            //goto fail;
         }
-
-        if(bypp == 1)
-            memcpy(p, gray_data, width*height);
-        else if(bypp == 2)
-            for(int i = 0; i<width*height; i++)
-                ((uint16_t*)p)[i] = color16gray(gray_data[i]);
-        else if(bypp == 4)
-            for(int i = 0; i<width*height; i++)
-                memset(p + 4*i, gray_data[i], 3);
-        else
-            ;//            fprintf(stderr, "bypp incompatible reading %s\n", filename);
+#endif
     }
 
+#ifndef INTERNAL_FONTS
     fclose(f);
+#endif    
     return;
 
 fail:
-//    fprintf(stderr, "failed ot open %s\n", filename);
-    delete [] p;
+    fprintf(stderr, "failed ot open %s\n", filename);
+#ifndef INTERNAL_FONTS
     fclose(f);
+#endif
     bypp = 0;
 }
 
@@ -170,7 +233,7 @@ void surface::store_grey(const char *filename)
 {
     FILE *f = fopen(filename, "w");
     if(!f) {
-        //        fprintf(stderr, "failed to open for writing %s\n", filename);
+        fprintf(stderr, "failed to open for writing %s\n", filename);
         return;
     }
 
@@ -184,7 +247,7 @@ void surface::store_grey(const char *filename)
         else if(bypp == 4)
             grey_data[i] = p[4*i];
         else
-            ;//            fprintf(stderr, "bypp incompatible storing %s\n", filename);
+            fprintf(stderr, "bypp incompatible storing %s\n", filename);
 
     uint16_t width16 = width, height16 = height, bypp16 = bypp, colors16 = 1; // grey
     fwrite(&width16, 2, 1, f);
@@ -221,6 +284,8 @@ void surface::store_grey(const char *filename)
 
 void surface::blit(surface *src, int xoff, int yoff, bool flip)
 {
+    if(!src->p)
+        return;
     if(bypp != src->bypp) {
         printf("incompatible surfaces cannot be blit\n");
         return;
@@ -273,7 +338,7 @@ void surface::magnify(surface *src, int factor)
 
     if(width < src->width*factor ||
        height < src->height*factor) {
-        //        printf("magnify surface not large enough\n");
+        printf("magnify surface not large enough\n");
         return;
     }
 
@@ -298,23 +363,31 @@ void surface::magnify(surface *src, int factor)
     } else if(bypp == 4) {
         MAG(4);
     } else
-        ;//        fprintf(stderr, "bypp incompatible with magnify\n");
+        fprintf(stderr, "bypp incompatible with magnify\n");
 }
 
 void surface::putpixel(int x, int y, uint32_t c)
 {
+    if(x < 0 || y < 0 || x >= width || y >= height)
+        return;
+
     long dl = x * bypp + y * line_length;
     switch(bypp) {
     case 1: *(uint8_t*)(p + dl) = c&0xff;      break;
     case 2: *(uint16_t*)(p + dl) = color16(c); break;
     case 4: *(uint32_t*)(p + dl) = c;          break;
     default:
-        ;//        fprintf(stderr, "bypp incompatible with putpixel\n");
+        fprintf(stderr, "bypp incompatible with putpixel\n");
     }
 }
 
 void surface::line(int x1, int y1, int x2, int y2, uint32_t c)
 {
+    x1 = x1 > 0 ? x1 : 0;
+    x2 = x2 < width ? x2 : width-1;
+    y1 = y1 > 0 ? y1 : 0;
+    y2 = y2 < height ? y2 : height-1;
+
     if (abs(x2 - x1) > abs(y2 - y1)) {
         if (x2 < x1)
             line(x2, y2, x1, y1, c);
@@ -351,7 +424,7 @@ void surface::hline(int x1, int x2, int y, uint32_t c)
             *(uint32_t*)(p + y*line_length + x*bypp) = c;
         break;
     default:
-        ;//        fprintf(stderr, "bypp incompatible with hline\n");
+        fprintf(stderr, "bypp incompatible with hline\n");
     }
 }
 
@@ -375,12 +448,17 @@ void surface::vline(int x, int y1, int y2, uint32_t c)
             *(uint32_t*)(p + y*line_length + x*bypp) = c;
         break;
     default:
-        ;//        fprintf(stderr, "bypp incompatible with vline\n");
+        fprintf(stderr, "bypp incompatible with vline\n");
     }
 }
 
 void surface::box(int x1, int y1, int x2, int y2, uint32_t c)
 {
+    x1 = x1 > 0 ? x1 : 0;
+    x2 = x2 < width ? x2 : width-1;
+    y1 = y1 > 0 ? y1 : 0;
+    y2 = y2 < height ? y2 : height-1;
+
     switch(bypp) {
     case 1:
     {
@@ -401,7 +479,7 @@ void surface::box(int x1, int y1, int x2, int y2, uint32_t c)
                 *(uint32_t*)(p + y*line_length + x*bypp) = c;
         break;
     default:
-        ;//        fprintf(stderr, "bypp incompatible with box\n");
+        fprintf(stderr, "bypp incompatible with box\n");
     }
 }
 
@@ -468,7 +546,7 @@ void surface::binary_write_sw(int sclk, int mosi)
 #else
 void surface::binary_write_sw(int sclk, int mosi)
 {
-//    fprintf(stderr, "no wiring pi\n");
+    fprintf(stderr, "no wiring pi, no binary write\n");
 }
 #endif
 
@@ -481,7 +559,7 @@ int surface::getpixel(int x, int y)
     else if(bypp == 4)
         return *(uint32_t*)(p + y*line_length + x*bypp);
 
-//    fprintf(stderr, "bypp incompatible with getpixel\n");
+    fprintf(stderr, "bypp incompatible with getpixel\n");
     exit(1);
 }
 
@@ -495,24 +573,24 @@ screen::screen(const char *device)
     // Open the file for reading and writing
     fbfd = open(device, O_RDWR);
     if (fbfd == -1) {
-//        perror("Error: cannot open framebuffer device");
+        perror("Error: cannot open framebuffer device");
         exit(1);
     }
-//    printf("The framebuffer device was opened successfully.\n");
+    printf("The framebuffer device was opened successfully.\n");
 
     // Get fixed screen information
     if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo) == -1) {
-//        perror("Error reading fixed information");
+        perror("Error reading fixed information");
         exit(2);
     }
 
     // Get variable screen information
     if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo) == -1) {
-//        perror("Error reading variable information");
+        perror("Error reading variable information");
         exit(3);
     }
 
-//    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
+    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
 
     // Figure out the size of the screen in bytes
     screensize = vinfo.yres * finfo.line_length;
@@ -520,10 +598,10 @@ screen::screen(const char *device)
     // Map the device to memory
     fbp = (char*)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
     if (fbp == (void*)-1) {
-//        perror("Error: failed to map framebuffer device to memory");
+        perror("Error: failed to map framebuffer device to memory");
         exit(4);
     }
-//    printf("The framebuffer device was mapped to memory successfully.\n");
+    printf("The framebuffer device was mapped to memory successfully.\n");
 
     p = fbp;
     width = vinfo.xres;
@@ -548,11 +626,11 @@ screen::~screen()
 class spilcd
 {
 public:
-    spilcd(int _rst, int _dc)
+    spilcd(int _rst, int _dc, int baud)
         : rst(_rst), dc(_dc) {
     	setenv("WIRINGPI_CODES", "1", 1);
         if(wiringPiSetup () < 0) {
-//            printf("wiringPiSetup Failed (no permissions?)\n");
+            printf("wiringPiSetup Failed (no permissions?) aborting\n");
             exit(1);
         }
 
@@ -560,7 +638,7 @@ public:
         pinMode(dc, OUTPUT);
 
 	for(int port=0; port<2; port++)
-	    if((spifd = wiringPiSPISetup(port, 1000000)) != -1)
+	    if((spifd = wiringPiSPISetup(port, baud)) != -1)
 		break;
 	  
 	if(spifd == -1) {
@@ -594,7 +672,7 @@ public:
 class spilcd
 {
 public:
-    spilcd(int _rst, int _dc)
+    spilcd(int _rst, int _dc, int baud)
         : rst(_rst), dc(_dc) {
     }
 
@@ -637,7 +715,7 @@ public:
 class PCD8544 : public spilcd
 {
 public:
-    PCD8544() : spilcd(RST, DC) {}
+    PCD8544() : spilcd(RST, DC, 5000000) {}
     virtual ~PCD8544() {} 
 
     void extended_command(uint8_t c) {
@@ -649,6 +727,7 @@ public:
     }
     
     void set_contrast(int contrast) {
+        contrast = 30 + contrast/2;  // use range 30-90 not 0-120
         contrast = contrast > 0x7f ? 0x7f : contrast;
         contrast = contrast < 0 ? 0 : contrast;
         extended_command(PCD8544_SETVOP | contrast);
@@ -711,24 +790,31 @@ const int  rsPIN  = 6;    // RS
 class JLX12864G : public spilcd
 {
 public:
-    JLX12864G() : spilcd(rstPIN, rsPIN) {}
+    JLX12864G() : spilcd(rstPIN, rsPIN, 1000000) {}
     virtual ~JLX12864G() {}
     void refresh(int contrast, surface *s) {
-//        command(0x25); // Coarse Contrast, setting range is from 20 to 27
-//      command(0x81); // Trim Contrast
-//        command(0x1f); // Trim Contrast value range can be set from 0 to 63
-
+        if(contrast < 0)
+            contrast = 0;
+        if(contrast > 120)
+            contrast = 120;
+        contrast = 30+contrast/4; // in range
         unsigned char cmd[] = {0xe2, // Soft Reset
-                            0x2c, // Boost 1
+                           0x2c, // Boost 1
                             0x2e, // Boost 2
                             0x2f, // Boost 3
-                            0xa2, // 1/9 bias ratio
-                            0xc0, // Line scan sequence : from top to bottom
+                               0xa2, // 1/9 bias ratio
+
+                               0x23, // Coarse Contrast, setting range is from 20 to 27
+                               0x81, // Trim Contrast
+                               (uint8_t)contrast, // Trim Contrast value range can be set from 0 to 63
+                               
+//                            0xc2, // Line scan sequence : from top to bottom
                             0xa0, // column scan order : from left to right
-                            0xa6, // not reverse
+                               0xa6, // not reverse
                             0xa4, // not all on
                             0x40, // start of first line
-                            0xaf}; // Open the display
+                            0xaf
+        }; // Open the display
 
         digitalWrite (dc, LOW) ;	// Off
         write(spifd, cmd, sizeof cmd);
@@ -742,7 +828,7 @@ public:
                 for(int bit = 0; bit<8; bit++) {
                     bits <<= 1;
 //                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+7-bit))
-                    if(*(uint8_t*)(s->p + (127-y)*s->line_length + (7-col)*8+bit))
+                    if(*(uint8_t*)(s->p + (127-y)*s->line_length + col*8+(7-bit)))
                         bits |= 1;
                 }
                 binary[index] = bits;
@@ -802,7 +888,7 @@ spiscreen::spiscreen(int driver)
     case 1: disp = new JLX12864G(); break;
 #endif
     default:
-        //  fprintf(stderr, "invalid driver: %d", driver);
+        fprintf(stderr, "invalid driver: %d", driver);
         exit(1);
     }
     contrast = 60;

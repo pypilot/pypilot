@@ -98,6 +98,8 @@ class Autopilot(object):
     self.sensors = Sensors(self.client)
     self.servo = servo.Servo(self.client, self.sensors)
     self.version = self.register(Value, 'version', 'pypilot' + ' ' + strversion)
+    self.timestamp = self.client.register(SensorValue('timestamp', 0))
+    self.starttime = time.monotonic()
     self.heading_command = self.register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.register(BooleanProperty, 'enabled', False)
     self.lastenabled = False
@@ -106,7 +108,7 @@ class Autopilot(object):
     self.lastmode = False    
     self.mode = self.register(ModeProperty, 'mode')
     self.mode.ap = self
-
+  
     self.last_heading = False
     self.last_heading_off = self.boatimu.heading_off.value
 
@@ -134,7 +136,7 @@ class Autopilot(object):
 
     self.wind_compass_offset = HeadingOffset()
     self.true_wind_compass_offset = HeadingOffset()
-    
+
     self.wind_direction = self.register(SensorValue, 'wind_direction', directional=True)
     self.wind_speed = 0
 
@@ -153,6 +155,41 @@ class Autopilot(object):
     
     self.lasttime = time.monotonic()
 
+    # setup all processes to exit on any signal
+    self.childprocesses = [self.boatimu.imu.process, self.boatimu.auto_cal,
+                           self.sensors.nmea.process, self.sensors.gpsd.process, self.sensors.signalk.process,
+                           self.server.process]
+    def cleanup(signal_number, frame=None):
+        print('got signal', signal_number, 'cleaning up')
+        while self.childprocesses:
+            process = self.childprocesses.pop()
+            if process:
+                pid = process.pid
+                print('kill', pid)
+                os.kill(pid, signal.SIGTERM) # get backtrace
+        sys.stdout.flush()
+        if signal_number != 'atexit':
+            raise KeyboardInterrupt # to get backtrace on all processes
+
+    # unfortunately we occasionally get this signal,
+    # some sort of timing issue where python doesn't realize the pipe
+    # is broken yet, so doesn't raise an exception
+    def printpipewarning(signal_number, frame):
+        print('got SIGPIPE, ignoring')
+
+    import signal
+    for s in range(1, 16):
+        if s == 13:
+            signal.signal(s, printpipewarning)
+        elif s != 9:
+            #signal.signal(s, cleanup)
+            pass
+
+    signal.signal(signal.SIGCHLD, cleanup)
+    import atexit
+    atexit.register(lambda : cleanup('atexit'))
+
+    
   def __del__(self):
       print('closing autopilot')
       self.server.__del__()
@@ -262,8 +299,7 @@ class Autopilot(object):
                                         (self.heading_error.value/1500)*dt, 1))          
   def iteration(self):
       data = False
-      t0 = time.monotonic()
-
+      t0 = time.monotonic()  
       self.server.poll()
       msgs = self.client.receive()
       for msg in msgs:
@@ -277,20 +313,23 @@ class Autopilot(object):
       t2 = time.monotonic()
       if t2-t1 > period/2:
           print('sensors is running too _slowly_', t2-t1)
-      
+
+      sp = 0
       for tries in range(14): # try 14 times to read from imu
           timu = time.monotonic()
           data = self.boatimu.read()
           if data:
               break
-          time.sleep(period/10)
+          pd10 = period/10
+          sp += pd10
+          time.sleep(pd10)
 
       if not data:
-          print('autopilot failed to read imu at time:', time.monotonic())
+          print('autopilot failed to read imu at time:', time.monotonic(), period)
 
       t3 = time.monotonic()
       if t3-t2 > period/2 and data:
-          print('read imu running too _slowly_', t3-t2)
+          print('read imu running too _slowly_', t3-t2, period)
 
       self.fix_compass_calibration_change(data, t0)
       self.compute_offsets()
@@ -331,47 +370,19 @@ class Autopilot(object):
           print('servo is running too _slowly_', t5-t4)
 
       self.timings.set([t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t5-t0])
+      self.timestamp.set(t0-self.starttime)
           
       if self.watchdog_device:
           self.watchdog_device.write('c')
 
       while True: # sleep remainder of period
-          dt = period - (time.monotonic() - t0)
+          dt = period - (time.monotonic() - t0) + sp
           if dt >= period or dt <= 0:
               break
           time.sleep(dt)
 
 def main():
-    # setup all processes to exit on any signal
-    childpids = []
-    def cleanup(signal_number, frame=None):
-        print('got signal', signal_number, 'cleaning up')
-        while childpids:
-            pid = childpids.pop()
-            os.kill(pid, signal.SIGTERM) # get backtrace
-        sys.stdout.flush()
-        if signal_number != 'atexit':
-            raise KeyboardInterrupt # to get backtrace on all processes
-
-    # unfortunately we occasionally get this signal,
-    # some sort of timing issue where python doesn't realize the pipe
-    # is broken yet, so doesn't raise an exception
-    def printpipewarning(signal_number, frame):
-        print('got SIGPIPE, ignoring')
-
-    import signal
-    for s in range(1, 16):
-        if s == 13:
-            signal.signal(s, printpipewarning)
-        elif s != 9:
-            #signal.signal(s, cleanup)
-            pass
-
     ap = Autopilot()
-
-    signal.signal(signal.SIGCHLD, cleanup)
-    import atexit
-    atexit.register(lambda : cleanup('atexit'))
     
     while True:
         ap.iteration()

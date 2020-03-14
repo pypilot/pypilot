@@ -5,6 +5,10 @@ if False: # reset on failure
         import machine
         machine.reset()
 
+from config_esp32 import config
 # get backtrace for debugging
 import lcd_esp32
+#import testsock
+#import upy_client
+#upy_client.main()
 

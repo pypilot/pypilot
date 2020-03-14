@@ -14,9 +14,19 @@
 <body>
   <div>
     <h2>pypilot lcd and remote control setup</h2>
+    <p><button id="clear">clear</button><button id="default">default</button>
     <p>Press button(s) on the keypad or remote then assign a command with the button.
         {{ actionkeys }}
-      <p>
+    <p>
+    <p>
+      <h2>pypilot hat NMEA port</h2>
+      <input type="checkbox" id="nmeainput" /> Input
+      <input type="checkbox" id="nmeaoutput" /> Output
+      <select id="nmeabaud">
+        <option value="4800">4800</option>
+        <option value="38400">38400</option>
+      </select>
+      <br>nmea current baud rate: <b><span id="baudrate"></span></b>
       <br>pypilot status: <b><span id="status"></span></b>
       <br>connection: <b><span id="connection"></span></b>
       <br>Web Server Latency: <b><span id="ping-pong"></span> ms</b>

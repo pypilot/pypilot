@@ -17,13 +17,22 @@ socketio = SocketIO(app, async_mode=None)
 
 web_port = 33333
 
+default_action_keys = \
+    {"auto": ["ir030C1000", "ir030C1800", "KEY_POWER", "gpio17"],
+     "menu": ["ir030D1000", "ir030D1800", "KEY_MUTE", "gpio23"],
+     "port1": ["ir03201800", "ir03201000", "KEY_UP", "gpio27"],
+     "starboard1": ["ir03211800", "ir03211000", "KEY_DOWN", "gpio22"],
+     "select": ["ir030B1000", "ir030B1800", "KEY_SELECT", "gpio18"],
+     "port10": ["ir03111800", "ir03111000", "KEY_LEFT", "gpio6"],
+     "starboard10": ["ir03101800", "ir03101000", "KEY_RIGHT", "gpio5"],
+     "tack": ["gpio26"]}
+
 class WebConfig(Namespace):
-    def __init__(self, name, pipe, keyspipe, actions):
+    def __init__(self, name, pipe, action_keys):
         super(Namespace, self).__init__(name)
         socketio.start_background_task(target=self.background_thread)
         self.pipe = pipe
-        self.keyspipe = keyspipe
-        self.actions = actions
+        self.action_keys = action_keys
         self.status = 'N/A'
 
         self.last_key = False
@@ -35,27 +44,28 @@ class WebConfig(Namespace):
         col = 0
         acts += Markup('<p>Actions for LCD interface<table border=0>')
         i = 0
-        for action in actions:
-            if i == 7:
+        for name in action_keys:
+            if i == 8:
                 acts += Markup('</tr></table>')
                 acts += Markup('<p><br>key: <b><span id="key0"></span></b>')
                 acts += Markup('<br>action: <b><span id="action0"></span></b>')
-                acts += Markup('<p>These actions do not depend on the display.')
+                acts += Markup('<p>These actions do not depend on the state')
+                acts += Markup(' of the display and can be used by wireless remotes.')
                 acts += Markup('<table border=0>')
                 col = 0
             i+=1
     
             if col == 0:
                 acts += Markup('<tr>')
-            acts += Markup('<td><button id="action_' + action.name + '">' +
-                           action.name + '</button></td><td><span id="action' +
-                           action.name + 'keys"></span></td>')
+            acts += Markup('<td><button id="action_' + name + '">' +
+                           name + '</button></td><td><span id="action' +
+                           name + 'keys"></span></td>')
             if col == cols-1:
                 acts += Markup('</tr>')
                 col = 0
             else:
                 col += 1
-            names += Markup('"' + action.name + '", ')
+            names += Markup('"' + name + '", ')
 
         acts += Markup('</table>')
         acts += Markup('<p><br>key: <b><span id="key1"></span></b>')
@@ -71,29 +81,51 @@ class WebConfig(Namespace):
         emit('pong')
 
     def on_keys(self, command):
-        if not self.last_key:
+        if command == 'clear':
+            for name in self.action_keys:
+                self.action_keys[name] = []
+            self.pipe.send(self.action_keys)
+            self.emit_keys()
             return
 
+        if command == 'default':
+            action_keys = {}
+            for name in self.action_keys:
+                action_keys[name] = []
+                self.action_keys[name] = []
+
+            for name, keys in default_action_keys.items():
+                self.action_keys[name] = keys.copy()
+
+            for name, keys in self.action_keys.items():
+                action_keys[name] = keys
+            self.pipe.send(action_keys)
+            self.emit_keys()
+            return
+
+        if not self.last_key:
+            return
+        
         action_keys = {}
         # remove this key from any actions
-        for action in self.actions:
-            while self.last_key in action.keys:
-                action.keys.remove(self.last_key)
-                action_keys[action.name] = action.keys
+        for name, keys in self.action_keys.items():
+            while self.last_key in keys:
+                keys.remove(self.last_key)
+                action_keys[name] = keys
 
         # add the last key to the action
-        for action in self.actions:
-            if command == action.name:
-                action.keys.append(self.last_key)
-                action_keys[action.name] = action.keys
-                break
+        self.action_keys[command].append(self.last_key)
+        action_keys[command] = self.action_keys[command]
 
-        self.keyspipe.send(action_keys)
+        self.pipe.send(action_keys)
         self.emit_keys()
 
+    def on_nmea(self, config):
+        self.nmeapipe.send(config)
+
     def emit_keys(self):
-        for action in self.actions:
-            keys = {'name': action.name, 'keys': action.keys}
+        for name, keys in self.action_keys.items():
+            keys = {'name': name, 'keys': keys}
             socketio.emit('action_keys', keys)
         
     def on_connect(self):
@@ -121,9 +153,12 @@ class WebConfig(Namespace):
 
             if not self.pipe:
                 continue
-            
-            msg = self.pipe.recv()
-            if msg:
+
+            while True:
+                msg = self.pipe.recv()
+                if not msg:
+                    break
+
                 if 'key' in msg:
                     self.last_key = msg['key']
                     last_key_time = time.monotonic()
@@ -133,10 +168,11 @@ class WebConfig(Namespace):
                     self.status = msg['status']
                     socketio.emit('status', self.status)
 
-def web_process(pipe, keyspipe, actions):
+def web_process(pipe, action_keys):
+    print('web process pid111', os.getpid())
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
-    socketio.on_namespace(WebConfig('', pipe, keyspipe, actions))
+    socketio.on_namespace(WebConfig('', pipe, action_keys))
     socketio.run(app, debug=False, host='0.0.0.0', port=web_port)
     
 if __name__ == '__main__':

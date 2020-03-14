@@ -6,7 +6,6 @@
  * version 3 of the License, or (at your option) any later version.
  */
 
-#include <linux/fb.h>
 
 unsigned int color(int r, int g, int b);
 
@@ -42,6 +41,9 @@ protected:
     surface() {}
 };
 
+#ifdef __linux__
+#include <linux/fb.h>
+
 // linux framebuffer surface
 class screen : public surface
 {
@@ -56,7 +58,7 @@ public:
     int fbfd;
     long int screensize;
 };
-
+#endif
 
 // nokia5110 spi device
 class spilcd;

@@ -12,43 +12,77 @@
 # pins for more functionallity (tack button, 
 # spi port.
 
-import os, sys, time, json
-import crc
+import os, sys, time, socket, errno
+import json
+import lircd
+
+REWIND=0xab # reset state
+READ_SERIAL = 0xb9 # read next serial byte
+DISCARD_SERIAL = 0xd1 # once data read is verified
+WRITE_DONE = 0xce # backup two bytes since verification failed
+WRITE_SERIAL = 0xd6 # set state writing to serial
+READ_DATA = 0xea # read next data byte
+DISCARD_DATA = 0xa4 # validate read data
+WRITE_DATA = 0xb6 # set state for writing data
+OK = 0xc8 # returned from sucessful operations
+END=0xe3 # returned if reading reaches end
+ZERO = 0x85 # encode a 0 byte
+INVALID=0x96
+
+RF=0x01
+IR=0x02
+GP=0x03
+VOLTAGE=0x04
+
+SET_BACKLIGHT=0x16
+SET_BUZZER=0x17
+SET_BAUD=0x18
+
+PACKET_LEN=6
 
 try:
     import RPi.GPIO as GPIO
 except:
     GPIO = False
-
-SET_BACKLIGHT = 0xa1
-RF, IR, AR = 0xa1, 0x06, 0x9c;
     
-class arduino(object):
+class arduino(object):    
     def __init__(self, config):
+        self.xfers=0
         self.spi = False
-        self.backlight = -1
-        self.packet_size = 6
-        self.next_packet = [0] * (self.packet_size - 1)
+        self.nmea_socket = False
+        self.nmea_connect_time = time.monotonic()
+        self.pollt0 = [0, time.monotonic()]
 
-        self.events = []
-
-        if config and 'arduino' in config:
-            self.config = config['arduino']
-        else:
-            self.config = False
-
-            # hack
-        if True:
-            self.config = {"device":"/dev/spidev0.1", "resetpin":16}
-            
-        if not self.config:
+        self.config = config
+        self.hatconfig = False
+        if 'hat' in config:
+            hatconfig = config['hat']
+            if hatconfig and 'arduino' in hatconfig:
+                self.hatconfig = hatconfig['arduino']
+        if not self.hatconfig:
             print('No hat config, arduino not found')
 
+        if not 'nmea' in config:
+            self.config['nmea'] = {'in': True, 'out': False, 'baud': 38400}
+
+        self.lasttime=0
+
+        self.sent_count = 0
+        self.sent_start = time.monotonic()
+
+        self.serial_in_count = 0
+        self.serial_out_count = 0
+        self.serial_time = self.sent_start + 2
+
+        self.packetout_data = []
+        self.packetin_data = []
+        self.lastbacklight = 0, 0, 0
+
     def open(self):
-        if not self.config:
+        if not self.hatconfig:
             return
 
-        device = self.config['device']
+        device = self.hatconfig['device']
         if not device:
             return
 
@@ -63,7 +97,7 @@ class arduino(object):
                 elif not self.verify(filename) and not self.verify(filename):
                     if not self.write(filename) or not self.verify(filename):
                         print('failed to verify or upload', filename)
-                        #self.config['device'] = False # prevent retry
+                        #self.hatconfig['device'] = False # prevent retry
                         #return
 
                 port, slave = int(device[11]), int(device[13])
@@ -71,84 +105,216 @@ class arduino(object):
                 import spidev
                 self.spi = spidev.SpiDev()
                 self.spi.open(port, slave)
-                self.spi.max_speed_hz=5000
+                self.spi.max_speed_hz=1000000
+
         except Exception as e:
             print('failed to communicate with arduino', device, e)
-            self.config = False
+            self.hatconfig = False
 
     def close(self, e):
         print('failed to read spi:', e)
         self.spi.close()
         self.spi = False
 
-    def packet(self, d):
-        if len(d) != self.packet_size - 1:
-            raise 'invalid packet'
-        return d + [crc.crc8(d)]
+    def xfer(self, x):
+        return self.spi.xfer([x])[0]
 
-    def set_backlight(self, value):
-        if (self.backlight != value):
-            self.backlight = min(max(int(value), 0), 200)
-            self.next_packet = [SET_BACKLIGHT, 0, 0, 0, self.backlight]
+    def send(self, id, data):
+        p = id
+        self.packetout_data += bytes([ord('$') | 0x80, id | 0x80])
+        for i in range(PACKET_LEN-1):
+            if i < len(data):
+                d = data[i]
+            else:
+                d = 0
+            p ^= d
+            self.packetout_data += bytes([d | 0x80])
+        self.packetout_data += bytes([p | 0x80])
+
+    def set_backlight(self, value, polarity):
+        lvalue, lpolarity, ltime = self.lastbacklight
+        if value == lvalue and polarity == lpolarity and time.monotonic() - ltime < 9:
+            return
+        self.lastbacklight = value, polarity, time.monotonic()
+
+        value = min(max(int(value), 0), 120)
+        backlight = [value, polarity]
+        self.send(SET_BACKLIGHT, backlight)
+
+    def set_baud(self, baud):
+        self.config['nmea']['baud'] = baud
+        # 0, 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600
+        if baud == 4800:
+            d = [5]
+        elif baud == 38400:
+            d = [8]
+        else:
+            print('invalid baud', baud)
+            d = [8]
+        self.send(SET_BAUD, d)
+
+    def set_buzzer(self, duration, frequency):
+        self.send(SET_BUZZER, (duration, frequency))
+
+    def get_baud_rate(self):
+        t = time.monotonic()
+        dt = t - self.serial_time
+        if dt < 10:
+            return False
+        self.serial_time = t
+        rate_in = self.serial_in_count*10/dt
+        rate_out = self.serial_out_count*10/dt
+        self.serial_in_count = self.serial_out_count = 0
+        return 'TX: %.1f  RX %.1f' % (rate_in, rate_out)
 
     def poll(self):
         if not self.spi:
             self.open()
-            return
+            return []
 
-        while self.read_packet():
-            pass
+        events = []
+        serial_data =  []
+        self.open_nmea()
 
-    def read_packet(self):
-        s = self.packet_size-1
-        try:
-            x = self.spi.xfer(self.packet(self.next_packet))
-            self.next_packet = [0] * s
+        # don't exceed 90% of baud rate
+        baud = self.config['nmea']['baud'] *.9
+        while True:
+            if self.nmea_socket:
+                try:
+                    b = self.nmea_socket.recv(40)
+                    b = b''
+                    self.socketdata += b
+                    self.serial_in_count += len(b)
+                    if len(self.socketdata) > 160:
+                        print('overflow, dropping 64 bytes')
+                        self.socketdata = self.socketdata[:64]
+                        self.serial_in_count -= 64
+                except Exception as e:
+                    if e.args[0] is errno.EWOULDBLOCK:
+                        pass
+                    else:
+                        print('nmea socket exception', e)
+                        self.nmea_socket.close()
+                        self.nmea_socket = False
 
-        except Exception as e:
-            self.close(e)
-            return False
+            i = 0
+            if self.socketdata:
+                count, t0 = self.pollt0
+                dt = time.monotonic() - t0
+                rate = 10*(count)/dt
+                if rate < baud:
+                    if self.socketdata[0] and self.socketdata[0] < 128:
+                        i = self.socketdata[0]
+                        self.pollt0[0] += 1
+                        self.socketdata = self.socketdata[1:]
+            else:
+                self.pollt0 = [0, time.monotonic()] # reset
 
-        for i in range(s+1):
-            if not any(x):
-                return False
+            if not i and self.packetout_data:
+                i = self.packetout_data[0]
+                #print('send %c %x' %(i,i))
+                self.packetout_data = self.packetout_data[1:]
 
-            ck = crc.crc8(x[:s])
-            if ck == x[s]:
+            o = self.xfer(i)
+            if not i and not o:
                 break
 
-            if i == s:
-                print('failed to syncronize spi packet', ck, x[s])
-                return False
-                
-            try:
-                y = self.spi.xfer([0])
-            except Exception as e:
-                self.close(e)
-                return False
-            x = x[1:] + y
-        #print('spi packet', x)
+            if o > 127:
+                o&=0x7f
+                self.packetin_data.append(o)
+            elif o:
+                serial_data.append(o)
 
-        command = x[0]
-        if x[0] == RF:
-            key = 'rf%02X%02X%02X' % (x[1], x[2], x[3])
-            count = x[4]
-        elif x[0] == IR:
-            key = 'ir%02X%02X%02X' % (x[1], x[2], x[3])
-            count = x[4]
-        elif x[0] == AR:
-            key = 'gpio' % x[1]
-            count = x[4]
-        else:
-            return False
-        self.events.append((key, count))
+        # now read packet data
+        while len(self.packetin_data) >= PACKET_LEN+3:
+            if self.packetin_data[0] != ord('$'):
+                self.packetin_data = self.packetin_data[1:]
+                continue
+
+            cmd = self.packetin_data[1]
+            d = self.packetin_data[2:PACKET_LEN+2]
+            parity = self.packetin_data[PACKET_LEN+2];
+            p = 0
+            for x in d:
+                p ^= x
+
+            # spi interrupt collides with pin change interrupt, so sometimes
+            # bytes are lost when rf is receiving causing parity failure
+            # drop invalid packets
+            if p != parity:
+                self.packetin_data = self.packetin_data[1:]
+                continue
+
+            self.packetin_data = self.packetin_data[3+PACKET_LEN:]
+
+            key = '%02X%02X%02X%02X' % (d[0], d[1], d[2], d[3])
+            count = d[4]
+                
+            if cmd == RF:
+                key = 'rf' + key
+            elif cmd == IR:
+                key = 'ir' + key
+                if lircd.LIRC_version:
+                    print('received IR decoded from arduino, disable LIRC')
+                    lircd.LIRC_version = 0 # disable lircd if we got ir from arduino
+            elif cmd == GP:
+                key = 'gpio_ext' + key
+            elif cmd == VOLTAGE:
+                vcc = (d[0] + (d[1]<<7))/1000.0
+                vin = (d[2] + (d[3]<<7))/1000.0
+                if vin < 3 or vin > 3.5:
+                    print('3v3 VOLTAGE BAD!!!', vin)
+                if vcc < 4.5 or vcc > 5.5:
+                    print('5v VOLTAGE BAD!!!', vcc)
+                continue
+            else:
+                print('unknown message', cmd, d)
+                continue
+
+            events.append((key, count))
+
+        if self.nmea_socket and serial_data:# and self.config['nmea']['out']:
+            #print('nmea>', bytes(serial_data))
+            self.nmea_socket.send(bytes(serial_data))
+            self.serial_out_count += len(serial_data)
+            #self.open_nmea()
+            #print('nmea', self.serial_in_count, self.serial_out_count, self.serial_in_count - self.serial_out_count)
+            
+        return events
+
+    def open_nmea(self):
+        if self.nmea_socket:
+            return
+        if time.monotonic() < self.nmea_connect_time:
+            return
+
+        self.nmea_connect_time += 4
+        nmea = self.config['nmea']
+        if not nmea['in'] and not nmea['out']:
+            return
+        try:
+            self.socketdata = b''
+            self.nmea_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.nmea_socket.setblocking(0)
+            print('connect nmea', self.config['host'])
+            self.nmea_socket.connect((self.config['host'], 20220))
+        except OSError as e:
+            print('os error', e)
+            if e.args[0] is errno.EINPROGRESS:
+                return True
+        except Exception as e:
+            print('exception', e)
+            self.nmea_socket = False
+        except:
+            print('MOOOOOOOOOOOOOOORE')
+            self.nmea_socket = False
 
     def flash(self, filename, c):
         global GPIO
         if not GPIO:
             return False
 
-        self.resetpin = self.config['resetpin']
+        self.resetpin = self.hatconfig['resetpin']
 
         try:
             GPIO.setmode(GPIO.BCM)
@@ -159,7 +325,7 @@ class arduino(object):
             GPIO = False # prevent further tries
             return False
 
-        command = 'avrdude -P ' + self.config['device'] + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 500000'
+        command = 'avrdude -P ' + self.hatconfig['device'] + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 500000'
 
         ret = os.system(command)
         GPIO.output(self.resetpin, 1)
@@ -172,17 +338,66 @@ class arduino(object):
     def write(self, filename):
         return self.flash(filename, 'w')
 
+def arduino_process(pipe, config):
+    a = arduino(config)
+    while True:
+        t0 = time.monotonic()
+        events = a.poll()
+        if events:
+            pipe.send(events)
+
+        baud_rate = a.get_baud_rate()
+        if baud_rate:
+            if a.nmea_socket:
+                pipe.send([('baudrate', baud_rate)])
+            else:
+                pipe.send([('baudrate', 'ERROR: no connection to server for nmea')])
+
+        while True:
+            try:
+                msg = pipe.recv()
+                if not msg:
+                    break
+                cmd, value = msg
+            except Exception as e:
+                print('pipe recv failed!!\n')
+                return
+            if cmd == 'baud':
+                a.set_baud(value)
+            elif cmd == 'backlight':
+                a.set_backlight(*value)
+            elif cmd == 'buzzer':
+                a.set_buzzer(*value)
+            else:
+                print('unhandled command', cmd)
+        t1 = time.monotonic()
+        # max period to handle 38400 with 192 byte buffers is (192*10) / 38400 = 0.05
+        # for now use 0.025, eventually dynamic depending on baud?
+        dt = .025 - (t1-t0)
+        if dt > 0:
+            time.sleep(dt)      
+    
 def main():
     print('initializing arduino')
-    c = {'arduino':{'device':'/dev/spidev0.1',
-                           'resetpin':'gpio16'}}
-    ar = arduino(c)
+    config = {'host':'localhost','hat':{'arduino':{'device':'/dev/spidev0.1',
+                                                   'resetpin':'gpio16'}}}
+    a = arduino(config)
 
-    t0 = time.monotonic()
-
+    dt = 0
+    lt = 0
     while True:
-        ar.poll()
-        time.sleep(.01)
+        t0 = time.monotonic()
+        events = a.poll()
+        if events:
+            print(events, dt, t0-lt)
+            lt = t0
+        baud_rate = a.get_baud_rate()
+        if baud_rate:
+            print('baud rate', baud_rate)
+        t1 = time.monotonic()
+        dt = t1 - t0
+        #print('dt', dt)
+        time.sleep(.02)
     
 if __name__ == '__main__':
     main()

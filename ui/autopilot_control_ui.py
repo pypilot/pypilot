@@ -20,7 +20,7 @@ class AutopilotControlBase ( wx.Frame ):
 	def __init__( self, parent ):
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Autopilot Control", pos = wx.DefaultPosition, size = wx.Size( 444,400 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 
-
+		self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
 
 		fgSizer5 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer5.AddGrowableCol( 0 )
@@ -295,7 +295,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 	def __init__( self, parent ):
 		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Calibration", pos = wx.DefaultPosition, size = wx.Size( 617,432 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
 
-#		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 
 		fgSizer7 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer7.AddGrowableCol( 0 )
@@ -491,7 +491,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook.AddPage( self.m_panel3, u"alignment", True )
+		self.m_notebook.AddPage( self.m_panel3, u"alignment", False )
 		self.m_panel7 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer81 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer81.AddGrowableCol( 0 )
@@ -603,6 +603,41 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer351.SetFlexibleDirection( wx.BOTH )
 		fgSizer351.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
+		fgSizer371 = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgSizer371.SetFlexibleDirection( wx.BOTH )
+		fgSizer371.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		self.m_staticText401 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"Sigma Points", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText401.Wrap( -1 )
+
+		self.m_staticText401.SetBackgroundColour( wx.Colour( 255, 255, 0 ) )
+
+		fgSizer371.Add( self.m_staticText401, 0, wx.ALL, 5 )
+
+		self.m_staticText42 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"local history", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText42.Wrap( -1 )
+
+		self.m_staticText42.SetBackgroundColour( wx.Colour( 0, 255, 0 ) )
+
+		fgSizer371.Add( self.m_staticText42, 0, wx.ALL, 5 )
+
+		self.m_staticText43 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"current", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText43.Wrap( -1 )
+
+		self.m_staticText43.SetBackgroundColour( wx.Colour( 255, 85, 85 ) )
+
+		fgSizer371.Add( self.m_staticText43, 0, wx.ALL, 5 )
+
+		self.m_staticText411 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"Calibration Points", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText411.Wrap( -1 )
+
+		self.m_staticText411.SetBackgroundColour( wx.Colour( 0, 255, 255 ) )
+
+		fgSizer371.Add( self.m_staticText411, 0, wx.ALL, 5 )
+
+
+		fgSizer351.Add( fgSizer371, 1, wx.EXPAND, 5 )
+
 		fgSizer10 = wx.FlexGridSizer( 0, 2, 0, 0 )
 		fgSizer10.AddGrowableCol( 1 )
 		fgSizer10.SetFlexibleDirection( wx.BOTH )
@@ -662,7 +697,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel1.SetSizer( fgSizer8 )
 		self.m_panel1.Layout()
 		fgSizer8.Fit( self.m_panel1 )
-		self.m_notebook.AddPage( self.m_panel1, u"compass", False )
+		self.m_notebook.AddPage( self.m_panel1, u"compass", True )
 		self.m_panel71 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer35 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer35.SetFlexibleDirection( wx.BOTH )

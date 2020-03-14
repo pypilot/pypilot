@@ -31,7 +31,6 @@ class NonBlockingPipeEnd(object):
         self.pipe.close()
 
     def recv(self, timeout=0):
-#        if self.pipe.poll(timeout):
         try:
             if self.pollin.poll(0):
                 return self.pipe.recv()
@@ -41,6 +40,12 @@ class NonBlockingPipeEnd(object):
             print('failed to recv nonblocking pipe!', self.name)
         return False
 
+    def recvdata(self):
+        return self.pollin.poll(0)
+
+    def readline(self):
+        return self.recv() # pipe carries complete lines
+    
     def send(self, value, block=False):
         if block or self.pollout.poll(0):
             self.pipe.send(value)
@@ -51,24 +56,7 @@ class NonBlockingPipeEnd(object):
             print('pipe full (%d)' % self.sendfailcount, self.name, 'cannot send')
             self.failcountmsg *= 10
         return False
-
-def NonBlockingPipe(name, recvfailok=True):
-    pipe = multiprocessing.Pipe()
-    return NonBlockingPipeEnd(pipe[0], name+'[0]', recvfailok), NonBlockingPipeEnd(pipe[1], name+'[1]', recvfailok)
     
-class LineBufferedNonBlockingPipeEnd(NonBlockingPipeEnd):
-    def __init__(self, pipe, name):
-        super(LineBufferedNonBlockingPipeEnd, self).__init__(pipe, name, True)
-            
-    def readline(self):
-#        if self.pipe.poll():   # pipe poll is really slow!!!!!
-        if self.pollin.poll(0):
-            return self.pipe.recv()
-        return False
-
-    def recv(self):
-        return True
-
 # non multiprocessed pipe emulates functions in a simple queue
 class NoMPLineBufferedPipeEnd(object):
     def __init__(self, name):
@@ -101,11 +89,10 @@ class NoMPLineBufferedPipeEnd(object):
         return True
         
 
-def LineBufferedNonBlockingPipe(name, use_multiprocessing):
+def NonBlockingPipe(name, use_multiprocessing, recvfailok=True):
     if use_multiprocessing:
         pipe = multiprocessing.Pipe()
-        return LineBufferedNonBlockingPipeEnd(pipe[0], name+'[0]'), \
-            LineBufferedNonBlockingPipeEnd(pipe[1], name+'[1]')
+        return NonBlockingPipeEnd(pipe[0], name+'[0]', recvfailok), NonBlockingPipeEnd(pipe[1], name+'[1]', recvfailok)
 
     pipe = NoMPLineBufferedPipeEnd(name+'[0]'), NoMPLineBufferedPipeEnd(name+'[1]')
     pipe[0].remote = pipe[1]

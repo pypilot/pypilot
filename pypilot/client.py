@@ -31,7 +31,7 @@ class Watch(object):
     def __init__(self, value, period):
         self.value = value
         self.period = period
-        self.time = time.monotonic()
+        self.time = time.monotonic() + period
 
 class ClientWatch(Value):
     def __init__(self, values, client):
@@ -48,9 +48,10 @@ class ClientWatch(Value):
             else:
                 if period is True:
                     period = 0
+                if not value.watch:
+                    self.client.send(name + '=' + value.get_msg() + '\n') # initial send
                 value.watch = Watch(value, period)
                 value.pwatch = True
-                self.client.send(name + '=' + value.get_msg() + '\n') # initial send
 
 class ClientValues(Value):
     def __init__(self, client):
@@ -76,7 +77,9 @@ class ClientValues(Value):
                 break # no more are ready
             t, i, watch = heapq.heappop(self.pqwatches) # pop first element
             self.client.send(watch.value.name + '=' + watch.value.get_msg() + '\n')
-            watch.time = t0+watch.period
+            watch.time += watch.period
+            if watch.time < t0:
+                watch.time = t0
             watch.value.pwatch = True # can watch again once updated
             
     def insert_watch(self, watch):
@@ -92,6 +95,11 @@ class ClientValues(Value):
         ret = pyjson.dumps(self.wvalues)
         self.wvalues = {}
         return ret
+
+    def onconnected(self):
+        for name in self.values:
+            if name != 'values' and name != 'watch':
+                self.wvalues[name] = self.values[name].info
 
 class pypilotClient(object):
     def __init__(self, host=False):        
@@ -109,6 +117,7 @@ class pypilotClient(object):
             fd = self.connection.fileno()
             if fd:
                 self.poller.register(fd, select.POLLIN)
+                self.values.onconnected()
             return
 
         config = {}
@@ -117,7 +126,7 @@ class pypilotClient(object):
             if not os.path.exists(configfilepath):
                 os.makedirs(configfilepath)
             if not os.path.isdir(configfilepath):
-                raise configfilepath + 'should be a directory'
+                raise Exception(configfilepath + 'should be a directory')
         except Exception as e:
             print('os not supported')
             configfilepath = '/.pypilot/'
@@ -162,29 +171,27 @@ class pypilotClient(object):
             print('failed to write config file:', self.configfilename)
         except Exception as e:
             print('Exception writing config file:', self.configfilename, e)
-        
+
         self.connection = LineBufferedNonBlockingSocket(self.connection_in_progress, self.config['host'])
         self.connection_in_progress = False
         self.poller = select.poll()
         self.poller.register(self.connection.socket, select.POLLIN)
+        self.wwatches = {}
         for name, value in self.watches.items():
             self.wwatches[name] = value # resend watches
 
-        for name in self.values.values:
-            if name != 'values' and name != 'watch':
-                self.values.wvalues[name] = self.values.values[name].info
+        self.values.onconnected()
 
     def poll(self, timeout=0):
         if not self.connection:
             if self.connection_in_progress:
                 events = self.poller_in_progress.poll(0)
-                if not events:
-                    return
-                fd, flag = events.pop()
-                if not (flag & select.POLLOUT):
+                if events:
+                    # hung hup
                     self.connection_in_progress.close()
                     self.connection_in_progress = False
                     return
+
                 self.onconnected()
             else:
                 if not self.connect(False):
@@ -193,8 +200,6 @@ class pypilotClient(object):
             
         # inform server of any watches we have changed
         if self.wwatches:
-            #print('send wwatchd', 'watch=' + pyjson.dumps(self.wwatches))
-
             self.connection.send('watch=' + pyjson.dumps(self.wwatches) + '\n')
             #print('watch', watches, self.wwatches, self.watches)
             self.wwatches = {}
@@ -217,7 +222,7 @@ class pypilotClient(object):
                 return # no data ready
             
             fd, flag = events.pop()
-            if not (flag & select.POLLIN) or (self.connection and not self.connection.recv()):
+            if not (flag & select.POLLIN) or (self.connection and not self.connection.recvdata()):
                 # other flags indicate disconnect
                 self.disconnect() # recv returns 0 means connection closed
                 return
@@ -241,7 +246,7 @@ class pypilotClient(object):
 
             except Exception as e:
                 print('invalid message from server:', line, e)
-                raise Exception
+                raise Exception()
 
             if name in self.values.values: # did this client register this value
                 self.values.values[name].set(value)
@@ -263,16 +268,20 @@ class pypilotClient(object):
             connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.connection_in_progress = connection
             self.poller_in_progress = select.poll()
-            self.poller_in_progress.register(self.connection_in_progress.fileno(), select.POLLOUT)
+            self.poller_in_progress.register(self.connection_in_progress.fileno(), 0)
             
-            connection.settimeout(1)
+            connection.settimeout(1) # set to 0 ?
             connection.connect(host_port)
         except OSError as e:
             import errno
             if e.args[0] is errno.EINPROGRESS:
                 return True
-            print('connect failed to %s:%d' % host_port, e)
-            time.sleep(.25)
+            if e.args[0] == 111: # refused
+                pass
+            else:
+                print('connect failed to %s:%d' % host_port, e)
+            #time.sleep(.25)
+                
             return False
                 
         #except Exception as e:
@@ -335,7 +344,9 @@ class pypilotClient(object):
         return value
 
     def get_values(self):
-        return self.values.value
+        if self.values.value:
+            return self.values.value
+        return {}
 
     def list_values(self, timeout=0):
         self.watch('values')
