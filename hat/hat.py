@@ -229,7 +229,6 @@ class Hat(object):
             host = self.config['host']
         else:
             host = 'localhost'
-
         self.client = pypilotClient(host)
         self.client.registered = False
         self.watchlist = ['ap.enabled', 'ap.heading_command']

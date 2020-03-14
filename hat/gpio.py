@@ -7,6 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+import os, time
+
 orangepi = False
 try:
     import RPi.GPIO as GPIO
@@ -54,14 +56,16 @@ class gpio(object):
                 print('failed to open /dev/gpiomem, no permission')
                 # if failed, attempt to give current user privilege if no sudo pw
                 user = os.getenv('USER')
-                os.system('sudo chown ' + user + '/dev/gpiomem')
+                os.system('sudo chown ' + user + ' /dev/gpiomem')
                 GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
                     
             def cbr(pin):
-                self.evalkey(pin, GPIO.input(pin))
+                GPIO.input(pin)
+                time.sleep(.02)  # workaround buggy gpio
+                self.evalkey(pin, value)
 
             try:
-                GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=20)
+                GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=50)
             except Exception as e:
                 print('WARNING', e)        
 
@@ -87,8 +91,19 @@ class gpio(object):
             if self.keystate[pin]:
                 self.keystate[pin] = 0
             else:
-                return []
+                return
         else:
             self.keystate[pin] += 1
 
         self.events.append(('gpio%d'%pin, self.keystate[pin]))
+
+def main():
+    gp = gpio()
+    while True:
+        events = gp.poll()
+        if events:
+            print('events', events)
+        time.sleep(.1)
+            
+if __name__ == '__main__':
+    main() 
