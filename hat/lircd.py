@@ -19,6 +19,7 @@ class LoadLIRC(threading.Thread):
 
     def run(self):
         while True:
+            version = 0
             try:
                 time.sleep(1)
                 t0 = time.monotonic()
@@ -45,13 +46,13 @@ class LoadLIRC(threading.Thread):
                     break
             except Exception as e:
                 print('failed to initialize lirc. is .lircrc missing?', e)
-            time.sleep(10)
+            time.sleep(2)
         self.version = version
 
 class lirc(object):
     def __init__(self, config):
         self.lastkey = False
-        self.lasttime = time.time()
+        self.lasttime = time.monotonic()
         self.config = config
         self.LIRC = None
 

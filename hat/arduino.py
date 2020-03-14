@@ -97,12 +97,10 @@ class arduino(object):
 
                 try:
                     GPIO.setmode(GPIO.BCM)
-                    #GPIO.setup(self.resetpin, GPIO.OUT)
-                    #GPIO.output(self.resetpin, 0)
-                    #time.sleep(.01)
                     GPIO.setup(self.resetpin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                    pass
                 except Exception as e:
-                    print('failed to set reset pin high', e)
+                    print('arduino failed to set reset pin high', e)
                     #return
                     
                 port, slave = int(device[11]), int(device[13])

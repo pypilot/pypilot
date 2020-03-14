@@ -27,7 +27,6 @@ global fonts
 fonts = {}
 
 def draw(surface, pos, text, size, bw, crop=False):
-    t0 = time.time()
     if not size in fonts:
         fonts[size] = {}
 

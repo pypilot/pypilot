@@ -45,6 +45,7 @@ class gpio(object):
         else:
             GPIO.setmode(GPIO.BCM)
 
+
         for pin in self.pins:
             try:
                 GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -89,4 +90,5 @@ class gpio(object):
                 return []
         else:
             self.keystate[pin] += 1
+
         self.events.append(('gpio%d'%pin, self.keystate[pin]))

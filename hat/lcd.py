@@ -17,7 +17,7 @@ try:
     import micropython
     from upy_client import pypilotClient
     def gettime():
-        return time.time()
+        return time.monotonic()
     import ugfx
 except:
     from pypilot.client import pypilotClient
@@ -314,7 +314,7 @@ class LCD():
             self.need_refresh = True
         
         if dt > frameperiod:
-            ta = time.time()
+            ta = time.monotonic()
             self.display()
             self.update_watches()
             self.lastframetime = max(self.lastframetime+frameperiod, t-frameperiod)

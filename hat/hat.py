@@ -111,12 +111,12 @@ class Web(Process):
     def create(self):
         def process(pipe, config):
             while True:
-                #time.sleep(10) # delay loading web and wait until modules are loaded
-                #try:
-                import web
-                web.web_process(pipe, config)
-                #except Exception as e:
-                #    print('web failed to run process:', e)
+                time.sleep(10) # delay loading web and wait until modules are loaded
+                try:
+                    import web
+                    web.web_process(pipe, config)
+                except Exception as e:
+                    print('web failed to run process:', e)
 
         super(Web, self).create(process)
         self.send({'status': self.status})
@@ -368,9 +368,9 @@ class Hat(object):
             i.poll()
         t3 = time.monotonic()
         for key, t in self.keytimes.items():
-            dt = time.monotonic() - t
+            dt = t3 - t
             if dt > .6:
-                print('keyup event lost, releasing key from timeout', key, dt)
+                print('keyup event lost, releasing key from timeout', key, t3, dt)
                 self.apply_code(key, 0)
                 break
 
