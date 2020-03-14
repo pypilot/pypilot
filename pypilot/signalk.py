@@ -38,10 +38,10 @@ class signalk(object):
             self.client = pypilotClient(server)
 
         self.initialized = False
+        self.missingzeroconfwarned = False
         self.signalk_access_url = False
         self.last_access_request_time = 0
 
-        print('hitehre')
         try:
             f = open(token_path)
             self.token = f.read()
@@ -62,8 +62,11 @@ class signalk(object):
         try:
             from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
         except Exception as e:
-            print('signalk: failed to import zeroconf, autodetection not possible')
-            print('try pip3 install zeroconf or apt install python3-zeroconf')
+            if not self.missingzeroconfwarned:
+                print('signalk: failed to import zeroconf, autodetection not possible')
+                print('try pip3 install zeroconf or apt install python3-zeroconf')
+                self.missingzeroconfwarned = True
+            time.sleep(20)
             return
             
         self.last_values = {}
@@ -163,7 +166,6 @@ class signalk(object):
             return
 
         try:
-            uid = random_uid()
             uid = "1234-45653343454";
             r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":uid, "description": "pypilot"})
             
