@@ -828,7 +828,7 @@ public:
                 for(int bit = 0; bit<8; bit++) {
                     bits <<= 1;
 //                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+7-bit))
-                    if(*(uint8_t*)(s->p + (127-y)*s->line_length + col*8+(7-bit)))
+                    if(*(uint8_t*)(s->p + (127-y)*s->line_length + (7-col)*8+bit))
                         bits |= 1;
                 }
                 binary[index] = bits;
