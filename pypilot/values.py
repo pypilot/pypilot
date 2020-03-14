@@ -138,6 +138,10 @@ class RangeProperty(Property):
         return '%.4f' % self.value
         
     def set(self, value):
+        try:
+            value = float(value) # try to convert to number
+        except:
+            return # ignore invalid value
         if value >= self.min_value and value <= self.max_value:
             super(RangeProperty, self).set(value)
 
