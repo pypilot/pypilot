@@ -198,26 +198,17 @@ class Hat(object):
         try:
             configfile = '/proc/device-tree/hat/custom_0'
             f = open(configfile)
-            hatconfig = pyjson.loads(f.read())
+            self.config['hat'] = pyjson.loads(f.read())
             f.close()
             print('loaded device tree hat config')
         except Exception as e:
             print('failed to load', configfile, ':', e)
-            hatconfig = {'lcd':{'driver':'nokia5110',
-                                     'port':'/dev/spidev0.0'},
-                              'lirc':'gpio4'}
+            
+        if not 'hat' in config:
             print('assuming original 26 pin tinypilot with nokia5110 display')
-            if False: #testing without eeprom flashed, or hat changed without reboot
-                hatconfig = {"mpu":{"driver":"mpu9255",
-                                    "port":"/dev/i2c-1"},
-                             "lcd":{"driver":"jlx12864",
-                                    "port":"/dev/spidev0.0"},
-                             "arduino":{"device":"/dev/spidev0.1",
-                                        "resetpin":16,
-                                        "hardware":0.21},
-                             "lirc":"gpio4"}
-
-        self.config['hat'] = hatconfig
+            self.config['hat'] = {'lcd':{'driver':'nokia5110',
+                                         'port':'/dev/spidev0.0'},
+                                  'lirc':'gpio4'}
 
         self.servo_timeout = time.monotonic() + 1
         
