@@ -49,8 +49,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 @app.route('/wifi', methods=['GET', 'POST'])
 def wifi():
     networking = '/home/tc/.pypilot/networking.txt'
-    wifi = {'mode': 'Master', 'ssid': 'pypilot', 'key': '', 'client_ssid': 'pypilot', 'client_key': ''}
-
+    wifi = {'mode': 'Master', 'ssid': 'pypilot', 'key': '',
+            'client_ssid': 'openplotter', 'client_key': '12345678', 'client_address': '10.10.10.60'}
     try:
         f = open(networking, 'r')
         while True:

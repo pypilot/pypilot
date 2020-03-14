@@ -261,8 +261,9 @@ class arduino(object):
 
             if cmd == RF:
                 key = 'rf' + key
-            elif cmd == IR and self.config['arduino.ir']:
-                key = 'ir' + key
+            elif cmd == IR:
+                if self.config['arduino.ir']:
+                    key = 'ir' + key
             elif cmd == GP:
                 key = 'gpio_ext' + key
             elif cmd == VOLTAGE:
