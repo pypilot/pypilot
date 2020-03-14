@@ -120,11 +120,13 @@ class Web(Process):
 
     def create(self):
         def process(pipe, action_keys):
-            try:
-                import web
-                web.web_process(pipe, action_keys)
-            except Exception as e:
-                print('failed to run process:', e)
+            while True:
+                time.sleep(15) # delay loading web
+                try:
+                    import web
+                    web.web_process(pipe, action_keys)
+                except Exception as e:
+                    print('web failed to run process:', e)
 
         action_keys = {}
         for action in self.hat.actions:

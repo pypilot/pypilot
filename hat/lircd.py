@@ -29,6 +29,7 @@ class LoadLIRC(threading.Thread):
             self.version = 2
             print('have lirc for remote control', time.monotonic()-t0)
         except Exception as e:
+            print('failed to load lirc', e)
             try:
                 import pylirc as LIRC
                 self.LIRC = LIRC
