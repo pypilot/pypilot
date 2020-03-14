@@ -234,10 +234,10 @@ class Hat(object):
         self.arduino = Arduino(self)
 
         # use raspberry pi lirc if there is no arduino
-        if not 'arduino' in hatconfig and 'lirc' in hatconfig:
-            self.lirc = lircd.lirc()
-        else:
-            self.lirc = False
+        #if not 'arduino' in hatconfig and 'lirc' in hatconfig:
+        self.lirc = lircd.lirc()
+        #else:
+        #    self.lirc = False
         self.keytimes = {}
         
         # keypad for lcd interface

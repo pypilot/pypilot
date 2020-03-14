@@ -14,6 +14,7 @@ try:
     import lirc as LIRC
     LIRC_version = 2
     print('have lirc for remote control')
+    
 except Exception as e:
     try:
         import pylirc as LIRC
@@ -31,7 +32,7 @@ class lirc(object):
         global LIRC_version, LIRC
         try:
             if LIRC_version == 1:
-                LIRC.init('pypilot')
+                LIRC.init('pypilot', blocking=False)
             elif LIRC_version == 2:
                 self.lircd = LIRC.RawConnection()
             self.lirctime = False
@@ -47,12 +48,10 @@ class lirc(object):
         events = []
         while LIRC_version:
             if LIRC_version == 1:
-                code = LIRC.nextcode()
+                code = LIRC.nextcode(0)
                 if not code:
                     break
-                print('code', code)
                 count = code[0]['repeat']+1
-                key = 'lirc' + code[0]['config']
             elif LIRC_version == 2:
                 code = self.lircd.readline(0)
                 if not code:
