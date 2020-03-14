@@ -311,11 +311,12 @@ def CalibrationProcess(cal_pipe, client):
             print(_('warning, failed to renice calibration process'))
 
     time.sleep(4)
-    
+
     while True:
         try:
             import calibration_fit
             print(_('calibration loaded, starting'), os.getpid())
+            cal_pipe.send('ready')
             calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
         except Exception as e:
             print(_('failed import calibration fit'), e)
@@ -332,6 +333,15 @@ class AutomaticCalibrationProcess():
         self.client = pypilotClient(server)
         self.process = multiprocessing.Process(target=CalibrationProcess, args=(self.cal_pipe_process, self.client), daemon=True)
         self.process.start()
+        self.cal_ready = False
+
+    def calibration_ready(self):
+        if self.cal_ready:
+            return True
+        if self.cal_pipe.recv():
+            self.cal_ready = True
+            return True
+        return False
 
     def __del__(self):
         #print(_('terminate calibration process'))
@@ -381,6 +391,7 @@ class BoatIMU(object):
         self.imu = IMU(client.server)
 
         self.last_imuread = time.monotonic() + 4 # ignore failed readings at startup
+        self.cal_data = False
 
     def __del__(self):
         #print('terminate imu process')
@@ -501,22 +512,18 @@ class BoatIMU(object):
             self.heading_off.last = self.heading_off.value
             self.alignmentQ.last = self.alignmentQ.value
 
-
-        if self.auto_cal.cal_pipe:
-            #print('warning, cal pipe always sending despite locks')
-            cal_data = {}
-            #how to check this here??  if not 'imu.accel.calibration.locked'
-            cal_data['accel'] = list(data['accel'])
-            
-            #how to check this here??  if not 'imu.compass.calibration.locked'
-            cal_data['compass'] = list(data['compass'])
-            cal_data['fusionQPose'] = list(data['fusionQPose'])
-
-            if cal_data:
-                #print('send', cal_data)
-                self.auto_cal.cal_pipe.send(cal_data)
-
+        #  warning, cal pipe always sending despite locks
+        #how to check this here??  if not 'imu.accel.calibration.locked'
+        #how to check this here??  if not 'imu.compass.calibration.locked'
+        self.cal_data = {'accel': data['accel'],
+                         'compass': data['compass'],
+                         'fusionQPose': data['fusionQPose']}
         return data
+
+    def send_cal_data(self):
+        if self.auto_cal.calibration_ready() and self.cal_data:
+            self.auto_cal.cal_pipe.send(self.cal_data)
+
 
 # print line without newline
 def printline(*args):

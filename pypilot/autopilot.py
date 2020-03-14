@@ -369,6 +369,9 @@ class Autopilot(object):
 
         if self.enabled.value:
             self.servo.poll()
+
+        self.boatimu.send_cal_data() # after critical loop is done
+
         t5 = time.monotonic()
         if t5-t4 > period/2 and self.servo.driver:
             print(_('servo is running too _slowly_'), t5-t4)

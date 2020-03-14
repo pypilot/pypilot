@@ -9,7 +9,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import importlib
 
 for module in os.listdir(os.path.dirname(__file__)):
-    print(module)
     if module == '__init__.py' or module[-3:] != '.py' or module.startswith('.'):
         continue
     if module == 'pilot.py':

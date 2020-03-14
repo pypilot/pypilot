@@ -283,7 +283,7 @@ class ServerValues(pypilotValue):
                 value.info = info # update info
                 value.watching = False
                 if value.msg:
-                    connection.write(value.get_msg()) # send value
+                    connection.write(value.get_msg()) # send value                
                 value.calculate_watch_period()
                 self.msg = 'new'
                 continue
@@ -292,6 +292,7 @@ class ServerValues(pypilotValue):
             if 'persistent' in info and info['persistent']:
                 value.calculate_watch_period()
                 if name in self.persistent_data:
+                    print('IS THIS POSSIBLE TO HIT?????')
                     v = self.persistent_data[name]
                     if isinstance(v, numbers.Number):
                         v = float(v) # convert any numeric to floating point
@@ -329,7 +330,6 @@ class ServerValues(pypilotValue):
                     connection.write(line)
                     
             self.values[name] = pypilotValue(self, name, msg=line)
-            
             line = f.readline()
         f.close()
         

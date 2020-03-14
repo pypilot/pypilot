@@ -667,7 +667,6 @@ def CalibrationProcess(cal_pipe, client):
             if cal_pipe:
                 p = cal_pipe.recv()
                 while p:
-                    #print('calpipe!!!!!!!!!!!!', type(p))
                     if 'accel' in p:
                         accel_points.AddPoint(p['accel'])
                         addedpoint = True
