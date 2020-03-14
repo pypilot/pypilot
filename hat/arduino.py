@@ -191,7 +191,6 @@ class arduino(object):
                         print('nmea socket exception', e)
                         self.nmea_socket.close()
                         self.nmea_socket = False
-
             i = 0
             if self.socketdata:
                 count, t0 = self.pollt0
@@ -290,7 +289,6 @@ class arduino(object):
             return
 
         self.nmea_connect_time += 8
-
         self.socketdata = b''
         try:
             self.nmea_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
