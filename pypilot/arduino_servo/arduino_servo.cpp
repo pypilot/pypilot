@@ -73,9 +73,8 @@ static uint8_t crc8(uint8_t *pcBlock, uint8_t len) {
     return crc8_with_init(0xFF, pcBlock, len);
 }
 
-
-ArduinoServo::ArduinoServo(int _fd, int _baud)
-    : fd(_fd), baud(_baud)
+ArduinoServo::ArduinoServo(int _fd)
+    : fd(_fd)
 {
     in_sync_count = 0;
     out_sync = 0;
@@ -101,11 +100,11 @@ void ArduinoServo::command(double command)
 }
 
 int ArduinoServo::process_packet(uint8_t *in_buf)
-{    
+{
     if(packet_count < 255)
         packet_count++;
     uint16_t value = in_buf[1] + (in_buf[2]<<8);
-//    printf("buf %x %x %x\n", in_buf[0], in_buf[1], in_buf[2]);
+
     switch(in_buf[0]) {
     case CURRENT_CODE:
         current = value / 100.0;
@@ -188,14 +187,6 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
 int ArduinoServo::poll()
 {
     if (!(flags & SYNC)) {
-#if 0
-        gettimeofday(&tv, 0);
-        double dt = 0;
-        while(dt < .01) { 
-            gettimeofday(&tv2, 0);
-            double dt = tv2.tv_sec - tv.tv_sec + (tv2.tv_usec - tv.tv_usec) / 1e6.
-        }
-#endif
         raw_command(1000); // ensure we set the temp limits as well here
         nosync_count++;
         if(nosync_count >= 400 && !nosync_data) {
@@ -225,7 +216,9 @@ int ArduinoServo::poll()
         if(c<0) {
             if(errno != EAGAIN)
                 return -1;
+            c = 0;
         }
+        
         in_buf_len += c;
         if(in_buf_len < 4)
             return 0;
@@ -234,12 +227,6 @@ int ArduinoServo::poll()
     int ret = 0;
     while(in_buf_len >= 4) {
         uint8_t crc = crc8(in_buf, 3);
-#if 0
-        static int cnt;
-        struct timeval tv;
-        gettimeofday(&tv, 0);
-        printf("input %d %ld:%ld %x %x %x %x %x %d\n", cnt++, tv.tv_sec, tv.tv_usec, in_buf[0], in_buf[1], in_buf[2], in_buf[3], crc, in_buf_len);
-#endif
         if(crc == in_buf[3]) { // valid packet
             if(in_sync_count >= 2)
                 ret |= process_packet(in_buf);
