@@ -418,9 +418,6 @@ def main():
         usage()
 
     plot = pypilotPlot()
-    def on_con(client):
-        plot.on_con(client)
-
     client = pypilotClientFromArgs(sys.argv)
     
     print('connected')

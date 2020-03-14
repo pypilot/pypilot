@@ -385,7 +385,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onIMUScope( self, event ):
         host, port = self.client.host_port
-        args = ['python', os.path.abspath(os.path.dirname(__file__)) + 'scope_wx.py', host + ':' + str(port),
+        args = ['pypilot_scope', host + ':' + str(port),
                 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading']
         subprocess.Popen(args)
 

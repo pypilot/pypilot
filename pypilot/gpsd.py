@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import multiprocessing, time, socket, select
 from nonblockingpipe import NonBlockingPipe
 from values import *
@@ -30,9 +29,10 @@ class gpsProcess(multiprocessing.Process):
                 return
             except socket.error:
                 time.sleep(3)
+                continue
             except Exception as e:
-                print('gpsd error:', e)
-                time.sleep(600)
+                print('failed to load gps module', e)
+            time.sleep(600)
 
     def read(self, pipe):
         lasttime = time.monotonic()

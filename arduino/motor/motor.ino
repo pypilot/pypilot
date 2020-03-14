@@ -4,18 +4,8 @@
  * modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation; either
  * version 3 of the License, or (at your option) any later version.
- */
 
-#include <Arduino.h>
-#include <stdint.h>
-#include <HardwareSerial.h>
 
-#include <avr/wdt.h>
-#include <avr/sleep.h>
-#include <avr/boot.h>
-#include <util/delay.h>
-
-/*
 This program is meant to interface with pwm based
 motor controller either brushless or brushed, or a regular RC servo
 
@@ -113,7 +103,18 @@ PWR+             VIN
                  gnd        gnd
 */
 
+#include <Arduino.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <HardwareSerial.h>
 
+#include <avr/wdt.h>
+#include <avr/sleep.h>
+#include <avr/boot.h>
+#include <avr/eeprom.h>
+#include <avr/pgmspace.h>
+#include <util/delay.h>
+#include "crc.h"
 
 //#define VNH2SP30 // defined if this board is used
 //#define DISABLE_TEMP_SENSE    // if no temp sensors avoid errors
@@ -121,11 +122,13 @@ PWR+             VIN
 //#define DISABLE_RUDDER_SENSE  // if no rudder sense
 
 
-// run at 4mhz instead of 16mhz to save power,
+// run at 4mhz instead of 16mhz to save power
 // and somehow at slower clock atmega328 is able to measure lower current from the shunt
 
-#define DIV_CLOCK 4  // 1 for 16mhz, 2 for 8mhz, 4 for 4mhz
+#define DIV_CLOCK 4  // speed board runs at  1 for 16mhz, 2 for 8mhz, 4 for 4mhz (recommended 4mhz)
+//#define BLINK  // blink status led while detached to avoid quiecent consumption of on led (3mA)
 #define QUIET  // don't use 1khz
+
 
 #if DIV_CLOCK==4
 #define dead_time \
@@ -158,6 +161,7 @@ PWR+             VIN
     asm volatile ("nop"); \
     asm volatile ("nop"); \
     asm volatile ("nop");
+#warning "DIV_CLOCK set to 1, this will only work with 16mhz xtal"
 #else
 #error "invalid DIV_CLOCK"
 #endif
@@ -210,8 +214,7 @@ uint16_t max_voltage = 1600; // 16 volts max by default
 
 #define led_pin 13 // led is on when engaged
 
-#include <stdarg.h>
-void debug(char *fmt, ... ){
+void debug(const char *fmt, ... ){
     char buf[128]; // resulting string limited to 128 chars
     va_list args;
     va_start (args, fmt );
@@ -224,12 +227,10 @@ enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CO
 
 enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f, EEPROM_VALUE_CODE=0x9a};
 
-enum {SYNC=1, OVERTEMP_FAULT=2, OVERCURRENT_FAULT=4, ENGAGED=8, INVALID=16*1, PORT_PIN_FAULT=16*2, STARBOARD_PIN_FAULT=16*4, BADVOLTAGE_FAULT=16*8, MIN_RUDDER_FAULT=256*1, MAX_RUDDER_FAULT=256*2, CURRENT_RANGE=256*4, BAD_FUSES=256*8};
+enum {SYNC=1, OVERTEMP_FAULT=2, OVERCURRENT_FAULT=4, ENGAGED=8, INVALID=16, PORT_PIN_FAULT=32, STARBOARD_PIN_FAULT=64, BADVOLTAGE_FAULT=128, MIN_RUDDER_FAULT=256, MAX_RUDDER_FAULT=512, CURRENT_RANGE=1024, BAD_FUSES=2048, /* PORT_FAULT=4096  STARBOARD_FAULT=8192 */ REBOOTED=32768};
 
-uint16_t flags = 0, faults = 0;
+uint16_t flags = REBOOTED, faults = 0;
 uint8_t serialin, packet_count = 0;
-
-#include <avr/eeprom.h>
 
 // we need these to be atomic for 16 bytes
 
@@ -255,8 +256,6 @@ void eeprom_update_16(int address, uint16_t value)
     for(int i=0; i<3; i++) {
         int addr = i*256 + address;
         eeprom_update_word((uint16_t*)addr, value);
-//        eeprom_update_byte((unsigned char*)addr, value&0xff);
-//        eeprom_update_byte((unsigned char*)addr+1, value>>8);
     }
 }
 
@@ -291,9 +290,6 @@ void eeprom_update_8(int address, uint8_t value)
     }
 }
 
-
-#include "crc.h"
-
 uint16_t max_current = 2000; // 20 Amps
 uint16_t max_controller_temp= 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
@@ -304,29 +300,54 @@ uint8_t eeprom_read_addr = 0;
 uint8_t eeprom_read_end = 0;
 
 uint8_t adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
-
-#include <avr/pgmspace.h>
+volatile uint8_t calculated_clock = 0; // must be volatile to work correctly
+uint16_t clock_time;
 
 void setup()
 {
-#if DIV_CLOCK==4
+    cli(); // disable interrupts
     CLKPR = _BV(CLKPCE);
-    CLKPR = _BV(CLKPS1); // divide by 4
-#elif DIV_CLOCK==2
-    CLKPR = _BV(CLKPCE);
-    CLKPR = _BV(CLKPS0); // divide by 2
-#endif
+    CLKPR = _BV(CLKPS1); // divide clock by 4
+    /* Clear MCU Status Register. */
+    MCUSR = 0;
+
+    // set watchdog interrupt 16 ms to detect the clock speed (support 8mhz or 16mhz crystal)
+    wdt_reset();
+    WDTCSR = (1<<WDCE)|(1<<WDE);
+    WDTCSR = (1<<WDIE);
+    sei();
+
+    uint32_t start = micros();
+    while(!calculated_clock);  // wait for watchdog to fire
+    clock_time = micros() - start;
+    uint8_t div_board = 1; // 1 for 16mhz
+    if(clock_time < 2900) // 1800-2600 is 8mhz, 3800-4600 is 16mhz
+        div_board = 2; // detected 8mhz crystal, otherwise assume 16mhz
+
+    // after timing the clock frequency set the correct divider
+    uint8_t div_clock = DIV_CLOCK/div_board;
+    if(div_clock==4) {
+        cli();
+        CLKPR = _BV(CLKPCE);
+        CLKPR = _BV(CLKPS1); // divide by 4
+        sei();
+    } else if(div_clock == 2) {
+        cli();
+        CLKPR = _BV(CLKPCE);
+        CLKPR = _BV(CLKPS0); // divide by 2
+        sei();
+    } else {
+        cli();
+        CLKPR = _BV(CLKPCE);
+        CLKPR = 0; // divide by 1
+        sei();
+    }
+
     // Disable all interrupts
     cli();
 
-/* Clear MCU Status Register. Not really needed here as we don't need to know why the MCU got reset. page 44 of datasheet */
-    MCUSR = 0;
-
-/* Disable and clear all Watchdog settings. Nice to get a clean slate when dealing with interrupts */
-
+    // set watchdog to interrupt in 1/4th second
     WDTCSR = (1<<WDCE)|(1<<WDE);
-
-    // interrupt in 1/4th second
     WDTCSR = (1<<WDIE) | (1<<WDP2);
 
     // read fuses, and report this as flag if they are wrong
@@ -334,7 +355,7 @@ void setup()
     uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
     uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
     // uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS); // too many clones don't set lock bits and there is no spm
-    if(lowBits != 0xFF ||
+    if((lowBits != 0xFF && lowBits != 0x7F) ||
        (highBits != 0xda && highBits != 0xde) ||
        (extendedBits != 0xFD && extendedBits != 0xFC)
        // || lockBits != 0xCF // too many clones don't set lock bits and there is no spm
@@ -398,12 +419,12 @@ void setup()
     }
     // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
     shunt_resistance = digitalRead(shunt_sense_pin);
-    //shunt_resistance = 0;  // for test board which doesn't have pin grounded
 
     // test current
     low_current = digitalRead(low_current_pin);
+    if(!low_current)
+        max_current = 4000; // default start at 40 amps
 
-#if 1
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
     if(pwm_style == 2 || ratiometric_mode)
@@ -419,7 +440,6 @@ void setup()
     ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
 #endif
     ADCSRA |= _BV(ADSC); // start conversion
-#endif    
 }
 
 uint8_t in_bytes[3];
@@ -575,7 +595,6 @@ void disengage()
     flags &= ~ENGAGED;
     timeout = 120/DIV_CLOCK+1; // detach in about 62ms
     digitalWrite(clutch_pin, LOW); // clutch
-    digitalWrite(led_pin, LOW); // status LED
 }
 
 void detach()
@@ -600,6 +619,20 @@ void detach()
         b_bottom_off;
     }
     TIMSK2 = 0;
+
+#ifdef BLINK
+    static uint32_t led_blink;
+    led_blink++;
+    if(led_blink < 1500)
+        digitalWrite(led_pin, HIGH); // status LED
+    else
+        digitalWrite(led_pin, LOW); // status LED
+    if(led_blink > 20000)
+        led_blink = 0;
+#else
+    digitalWrite(led_pin, LOW); // status LED
+#endif
+    
     timeout = 128/DIV_CLOCK; // avoid overflow
 }
 
@@ -899,6 +932,10 @@ ISR(WDT_vect)
 {
     wdt_reset();
     wdt_disable();
+    if(!calculated_clock) {
+        calculated_clock = 1;
+        return;
+    }
     disengage();
     delay(50);
     detach();
@@ -1110,7 +1147,7 @@ void loop()
               stop(); //disengage();
               in_sync_count = 0;
               packet_count = 0;
-              in_bytes[0] = in_bytes[1];
+              in_bytes[0] = in_bytes[1]; // shift input 1 byte
               in_bytes[1] = in_bytes[2];
               in_bytes[2] = c;
               flags |= INVALID;
@@ -1233,6 +1270,7 @@ void loop()
                 flags |= CURRENT_RANGE;
 
             v = flags;
+            flags &= ~REBOOTED;
             code = FLAGS_CODE;
             break;
         case 1: case 4: case 7: case 11: case 14: case 17: case 21: case 24: case 27: case 31: case 34: case 37: case 40:

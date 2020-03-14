@@ -20,7 +20,7 @@ class pypilotScopeBase ( wx.Frame ):
 	def __init__( self, parent ):
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"pypilot Scope", pos = wx.DefaultPosition, size = wx.Size( 1024,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 
-		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+
 
 		fgSizer3 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer3.AddGrowableCol( 0 )

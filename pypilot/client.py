@@ -27,9 +27,6 @@ except:
     print('select.POLLNVAL not defined, using 32')
     ourPOLLNVAL = 32
     
-class ConnectionLost(Exception):
-    pass
-
 class Watch(object):
     def __init__(self, value, period):
         self.value = value
@@ -53,7 +50,6 @@ class ClientWatch(Value):
                     period = 0
                 value.watch = Watch(value, period)
                 value.pwatch = True
-                
                 self.client.send(name + '=' + value.get_msg() + '\n') # initial send
 
 class ClientValues(Value):
@@ -223,7 +219,6 @@ class pypilotClient(object):
             line = self.connection.readline()
             if not line:
                 return
-            #print('line', line.rstrip())
             try:
                 name, data = line.rstrip().split('=', 1)
                 if name == 'error':
@@ -232,15 +227,16 @@ class pypilotClient(object):
                 value = pyjson.loads(data)
             except ValueError as e:
                 print('value error', line, e)
+                continue
+
             except Exception as e:
-                print('invalid message from server:', line)
-                print('reason', e)
+                print('invalid message from server:', line, e)
                 raise Exception
 
-            if name in self.values.values:
+            if name in self.values.values: # did this client register this value
                 self.values.values[name].set(value)
             else:
-                self.received.append((name, value))
+                self.received.append((name, value)) # remote value
 
     # polls at least as long as timeout
     def disconnect(self):
@@ -329,10 +325,11 @@ def pypilotClientFromArgs(args, period=True):
         host = args[1]
 
     client = pypilotClient(host)
-    if not client.connect(False):
+    if client.connect(False):
+        args.remove(host)
+    else:
         if host:
             client = pypilotClient()
-            watches = args[1:]
             client.connect()
         if not client.connection:
             print('failed to connect')
@@ -340,17 +337,23 @@ def pypilotClientFromArgs(args, period=True):
 
     # set any value specified with path=value
     watches = []
-    for arg in args[2:]:
+    sets = False
+    for arg in args[1:]:
         if '=' in arg:
             name, value = arg.split('=', 1)
-            self.send(arg + '\n')
+            client.send(arg + '\n')
+            sets = True
         else:
             name = arg
         watches.append(name)
 
-    # args without = are watched
+    if sets:
+        client.poll(1)
+        time.sleep(.5) # todo: wait until value set to what we set or fail
+        
     for name in watches:
         client.watch(name, period)
+
     return client
 
 
@@ -402,7 +405,7 @@ def main():
     if not client.watches: # retrieve all values
         watches = client.list_values(10)
         if not watches:
-            print('failed to retrieve value list!!!')
+            print('failed to retrieve value list!')
             exit(1)
         for name in watches:
             client.watch(name, period)
@@ -413,7 +416,7 @@ def main():
         while len(values) < len(client.watches):
             dt = time.monotonic() - t0
             if dt > 10:
-                print('timeout retrieving values', len(values), len(client.watches))
+                print('timeout retrieving', len(client.watches) - len(values), 'values')
                 for name in client.watches:
                     if not name in values:
                         print('missing', name)
@@ -424,7 +427,6 @@ def main():
             for name in msgs:
                 values[name] = msgs[name]
 
-            
         names = sorted(values)
         for name in names:
             if info:

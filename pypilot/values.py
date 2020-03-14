@@ -10,7 +10,6 @@
 import os, time, math
 import pyjson
 
-
 class Value(object):
     def __init__(self, name, initial, **kwargs):
         self.name = name
@@ -27,6 +26,8 @@ class Value(object):
             self.set(value)
 
     def get_msg(self):
+        if isinstance(self.value, str):
+            return '"' + self.value + '"'
         return str(self.value)
 
     def set(self, value):
@@ -170,7 +171,7 @@ class EnumProperty(Property):
         super(EnumProperty, self).__init__(name, initial, **kwargs)
         self.info['type'] = 'EnumProperty'
         self.info['choices'] = self.choices
-
+        
     def set(self, value):
         for choice in self.choices:
             try: # accept floating point equivilent, 10.0 is 10

@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import sys, time, multiprocessing, math, numpy
 import vector, resolv, quaternion
 import boatimu
@@ -588,28 +587,27 @@ class CalibrationProperty(RoundedValue):
 class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
         super(AgeValue, self).__init__(name, time.monotonic(), **kwargs)
-        self.dt = 0
-        self.lastupdate_value = -1
+        self.lastupdate = 0
+        self.readable = 0
         self.lastage = ''
 
     def reset(self):
         self.set(time.monotonic())
 
     def set(self, value):
-        print("ageval set", self.name, value, type(value))
         super(AgeValue, self).set(value)
-        
         
     def update(self):
         t = time.monotonic()
-        if t - self.lastupdate_value > 1:
-          self.lastupdate_value = t
-          self.set(self.value) # update every second
+        if t - self.lastupdate > 1:
+          self.lastupdate = t
+          self.set(t) # update every second
 
     def get_msg(self):
-        dt = time.monotonic() - self.value
-        if abs(dt - self.dt) > 1:
-            self.dt = dt
+        t = time.monotonic()
+        if t - self.lastreadable > 1:
+            self.lastreadable = t
+            dt = t - self.value
             self.lastage = boatimu.readable_timespan(dt)
         return '"'+self.lastage+'"'
 

@@ -6,8 +6,8 @@
 # serial monitor: make serial
 
 SKETCHNAME = motor
-#DEVICE = /dev/ttyUSB1
-DEVICE = /dev/ttyAMA0
+DEVICE = /dev/ttyUSB0
+#DEVICE = /dev/ttyAMA0
 
 MCU = atmega328p
 
@@ -66,6 +66,10 @@ obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 AVRDUDE = avrdude
 BOOTLOADER = arduino
 BAUDRATE = 57600
+
+#BOOTLOADER = stk500v1
+#BAUDRATE = 19200
+
 upload: $(SKETCHNAME).cpp.hex
 	#	./jump_bootloader
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:w:$(SKETCHNAME).cpp.hex -b $(BAUDRATE)

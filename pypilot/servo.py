@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import os, math, sys, time
 import select, serial
 
@@ -93,18 +92,21 @@ class ServoFlags(Value):
     CURRENT_RANGE=256*4
     BAD_FUSES=256*8
 
-    DRIVER_MASK = 4095 # bits used for driver flags
+    REBOOTED=256*16*8
 
-    PORT_FAULT=4096*1 # overcurrent faults
-    STARBOARD_FAULT=4096*2
-    DRIVER_TIMEOUT = 4096*4
-    SATURATED = 4096*8
+    sz = 256*256
+    DRIVER_MASK = sz-1 # bits used for driver flags
+
+    PORT_FAULT=sz*1 # overcurrent faults
+    STARBOARD_FAULT=sz*2
+    DRIVER_TIMEOUT = sz*4
+    SATURATED = sz*8
 
     def __init__(self, name):
         super(ServoFlags, self).__init__(name, 0)
-          
-    def get_msg(self):
-        ret = ''
+
+    def get_str(self):
+        ret = ""
         if self.value & self.SYNC:
             ret += 'SYNC '
         if self.value & self.OVERTEMP_FAULT:
@@ -135,7 +137,12 @@ class ServoFlags(Value):
             ret += 'DRIVER_TIMEOUT '
         if self.value & self.SATURATED:
             ret += 'SATURATED '
+        if self.value & self.REBOOTED:
+            ret += 'REBOOTED'
         return ret
+
+    def get_msg(self):
+        return '"' + self.get_str().strip() + '"'
 
     def setbit(self, bit, t=True):
         if t:
@@ -169,13 +176,25 @@ class ServoTelemetry(object):
 # a property which records the time when it is updated
 class TimedProperty(Property):
     def __init__(self, name):
-        self.time = 0
         super(TimedProperty, self).__init__(name, 0)
+        self.time = 0
 
     def set(self, value):
         self.time = time.monotonic()
         return super(TimedProperty, self).set(value)
 
+class TimeoutSensorValue(SensorValue):
+    def __init__(self, name):
+        super(TimeoutSensorValue, self).__init__(name, False, fmt='%.3f')
+
+    def set(self, value):
+        self.time = time.monotonic()
+        super(TimeoutSensorValue, self).set(value)
+
+    def timeout(self):
+        if self.value and time.monotonic() - self.time > 8:
+            self.set(False)
+    
 class Servo(object):
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
 
@@ -200,8 +219,8 @@ class Servo(object):
         self.voltage = self.register(SensorValue, 'voltage')
         self.current = self.register(SensorValue, 'current')
         self.current.lasttime = time.monotonic()
-        self.controller_temp = self.register(SensorValue, 'controller_temp')
-        self.motor_temp = self.register(SensorValue, 'motor_temp')
+        self.controller_temp = self.register(TimeoutSensorValue, 'controller_temp')
+        self.motor_temp = self.register(TimeoutSensorValue, 'motor_temp')
 
         self.engaged = self.register(BooleanValue, 'engaged', False)
         self.max_current = self.register(RangeSetting, 'max_current', 7, 0, 60, 'amps')
@@ -209,8 +228,8 @@ class Servo(object):
         self.current.offset = self.register(RangeProperty, 'current.offset', 0, -1.2, 1.2, persistent=True)
         self.voltage.factor = self.register(RangeProperty, 'voltage.factor', 1, 0.8, 1.2, persistent=True)
         self.voltage.offset = self.register(RangeProperty, 'voltage.offset', 0, -1.2, 1.2, persistent=True)
-        self.max_controller_temp = self.register(RangeProperty, 'max_controller_temp', 60, 45, 100, persistent=True)
-        self.max_motor_temp = self.register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
+        self.max_controller_temp = self.register(RangeProperty, 'max_controller_temp', 60, 45, 80, persistent=True)
+        self.max_motor_temp = self.register(RangeProperty, 'max_motor_temp', 60, 30, 80, persistent=True)
 
         self.max_slew_speed = self.register(RangeSetting, 'max_slew_speed', 18, 0, 100, '')
         self.max_slew_slow = self.register(RangeSetting, 'max_slew_slow', 28, 0, 100, '')
@@ -543,7 +562,6 @@ class Servo(object):
             print('servo lost')
             self.close_driver()
             return
-        
         t = time.monotonic()
         if result == 0:
             d = t - self.lastpolltime
@@ -658,6 +676,8 @@ class Servo(object):
             self.position.set(self.sensors.rudder.angle.value)
 
         self.send_command()
+        self.controller_temp.timeout()
+        self.motor_temp.timeout()
 
     def fault(self):
         if not self.driver:
@@ -713,7 +733,7 @@ def main():
     while True:
 
         if servo.controller.value != 'none':
-            print('voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', sensors.rudder.angle.value, 'flags', servo.flags.strvalue())
+            print('voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', sensors.rudder.angle.value, 'flags', servo.flags.get_str())
             pass
 
         servo.poll()

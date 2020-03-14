@@ -130,6 +130,7 @@ class Sensors(object):
         from signalk import signalk
 
         self.client = client
+
         # services that can receive sensor data
         self.nmea = Nmea(self)
         self.signalk = signalk(self)

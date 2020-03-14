@@ -450,7 +450,7 @@ class pypilotServer(object):
                 
                 self.sockets.append(socket)
                 fd = socket.fileno()
-                socket.cwatches = {'values': True} # server always watches client values 
+                socket.cwatches = {'values': True} # server always watches client values
 
                 self.fd_to_connection[fd] = socket
                 self.poller.register(fd, select.POLLIN)
@@ -477,8 +477,12 @@ class pypilotServer(object):
                     try:
                         self.HandleRequest(connection, line)
                     except Exception as e:
-                        print('invalid request from connection', line, e)
+                        #print('invalid request from connection', line, e)
                         connection.send('invalid request: ' + line + '\n')
+                        try:
+                            print('invalid request from connection', e, line)
+                        except Exception as e2:
+                            print('invalid request has malformed string', e, e2)
 
         if not self.multiprocessing:
             # these pipes are not pollable
@@ -492,15 +496,15 @@ class pypilotServer(object):
         # send periodic watches
         self.values.send_watches()
 
-        # flush all sockets
-        for socket in self.sockets:
-            socket.flush()
-
         # send watches
         for connection in self.sockets + self.pipes:
             if connection.cwatches:
                 connection.send('watch=' + pyjson.dumps(connection.cwatches) + '\n')
                 connection.cwatches = {}
+
+        # flush all sockets
+        for socket in self.sockets:
+            socket.flush()
 
 if __name__ == '__main__':
     server = pypilotServer()

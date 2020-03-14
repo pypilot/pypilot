@@ -39,7 +39,8 @@ try:
     def send(self, data):
         self.out_buffer += data
         if len(self.out_buffer) > 65536:
-            print('overflow in pypilot socket')
+            print('overflow in pypilot socket', len(self.out_buffer))
+            self.out_buffer = ''
             self.socket.close()
     
     def flush(self):

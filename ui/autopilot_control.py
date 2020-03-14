@@ -46,13 +46,16 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.stStatus.SetLabel('No Connection')
         self.client = pypilotClient(self.host)
 
-        # add continuous value to avoid timeout
-        if not 'ap.heading' in value_list:
-            self.watchlist.append('servo.current')
+        self.value_list = False
         
-        for name in self.watchlist:
-            if name in value_list:
-                self.client.watch(name)
+        watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
+                          'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
+                          'ap.heading', 'ap.pilot',
+                          'gps.source', 'wind.source',
+                          'servo.controller', 'servo.engaged', 'servo.flags',
+                          'rudder.angle']
+        for name in watchlist:
+            self.client.watch(name)
 
     def servo_command(self, command):
         if self.lastcommand != command or command != 0:
@@ -77,12 +80,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.set_mode_color()
         
         self.fgGains.Clear(True)
-        self.watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
-                          'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
-                          'ap.heading', 'ap.pilot',
-                          'gps.source', 'wind.source',
-                          'servo.controller', 'servo.engaged', 'servo.flags',
-                          'rudder.angle']
         self.gains = {}
         pilots = {}
         for name in value_list:
@@ -138,7 +135,13 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.SetSize(wx.Size(570, 420))
         
         
-    def receive_messages(self, event):            
+    def receive_messages(self, event):
+        if not self.value_list:
+            self.value_list = self.client.list_values(10)
+            if self.value_list:
+                self.enumerate_controls(self.value_list)
+            return
+        
         command = self.sCommand.GetValue()
         if command != 0:
             if self.tbAP.GetValue():
@@ -146,10 +149,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.client.set('ap.heading_command', self.heading_command)
                 self.sCommand.SetValue(0)
             else:
-                if command > 0:
-                    command -= 1
-                elif command < 0:
-                    command += 1
+                if True:
+                    if command > 0:
+                        command -= 1
+                    elif command < 0:
+                        command += 1
                 self.servo_command(-command / 100.0)
                 self.sCommand.SetValue(command)
 
@@ -163,19 +167,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                time.monotonic() - gain['last_change'] > 1:
                 gain['slider'].SetValue(gain['sliderval'])
 
-
-        value_list = self.client.list_values()
-        if value_list:
-            self.enumerate_controls(value_list)
                 
         msgs = self.client.receive()
 
         for name in msgs:
-            data = msgs[name]
-            if not 'value' in data:
-                print('no value?!?!', data)
-                continue
-            value = data['value']
+            value = msgs[name]
             self.recv[name] = True
 
             found = False
@@ -355,13 +351,13 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.client.set('servo.position_command', 0)
 
     def onScope( self, event ):
-        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + 'scope_wx.py'] + sys.argv[1:])
+        subprocess.Popen(['pypilot_scope'] + sys.argv[1:])
 	
     def onClient( self, event ):
-        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + 'client_wx.py'] + sys.argv[1:])
+        subprocess.Popen(['pypilot_client_wx'] + sys.argv[1:])
 	
     def onCalibration( self, event ):
-        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/autopilot_calibration.py'] + sys.argv[1:])
+        subprocess.Popen(['pypilot_calibration'] + sys.argv[1:])
 	
     def onClose( self, event ):
         self.Close()
