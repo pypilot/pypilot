@@ -628,21 +628,18 @@ void disengage()
 
 void detach()
 {
+    TIMSK1 = 0;
+    TCCR1A=0;
+    TCCR1B=0;
     if(pwm_style) {
-        TCCR1A=0;
-        TCCR1B=0;
         while(digitalRead(pwm_output_pin)); // wait for end of pwm if pulse is high
-        TIMSK1 = 0;
         if(pwm_style == 2) {
             a_bottom_off;
             b_bottom_off;
             digitalWrite(enable_pin, LOW);
         }
     } else {
-        TCCR1A=0;
-        TCCR1B=0;
         timer1_state = 0;
-        TIMSK1 = 0;
         a_top_off;
         a_bottom_off;
         b_top_off;

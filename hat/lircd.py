@@ -36,6 +36,7 @@ class LoadLIRC(threading.Thread):
                     print('have old lirc for remote control')
                 except Exception as e:
                     print('no lirc available', e)
+                    time.sleep(20)
 
             try:
                 if version == 1:

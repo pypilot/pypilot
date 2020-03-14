@@ -12,7 +12,6 @@
 
 #include <Arduino.h>
 #include <stdint.h>
-//#include <HardwareSerial.h>
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 #include <avr/boot.h>
@@ -178,7 +177,8 @@ void set_buzzer(uint8_t mode, uint8_t timeout)
     TIMSK2 |= _BV(OCIE2B) | _BV(TOIE2);
 }
 
-void setup() {
+void setup()
+{
     // turn led on booting
     digitalWrite(LED_PIN, HIGH);
     pinMode(LED_PIN, OUTPUT);
@@ -197,6 +197,8 @@ void setup() {
     if(backlight_value == 0xff)
         backlight_value = 64;
     backlight_polarity = eeprom_read_byte(&backlight_polarity_ee);
+    if(backlight_polarity == 0xff)
+        backlight_polarity = 0;
     uint8_t baud = eeprom_read_byte(&serial_baud_ee);
 
     Serial_begin(baud);
@@ -230,13 +232,6 @@ void setup() {
 
     digitalWrite(9, LOW); /* enable internal pullups */
     pinMode(9, OUTPUT);
-
-    TCNT1 = 0x1fff;
-    ICR1 = 1000; // 1khz
-    TIMSK1 = 0;
-        //Configure TIMER1 to drive backlight variable pwm
-        TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
-        TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
 
     if(MCUSR & 8) // beep on watchdog reset
         set_buzzer(2, 200);
@@ -302,7 +297,6 @@ void read_data()
         // turn on backlight
         if(backlight_value == d[0] && backlight_polarity == d[1])
             break;
-        adc_cycles=64; // update timer from adc and ambient
         backlight_value = d[0];
         backlight_polarity = d[1];
         eeprom_write_byte(&backlight_value_ee, backlight_value);
@@ -368,15 +362,15 @@ void send_code(uint8_t source, uint32_t value)
         }
         codes[source].repeat_count = 1;
     }
-
+    
     if(cvalue) {
         uint8_t d[PACKET_LEN] = {pvalue[0], pvalue[1], pvalue[2], pvalue[3], codes[source].repeat_count, 0};
         send(source, d);
-        codes[source].lvalue = cvalue;
-
-        codes[source].ltime = millis();
         digitalWrite(LED_PIN, HIGH); // turn on led to indicate remote received
-    }
+    } else
+        digitalWrite(LED_PIN, LOW);
+    codes[source].lvalue = cvalue;
+    codes[source].ltime = millis();
 }
 
 void read_analog() {
@@ -402,6 +396,39 @@ void read_analog() {
     ADMUX = _BV(REFS0) | channels[channel]; // select channel at 5 volts
     ADCSRA |= _BV(ADSC);
 
+
+    uint16_t ambient = adc_avg[1];
+
+    //Configure TIMER1 to drive backlight variable pwm
+    static uint8_t last_backlight = 0;
+    uint8_t backlight = 0;
+    if(ambient < 12000 || backlight_value > 80)
+        backlight = backlight_value;
+
+    if(backlight != last_backlight) {
+        last_backlight = backlight;
+        if(backlight) {
+            int ocr1a = backlight*backlight/11;
+            //int ocr1a = 1000 - ambient/10;
+            if(ocr1a < 0)
+                ocr1a = 0;
+            if(ocr1a > 1000)
+                ocr1a = 1000;
+       
+            if(backlight_polarity)
+                ocr1a = 1000 - ocr1a;
+
+            OCR1A = ocr1a;
+            TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
+            TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
+            ICR1 = 1000; // 1khz
+        } else {
+            TCCR1A=0;
+            TCCR1B=0;
+            TCNT1 = 0;
+        }
+    }
+
     if(++adc_cycles < 64)
         return;
 
@@ -409,26 +436,8 @@ void read_analog() {
         return;
 
     adc_cycles = 0;
-    uint16_t ambient = adc_avg[1];
     uint16_t reference = adc_avg[2];
-
-    if(backlight_value > 0) {
-        //Configure TIMER1 to drive backlight variable pwm
-        TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
-        TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
-        int ocr1a = backlight_value*backlight_value/11;// - ambient/100;
-        if(ocr1a < 0)
-            ocr1a = 0;
-        if(ocr1a > 1000)
-            ocr1a = 1000;
-        if(backlight_polarity)
-            ocr1a = 1000 - ocr1a;
-        OCR1A = ocr1a;
-    } else {
-        TCCR1A=0;
-        TCCR1B=0;
-    }
-
+    
     // calculate input voltage (should be near 3.3)
     // reference/16/1023*Vin = 1.1
     // Vin = 1.1*1023*16*1000 / reference
@@ -466,9 +475,7 @@ void loop() {
         sei();
         RB_PUT(serial_out, x);
     }
-
 #endif
-    
     if(buzzer_timeout) {
         uint32_t t0 = millis();
         if(buzzer_timeout < t0) {
@@ -485,7 +492,6 @@ void loop() {
             }
         }
     }
-
     read_analog();
 
     // send code up message on timeout
@@ -495,12 +501,10 @@ void loop() {
         uint32_t dt = t - codes[source].ltime;
         if(codes[source].lvalue && (dt > timeout[source] && dt < 10000)) {
             send_code(source, 0);
-            codes[source].repeat_count = 0;
-            codes[source].lvalue = 0;
-            digitalWrite(LED_PIN, LOW);
         }
     }
     t = millis();
+
     // read from IR??
     if (ir.getResults()) {
         myDecoder.decode();
@@ -509,8 +513,11 @@ void loop() {
     }
     if (rf.available()) {
         uint32_t value = rf.getReceivedValue();
-        if(value && rf.getReceivedBitlength() == 24)
+        if(value && rf.getReceivedBitlength() == 24) {
+            if(value == 0x7c2933) // this specific code is used by pypilot remote for key up
+                value = 0;            
             send_code(RF, value);
+        }
         rf.resetAvailable();
     }
 
