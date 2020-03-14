@@ -59,7 +59,7 @@ class WebConfig(Namespace):
         names = Markup('[')
         cols = 1
         col = 0
-        acts1 += Markup('<table border=0>')
+        acts[ind] += Markup('<table border=0>')
         i = 0
         actions = config['actions']
         for name in actions:
@@ -72,7 +72,7 @@ class WebConfig(Namespace):
     
             if col == 0:
                 acts[ind] += Markup('<tr>')
-            acts += Markup('<td><button id="action_' + name + '">' +
+            acts[ind] += Markup('<td><button id="action_' + name + '">' +
                            name + '</button></td><td><span id="action' +
                            name + 'keys"></span></td>')
             if col == cols-1:
