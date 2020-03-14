@@ -111,7 +111,7 @@ class Web(Process):
     def create(self):
         def process(pipe, config):
             while True:
-                time.sleep(10) # delay loading web and wait until modules are loaded
+                time.sleep(30) # delay loading web and wait until modules are loaded
                 try:
                     import web
                     web.web_process(pipe, config)
