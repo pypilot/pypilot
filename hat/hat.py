@@ -150,6 +150,8 @@ class Arduino(Process):
         def process(pipe, config):
             import arduino
             print('arduino process on ', os.getpid())
+            if os.system("renice -5 %d" % os.getpid()):
+                print('warning, failed to renice hat arduino process')
             while True:
                 arduino.arduino_process(pipe, config)
                 time.sleep(15)
