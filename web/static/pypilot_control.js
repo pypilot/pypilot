@@ -514,8 +514,13 @@ $(document).ready(function() {
         pypilot_set('servo.amp_hours', 0);
         return false;
     });
-    
-    openTab("Control");
+
+    // openInitialTab
+    var i;
+    var x = document.getElementsByClassName("tab");
+    for (i = 0; i < x.length; i++)
+        x[i].style.display = "none";
+    document.getElementById(currentTab).style.display = "block";
 
     function pypilot_watches(names, watch, period) {
         for(var i=0; i< names.length; i++)
@@ -532,15 +537,6 @@ $(document).ready(function() {
         pypilot_watches(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'servo.engaged'], tab == 'Statistics', 1);
     }
     setup_watches();
-    
-    function openTab(name) {
-        var i;
-        var x = document.getElementsByClassName("tabname");
-        for (i = 0; i < x.length; i++) {
-            x[i].style.display = "none";
-        }
-        document.getElementById(name).style.display = "block";
-    }
 
     function window_resize() {
         var w = $(window).width();
