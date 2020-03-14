@@ -100,6 +100,18 @@ class arduino(object):
                         #self.hatconfig['device'] = False # prevent retry
                         #return
 
+                self.resetpin = self.hatconfig['resetpin']
+
+                try:
+                    GPIO.setmode(GPIO.BCM)
+                    GPIO.setup(self.resetpin, GPIO.OUT)
+                    GPIO.output(self.resetpin, 0)
+                    time.sleep(.01)
+                    GPIO.setup(self.resetpin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                except:
+                    print('failed to set reset pin high')
+                    return
+                    
                 port, slave = int(device[11]), int(device[13])
                 print('arduino on spidev%d.%d' % (port, slave))
                 import spidev
