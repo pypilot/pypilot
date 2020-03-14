@@ -1,4 +1,3 @@
-
 /* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
@@ -797,6 +796,7 @@ public:
         contrast = 30+contrast/4; // in range
         unsigned char cmd[] = {
             0xe2, // Soft Reset
+            0xc2, // Line scan sequence : from top to bottom
             0x2c, // Boost 1
             0x2e, // Boost 2
             0x2f, // Boost 3
@@ -805,7 +805,6 @@ public:
             0x23, // Coarse Contrast, setting range is from 20 to 27
             0x81, // Trim Contrast
             (uint8_t)contrast, // Trim Contrast value range can be set from 0 to 63                               
-            0xc2, // Line scan sequence : from top to bottom
             0xa0, // column scan order : from left to right
             0xa6, // not reverse
             0xa4, // not all on

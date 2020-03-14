@@ -48,7 +48,7 @@ class NonBlockingPipeEnd(object):
     def readline(self):
         return self.recv() # pipe has complete lines if used for text
 
-    def write(self, value, stream=False):
+    def write(self, value, udp=False):
         self.send(value)
     
     def send(self, value, block=False):
@@ -149,7 +149,7 @@ class PipeNonBlockingPipeEnd(object):
     def flush(self):
         pass
 
-    def write(self, data, stream=False):
+    def write(self, data, udp=False):
         if not self.pollout.poll(0):
             if not self.sendfailok:
                 print('failed write', self.name)
@@ -158,22 +158,24 @@ class PipeNonBlockingPipeEnd(object):
         t1 = time.time()
         if t1-t0 > .024:
             print('too long write pipe', t1-t0, self.name, len(data))
-    
+
     def send(self, value, block=False):
-        if not self.pollout.poll(0):
-            if not self.sendfailok:
-                print('failed send', self.name)
-        t0 = time.time()
+        if 0:
+            if not self.pollout.poll(0):
+                if not self.sendfailok:
+                    print('failed poll send', self.name)
+        t0 = time.monotonic()
         try:
             data = pyjson.dumps(value) + '\n'
             os.write(self.w, data.encode())
-            t1 = time.time()
+            t1 = time.monotonic()
             self.flush()
-            t2 = time.time()
+            t2 = time.monotonic()
             if t2-t0 > .024:
                 print('too long send nonblocking pipe', t1-t0, t2-t1, self.name, len(data))
             return True
         except Exception as e:
+            print("failed send ex", t0, time.monotonic(), e)
             if not self.sendfailok:
                 print('failed to encode data pipe!', self.name, e)
             return False
@@ -193,7 +195,7 @@ class NoMPLineBufferedPipeEnd(object):
     def close(self):
         pass
 
-    def write(self, data):
+    def write(self, data, udp=False):
         self.send(data)
     
     def recv(self, timeout=0):

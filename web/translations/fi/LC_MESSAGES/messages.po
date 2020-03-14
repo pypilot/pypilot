@@ -1,0 +1,176 @@
+# Finnish translations for PROJECT.
+# Copyright (C) 2021 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2021-05-09 21:52-0400\n"
+"PO-Revision-Date: 2021-05-08 20:38-0400\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: fi\n"
+"Language-Team: fi <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.6.0\n"
+
+#: templates/calibrationplot.html:4
+msgid "Calibration Plot"
+msgstr "Kalibrointikaavio"
+
+#: templates/calibrationplot.html:21
+msgid ""
+"The raw sensor readings should fall on a sphere when calibrated.  The age"
+" will reset when the calibration updates."
+msgstr ""
+"Anturin raakalukemien tulisi pudota palloon kalibroituna. Ikä nollautuu, "
+"kun kalibrointi päivittyy."
+
+#: templates/calibrationplot.html:28
+msgid "Connection"
+msgstr "Yhteys"
+
+#: templates/index.html:21
+msgid "Control"
+msgstr "Ohjaus"
+
+#: templates/index.html:24
+msgid "Gain"
+msgstr "Saada"
+
+#: templates/index.html:27
+msgid "Calibration"
+msgstr "Kalibrointi"
+
+#: templates/index.html:30
+msgid "Configuration"
+msgstr "Kokoonpano"
+
+#: templates/index.html:33
+msgid "Statistics"
+msgstr "Tilastot"
+
+#: templates/index.html:48
+msgid "Heading"
+msgstr "Otsikko"
+
+#: templates/index.html:50
+msgid "Command"
+msgstr "Komento"
+
+#: templates/index.html:89
+msgid "Magnetic Heading"
+msgstr "Magneettinen otsikko"
+
+#: templates/index.html:90
+msgid "Pitch"
+msgstr "Piki"
+
+#: templates/index.html:91
+msgid "Roll"
+msgstr "Rullaa"
+
+#: templates/index.html:92
+msgid "Press"
+msgstr "Lehdistö"
+
+#: templates/index.html:92
+msgid "here"
+msgstr "tässä"
+
+#: templates/index.html:93
+msgid "when the boat is level to align the inertial sensors."
+msgstr "kun vene on vaakasuorassa kohdistamaan inertiasensorit."
+
+#: templates/index.html:98
+msgid "Magnetic Heading Offset"
+msgstr "Magneettinen suuntasiirtymä"
+
+#: templates/index.html:100
+msgid "Lock Calibration"
+msgstr "Lukitse kalibrointi"
+
+#: templates/index.html:102
+msgid "calibration plot"
+msgstr "kalibrointikaavio"
+
+#: templates/index.html:104
+msgid "Rudder"
+msgstr "Peräsin"
+
+#: templates/index.html:106
+msgid "centered"
+msgstr "keskitetty"
+
+#: templates/index.html:107
+msgid "port range"
+msgstr "porttialue"
+
+#: templates/index.html:108
+msgid "starboard range"
+msgstr "oikealla puolella"
+
+#: templates/index.html:109 templates/index.html:131
+msgid "reset"
+msgstr "nollaa"
+
+#: templates/index.html:112
+msgid "Rudder Range"
+msgstr "Peräsimen alue"
+
+#: templates/index.html:113
+msgid "Degrees"
+msgstr "Tutkinnot"
+
+#: templates/index.html:119
+msgid "Display"
+msgstr "Näyttö"
+
+#: templates/index.html:120
+msgid "Clear"
+msgstr "Asia selvä"
+
+#: templates/index.html:121
+msgid "Dark"
+msgstr "Tumma"
+
+#: templates/index.html:129
+msgid "Amp Hours"
+msgstr "Vahvistintunnit"
+
+#: templates/index.html:132
+msgid "Voltage"
+msgstr "Jännite"
+
+#: templates/index.html:133
+msgid "Controller temperature"
+msgstr "Säätimen lämpötila"
+
+#: templates/index.html:134
+msgid "Runtime"
+msgstr "Ajonaika"
+
+#: templates/index.html:135
+msgid "Servo"
+msgstr "Servo"
+
+#: templates/wifi.html:7
+msgid "Wireless Configuration"
+msgstr "Langattoman verkon asetukset"
+
+#: templates/wifi.html:15
+msgid "Key (leave blank for no encryption)"
+msgstr "Avain (jätä tyhjäksi ilman salausta)"
+
+#: templates/wifi.html:17
+msgid "Client Mode Address (leave blank for dhcp)"
+msgstr "Asiakastilan osoite (jätä tyhjäksi dhcp: lle)"
+
+#: templates/wifi.html:22
+msgid "If there is a problem, edit the file"
+msgstr "Jos on ongelmia, muokkaa tiedostoa"
+

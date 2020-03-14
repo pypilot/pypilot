@@ -192,4 +192,10 @@ def web_process(pipe, config):
     socketio.run(app, debug=False, host='0.0.0.0', port=web_port)
     
 if __name__ == '__main__':
-    web_process(None, [])
+    config = {'remote': False, 'host': '127.0.0.1', 'actions': {},
+              'pi.ir': True, 'arduino.ir': False,
+              'arduino.nmea.in': False, 'arduino.nmea.out': False,
+              'arduino.nmea.baud': 4800,
+              'lcd': {},
+              'actions': default_actions.copy()}
+    web_process(None, config)

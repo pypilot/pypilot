@@ -413,6 +413,12 @@ $(document).ready(function() {
     $('#star2').click(function(event) { move(2); });
     $('#star10').click(function(event) { move(10); });
 
+    $('#tack_button').click(function(event) {
+        direction = $('#tacking_mode').val();
+        pypilot_set('ap.tack.direction', direction);
+        pypilot_set('ap.tack.state', 'begin');
+        });
+
     // Gain
 
     // Calibration
@@ -422,7 +428,7 @@ $(document).ready(function() {
     });
 
     $('#imu_heading_offset').change(function(event) {
-        pypilot_set('imu.heading_offset', $('#imu_heading_offset').value());
+        pypilot_set('imu.heading_offset', $('#imu_heading_offset').val());
     });
 
     $('#rudder_centered').click(function(event) {
@@ -442,7 +448,7 @@ $(document).ready(function() {
     });
     
     $('#rudder_range').change(function(event) {
-        pypilot_set('rudder.range', $('#rudder_range').value());
+        pypilot_set('rudder.range', $('#rudder_range').val());
     });
 
     // Configuration

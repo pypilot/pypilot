@@ -9,10 +9,15 @@
 
 
 import wifi_esp32
+import sys
 import socket, time, json
 import errno
 
 DEFAULT_PORT = 23322
+
+def gettime():
+    return time.ticks_us()/1e6
+
 
 class pypilotClient(object):
     def __init__(self, host=False):
@@ -22,9 +27,10 @@ class pypilotClient(object):
         self.watches = {}
         self.wwatches = {}
         self.values = {}
-        self.lastlinetime = time.time()
+        self.lastlinetime = gettime()
         self.addr = False
         self.need_values = False
+        self.valuesbuffer = ''
 
         self.udp_port = 8317
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -44,7 +50,7 @@ class pypilotClient(object):
         if self.connection or not self.host:
             return False
 
-        print('connect to host', self.host)
+        sys.stdout.write('connect to host: ' + self.host + ' ... ')
         if not self.addr or self.addr[1] != self.host:
             addr_info = socket.getaddrinfo(self.host, DEFAULT_PORT)
             self.addr = addr_info[0][-1], self.host
@@ -61,7 +67,6 @@ class pypilotClient(object):
             self.wwatches[name] = value # resend watches
         #self.values = {}
         connection.settimeout(1)
-        print('connecting...')
         
         try:
             connection.connect(self.addr[0])
@@ -81,11 +86,12 @@ class pypilotClient(object):
         return True
 
     def reset_timeout(self):
-        self.lastlinetime = time.time()+1.5
+        self.lastlinetime = gettime()+1.5
 
 
     def decode_line(self, line, msgs):
-        self.lastlinetime = time.time()
+        #print('decode line...', line)
+        self.lastlinetime = gettime()
         try:
             name, data = line.split('=', 1)
             if name == 'error':
@@ -106,6 +112,7 @@ class pypilotClient(object):
                     
                     
     def receive(self):
+        t0 = gettime()
         if not self.connection:
             if self.connection_in_progress:
                 self.connection = self.connection_in_progress
@@ -116,7 +123,7 @@ class pypilotClient(object):
                 self.requested_values = False
             else:
                 self.connect()
-                time.sleep(.25)
+                time.sleep(.05)
                 return {}
 
         if not self.values and self.need_values:
@@ -149,8 +156,7 @@ class pypilotClient(object):
                 self.decode_line(line, msgs)
             some_lines = not not lines
 
-
-        t0 = time.time()
+        t1 = gettime()
         while self.connection:
             line = False
             try:
@@ -217,7 +223,7 @@ class pypilotClient(object):
                 else:
                     break
 
-            if time.time() - t0 > 1: # .5 second maximum
+            if gettime() - t0 > .5: # .5 second maximum
                 break
                 
             if self.valuesbuffer:
@@ -231,18 +237,21 @@ class pypilotClient(object):
                     some_lines = True
             else:
                 print('overflow messages!', len(line), line)
+        t2 = gettime()
+
+        #print('timez', t2-t1, t1-t0)
 
         if not some_lines:
-            t = time.time()
+            t = gettime()
             dt = t - self.lastlinetime            
-            if dt > 1.0:
-                print('dt', dt, t)
+            #if dt > 1.0:
+            #    print('upy_client: dt', dt, t)
             if dt > 2.5:
-                print('timeout on socket', dt, 'reset wifi')
+                print('upy_client: timeout on socket', dt, 'reset wifi')
                 from wifi_esp32 import connect
                 connect()
                 self.disconnect()
-
+                
         return msgs
 
     def list_values(self):

@@ -10,7 +10,7 @@
 import time, os, sys, signal, select
 from pypilot import pyjson
 from pypilot.client import pypilotClient
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lcd, gpio, lircd
 
 class Action(object):
@@ -115,7 +115,10 @@ class Web(Process):
                     print('warning, failed to make hat web process idle, trying renice')
                 if os.system("renice 20 %d" % os.getpid()):
                     print('warning, failed to renice hat web process')
-                time.sleep(30) # delay loading web and wait until modules are loaded
+                if os.getenv('USER') == 'tc':
+                    time.sleep(30) # delay loading web and wait until modules are loaded
+                else:
+                    time.sleep(3) # delay less on other platforms
                 try:
                     import web
                     web.web_process(pipe, config)
@@ -184,7 +187,7 @@ class Hat(object):
         self.config = {'remote': False, 'host': '127.0.0.1', 'actions': {},
                        'pi.ir': True, 'arduino.ir': False,
                        'arduino.nmea.in': False, 'arduino.nmea.out': False,
-                       'arduino.nmea.baud': 38400,
+                       'arduino.nmea.baud': 4800,
                        'lcd': {}}
         self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf' 
         print('loading config file:', self.configfilename)
@@ -211,10 +214,11 @@ class Hat(object):
             print('failed to load', configfile, ':', e)
             
         if not 'hat' in self.config:
-            print('assuming original 26 pin tinypilot with nokia5110 display')
-            self.config['hat'] = {'lcd':{'driver':'nokia5110',
-                                         'port':'/dev/spidev0.0'},
-                                  'lirc':'gpio4'}
+            if os.path.exists('/dev/spidev0.0'):
+                print('assuming original 26 pin tinypilot with nokia5110 display')
+                self.config['hat'] = {'lcd':{'driver':'nokia5110',
+                                            'port':'/dev/spidev0.0'},
+                                    'lirc':'gpio4'}
             self.write_config()
 
         self.servo_timeout = time.monotonic() + 1
@@ -223,10 +227,16 @@ class Hat(object):
         self.last_msg['ap.enabled'] = False
         self.last_msg['ap.heading_command'] = 0
 
+        if len(sys.argv) > 1:
+            self.config['host'] = sys.argv[1]
+            self.config['remote'] = self.config['host'] != 'localhost'
+            self.write_config()
+
         if self.config['remote']:
             host = self.config['host']
         else:
             host = 'localhost'
+
         self.client = pypilotClient(host)
         self.client.registered = False
         self.watchlist = ['ap.enabled', 'ap.heading_command']
@@ -271,8 +281,8 @@ class Hat(object):
                          ActionNone()]
 
         for action in self.actions:
-            if action.name in self.config['actions']:
-                action.keys = self.config['actions'][action.name]
+            if not action.name in self.config['actions']:
+                self.config['actions'][action.name] = []
 
         self.web = Web(self)
 
@@ -297,11 +307,13 @@ class Hat(object):
                     os.kill(pid, signal.SIGTERM) # get backtrace
                 except ProcessLookupError:
                     pass # ok, process is already terminated
+                #os.waitpid(pid, 0)
                 sys.stdout.flush()
             for process in processes:
                 process.process = False
             if signal_number != 'atexit':
                 raise KeyboardInterrupt # to get backtrace on all processes
+
             sys.stdout.flush()
 
         for s in range(1, 16):

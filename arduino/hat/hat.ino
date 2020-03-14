@@ -225,7 +225,7 @@ void setup()
     pinMode(DIR_PIN, INPUT);
 
     rf.enableReceive(0);  // Receiver on interrupt 0 => that is pin #2
-    ir.enableIRIn();    
+    ir.enableIRIn();
 
     for(int i=0; i<6; i++)
         pinMode(A0+i, INPUT_PULLUP);
@@ -509,7 +509,8 @@ void loop() {
     // read from IR??
     if (ir.getResults()) {
         myDecoder.decode();
-        send_code(IR, (myDecoder.value<<8) | myDecoder.protocolNum);
+        if(myDecoder.protocolNum || myDecoder.bits >= 12)
+            send_code(IR, (myDecoder.value<<8) | myDecoder.protocolNum);
         ir.enableIRIn();      //Restart receiver
     }
     if (rf.available()) {

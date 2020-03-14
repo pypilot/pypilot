@@ -9,9 +9,17 @@
 
 import network    
 station = network.WLAN(network.STA_IF)  # client, not AP
+station.wifi_ps(network.WIFI_PS_MAX_MODEM)  # not sure this saves any power!!
+
+from page import gettime
+import time
+connected = False, gettime()
+enabled = True
 
 address = ''
 def connect():
+    print('wifi timeout, reconnecting wifi', gettime() - connected[1])
+
     import config_esp32
     global address
 
@@ -29,21 +37,30 @@ def connect():
     else:
         station.connect(essid)
 
-import time
-connected = False, time.time()
 connect()
+
+def enable():
+    global enabled
+    if not connected[0]:
+        connect()
+    enabled = True
+
+def disable():
+    global enabled
+    station.active(False)
+    enabled = False
+    
 
 def poll(client):
     global connected
     isconnected = station.isconnected()
     if connected[0] == isconnected: # no change
-        if not isconnected and time.time() - connected[1] > 8:
-            print('wifi timeout, reconnecting wifi', time.time() - connected[1])
+        if enabled and not isconnected and gettime() - connected[1] > 8:
+            connected = isconnected, gettime()
             connect()
-        connected = isconnected, time.time()
         return isconnected
-    connected = isconnected, time.time()
-    if connected:
+    connected = isconnected, gettime()
+    if isconnected:
         if address:
             host = address
         else:

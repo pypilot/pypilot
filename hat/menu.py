@@ -12,12 +12,18 @@ import time, os
 from page import *
 from page import _
 
+try:
+    import micropython
+except:
+    micropython = False
+
 class menu(page):
     def __init__(self, name, items):
         super(menu, self).__init__(name)
         self.selection = 0
         self.items = items
         self.prev = False
+        self.last_selection = -1        
 
     def find_parents(self):
         for p in self.items:
@@ -127,7 +133,7 @@ class RangeEdit(page):
             self.box(rectangle(0, .6, 1, .4), black)
 
         # update name
-        if time.time()-self.lastmovetime > 1:
+        if gettime()-self.lastmovetime > 1:
             if self.pypilot_path:
                 self.value = self.last_val(self.pypilot_path)
 
@@ -169,7 +175,7 @@ class RangeEdit(page):
                 delta = max(1, delta)
             else:
                 delta = min(-1, delta)
-            v = self.value + delta*self.step
+            v = int(self.value) + delta*self.step
             v = round(v)
             
         v = min(v, self.range[1])
@@ -179,7 +185,7 @@ class RangeEdit(page):
             self.lcd.client.set(self.pypilot_path, v)
         else:
             self.lcd.config[self.id] = v
-        self.lastmovetime = time.time()
+        self.lastmovetime = gettime()
 
     def process(self):
         if self.testkeydown(MENU):
@@ -187,9 +193,34 @@ class RangeEdit(page):
                 self.lcd.write_config()
             return self.prev
 
-        speed = self.speed_of_keys()
+        keypad = self.lcd.keypad
+        def spd(k):
+            dt = keypad[k].dt()*2
+            if dt or self.testkeydown(k):
+                return dt + 1
+            return 0
+        
+        ss = spd(SMALL_STARBOARD)
+        sp = spd(SMALL_PORT)
+        bp = spd(BIG_PORT)
+        bs = spd(BIG_STARBOARD)
+
+
+        speed = 0;
+        sign = 0;
+        if sp or ss:
+            speed = max(sp, ss)
+        if bp or bs:
+            speed = max(bp, bs)*3
+
+        if ss or bs:
+            sign = 1
+        elif sp or bp:
+            sign = -1
+
+        speed = sign * speed
         if speed:
-            self.move(-.5*speed)
+            self.move(speed)
         else:
             return super(RangeEdit, self).process()
 
@@ -229,7 +260,7 @@ class ValueEnumSelect(page):
 
     def process(self):
         self.set(self.pypilot_path, self.name)
-        return self.lcd.menu.prev
+        return control(self.lcd)
 
 class ValueEnum(menu):
     def __init__(self, name, pypilot_path, hide_choices=[]):
@@ -358,7 +389,8 @@ class motor(menu):
                                     [ValueEdit(_('min speed'), _('relative'), 'servo.speed.min'),
                                      ValueEdit(_('max speed'), _('relative'), 'servo.speed.max'),
                                      ValueEdit(_('max current'), _('amps'), 'servo.max_current'),
-                                     ValueEdit(_('period'), _('seconds'), 'servo.period')])
+                                     ValueEdit(_('period'), _('seconds'), 'servo.period'),
+                                     ValueEdit(_('clutch pwm'), _('percent'), 'servo.clutch_pwm')])
 
 networking = '/home/tc/.pypilot/networking.txt'
 default_network = {'mode': 'Master', 'ssid': 'pypilot', 'key':'', 'client_ssid': 'openplotter', 'client_key': '12345678'}
@@ -471,11 +503,13 @@ class flip(page):
 
 class display(menu):
     def __init__(self):
+        if micropython:
+            bl = ConfigEdit(_('hue'), '', 'hue', 0, 255, 1)
+        else:
+            bl = ConfigEdit(_('backlight'), '', 'backlight', 0, 40, 1)
         super(display, self).__init__(_('display'),
                                       [ConfigEdit(_('contrast'), '', 'contrast', 0, 120, 1),
-                                       invert(_('invert')),
-                                       ConfigEdit(_('backlight'), '', 'backlight', 0, 40, 1),
-                                       flip(_('flip'))])                                   
+                                       invert(_('invert')), flip(_('flip')), bl])
 class select_language(page):
     def __init__(self, lang):
         super(select_language, self).__init__(lang[0])
@@ -492,7 +526,7 @@ class language(menu):
                  ('deutsch', 'de'),
                  ('Eλληνικά', 'el'),
                  ('english', 'en'),
-                ('español', 'es'),
+                 ('español', 'es'),
                  ('suomalainen', 'fi'),
                  ('français', 'fr'),
                  ('italiano', 'it'),
@@ -518,10 +552,14 @@ class language(menu):
         
 class settings(menu):
     def __init__(self):
+        if no_translation == translate:
+            lang = []
+        else:
+            lang = [language()]
         super(settings, self).__init__(_('settings'),
                             [ValueEnum(_('mode'), 'ap.mode'),
                              ValueEnum(_('pilot'), 'ap.pilot'),
-                             motor(), control_menu(), display(), language()])
+                             motor(), control_menu(), display()] + lang)
         
 class mainmenu(menu):
     def __init__(self, lcd):
@@ -535,12 +573,12 @@ class mainmenu(menu):
         if not values:
             if not self.loadtime:
                 if self.lcd.client.connection:
-                    self.loadtime = time.time()
+                    self.loadtime = gettime()
                     self.lcd.client.list_values()
                 else:
                     self.loadtime = 0
             else:
-                dt = time.time() - self.loadtime
+                dt = gettime() - self.loadtime
                 self.lcd.surface.fill(black)
                 if dt > .2:
                     self.fittext(rectangle(0, 0, 1, .4), _('Loading'))
@@ -550,10 +588,10 @@ class mainmenu(menu):
             self.loadtime = 0
 
         if self.loadtime:
-            dt = time.time() - self.loadtime
-            if dt > 5:
+            dt = gettime() - self.loadtime
+            if dt > 11:
                 self.fittext(rectangle(0, .4, 1, .2), _('timeout'))
-            elif dt > 6:
+            elif dt > 10:
                 self.loadtime = 0
             elif dt > .6:
                 self.fittext(rectangle(0, .4, 1, .2), '.'*int(dt*2+.5))

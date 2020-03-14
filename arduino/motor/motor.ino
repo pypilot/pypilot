@@ -199,9 +199,11 @@ uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 
 #define b_bottom_off PORTD &= ~_BV(PD3)
 
 #define clutch_pin 11 // use pin 11 to engage clutch
+#define clutch_sense_pwm_pin A5
 
-#define clutch_on PORTB |= _BV(PB3)
-#define clutch_off PORTB &= ~_BV(PB3)
+//#define clutch_on PORTB |= _BV(PB3)
+//#define clutch_off PORTB &= ~_BV(PB3)
+uint8_t clutch_pwm = 255, clutch_start_time;
 
 #define USE_ADC_ISR 0 // set to 1 to use interrupt (recommend 0)
 
@@ -221,7 +223,7 @@ void debug(const char *fmt, ... ){
     Serial.print(buf);
 }
 
-enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, RUDDER_MIN_CODE=0x2b, RUDDER_MAX_CODE=0x4d, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53};
+enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, RUDDER_MIN_CODE=0x2b, RUDDER_MAX_CODE=0x4d, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53, CLUTCH_PWM_CODE=0x36};
 
 enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f, EEPROM_VALUE_CODE=0x9a};
 
@@ -299,7 +301,6 @@ uint8_t eeprom_read_end = 0;
 
 uint8_t adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
 volatile uint8_t calculated_clock = 0; // must be volatile to work correctly
-uint16_t clock_time;
 uint8_t timeout;
 uint16_t serial_data_timeout;
 
@@ -322,7 +323,7 @@ void setup()
 
     uint32_t start = micros();
     while(!calculated_clock);  // wait for watchdog to fire
-    clock_time = micros() - start;
+    uint16_t clock_time = micros() - start;
     uint8_t div_board = 1; // 1 for 16mhz
     if(clock_time < 2900) // 1800-2600 is 8mhz, 3800-4600 is 16mhz
         div_board = 2; // detected 8mhz crystal, otherwise assume 16mhz
@@ -376,6 +377,7 @@ void setup()
     pinMode(pwm_style_pin, INPUT_PULLUP);
     pinMode(clutch_pin, INPUT_PULLUP);
     pinMode(voltage_sense_pin, INPUT_PULLUP);
+    pinMode(clutch_sense_pwm_pin, INPUT_PULLUP);
 
     serialin = 0;
     // set up Serial library
@@ -387,6 +389,7 @@ void setup()
     if(!voltage_sense)
         pinMode(voltage_sense_pin, INPUT); // if attached, turn off pullup
     pinMode(A0, INPUT);
+
 
     digitalWrite(clutch_pin, LOW);
     pinMode(clutch_pin, OUTPUT); // clutch
@@ -452,10 +455,12 @@ void setup()
         max_current = 4000; // default start at 40 amps
 
     // setup adc
-    DIDR0 = 0x3f; // disable all digital io on analog pins
-    if(pwm_style == 2 || ratiometric_mode)
+    DIDR0 = 0x1f; // disable digital io on analog pins
+    if(ratiometric_mode) {
         adcref = _BV(REFS0); // 5v
-    else
+        voltage_mode = 1; // 24v mode
+        max_voltage = 3200; // increase max voltage to 32v
+    } else
         adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
     ADMUX = adcref | _BV(MUX0);
 #if USE_ADC_ISR
@@ -475,9 +480,10 @@ void setup()
     } else
 #endif        
     {
-        // use timer2 as timeout
-        TCNT2 = 0;
-        TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20); // divide 1024
+        // use timer0 as timeout
+        TCNT0 = 0;
+        TCCR0A = 0;
+        TCCR0B = _BV(CS02) | _BV(CS00); // divide 1024
     }
     serial_data_timeout = 250;
 }
@@ -500,7 +506,7 @@ void position(uint16_t value)
         OCR1A = 1500/DIV_CLOCK + value * 3 / 2 / DIV_CLOCK;
     //OCR1A = 1350/DIV_CLOCK + value * 27 / 20 / DIV_CLOCK;
     else if(pwm_style == 2) {
-        OCR1A = abs((int)value - 1000) * DIV_CLOCK;
+        OCR1A = abs((int)value - 1000) * 16 / DIV_CLOCK;
         if(value > 1040) {
             a_bottom_off;
             b_bottom_on;
@@ -634,6 +640,9 @@ void disengage()
         flags &= ~ENGAGED;
         timeout = 30; // detach in about 62ms
     }
+    TCCR2A = 0;
+    TCCR2B = 0;
+    clutch_start_time = 0;
     digitalWrite(clutch_pin, LOW); // clutch
 }
 
@@ -708,7 +717,7 @@ void engage()
 
         pinMode(hbridge_a_bottom_pin, OUTPUT);
         pinMode(hbridge_b_bottom_pin, OUTPUT);
-        pinMode(enable_pin, INPUT);
+        pinMode(enable_pin, OUTPUT);
 
         digitalWrite(enable_pin, HIGH);
     } else {
@@ -733,8 +742,14 @@ void engage()
 
     position(1000);
     digitalWrite(clutch_pin, HIGH); // clutch
-    digitalWrite(led_pin, HIGH); // status LED
+    clutch_start_time = 20;
+    TCCR2A = 0;
 
+    if(!digitalRead(clutch_sense_pwm_pin) && ratiometric_mode)
+        TCCR2B = _BV(CS20); // divide 1 and pwm ~16khz;
+    else
+        TCCR2B = _BV(CS21); // divide 8 and 2khz or fast pwm 4khz if not ratiometric
+    digitalWrite(led_pin, HIGH); // status LED
     flags |= ENGAGED;
 }
 
@@ -897,16 +912,16 @@ uint16_t TakeVolts(uint8_t p)
     // voltage in 10mV increments 1.1ref, 560 and 10k resistors
     uint32_t v = TakeADC(VOLTAGE, p);
 
-    if(voltage_mode)
-        // 14135 / 3584 = 100.0/1024*10280/280*1.1
-        v = v * 14135 / 3584 / 16;
-    else if(ratiometric_mode) {
+    if(ratiometric_mode)
         // 100.0/1024*115000/15000*5.0
         v = v * 1439 / 384 / 16;
-    } else
+    else if(voltage_mode)
+        // 14135 / 3584 = 100.0/1024*10280/280*1.1
+        v = v * 14135 / 3584 / 16;
+    else
         // 1815 / 896 = 100.0/1024*10560/560*1.1
         //    v = v * 1815 / 896 / 16;
-    v = v * 1790 / 896 / 16; // hack closer to actual voltage
+        v = v * 1790 / 896 / 16; // hack closer to actual voltage
 
     return v;
 }
@@ -977,6 +992,8 @@ ISR(WDT_vect)
     disengage();
     _delay_ms(50);
     detach();
+
+    TCCR0B = 0;
 
     asm volatile ("ijmp" ::"z" (0x0000)); // soft reset
 }
@@ -1094,8 +1111,8 @@ void process_packet()
         }
         break;
     case MAX_CURRENT_CODE: { // current in units of 10mA
-        unsigned int max_max_current = low_current ? 2000 : 4000;
-        if(value > max_max_current) // maximum is 20 or 40 amps
+        unsigned int max_max_current = low_current ? 2000 : 5000;
+        if(value > max_max_current) // maximum is 20 or 50 amps
             value = max_max_current;
         max_current = value;
     } break;
@@ -1143,7 +1160,16 @@ void process_packet()
     break;
     case EEPROM_WRITE_CODE:
         eeprom_update_8(in_bytes[1], in_bytes[2]);
-    break;
+
+    case CLUTCH_PWM_CODE:
+    {
+        uint8_t pwm = in_bytes[1];
+        if(pwm < 30)
+            pwm = 30;
+        else if(pwm > 250)
+            pwm = 255;
+        clutch_pwm = in_bytes[1];
+    } break;
     }
 }
 
@@ -1163,7 +1189,7 @@ ISR(PCINT2_vect) {
 
 void loop()
 {
-    TIMSK0 &= ~_BV(TOIE0); // disable timer0 interrupt: millis is not used!
+    TIMSK0 = 0; // disable timer0 interrupt: millis is not used!
     wdt_reset(); // strobe watchdog
     service_adc();
  
@@ -1175,13 +1201,22 @@ void loop()
         ticks = TCNT4;
     else
 #endif        
-        ticks = TCNT2;
+        ticks = TCNT0;
     if(ticks > 78) {
         static uint8_t timeout_d;
         // divide timeout for faster clocks, timeout counts at 50hz
         if(++timeout_d >= 4/DIV_CLOCK) {
             if(flags & ENGAGED)
                 update_command(); // update speed changes to slew speed
+
+            if(clutch_start_time)
+                if(--clutch_start_time == 0 && clutch_pwm < 250) {
+                    OCR2A = clutch_pwm;
+                    TCCR2A = _BV(WGM20) | _BV(COM2A1); // phase correct pwm
+                    //if(!digitalRead(clutch_sense_pwm_pin) && !ratiometric_mode)
+                    //TCCR2A |= _BV(WGM21); // fast pwm
+                }
+            
             timeout_d = 0;
             timeout++;
             serial_data_timeout++;
@@ -1191,7 +1226,7 @@ void loop()
             TCNT4 -= 78;
         else
 #endif
-            TCNT2 -= 78;
+            TCNT0 -= 78;
     }
 
     if(timeout == 30)
@@ -1202,7 +1237,7 @@ void loop()
 
 #if 1
     if(serial_data_timeout > 250 && timeout>32) { // no serial data for 10 seconds, enter power down
-        TCNT2 = 0;
+        TCNT0 = 0;
         
         // make watchdog 8 seconds
         cli();
@@ -1326,6 +1361,7 @@ void loop()
         // 110C indicates software fault
         if(controller_temp > 11000) {
             stop();
+            TCCR0B = 0;
             asm volatile ("ijmp" ::"z" (0x0000)); // attempt soft reset
         }
     }

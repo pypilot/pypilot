@@ -209,7 +209,7 @@ class signalk(object):
             from websocket import create_connection
         except Exception as e:
             print('signalk cannot create connection:', e)
-            print('try pip3 install websocket-client or apt install python3-websocket')
+            print('try pip3 install websocket-client or apt install python3-websockets')
             self.signalk_host_port = False
             return
 
@@ -305,7 +305,11 @@ class signalk(object):
                 debug('signalk received', msg)
             except:
                 break
-            self.receive_signalk(msg)
+
+            try:
+                self.receive_signalk(msg)
+            except Exception as e:
+                print('signalk failed to parse', msg, e)
 
         t5 = time.monotonic()
         # convert received signalk values into sensor inputs if possible
@@ -333,7 +337,7 @@ class signalk(object):
                         if signalk_path in values:
                             del values[signalk_path]
                     # all needed sensor data is found 
-                    data['device'] = source
+                    data['device'] = source + 'signalk'
                     if self.sensors_pipe:
                         self.sensors_pipe.send([sensor, data])
                     else:
@@ -411,7 +415,15 @@ class signalk(object):
                     timestamp = update['timestamp']
                 if not source in self.signalk_values:
                     self.signalk_values[source] = {}
-                for value in update['values']:
+                if 'values' in update:
+                    values = update['values']
+                elif 'meta' in update:
+                    values = update['meta']
+                else:
+                    debug('signalk message update contains no values or meta', update)
+                    continue
+
+                for value in values:
                     path = value['path']
                     if path in self.signalk_last_msg_time:
                         if self.signalk_last_msg_time[path] == timestamp:

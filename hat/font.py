@@ -12,6 +12,9 @@ try:
     import ugfx
     #fontpath = '/_#!#_spiffs/ugfxfonts/'
     fontpath = ''
+    #character = ugfx.surface(64, 84, 1)
+    character = ugfx.surface(76, 149, 1)
+
 except:
     micropython = False
     import os
@@ -40,7 +43,6 @@ def draw(surface, pos, text, size, bw, crop=False):
     width = 0
     lineheight = 0
     height = 0
-    removes = {}
     for c in text:
         if c == '\n':
             x = origx
@@ -52,6 +54,7 @@ def draw(surface, pos, text, size, bw, crop=False):
         if c in font:
             src = font[c]
         else:
+            src = None
             while size>1:
                 filename = fontpath + '%03d%03d' % (size, ord(c))
                 if bw:
@@ -59,7 +62,12 @@ def draw(surface, pos, text, size, bw, crop=False):
                 if crop:
                     filename += 'c';
 
-                src = ugfx.surface(filename.encode('utf-8'), surface.bypp)
+                if micropython:
+                    #print('try load', filename)
+                    character.load(filename.encode('utf-8'), surface.bypp)
+                    src = character
+                else:
+                    src = ugfx.surface(filename.encode('utf-8'), surface.bypp)
             
                 if src.bypp == surface.bypp:
                     break # loaded
@@ -78,7 +86,7 @@ def draw(surface, pos, text, size, bw, crop=False):
                 size -= 1 # try smaller size
 
         if not src or src.bypp != surface.bypp:
-            print('dont have', ord(c), size)
+            print('font dont have character', ord(c), size)
             continue
                 
         if pos:
@@ -88,14 +96,8 @@ def draw(surface, pos, text, size, bw, crop=False):
         width = max(width, x-origx)
         lineheight = max(lineheight, src.height)
         
-        if micropython and pos:
-            removes[c] = True
-        font[c] = src
-
-    for c in removes:
-        font[c].free()
-        del font[c]
-        time.sleep(.01)
+        if not micropython:
+            font[c] = src
 
     return width, height+lineheight
 

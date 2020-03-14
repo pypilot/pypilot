@@ -76,23 +76,34 @@ class IMU(object):
 
         s.KalmanRk, s.KalmanQ = .002, .001
         self.s = s
-        while not self.init():
-            time.sleep(1)
+        self.imu_detect_time = 0
+        self.rtimu = True
+        self.init()
         self.lastdata = False
         self.rate = 10
 
     def init(self):
+        t0 = time.monotonic()
         self.s.IMUType = 0 # always autodetect imu
+        # avoid detecting so often filling log file
+        if t0 - self.imu_detect_time < 1:
+            return
+        self.imu_detect_time = t0
+
         rtimu = RTIMU.RTIMU(self.s)
         if rtimu.IMUName() == 'Null IMU':
-            print('no IMU detected... try again')
-            return False
-      
-        print("IMU Name: " + rtimu.IMUName())
+            if self.rtimu:
+                print('ERROR: No IMU Detected', t0)
+            self.s.IMUType = 0
+            self.rtimu = False
+            return
+
+        print('IMU Name: ' + rtimu.IMUName())
 
         if not rtimu.IMUInit():
-            print("ERROR: IMU Init Failed, no inertial data available")
-            return False
+            print('ERROR: IMU Init Failed, no inertial data available', t0)
+            self.s.IMUType = 0
+            return
 
         # this is a good time to set any fusion parameters
         rtimu.setSlerpPower(.01)
@@ -104,7 +115,6 @@ class IMU(object):
 
         self.avggyro = [0, 0, 0]
         self.compass_calibration_updated = False
-        return True
 
     def process(self, pipe):
         print('imu process', os.getpid())
@@ -121,7 +131,9 @@ class IMU(object):
         while True:
             t0 = time.monotonic()
             data = self.read()
+            t1 = time.monotonic()
             pipe.send(data, not data)
+            t2 = time.monotonic()
 
             if not self.s.GyroBiasValid:
                 if self.gyrobias.value:
@@ -134,18 +146,22 @@ class IMU(object):
                 self.s.GyroBiasValid = True
             
             self.poll()
+            t3 = time.monotonic()
             dt = time.monotonic() - t0
             period = 1/self.rate
             t = period - dt
             if t > 0 and t < period:
                 time.sleep(t)
             else:
-                print('imu process failed to keep time', t)
+                print('imu process failed to keep time', dt, t0, t1, t2, t3)
 
     def read(self):
         t0 = time.monotonic()
+        if not self.s.IMUType:
+            self.init()
+            return False
         if not self.rtimu.IMURead():
-            print('failed to read IMU!')
+            print('failed to read IMU!', t0)
             self.init() # reinitialize imu
             return False 
          
@@ -182,6 +198,7 @@ class IMU(object):
         if not self.lastdata:
             return
         gyro, compass = self.lastdata
+        self.lastdata = False
 
         # see if gyro is out of range, sometimes the sensors read
         # very high gyro readings and the sensors need to be reset by software
@@ -326,7 +343,7 @@ class BoatIMU(object):
     def __init__(self, client):
         self.client = client
 
-        self.rate = self.register(EnumProperty, 'rate', 10, [10, 20], persistent=True)
+        self.rate = self.register(EnumProperty, 'rate', 20, [10, 20], persistent=True)
 
         self.frequency = self.register(FrequencyValue, 'frequency')
         self.alignmentQ = self.register(QuaternionValue, 'alignmentQ', [1, 0, 0, 0], persistent=True)

@@ -1,0 +1,176 @@
+# German translations for PROJECT.
+# Copyright (C) 2021 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2021-05-09 21:52-0400\n"
+"PO-Revision-Date: 2021-05-08 20:38-0400\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: de\n"
+"Language-Team: de <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.6.0\n"
+
+#: templates/calibrationplot.html:4
+msgid "Calibration Plot"
+msgstr "Kalibrierungsdiagramm"
+
+#: templates/calibrationplot.html:21
+msgid ""
+"The raw sensor readings should fall on a sphere when calibrated.  The age"
+" will reset when the calibration updates."
+msgstr ""
+"Die rohen Sensorwerte sollten bei der Kalibrierung auf eine Kugel fallen."
+" Das Alter wird zurückgesetzt, wenn die Kalibrierung aktualisiert wird."
+
+#: templates/calibrationplot.html:28
+msgid "Connection"
+msgstr "Verbindung"
+
+#: templates/index.html:21
+msgid "Control"
+msgstr "Steuerung"
+
+#: templates/index.html:24
+msgid "Gain"
+msgstr "Dazugewinnen"
+
+#: templates/index.html:27
+msgid "Calibration"
+msgstr "Kalibrierung"
+
+#: templates/index.html:30
+msgid "Configuration"
+msgstr "Aufbau"
+
+#: templates/index.html:33
+msgid "Statistics"
+msgstr "Statistiken"
+
+#: templates/index.html:48
+msgid "Heading"
+msgstr "Überschrift"
+
+#: templates/index.html:50
+msgid "Command"
+msgstr "Befehl"
+
+#: templates/index.html:89
+msgid "Magnetic Heading"
+msgstr "Magnetische Überschrift"
+
+#: templates/index.html:90
+msgid "Pitch"
+msgstr "Tonhöhe"
+
+#: templates/index.html:91
+msgid "Roll"
+msgstr "Rollen"
+
+#: templates/index.html:92
+msgid "Press"
+msgstr "Drücken Sie"
+
+#: templates/index.html:92
+msgid "here"
+msgstr "Hier"
+
+#: templates/index.html:93
+msgid "when the boat is level to align the inertial sensors."
+msgstr "wenn das Boot waagerecht ist, um die Trägheitssensoren auszurichten."
+
+#: templates/index.html:98
+msgid "Magnetic Heading Offset"
+msgstr "Magnetischer Kursversatz"
+
+#: templates/index.html:100
+msgid "Lock Calibration"
+msgstr "Sperren Sie die Kalibrierung"
+
+#: templates/index.html:102
+msgid "calibration plot"
+msgstr "Kalibrierungsdiagramm"
+
+#: templates/index.html:104
+msgid "Rudder"
+msgstr "Ruder"
+
+#: templates/index.html:106
+msgid "centered"
+msgstr "zentriert"
+
+#: templates/index.html:107
+msgid "port range"
+msgstr "Portbereich"
+
+#: templates/index.html:108
+msgid "starboard range"
+msgstr "Steuerbord Reichweite"
+
+#: templates/index.html:109 templates/index.html:131
+msgid "reset"
+msgstr "zurücksetzen"
+
+#: templates/index.html:112
+msgid "Rudder Range"
+msgstr "Ruderbereich"
+
+#: templates/index.html:113
+msgid "Degrees"
+msgstr "Grad"
+
+#: templates/index.html:119
+msgid "Display"
+msgstr "Anzeige"
+
+#: templates/index.html:120
+msgid "Clear"
+msgstr "klar"
+
+#: templates/index.html:121
+msgid "Dark"
+msgstr "Dunkel"
+
+#: templates/index.html:129
+msgid "Amp Hours"
+msgstr "Ampere Stunden"
+
+#: templates/index.html:132
+msgid "Voltage"
+msgstr "Stromspannung"
+
+#: templates/index.html:133
+msgid "Controller temperature"
+msgstr "Reglertemperatur"
+
+#: templates/index.html:134
+msgid "Runtime"
+msgstr "Laufzeit"
+
+#: templates/index.html:135
+msgid "Servo"
+msgstr "Servo"
+
+#: templates/wifi.html:7
+msgid "Wireless Configuration"
+msgstr "Drahtlose Konfiguration"
+
+#: templates/wifi.html:15
+msgid "Key (leave blank for no encryption)"
+msgstr "Schlüssel (leer lassen für keine Verschlüsselung)"
+
+#: templates/wifi.html:17
+msgid "Client Mode Address (leave blank for dhcp)"
+msgstr "Client-Modus-Adresse (für DHCP leer lassen)"
+
+#: templates/wifi.html:22
+msgid "If there is a problem, edit the file"
+msgstr "Wenn es ein Problem gibt, bearbeiten Sie die Datei"
+

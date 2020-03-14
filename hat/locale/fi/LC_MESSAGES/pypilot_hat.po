@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot_hat\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-08-15 20:57+0100\n"
+"POT-Creation-Date: 2021-05-05 23:30-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,253 +18,272 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 
-#: ../menu.py:271
-msgid "pilot"
-msgstr "lentäjä"
-
-#: ../menu.py:273
+#: ../menu.py:278
 msgid "gain"
 msgstr "saada"
 
-#: ../menu.py:303
+#: ../menu.py:311
 msgid "rudder"
 msgstr "peräsin"
 
-#: ../menu.py:323
+#: ../menu.py:331
 msgid "calibrate"
 msgstr "kalibroida"
 
-#: ../menu.py:324
+#: ../menu.py:332
 msgid "level"
 msgstr "taso"
 
-#: ../menu.py:325
+#: ../menu.py:333
 msgid "heading"
 msgstr "otsikko"
 
-#: ../menu.py:326
+#: ../menu.py:334
 msgid "lock"
 msgstr "Lukko"
 
-#: ../menu.py:355
+#: ../menu.py:363
 msgid "motor"
 msgstr "moottori"
 
-#: ../menu.py:356
+#: ../menu.py:364
 msgid "min speed"
 msgstr "min nopeus"
 
-#: ../menu.py:356 ../menu.py:357
+#: ../menu.py:364 ../menu.py:365
 msgid "relative"
 msgstr "suhteellinen"
 
-#: ../menu.py:357
+#: ../menu.py:365
 msgid "max speed"
 msgstr "max nopeus"
 
-#: ../menu.py:358
+#: ../menu.py:366
 msgid "max current"
 msgstr "max virta"
 
-#: ../menu.py:358
+#: ../menu.py:366
 msgid "amps"
 msgstr "ampeeria"
 
-#: ../menu.py:359
+#: ../menu.py:367
 msgid "period"
 msgstr "aika"
 
-#: ../menu.py:359
+#: ../menu.py:367
 msgid "seconds"
 msgstr "sekuntia"
 
-#: ../menu.py:398
+#: ../menu.py:368
+msgid "clutch pwm"
+msgstr "kytkin pwm"
+
+#: ../menu.py:368
+msgid "percent"
+msgstr "prosenttia"
+
+#: ../menu.py:419
 msgid "defaults"
 msgstr "oletukset"
 
-#: ../menu.py:399
-msgid "remote"
-msgstr "etä"
+#: ../menu.py:429
+msgid "Wifi not managed"
+msgstr "Wifiä ei hallita"
 
-#: ../menu.py:404
-msgid "No Wifi detected"
-msgstr "Wifiä ei löydy"
+#: ../menu.py:435
+msgid "No Connetion"
+msgstr "Ei yhteyttä"
 
-#: ../menu.py:431
+#: ../menu.py:463
 msgid "control"
 msgstr "ohjaus"
 
-#: ../menu.py:433
+#: ../menu.py:465
 msgid "small step"
 msgstr "pieni askel"
 
-#: ../menu.py:433 ../menu.py:434
+#: ../menu.py:465 ../menu.py:466
 msgid "degrees"
 msgstr "astetta"
 
-#: ../menu.py:434
+#: ../menu.py:466
 msgid "big step"
 msgstr "iso askel"
 
-#: ../menu.py:449
-msgid "display"
-msgstr "näyttö"
+#: ../menu.py:482
+msgid "hue"
+msgstr "värisävy"
 
-#: ../menu.py:450
-msgid "contrast"
-msgstr "kontrasti"
-
-#: ../menu.py:451
-msgid "invert"
-msgstr "inverttisokeri"
-
-#: ../menu.py:452
+#: ../menu.py:484
 msgid "backlight"
 msgstr "taustavalo"
 
-#: ../menu.py:453
+#: ../menu.py:485
+msgid "display"
+msgstr "näyttö"
+
+#: ../menu.py:486
+msgid "contrast"
+msgstr "kontrasti"
+
+#: ../menu.py:487
+msgid "invert"
+msgstr "inverttisokeri"
+
+#: ../menu.py:487
 msgid "flip"
 msgstr "voltti"
 
-#: ../menu.py:481
+#: ../menu.py:515
 msgid "language"
 msgstr "kieli"
 
-#: ../menu.py:494
+#: ../menu.py:534
 msgid "settings"
 msgstr "asetukset"
 
-#: ../menu.py:495
+#: ../menu.py:535
 msgid "mode"
 msgstr "tila"
 
-#: ../menu.py:500
+#: ../menu.py:536
+msgid "pilot"
+msgstr "lentäjä"
+
+#: ../menu.py:541
 msgid "Menu"
 msgstr "valikko"
 
-#: ../menu.py:518
+#: ../menu.py:559
 msgid "Loading"
 msgstr "Ladataan"
 
-#: ../menu.py:527
+#: ../menu.py:568
 msgid "timeout"
 msgstr "Aikalisä"
 
-#: ../page.py:274 ../page.py:288
+#: ../page.py:286
 msgid "info"
 msgstr "tiedot"
 
-#: ../page.py:296
+#: ../page.py:300
+msgid "Info"
+msgstr "Tiedot"
+
+#: ../page.py:308
 msgid "Watts"
 msgstr "Watts"
 
-#: ../page.py:296
+#: ../page.py:308
 msgid "Amp Hours"
 msgstr "Amp. Tuntia"
 
-#: ../page.py:296
+#: ../page.py:308
 msgid "runtime"
 msgstr "runtime"
 
-#: ../page.py:302
+#: ../page.py:314
 msgid "voltage"
 msgstr "Jännite"
 
-#: ../page.py:302
+#: ../page.py:314
 msgid "rate"
 msgstr "nopeus"
 
-#: ../page.py:302
+#: ../page.py:314
 msgid "uptime"
 msgstr "käyttöaste"
 
-#: ../page.py:308
+#: ../page.py:320
 msgid "cont temp"
 msgstr "jatk. C"
 
-#: ../page.py:308
+#: ../page.py:320
 msgid "motor temp"
 msgstr "moottorin C"
 
-#: ../page.py:308
+#: ../page.py:320
 msgid "faults"
 msgstr "viat"
 
-#: ../page.py:313
+#: ../page.py:325
 msgid "version"
 msgstr "versio"
 
-#: ../page.py:313
+#: ../page.py:325
 msgid "author"
 msgstr "kirjailija"
 
-#: ../page.py:335
+#: ../page.py:347
 msgid "Calibrate Info"
 msgstr "Kalibroi tiedot"
 
-#: ../page.py:346
+#: ../page.py:358
 msgid "incomplete"
 msgstr "epätäydellinen"
 
-#: ../page.py:346
+#: ../page.py:358
 msgid "excellent"
 msgstr "erinomainen"
 
-#: ../page.py:346
+#: ../page.py:358
 msgid "good"
 msgstr "hyvä"
 
-#: ../page.py:347
+#: ../page.py:359
 msgid "fair"
 msgstr "oikeudenmukainen"
 
-#: ../page.py:347
+#: ../page.py:359
 msgid "poor"
 msgstr "huono"
 
-#: ../page.py:347
+#: ../page.py:359
 msgid "bad"
 msgstr "huono"
 
-#: ../page.py:355
+#: ../page.py:367
 msgid "compass"
 msgstr "kompassi"
 
-#: ../page.py:534
+#: ../page.py:598
 msgid "ERROR"
 msgstr "VIRHE"
 
-#: ../page.py:534
+#: ../page.py:598
 msgid "compass or gyro failure!"
 msgstr "kompassi- tai gyro-virhe!"
 
-#: ../page.py:564
+#: ../page.py:634
 msgid "GPS not detected"
 msgstr "GPS: tä ei havaittu"
 
-#: ../page.py:568
+#: ../page.py:638
 msgid "WIND not detected"
 msgstr "WIND: tä ei havaittu"
 
-#: ../page.py:572
+#: ../page.py:642
 msgid "WARNING no motor controller"
 msgstr "VAROITUS ei moottorin ohjainta"
 
-#: ../page.py:584
+#: ../page.py:653
 msgid "standby"
 msgstr "valmiina"
 
-#: ../page.py:608
+#: ../page.py:674
 msgid "No Cal"
 msgstr "Ei Cal"
 
-#: ../page.py:611
+#: ../page.py:677
 msgid "Bad Cal"
 msgstr "Huono Cal"
 
-#: ../page.py:670
+#: ../page.py:767
 msgid "connect to server"
 msgstr "yhdistä palvelimeen"
 
-#~ msgid "Info"
-#~ msgstr "Tiedot"
+#~ msgid "remote"
+#~ msgstr "etä"
+
+#~ msgid "No Wifi detected"
+#~ msgstr "Wifiä ei löydy"

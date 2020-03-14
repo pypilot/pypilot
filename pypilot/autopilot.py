@@ -73,7 +73,7 @@ class TimeStamp(SensorValue):
         
 class Autopilot(object):
     def __init__(self):
-        super(Autopilot, self).__init__()    
+        super(Autopilot, self).__init__()
         self.watchdog_device = False
 
         self.server = pypilotServer()
@@ -323,8 +323,8 @@ class Autopilot(object):
             sp += pd10
             time.sleep(pd10)
 
-        if not data:
-            print('autopilot failed to read imu at time:', time.monotonic(), period)
+            #if not data:
+            #print('autopilot failed to read imu at time:', time.monotonic(), period)
 
         t3 = time.monotonic()
         if t3-t2 > period/2 and data:
