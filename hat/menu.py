@@ -423,9 +423,12 @@ class wifi(menu):
             return
 
         super(wifi, self).display(refresh)
-        if not test_wifi():
+        self.have_wifi = test_wifi()
+        if not self.have_wifi:
             info = _('No Connetion')
-        elif self.wifi_settings['mode'] == 'Master':
+            self.fittext(rectangle(0, 0, 1, .20), info)
+            
+        if self.wifi_settings['mode'] == 'Master':
             info = 'mode: AP\n'
             ssid = 'ssid'
             key = 'key'
