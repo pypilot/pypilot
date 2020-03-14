@@ -103,12 +103,12 @@ class arduino(object):
 
                 try:
                     GPIO.setmode(GPIO.BCM)
-                    GPIO.setup(self.resetpin, GPIO.OUT)
-                    GPIO.output(self.resetpin, 0)
-                    time.sleep(.01)
+                    #GPIO.setup(self.resetpin, GPIO.OUT)
+                    #GPIO.output(self.resetpin, 0)
+                    #time.sleep(.01)
                     GPIO.setup(self.resetpin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-                except:
-                    print('failed to set reset pin high')
+                except Exception as e:
+                    print('failed to set reset pin high', e)
                     return
                     
                 port, slave = int(device[11]), int(device[13])
@@ -271,9 +271,9 @@ class arduino(object):
                 key = 'rf' + key
             elif cmd == IR:
                 key = 'ir' + key
-                if lircd.LIRC_version:
+                if lircd.LIRC.version:
                     print('received IR decoded from arduino, disable LIRC')
-                    lircd.LIRC_version = 0 # disable lircd if we got ir from arduino
+                    lircd.LIRC.version = 0 # disable lircd if we get ir from arduino
             elif cmd == GP:
                 key = 'gpio_ext' + key
             elif cmd == VOLTAGE:
