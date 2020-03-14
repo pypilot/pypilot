@@ -67,7 +67,11 @@ def draw(surface, pos, text, size, bw, crop=False):
                     break # loaded
                 
                 if not micropython:
-                    print('create', c, size, src.bypp, surface.bypp)
+                    try:
+                        print('create font charater', c, size, src.bypp, surface.bypp)
+                    except:
+                        print('create font charater', size, src.bypp, surface.bypp)
+                        print('unable to print unicode character to console')
                     src = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
                     if src:
                         print('store grey', filename)
