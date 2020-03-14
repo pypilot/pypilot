@@ -111,17 +111,35 @@ class gpsProcess(multiprocessing.Process):
                         fix[key] = msg[key]
                 fix['speed'] *= 1.944 # knots
                 device = msg['device']
+                if self.baud_boot_device_hint != device:
+                    self.write_baud_boot_hint(device)
                 if not device in self.devices:
                     self.devices.append(device)
                     ret = True
                 pipe.send(fix, False)
         return ret
 
+    def write_baud_boot_hint(self, device):
+        self.baud_boot_device_hint = device
+        try:
+            stty=os.popen('sudo stty -F ' + device)
+            line = stty.readline()
+            stty.close()
+            speed = line.index('speed')
+            baud = line.index('baud')
+            bps = int(line[speed+6:baud-1])
+            f = open(os.getenv('HOME') + '/.pypilot/gpsd_baud_hint', 'w')
+            f.write(str(bps))
+            f.close()
+        except Exception as e:
+            print('gpsd failed to determine serial baud rate of device')
+            
     def gps_process(self, pipe):
         print('gps process', os.getpid())
         self.gpsd_socket = False
         self.poller = select.poll()
         self.devices = False
+        self.baud_boot_device_hint = ''
         while True:
             self.read_pipe(pipe)
             if not self.gpsd_socket:
