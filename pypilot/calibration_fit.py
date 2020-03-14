@@ -529,7 +529,7 @@ def FitCompass(debug, compass_points, compass_calibration, norm):
 
     coverage = ComputeCoverage(p, c[0][:3], norm)
     #debug('coverage', coverage)
-    if coverage < 12: # require 240 degrees
+    if coverage < 14: # require 280 degrees
         debug('insufficient coverage:', coverage, ' need 12')
         if c == fit[1]: # must have had 3d fit to use 1d fit
             return
