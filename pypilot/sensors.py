@@ -117,15 +117,15 @@ class gps(Sensor):
         super(gps, self).__init__(client, 'gps')
         self.track = self.register(SensorValue, 'track', directional=True)
         self.speed = self.register(SensorValue, 'speed')
-        self.latitude = self.register(SensorValue, 'latitude', fmt='%.11f')
-        self.longitude = self.register(SensorValue, 'longitude')
+        self.lat = self.register(SensorValue, 'lat', fmt='%.11f')
+        self.lon = self.register(SensorValue, 'lon')
 
     def update(self, data):
         self.track.set(data['track'])
         self.speed.set(data['speed'])
-        if 'latitude' in data and 'longitude' in data:
-            self.latitude.set(data['latitude'])
-            self.longitude.set(data['longitude'])
+        if 'lat' in data and 'lon' in data:
+            self.lat.set(data['lat'])
+            self.lon.set(data['lon'])
 
     def reset(self):
         self.track.set(False)
@@ -156,7 +156,6 @@ class Sensors(object):
         self.nmea.poll()
         self.signalk.poll()
         self.gpsd.poll()
-
         self.rudder.poll()
 
         # timeout sources
@@ -173,13 +172,17 @@ class Sensors(object):
         sensor.source.set('none')
         sensor.reset()
         sensor.device = None
+
+    def lostgpsd(self):
+        if self.gps.source.value == 'gpsd':
+            self.lostsensor(self.gps)
             
     def write(self, sensor, data, source):
         if not sensor in self.sensors:
             print('unknown data parsed!', sensor)
             return
         self.sensors[sensor].write(data, source)
-
+        
     def lostdevice(self, device):
         # optional routine  useful when a device is
         # unplugged to skip the normal data timeout

@@ -13,21 +13,33 @@ from bufferedsocket import LineBufferedNonBlockingSocket
 from values import *
 import serialprobe, pyjson
 
+def gps_json_loads(line):
+    try:
+        return pyjson.loads(line)
+    except:
+        pass
+    act = '"activated"'
+    i = line.index(act)
+    j = line.index('Z', i)
+    line = line[:i]+act+':"'+line[i+12:j+1]+'"'+line[j+1:]
+    return pyjson.loads(line)
+
 class gpsProcess(multiprocessing.Process):
     def __init__(self):
         # split pipe ends
         self.pipe, pipe = NonBlockingPipe('gps_pipe', True)
         super(gpsProcess, self).__init__(target=self.gps_process, args=(pipe,), daemon=True)
         
-    def connect(self):        
+    def connect(self):
+        time.sleep(2)
         try:
-            socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            socket.settimeout(0)
-            socket.connect(('127.0.0.1', 2947))
-            socket.write('?WATCH={"enable":true,"json":true};'.encode())
-            self.poller.register(socket, select.POLLIN)
-            self.gpsd_socket = LineBufferedNonBlockingSocket(socket, 'gpsd')
-
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect(('127.0.0.1', 2947))
+            self.poller.register(sock, select.POLLIN)
+            sock.settimeout(0)
+            sock.send('?WATCH={"enable":true,"json":true};'.encode())
+            self.gpsd_socket = LineBufferedNonBlockingSocket(sock, 'gpsd')
+            self.gpsconnecttime = time.monotonic()
             #self.gpsd = gps.gps(mode=gps.WATCH_ENABLE) #starting the stream of info
             self.devices = []
             print('gpsd connected')
@@ -35,30 +47,31 @@ class gpsProcess(multiprocessing.Process):
         except ConnectionRefusedError:
             print('gpsd failed to connect')
             self.gpsd_socket = False
-            time.sleep(10)
+            time.sleep(30)
         except Exception as e:
             self.gpsd_socket = False
             print('exception connecting to gps', e)
-            time.sleep(10)
+            time.sleep(60)
 
     def disconnect(self):
         print('gpsd disconnected')
         self.poller.unregister(self.gpsd_socket.socket)
         self.gpsd_socket.close()
         self.gpsd_socket = False
-        self.devices = []
+        self.devices = False
 
     def read_pipe(self, pipe):
         while True:
             device = pipe.recv()
             if not device:
                 break
-            if not self.devices: # only probe if there are no gpsd devices
+            if self.gpsd_socket and not self.devices: # only probe if there are no gpsd devices
                 print('gpsd PROBING...', device)                    
                 if not os.system('timeout -s KILL -t 8 gpsctl -f ' + device + ' 2> /dev/null'):
                     print('gpsd PROBE success', device)
                     # probe was success
                     os.environ['GPSD_SOCKET'] = '/tmp/gpsd.sock'
+                    os.environ['GPSD_OPTIONS'] = '-N -G -F /tmp/gpsd.sock' # should not run gpsd..
                     os.system('gpsdctl add ' + device)
                     print('gpsd probe success: ' + device)
                     self.devices = [device]
@@ -81,22 +94,23 @@ class gpsProcess(multiprocessing.Process):
         elif cls == 'DEVICE':
             device = msg['path']
             if msg['activated']:
-                print('gpsd activated device', device)
                 if not device in self.devices:
                     self.devices.append(device)
                     ret = True
             else:
-                print('gpsd deactivated', device)
+                print('gpsd deactivated', device, self.devices)
                 if device in self.devices:
                     self.devices.remove(device)
                     ret = True
         elif cls == 'TPV':
             if msg['mode'] == 3:
                 fix = {}
-                for key in ['track', 'speed', 'latitude', 'longitude', 'device']:
+                for key in ['track', 'speed', 'lat', 'lon', 'device']:
                     fix[key] = msg[key]
                 fix['speed'] *= 1.944 # knots
-                if not msg['device'] in self.devices:
+                fix['device'] = fix['device']
+                device = msg['device']
+                if not device in self.devices:
                     self.devices.append(device)
                     ret = True
                 pipe.send(fix, False)
@@ -106,27 +120,36 @@ class gpsProcess(multiprocessing.Process):
         print('gps process', os.getpid())
         self.gpsd_socket = False
         self.poller = select.poll()
-        self.devices = []
+        self.devices = False
         while True:
+            self.read_pipe(pipe)
             if not self.gpsd_socket:
                 self.connect()
-                self.read_pipe(pipe)
-            events = self.poller.poll(3):
-            if events:
-                fd, flag = events.pop()
-                if flag & select.POLLIN and self.gpsd_socket.recvdata():
-                    while True:
-                        line = connection.readline()
-                        if not line:
-                            break
-                        try:
-                            if self.parse_gpsd(pyjson.loads(line), pipe):
-                                pipe.send({'devices': self.devices})                    
-                        except Exception as e:
-                            print('gpsd received invalid message', line, e)
-                else: # gpsd connection lost
-                    self.disconnect()
-                    pipe.send({'devices': self.devices})                    
+                continue
+
+            events = self.poller.poll(1000)
+            #print('gpsd poll', events)
+            if not events:
+                if self.gpsconnecttime and time.monotonic() - self.gpsconnecttime > 10:
+                    print('gpsd timeout from lack of data')
+                    self.disconnect();
+                continue
+
+            self.gpsconnecttime = False
+            fd, flag = events.pop()
+            if flag & select.POLLIN and self.gpsd_socket.recvdata():
+                while True:
+                    line = self.gpsd_socket.readline()
+                    if not line:
+                        break
+                    try:
+                        if self.parse_gpsd(gps_json_loads(line), pipe):
+                            pipe.send({'devices': self.devices})                    
+                    except Exception as e:
+                        print('gpsd received invalid message', line, e)
+            else: # gpsd connection lost
+                self.disconnect()
+                pipe.send({'devices': self.devices})                    
 
 class gpsd(object):
     def __init__(self, sensors):
@@ -134,7 +157,7 @@ class gpsd(object):
         self.reserved_devices = [] # list of devices used by gps we didn't probe
         self.probe_device = False  # device process is currently probing
         self.probed_device = False # device process probed
-        self.devices = [] # list of devices used by gpsd
+        self.devices = False # list of devices used by gpsd, or False if not connected
 
         self.process = gpsProcess()
         self.process.start()
@@ -145,31 +168,48 @@ class gpsd(object):
             
     def read(self):
         data = self.process.pipe.recv()
-        if 'devices' in data:
-            self.devices = data['devices']
-            if self.probe_device:
-                if self.probe_device in self.devices:
-                    serialprobe.success('gpsd', (self.probe_device, 4800))
-                    self.probed_device = self.probe_device
-                else: # probe failed
+        while data:
+            if 'devices' in data:
+                if self.devices and not data['devices']:
+                    # shortcut normal timeout
+                    self.sensors.lostgpsd() # gpsd is highest priority
+                self.devices = data['devices']
+                if self.devices is False: # lost gpsd
                     serialprobe.relinquish('gpsd')
-                self.probe_device = False
+                    for device in list(self.reserved_devices):
+                        serialprobe.unreserve(device)
+                        self.probe_device = False
+                        self.probed_device = False
+                    self.reserved_devices = []
+                    return
+                if self.probe_device:
+                    if self.probe_device in self.devices:
+                        print('gpsd serial probe success', self.devices) 
+                        serialprobe.success('gpsd', (self.probe_device, 4800))
+                        self.probed_device = self.probe_device
+                    else: # probe failed
+                        serialprobe.relinquish('gpsd')
+                    self.probe_device = False
+                elif self.probed_device and not self.probed_devices in self.devices:
+                    self.probed_device = False
 
-            for device in list(self.reserved_devices):
-                if not device in self.devices:
-                    serialprobe.unreserve(device)
-                    self.reserved_devices.remove(device)
+                for device in list(self.reserved_devices):
+                    if not device in self.devices:
+                        serialprobe.unreserve(device)
+                        self.reserved_devices.remove(device)
                     
-            for device in self.devices:
-                if device != self.probed_device and \
-                   not device in self.reserved_devices:
-                    serialprobe.reserve(device)
-                    self.reserved_devices.append(device)
-        else:
-            self.sensors.write('gps', data, 'gpsd')
+                for device in self.devices:
+                    if device != self.probed_device and \
+                       not device in self.reserved_devices:
+                        serialprobe.reserve(device)
+                        self.reserved_devices.append(device)
+            else:
+                self.sensors.write('gps', data, 'gpsd')
+            data = self.process.pipe.recv()
 
     def poll(self):
-        if not self.devices and not self.probe_device: # no gpsd devices: probe
+        # no gpsd devices: probe
+        if (not self.devices is False) and not self.devices and not self.probe_device:
             device_path = serialprobe.probe('gpsd', [4800], 4)
             if device_path:
                 print('gpsd serial probe', device_path)

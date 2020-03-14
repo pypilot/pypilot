@@ -60,19 +60,19 @@ def parse_nmea_gps(line):
             return False
         
         timestamp = float(data[0])
-        latitude = float(data[2])/100.0
+        lat = float(data[2])/100.0
         if data[3] == 'S':
-            latitude = -latitude
-        longitude = float(data[4])/100.0
+            lat = -latitude
+        lon = float(data[4])/100.0
         if data[5] == 'W':
-            longitude = -longitude
+            lon = -longitude
         speed = float(data[6])
         heading = float(data[7])
     except Exception as e:
         print('nmea failed to parse gps', line, e)
         return False
 
-    return 'gps', {'timestamp': timestamp, 'track': heading, 'speed': speed, 'latitude': latitude, 'longitude': longitude}
+    return 'gps', {'timestamp': timestamp, 'track': heading, 'speed': speed, 'lat': lat, 'lon': lon}
 
 
 '''
@@ -304,7 +304,7 @@ class Nmea(object):
             if result:
                 name, msg = result
                 if name:
-                    msg['device'] = line[1:3]+device.path[0]
+                    msg['device'] = line[1:3] + device.path[0]
                     serial_msgs[name] = msg
                 break
 
@@ -403,15 +403,15 @@ class Nmea(object):
                 self.probeindex = len(self.devices)
             self.probedevicepath = serialprobe.probe('nmea%d' % self.probeindex, [38400, 4800])
             if self.probedevicepath:
-                print('nmea probe', self.probedevicepath)
+                #print('nmea probe', self.probedevicepath)
                 try:
                     self.probedevice = NMEASerialDevice(self.probedevicepath)
                     self.probetime = time.monotonic()
-                except serial.serialutil.SerialException:
-                    print('failed to open', self.probedevicepath, 'for nmea data')
-                    pass
+                except Exception as e: # serial.serialutil.SerialException:
+                    print('failed to open', self.probedevicepath, 'for nmea data', e)
+
         elif time.monotonic() - self.probetime > 5:
-            print('nmea serial probe timeout', self.probedevicepath)
+            #print('nmea serial probe timeout', self.probedevicepath)
             self.probedevice = None # timeout
         else:
             # see if the probe device gets a valid nmea message
@@ -508,7 +508,7 @@ class nmeaBridge(object):
             result = parser(line)
             if result:
                 name, msg = result
-                msg['device'] = device + line[1:3]
+                msg['device'] = line[1:3] + device
                 self.msgs[name] = msg
                 return
 

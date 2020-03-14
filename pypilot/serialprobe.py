@@ -176,6 +176,7 @@ def enumerate_devices():
         signal.signal(signal.SIGCHLD, cursigchld_handler)
 
     scanned_devices = scan_devices()
+    print('serialprobe scan', scanned_devices)
     # remove devices not scanned
     for device in list(devices):
         if not device in scanned_devices:
@@ -198,6 +199,7 @@ def relinquish(name):
 def probe(name, bauds, timeout=5):
     global devices
     global probes
+    #print('probing', name, devices, probes)
     
     t0 = time.monotonic()
     if not name in probes:
@@ -282,6 +284,7 @@ def probe(name, bauds, timeout=5):
         exit(1)
 
     try:
+        print('serialprobe open', serial_device)
         dev = serial.Serial(*serial_device)
         dev.close() # opened without exception, now close it
     except serial.serialutil.SerialException as err:
@@ -289,7 +292,7 @@ def probe(name, bauds, timeout=5):
         if type(arg) == type('') and 'Errno ' in  arg:
             arg = int(arg[arg.index('Errno ')+6: arg.index(']')])
         if arg == 16: # device busy, retry later
-            print('busy, try again later', serial_device, probe['device'], name, err)
+            print('busy, try again later', name, err)
         elif arg == 6: # No such device or address, don't try again
             devices.remove(device)
         elif arg == 5: # input output error (unusable)

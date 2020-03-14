@@ -22,7 +22,7 @@ signalk_table = {'wind': {('environment.wind.speedApparent', meters_s): 'speed',
                           ('environment.wind.angleApparent', radians): 'direction'},
                  'gps': {('navigation.courseOverGroundTrue', radians): 'track',
                          ('navigation.speedOverGround', meters_s): 'speed',
-                         ('navigation.position', 1): {'latitude': 'latitude', 'longitude': 'longitude'}},
+                         ('navigation.position', 1): {'latitude': 'lat', 'longitude': 'lon'}},
                  'rudder': {('steering.rudderAngle', radians): 'angle'},
                  'apb': {('steering.autopilot.target.headingTrue', radians): 'track'},
                  'imu': {('navigation.headingMagnetic', radians): 'heading_lowpass',
@@ -285,6 +285,7 @@ class signalk(object):
             self.receive_signalk(msg)
 
         t5 = time.monotonic()
+        # convert received signalk values into sensor inputs if possible
         for sensor, sensor_table in signalk_table.items():
             for source, values in self.signalk_values.items():
                 data = {}
@@ -292,11 +293,17 @@ class signalk(object):
                     signalk_path, signalk_conversion = signalk_path_conversion
                     if signalk_path in values:
                         try:
-                            data[pypilot_path] = values[signalk_path] / signalk_conversion
+                            value = values[signalk_path]
+                            if type(pypilot_path) == type({}): # single path translates to multiple pypilot
+                                for signalk_key, pypilot_key in pypilot_path.items():
+                                    data[pypilot_key] = value[signalk_key] / signalk_conversion
+                            else:
+                                data[pypilot_path] = value / signalk_conversion
                         except Exception as e:
-                            print('this is a bug!!!!!!!!!!!!!!!', e, values[signalk_path], signalk_path)
-                    elif signalk_conversion != 1: # don't require fields with conversion of 1 (lat/lon)
-                        break
+                            print('Exception converting signalk->pypilot', e, self.signalk_values)
+                            break
+                    elif signalk_conversion != 1: # don't require fields with conversion of 1
+                        break  # missing fields?  skip input this iteration
                 else:
                     for signalk_path_conversion in sensor_table:
                         signalk_path, signalk_conversion = signalk_path_conversion
