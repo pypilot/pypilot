@@ -51,6 +51,7 @@ class arduino(object):
         self.pollt0 = [0, time.monotonic()]
 
         self.config = config
+        
         self.hatconfig = False
         if 'hat' in config:
             hatconfig = config['hat']
@@ -110,7 +111,8 @@ class arduino(object):
                 self.spi.open(port, slave)
                 self.spi.max_speed_hz=100000
 
-                self.set_backlight(self.config['lcd']['backlight'])
+                if 'lcd' in self.config:
+                    self.set_backlight(self.config['lcd']['backlight'])
                 self.set_baud(self.config['arduino.nmea.baud'])
 
         except Exception as e:
@@ -256,10 +258,10 @@ class arduino(object):
 
             key = '%02X%02X%02X%02X' % (d[0], d[1], d[2], d[3])
             count = d[4]
-                
+
             if cmd == RF:
                 key = 'rf' + key
-            elif cmd == IR and config['ir']:
+            elif cmd == IR and self.config['arduino.ir']:
                 key = 'ir' + key
             elif cmd == GP:
                 key = 'gpio_ext' + key
@@ -394,7 +396,12 @@ def arduino_process(pipe, config):
 def main():
     print('initializing arduino')
     config = {'host':'localhost','hat':{'arduino':{'device':'/dev/spidev0.1',
-                                                   'resetpin':'gpio16'}}}
+                                                   'resetpin':'gpio16'}},
+              'arduino.nmea.baud': 38400,
+              'arduino.nmea.in': False,
+              'arduino.nmea.out': False,
+              'arduino.ir': True}
+
     a = arduino(config)
 
     dt = 0
