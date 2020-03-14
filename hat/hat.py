@@ -7,11 +7,15 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, os, sys, signal, select
+import time
+print('hat start', time.monotonic())
+import os, sys, signal, select
 from pypilot import pyjson
 from pypilot.client import pypilotClient
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import gpio, lircd
+import gpio
+import lircd
+print('hat import done', time.monotonic())
 
 class Action(object):
     def  __init__(self, hat, name):
@@ -267,6 +271,10 @@ class Hat(object):
         else:
             host = 'localhost'
 
+        self.poller = select.poll()
+        self.gpio = gpio.gpio()
+        self.lcd = LCD(self)
+        time.sleep(1)
         self.client = pypilotClient(host)
         self.client.registered = False
         self.watchlist = ['ap.enabled', 'ap.heading_command']
@@ -274,10 +282,6 @@ class Hat(object):
         for name in self.watchlist:
             self.client.watch(name)
 
-        self.poller = select.poll()
-            
-        self.gpio = gpio.gpio()
-        self.lcd = LCD(self)
         self.lcd.poll()
 
         if 'arduino' in self.config['hat']:
@@ -472,6 +476,7 @@ class Hat(object):
 
 def main():
     hat = Hat()
+    print('hat init complete', time.monotonic())
     while True:
         hat.poll()
 
