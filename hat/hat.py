@@ -245,7 +245,8 @@ class Hat(object):
         self.lirc = lircd.lirc(self.config)
         self.lirc.registered = False
         self.keytimes = {}
-        
+        self.keytimeouts = {}
+
         # keypad for lcd interface
         self.actions = []
         keypadnames = ['auto', 'menu', 'port1', 'starboard1', 'select', 'port10', 'starboard10', 'tack', 'dodge_port', 'dodge_starboard']
@@ -330,6 +331,13 @@ class Hat(object):
         self.config[name] = value
             
     def apply_code(self, key, count):
+        if key in self.keytimeouts:
+            timeoutcount = self.keytimeouts[key]
+            if count > timeoutcount:
+                return # ignore as we already timed out from this key
+            del self.keytimeouts[key]
+            if count == 0:
+                return # already applied count 0
         self.web.send({'key': key})
         actions = self.config['actions']
         for action in self.actions:
@@ -342,7 +350,7 @@ class Hat(object):
                     if key in self.keytimes:
                         del self.keytimes[key]
                 else:
-                    self.keytimes[key] = time.monotonic()
+                    self.keytimes[key] = time.monotonic(), count
                 action.trigger(count)
                 return
         self.web.send({'action': 'none'})
@@ -381,11 +389,13 @@ class Hat(object):
         for i in [self.lcd, self.web]:
             i.poll()
         t3 = time.monotonic()
-        for key, t in self.keytimes.items():
+        for key, tc in self.keytimes.items():
+            t, c = tc
             dt = t3 - t
             if dt > .6:
                 print('keyup event lost, releasing key from timeout', key, t3, dt)
                 self.apply_code(key, 0)
+                self.keytimeouts[key] = c # don't apply this code if we eventually receive it
                 break
 
         # receive heading once per second if autopilot is not enabled
