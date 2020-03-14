@@ -335,8 +335,8 @@ class calibrate_info(info):
         self.fittext(rectangle(0, 0, 1, .24), _('Calibrate Info'), True)
 
         if self.page == 0:
-            deviation = [_('N/A'), _('N/A')]
-            deviationstr = _('N/A')
+            deviation = ['N/A', 'N/A']
+            deviationstr = 'N/A'
             dim = '?'
             try:
                 cal = self.last_val('imu.compass.calibration')
@@ -531,7 +531,7 @@ class control(controlbase):
 
         if self.last_val('imu.frequency', 1) is False:
             r = rectangle(0, 0, 1, .92)
-            self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
+            self.fittext(r, _('ERROR') + '\n' + _('compass or gyro failure!'), True, black)
             self.control['heading'] = 'no imu'
             self.control['heading_command'] = 'no imu'
             super(control, self).display(refresh)
@@ -553,7 +553,7 @@ class control(controlbase):
 
         if warning:
             if self.hat:
-                self.hat.buzzer.alarm()
+                self.hat.arduino.set_buzzer(2, 1)
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:
@@ -571,6 +571,11 @@ class control(controlbase):
             if self.control['heading_command'] != 'no controller':
                 self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
                 self.control['heading_command'] = 'no controller'
+        elif self.lcd.hat and self.lcd.hat.check_voltage():
+            msg = self.lcd.hat.check_voltage()
+            if self.control['heading_command'] != msg:
+                self.fittext(rectangle(0, .4, 1, .35), msg, True, black)
+                self.control['heading_command'] = msg
         else:
             # no warning, display the desired course or 'standby'
             if self.last_val('ap.enabled') != True:
@@ -614,7 +619,7 @@ class control(controlbase):
         if not self.lcd.client.connection:
             return connecting(self.lcd)
 
-        if self.testkeyup(AUTO): # AUTO
+        if self.testkeydown(AUTO): # AUTO
             if self.last_val('ap.enabled') == False:
                 self.set('ap.heading_command', self.last_val('ap.heading'))
                 self.set('ap.enabled', True)

@@ -31,11 +31,12 @@ class pypilotClient(object):
         self.udp_socket.bind(('0.0.0.0', self.udp_port))
         self.udp_socket.settimeout(0)
 
-    def disconnect(self):
+    def disconnect(self, close=True):
         if not self.connection:
             return
 
-        self.connection.close()
+        if close:
+            self.connection.close()
         self.connection = False
         time.sleep(.25)
         
@@ -162,7 +163,7 @@ class pypilotClient(object):
                 if e.args[0] is errno.ETIMEDOUT:
                     break
                 print('OSerror', e)
-                self.disconnect()
+                self.disconnect(False)
                 break
 
             if self.valuesbuffer:
@@ -272,7 +273,7 @@ class pypilotClient(object):
         except OSError as e:
             if not (e.args[0] is errno.EINPROGRESS):
                 print('failed to set', e)
-                self.disconnect()
+                self.disconnect(False)
                 return False
         except Exception as e:
             print('failed to set', name, value, e)

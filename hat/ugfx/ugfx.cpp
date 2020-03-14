@@ -155,10 +155,7 @@ surface::surface(const char* filename, int tbypp)
     
     xoffset = yoffset = 0;
     line_length = width*bypp;
-
-    
     p = new char [width*height*bypp];
-
 
     if(colors16 != 1) // only greyscale supported
         goto fail;
@@ -188,14 +185,14 @@ surface::surface(const char* filename, int tbypp)
                 }
                 if(bypp == 1)
                     p[i++] = value;
-/*                else if(bypp == 2)
-                    for(int i = 0; i<width*height; i++)
-                        ((uint16_t*)p)[i] = color16gray(gray_data[i]);
+                else if(bypp == 2)
+                    ((uint16_t*)p)[i++] = color16gray(value);
                 else if(bypp == 4)
-                    for(int i = 0; i<width*height; i++)
-                    memset(p + 4*i, gray_data[i], 3);*/
-                else
+                    memset(p + 4*i++, value, 3);
+                else {
                     fprintf(stderr, "bypp incompatible reading %s\n", filename);
+                    goto fail;
+                }
 
             }
         }
@@ -217,7 +214,7 @@ surface::surface(const char* filename, int tbypp)
     return;
 
 fail:
-    fprintf(stderr, "failed ot open %s\n", filename);
+    fprintf(stderr, "failed t0 open %s\n", filename);
 #ifndef INTERNAL_FONTS
     fclose(f);
 #endif
@@ -808,9 +805,9 @@ public:
                                0x81, // Trim Contrast
                                (uint8_t)contrast, // Trim Contrast value range can be set from 0 to 63
                                
-//                            0xc2, // Line scan sequence : from top to bottom
+                            0xc2, // Line scan sequence : from top to bottom
                             0xa0, // column scan order : from left to right
-                               0xa6, // not reverse
+                            0xa6, // not reverse
                             0xa4, // not all on
                             0x40, // start of first line
                             0xaf

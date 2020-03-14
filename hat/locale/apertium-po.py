@@ -1,5 +1,4 @@
-
-#! /usr/bin/env python
+#!/usr/bin/env python3
 
 __author__ = 'Rory McCann <rory@technomancy.org>'
 __version__ = '1.0'
@@ -10,9 +9,9 @@ import polib, subprocess, re, sys
 def translate_subpart(string, lang_direction):
     """Simple translate for just a certin string"""
 
-    for codes in lang_direction.split("/"):
+    for codes in lang_direction.split('/'):
         translater = subprocess.Popen(['apertium', '-u', codes], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        translater.stdin.write(string.encode("utf8")+"\n")
+        translater.stdin.write((string+'\n').encode())
         string, _ = translater.communicate()
         string = string[:-1].decode("utf8")
 
@@ -83,7 +82,7 @@ def translate_po(filename, lang_direction):
 
             num_done += 1
             if num_done % 10 == 0:
-                print "Translated %d of %d" % (num_done, total)
+                print("Translated %d of %d" % (num_done, total))
 
     finally:
         pofile.save(filename)

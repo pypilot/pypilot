@@ -27,7 +27,7 @@ D4  D5
  1   1        .05 ohm, (or .001 ohm x 50 gain)
  0   1        .01 ohm
  1   0        .0005 ohm x 50 gain
- 0   0        .0005 ohm x 200 gain   *ratiometric mode
+ 0   0        .00025 ohm x 200 gain   *ratiometric mode
 
 
 digital pin6 determines:
@@ -130,37 +130,35 @@ PWR+             VIN
 
 static volatile uint8_t timer1_state;
 
-#if DIV_CLOCK==4
-#define dead_time \
+// 1.5uS
+#define dead_time4 \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
     asm volatile ("nop"); \
     asm volatile ("nop");
+
+#if DIV_CLOCK==4
+#define dead_time dead_time4
 #elif DIV_CLOCK==2
 #define dead_time \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop");
+    dead_time4 \
+    dead_time4
 #elif DIV_CLOCK==1
 #define dead_time \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop");
+    dead_time4 \
+    dead_time4 \
+    dead_time4 \
+    dead_time4
 #warning "DIV_CLOCK set to 1, this will only work with 16mhz xtal"
 #else
 #error "invalid DIV_CLOCK"
 #endif
 
 
-// time to charge bootstrap capacitor, twice dead time
+// time to charge bootstrap capacitor same as dead time
 #define charge_time \
-        dead_time; \
         dead_time;
 
 #define shunt_sense_pin 4 // use pin 4 to specify shunt resistance

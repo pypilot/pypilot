@@ -349,8 +349,8 @@ class calibrate(menu):
 class motor(menu):
     def __init__(self):
         super(motor, self).__init__(_('motor'),
-                                    [ValueEdit(_('speed.min'), _('relative'), 'servo.speed.min'),
-                                     ValueEdit(_('speed.max'), _('relative'), 'servo.speed.max'),
+                                    [ValueEdit(_('min speed'), _('relative'), 'servo.speed.min'),
+                                     ValueEdit(_('max speed'), _('relative'), 'servo.speed.max'),
                                      ValueEdit(_('max current'), _('amps'), 'servo.max_current'),
                                      ValueEdit(_('period'), _('seconds'), 'servo.period')])
         
@@ -389,7 +389,7 @@ class wifi_remote(page):
 class wifi(menu):
     def __init__(self):
         self.wifi = False
-        super(wifi, self).__init__(_('WIFI'),
+        super(wifi, self).__init__('WIFI',
                                 [select_wifi_ap_toggle('AP'),
                                  select_wifi_defaults(_('defaults')),
                                  wifi_remote(_('remote'))])
@@ -445,7 +445,7 @@ class display(menu):
         super(display, self).__init__(_('display'),
                                       [ConfigEdit(_('contrast'), '', 'contrast', 0, 120, 1),
                                        invert(_('invert')),
-                                       ConfigEdit(_('backlight'), '', 'backlight', 0, 100, 1),
+                                       ConfigEdit(_('backlight'), '', 'backlight', 0, 20, 1),
                                        flip(_('flip'))])                                   
 class select_language(page):
     def __init__(self, lang):

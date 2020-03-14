@@ -96,10 +96,8 @@ install: $(SKETCHNAME).cpp.hex
 setfuses:
 	echo 16 > /sys/class/gpio/export || echo ok
 	echo in > /sys/class/gpio/gpio16/direction
-	sleep 1
 	echo out > /sys/class/gpio/gpio16/direction
-	sleep 1
-	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -b $(BAUDRATE)  -Uefuse:w:0x05:m -Uhfuse:w:0xDA:m -Ulfuse:w:0xFF:m -Ulock:w:0x3f:m
+	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -b 10000  -Uefuse:w:0xfd:m -Uhfuse:w:0xDA:m -Ulfuse:w:0xFF:m -Ulock:w:0xff:m
 	echo in > /sys/class/gpio/gpio16/direction
 
 serial:

@@ -29,7 +29,7 @@ void IRrecvPCI_Handler();//prototype for interrupt handler
  */
 IRrecvPCI::IRrecvPCI(uint8_t pin) {
   init();
-  intrNum=3;//digitalPinToInterrupt(pin);
+  intrNum=1;//digitalPinToInterrupt(pin);
   recvGlobal.recvPin=pin;
 }
 

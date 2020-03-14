@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-    <title>pypilot keypad and remote configuration</title>
+    <title>pypilot hat configuration</title>
     <link rel="stylesheet" type="text/css" href="static/w3.css" />
     <script type="text/javascript" src="static/jquery.min.js"></script>
     <script type="text/javascript" src="static/socket.io.min.js"></script>
@@ -20,13 +20,14 @@
     <p>
     <p>
       <h2>pypilot hat NMEA port</h2>
-      <input type="checkbox" id="nmeainput" /> Input
-      <input type="checkbox" id="nmeaoutput" /> Output
-      <select id="nmeabaud">
+      <input type="checkbox" id="nmea_in" /> Input
+      <input type="checkbox" id="nmea_out" /> Output
+      <select id="nmea_baud">
         <option value="4800">4800</option>
         <option value="38400">38400</option>
       </select>
       <br>nmea current baud rate: <b><span id="baudrate"></span></b>
+      <br>voltages: <b><span id="voltage"></span></b>
       <br>pypilot status: <b><span id="status"></span></b>
       <br>connection: <b><span id="connection"></span></b>
       <br>Web Server Latency: <b><span id="ping-pong"></span> ms</b>
