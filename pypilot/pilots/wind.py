@@ -41,7 +41,7 @@ class WindPilot(AutopilotPilot):
     compass = self.ap.boatimu.SensorValues['heading_lowpass'].value
 
     sensors = self.ap.sensors
-    wind = sensors.wind.direction
+    wind = sensors.wind.direction.value
 
     if sensors.gps.source.value != 'none':
       gps_track  = sensors.gps.track.value
@@ -50,15 +50,11 @@ class WindPilot(AutopilotPilot):
         d = .005*math.log(gps_speed + 1)
         self.gps_wind_offset.update(wind + gps_track, d)
 
-    # compensate compass relative to wind offset
-    if self.ap.compass_change:
-      self.compass_wind_offset.value += self.ap.compass_change
-
     mode = ap.mode.value
     if mode == 'compass':
       # compute compass from the wind. this causes the boat
       # to follow wind shifts with an overall average compass course
-      compass = resolv(ap.compass_wind_offset.value - wind, 180)
+      compass = resolv(ap.wind_compass_offset.value - wind, 180)
       ap.heading.set(compass)
     elif mode == 'gps':
       gps = resolv(self.gps_wind_offset.value - wind, 180)

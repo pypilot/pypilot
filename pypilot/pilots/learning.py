@@ -10,6 +10,7 @@
 import multiprocessing, select
 from pilot import AutopilotPilot, AutopilotGain
 from intellect import *
+disabled = True
 
 def build_actions(current, period_count, count):
     if count <= 0:

@@ -33,24 +33,12 @@ class BasicPilot(AutopilotPilot):
     t = time.monotonic()
     ap = self.ap
     
-    # if disabled, only compute if a client cares
-    if not ap.enabled.value: 
-      compute = False
-      for gain in self.gains:
-        if self.gains[gain]['sensor'].watch:
-          compute = True
-          break
-      if not compute:
-        return
-
     # compute command
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
     #reactive_value = self.servocommand_queue.take(t - self.reactive_time.value)
     #self.reactive_value.update(reactive_value)
     
-    if not 'wind' in ap.mode.value: # wind mode needs opposite gain
-        feedforward_value = -feedforward_value
     gain_values = {'P': ap.heading_error.value,
                    'I': ap.heading_error_int.value,
                    'D': headingrate,      

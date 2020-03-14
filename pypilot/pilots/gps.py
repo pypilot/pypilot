@@ -18,7 +18,7 @@ from pypilot.values import *
 
 class GPSPilot(AutopilotPilot):
   def __init__(self, ap):
-    super(WindPilot, self).__init__('gps', ap)
+    super(GPSPilot, self).__init__('gps', ap)
 
     # create filters
     self.wind_gps_offset = HeadingOffset()
@@ -67,7 +67,7 @@ class GPSPilot(AutopilotPilot):
 
   def best_mode(self, mode):
       sensors = self.ap.sensors
-      gps_speed = self.sensors.gps.speed.value
+      gps_speed = sensors.gps.speed.value
       nogps = sensors.gps.source.value == 'none' or gps_speed < 1.2
       nowind = sensors.wind.source.value == 'none'
       if nogps:  # fallback to compass only if gps has failed boat speed < 1.2knots
@@ -82,7 +82,7 @@ class GPSPilot(AutopilotPilot):
     # compute command
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
-    gain_values = {'P': self.heading_error.value,
+    gain_values = {'P': ap.heading_error.value,
                    'D': headingrate,      
                    'DD': headingraterate,
                    'FF': ap.heading_command_rate.value}
@@ -92,4 +92,4 @@ class GPSPilot(AutopilotPilot):
     if ap.enabled.value:
       ap.servo.command.set(command)
 
-pilot = WindPilot
+pilot = GPSPilot

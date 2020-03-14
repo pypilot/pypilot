@@ -48,7 +48,8 @@ class AutotunePilot(AutopilotPilot):
         self.search_count = 0
 
     self.search_count+= 1
-    self.cost += ap.heading_error.value + self.gains['P'].value
+    P, D = self.gains['P']['apgain'], self.gains['D']['apgain']
+    self.cost += ap.heading_error.value + P.value*4000 + D.value*20
     if self.search_count >= 600:
       self.search_count = 0
       t = time.monotonic()
@@ -58,7 +59,6 @@ class AutotunePilot(AutopilotPilot):
       # update after 600 iterations (30 seconds at 20hz)
       if search_dt < 600/self.boatimu.rate.value*1.05:
         # determine current error and bias toward lower gains slightly
-        P, D = self.gains['P'].value, self.gains['D'].value
 
         # determine the change in cost since last update
         cost_dt = cost - self.last_cost
@@ -73,16 +73,16 @@ class AutotunePilot(AutopilotPilot):
         self.search_angle = resolve(self.search_angle)
 
         # apply changes to gains
-        P += self.p_search[2]*math.sin(self.search_angle)
-        D += self.d_search[2]*math.cos(self.search_angle)
+        Pval = P.value + self.p_search[2]*math.sin(self.search_angle)
+        Dval = D.value + self.d_search[2]*math.cos(self.search_angle)
 
         # keep search space within bounds
-        self.gains['P'].set(min(max(P, self.p_search[0]), self.p_search[1]))
-        self.gains['D'].set(min(max(D, self.d_search[0]), self.d_search[1]))
+        P.set(min(max(Pval, self.p_search[0]), self.p_search[1]))
+        D.set(min(max(Dval, self.d_search[0]), self.d_search[1]))
 
       self.last_cost = cost
       self.cost = 0
 
 
 
-pilot = BayesianPilot
+pilot = AutotunePilot

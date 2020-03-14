@@ -391,13 +391,24 @@ class Autopilot(object):
         self.heading_command_rate.time = t0
         lp = .1
         command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
+        if not 'wind' in self.mode.value: # wind modes need opposite gain
+            command_rate = -command_rate
         self.heading_command_rate.update(command_rate)
             
         self.last_heading_mode = self.mode.value
                 
         # perform tacking or pilot specific calculation
         if not self.tack.process():
-            pilot.process() # implementation specific process
+            # if disabled, only compute if a client cares
+            compute = True
+            if not self.enabled.value:
+                for gain in pilot.gains:
+                    if pilot.gains[gain]['sensor'].watch:
+                        break
+                else:
+                    compute = False
+            if compute:
+                pilot.process() # implementation specific process
 
         # servo can only disengage under manual control
         self.servo.force_engaged = self.enabled.value
