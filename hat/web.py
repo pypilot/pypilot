@@ -53,39 +53,36 @@ class WebConfig(Namespace):
         self.status = 'N/A'
 
         self.last_key = False
-        
-        acts = ''
+
+        ind = 0
+        acts = ['', '']
         names = Markup('[')
         cols = 1
         col = 0
-        acts += Markup('<p>' + _('Actions for LCD interface') + '<table border=0>')
+        acts1 += Markup('<table border=0>')
         i = 0
         actions = config['actions']
         for name in actions:
             if i == 8:
-                acts += Markup('</tr></table>')
-                acts += Markup('<p><br>key: <b><span id="key0"></span></b>')
-                acts += Markup('<br>action: <b><span id="action0"></span></b>')
-                acts += Markup('<p>' + _('These actions do not depend on the state of the display and can be used by wireless remotes.'))
-                acts += Markup('<table border=0>')
+                acts[ind] += Markup('</tr></table>')
+                ind = 1
+                acts[ind] += Markup('<table border=0>')
                 col = 0
             i+=1
     
             if col == 0:
-                acts += Markup('<tr>')
+                acts[ind] += Markup('<tr>')
             acts += Markup('<td><button id="action_' + name + '">' +
                            name + '</button></td><td><span id="action' +
                            name + 'keys"></span></td>')
             if col == cols-1:
-                acts += Markup('</tr>')
+                acts[ind] += Markup('</tr>')
                 col = 0
             else:
                 col += 1
             names += Markup('"' + name + '", ')
 
-        acts += Markup('</table>')
-        acts += Markup('<p><br>key: <b><span id="key1"></span></b>')
-        acts += Markup('<br>action: <b><span id="action1"></span></b>')
+        acts[ind] += Markup('</table>')
 
         names += Markup('""]')
 
@@ -115,8 +112,7 @@ class WebConfig(Namespace):
         remote = Markup('<input type="checkbox" id="remote"')
         if config['host'] != 'localhost':
             remote += Markup(' checked')
-        remote += Markup('/>' + _('remote'))
-        remote += Markup('<input type="text" id="host" value="' + config['host'] + '">')
+        remote += Markup('/><input type="text" id="host" value="' + config['host'] + '">')
 
         @app.route('/')
         def index():
