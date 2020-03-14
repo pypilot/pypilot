@@ -1,0 +1,270 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the pypilot_hat package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: pypilot_hat\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2020-08-15 20:57+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+
+#: ../menu.py:271
+msgid "pilot"
+msgstr "pilot"
+
+#: ../menu.py:273
+msgid "gain"
+msgstr "zdobyć"
+
+#: ../menu.py:303
+msgid "rudder"
+msgstr "ster"
+
+#: ../menu.py:323
+msgid "calibrate"
+msgstr "kalibrować"
+
+#: ../menu.py:324
+msgid "level"
+msgstr "poziom"
+
+#: ../menu.py:325
+msgid "heading"
+msgstr "nagłówek"
+
+#: ../menu.py:326
+msgid "lock"
+msgstr "zamek"
+
+#: ../menu.py:355
+msgid "motor"
+msgstr "silnik"
+
+#: ../menu.py:356
+msgid "min speed"
+msgstr "min prędkość"
+
+#: ../menu.py:356 ../menu.py:357
+msgid "relative"
+msgstr "krewny"
+
+#: ../menu.py:357
+msgid "max speed"
+msgstr "mak. prędkość"
+
+#: ../menu.py:358
+msgid "max current"
+msgstr "mak. prąd"
+
+#: ../menu.py:358
+msgid "amps"
+msgstr "ampery"
+
+#: ../menu.py:359
+msgid "period"
+msgstr "kropka"
+
+#: ../menu.py:359
+msgid "seconds"
+msgstr "sekundy"
+
+#: ../menu.py:398
+msgid "defaults"
+msgstr "domyślne"
+
+#: ../menu.py:399
+msgid "remote"
+msgstr "zdalny"
+
+#: ../menu.py:404
+msgid "No Wifi detected"
+msgstr "Nie wykryto Wi-Fi"
+
+#: ../menu.py:431
+msgid "control"
+msgstr "kontrola"
+
+#: ../menu.py:433
+msgid "small step"
+msgstr "mały krok"
+
+#: ../menu.py:433 ../menu.py:434
+msgid "degrees"
+msgstr "stopni"
+
+#: ../menu.py:434
+msgid "big step"
+msgstr "duży krok"
+
+#: ../menu.py:449
+msgid "display"
+msgstr "pokaz"
+
+#: ../menu.py:450
+msgid "contrast"
+msgstr "kontrast"
+
+#: ../menu.py:451
+msgid "invert"
+msgstr "odwracać"
+
+#: ../menu.py:452
+msgid "backlight"
+msgstr "podświetlenie"
+
+#: ../menu.py:453
+msgid "flip"
+msgstr "trzepnięcie"
+
+#: ../menu.py:481
+msgid "language"
+msgstr "język"
+
+#: ../menu.py:494
+msgid "settings"
+msgstr "ustawienia"
+
+#: ../menu.py:495
+msgid "mode"
+msgstr "tryb"
+
+#: ../menu.py:500
+msgid "Menu"
+msgstr "Menu"
+
+#: ../menu.py:518
+msgid "Loading"
+msgstr "Ładowanie"
+
+#: ../menu.py:527
+msgid "timeout"
+msgstr "koniec czasu"
+
+#: ../page.py:274 ../page.py:288
+msgid "info"
+msgstr "info"
+
+#: ../page.py:296
+msgid "Watts"
+msgstr "Watts"
+
+#: ../page.py:296
+msgid "Amp Hours"
+msgstr "Amp Hours"
+
+#: ../page.py:296
+msgid "runtime"
+msgstr "runtime"
+
+#: ../page.py:302
+msgid "voltage"
+msgstr "Napięcie"
+
+#: ../page.py:302
+msgid "rate"
+msgstr "oceniać"
+
+#: ../page.py:302
+msgid "uptime"
+msgstr "uptime"
+
+#: ../page.py:308
+msgid "cont temp"
+msgstr "temp. kont"
+
+#: ../page.py:308
+msgid "motor temp"
+msgstr "temp. silnika"
+
+#: ../page.py:308
+msgid "faults"
+msgstr "wady"
+
+#: ../page.py:313
+msgid "version"
+msgstr "wersja"
+
+#: ../page.py:313
+msgid "author"
+msgstr "autor"
+
+#: ../page.py:335
+msgid "Calibrate Info"
+msgstr "Kalibruj informacje"
+
+#: ../page.py:346
+msgid "incomplete"
+msgstr "niekompletny"
+
+#: ../page.py:346
+msgid "excellent"
+msgstr "doskonały"
+
+#: ../page.py:346
+msgid "good"
+msgstr "dobry"
+
+#: ../page.py:347
+msgid "fair"
+msgstr "targi"
+
+#: ../page.py:347
+msgid "poor"
+msgstr "ubogi"
+
+#: ../page.py:347
+msgid "bad"
+msgstr "zły"
+
+#: ../page.py:355
+msgid "compass"
+msgstr "kompas"
+
+#: ../page.py:534
+msgid "ERROR"
+msgstr "BŁĄD"
+
+#: ../page.py:534
+msgid "compass or gyro failure!"
+msgstr "awaria kompasu lub żyroskopu!"
+
+#: ../page.py:564
+msgid "GPS not detected"
+msgstr "GPS nie został wykryty"
+
+#: ../page.py:568
+msgid "WIND not detected"
+msgstr "Nie wykryto WIND"
+
+#: ../page.py:572
+msgid "WARNING no motor controller"
+msgstr "OSTRZEŻENIE brak sterownika silnika"
+
+#: ../page.py:584
+msgid "standby"
+msgstr "czekaj"
+
+#: ../page.py:608
+msgid "No Cal"
+msgstr "No Cal"
+
+#: ../page.py:611
+msgid "Bad Cal"
+msgstr "Zły Cal"
+
+#: ../page.py:670
+msgid "connect to server"
+msgstr "połączyć się z serwerem"
+
+#~ msgid "Info"
+#~ msgstr "Informacje"
