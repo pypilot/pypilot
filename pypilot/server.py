@@ -159,18 +159,26 @@ class ServerWatch(pypilotValue):
             values[name].watch(connection, watches[name])
 
 class ServerUDP(pypilotValue):
-    def __init__(self, values):
+    def __init__(self, values, server):
         super(ServerUDP, self).__init__(values, 'udp_port')
+        self.server = server
 
     def set(self, msg, connection):
         name, data = msg.rstrip().split('=', 1)        
         self.msg = pyjson.loads(data)
+        # remove any identical udp connection
+        for socket in self.server.sockets:
+            if socket.udp_port and (socket.udp_port == self.msg or not self.msg) and socket.address[0] == connection.address[0]:
+                #print('remove old udp')
+                socket.udp_port = False
+                socket.udp_out_buffer = ''
         connection.udp_port = self.msg # output streams on this port
 
+
 class ServerValues(pypilotValue):
-    def __init__(self):
+    def __init__(self, server):
         super(ServerValues, self).__init__(self, 'values')
-        self.values = {'values': self, 'watch': ServerWatch(self), 'udp_port': ServerUDP(self)}
+        self.values = {'values': self, 'watch': ServerWatch(self), 'udp_port': ServerUDP(self, server)}
         self.internal = list(self.values)
         self.pipevalues = {}
         self.msg = 'new'
@@ -194,6 +202,7 @@ class ServerValues(pypilotValue):
                 msg += '"' + name + '":' + pyjson.dumps(info)
                 notsingle = True
             self.msg = msg + '}\n'
+            #print('values len', len(self.msg))
         return self.msg
 
     def sleep_time(self):
@@ -375,7 +384,7 @@ class pypilotServer(object):
         self.sockets = []
         self.fd_to_pipe = {}
 
-        self.values = ServerValues()
+        self.values = ServerValues(self)
 
         while True:
             try:
@@ -418,6 +427,7 @@ class pypilotServer(object):
         self.values.HandleRequest(request, connection)
 
     def RemoveSocket(self, socket):
+        #print('remove socket', socket.address)
         self.sockets.remove(socket)
 
         found = False
@@ -464,7 +474,8 @@ class pypilotServer(object):
                     print('pypilot server: max connections reached!!!', len(self.sockets))
                     self.RemoveSocket(self.sockets[0]) # dump first socket??
                 socket = LineBufferedNonBlockingSocket(connection, address)
-                
+                #print('add socket', socket.address)
+
                 self.sockets.append(socket)
                 fd = socket.fileno()
                 socket.cwatches = {'values': True} # server always watches client values
