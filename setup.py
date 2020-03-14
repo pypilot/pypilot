@@ -101,10 +101,12 @@ package_data = {'pypilot': find_locales('pypilot'),
                 'pypilot.ui': ['*.png', '*.mtl', '*.obj'],
                 'pypilot.web': ['static/*', 'templates/*'] + ['pypilot_web.pot'] + find_locales('web', 'translations')}
         
-#print(package_data)
-#exit(0)
 
-        
+ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module]
+if spireader_module:
+    ext_modules.append(spireader_module)
+    
+
 setup (name = 'pypilot',
        version = version.strversion,
        description = 'pypilot sailboat autopilot',
@@ -113,7 +115,7 @@ setup (name = 'pypilot',
        url='http://pypilot.org/',
        packages=packages,
        package_dir=package_dirs,
-       ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module, spireader_module],
+       ext_modules = ext_modules ,
        package_data=package_data,
        entry_points={
            'console_scripts': [
