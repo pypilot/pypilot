@@ -282,10 +282,6 @@ def heading_filter(lp, a, b):
     return result
 
 def CalibrationProcess(cal_pipe, client):
-    import signal
-    signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-    import os
-
     if os.system('sudo chrt -po 0 %d 2> /dev/null > /dev/null' % os.getpid()):
         print('warning, failed to make calibration process other')
     if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
@@ -294,21 +290,16 @@ def CalibrationProcess(cal_pipe, client):
             print('warning, failed to renice calibration process')
 
     time.sleep(4)
-    # since this process can restart, must reset signals
-    for s in range(1, 16):
-        if s != 9:
-            signal.signal(s, signal.SIG_DFL)
     
     print('calibration process', os.getpid())
-    try:
-        import calibration_fit
-        pass
-    except Exception as e:
-        print('failed import calibration fit', e)
-        time.sleep(30) # maybe numpy or scipypppp isn't ready yet
-        return
-    print('calibration loaded, starting')
-    calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
+    while True:
+        try:
+            import calibration_fit
+            print('calibration loaded, starting')
+            calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
+        except Exception as e:
+            print('failed import calibration fit', e)
+            time.sleep(30) # maybe numpy or scipy isn't ready yet
 
 class AutomaticCalibrationProcess():
     def __init__(self, server):
@@ -319,19 +310,12 @@ class AutomaticCalibrationProcess():
         else:
             self.cal_pipe, self.cal_pipe_process = False, False # use client
         self.client = pypilotClient(server)
-        self.process = False
-
-    def start(self):
-        if self.process:
-            return
-        print('starting calibration process...')
         self.process = multiprocessing.Process(target=CalibrationProcess, args=(self.cal_pipe_process, self.client), daemon=True)
         self.process.start()
 
     def __del__(self):
         print('terminate calibration process')
-        if self.process:
-            self.process.terminate()
+        self.process.terminate()
 
 
 class BoatIMU(object):
@@ -498,7 +482,6 @@ class BoatIMU(object):
             self.alignmentQ.last = self.alignmentQ.value
 
 
-        self.auto_cal.start()            
         if self.auto_cal.cal_pipe:
             #print('warning, cal pipe always sending despite locks')
             cal_data = {}
