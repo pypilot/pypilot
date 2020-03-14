@@ -1,5 +1,4 @@
 /*
-#
 #   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
@@ -212,9 +211,29 @@ $(document).ready(function() {
     var heading_set_time = new Date().getTime();
     var heading_local_command;
     var last_rudder_data = {}
+
+    function heading_str(heading) {
+        if(heading.toString()=="false")
+            return "N/A"
+
+        // round to 1 decimal place
+        heading = Math.round(10*heading)/10
+
+        mode = $('#mode').val()
+        if(mode == 'wind' || mode == 'true wind') {
+            if(heading > 0)
+               heading += '-';
+        }
+        return heading
+    }
+
     socket.on('pypilot', function(msg) {
         data = JSON.parse(msg);
-        //data = msg;
+
+        if('ap.mode' in data) {
+            value = data['ap.mode'];
+            $('#mode').val(value);
+        }
 
         if('ap.heading' in data) {
             heading = data['ap.heading'];
@@ -222,9 +241,9 @@ $(document).ready(function() {
                 $('#aperrors0').text('compass or gyro failure!');
             else
                 $('#aperrors0').text('');
-
-            $('#heading').text(Math.round(10*heading)/10);
+            $('#heading').text(heading_str(heading));
         }
+
         if('ap.enabled' in data) {
             if(data['ap.enabled']) {
                 var w = $(window).width();
@@ -245,10 +264,6 @@ $(document).ready(function() {
                 $('#star10').text('>>');
             }
         }
-        if('ap.mode' in data) {
-            value = data['ap.mode'];
-            $('#mode').val(value);
-        }
 
         if('ap.pilot' in data) {
             value= data['ap.pilot'];
@@ -268,10 +283,9 @@ $(document).ready(function() {
                     $('#' + iname + 'label').text(value);
                 }
             }
-        if('ap.heading_command' in data) {
-            heading_command = data['ap.heading_command'];
-            $('#heading_command').text(Math.round(heading_command));
-        }
+        if('ap.heading_command' in data)
+            $('#heading_command').text(heading_str(data['ap.heading_command']));
+
         if('servo.engaged' in data) {
             if(data['servo.engaged'])
                 $('#servo_engaged').text('Engaged');
@@ -582,4 +596,3 @@ function getCookie(key) {
     var keyValue = document.cookie.match('(^|;) ?' + key + '=([^;]*)(;|$)');
     return keyValue ? keyValue[2] : null;
 }
-

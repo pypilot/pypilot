@@ -158,17 +158,6 @@ class RangeSetting(RangeProperty):
 
         self.info['type'] = 'RangeSetting'
         self.info['units'] = self.units
-        
-class HeadingProperty(RangeProperty):
-    def __init__(self, name, initial):
-        super(HeadingProperty, self).__init__(name, initial, 0, 360)
-
-    def set(self, value):
-        while value < 0:
-            value += 360
-        while value >= 360:
-            value -= 360
-        super(HeadingProperty, self).set(value)
 
 class EnumProperty(Property):
     def __init__(self, name, initial, choices, **kwargs):

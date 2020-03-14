@@ -64,7 +64,8 @@ class Wind(Sensor):
 
     def update(self, data):
         if 'direction' in data:
-            self.direction.set(resolv(data['direction'] + self.offset.value, 180))
+            # direction is from -180 to 180
+            self.direction.set(resolv(data['direction'] + self.offset.value))
         if 'speed' in data:
             self.speed.set(data['speed'])
 

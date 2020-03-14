@@ -201,7 +201,6 @@ class page(object):
     def box(self, rect, color):
         surface = self.lcd.surface
         surface.box(*(self.convrect(rect) + [color]))
-        
                 
     def last_val(self, name, period=-1, default='N/A'):
         if period is -1:
@@ -270,7 +269,6 @@ class page(object):
             lcd.client.set('servo.command', 1)           
         if self.lcd.keypad[NUDGE_PORT].up or self.lcd.keypad[NUDGE_STARBOARD].up:
             lcd.client.set('servo.command', 0)           
-        
 
 class info(page):
     def __init__(self, num_pages=4):
@@ -484,28 +482,31 @@ class control(controlbase):
         self.control['modes'] = modes
 
         #print('mode', self.last_val('ap.mode'))
-        modes = {'compass': ('C', self.have_compass, rectangle(0, .74, .25, .16)),
-                 'gps':     ('G', self.have_gps,     rectangle(.25, .74, .25, .16)),
-                 'wind':    ('W', self.have_wind,    rectangle(.5, .74, .25, .16)),
-                 'true wind': ('T', self.have_true_wind, rectangle(.75, .74, .25, .16))}
+        modes = {'compass':   ('C', self.have_compass,   rectangle(  0, .74, .22, .16)),
+                 'gps':       ('G', self.have_gps,       rectangle(.22, .74, .25, .16)),
+                 'wind':      ('W', self.have_wind,      rectangle(.47, .74, .3,  .16)),
+                 'true wind': ('T', self.have_true_wind, rectangle(.77, .74, .23, .16))}
 
         self.lcd.surface.box(*(self.convrect(rectangle(0, .74, 1, .18)) + [black]))
         for mode in modes:
             if modes[mode][1]():
-                self.fittext(modes[mode][2], modes[mode][0])
+                ret=self.fittext(modes[mode][2], modes[mode][0])
+
+        for mode in modes:
             if self.last_val('ap.mode') == mode:
                 r = modes[mode][2]
                 marg = .02
-                self.rectangle(rectangle(r.x, r.y+marg, r.width-marg, r.height), .015)
+                self.rectangle(rectangle(r.x, r.y+marg, r.width, r.height), .015)
 
     def display(self, refresh):
         if not self.control:
             self.fill(black)
-            self.control = {'heading': '   ', 'heading_command': '   ', 'mode': False, 'modes': []}
-        
+            self.control = {'heading': (0, '   ', False),
+                            'heading_command': (0, '   ', False),
+                            'mode': False, 'modes': []}
         def nr(x):
             try:
-                s = str(int(round(x)))
+                s = str(int(round(abs(x))))
                 while len(s) < 3:
                     s = ' ' + s
                 return s
@@ -514,7 +515,7 @@ class control(controlbase):
 
         def draw_big_number(pos, num, lastnum):
             if num == 'N/A' and lastnum != num:
-                r = rectangle(pos[0], pos[1], 1, .4)
+                r = rectangle(0, pos, 1, .4)
                 self.fittext(r, num, False, black)
                 return
 
@@ -529,9 +530,28 @@ class control(controlbase):
                         continue
                 except:
                     pass
-                x = pos[0]+float(i)*.33
-                self.box(rectangle(x, pos[1], .34, .4), black)
-                self.text((x, pos[1]), num[i], size, True)
+                x = float(i)*.33
+                self.box(rectangle(x, pos, .34, .4), black)
+                self.text((x, pos), num[i], size, True)
+
+        def draw_heading(pos, value, lastvalue):
+            heading, mode, num = value
+            lastheading, lastmode, lastnum = lastvalue
+            windmode = 'wind' in mode
+
+            if mode != lastmode:
+                lastnum = 'XXX' # redraw if mode changes
+            elif windmode and lastheading != 'N/A' and \
+               heading*lastheading <= 0:
+                lastnum = 'XXX' # redraw if sign changes
+                
+            draw_big_number(pos, num, lastnum)
+            # in wind mode draw indicator showing sign
+            if windmode:
+                if heading > 0:
+                    self.box(rectangle(.7, pos+.3, .3, .05), white)
+                elif heading < 0:
+                    self.box(rectangle(0, pos+.3, .3, .05), white)
 
         if self.last_val('imu.frequency', 1) is False:
             r = rectangle(0, 0, 1, .8)
@@ -541,12 +561,12 @@ class control(controlbase):
             super(control, self).display(refresh)
             return
 
-        ap_heading = nr(self.last_val('ap.heading'))
-        draw_big_number((0,0), ap_heading, self.control['heading'])
-        self.control['heading'] = ap_heading
-        #print('heading', self.last_val('ap.heading'))
-
         mode = self.last_val('ap.mode')
+
+        ap_heading = self.last_val('ap.heading')
+        heading = ap_heading, mode, nr(ap_heading)
+        draw_heading(0, heading, self.control['heading'])
+        self.control['heading'] = heading
 
         # display warning about any servo faults
         flags = self.last_val('servo.flags').split()
@@ -580,20 +600,18 @@ class control(controlbase):
             if self.control['heading_command'] != msg:
                 self.fittext(rectangle(0, .4, 1, .4), msg, True, black)
                 self.control['heading_command'] = msg
-        else:
+        elif self.last_val('ap.enabled') != True:
             # no warning, display the desired course or 'standby'
-            if self.last_val('ap.enabled') != True:
-                if self.control['heading_command'] != 'standby':
-                    r = rectangle(0, .4, 1, .34)
-                    self.fittext(r, _('standby'), False, black)
-                    self.control['heading_command'] = 'standby'
-            else:
-                if self.control['heading_command'] != self.last_val('ap.heading_command'):
-                    ap_heading_command = nr(self.last_val('ap.heading_command'))
-                    draw_big_number((0, .4), ap_heading_command, self.control['heading_command'])
-                    self.control['heading_command'] = ap_heading_command
-
-                    self.control['mode'] = False # refresh mode
+            if self.control['heading_command'] != 'standby':
+                r = rectangle(0, .4, 1, .34)
+                self.fittext(r, _('standby'), False, black)
+                self.control['heading_command'] = 'standby'
+        elif self.control['heading_command'] != self.last_val('ap.heading_command'):
+            ap_heading_command = self.last_val('ap.heading_command')
+            heading_command = ap_heading_command, mode, nr(ap_heading_command)
+            draw_heading(.4, heading_command, self.control['heading_command'])
+            self.control['heading_command'] = heading_command
+            self.control['mode'] = False # refresh mode
 
         warning = False
         if mode == 'compass':
