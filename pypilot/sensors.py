@@ -94,10 +94,11 @@ class APB(Sensor):
         self.track.update(data['track'])
         self.xte.update(data['xte'])
 
-        if not self.client.values['ap.enabled'].value:
+        # ignore message if autopilot is not enabled
+        if not self.client.values.values['ap.enabled'].value:
             return
 
-        mode = self.client.values['ap.mode'].value
+        mode = self.client.values.values['ap.mode']
         if mode.value != data['mode']:
             # for GPAPB, ignore message on wrong mode
             if data['isgp'] != 'GP':
@@ -107,8 +108,9 @@ class APB(Sensor):
                 # APB is from GP with no gps mode selected so exit
 
         command = data['track'] + self.gain.value*data['xte']
+        print("apb command", command, data)
 
-        heading_command = self.server.values['ap.heading_command']
+        heading_command = self.client.values.values['ap.heading_command']
         if abs(heading_command.value - command) > .1:
             heading_command.set(command)
 
