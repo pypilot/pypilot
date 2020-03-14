@@ -190,7 +190,7 @@ class gpsd(object):
                     else: # probe failed
                         serialprobe.relinquish('gpsd')
                     self.probe_device = False
-                elif self.probed_device and not self.probed_devices in self.devices:
+                elif self.probed_device and not self.probed_device in self.devices:
                     self.probed_device = False
 
                 for device in list(self.reserved_devices):

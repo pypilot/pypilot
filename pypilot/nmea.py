@@ -401,7 +401,7 @@ class Nmea(object):
                 self.probeindex = self.devices.index(False)
             except:
                 self.probeindex = len(self.devices)
-            self.probedevicepath = serialprobe.probe('nmea%d' % self.probeindex, [38400, 4800])
+            self.probedevicepath = serialprobe.probe('nmea%d' % self.probeindex, [38400, 4800], 4)
             if self.probedevicepath:
                 #print('nmea probe', self.probedevicepath)
                 try:
@@ -411,7 +411,8 @@ class Nmea(object):
                     print('failed to open', self.probedevicepath, 'for nmea data', e)
 
         elif time.monotonic() - self.probetime > 5:
-            #print('nmea serial probe timeout', self.probedevicepath)
+            print('nmea serial probe timeout', self.probedevicepath)
+            serialprobe.relinquish('nmea%d' % self.probeindex)
             self.probedevice = None # timeout
         else:
             # see if the probe device gets a valid nmea message

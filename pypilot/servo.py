@@ -538,7 +538,7 @@ class Servo(object):
 
     def poll(self):
         if not self.driver:
-            device_path = serialprobe.probe('servo', [38400], 1)
+            device_path = serialprobe.probe('servo', [38400], 2)
             if device_path:
                 #print('servo probe', device_path)
                 try:
