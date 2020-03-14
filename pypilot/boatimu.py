@@ -331,9 +331,9 @@ class BoatIMU(object):
         self.lasttimestamp = 0
 
         self.headingrate = self.heel = 0
-        self.heading_lowpass_constant = self.register(RangeProperty, 'heading_lowpass_constant', .1, .01, 1)
-        self.headingrate_lowpass_constant = self.register(RangeProperty, 'headingrate_lowpass_constant', .1, .01, 1)
-        self.headingraterate_lowpass_constant = self.register(RangeProperty, 'headingraterate_lowpass_constant', .1, .01, 1)
+        self.heading_lowpass_constant = self.register(RangeProperty, 'heading_lowpass_constant', .2, .1, .5)
+        self.headingrate_lowpass_constant = self.register(RangeProperty, 'headingrate_lowpass_constant', .2, .1, .5)
+        self.headingraterate_lowpass_constant = self.register(RangeProperty, 'headingraterate_lowpass_constant', .2, .1, .5)
 
         sensornames = ['accel', 'gyro', 'compass', 'accel.residuals', 'pitch', 'roll']
         sensornames += ['pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']
