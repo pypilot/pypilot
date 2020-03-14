@@ -46,14 +46,14 @@ try:
     from flask_babel import Babel, gettext
     babel = Babel(app)
 
-    LANGUAGES = os.listdir('translations')
+    LANGUAGES = os.listdir(os.path.dirname(os.path.abspath(__file__)) + '/translations')
 
     @babel.localeselector
     def get_locale():
         return request.accept_languages.best_match(LANGUAGES)
     
 except Exception as e:
-    print('failed to import flask_babel, translations not possible!!')
+    print('failed to import flask_babel, translations not possible!!', e)
     def _(x): return x
     app.jinja_env.globals.update(_=_)
     babel = None
