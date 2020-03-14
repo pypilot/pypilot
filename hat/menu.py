@@ -459,9 +459,21 @@ class select_language(page):
 
 class language(menu):
     def __init__(self):
-        languages = [(_('English'), 'en'),
-                     (_('French'), 'fr'),
-                     (_('Spanish'), 'es')]
+        languages = [('català', 'ca'),
+                     ('dansk', 'da'),
+                     ('deutsch', 'de'),
+                     ('Eλληνικά'),
+                     ('english', 'en'),
+                     ('español', 'es'),
+                     ('suomalainen', 'fi'),
+                     ('français', 'fr'),
+                     ('italiano', 'it'),
+                     ('nederlands', 'nl'),
+                     ('norsk', 'no'),
+                     ('polskie', 'pl'),
+                     ('pycкий', 'ru'),
+                     ('svenska', 'sv')
+                     ]
         super(language, self).__init__(_('language'), list(map(select_language, languages)))
 
     def process(self):
