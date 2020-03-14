@@ -7,15 +7,15 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-07-20 05:26-0400\n"
+"POT-Creation-Date: 2021-07-20 06:24-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: nl <LL@li.org>\n"
 "Language: nl\n"
+"Language-Team: nl <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
 #: static/pypilot_control.js:37
@@ -60,11 +60,11 @@ msgstr "Kalibratieplot"
 
 #: templates/calibrationplot.html:21
 msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age "
-"will reset when the calibration updates."
+"The raw sensor readings should fall on a sphere when calibrated.  The age"
+" will reset when the calibration updates."
 msgstr ""
-"De ruwe sensormetingen moeten bij kalibratie op een bol vallen. De leeftijd "
-"wordt gereset wanneer de kalibratie wordt bijgewerkt."
+"De ruwe sensormetingen moeten bij kalibratie op een bol vallen. De "
+"leeftijd wordt gereset wanneer de kalibratie wordt bijgewerkt."
 
 #: templates/calibrationplot.html:28
 msgid "Connection"
@@ -209,3 +209,4 @@ msgstr "Client Mode Address (leeg laten voor dhcp)"
 #: templates/wifi.html:22
 msgid "If there is a problem, edit the file"
 msgstr "Bewerk het bestand als er een probleem is"
+
