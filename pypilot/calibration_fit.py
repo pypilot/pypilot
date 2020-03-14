@@ -146,7 +146,7 @@ def FitPointsAccel(debug, points):
     if not sphere3d_fit or sphere3d_fit[3] < 0:
         debug('FitLeastSq sphere failed!!!! ', len(points))
         return False
-    debug('accel sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
+    debug('sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
     return sphere3d_fit
 
 def FitPointsCompass(debug, points, current, norm):
@@ -696,7 +696,7 @@ def CalibrationProcess(cal_pipe, client):
                 accel_calibration.set(fit)
                 accel_calibration.points.set(accel_points.Points())
             else:
-                debug('accel')('calibration distance too small ' + dist)
+                debug('accel')('calibration distance too small ', dist)
 
         compass_points.RemoveOlder(20*60) # 20 minutes
         fit = FitCompass(debug('compass'), compass_points, compass_calibration.value[0], norm)
