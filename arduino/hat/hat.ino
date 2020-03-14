@@ -200,6 +200,7 @@ void setup() {
 //    OCR1A = 100;
 }
 
+// interrupt driven pwm gives inverting signals (highest volume) with variable frequency
 ISR(TIMER2_OVF_vect) __attribute__((naked));
 ISR(TIMER2_OVF_vect)
 {
@@ -436,11 +437,13 @@ void loop() {
     }
     t = millis();
     // read from IR??
+    /*
     if (ir.getResults()) {
         myDecoder.decode();
         send_code(IR, (myDecoder.value<<8) | myDecoder.protocolNum);
         ir.enableIRIn();      //Restart receiver
     }
+    */
 
     if (rf.available()) {
         uint32_t value = rf.getReceivedValue();

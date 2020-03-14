@@ -61,6 +61,7 @@ class gpsProcess(multiprocessing.Process):
                 break
 
     def gps_process(self, pipe):
+        print('gps process', os.getpid())
         while True:
             self.connect()
             self.read(pipe)

@@ -33,9 +33,12 @@ try:
         return self.socket.fileno()
 
     def close(self):
-        self.socket.close()
+        if self.socket:
+            self.socket.close()
+            self.socket = False
         if self.udp_socket:
-          self.udp_socket.close()
+            self.udp_socket.close()
+            self.udp_socket = False
         
     def recvdata(self):
         return self.b.recv()
@@ -89,7 +92,7 @@ try:
                 self.socket.close()
             self.out_buffer = self.out_buffer[count:]
         except Exception as e:
-            print('pypilot socket exception', self.address, e, os.getpid())
+            print('pypilot socket exception', self.address, e, os.getpid(), self.socket)
             self.close()
   
 except Exception as e:

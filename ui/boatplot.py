@@ -77,6 +77,7 @@ class BoatPlot():
         dist = 12
         glTranslatef(0, 0, -dist)
         glScalef(self.Scale, self.Scale, self.Scale)
+
         glRotateQ(self.Q)
 
         if self.obj:
@@ -84,8 +85,6 @@ class BoatPlot():
             #q = quaternion.multiply(fusionQPose, quaternion.angvec2quat(-math.pi/2, [1, 0, 0]))
             q = fusionQPose
             glRotateQ(q)
-            #OAglTranslatef(0, 0, -.7)
-
 
             s = .2
             glScalef(s,s,s)

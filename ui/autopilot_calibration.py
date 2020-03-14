@@ -184,17 +184,20 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             if name == 'imu.alignmentQ':
                 self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(quaternion.angle(value))))
                 self.alignmentQ = value
-            elif name == 'imu.fusionQPose':
-                aligned = quaternion.normalize(quaternion.multiply(value, self.alignmentQ))
-                
+            elif name == 'imu.fusionQPose':                
                 if not value:
                     return # no imu!  show warning?
+
+                #lastaligned = quaternion.normalize(quaternion.multiply(self.fusionQPose, self.alignmentQ))
+                aligned = quaternion.normalize(quaternion.multiply(value, self.alignmentQ))
+                value = aligned
                     
                 if self.cCoords.GetSelection() == 1:
-                    self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, aligned)
-                    self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, quaternion.conjugate(value))
+                    #self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, lastedaligned)
+                    self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, self.fusionQPose)
+                    self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, quaternion.conjugate(aligned))
                 elif self.cCoords.GetSelection() == 2:
-                    ang = quaternion.toeuler(aligned)[2] - quaternion.toeuler(value)[2]
+                    ang = quaternion.toeuler(self.fusionQPose)[2] - quaternion.toeuler(aligned)[2]
                     self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, quaternion.angvec2quat(ang, [0, 0, 1]))
 
                 self.fusionQPose = value
@@ -384,7 +387,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         # stupid hack
         self.boat_plot.reshape(self.BoatPlot.GetSize().x, self.BoatPlot.GetSize().y)
-        
+
         self.boat_plot.display(self.fusionQPose)
         self.BoatPlot.SwapBuffers()
 

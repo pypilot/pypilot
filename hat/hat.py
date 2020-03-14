@@ -194,14 +194,15 @@ class Hat(object):
             print('loaded device tree hat config')
         except Exception as e:
             print('failed to load', configfile, ':', e)
-            hatconfig = {"lcd":{"driver":"jlx12864",
-                                "port":"/dev/spidev0.0"},
-                         "lirc":"gpio4"}
-            if False: # for test
-                hatconfig["arduino"] = {"device":"/dev/spidev0.1",
-                                        "resetpin":16,
-                                        "hardware":0.21}
-            print('assuming original 26 pin tinypilot')
+            hatconfig = {'lcd':{'driver':'nokia5110',
+                                'port':'/dev/spidev0.0'},
+                         'lirc':'gpio4'}
+            if True: # for test
+                hatconfig['lcd']['driver'] = 'jlx12864'
+                hatconfig['arduino'] = {'device':'/dev/spidev0.1',
+                                        'resetpin':16,
+                                        'hardware':0.21}
+            print('assuming original 26 pin tinypilot with nokia5110 display')
         self.config['hat'] = hatconfig
 
         self.servo_timeout = time.monotonic() + 1

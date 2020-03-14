@@ -376,19 +376,12 @@ class pypilotServer(object):
             print('direct pipe clients must be created before the server is run')
             exit(0)
 
-        if not self.multiprocessing or True:
-            pipe0, pipe1 = NonBlockingPipe('pypilotServer pipe' + str(len(self.pipes)), self.multiprocessing)
-        else:
-            # slightly more efficient to directly use socket pair (avoid json wrap)
-            # is this better without multiprocessing too??
-            s = socket.socketpair()
-            pipe0 = LineBufferedNonBlockingSocket(s[0], 'serverpipe'+ str(len(self.pipes)))
-            pipe1 = LineBufferedNonBlockingSocket(s[1], 'serverpipe'+ str(len(self.pipes)))
+        pipe0, pipe1 = NonBlockingPipe('pypilotServer pipe' + str(len(self.pipes)), self.multiprocessing)
         self.pipes.append(pipe1)
         return pipe0
         
     def run(self):
-        print('pypilotServer pid', os.getpid())
+        print('pypilotServer process', os.getpid())
         # if server is in a separate process
         self.init()
         while True:
@@ -459,7 +452,7 @@ class pypilotServer(object):
             pipe.close()
 
     def RemoveSocket(self, socket):
-        #print('remove socket', socket.address)
+        print('server, remove socket', socket.address)
         self.sockets.remove(socket)
 
         found = False
@@ -471,7 +464,7 @@ class pypilotServer(object):
                 break
 
         if not found:
-            print('socket not found in fd_to_connection')
+            print('server error: socket not found in fd_to_connection')
 
         socket.close()
         self.values.remove(socket)
@@ -507,7 +500,7 @@ class pypilotServer(object):
                     print('pypilot server: max connections reached!!!', len(self.sockets))
                     self.RemoveSocket(self.sockets[0]) # dump first socket??
                 socket = LineBufferedNonBlockingSocket(connection, address)
-                #print('add socket', socket.address)
+                print('server add socket', socket.address)
 
                 self.sockets.append(socket)
                 fd = socket.fileno()
@@ -567,6 +560,15 @@ class pypilotServer(object):
         # flush all sockets
         for socket in self.sockets:
             socket.flush()
+        while True:
+            for socket in self.sockets:
+                if not socket.socket:
+                    print('server socket closed from flush!!')
+                    self.RemoveSocket(socket)
+                    break
+            else:
+                break
+                
         for pipe in self.pipes:
             pipe.flush()
 

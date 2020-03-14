@@ -150,6 +150,7 @@ class Autopilot(object):
         print('warning: failed to open special file', device, 'for writing')
         print('         cannot stroke the watchdog')
 
+    self.server.poll() # setup process before we switch main process to realtime
     if os.system('sudo chrt -pf 99 %d 2>&1 > /dev/null' % os.getpid()):
         print('warning, failed to make autopilot process realtime')
     
