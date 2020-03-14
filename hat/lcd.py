@@ -16,7 +16,7 @@ _ = lambda x : x # initially no translation
     
 from pypilot import quaternion
 
-from ugfx import ugfx
+from pypilot.hat.ugfx import ugfx
 import font
 
 class LCDMenu():
@@ -159,7 +159,7 @@ class LCD():
                 driver = pdriver
                 break
             
-        print('Using driver', driver)
+        print('using lcd driver', driver)
 
         use_glut = 'DISPLAY' in os.environ
         self.use_glut = False
@@ -480,7 +480,7 @@ class LCD():
                         self.hat.connect()
                         self.connect()
                         return self.display_menu
-                    return [thunk, lambda : self.config['remote']]
+                    return [thunk, lambda : self.hat.config['remote']]
 
                 self.menu = LCDMenu(self, _('WIFI'),
                                     [['AP'] + select_wifi_ap_toggle(),
@@ -723,7 +723,7 @@ class LCD():
             wifirect = rectangle(.3, .9, .6, .12)
             if wifi:
                 text = 'WIFI'
-                if self.config['remote']:
+                if self.hat.config['remote']:
                     text += ' R'
                 self.fittext(wifirect, text)
             else:
@@ -1045,7 +1045,7 @@ class LCD():
         right = self.keypad[RIGHT] or self.keypadup[RIGHT]
         updownup = self.keypadup[LEFT] or self.keypadup[RIGHT]
         updownheld = self.keypad[LEFT] > 10 or self.keypad[RIGHT] > 10
-        speed = float(1 if updownup else min(10, .004*max(self.keypad[LEFT], self.keypad[RIGHT])**2.5))
+        speed = fhaloat(1 if updownup else min(10, .004*max(self.keypad[LEFT], self.keypad[RIGHT])**2.5))
         updown = updownheld or updownup
         if self.keypadup[UP] or self.keypadup[DOWN]:
             updown = True

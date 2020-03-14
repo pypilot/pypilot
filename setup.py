@@ -39,7 +39,7 @@ except:
         ugfx_libraries=[]
         ugfx_defs = []
 
-ugfx_module = Extension('pypilot/hat/_ugfx',
+ugfx_module = Extension('_ugfx',
                         sources=['hat/ugfx/ugfx.cpp',
                                  'hat/ugfx/ugfx.i'],
                         extra_compile_args=['-Wno-unused-result'] + ugfx_defs,
@@ -58,7 +58,7 @@ for walk in os.walk('hat/locale'):
 
 from pypilot import version
 
-packages = ['pypilot', 'pypilot/pilots', 'pypilot/arduino_servo', 'ui', 'pypilot/hat', 'web', 'pypilot/linebuffer', 'hat/ugfx']
+packages = ['pypilot', 'pypilot/pilots', 'pypilot/arduino_servo', 'ui', 'hat', 'web', 'pypilot/linebuffer', 'hat/ugfx']
 try:
     from setuptools import find_packages
     packages = find_packages()
