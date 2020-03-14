@@ -445,7 +445,7 @@ class controlbase(page):
         if self.wifi == wifi and not refresh:
             return # done displaying
         self.wifi = wifi
-        wifirect = rectangle(.35, .9, .6, .1)
+        wifirect = rectangle(.35, .91, .6, .09)
         if wifi:
             text = 'WIFI'
             if self.lcd.hat and self.lcd.hat.config['remote']:
@@ -482,12 +482,12 @@ class control(controlbase):
         self.control['modes'] = modes
 
         #print('mode', self.last_val('ap.mode'))
-        modes = {'compass':   ('C', self.have_compass,   rectangle(  0, .74, .22, .16)),
-                 'gps':       ('G', self.have_gps,       rectangle(.22, .74, .25, .16)),
-                 'wind':      ('W', self.have_wind,      rectangle(.47, .74, .3,  .16)),
-                 'true wind': ('T', self.have_true_wind, rectangle(.77, .74, .23, .16))}
+        modes = {'compass':   ('C', self.have_compass,   rectangle(  0, .74, .22, .15)),
+                 'gps':       ('G', self.have_gps,       rectangle(.22, .74, .25, .15)),
+                 'wind':      ('W', self.have_wind,      rectangle(.47, .74, .3,  .15)),
+                 'true wind': ('T', self.have_true_wind, rectangle(.77, .74, .23, .15))}
 
-        self.lcd.surface.box(*(self.convrect(rectangle(0, .74, 1, .18)) + [black]))
+        self.lcd.surface.box(*(self.convrect(rectangle(0, .74, 1, .16)) + [black]))
         for mode in modes:
             if modes[mode][1]():
                 ret=self.fittext(modes[mode][2], modes[mode][0])
