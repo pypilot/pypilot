@@ -59,7 +59,8 @@ class pypilotValue(object):
                 for watch in self.pwatches:
                     if t0 >= watch.time:
                         watch.time = t0
-                    self.server_values.insert_watch(watch)
+                    if watch.connections: # only insert if there are connections
+                        self.server_values.insert_watch(watch)
                 self.pwatches = []
 
         elif self.connection: # inform owner of change if we are not owner
@@ -90,10 +91,12 @@ class pypilotValue(object):
                 
         if watching is not self.watching:
             self.watching = watching
-            if watching == 0:
+            if watching is 0:
                 watching = True
             if self.connection:
                 self.connection.cwatches[self.name] = watching
+                if watching is False:
+                    self.msg = False # server no longer tracking value
 
     def unwatch(self, connection, recalc):
         for watch in self.awatches:
