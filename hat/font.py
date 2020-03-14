@@ -23,7 +23,6 @@ except:
     if not os.path.isdir(fontpath):
         raise 'ugfxfonts should be a directory'
 
-
 global fonts
 fonts = {}
 

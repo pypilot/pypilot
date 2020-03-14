@@ -42,14 +42,6 @@ class signalk(object):
         self.signalk_access_url = False
         self.last_access_request_time = 0
 
-        try:
-            f = open(token_path)
-            self.token = f.read()
-            print('read token', self.token)
-            f.close()
-        except Exception as e:
-            print('signalk failed to read token', token_path)
-            self.token = False
         self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('nmea pipe', self.multiprocessing)
         if self.multiprocessing:
             import multiprocessing
@@ -59,6 +51,15 @@ class signalk(object):
             self.process = False
 
     def setup(self):
+        try:
+            f = open(token_path)
+            self.token = f.read()
+            print('read token', self.token)
+            f.close()
+        except Exception as e:
+            print('signalk failed to read token', token_path)
+            self.token = False
+
         try:
             from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
         except Exception as e:

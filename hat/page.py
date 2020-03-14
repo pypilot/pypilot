@@ -7,6 +7,9 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+import time
+import font
+
 white = 0xffffff
 black = 0x00
 #white = ugfx.color(255, 255, 255)
@@ -17,10 +20,6 @@ AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, 
 class rectangle():
     def __init__(self, x, y, width, height):
         self.x, self.y, self.width, self.height = x, y, width, height
-
-import time
-import json
-import font
 
 translate = lambda x : x # initially no translation
 

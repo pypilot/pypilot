@@ -7,7 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import sys, os, time, math
+
+import time, sys, os, math
 
 from page import *
 from page import _

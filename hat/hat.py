@@ -7,12 +7,19 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, os, sys, signal
-import json
+import time, os, sys
+from pypilot import pyjson
 from pypilot.client import pypilotClient
-
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import lcd, gpio, lircd
+print('t0', time.monotonic())
+import signal
+print('t0a', time.monotonic())
+import lcd
+print('t1', time.monotonic())
+import gpio
+print('t2', time.monotonic())
+import lircd
+print('t11', time.monotonic())
 
 class Action(object):
     def  __init__(self, hat, name):
@@ -188,7 +195,7 @@ class Hat(object):
         print('loading config file:', self.configfilename)
         try:
             file = open(self.configfilename)
-            config = json.loads(file.read())
+            config = pyjson.loads(file.read())
             file.close()
             for name in config:
                 self.config[name] = config[name]
@@ -198,7 +205,7 @@ class Hat(object):
         try:
             configfile = '/proc/device-tree/hat/custom_0'
             f = open(configfile)
-            hatconfig = json.loads(f.read())
+            hatconfig = pyjson.loads(f.read())
             f.close()
             print('loaded device tree hat config')
         except Exception as e:
@@ -313,7 +320,7 @@ class Hat(object):
         self.config['actions'] = actions
         try:
             file = open(self.configfilename, 'w')
-            file.write(json.dumps(self.config) + '\n')
+            file.write(pyjson.dumps(self.config) + '\n')
         except IOError:
             print('failed to save config file:', self.configfilename)
 

@@ -13,7 +13,6 @@
 # spi port.
 
 import os, sys, time, socket, errno, select
-import json
 import lircd
 
 REWIND=0xab # reset state
