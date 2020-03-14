@@ -67,7 +67,8 @@ class page(object):
         metrics = []
         for word in words:
             metrics.append((word, font.draw(surface, False, word, metric_size, bw)))
-            self.lcd.client.receive()
+            # needed in micropython because this routine can be so slow the recieve buffer can overflow
+            self.lcd.receive()
 
         t1 = time.time()
 
@@ -285,7 +286,7 @@ class info(page):
         self.bound_page()
         self.watches = {} # clear watches so they can be page specific
         self.fill(black)
-        self.fittext(rectangle(0, 0, 1, .2), _('info'))
+        self.fittext(rectangle(0, 0, 1, .2), _('Info'))
 
         y = .2
         if self.page == 0:

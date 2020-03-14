@@ -289,16 +289,18 @@ class LCD():
         for name, period in self.page.watches.items():
             self.client.watch(name, period)
 
-    def poll(self):
-        t0 = gettime()
 
+    def receive(self):
         msgs = self.client.receive()
         if msgs:
             self.data_update = True # allow cursor to blink
-
+            for name, value in msgs.items():
+                self.last_msg[name] = value
+            
+    def poll(self):
+        t0 = gettime()
+        self.receive()
         t1 = gettime()
-        for name, value in msgs.items():
-            self.last_msg[name] = value
         
         if not self.page:
             frameperiod = 1;
