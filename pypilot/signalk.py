@@ -109,7 +109,10 @@ class signalk(object):
                 if self.name_type == (name, type):
                     self.signalk.signalk_host_port = False
                     self.signalk.disconnect_signalk()
-                    print(_('signalk server lost'))
+                    print('signalk ' + _('server lost'))
+
+            def update_service(self, zeroconf, type, name):
+                self.add_service(zeroconf, type, name)
 
             def add_service(self, zeroconf, type, name):
                 print('signalk zeroconf ' + _('service add'), name, type)
@@ -151,8 +154,9 @@ class signalk(object):
         except Exception as e:
             print(_('failed to retrieve/parse data from'), self.signalk_host_port, e)
             time.sleep(5)
+            self.signalk_host_port = False
             return
-        print(_('signalk found'), self.signalk_ws_url)
+        print('signalk ' + _('found'), self.signalk_ws_url)
 
     def request_access(self):
         import requests
@@ -177,8 +181,8 @@ class signalk(object):
                                 f.close()
                             except Exception as e:
                                 print('signalk ' + _('failed to store token'), token_path)
-                    else:
-                        self.signalk_access_url = False
+                        # if permission == DENIED should we try other servers??
+                    self.signalk_access_url = False
             except Exception as e:
                 print('signalk ' + _('error requesting access'), e)
                 self.signalk_access_url = False
@@ -199,14 +203,14 @@ class signalk(object):
             print('signalk post', contents)
             if contents['statusCode'] == 202 or contents['statusCode'] == 400:
                 self.signalk_access_url = 'http://' + self.signalk_host_port + contents['href']
-                print(_('signalk request access url'), self.signalk_access_url)
+                print('signalk ' + _('request access url'), self.signalk_access_url)
         except Exception as e:
-            print(_('signalk error requesting access'), e)
+            print('signalk ' + _('error requesting access'), e)
             self.signalk_ws_url = False
         
     def connect_signalk(self):
         try:
-            from websocket import create_connection
+            from websocket import create_connection, WebSocketBadStatusException
         except Exception as e:
             print('signalk ' + _('cannot create connection:'), e)
             print(_('try') + ' pip3 install websocket-client ' + _('or') + ' apt install python3-websocket')
@@ -218,13 +222,24 @@ class signalk(object):
             self.subscribed[sensor] = False
         self.subscriptions = [] # track signalk subscriptions
         self.signalk_values = {}
+        self.keep_token = False
         try:
             self.ws = create_connection(self.signalk_ws_url, header={'Authorization': 'JWT ' + self.token})
             self.ws.settimeout(0) # nonblocking
+        except WebSocketBadStatusException:
+            print('signalk ' + _('bad status, rejecting token'))
+            self.token = False
+            self.ws = False
+        except ConnectionRefusedError:
+            print('signalk ' + _('connection refused'))
+            #self.signalk_host_port = False
+            self.signalk_ws_url = False
+            time.sleep(5)
         except Exception as e:
             print('signalk ' + _('failed to connect'), e)
-            self.token = False
-
+            self.signalk_ws_url = False
+            time.sleep(5)
+            
     def process(self):
         time.sleep(6) # let other stuff load
         print('signalk process', os.getpid())
@@ -260,13 +275,14 @@ class signalk(object):
         if not self.token:
             self.request_access()
             return
-        t3 = time.monotonic()
 
+        t3 = time.monotonic()
         if not self.ws:
             self.connect_signalk()
             if not self.ws:
                 return
-            print(_('signalk connected to'), self.signalk_ws_url)
+            print('signalk ' + _('connected to'), self.signalk_ws_url)
+
             # setup pypilot watches
             watches = ['imu.heading_lowpass', 'imu.roll', 'imu.pitch', 'timestamp']
             for watch in watches:
@@ -298,18 +314,26 @@ class signalk(object):
                 self.last_values[name] = value
 
         t4 = time.monotonic()
-
         while True:
             try:
                 msg = self.ws.recv()
-                debug('signalk received', msg)
-            except:
+            except Exception as e:
                 break
+
+            if not msg:
+                print('signalk server closed connection')
+                if not self.keep_token:
+                    print('signalk invalidating token')
+                    self.token = False
+                self.disconnect_signalk()
+                return
 
             try:
                 self.receive_signalk(msg)
             except Exception as e:
-                print(_('signalk failed to parse'), msg, e)
+                debug('failed to parse signalk', e)
+                return
+            self.keep_token = True # do not throw away token if we got valid data
 
         t5 = time.monotonic()
         # convert received signalk values into sensor inputs if possible
@@ -387,7 +411,7 @@ class signalk(object):
             try:
                 self.ws.send(pyjson.dumps(msg)+'\n')
             except Exception as e:
-                print(_('signalk failed to send'), e)
+                print('signalk ' + _('failed to send updates'), e)
                 self.disconnect_signalk()
 
     def disconnect_signalk(self):
@@ -400,7 +424,8 @@ class signalk(object):
         try:
             data = pyjson.loads(msg)
         except:
-            print(_('signalk failed to parse msg:'), msg)
+            if msg:
+                print('signalk ' + _('failed to parse msg:'), msg)
             return
         
         if 'updates' in data:
@@ -463,7 +488,12 @@ class signalk(object):
             #signalk can't unsubscribe by path!?!?!
             subscription = {'context': '*', 'unsubscribe': [{'path': '*'}]}
             debug('signalk unsubscribe', subscription)
-            self.ws.send(pyjson.dumps(subscription)+'\n')
+            try:
+                self.ws.send(pyjson.dumps(subscription)+'\n')
+            except Exception as e:
+                print('signalk failed to send', e)
+                self.disconnect_signalk()
+                return
         
         signalk_sensor = signalk_table[sensor]
         if subscribe: # translate from signalk -> pypilot
@@ -491,7 +521,11 @@ class signalk(object):
         subscription = {'context': 'vessels.self'}
         subscription['subscribe'] = subscriptions
         debug('signalk subscribe', subscription)
-        self.ws.send(pyjson.dumps(subscription)+'\n')
+        try:
+            self.ws.send(pyjson.dumps(subscription)+'\n')
+        except Exception as e:
+            print('signalk failed to send subscription', e)
+            self.disconnect_signalk()
 
 def main():
     sk = signalk()
