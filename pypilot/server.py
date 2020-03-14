@@ -101,7 +101,7 @@ class pypilotValue(object):
                 watch.connections.remove(connection)
                 if not watch.connections:
                     self.awatches.remove(watch)
-                    if recalc and watch.period == period:
+                    if recalc and watch.period is self.watching:
                         self.calculate_watch_period()
                 return True
         return False
@@ -477,8 +477,7 @@ class pypilotServer(object):
                     try:
                         self.HandleRequest(connection, line)
                     except Exception as e:
-                        print('invalid request from connection', line)
-                        print(e)
+                        print('invalid request from connection', line, e)
                         connection.send('invalid request: ' + line + '\n')
 
         if not self.multiprocessing:

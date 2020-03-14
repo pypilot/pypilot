@@ -12,7 +12,6 @@
 # it is an enhanced imu with special knowledge of boat dynamics
 # giving it the ability to auto-calibrate the inertial sensors
 
-from __future__ import print_function
 import os, sys
 import time, math, multiprocessing, select
 
@@ -73,7 +72,7 @@ class IMU(object):
         while not self.init():
             time.sleep(1)
         self.lastdata = False
-        self.period = .1
+        self.rate = 10
 
     def init(self):
         self.s.IMUType = 0 # always autodetect imu
@@ -117,8 +116,9 @@ class IMU(object):
             pipe.send(data, not data)
             self.poll()
             dt = time.monotonic() - t0
-            t = self.period - dt
-            if t > 0 and t < self.period:
+            period = 1/self.rate
+            t = period - dt
+            if t > 0 and t < period:
                 time.sleep(t)
             else:
                 print('imu process failed to keep time', t)
@@ -157,7 +157,7 @@ class IMU(object):
                 self.s.CompassCalEllipsoidOffset = tuple(value[0][:3])
                 #rtimu.resetFusion()
             elif name == 'imu.rate':
-                self.period = 1.0/value
+                self.rate = value
 
         if not self.lastdata:
             return
@@ -166,7 +166,7 @@ class IMU(object):
         # see if gyro is out of range, sometimes the sensors read
         # very high gyro readings and the sensors need to be reset by software
         # this is probably a bug in the underlying driver with fifo misalignment
-        d = .05*self.period # filter constant
+        d = .05/self.rate # filter constant
         for i in range(3): # filter gyro vector
             self.avggyro[i] = (1-d)*self.avggyro[i] + d*gyro[i]
         if vector.norm(self.avggyro) > .8: # 55 degrees/s
@@ -340,7 +340,7 @@ class BoatIMU(object):
         value = _type(*(['imu.' + name] + list(args)), **kwargs)
         return self.client.register(value)
       
-    def update_alignment(self, q):
+    def update_alpignment(self, q):
         a2 = 2*math.atan2(q[3], q[0])
         heading_offset = a2*180/math.pi
         off = self.heading_off.value - heading_offset
@@ -358,7 +358,6 @@ class BoatIMU(object):
         return self.imu.read()
 
     def poll(self):
-        self.period = 1.0/self.rate.value
         if not self.imu.multiprocessing:
             self.imu.poll()
 
@@ -494,7 +493,7 @@ def main():
             printline('pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading'])
         boatimu.poll()
         while True:
-            dt = boatimu.period - (time.monotonic() - t0)
+            dt = 1/boatimu.rate - (time.monotonic() - t0)
             if dt < 0:
                 break
             if dt > 0:

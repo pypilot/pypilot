@@ -518,6 +518,7 @@ class nmeaBridge(object):
             self.client_socket = False
 
     def nmea_process(self):
+        self.process = True
         self.setup()
         while True:
             timeout = 100 if self.sockets else 10000
@@ -589,7 +590,7 @@ class nmeaBridge(object):
             elif sock == self.server:
                 self.new_socket_connection(*self.server.accept())
             elif sock == self.pipe:
-                self.recieve_pipe()
+                self.receive_pipe()
             elif flag & select.POLLIN:
                 if not sock.recv():
                     self.socket_lost(sock, fd)
@@ -602,8 +603,9 @@ class nmeaBridge(object):
             else:
                 print('nmea bridge unhandled poll flag', flag)
 
-        if not self.mp:
-            self.recieve_pipe()
+        # if we are not multiprocessing, the pipe won't be pollable, so receive any data now
+        if not self.process:
+            self.receive_pipe()
                 
         t2 = time.monotonic()
 
@@ -642,8 +644,9 @@ class nmeaBridge(object):
         t6 = time.monotonic()
 
         # run tcp nmea traffic at rate of 10hz
-        if t6-t0 > period:
-            print('nmea process loop too slow:', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
+        period = .1
+        dt = t6-t0
+        if dt > period:
+            print('nmea process loop too slow:', dt, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
         else:
-            dt = period - (t6 - t0)
-            time.sleep(dt)
+            time.sleep(period - dt)

@@ -7,8 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
-
 import socket, select, sys, os, time
 import heapq
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -232,8 +230,8 @@ class pypilotClient(object):
                     print('server error', data)
                     continue
                 value = pyjson.loads(data)
-            except ValueError:
-                print('va erropr', data)
+            except ValueError as e:
+                print('value error', line, e)
             except Exception as e:
                 print('invalid message from server:', line)
                 print('reason', e)

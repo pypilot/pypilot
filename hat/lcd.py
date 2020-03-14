@@ -656,8 +656,6 @@ class LCD():
     def last_val(self, name, period=-1):
         if period is -1:
             period = self.frameperiod
-        if name in self.watches:
-            print('rewatch', name)
         self.watches[name] = period
         if name in self.last_msg:
             return self.last_msg[name]
@@ -994,8 +992,14 @@ class LCD():
             self.wifi = False
 
         # status cursor
+        t0 = time.monotonic()
+        try:
+            if t0-self.blinktime > .5:
+                self.blink = self.blink[1], self.blink[0]
+                self.blinktime = t0
+        except:
+            self.blinktime = 0
         w, h = self.surface.width, self.surface.height
-        self.blink = self.blink[1], self.blink[0]
         size = h // 40
         self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
 
@@ -1045,7 +1049,7 @@ class LCD():
         right = self.keypad[RIGHT] or self.keypadup[RIGHT]
         updownup = self.keypadup[LEFT] or self.keypadup[RIGHT]
         updownheld = self.keypad[LEFT] > 10 or self.keypad[RIGHT] > 10
-        speed = fhaloat(1 if updownup else min(10, .004*max(self.keypad[LEFT], self.keypad[RIGHT])**2.5))
+        speed = float(1 if updownup else min(10, .004*max(self.keypad[LEFT], self.keypad[RIGHT])**2.5))
         updown = updownheld or updownup
         if self.keypadup[UP] or self.keypadup[DOWN]:
             updown = True
@@ -1178,14 +1182,12 @@ class LCD():
             dt = t - self.lastframetime
             if dt > self.frameperiod:
                 self.draw()
-
                 self.lastframetime = max(self.lastframetime+self.frameperiod,
                                          t-self.frameperiod)
 
         self.client.update_watches(self.watches)
         msgs = self.client.receive()
-        for msg in msgs:
-            name, value = msg
+        for name, value in msgs.items():
             self.last_msg[name] = value
                 
         self.watches = {}

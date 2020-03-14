@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 from client import *
 from values import *
 from resolv import resolv
@@ -130,13 +129,13 @@ class Sensors(object):
         from nmea import Nmea
         from signalk import signalk
 
+        self.client = client
         # services that can receive sensor data
         self.nmea = Nmea(self)
         self.signalk = signalk(self)
         self.gpsd = gpsd(self)
 
         # actual sensors supported
-        self.client = client
         self.gps = gps(client)
         self.wind = Wind(client)
         self.rudder = Rudder(client)

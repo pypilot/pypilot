@@ -254,8 +254,7 @@ class Hat(object):
             self.web.set_status('disconnected')
             
         msgs = self.client.receive()
-        for msg in msgs:
-            name, value = msg
+        for name, value in msgs.items():
             self.last_msg[name] = value
 
         for i in [self.lcd, self.buzzer, self.web]:

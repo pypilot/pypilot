@@ -75,7 +75,11 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
         # we will get respawn hopefully after python-PIL is loaded
         print('failed to load PIL to create fonts, aborting...')
         import time
-        time.sleep(3)
+        time.sleep(3) # wait 3 seconds to avoid respawning too quickly
+
+        
+        return ugfx.surface(size, size, bypp, bytes([0]*(size*size*bypp)))
+
         exit(1)
 
     ifont = ImageFont.truetype(fontpath, size)

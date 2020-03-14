@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, socket
+import time, socket, multiprocessing
 import pyjson
 from client import pypilotClient
 from sensors import source_priority
@@ -118,7 +118,7 @@ class signalk(object):
         try:
             from websocket import create_connection
         except Exception as e:
-            print('no websockets module, try pip3 install websocket-client', e)
+            print('signalk cannot create connection: try pip3 install websocket-client', e)
             return
 
         try:
@@ -143,6 +143,7 @@ class signalk(object):
         self.client.poll(timeout)
 
         # read all messages from pypilot
+        updated = {}
         while True:
             msg = self.client.receive_single()
             if not msg:
@@ -150,54 +151,56 @@ class signalk(object):
             name, value = msg
             self.last_values[name] = value
 
-        # see if we can produce any signalk output from these
-        updates = []
+            for sensor in signalk_table:
+                signalk_sensor = signalk_table[sensor]
+                for signalk_path, pypilot_path in signalk_sensor.items():
+                    if name != pypilot_path:
+                        continue
+                    if type(pypilot_path) == type({}):
+                        for signalk_key in pypilot_path:
+                            updated[signalk_path] = True
+                    else:
+                        updated[signalk_path] = True
+
+        # update sources
         for sensor in signalk_table:
             source_name = sensor + '.source'
             if source_name in self.last_values:
                 self.update_sensor_source(sensor, self.last_values[source_name])
+        
+        # see if we can produce any signalk output from these
+        updates = []
+        for sensor in signalk_table:
             for signalk_path, pypilot_path in signalk_table[sensor].items():
+                if not signalk_path in updated:
+                    continue
                 if type(pypilot_path) == type({}): # single path translates to multiple pypilot
                     v = {}
                     for signalk_key, pypilot_key in pypilot_path.items():
                         key = sensor+'.'+pypilot_key
                         if not key in self.last_values:
                             break
-                        v[signalk_key] = self.last_values
-                    if len(v) == len(pypilot_path):
+                        v[signalk_key] = self.last_values[key]
+                    else:
                         updates.append({'path': signalk_path, 'value': v})
                 else:
                     key = sensor+'.'+pypilot_path
                     if key in self.last_values:
                         updates.append({'path': signalk_path, 'value': self.last_values[key]})
 
-        # now remove any keys used from last values
-        for update in updates:
-            for sensor in signalk_table:
-                pypilot_path = signalk_table[sensor][update['path']]
-                if type(pypilot_path) == type({}):
-                    for signalk_key, pypilot_key in pypilot_path.items():
-                        key = sensor + '.' + pypilot_key
-                        if key in self.last_values:
-                            del self.last_values[key]
-                else:
-                    key = sensor + '.' + pypilot_path
-                    if key in self.last_values:
-                        del self.last_values[key]
-
         if updates:
+            # send signalk updates
             msg = {"updates":[{"$source":"pypilot","values":updates}]}
             if self.ws:
                 self.ws.send(pyjson.dumps(msg)+'\n')
 
         signalk_values = {}
-        while True:
+        while self.ws:
             try:
                 self.receive_signalk(self.ws.recv(), signalk_values)
-            except OSError as e:
-                break
             except Exception as e:
-                print('exception', e)
+                print('signalk exception', e)
+                self.ws = False
                 return
 
         for sensor, sensor_table in signalk_table.items():
@@ -212,7 +215,7 @@ class signalk(object):
                     if self.sensors:
                         self.sensors.write(sensor, data, 'signalk')
                     else:
-                        print('signalk', sensor, data)
+                        print('signalk received', sensor, data)
             
     def receive_signalk(self, msg, signalk_values):
         data = pyjson.loads(msg)

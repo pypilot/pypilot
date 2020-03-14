@@ -9,7 +9,6 @@
 
 # autopilot base handles reading from the imu (boatimu)
 
-from __future__ import print_function
 import sys, os, math
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
@@ -91,6 +90,7 @@ class HeadingOffset(object):
 class Autopilot(object):
   def __init__(self):
     super(Autopilot, self).__init__()
+    self.watchdog_device = False
 
     self.server = pypilotServer()
     self.client = pypilotClient(self.server)
@@ -141,7 +141,6 @@ class Autopilot(object):
     self.timings = self.register(Value, 'timings', False)
 
     device = '/dev/watchdog0'
-    self.watchdog_device = False
     try:
         self.watchdog_device = open(device, 'w')
     except:
@@ -269,25 +268,26 @@ class Autopilot(object):
       for msg in msgs:
           print('autopilot main process received:', msg, msgs[msg])
       t1 = time.monotonic()
-      if t1 - t0 > self.boatimu.period/2:
-          print('server/client is running too _slowly_', t5-t4)
+      period = 1/self.boatimu.rate.value
+      if t1 - t0 > period/2:
+          print('server/client is running too _slowly_', t1-t0)
 
       self.sensors.poll()
       t2 = time.monotonic()
-      if t2-t1 > self.boatimu.period/2:
+      if t2-t1 > period/2:
           print('sensors is running too _slowly_', t2-t1)
       
       for tries in range(14): # try 14 times to read from imu 
           data = self.boatimu.read()
           if data:
               break
-          time.sleep(self.boatimu.period/10)
+          time.sleep(period/10)
 
       if not data:
           print('autopilot failed to read imu at time:', time.monotonic())
 
       t3 = time.monotonic()
-      if t3-t2 > self.boatimu.period/2 and data:
+      if t3-t2 > period/2 and data:
           print('read imu running too _slowly_', t3-t2)
 
       self.fix_compass_calibration_change(data, t0)
@@ -324,12 +324,12 @@ class Autopilot(object):
       self.servo.force_engaged = self.enabled.value
 
       t4 = time.monotonic()
-      if t4-t3 > self.boatimu.period/2:
+      if t4-t3 > period/2:
           print('Autopilot routine is running too _slowly_', t4-t3)
 
       self.servo.poll()
       t5 = time.monotonic()
-      if t5-t4 > self.boatimu.period/2:
+      if t5-t4 > period/2:
           print('servo is running too _slowly_', t5-t4)
 
       self.timings.set([t1-t0, t2-t1, t3-t2, t4-t3, t5-t4])
@@ -338,8 +338,8 @@ class Autopilot(object):
           self.watchdog_device.write('c')
 
       while True: # sleep remainder of period
-          dt = self.boatimu.period - (time.monotonic() - t0)
-          if dt >= self.boatimu.period or dt <= 0:
+          dt = period - (time.monotonic() - t0)
+          if dt >= period or dt <= 0:
               break
           time.sleep(dt)
 
