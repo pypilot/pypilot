@@ -108,7 +108,7 @@ for package in list(packages):
         package_dirs['pypilot.'+package] = package.replace('.', '/')
 
 package_data = {'pypilot': find_locales('pypilot'),
-                'pypilot.hat': ['font.ttf', 'static/*', 'templates/*'] + find_locales('hat'),
+                'pypilot.hat': ['font.ttf', 'static/*', 'templates/*'] + find_locales('hat')  + find_locales('hat', 'translations'),
                 'pypilot.ui': ['*.png', '*.mtl', '*.obj'],
                 'pypilot.web': ['static/*', 'templates/*'] + ['pypilot_web.pot'] + find_locales('web', 'translations')}
         

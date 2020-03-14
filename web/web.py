@@ -82,10 +82,7 @@ def wifi():
     if request.method == 'POST':
         try:
             for name in request.form:
-                cname = name
-                if name != 'mode' and request.form['mode'] == 'Managed':
-                    cname = 'client_' + name
-                wifi[cname] = str(request.form[name])
+                wifi[name] = str(request.form[name])
 
             f = open(networking, 'w')
             for name in wifi:
