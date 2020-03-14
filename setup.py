@@ -62,11 +62,10 @@ def find_locales(name='', dir = 'locale'):
     locale_files = []
     for walk in os.walk('./' + name + '/' + dir):
         path, dirs, files = walk
-        path = path[len(name) + 1:]
+        path = path[len(name) + 3:]
         for file in files:
             if file[len(file)-3:] == '.mo':
                 locale_files.append(os.path.join(path, file))
-
     return locale_files
 
 from pypilot import version
