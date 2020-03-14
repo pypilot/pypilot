@@ -54,7 +54,7 @@ class pypilotValue(object):
                 watch = self.awatches[0]
                 if watch.period == 0:
                     for connection in watch.connections:
-                        connection.write(msg)
+                        connection.write(msg, True)
 
                 for watch in self.pwatches:
                     if t0 >= watch.time:
@@ -243,7 +243,7 @@ class ServerValues(pypilotValue):
             msg = watch.value.get_msg()
             if msg:
                 for connection in watch.connections:
-                    connection.write(msg)
+                    connection.write(msg, True)
 
             watch.time += watch.period
             if watch.time < t0:
