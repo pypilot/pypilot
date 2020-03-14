@@ -200,17 +200,22 @@ class Hat(object):
         try:
             configfile = '/proc/device-tree/hat/custom_0'
             f = open(configfile)
-            self.config['hat'] = pyjson.loads(f.read())
+            hat_config = pyjson.loads(f.read())
             f.close()
             print('loaded device tree hat config')
+            if not 'hat' in self.config or hat_config != self.config['hat']:
+                self.config['hat'] = hat_config
+                print('writing device tree hat to hat.conf')
+                self.write_config()
         except Exception as e:
             print('failed to load', configfile, ':', e)
             
-        if not 'hat' in config:
+        if not 'hat' in self.config:
             print('assuming original 26 pin tinypilot with nokia5110 display')
             self.config['hat'] = {'lcd':{'driver':'nokia5110',
                                          'port':'/dev/spidev0.0'},
                                   'lirc':'gpio4'}
+            self.write_config()
 
         self.servo_timeout = time.monotonic() + 1
         
