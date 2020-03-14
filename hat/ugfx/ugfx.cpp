@@ -715,7 +715,7 @@ public:
 class PCD8544 : public spilcd
 {
 public:
-    PCD8544() : spilcd(RST, DC, 5000000) {}
+    PCD8544() : spilcd(RST, DC, 500000) {}
     virtual ~PCD8544() {} 
 
     void extended_command(uint8_t c) {

@@ -36,6 +36,10 @@ class signalk(object):
             self.client = pypilotClient(server)
 
         self.initialized = False
+        self.signalk_access_url = False
+        self.last_access_request_time = 0
+        self.authenticated = False
+        self.token = False
         self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('nmea pipe', self.multiprocessing)
         if self.multiprocessing:
             import multiprocessing
@@ -112,6 +116,43 @@ class signalk(object):
             return
         print('signalk found', self.signalk_ws_url)
 
+    def request_access(self):
+        uid = "1234-45653343454";
+        import requests
+        if self.signalk_access_url:
+            dt = time.monotonic() - self.last_access_request_time            
+            if dt < 5:
+                return
+            self.last_access_request_time = time.monotonic()
+            try:
+                print('signalk see if token is ready')
+                r = requests.get(self.signalk_access_url)
+                contents = pyjson.loads(r.content)
+                print('got', contents)
+                if contents['state'] == 'COMPLETED':
+                    access = contents['accessRequest']
+                    if access['permission'] == 'APPROVED':
+                        self.token = access['token']
+                        if self.ws:
+                            self.ws.send(pyjson.dumps({"clientId": uid, "validate":{"token": self.token}})+'\n')
+                        print('signalk recieved token', self.token)
+                    return
+            except Exception as e:
+                print('error requesting access', e)
+                self.signalk_access_url = False
+            return
+
+        try:
+            r= requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":uid, "description": "pypilot"})
+            
+            contents = pyjson.loads(r.content)
+            print('post', contents)
+            if contents['statusCode'] == 202 or contents['statusCode'] == 400:
+                self.signalk_access_url = 'http://' + self.signalk_host_port + contents['href']
+                print('signalk request access url', self.signalk_access_url)
+        except Exception as e:
+            print('signalk error requesting access', e)
+        
     def connect_signalk(self):
         try:
             from websocket import create_connection
@@ -161,10 +202,16 @@ class signalk(object):
         if not self.signalk_host_port:
             return # waiting for signalk to detect
 
+        t1 = time.monotonic()
         if not self.signalk_ws_url:
             #zeroconf.close()  # takes a long time
             self.probe_signalk()
             return
+
+        t2 = time.monotonic()
+        if not self.token:
+            self.request_access()
+        t3 = time.monotonic()
 
         if not self.ws:
             self.connect_signalk()
@@ -201,15 +248,17 @@ class signalk(object):
                         self.update_sensor_source(sensor, value)
 
         self.send_signalk()
+        t4 = time.monotonic()
 
         while True:
             try:
                 msg = self.ws.recv()
-                #print('sigk', msg)
+                print('sigk', msg)
             except:
                 break
             self.receive_signalk(msg)
 
+        t5 = time.monotonic()
         for sensor, sensor_table in signalk_table.items():
             for source, values in self.signalk_values.items():
                 data = {}
@@ -229,6 +278,7 @@ class signalk(object):
                     else:
                         print('signalk received', sensor, data)
                     break
+        #print('sigktimes', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
 
     def send_signalk(self):
         # see if we can produce any signalk output from the data we have read

@@ -148,7 +148,7 @@ class IMU(object):
         data = self.rtimu.getIMUData()
         data['accel.residuals'] = list(self.rtimu.getAccelResiduals())
 
-        #data['timestamp'] = t0 # imu timestamp is perfectly accurate
+        data['timestamp'] = t0 # imu timestamp is perfectly accurate
         
         if self.compass_calibration_updated:
             data['compass_calibration_updated'] = True
@@ -416,7 +416,7 @@ class BoatIMU(object):
   
         dt = data['timestamp'] - self.lasttimestamp
         self.lasttimestamp = data['timestamp']
-        if dt > .02 and dt < .5:
+        if dt > .01 and dt < .2:
             data['headingraterate'] = (data['headingrate'] - self.headingrate) / dt
         else:
             data['headingraterate'] = 0

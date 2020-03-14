@@ -15,6 +15,8 @@ from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
 
 from pypilot.client import pypilotClient
 from pypilot import pyjson
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import tinypilot
 
 pypilot_web_port=8000
