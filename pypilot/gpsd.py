@@ -40,7 +40,6 @@ class gpsProcess(multiprocessing.Process):
             sock.send('?WATCH={"enable":true,"json":true};'.encode())
             self.gpsd_socket = LineBufferedNonBlockingSocket(sock, 'gpsd')
             self.gpsconnecttime = time.monotonic()
-            #self.gpsd = gps.gps(mode=gps.WATCH_ENABLE) #starting the stream of info
             self.devices = []
             print('gpsd connected')
         #except socket.error:
@@ -62,33 +61,8 @@ class gpsProcess(multiprocessing.Process):
 
     def read_pipe(self, pipe):
         while True:
-            try:
-                gpsdata = self.gpsd.next()
-                device = None
-                if 'devices' in gpsdata:
-                    for dev in gpsdata['devices']:
-                        device = dev['path']
-                        if not device in self.devices:
-                            pipe.send({'device': device})
-                            self.devices.append(device)
-
-                if self.gpsd.fix.mode == 3 and \
-                   time.monotonic() - lasttime > .25:
-                    fix = {}
-                    #fix['time'] = self.gpsd.fix.time
-                    fix['track'] = self.gpsd.fix.track
-                    fix['speed'] = self.gpsd.fix.speed * 1.944 # knots
-                    fix['latitude'] = self.gpsd.fix.latitude
-                    fix['longitude'] = self.gpsd.fix.longitude
-                    fix['device'] = device
-                    pipe.send(fix, False)
-                    lasttime = time.monotonic()
-
-            except StopIteration:
-                print('gpsd lost connection')
-                break
-            except Exception as e:
-                print('UNHANDLED!!!!!!!!!!!!!!!!!!!! gpsd unhandled exception', e)
+            device = pipe.recv()
+            if not device:
                 break
             if self.gpsd_socket and not self.devices: # only probe if there are no gpsd devices
                 print('gpsd PROBING...', device)                    
