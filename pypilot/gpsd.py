@@ -57,7 +57,7 @@ class gpsProcess(multiprocessing.Process):
         self.poller.unregister(self.gpsd_socket.socket)
         self.gpsd_socket.close()
         self.gpsd_socket = False
-        self.devices = False
+        self.devices = []
 
     def read_pipe(self, pipe):
         while True:
@@ -138,7 +138,6 @@ class gpsProcess(multiprocessing.Process):
         print('gps process', os.getpid())
         self.gpsd_socket = False
         self.poller = select.poll()
-        self.devices = False
         self.baud_boot_device_hint = ''
         while True:
             self.read_pipe(pipe)
