@@ -121,8 +121,9 @@ class gps(Sensor):
         self.lon = self.register(SensorValue, 'lon')
 
     def update(self, data):
-        self.track.set(data['track'])
         self.speed.set(data['speed'])
+        if 'track' in data:
+            self.track.set(data['track'])
         if 'lat' in data and 'lon' in data:
             self.lat.set(data['lat'])
             self.lon.set(data['lon'])

@@ -50,7 +50,14 @@ def check_nmea_cksum(line):
     except:
         return False
 
+    
 def parse_nmea_gps(line):
+    def degrees_minutes_to_decimal(n):
+        n/=100
+        degrees = int(n)
+        minutes = n - degrees
+        return degrees + minutes*10/6
+
     if line[3:6] != 'RMC':
         return False
 
@@ -58,21 +65,28 @@ def parse_nmea_gps(line):
         data = line[7:len(line)-3].split(',')
         if data[1] == 'V':
             return False
-        
+        gps = {}
+
         timestamp = float(data[0])
-        lat = float(data[2])/100.0
+
+        lat = degrees_minutes_to_decimal(float(data[2]))
         if data[3] == 'S':
             lat = -lat
-        lon = float(data[4])/100.0
+
+        lon = degrees_minutes_to_decimal(float(data[4]))
         if data[5] == 'W':
             lon = -lon
-        speed = float(data[6])
-        heading = float(data[7])
+
+        speed = float(data[6]) if data[6] else 0
+        gps = {'timestamp': timestamp, 'speed': speed, 'lat': lat, 'lon': lon}
+        if data[7]:
+            gps['track'] = float(data[7])
+
     except Exception as e:
         print('nmea failed to parse gps', line, e)
         return False
 
-    return 'gps', {'timestamp': timestamp, 'track': heading, 'speed': speed, 'lat': lat, 'lon': lon}
+    return 'gps', gps
 
 
 '''

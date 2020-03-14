@@ -71,30 +71,38 @@ def scan_devices():
     devicesp = ['ttyAMA']
 
     by_id = '/dev/serial/by-id'
+    by_path = '/dev/serial/by-path'
+    by = by_id
     if os.path.exists(by_id):
         paths = os.listdir(by_id)
         debug('serialprobe scan by-id', paths)
 
-        by_path = '/dev/serial/by-path'
         if os.path.exists(by_path):
-            by_path = os.listdir(by_path)
-            if len(by_path) > len(paths):
+            by_path_paths = os.listdir(by_path)
+            if len(by_path_paths) > len(paths):
                 # if more devices by path than id, then use the paths
                 # this allows identical devices and remembers which port
                 # they are plugged into to speed up future probing
                 print('serial probe found more devices by path')
-                paths = by_path
+                paths = by_path_paths
+                by = by_path
         
         for device_path in paths:
-            full_path = os.path.join(by_id, device_path)
+            full_path = os.path.join(by, device_path)
             realpath = os.path.realpath(full_path)
             devices[full_path] = {'realpath': realpath}
     else: # do not have by-id and by-path support
         devicesp = ['ttyUSB', 'ttyACM'] + devicesp
 
     # devicesp are devices that need number after, enumerate them
+    devgpsdevices = []
     for dev in os.listdir('/dev'):
         devicesd = []
+        if dev.startswith('gps'):
+            path = '/dev/'+dev
+            realpath = os.path.realpath(path)
+            devgpsdevices.append(realpath)
+            
         for p in devicesp:
             if dev.startswith(p):
                 path = '/dev/'+dev
@@ -105,10 +113,15 @@ def scan_devices():
                 else:
                     devices[path] = {'realpath': realpath}
 
+    for device in list(devices):
+        if devices[device]['realpath'] in devgpsdevices:
+            print('serialprobe removing gps device', device)
+            del devices[device]
+                    
     blacklist_serial_ports = read_blacklist()
     for path in blacklist_serial_ports:
         realpath = os.path.realpath(path)
-        for device in devices:
+        for device in list(devices):
             if devices[device]['realpath'] == realpath:
                 del devices[device]
     
@@ -136,6 +149,7 @@ def scan_devices():
     return allowed_devices
 
 devices = {}
+gpsdevices = []
 enumstate = 'init'
 
 def enumerate_devices():
@@ -306,7 +320,7 @@ def probe(name, bauds, timeout=5):
             else:
                 break
     else:
-        debug('serialprobe ret3')
+        debug('serialprobe ret3', name)
         probe['lastdevice'] = False
         return False
 
@@ -314,10 +328,11 @@ def probe(name, bauds, timeout=5):
         probe['lastdevice'] = device
 
     if device == '/dev/ttyAMA0' and name != 'servo':
+        debug('serial probe abort', name, 'reserved for servo')
         return False # only let servo have AMA0
 
-    if 'Prolific' in device:
-        print("AAAAAAAAAAAAAAAAAAAAAARG^&((%$*%^*(^&*(^&*(^&*(")
+    if devices[device]['realpath'] in gpsdevices:
+        debug('serial probe abort', name, 'device', device, 'is a gps device')
         return False
     
     probe['device'] = device
@@ -327,33 +342,13 @@ def probe(name, bauds, timeout=5):
     return device, bauds[0]
 
 # reserve gpsd devices against probing
-def reserve(device):
-    i = 0
-    global probes
-    while 'reserved%d' % i in probes:
-        i+=1
-    realpath = os.path.realpath(device)
-    for device_path in devices:
-        if devices[device_path]['realpath'] == realpath:
-            probes['reserved%d' % i] = {'device': device_path, 'lastworking': False}
-            print('serial probe reserve', device, device_path, realpath)
-            return True
-    print('serial probe reserve not found!!', device, realpath, devices)
-    return False # try again when the device is found
-                                                                                                                    
-def unreserve(device):
-    print('serial probe unreserve', device)
-    global probes
-    realpath = os.path.realpath(device)
-    for device_path in devices:
-        if devices[device_path]['realpath'] == realpath:
-            for probe in probes:
-                if probe.startswith('reserved'):
-                    if probes[probe]['device'] == device_path:
-                        del probes[probe]
-                        return
-    print('warning: failed to unreserve!!!!!!!', device, realpath)
-    
+def gpsddevices(devices):
+    global gpsdevices
+    gpsdevices = []
+    for device in devices:
+        realpath = os.path.realpath(device)
+        gpsdevices.append(realpath)
+
 # called to record the working serial device
 def success(name, device):
     global probes
