@@ -18,14 +18,14 @@ socketio = SocketIO(app, async_mode=None)
 web_port = 33333
 
 default_actions = \
-    {"auto": ["ir030C1000", "ir030C1800", "KEY_POWER", "gpio17"],
-     "menu": ["ir030D1000", "ir030D1800", "KEY_MUTE", "gpio23"],
-     "port1": ["ir03201800", "ir03201000", "KEY_UP", "gpio27"],
-     "starboard1": ["ir03211800", "ir03211000", "KEY_DOWN", "gpio22"],
-     "select": ["ir030B1000", "ir030B1800", "KEY_SELECT", "gpio18"],
-     "port10": ["ir03111800", "ir03111000", "KEY_LEFT", "gpio6"],
-     "starboard10": ["ir03101800", "ir03101000", "KEY_RIGHT", "gpio5"],
-     "tack": ["gpio26"]}
+    {'auto':['ir030C1000','ir030C1800','KEY_POWER','gpio17','rf7E1C2950','rf7E0C2950'],
+     'menu':['ir030D1000','ir030D1800','KEY_MUTE','gpio23','rf7D1C2950','rf7D0C2950'],
+     'port1':['ir03201800','ir03201000','KEY_UP','gpio27','rf771C2950','rf770C2950'],
+     'starboard1':['ir03211800','ir03211000','KEY_DOWN','gpio22','rf7B1C2950','rf7B0C2950'],
+     'select':['ir030B1000','ir030B1800','KEY_SELECT','gpio18','rf6F1C2950','rf6F0C2950'],
+     'port10':['ir03111800','ir03111000','KEY_LEFT','gpio6','rf3F1C2950','rf3F0C2950'],
+     'starboard10':['ir03101800','ir03101000','KEY_RIGHT','gpio5','rf5F1C2950','rf5F0C2950'],
+     'tack':['gpio26','rf7F1C2910','rf7F0C2910']}
 
 class WebConfig(Namespace):
     def __init__(self, name, pipe, config):
