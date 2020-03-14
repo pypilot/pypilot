@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-07-12 14:38-0400\n"
+"POT-Creation-Date: 2021-08-06 08:40-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,44 +19,44 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:106
+#: pypilot/autopilot.py:107
 msgid "failed to load pilot"
 msgstr "échec du chargement du pilote"
 
-#: pypilot/autopilot.py:109
+#: pypilot/autopilot.py:110
 msgid "Available Pilots"
 msgstr "Pilotes disponibles"
 
-#: pypilot/autopilot.py:135
+#: pypilot/autopilot.py:136
 msgid "warning: failed to open special file"
 msgstr "avertissement : échec de l'ouverture du fichier spécial"
 
-#: pypilot/autopilot.py:135
+#: pypilot/autopilot.py:136
 msgid "for writing"
 msgstr "pour écrire"
 
-#: pypilot/autopilot.py:136
+#: pypilot/autopilot.py:137
 msgid "cannot stroke the watchdog"
 msgstr "ne peut pas caresser le chien de garde"
 
-#: pypilot/autopilot.py:140
+#: pypilot/autopilot.py:141
 msgid "warning: failed to make autopilot process realtime"
 msgstr ""
 "avertissement : échec du processus de pilotage automatique en temps réel"
 
-#: pypilot/autopilot.py:308
+#: pypilot/autopilot.py:312
 msgid "server/client is running too _slowly_"
 msgstr "le serveur/client s'exécute trop _lentement_"
 
-#: pypilot/autopilot.py:314
+#: pypilot/autopilot.py:318
 msgid "sensors is running too _slowly_"
 msgstr "les capteurs fonctionnent trop lentement"
 
-#: pypilot/autopilot.py:364
+#: pypilot/autopilot.py:368
 msgid "autopilot routine is running too _slowly_"
 msgstr "la routine du pilote automatique s'exécute trop lentement"
 
-#: pypilot/autopilot.py:369
+#: pypilot/autopilot.py:377
 msgid "servo is running too _slowly_"
 msgstr "le servo tourne trop lentement"
 
@@ -127,11 +127,11 @@ msgstr "avertissement, échec du processus d'étalonnage"
 msgid "calibration loaded, starting"
 msgstr "étalonnage chargé, démarrage"
 
-#: pypilot/boatimu.py:321
+#: pypilot/boatimu.py:322
 msgid "failed import calibration fit"
 msgstr "échec de l'ajustement d'étalonnage d'importation"
 
-#: pypilot/boatimu.py:427
+#: pypilot/boatimu.py:438
 msgid "accel values invalid"
 msgstr "valeurs d'accélération invalides"
 
@@ -151,27 +151,27 @@ msgstr "échec de l'envoi du paquet udp"
 msgid "pypilot socket failed to send to"
 msgstr "échec de l'envoi du socket pypilot à"
 
-#: pypilot/bufferedsocket.py:92
+#: pypilot/bufferedsocket.py:93
 msgid "socket send took too long!?!?"
 msgstr "l'envoi du socket a pris trop de temps !?!?"
 
-#: pypilot/bufferedsocket.py:94
+#: pypilot/bufferedsocket.py:95
 msgid "socket send error"
 msgstr "erreur d'envoi de socket"
 
-#: pypilot/bufferedsocket.py:98
+#: pypilot/bufferedsocket.py:99
 msgid "pypilot socket exception"
 msgstr "exception de socket pypilot"
 
-#: pypilot/bufferedsocket.py:102
+#: pypilot/bufferedsocket.py:103
 msgid "falling back to python nonblocking socket, will consume more cpu"
 msgstr "revenir au socket non bloquant python, consommera plus de processeur"
 
-#: pypilot/bufferedsocket.py:128
+#: pypilot/bufferedsocket.py:129
 msgid "socket send error in server flush"
 msgstr "erreur d'envoi de socket dans le vidage du serveur"
 
-#: pypilot/bufferedsocket.py:143
+#: pypilot/bufferedsocket.py:144
 msgid "error receiving data"
 msgstr "erreur de réception des données"
 
@@ -197,51 +197,51 @@ msgstr "échec d'écriture du fichier de configuration :"
 msgid "Exception writing config file:"
 msgstr "Exception d'écriture du fichier de configuration :"
 
-#: pypilot/client.py:274
+#: pypilot/client.py:275
 msgid "invalid message from server:"
 msgstr "message invalide du serveur :"
 
-#: pypilot/client.py:290
+#: pypilot/client.py:291
 msgid "warning, pypilot client aleady has connection"
 msgstr "avertissement, le client pypilot a déjà une connexion"
 
-#: pypilot/client.py:310
+#: pypilot/client.py:311
 msgid "connect failed to"
 msgstr "échec de la connexion"
 
-#: pypilot/client.py:402
+#: pypilot/client.py:403
 msgid "failed to connect to"
 msgstr "n'a pas réussi à se connecter à"
 
-#: pypilot/client.py:459
+#: pypilot/client.py:460
 msgid "usage"
 msgstr "usage"
 
-#: pypilot/client.py:462
+#: pypilot/client.py:463
 msgid "set the host or ip address"
 msgstr "définir l'hôte ou l'adresse IP"
 
-#: pypilot/client.py:463
+#: pypilot/client.py:464
 msgid "print info about each value type"
 msgstr "imprimer des informations sur chaque type de valeur"
 
-#: pypilot/client.py:464
+#: pypilot/client.py:465
 msgid "continuous watch"
 msgstr "veille continue"
 
-#: pypilot/client.py:465
+#: pypilot/client.py:466
 msgid "show this message"
 msgstr "afficher ce message"
 
-#: pypilot/client.py:492
+#: pypilot/client.py:493
 msgid "failed to retrieve value list!"
 msgstr "n'a pas réussi à récupérer la liste de valeurs !"
 
-#: pypilot/client.py:503
+#: pypilot/client.py:504
 msgid "timeout retrieving"
 msgstr "délai d'attente récupération"
 
-#: pypilot/client.py:506
+#: pypilot/client.py:507
 msgid "missing"
 msgstr "disparu"
 
@@ -374,7 +374,7 @@ msgstr "nmea n'a pas réussi à supprimer fd"
 msgid "nmea failed to remove address"
 msgstr "nmea n'a pas réussi à supprimer l'adresse"
 
-#: pypilot/nmea.py:609
+#: pypilot/nmea.py:609 pypilot/signalk.py:284
 msgid "connected to"
 msgstr "connecté à"
 
@@ -544,35 +544,35 @@ msgstr "socket serveur fermé du flush !!"
 msgid "servo calibration invalid"
 msgstr "étalonnage servo invalide"
 
-#: pypilot/servo.py:556
+#: pypilot/servo.py:563
 msgid "failed to open servo on:"
 msgstr "échec de l'ouverture du servo sur :"
 
-#: pypilot/servo.py:563
+#: pypilot/servo.py:570
 msgid "failed set nonblocking/exclusive"
 msgstr "échec de l'ensemble non bloquant/exclusif"
 
-#: pypilot/servo.py:594
+#: pypilot/servo.py:601 pypilot/signalk.py:159
 msgid "found"
 msgstr "trouvé"
 
-#: pypilot/servo.py:715
+#: pypilot/servo.py:723
 msgid "loading servo calibration"
 msgstr "chargement de l'étalonnage du servo"
 
-#: pypilot/servo.py:719
+#: pypilot/servo.py:727
 msgid "WARNING: using default servo calibration!!"
 msgstr "ATTENTION : utilisation de l'étalonnage par défaut du servo !!"
 
-#: pypilot/servo.py:728
+#: pypilot/servo.py:736
 msgid "probing"
 msgstr "sondage"
 
-#: pypilot/servo.py:744
+#: pypilot/servo.py:752
 msgid "arduino servo detected"
 msgstr "servo arduino détecté"
 
-#: pypilot/servo.py:753
+#: pypilot/servo.py:761
 msgid "device needed for option"
 msgstr "appareil nécessaire pour l'option"
 
@@ -592,11 +592,11 @@ msgstr "n'a pas réussi à"
 msgid "autodetection not possible"
 msgstr "détection automatique impossible"
 
-#: pypilot/signalk.py:77 pypilot/signalk.py:143 pypilot/signalk.py:212
+#: pypilot/signalk.py:77 pypilot/signalk.py:146 pypilot/signalk.py:216
 msgid "try"
 msgstr "essayer"
 
-#: pypilot/signalk.py:77 pypilot/signalk.py:143 pypilot/signalk.py:212
+#: pypilot/signalk.py:77 pypilot/signalk.py:146 pypilot/signalk.py:216
 msgid "or"
 msgstr "ou alors"
 
@@ -605,88 +605,80 @@ msgid "service removed"
 msgstr "service supprimé"
 
 #: pypilot/signalk.py:112
-msgid "signalk server lost"
-msgstr "serveur signalk perdu"
+msgid "server lost"
+msgstr "serveur perdu"
 
-#: pypilot/signalk.py:115
+#: pypilot/signalk.py:118
 msgid "service add"
 msgstr "service ajouter"
 
-#: pypilot/signalk.py:129
+#: pypilot/signalk.py:132
 msgid "server found"
 msgstr "serveur trouvé"
 
-#: pypilot/signalk.py:138
+#: pypilot/signalk.py:141
 msgid "probe"
 msgstr "sonde"
 
-#: pypilot/signalk.py:142
+#: pypilot/signalk.py:145
 msgid "could not"
 msgstr "ne pouvait pas"
 
-#: pypilot/signalk.py:152
+#: pypilot/signalk.py:155
 msgid "failed to retrieve/parse data from"
 msgstr "n'a pas réussi à récupérer/analyser les données de"
 
-#: pypilot/signalk.py:155
-msgid "signalk found"
-msgstr "Signalk trouvé"
-
-#: pypilot/signalk.py:167
+#: pypilot/signalk.py:171
 msgid "see if token is ready"
 msgstr "voir si le jeton est prêt"
 
-#: pypilot/signalk.py:173
+#: pypilot/signalk.py:177
 msgid "received token"
 msgstr "jeton reçu"
 
-#: pypilot/signalk.py:179
+#: pypilot/signalk.py:183
 msgid "failed to store token"
 msgstr "échec du stockage du jeton"
 
-#: pypilot/signalk.py:183
+#: pypilot/signalk.py:187 pypilot/signalk.py:208
 msgid "error requesting access"
 msgstr "erreur lors de la demande d'accès"
 
-#: pypilot/signalk.py:202
-msgid "signalk request access url"
-msgstr "URL d'accès à la demande de signalk"
+#: pypilot/signalk.py:206
+msgid "request access url"
+msgstr "demander l'URL d'accès"
 
-#: pypilot/signalk.py:204
-msgid "signalk error requesting access"
-msgstr "erreur de signalisation lors de la demande d'accès"
-
-#: pypilot/signalk.py:211
+#: pypilot/signalk.py:215
 msgid "cannot create connection:"
 msgstr "impossible de créer la connexion :"
 
-#: pypilot/signalk.py:225
+#: pypilot/signalk.py:230
+msgid "bad status, rejecting token"
+msgstr "mauvais état, jeton de rejet"
+
+#: pypilot/signalk.py:234
+msgid "connection refused"
+msgstr "Connexion rejetée"
+
+#: pypilot/signalk.py:239
 msgid "failed to connect"
 msgstr "échec de connexion"
 
-#: pypilot/signalk.py:269
-msgid "signalk connected to"
-msgstr "signalk connecté à"
-
-#: pypilot/signalk.py:312
-msgid "signalk failed to parse"
-msgstr "signalk n'a pas réussi à analyser"
-
-#: pypilot/signalk.py:330
+#: pypilot/signalk.py:354
 msgid "Exception converting signalk->pypilot"
 msgstr "Exception conversion signalk->pypilot"
 
-#: pypilot/signalk.py:344
+#: pypilot/signalk.py:368
 msgid "received"
 msgstr "reçu"
 
-#: pypilot/signalk.py:390
-msgid "signalk failed to send"
-msgstr "signalk n'a pas réussi à envoyer"
+#: pypilot/signalk.py:414
+msgid "failed to send updates"
+msgstr "échec de l'envoi des mises à jour"
 
-#: pypilot/signalk.py:403
-msgid "signalk failed to parse msg:"
-msgstr "signalk n'a pas réussi à analyser le message :"
+#: pypilot/signalk.py:428
+msgid "failed to parse msg:"
+msgstr "échec de l'analyse du message :"
 
 #: pypilot/values.py:130
 msgid "invalid initial value for range property"
@@ -696,7 +688,7 @@ msgstr "valeur initiale non valide pour la propriété de plage"
 msgid "invalid set"
 msgstr "ensemble invalide"
 
-#: pypilot/pilots/__init__.py:24
+#: pypilot/pilots/__init__.py:23
 msgid "ERROR loading"
 msgstr "Erreur de chargement"
 

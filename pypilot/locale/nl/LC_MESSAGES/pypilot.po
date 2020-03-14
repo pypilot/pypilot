@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-07-12 14:38-0400\n"
+"POT-Creation-Date: 2021-08-06 08:40-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,43 +19,43 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:106
+#: pypilot/autopilot.py:107
 msgid "failed to load pilot"
 msgstr "kan piloot niet laden"
 
-#: pypilot/autopilot.py:109
+#: pypilot/autopilot.py:110
 msgid "Available Pilots"
 msgstr "Beschikbare piloten"
 
-#: pypilot/autopilot.py:135
+#: pypilot/autopilot.py:136
 msgid "warning: failed to open special file"
 msgstr "waarschuwing: kan speciaal bestand niet openen"
 
-#: pypilot/autopilot.py:135
+#: pypilot/autopilot.py:136
 msgid "for writing"
 msgstr "om te schrijven"
 
-#: pypilot/autopilot.py:136
+#: pypilot/autopilot.py:137
 msgid "cannot stroke the watchdog"
 msgstr "kan de waakhond niet aaien"
 
-#: pypilot/autopilot.py:140
+#: pypilot/autopilot.py:141
 msgid "warning: failed to make autopilot process realtime"
 msgstr "waarschuwing: kon stuurautomaatproces niet realtime maken"
 
-#: pypilot/autopilot.py:308
+#: pypilot/autopilot.py:312
 msgid "server/client is running too _slowly_"
 msgstr "server/client draait te _langzaam_"
 
-#: pypilot/autopilot.py:314
+#: pypilot/autopilot.py:318
 msgid "sensors is running too _slowly_"
 msgstr "sensoren lopen te langzaam"
 
-#: pypilot/autopilot.py:364
+#: pypilot/autopilot.py:368
 msgid "autopilot routine is running too _slowly_"
 msgstr "automatische piloot-routine loopt te langzaam"
 
-#: pypilot/autopilot.py:369
+#: pypilot/autopilot.py:377
 msgid "servo is running too _slowly_"
 msgstr "servo loopt te langzaam"
 
@@ -124,11 +124,11 @@ msgstr "waarschuwing, kan het kalibratieproces niet herroepen"
 msgid "calibration loaded, starting"
 msgstr "kalibratie geladen, starten"
 
-#: pypilot/boatimu.py:321
+#: pypilot/boatimu.py:322
 msgid "failed import calibration fit"
 msgstr "mislukte import kalibratie fit"
 
-#: pypilot/boatimu.py:427
+#: pypilot/boatimu.py:438
 msgid "accel values invalid"
 msgstr "accel waarden ongeldig"
 
@@ -148,27 +148,27 @@ msgstr "kan ud-pakket niet verzenden"
 msgid "pypilot socket failed to send to"
 msgstr "pypilot-socket kan niet worden verzonden naar"
 
-#: pypilot/bufferedsocket.py:92
+#: pypilot/bufferedsocket.py:93
 msgid "socket send took too long!?!?"
 msgstr "socket verzenden duurde te lang!?!?"
 
-#: pypilot/bufferedsocket.py:94
+#: pypilot/bufferedsocket.py:95
 msgid "socket send error"
 msgstr "socket verzend fout"
 
-#: pypilot/bufferedsocket.py:98
+#: pypilot/bufferedsocket.py:99
 msgid "pypilot socket exception"
 msgstr "pypilot socket-uitzondering"
 
-#: pypilot/bufferedsocket.py:102
+#: pypilot/bufferedsocket.py:103
 msgid "falling back to python nonblocking socket, will consume more cpu"
 msgstr "terugvallen op python nonblocking socket, zal meer cpu verbruiken"
 
-#: pypilot/bufferedsocket.py:128
+#: pypilot/bufferedsocket.py:129
 msgid "socket send error in server flush"
 msgstr "socket verzend fout in server flush"
 
-#: pypilot/bufferedsocket.py:143
+#: pypilot/bufferedsocket.py:144
 msgid "error receiving data"
 msgstr "fout bij het ontvangen van gegevens"
 
@@ -194,51 +194,51 @@ msgstr "kon configuratiebestand niet schrijven:"
 msgid "Exception writing config file:"
 msgstr "Uitzondering schrijven configuratiebestand:"
 
-#: pypilot/client.py:274
+#: pypilot/client.py:275
 msgid "invalid message from server:"
 msgstr "ongeldig bericht van server:"
 
-#: pypilot/client.py:290
+#: pypilot/client.py:291
 msgid "warning, pypilot client aleady has connection"
 msgstr "waarschuwing, pypilot-client heeft al verbinding"
 
-#: pypilot/client.py:310
+#: pypilot/client.py:311
 msgid "connect failed to"
 msgstr "verbinding mislukt"
 
-#: pypilot/client.py:402
+#: pypilot/client.py:403
 msgid "failed to connect to"
 msgstr "kan geen verbinding maken met"
 
-#: pypilot/client.py:459
+#: pypilot/client.py:460
 msgid "usage"
 msgstr "gebruik"
 
-#: pypilot/client.py:462
+#: pypilot/client.py:463
 msgid "set the host or ip address"
 msgstr "stel het host- of ip-adres in"
 
-#: pypilot/client.py:463
+#: pypilot/client.py:464
 msgid "print info about each value type"
 msgstr "info afdrukken over elk waardetype"
 
-#: pypilot/client.py:464
+#: pypilot/client.py:465
 msgid "continuous watch"
 msgstr "continu kijken"
 
-#: pypilot/client.py:465
+#: pypilot/client.py:466
 msgid "show this message"
 msgstr "toon dit bericht"
 
-#: pypilot/client.py:492
+#: pypilot/client.py:493
 msgid "failed to retrieve value list!"
 msgstr "kan de waardelijst niet ophalen!"
 
-#: pypilot/client.py:503
+#: pypilot/client.py:504
 msgid "timeout retrieving"
 msgstr "time-out ophalen"
 
-#: pypilot/client.py:506
+#: pypilot/client.py:507
 msgid "missing"
 msgstr "missend"
 
@@ -370,7 +370,7 @@ msgstr "nmea kan fd . niet verwijderen"
 msgid "nmea failed to remove address"
 msgstr "nmea kan adres niet verwijderen"
 
-#: pypilot/nmea.py:609
+#: pypilot/nmea.py:609 pypilot/signalk.py:284
 msgid "connected to"
 msgstr "verbonden met"
 
@@ -540,35 +540,35 @@ msgstr "server socket gesloten van flush!!"
 msgid "servo calibration invalid"
 msgstr "servo kalibratie ongeldig"
 
-#: pypilot/servo.py:556
+#: pypilot/servo.py:563
 msgid "failed to open servo on:"
 msgstr "kon servo niet openen op:"
 
-#: pypilot/servo.py:563
+#: pypilot/servo.py:570
 msgid "failed set nonblocking/exclusive"
 msgstr "mislukte set niet-blokkerend/exclusief"
 
-#: pypilot/servo.py:594
+#: pypilot/servo.py:601 pypilot/signalk.py:159
 msgid "found"
 msgstr "gevonden"
 
-#: pypilot/servo.py:715
+#: pypilot/servo.py:723
 msgid "loading servo calibration"
 msgstr "servo-kalibratie laden"
 
-#: pypilot/servo.py:719
+#: pypilot/servo.py:727
 msgid "WARNING: using default servo calibration!!"
 msgstr "WAARSCHUWING: gebruik standaard servokalibratie!!"
 
-#: pypilot/servo.py:728
+#: pypilot/servo.py:736
 msgid "probing"
 msgstr "indringend"
 
-#: pypilot/servo.py:744
+#: pypilot/servo.py:752
 msgid "arduino servo detected"
 msgstr "arduino servo gedetecteerd"
 
-#: pypilot/servo.py:753
+#: pypilot/servo.py:761
 msgid "device needed for option"
 msgstr "apparaat nodig voor optie:"
 
@@ -588,11 +588,11 @@ msgstr "slaagde er niet in"
 msgid "autodetection not possible"
 msgstr "automatische detectie niet mogelijk"
 
-#: pypilot/signalk.py:77 pypilot/signalk.py:143 pypilot/signalk.py:212
+#: pypilot/signalk.py:77 pypilot/signalk.py:146 pypilot/signalk.py:216
 msgid "try"
 msgstr "proberen"
 
-#: pypilot/signalk.py:77 pypilot/signalk.py:143 pypilot/signalk.py:212
+#: pypilot/signalk.py:77 pypilot/signalk.py:146 pypilot/signalk.py:216
 msgid "or"
 msgstr "of"
 
@@ -601,88 +601,80 @@ msgid "service removed"
 msgstr "dienst verwijderd"
 
 #: pypilot/signalk.py:112
-msgid "signalk server lost"
-msgstr "signaalserver verloren server"
+msgid "server lost"
+msgstr "server verloren"
 
-#: pypilot/signalk.py:115
+#: pypilot/signalk.py:118
 msgid "service add"
 msgstr "service toevoegen"
 
-#: pypilot/signalk.py:129
+#: pypilot/signalk.py:132
 msgid "server found"
 msgstr "server gevonden"
 
-#: pypilot/signalk.py:138
+#: pypilot/signalk.py:141
 msgid "probe"
 msgstr "sonde"
 
-#: pypilot/signalk.py:142
+#: pypilot/signalk.py:145
 msgid "could not"
 msgstr "kon niet"
 
-#: pypilot/signalk.py:152
+#: pypilot/signalk.py:155
 msgid "failed to retrieve/parse data from"
 msgstr "kan gegevens niet ophalen/parseren van"
 
-#: pypilot/signalk.py:155
-msgid "signalk found"
-msgstr "signaal gevonden"
-
-#: pypilot/signalk.py:167
+#: pypilot/signalk.py:171
 msgid "see if token is ready"
 msgstr "kijk of token klaar is"
 
-#: pypilot/signalk.py:173
+#: pypilot/signalk.py:177
 msgid "received token"
 msgstr "ontvangen token"
 
-#: pypilot/signalk.py:179
+#: pypilot/signalk.py:183
 msgid "failed to store token"
 msgstr "kan token niet opslaan"
 
-#: pypilot/signalk.py:183
+#: pypilot/signalk.py:187 pypilot/signalk.py:208
 msgid "error requesting access"
 msgstr "fout bij het aanvragen van toegang"
 
-#: pypilot/signalk.py:202
-msgid "signalk request access url"
-msgstr "signalk verzoek toegang url"
+#: pypilot/signalk.py:206
+msgid "request access url"
+msgstr "toegangs-url aanvragen"
 
-#: pypilot/signalk.py:204
-msgid "signalk error requesting access"
-msgstr "signalk fout bij het aanvragen van toegang"
-
-#: pypilot/signalk.py:211
+#: pypilot/signalk.py:215
 msgid "cannot create connection:"
 msgstr "kan geen verbinding maken:"
 
-#: pypilot/signalk.py:225
+#: pypilot/signalk.py:230
+msgid "bad status, rejecting token"
+msgstr "slechte status, token afwijzen"
+
+#: pypilot/signalk.py:234
+msgid "connection refused"
+msgstr "Verbinding geweigerd"
+
+#: pypilot/signalk.py:239
 msgid "failed to connect"
 msgstr "kon niet verbinden"
 
-#: pypilot/signalk.py:269
-msgid "signalk connected to"
-msgstr "signaal aangesloten op"
-
-#: pypilot/signalk.py:312
-msgid "signalk failed to parse"
-msgstr "signalk kan niet worden geparseerd"
-
-#: pypilot/signalk.py:330
+#: pypilot/signalk.py:354
 msgid "Exception converting signalk->pypilot"
 msgstr "Uitzondering converteren signalk->pypilot"
 
-#: pypilot/signalk.py:344
+#: pypilot/signalk.py:368
 msgid "received"
 msgstr "ontvangen"
 
-#: pypilot/signalk.py:390
-msgid "signalk failed to send"
-msgstr "signalk kan niet worden verzonden"
+#: pypilot/signalk.py:414
+msgid "failed to send updates"
+msgstr "kan geen updates verzenden"
 
-#: pypilot/signalk.py:403
-msgid "signalk failed to parse msg:"
-msgstr "signalk kon bericht niet ontleden:"
+#: pypilot/signalk.py:428
+msgid "failed to parse msg:"
+msgstr "kon bericht niet ontleden:"
 
 #: pypilot/values.py:130
 msgid "invalid initial value for range property"
@@ -692,7 +684,7 @@ msgstr "ongeldige beginwaarde voor bereikeigenschap"
 msgid "invalid set"
 msgstr "ongeldige set"
 
-#: pypilot/pilots/__init__.py:24
+#: pypilot/pilots/__init__.py:23
 msgid "ERROR loading"
 msgstr "Fout bij het laden"
 
