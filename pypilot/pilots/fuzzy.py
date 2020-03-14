@@ -43,28 +43,32 @@ def fuzzy_matrix(index, matrix):
             index = 'N/A' # fallback to data not available
     return matrix[index]
 
-def fuzzy_compute(dimensions, matrix):
-    if not dimensions:
+def fuzzy_compute(di, dimensions, matrix):
+    if di == len(dimensions):
         return matrix
         
-    dimension = dimensions[0]
+    dimension = dimensions[di]
     name, sensor, step = dimension
     value = sensor.value
     if value is False:
-        return fuzzy_compute(dimensions[1:], matrix['N/A'])
+        return fuzzy_compute(di+1, dimensions, matrix['N/A'])
 
     index = value / step
     indexl = math.floor(index)
     indexh = indexl + 1
-    d = index - indexl
 
     matrixl = fuzzy_matrix(indexl, matrix)
     matrixh = fuzzy_matrix(indexh, matrix)
 
     # recursively compute weighted average over all dimensions
-    l = fuzzy_compute(dimensions[1:], matrixl)
-    h = fuzzy_compute(dimensions[1:], matrixh)
-    return d*l + (1-d)*h
+    l = fuzzy_compute(di+1, dimensions, matrixl)
+
+    if matrixl is matrixh: # optimization
+        return l
+    h = fuzzy_compute(di+1, dimensions, matrixh)
+
+    d = index - indexl
+    return (1-d)*l + d*h
 
 def fuzzy_get(matrix, indicies):
     if not indicies:
@@ -76,7 +80,7 @@ def fuzzy_set(matrix, indicies, update):
         matrix[indicies[0]] = update
     else:
         if not indicies[0] in matrix:
-            matrix[indicies[0]] = {}
+            matrix[indicies[0]] = matrix['N/A'].copy()
         fuzzy_set(matrix[indicies[0]], indicies[1:], update)
 
 def fuzzy_train(dimensions, matrix, state, error):
@@ -94,9 +98,11 @@ def fuzzy_train(dimensions, matrix, state, error):
 
     current = fuzzy_get(matrix, indicies) # get current correction
 
-    d = .005 #learning rate
+    d = .002 #learning rate
     update = current + d*error # add error
     update = min(max(update, -1), 1) # bound to range
+
+    #print('fuzzy train', state, error, current, update)
 
     fuzzy_set(matrix, indicies, update)   # update correction in matrix
 
@@ -151,20 +157,24 @@ class FuzzyPilot(AutopilotPilot):
             print('failed to load fuzzy data', e)
             
     def process(self):
+        t0 = time.monotonic()
         ap = self.ap
 
         # update sea state calculation
         accel = ap.boatimu.SensorValues['accel'].value
         if accel:
             self.accelm = .1*vector.norm(accel) + .9*self.accelm
-            self.seastate.set(max(self.seastate * .99, self.accelm))
+            self.seastate.set(max(self.seastate.value * .99, self.accelm))
 
         if not ap.enabled.value:
             return
 
+        t1 = time.monotonic()
         # compute fuzzy command from matrix and command servo
-        command = fuzzy_compute(self.dimensions, self.matrix)
+        command = fuzzy_compute(0, self.dimensions, self.matrix)
+        t2 = time.monotonic()
         ap.servo.command.set(command)
+        t3 = time.monotonic()
 
         # feedback to update fuzzy matrix
         P = ap.heading_error.value
@@ -178,12 +188,15 @@ class FuzzyPilot(AutopilotPilot):
         self.history_time = t
 
         self.history.append((state, error))
+        t4 = time.monotonic()
         if len(self.history) == self.history_count:
             prev, self.history = self.history[0], self.history[1:]
             prev_state, prev_error = prev
             fuzzy_train(self.dimensions, self.matrix, prev_state, error)
+            t5 = time.monotonic()
 
             if t - self.matrix_time > 600:
+                print('fuzzy store')
                 self.store()
                 self.matrix_time = t
 
