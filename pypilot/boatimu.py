@@ -46,6 +46,9 @@ class IMU(object):
         self.client.watch('imu.compass.calibration')
         self.client.watch('imu.rate')
 
+        self.gyrobias = self.client.register(SensorValue('imu.gyrobias', persistent=True))
+        self.lastgyrobiastime = time.monotonic()
+
         SETTINGS_FILE = "RTIMULib"
         print("Using settings file " + SETTINGS_FILE + ".ini")
         s = RTIMU.Settings(SETTINGS_FILE)
@@ -65,7 +68,7 @@ class IMU(object):
         s.AccelCalMin = (-1, -1, -1)
         s.AccelCalMax = (1, 1, 1)
 
-        s.GyroBiasValid = True
+        s.GyroBiasValid = False
         s.GyroBias = (0, 0, 0)
 
         s.KalmanRk, s.KalmanQ = .002, .001
@@ -101,6 +104,7 @@ class IMU(object):
         return True
 
     def process(self, pipe):
+        print('imu process', os.getpid())
         if not RTIMU:
             while True:
                 time.sleep(10) # do nothing
@@ -115,6 +119,16 @@ class IMU(object):
             t0 = time.monotonic()
             data = self.read()
             pipe.send(data, not data)
+
+            if not self.s.GyroBiasValid:
+                if self.gyrobias.value:
+                    print('setting initial gyro bias', self.gyrobias.value)
+                    self.s.GyroBias = tuple(map(math.radians, self.gyrobias.value))
+                    self.s.GyroBiasValid = True
+            elif t0-self.lastgyrobiastime > 10:
+                self.gyrobias.set(list(map(math.degrees, self.s.GyroBias)))
+                self.lastgyrobiastime = t0
+            
             self.poll()
             dt = time.monotonic() - t0
             period = 1/self.rate
@@ -133,7 +147,7 @@ class IMU(object):
          
         data = self.rtimu.getIMUData()
         data['accel.residuals'] = list(self.rtimu.getAccelResiduals())
-        data['gyrobias'] = self.s.GyroBias
+
         #data['timestamp'] = t0 # imu timestamp is perfectly accurate
         
         if self.compass_calibration_updated:
@@ -267,13 +281,19 @@ def heading_filter(lp, a, b):
     return result
 
 def CalibrationProcess(cal_pipe, client):
+    time.sleep(30) # let other stuff load
     import calibration_fit
+    print('calibration process', os.getpid())
     calibration_fit.CalibrationProcess(cal_pipe, client)
 
 class AutomaticCalibrationProcess(multiprocessing.Process):
     def __init__(self, server):
-        #self.cal_pipe, cal_pipe = NonBlockingPipe('cal pipe', True)
-        self.cal_pipe, cal_pipe = False, False # use client
+        if True:
+            # direct connection to send raw sensors to calibration process is more
+            # efficient than routing through server (save up to 2% cpu on rpi zero)
+            self.cal_pipe, cal_pipe = NonBlockingPipe('cal pipe', True, sendfailok=True)
+        else:
+            self.cal_pipe, cal_pipe = False, False # use client
         client = pypilotClient(server)
         super(AutomaticCalibrationProcess, self).__init__(target=CalibrationProcess, args=(cal_pipe, client), daemon=True)
         self.start()
@@ -320,12 +340,9 @@ class BoatIMU(object):
             self.SensorValues[name] = self.register(SensorValue, name, directional = name in directional_sensornames)
 
         # quaternion needs to report many more decimal places than other sensors
-        sensornames += ['fusionQPose']
+        #sensornames += ['fusionQPose']
         self.SensorValues['fusionQPose'] = self.register(SensorValue, 'fusionQPose', fmt='%.7f')
     
-        sensornames += ['gyrobias']
-        self.SensorValues['gyrobias'] = self.register(SensorValue, 'gyrobias', persistent=True)
-
         self.imu = IMU(client.server)
 
         self.last_imuread = time.monotonic() + 4 # ignore failed readings at startup
@@ -404,7 +421,6 @@ class BoatIMU(object):
         #data['roll'] -= data['heel']
   
         data['gyro'] = list(map(math.degrees, data['gyro']))
-        data['gyrobias'] = list(map(math.degrees, data['gyrobias']))
   
         # lowpass heading and rate
         llp = self.heading_lowpass_constant.value
@@ -452,16 +468,17 @@ class BoatIMU(object):
 
 
         if self.auto_cal.cal_pipe:
-            print('warning, cal pipe always sending despite locks')
+            #print('warning, cal pipe always sending despite locks')
             cal_data = {}
             #how to check this here??  if not 'imu.accel.calibration.locked'
             cal_data['accel'] = list(data['accel'])
             
             #how to check this here??  if not 'imu.compass.calibration.locked'
             cal_data['compass'] = list(data['compass'])
-            cal_data['down'] = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(data['fusionQPose']))
+            cal_data['fusionQPose'] = list(data['fusionQPose'])
 
             if cal_data:
+                #print('send', cal_data)
                 self.auto_cal.cal_pipe.send(cal_data)
 
         return data
@@ -482,13 +499,16 @@ def main():
 
     quiet = '-q' in sys.argv
 
+    lastprint = 0
     while True:
         t0 = time.monotonic()
         server.poll()
         client.poll()
         data = boatimu.read()
         if data and not quiet:
-            printline('pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading'])
+            if t0-lastprint > .25:
+                printline('pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading'])
+                lastprint = t0
         boatimu.poll()
         while True:
             dt = 1/boatimu.rate.value - (time.monotonic() - t0)

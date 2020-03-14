@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, socket, multiprocessing
+import time, socket, multiprocessing, os
 import pyjson
 from client import pypilotClient
 from sensors import source_priority
@@ -21,22 +21,6 @@ signalk_table = {'wind': {'environment.wind.speedApparent': 'speed',
                  'apb': {'steering.autopilot.target.headingTrue': 'track'},
                  'imu': {'navigation.headingMagnetic': 'heading_lowpass',
                          'navigation.attitude': {'pitch': 'pitch', 'roll': 'roll', 'yaw': 'heading_lowpass'}}}
-
-dependencies = True
-try:
-    from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
-except Exception as e:
-    print('signalk: failed to import zeroconf, autodetection not possible')
-    print('try pip3 install zeroconf or apt install python3-zeroconf')
-    dependencies = False
-
-try:
-    import requests
-except Exception as e:
-    print('signalk could not import requests')
-    print('try pip3 install requests')
-    dependencies = False
-    
     
 class signalk(object):
     def __init__(self, sensors=False):
@@ -46,8 +30,7 @@ class signalk(object):
             self.multiprocessing = False
         else:
             server = sensors.client.server
-            #self.multiprocessing = server.multiprocessing
-            self.multiprocessing = False
+            self.multiprocessing = server.multiprocessing
             self.client = pypilotClient(server)
 
         self.initialized = False
@@ -59,6 +42,14 @@ class signalk(object):
             self.process = False
 
     def setup(self):
+        print('setup signalk')
+        try:
+            from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
+        except Exception as e:
+            print('signalk: failed to import zeroconf, autodetection not possible')
+            print('try pip3 install zeroconf or apt install python3-zeroconf')
+            return
+            
         self.last_values = {}
         self.signalk_msgs = {}
         self.signalk_msgs_skip = {}
@@ -72,9 +63,6 @@ class signalk(object):
         self.signalk_host_port = False
         self.signalk_ws_url = False
         self.ws = False
-
-        if not dependencies:
-            return
         
         class MyListener:
             def __init__(self, signalk):
@@ -84,6 +72,7 @@ class signalk(object):
                 print("Service %s removed" % (name,))
 
             def add_service(self, zeroconf, type, name):
+                print('zeroconf service add', name, type)
                 info = zeroconf.get_service_info(type, name)
                 if not info:
                     return
@@ -108,6 +97,14 @@ class signalk(object):
 
     def probe_signalk(self):
         print('signalk probe...', self.signalk_host_port)
+
+        try:
+            import requests
+        except Exception as e:
+            print('signalk could not import requests')
+            print('try pip3 install requests')
+            return
+
         try:
             r = requests.get('http://' + self.signalk_host_port + '/signalk')
             contents = pyjson.loads(r.content)
@@ -123,6 +120,7 @@ class signalk(object):
         except Exception as e:
             print('signalk cannot create connection:', e)
             print('try pip3 install websocket-client or apt install python3-websocket')
+            self.signalk_host_port = False
             return
 
         self.subscriptions = [] # track signalk subscriptions
@@ -137,23 +135,28 @@ class signalk(object):
         print('would send signalk server', msg)
             
     def process(self):
+        time.sleep(10) # let other stuff load
+        print('signalk process', os.getpid())
+        self.process = False
         while True:
+            time.sleep(.1)
             self.poll(1)
 
     def poll(self, timeout=0):
+        if self.process:
+            return
+
         t0 = time.monotonic()
-        self.client.poll(timeout)
         if not self.initialized:
             self.setup()
             return
 
+        self.client.poll(timeout)
         if not self.signalk_host_port:
-            time.sleep(timeout)
             return # waiting for signalk to detect
 
         if not self.signalk_ws_url:
             #zeroconf.close()  # takes a long time
-            print('probe')
             self.probe_signalk()
             return
 
