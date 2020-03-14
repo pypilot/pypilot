@@ -8,11 +8,11 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from pilot import AutopilotPilot
+disabled = True # IMPORTANT:  remove this line enable the simple pilot
 
 class SimplePilot(AutopilotPilot):
   def __init__(self, ap):
     super(SimplePilot, self).__init__('simple', ap)
-    self.disabled = True # IMPORTANT:  remove this line enable the simple pilot
 
     # create simple pid filter
     self.gains = {}
