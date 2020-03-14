@@ -160,7 +160,7 @@ class Arduino(Process):
         backlight = self.hat.config['lcd']['backlight']
         if backlight != self.backlight:
             self.backlight = backlight
-            self.send(('backlight', value))
+            self.send(('backlight', backlight))
         while True:
             msgs = self.pipe.recv()
             if not msgs:
@@ -286,10 +286,10 @@ class Hat(object):
                 if process.process:
                     childpids.append(process.process.pid)
             if signal_number == signal.SIGCHLD:
-                pid = os.waitpid(-1, 0)
+                pid = os.waitpid(-1, os.WNOHANG)
                 if not pid[0] in childpids:
-                    print('flask ret', pid, childpids)
-                    # flask makes process at startup that dies
+                    print('subprocess returned', pid, childpids)
+                    # flask or system makes process at startup that dies
                     return
                 print('child process', pid, childpids)
             while childpids:
@@ -361,15 +361,16 @@ class Hat(object):
     def poll(self):            
         t0 = time.monotonic()
         for i in [self.gpio, self.arduino, self.lirc]:
-            try:
+#            try:
+            if 1:
                 if not i:
                     continue
                 events = i.poll()
                 for event in events:
                     #print('apply', event, time.monotonic())
                     self.apply_code(*event)
-            except Exception as e:
-                print('WARNING, failed to poll!!', e, i)
+#            except Exception as e:
+#                print('WARNING, failed to poll!!', e, i)
 
         t1 = time.monotonic()
         msgs = self.client.receive()

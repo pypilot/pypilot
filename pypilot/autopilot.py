@@ -143,7 +143,7 @@ class Autopilot(object):
         def cleanup(signal_number, frame=None):
             #print('got signal', signal_number, 'cleaning up')
             if signal_number == signal.SIGCHLD:
-                pid = os.waitpid(-1, 0)
+                pid = os.waitpid(-1, os.WNOHANG)
                 #print('sigchld waitpid', pid)
 
             if signal_number != 'atexit': # don't get this signal again
