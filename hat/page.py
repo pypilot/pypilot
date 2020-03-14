@@ -106,11 +106,10 @@ class page(object):
                 maxw = max(maxw, posx)
             maxh = posy + lineheight
                     
-            s = maxw, maxh
-            if s[0] == 0 or s[1] == 0:
-                continue
-            sw = surface.width * float(rect.width) / s[0]
-            sh = surface.height * float(rect.height) / s[1]
+            if maxw == 0 or maxh == 0: # failed to render anything
+                return 0, ''
+            sw = surface.width * float(rect.width) / maxw
+            sh = surface.height * float(rect.height) / maxh
             cursize = int(min(sw*metric_size, sh*metric_size))
             if cursize < size:
                 break
@@ -445,7 +444,7 @@ class controlbase(page):
         if self.wifi == wifi and not refresh:
             return # done displaying
         self.wifi = wifi
-        wifirect = rectangle(.35, .91, .6, .09)
+        wifirect = rectangle(.35, .92, .6, .09)
         if wifi:
             text = 'WIFI'
             if self.lcd.hat and self.lcd.hat.config['remote']:

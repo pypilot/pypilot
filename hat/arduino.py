@@ -353,7 +353,7 @@ def arduino_process(pipe, config):
 
         if events:
             pipe.send(events)
-            print('events', events, time.monotonic())
+            #print('events', events, time.monotonic())
             period = .05
             periodtime = t0
         elif periodtime - t0 > 5:
