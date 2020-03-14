@@ -15,6 +15,7 @@ from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
 
 from pypilot.client import pypilotClient
 from pypilot import pyjson
+import tinypilot
 
 pypilot_web_port=8000
 if len(sys.argv) > 1:
@@ -30,7 +31,6 @@ else:
     except:
         print('using default port of', pypilot_web_port)
 
-
 # Set this variable to 'threading', 'eventlet' or 'gevent' to test the
 # different async modes, or leave it set to None for the application to choose
 # the best option based on installed packages.
@@ -43,12 +43,50 @@ socketio = SocketIO(app, async_mode=async_mode)
 DEFAULT_PORT = 21311
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import networking
-networking.wifi(app)
+
+@app.route('/wifi', methods=['GET', 'POST'])
+def wifi():
+    networking = '/home/tc/.pypilot/networking.txt'
+    wifi = {'mode': 'Master', 'ssid': 'pypilot', 'key': '', 'client_ssid': 'pypilot', 'client_key': ''}
+
+    try:
+        f = open(networking, 'r')
+        while True:
+            l = f.readline()
+            if not l:
+                break
+            try:
+                name, value = l.split('=')
+                wifi[name] = value.rstrip()
+            except Exception as e:
+                print('failed to parse line in networking.txt', l)
+        f.close()
+    except:
+        pass
+
+    if request.method == 'POST':
+        try:
+            for name in request.form:
+                cname = name
+                if name != 'mode' and request.form['mode'] == 'Managed':
+                    cname = 'client_' + name
+                wifi[cname] = str(request.form[name])
+
+            f = open(networking, 'w')
+            for name in wifi:
+                f.write(name+'='+wifi[name]+'\n')
+            f.close()
+
+            os.system('/opt/networking.sh')
+        except Exception as e:
+            print('exception!', e)
+
+    return render_template('wifi.html', async_mode=socketio.async_mode, wifi=Markup(wifi))
+
 
 @app.route('/')
 def index():
-    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=networking.tinypilot)
+    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot.tinypilot)
 
 class pypilotWeb(Namespace):
     def __init__(self, name):
