@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2021 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -58,8 +58,6 @@ except Exception as e:
     app.jinja_env.globals.update(_=_)
     babel = None
 
-DEFAULT_PORT = 21311
-
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 @app.route('/wifi', methods=['GET', 'POST'])
@@ -104,7 +102,6 @@ def wifi():
 @app.route('/calibrationplot')
 def calibrationplot():
     return render_template('calibrationplot.html', async_mode=socketio.async_mode,pypilot_web_port=pypilot_web_port)
-
 
 @app.route('/')
 def index():

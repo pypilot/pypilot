@@ -18,35 +18,35 @@
   <div class="w3-container font-resizable3">
     <div id="headerTab" class="w3-row tabRow">
       <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Control');">
-        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey w3-red font-resizable active">{{_('Control')}}</div>
+        <div class="w3-col tablink w3-hover-light-grey w3-red font-resizable active" style="width:20%">{{_('Control')}}</div>
       </a>
       <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Gain');">
-        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey font-resizable">{{_('Gain')}}</div>
+        <div class="w3-col tablink w3-hover-light-grey font-resizable" style="width:20%">{{_('Gain')}}</div>
       </a>
       <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Calibration');">
-        <div class="w3-col s4 m3 l3 tablink w3-hover-light-grey font-resizable">{{_('Calibration')}}</div>
+        <div class="w3-col tablink w3-hover-light-grey font-resizable" style="width:20%">{{_('Calibration')}}</div>
       </a>
       <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Configuration');">
-        <div class="w3-col s6 m3 l3 tablink w3-hover-light-grey font-resizable">{{_('Configuration')}}</div>
+        <div class="w3-col tablink w3-hover-light-grey font-resizable" style="width:20%">{{_('Configuration')}}</div>
       </a>
       <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Statistics');">
-        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey font-resizable">{{_('Statistics')}}</div>
+        <div class="w3-col tablink w3-hover-light-grey font-resizable" style="width:20%">{{_('Statistics')}}</div>
       </a>
     </div>
     <br>
     <div id="Control" class="w3-container tab">
       <div class="w3-row">
-        <div class="w3-col s3 m3 l3">
+        <div class="w3-col l3">
           <div class="toggle-button button-resizable1" id="tb_engaged" >
             <button id="engaged" class="font-resizable2 button-resizable2">AP</button>
           </div>
         </div>
         <div class="w3-col s9 m9 l9">
           <div id="heading_info" class="w3-row s1 m1 l1 data_block" style="display: flex; align-items: center;">
-            <div class="w3-col s3 m3 l3 data_label">{{_('Heading')}}</div>
-            <div class="w3-col s3 m3 l3 data_value" style="font-size: 2em" id="heading">---</div>
-            <div class="w3-col s3 m3 l3 data_label">{{_('Command')}}</div>
-            <div class="w3-col s3 m3 l3 data_value" style="font-size: 2em" id="heading_command">---</div>
+            <div class="w3-col l3 data_label">{{_('Heading')}}</div>
+            <div class="w3-col l3 data_value" style="font-size: 2em" id="heading">---</div>
+            <div class="w3-col l3 data_label">{{_('Command')}}</div>
+            <div class="w3-col l3 data_value" style="font-size: 2em" id="heading_command">---</div>
           </div>
         </div>
       </div>
@@ -71,7 +71,7 @@
       <br>
       <br>
       <div class="w3-row" style="display: flex; align-items: center;">
-        <div id="heading_mode_container" class="w3-col s3 m3 l3">
+        <div id="heading_mode_container" class="w3-col l3">
           <select id="mode">
             <option value="compass">compass</option>
             <option value="gps">gps</option>
@@ -80,9 +80,9 @@
           </select>
         </div>
         <div class="w3-col s3 m3 l3 data_label">
-          <button id="tack_button" class="button button-resizable1">{{_('Tack')}}</button>
+          <button id="tack_button" class="button button-resizable1 font-resizable2">{{_('Tack')}}</button>
         </div>
-        <div class="w3-col s1 m1 l1" />
+        <div class="w3-col s1 m1 l1"></div>
         <div class="w3-col s3 m3 l3 data_label">
           <select id="tacking_mode">
             <option value="port">--&gt; starboard</option>
