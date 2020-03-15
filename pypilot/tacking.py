@@ -129,7 +129,7 @@ class Tack(object):
 
         # waiting to tack, update timeout
         if self.state.value == 'waiting':
-            remaining = self.delay.value - (t - self.time)
+            remaining = round(self.delay.value - (t - self.time), 1)
             if remaining > 0:
                 self.timeout.set(remaining)
                 return
