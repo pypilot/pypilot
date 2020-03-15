@@ -17,7 +17,7 @@ from pypilot.client import pypilotClient
 from pypilot import pyjson
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-DNSMASQ_LEASES_FILE = "/var/lib/misc/dnsmasq.leases"
+
 import tinypilot
 
 pypilot_web_port=8000
@@ -59,30 +59,6 @@ except Exception as e:
     app.jinja_env.globals.update(_=_)
     babel = None
 
-@app.route("/leases")
-def getLeases():
-    leases = list()
-    with open(DNSMASQ_LEASES_FILE) as f:
-        for line in f:
-            elements = line.split()
-            if len(elements) == 5:
-                entry = LeaseEntry(elements[0], elements[1], elements[2], elements[3])
-                leases.append(entry)
-    leases.sort(key = leaseSort)
-    return jsonify(leases=[lease.serialize() for lease in leases])
-
-@app.route("/leases")
-def getLeases():
-    leases = list()
-    with open(DNSMASQ_LEASES_FILE) as f:
-        for line in f:
-            elements = line.split()
-            if len(elements) == 5:
-                entry = LeaseEntry(elements[0], elements[1], elements[2], elements[3])
-                leases.append(entry)
-    leases.sort(key = leaseSort)
-    return jsonify(leases=[lease.serialize() for lease in leases])
-
 @app.route('/wifi', methods=['GET', 'POST'])
 def wifi():
     networking = '/home/tc/.pypilot/networking.txt'
@@ -120,7 +96,36 @@ def wifi():
         except Exception as e:
             print('exception!', e)
 
-    return render_template('wifi.html', async_mode=socketio.async_mode, wifi=Markup(wifi))
+
+    try:
+        leases = '<table id="leases">'
+        leases += '<tr><th>IP Address</th><th>Mac Address</th><th>Name</th><th>Static IP?</th><th>Lease ends on</th></tr>'
+        DNSMASQ_LEASES_FILE = "/var/lib/misc/dnsmasq.leases"
+        f = open(DNSMASQ_LEASES_FILE)
+        for line in f:
+            elements = line.split()
+            if len(elements) == 5:
+                from datetime import datetime
+                ts = int(elements[0])
+                if ts:
+                    ts = datetime.utcfromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    ts = 'Never'
+                    
+                leases += '<tr>'
+                leases += '<td>' + elements[2] + '</td>'
+                leases += '<td>' + elements[1] + '</td>'
+                leases += '<td>' + elements[3] + '</td>'
+                leases += '<td>' + ( 'Yes' if elements[4] != '*' else 'No' ) + '</td>'
+                leases += '<td>' + ts + '</td>'
+                leases += '</tr>'
+            leases += '</table>'
+    except:
+        leases = ''
+    if wifi['mode'] != 'Master':
+        leases = ''
+
+    return render_template('wifi.html', async_mode=socketio.async_mode, wifi=Markup(wifi), leases=Markup(leases))
 
 @app.route('/calibrationplot')
 def calibrationplot():
