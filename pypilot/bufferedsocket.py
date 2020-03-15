@@ -7,17 +7,23 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, select
+import time, select, socket
 
 try:
   from pypilot.linebuffer import linebuffer
   class LineBufferedNonBlockingSocket(object):
-    def __init__(self, connection):
+    def __init__(self, connection, address):
         connection.setblocking(0)
         self.b = linebuffer.LineBuffer(connection.fileno())
 
         self.socket = connection
+        self.address = address
         self.out_buffer = ''
+
+        self.udp_port = False
+        self.udp_out_buffer = ''
+        self.udp_socket = False
+
         self.pollout = select.poll()
         self.pollout.register(connection, select.POLLOUT)
         self.sendfail_msg = 1
@@ -35,20 +41,35 @@ try:
     def readline(self):
       return self.b.line()
 
-    def send(self, data):
-        self.out_buffer += data
-        if len(self.out_buffer) > 65536:
-            print('overflow in pypilot socket', len(self.out_buffer))
+    def send(self, data, udp=False):
+        if udp and self.udp_port:
+          self.udp_out_buffer += data
+          if len(self.udp_out_buffer) > 400:
+            print('overflow in pypilot udp socket', self.address, len(self.udp_out_buffer))
+            self.udp_out_buffer = ''
+        else:
+          self.out_buffer += data
+          if len(self.out_buffer) > 65536:
+            print('overflow in pypilot socket', self.address, len(self.out_buffer))
             self.out_buffer = ''
             self.socket.close()
     
     def flush(self):
+        if self.udp_out_buffer:
+            if not self.udp_socket:
+                  self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            count = self.udp_socket.sendto(self.udp_out_buffer.encode(), (self.address[0], self.udp_port))
+            if count != len(self.udp_out_buffer):
+                print('failed to send udp packet', self.address)
+            self.udp_out_buffer = ''
+        
         if not self.out_buffer:
             return
+
         try:
             if not self.pollout.poll(0):
                 if self.sendfail_cnt >= self.sendfail_msg:
-                    print('pypilot socket failed to send', self.sendfail_cnt)
+                    print('pypilot socket failed to send to', self.address, self.sendfail_cnt)
                     self.sendfail_msg *= 10
                 self.sendfail_cnt += 1
 
@@ -60,13 +81,13 @@ try:
             t1 = time.monotonic()
 
             if t1-t0 > .1:
-                print('socket send took too long!?!?', t1-t0)
+                print('socket send took too long!?!?', self.address, t1-t0)
             if count < 0:
-                print('socket send error', count)
+                print('socket send error', self.address, count)
                 self.socket.close()
             self.out_buffer = self.out_buffer[count:]
         except Exception as e:
-            print('pypilot socket exception', e)
+            print('pypilot socket exception', self.address, e)
             self.socket.close()
   
 except Exception as e:

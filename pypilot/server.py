@@ -56,7 +56,7 @@ class pypilotValue(object):
                 watch = self.awatches[0]
                 if watch.period == 0:
                     for connection in watch.connections:
-                        connection.send(msg)
+                        connection.send(msg, True)
 
                 for watch in self.pwatches:
                     if t0 >= watch.time:
@@ -146,7 +146,7 @@ class pypilotValue(object):
 
 class ServerWatch(pypilotValue):
     def __init__(self, values):
-        super(ServerWatch, self).__init__(values, 'watch', {}, None)
+        super(ServerWatch, self).__init__(values, 'watch')
 
     def set(self, msg, connection):
         name, data = msg.rstrip().split('=', 1)        
@@ -158,10 +158,20 @@ class ServerWatch(pypilotValue):
                 values[name] = pypilotValue(self.server_values, name)
             values[name].watch(connection, watches[name])
 
+class ServerUDP(pypilotValue):
+    def __init__(self, values):
+        super(ServerUDP, self).__init__(values, 'udp_port')
+
+    def set(self, msg, connection):
+        name, data = msg.rstrip().split('=', 1)        
+        self.msg = pyjson.loads(data)
+        connection.udp_port = self.msg # output streams on this port
+
 class ServerValues(pypilotValue):
     def __init__(self):
-        super(ServerValues, self).__init__(self, 'values', {}, None)
-        self.values = {'values': self, 'watch': ServerWatch(self)}
+        super(ServerValues, self).__init__(self, 'values')
+        self.values = {'values': self, 'watch': ServerWatch(self), 'udp_port': ServerUDP(self)}
+        self.internal = list(self.values)
         self.pipevalues = {}
         self.msg = 'new'
         self.load()
@@ -174,7 +184,7 @@ class ServerValues(pypilotValue):
             msg = 'values={'
             notsingle = False
             for name in self.values:
-                if name == 'values' or name == 'watch':
+                if name in self.internal:
                     continue
                 info = self.values[name].info
                 if not info: # placeholders that are watched
@@ -201,7 +211,7 @@ class ServerValues(pypilotValue):
             if not watch.connections:
                 continue # forget this watch
             for connection in watch.connections:
-                connection.send(watch.value.get_msg())
+                connection.send(watch.value.get_msg(), True)
             watch.time += watch.period
             watch.value.pwatches.append(watch) # put back on value periodic watch list
             
@@ -255,7 +265,7 @@ class ServerValues(pypilotValue):
     def HandleRequest(self, msg, connection):
         name, data = msg.split('=', 1)        
         if not name in self.values:
-            connection.send('invalid unknown value: ' + name + '\n')
+            connection.send('error=invalid unknown value: ' + name + '\n')
             return
         self.values[name].set(msg, connection)
 
@@ -453,7 +463,7 @@ class pypilotServer(object):
                 if len(self.sockets) == max_connections:
                     print('pypilot server: max connections reached!!!', len(self.sockets))
                     self.RemoveSocket(self.sockets[0]) # dump first socket??
-                socket = LineBufferedNonBlockingSocket(connection)
+                socket = LineBufferedNonBlockingSocket(connection, address)
                 
                 self.sockets.append(socket)
                 fd = socket.fileno()
