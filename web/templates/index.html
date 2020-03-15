@@ -12,6 +12,15 @@
     <script>
       var pypilot_web_port = {{pypilot_web_port}};
       var tinypilot = {{tinypilot}};
+      var translations = {};
+      {% for s in translations %}
+      translations['{{s}}'] = '{{_(s)}}';
+      {% endfor %}
+      var _ = function(msg) {
+          if(msg in translations)
+              return translations[msg];
+          return msg;
+      }
     </script>
 </head>
 <body>
@@ -80,8 +89,9 @@
           </select>
         </div>
         <div class="w3-col l3">
-          <button id="tack_button" class="button button-resizable1 font-resizable2">{{_('Tack')}}</button>
+          <button id="tack_button" class="button button-resizable1 font-resizable2">      </button>
         </div>
+        <div class="w3-col l1"></div>
         <div id="tack_timeout" class="w3-col l1"></div>
         <div id="tack_state" class="w3-col l3"></div>
         <div class="w3-col l3 data_label">

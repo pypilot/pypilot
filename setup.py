@@ -97,7 +97,7 @@ setup (name = 'pypilot',
        package_data={'pypilot': find_locales(),
                      'pypilot.hat': ['font.ttf', 'static/*', 'templates/*'] + find_locales('hat'),
                      'pypilot.ui': ['*.png', '*.mtl', '*.obj'],
-                     'pypilot.web': ['static/*', 'templates/*'] + find_locales('web', 'translations')},
+                     'pypilot.web': ['static/*', 'templates/*'] + 'pypilot_web.pot' + find_locales('web', 'translations')},
        entry_points={
            'console_scripts': [
                'pypilot=pypilot.autopilot:main',
