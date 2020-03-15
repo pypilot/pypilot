@@ -84,6 +84,11 @@ download:
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:r:download.hex -b $(BAUDRATE)
 	echo in > /sys/class/gpio/gpio16/direction
 
+reset:
+	echo 16 > /sys/class/gpio/export || echo ok
+	echo out > /sys/class/gpio/gpio16/direction
+	echo in > /sys/class/gpio/gpio16/direction
+
 install: $(SKETCHNAME).cpp.hex
 	cp $(SKETCHNAME).cpp.hex ~/.pypilot/$(SKETCHNAME).hex
 

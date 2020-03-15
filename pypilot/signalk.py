@@ -121,22 +121,24 @@ class signalk(object):
         import requests
         if self.signalk_access_url:
             dt = time.monotonic() - self.last_access_request_time            
-            if dt < 5:
+            if dt < 15:
                 return
             self.last_access_request_time = time.monotonic()
             try:
-                print('signalk see if token is ready')
+                #print('signalk see if token is ready')
                 r = requests.get(self.signalk_access_url)
                 contents = pyjson.loads(r.content)
-                print('got', contents)
+                #print('got', contents)
                 if contents['state'] == 'COMPLETED':
-                    access = contents['accessRequest']
-                    if access['permission'] == 'APPROVED':
-                        self.token = access['token']
-                        if self.ws:
-                            self.ws.send(pyjson.dumps({"clientId": uid, "validate":{"token": self.token}})+'\n')
-                        print('signalk recieved token', self.token)
-                    return
+                    if 'accessRequest' in contents:
+                        access = contents['accessRequest']
+                        if access['permission'] == 'APPROVED':
+                            self.token = access['token']
+                            if self.ws:
+                                self.ws.send(pyjson.dumps({"clientId": uid, "validate":{"token": self.token}})+'\n')
+                                print('signalk recieved token', self.token)
+                else:
+                    self.signalk_access_url = 'http://' + self.signalk_host_port + contents['href']
             except Exception as e:
                 print('error requesting access', e)
                 self.signalk_access_url = False

@@ -218,7 +218,7 @@ class pypilotClient(object):
             try:
                 events = self.poller.poll(int(1000 * timeout))
             except Exception as e:
-                print('exception polling', e)
+                print('exception polling', e, os.getpid())
                 self.disconnect()
                 return
 
