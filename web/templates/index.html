@@ -33,9 +33,7 @@
         <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey font-resizable">{{_('Statistics')}}</div>
       </a>
     </div>
-
     <br>
-
     <div id="Control" class="w3-container tab">
       <div class="w3-row">
         <div class="w3-col s3 m3 l3">
@@ -44,16 +42,35 @@
           </div>
         </div>
         <div class="w3-col s9 m9 l9">
-          <div id="heading_info" class="w3-row font-resizable data_block">
-            <div class="w3-col s3 m4 l2 data_label"><button id="tack_button">{{_('Tack')}}</button></div>
-            <div class="w3-col s6 m4 l4 data_label">{{_('Heading')}}</div>
-            <div class="w3-col s2 m2 l2 data_value" id="heading">---</div>
-            <div class="w3-col s6 m4 l4 data_label">{{_('Command')}}</div>
-            <div class="w3-col s2 m2 l2 data_value" id="heading_command">---</div>
+          <div id="heading_info" class="w3-row s1 m1 l1 data_block" style="display: flex; align-items: center;">
+            <div class="w3-col s3 m3 l3 data_label">{{_('Heading')}}</div>
+            <div class="w3-col s3 m3 l3 data_value" style="font-size: 2em" id="heading">---</div>
+            <div class="w3-col s3 m3 l3 data_label">{{_('Command')}}</div>
+            <div class="w3-col s3 m3 l3 data_value" style="font-size: 2em" id="heading_command">---</div>
           </div>
         </div>
       </div>
-      <div class="w3-row">
+      <div id="steer_buttons_container" class="w3-row" >
+        <div class="w3-col s6 m6 l6">
+          <button id="port10" class="button font-resizable1 button-resizable">
+            <span id="port10">--</span>
+          </button>
+          <button id="port2" class="button font-resizable1 button-resizable"> <!-- force no space between buttons-->
+            <span id="port2">--</span>
+          </button>
+        </div>
+        <div class="w3-col s6 m6 l6">
+          <button id="star10" class="button font-resizable1 button-resizable" style="float:right">
+            <span id="star10">--</span>
+          </button>
+          <button id="star2" class="button font-resizable1 button-resizable" style="float:right">
+            <span id="star2">--</span>
+          </button>
+        </div>
+      </div>
+      <br>
+      <br>
+      <div class="w3-row" style="display: flex; align-items: center;">
         <div id="heading_mode_container" class="w3-col s3 m3 l3">
           <select id="mode">
             <option value="compass">compass</option>
@@ -62,31 +79,17 @@
             <option value="true wind">true wind</option>
           </select>
         </div>
-        <div id="tacking_mode_container" class="w3-col s3 m3 l2">
+        <div class="w3-col s3 m3 l3 data_label">
+          <button id="tack_button" class="button button-resizable1">{{_('Tack')}}</button>
+        </div>
+        <div class="w3-col s1 m1 l1" />
+        <div class="w3-col s3 m3 l3 data_label">
           <select id="tacking_mode">
-            <option value="port">--> starboard</option>
-            <option value="starboard"><-- port</option>
+            <option value="port">--&gt; starboard</option>
+            <option value="starboard">&lt;-- port</option>
           </select>
         </div>
-
       </div>
-      <div id="steer_buttons_container" class="w3-row" >
-        <div class="w3-col s6 m6 l6">
-          <button id="port10" class="button font-resizable1 button-resizable">
-            <span id="port10">--</span>
-          </button><button id="port2" class="button font-resizable1 button-resizable"> <!-- force no space between buttons-->
-            <span id="port2">--</span>
-          </button>
-        </div>
-        <div class="w3-col s6 m6 l6">
-          <button id="star10" class="button font-resizable1 button-resizable" style="float:right">
-            <span id="star10">--</span>
-          </button><button id="star2" class="button font-resizable1 button-resizable" style="float:right">
-            <span id="star2">--</span>
-          </button>
-        </div>
-      </div>
-
     </div>
     
     <div id="Gain" class="w3-container tab">

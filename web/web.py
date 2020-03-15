@@ -55,6 +55,7 @@ try:
 except Exception as e:
     print('failed to import flask_babel, translations not possible!!')
     def _(x): return x
+    app.jinja_env.globals.update(_=_)
     babel = None
 
 DEFAULT_PORT = 21311
@@ -170,7 +171,7 @@ def main():
             break
         except PermissionError as e:
             print('failed to run socket io on port', port, e)
-            port +=8000 - 80
+            port += 8000 - 80
             print('trying port', port)
 
 if __name__ == '__main__':
