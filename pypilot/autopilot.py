@@ -330,13 +330,13 @@ class Autopilot(object):
       if t5-t4 > period/2:
           print('servo is running too _slowly_', t5-t4)
 
-      self.timings.set([t1-t0, t2-t1, t3-t2, t4-t3, t5-t4])
+      self.timings.set([t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t5-t0])
           
       if self.watchdog_device:
           self.watchdog_device.write('c')
 
       while True: # sleep remainder of period
-          dt = period - (time.monotonic() - timu)
+          dt = period - (time.monotonic() - t0)
           if dt >= period or dt <= 0:
               break
           time.sleep(dt)

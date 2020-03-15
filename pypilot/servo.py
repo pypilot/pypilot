@@ -520,13 +520,17 @@ class Servo(object):
     def poll(self):
         if not self.driver:
             device_path = serialprobe.probe('servo', [38400], 1)
+            return
             if device_path:
                 #from arduino_servo.arduino_servo_python import ArduinoServo
                 from arduino_servo.arduino_servo import ArduinoServo
+                return
                 try:
                     device = serial.Serial(*device_path)
                     device.timeout=0 #nonblocking
                     fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
+                    device.close()
+                    return
                 except Exception as e:
                     print('failed to open servo on:', device_path, e)
                     return

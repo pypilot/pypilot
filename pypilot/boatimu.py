@@ -186,7 +186,7 @@ class LoopFreqValue(SensorValue):
 
     def strobe(self):
         self.loopc += 1
-        if self.loopc == 10:
+        if self.loopc == 4: # update timing from 5 cycles
             t1 = time.monotonic()
             self.set(self.loopc/(t1-self.t0))
             self.t0 = t1
@@ -291,6 +291,7 @@ class BoatIMU(object):
         self.rate = self.register(EnumProperty, 'rate', 10, [10, 25], persistent=True)
 
         self.loopfreq = self.register(LoopFreqValue, 'loopfreq')
+        self.loopfreq.set(self.rate.value)
         self.alignmentQ = self.register(QuaternionValue, 'alignmentQ', [2**.5/2, -2**.5/2, 0, 0], persistent=True)
         self.alignmentQ.last = False
         self.heading_off = self.register(RangeProperty, 'heading_offset', 0, -180, 180, persistent=True)
@@ -329,7 +330,7 @@ class BoatIMU(object):
 
         self.imu = IMU(client.server)
 
-        self.last_imuread = time.monotonic()
+        self.last_imuread = time.monotonic() + 4 # ignore failed readings at startup
 
     def __del__(self):
         #print('terminate imu process')
