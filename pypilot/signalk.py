@@ -51,7 +51,7 @@ class signalk(object):
         self.signalk_access_url = False
         self.last_access_request_time = 0
 
-        self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('nmea pipe', self.multiprocessing)
+        self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('signalk pipe', self.multiprocessing)
         if self.multiprocessing:
             import multiprocessing
             self.process = multiprocessing.Process(target=self.process, daemon=True)
