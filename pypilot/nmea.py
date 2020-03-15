@@ -487,6 +487,7 @@ class nmeaBridge(object):
 
         self.server.listen(5)
 
+        self.client_socket_nmea_address = False
         self.nmea_client_connect_time = 0
         self.last_values = {'gps.source' : 'none', 'wind.source' : 'none', 'rudder.source': 'none', 'apb.source': 'none'}
         for name in self.last_values:
@@ -574,7 +575,7 @@ class nmeaBridge(object):
             self.close_connecting_client()
             return
         if sock == self.client_socket:
-            print('nmea client lost')
+            print(_('nmea client lost connection'))
             self.client_socket = False
         try:
             self.sockets.remove(sock)
@@ -605,12 +606,21 @@ class nmeaBridge(object):
         sock.close()
 
     def connect_client(self):
+        if self.client_socket: # already connected
+            if self.client_socket_nmea_address != self.nmea_client.value:
+                self.client_socket.socket.close() # address has changed, close connection
+            return
+
+        timeout = 30
         t = time.monotonic()
-        if t - self.nmea_client_connect_time < 20:
+        if self.client_socket_nmea_address != self.nmea_client.value:
+            self.nmea_client_connect_time = t - timeout + 5 # timeout sooner if it changed
+
+        self.client_socket_nmea_address = self.nmea_client.value
+        if t - self.nmea_client_connect_time < timeout:
             return
         
         self.nmea_client_connect_time = t
-        self.client_socket_nmea_address = self.nmea_client.value
         
         if not ':' in self.nmea_client.value:
             self.warn_connecting_client(_('invalid value'))
@@ -622,6 +632,10 @@ class nmeaBridge(object):
         port = hostport[1]
 
         self.client_socket = False
+        def warning(e, s):
+            self.warn_connecting_client(_('connect error') + ' : ' + str(e))
+            s.close()            
+            
         try:
             port = int(port)
             if self.connecting_client_socket:
@@ -637,13 +651,10 @@ class nmeaBridge(object):
                 self.poller.register(s, select.POLLOUT)
                 self.fd_to_socket[s.fileno()] = s
                 self.connecting_client_socket = s
-            else:
-                self.warn_connecting_client('failed to connect', self.nmea_client.value, ':', e)
-                s.close()
-                
+                return
+            warning(e, s)
         except Exception as e:
-            s.close()
-            self.warn_connecting_client(_('connect error'))
+            warning(e, s)
 
     def warn_connecting_client(self, msg):
         if self.client_socket_warning_address != self.client_socket_nmea_address:
@@ -651,7 +662,7 @@ class nmeaBridge(object):
             self.client_socket_warning_address = self.client_socket_nmea_address
             
     def close_connecting_client(self):
-        self.warn_connecting_client(_('nmea client failed to connect'))
+        self.warn_connecting_client(_('failed to connect'))
         fd = self.connecting_client_socket.fileno()
         self.poller.unregister(fd)
         del self.fd_to_socket[fd]
@@ -659,7 +670,7 @@ class nmeaBridge(object):
         self.connecting_client_socket = False
 
     def client_connected(self, connection):
-        print('nmea client connected')
+        print(_('nmea client connected'), self.client_socket_nmea_address)
         self.client_socket_warning_address = False
         self.client_socket = self.new_socket_connection(connection, self.client_socket_nmea_address)
         self.connecting_client_socket = False
@@ -751,11 +762,7 @@ class nmeaBridge(object):
         t5 = time.monotonic()
 
         # reconnect client tcp socket
-        if self.client_socket:
-            if self.client_socket_nmea_address != self.nmea_client.value:
-                self.client_socket.socket.close() # address has changed, close connection
-        else:
-            self.connect_client()
+        self.connect_client()
                                 
         t6 = time.monotonic()
 
