@@ -22,14 +22,14 @@ class TackSensorLog(object):
         dt = t - self.time
         # limit update rate
         if dt < .25:
-            return False
+            return
 
         self.time = t
 
         # if lagged by second or more, reset
         if dt > 1:
             self.log = []
-            return False
+            return
 
         if len(self.log) < 20:
             self.log.append(value)
@@ -39,9 +39,9 @@ class TackSensorLog(object):
         port, starboard = True, True
         avg = 0
         for d in self.log:
-            if d <= -self.threshold:
+            if d <= self.threshold:
                 starboard = False
-            if d >= self.threshold:
+            if d >= -self.threshold:
                 port = False
             avg += d
 
@@ -55,7 +55,6 @@ class TackSensorLog(object):
             return 'starboard'
         if port:
             return 'port'
-        return False
 
 
 class Tack(object):
@@ -81,7 +80,7 @@ class Tack(object):
         self.time = time.monotonic()
 
         self.wind_log = TackSensorLog(12)
-        self.heel_log = TackSensorLog(7)
+        self.heel_log = TackSensorLog(5)
         self.tack_angle = self.angle.value
 
     def register(self, _type, name, *args, **kwargs):
@@ -95,7 +94,6 @@ class Tack(object):
         if not ap.enabled.value:
             self.state.update('none')
 
-        if self.state.value == 'none':  # not tacking
             # if we have wind data, use it to determine the tacking direction
             r = False
             if ap.sensors.wind.source.value != 'none':
@@ -104,6 +102,7 @@ class Tack(object):
             elif t - self.time > 30:
                 r = self.heel_log.update(ap.boatimu.heel)
 
+            #self.direction.update('port')
             if r:
                 self.direction.update(r)
 
