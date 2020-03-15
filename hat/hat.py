@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, os, sys, signal
+import time, os, sys, signal, select
 from pypilot import pyjson
 from pypilot.client import pypilotClient
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -239,6 +239,9 @@ class Hat(object):
         self.gpio = gpio.gpio()
         self.arduino = Arduino(self)
 
+        self.poller = select.poll()
+        self.poller.register(self.arduino.pipe, select.POLLIN)
+
         # use raspberry pi lirc if there is no arduino
         #if not 'arduino' in hatconfig and 'lirc' in hatconfig:
         self.lirc = lircd.lirc()
@@ -392,8 +395,9 @@ class Hat(object):
         t4 = time.monotonic()
         dt = t3-t0
         period = max(.2 - dt, .01)
-        time.sleep(period)
-        #print('times', t1-t0, t2-t1, t3-t2, t4-t3, period, dt)
+
+        self.poller.poll(1000*period)
+        #print('hat times', t1-t0, t2-t1, t3-t2, t4-t3, period, dt)
 
 def main():
     hat = Hat()

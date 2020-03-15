@@ -110,7 +110,7 @@ class arduino(object):
                     GPIO.setup(self.resetpin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
                 except Exception as e:
                     print('failed to set reset pin high', e)
-                    return
+                    #return
                     
                 port, slave = int(device[11]), int(device[13])
                 print('arduino on spidev%d.%d' % (port, slave))
@@ -373,7 +373,7 @@ def arduino_process(pipe, config):
 
         if events:
             pipe.send(events)
-            period = .025
+            period = .02
             periodtime = t0
         elif periodtime - t0 > 5:
             period = .05

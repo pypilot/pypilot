@@ -256,6 +256,7 @@ class LCD():
                 self.blinktime = t0
         except:
             self.blinktime = 0
+        
         w, h = self.surface.width, self.surface.height
         size = h // 40
         self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
@@ -307,21 +308,22 @@ class LCD():
             frameperiod = 1;
         else:
             frameperiod = self.page.frameperiod
+
         t = gettime()
         dt = t - self.lastframetime
-
-        if dt > frameperiod:
-            ta = time.time()
-            self.display()
-            self.update_watches()
-            self.lastframetime = max(self.lastframetime+frameperiod, t-frameperiod)
-        t2 = gettime()
 
         next_page = self.page.process()
         if next_page and next_page != self.page:
             self.page = next_page
             self.update_watches()
             self.need_refresh = True
+        
+        if dt > frameperiod:
+            ta = time.time()
+            self.display()
+            self.update_watches()
+            self.lastframetime = max(self.lastframetime+frameperiod, t-frameperiod)
+        t2 = gettime()
 
         for key in self.keypad:
             if key.down:
