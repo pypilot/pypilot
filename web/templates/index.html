@@ -116,8 +116,8 @@
         <button id="rudder_reset" class="button">{{_('reset')}}</button>
       </p>
       <p>
-        {{_('Rudder Range')}}
-        <input type="spin" id="rudder_range" min=10 max=100 value=30>{{_('Degrees')}}</input>
+        {{_('Rudder Range')}} 
+       <input type="number" id="rudder_range" min=10 max=100 value=30 style="text-align: right;"></input>&nbsp;{{_('Degrees')}}
       </p>
     </div>
 
@@ -125,11 +125,12 @@
       <div id='theme_selector' class="configuration_item">
           <spawn calss="value_name">{{_('Display')}}:</spawn>
           <label for="theme_clear" class="theme_name">{{_('Clear')}}&nbsp;</label><input type="radio" name="theme" class="theme_option" id="theme_clear" value="clear">
-          <label for="theme_dark"  class="theme_name">{{_('Dark')}}&nbsp; </label><input type="radio" name="theme" class="theme_option" id="theme_dark"  value="dark" >
+          <label for="theme_dark"  class="theme_name">{{_('Dark')}}&nbsp;</label><input type="radio" name="theme" class="theme_option" id="theme_dark"  value="dark" >
       </div>
-      <div id="configuration_container">
-      
-      </div>
+      <div id="configuration_container"></div>
+      <br>
+      {{_('NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110')}}
+      <p><input type="text" id="nmea_client" "></input>
     </div>
 
     <div id="Statistics" class="w3-container tab">

@@ -165,6 +165,7 @@ $(document).ready(function() {
             $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>')
             $('#configuration_container').append('<p><a href=":33333">Configure LCD Keypad and Remotes</a>')
         }
+        pypilot_watch('nmea.client')
 
         pypilot_watch('servo.controller');
         pypilot_watch('servo.flags');
@@ -365,6 +366,9 @@ $(document).ready(function() {
             }
         }
 
+        if('nmea.client' in data)
+            $('#nmea_client').val(data['nmea.client']);
+
         // statistics
         if('servo.amp_hours' in data) {
             value = data['servo.amp_hours'];
@@ -496,6 +500,10 @@ $(document).ready(function() {
 
     // Configuration
 
+    $('#nmea_client').change(function(event) {
+        pypilot_set('nmea.client', $('#nmea_client').val());
+    });
+    
     // hack
     document.addEventListener('click', function(event) {
         var target = event.target;
