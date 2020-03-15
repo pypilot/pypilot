@@ -677,6 +677,7 @@ class control(controlbase):
             if self.control['heading_command'] != warning:
                 self.fittext(rectangle(0, .4, 1, .4), _(warning), True, black)
                 self.control['heading_command'] = warning
+                self.control['mode'] = warning
         elif mode == 'gps' and not self.have_gps():
             if self.control['heading_command'] != 'no gps':
                 self.fittext(rectangle(0, .4, 1, .35), _('GPS not detected'), True, black)
@@ -692,7 +693,7 @@ class control(controlbase):
         elif self.lcd.hat and self.lcd.hat.check_voltage():
             msg = self.lcd.hat.check_voltage()
             if self.control['heading_command'] != msg:
-                self.fittext(rectangle(0, .4, 1, .4), msg, True, black)
+                self.fittext(rectangle(0, .4, 1, .34), msg, True, black)
                 self.control['heading_command'] = msg
         elif self.last_val('ap.enabled') != True:
             # no warning, display the desired course or 'standby'
@@ -716,7 +717,7 @@ class control(controlbase):
             self.control['heading_command'] = heading_command
             self.control['mode'] = False # refresh mode
 
-        warning = False
+        #warning = False
         if mode == 'compass':
             cal = self.last_val('imu.compass.calibration')
             if cal == 'N/A':
