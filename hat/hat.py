@@ -119,10 +119,10 @@ class Web(Process):
                     print('warning, failed to make hat web process idle, trying renice')
                 if os.system("renice 20 %d" % os.getpid()):
                     print('warning, failed to renice hat web process')
-                if os.getenv('USER') == 'tc':
+                if os.getenv('USER') == 'tc' and time.monotonic() < 300:
                     time.sleep(30) # delay loading web and wait until modules are loaded
                 else:
-                    time.sleep(3) # delay less on other platforms
+                    time.sleep(5) # delay less on other platforms
                 try:
                     import web
                     web.web_process(pipe, config)
@@ -139,6 +139,9 @@ class Web(Process):
                 value = msg[name]
                 self.hat.update_config(name, value);
             self.hat.write_config()
+            if 'host' in msg:
+                print('host changed, exiting', msg['host'])
+                exit(0) # respawn
 
 class Arduino(Process):
     def __init__(self, hat):
@@ -152,7 +155,7 @@ class Arduino(Process):
     def create(self):
         def process(pipe, config):
             import arduino
-            print('arduino process on ', os.getpid())
+            print('arduino process on', os.getpid())
             if os.system("renice -5 %d" % os.getpid()):
                 print('warning, failed to renice hat arduino process')
             while True:
@@ -184,7 +187,7 @@ class LCD(Process):
     def create(self):
         def process(pipe, config):
             import lcd
-            print('lcd process on ', os.getpid())
+            print('lcd process on', os.getpid())
             self.lcd = lcd.LCD(self.hat.config)
             self.lcd.pipe = pipe
 
@@ -219,7 +222,7 @@ cleanedup = False
 class Hat(object):
     def __init__(self):
         # read config
-        self.config = {'remote': False, 'host': 'localhost', 'actions': {},
+        self.config = {'host': 'localhost', 'actions': {},
                        'pi.ir': True, 'arduino.ir': False,
                        'arduino.nmea.in': False, 'arduino.nmea.out': False,
                        'arduino.nmea.baud': 4800,
@@ -263,13 +266,9 @@ class Hat(object):
 
         if len(sys.argv) > 1:
             self.config['host'] = sys.argv[1]
-            self.config['remote'] = self.config['host'] != 'localhost'
             self.write_config()
 
-        if self.config['remote']:
-            host = self.config['host']
-        else:
-            host = 'localhost'
+        host = self.config['host']
 
         self.poller = select.poll()
         self.gpio = gpio.gpio()
@@ -370,8 +369,9 @@ class Hat(object):
 
     def write_config(self):
         try:
-            file = open(self.configfilename, 'w')
-            file.write(pyjson.dumps(self.config) + '\n')
+            f = open(self.configfilename, 'w')
+            f.write(pyjson.dumps(self.config) + '\n')
+            f.close()
         except IOError:
             print('failed to save config file:', self.configfilename)
 
@@ -383,7 +383,7 @@ class Hat(object):
             self.arduino.config(name, value)
 
         self.config[name] = value
-            
+
     def apply_code(self, key, count):
         if key in self.keytimeouts:
             timeoutcount = self.keytimeouts[key]

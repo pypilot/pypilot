@@ -27,6 +27,23 @@ default_actions = \
      'starboard10':['ir03101800','ir03101000','KEY_RIGHT','gpio5','rf5F1C2950','rf5F0C2950'],
      'tack':['gpio26','rf7F1C2910','rf7F0C2910']}
 
+
+try:
+    from flask_babel import Babel, gettext
+    babel = Babel(app)
+
+    LANGUAGES = os.listdir(os.path.dirname(os.path.abspath(__file__)) + '/translations')
+
+    @babel.localeselector
+    def get_locale():
+        return request.accept_languages.best_match(LANGUAGES)
+    
+except Exception as e:
+    print('failed to import flask_babel, translations not possible!!', e)
+    def _(x): return x
+    app.jinja_env.globals.update(_=_)
+    babel = None
+
 class WebConfig(Namespace):
     def __init__(self, name, pipe, config):
         super(Namespace, self).__init__(name)
@@ -41,7 +58,7 @@ class WebConfig(Namespace):
         names = Markup('[')
         cols = 1
         col = 0
-        acts += Markup('<p>Actions for LCD interface<table border=0>')
+        acts += Markup('<p>' + _('Actions for LCD interface') + '<table border=0>')
         i = 0
         actions = config['actions']
         for name in actions:
@@ -49,8 +66,7 @@ class WebConfig(Namespace):
                 acts += Markup('</tr></table>')
                 acts += Markup('<p><br>key: <b><span id="key0"></span></b>')
                 acts += Markup('<br>action: <b><span id="action0"></span></b>')
-                acts += Markup('<p>These actions do not depend on the state')
-                acts += Markup(' of the display and can be used by wireless remotes.')
+                acts += Markup('<p>' + _('These actions do not depend on the state of the display and can be used by wireless remotes.'))
                 acts += Markup('<table border=0>')
                 col = 0
             i+=1
@@ -96,9 +112,15 @@ class WebConfig(Namespace):
             nmea += Markup('>' + str(baud) + '</option>')
         nmea += Markup('</select>')
 
+        remote = Markup('<input type="checkbox" id="remote"')
+        if config['host'] != 'localhost':
+            remote += Markup(' checked')
+        remote += Markup('/>' + _('remote'))
+        remote += Markup('<input type="text" id="host" value="' + config['host'] + '">')
+
         @app.route('/')
         def index():
-            return render_template('index.html', async_mode=socketio.async_mode, web_port=web_port, actionkeys = acts, action_names = names, ir_settings = ir, nmea_settings = nmea)
+            return render_template('index.html', async_mode=socketio.async_mode, web_port=web_port, actionkeys = acts, action_names = names, ir_settings = ir, nmea_settings = nmea, remote_settings = remote)
 
     def on_ping(self):
         emit('pong')
@@ -192,7 +214,7 @@ def web_process(pipe, config):
     socketio.run(app, debug=False, host='0.0.0.0', port=web_port)
     
 if __name__ == '__main__':
-    config = {'remote': False, 'host': '127.0.0.1', 'actions': {},
+    config = {'host': 'localhost', 'actions': {},
               'pi.ir': True, 'arduino.ir': False,
               'arduino.nmea.in': False, 'arduino.nmea.out': False,
               'arduino.nmea.baud': 4800,

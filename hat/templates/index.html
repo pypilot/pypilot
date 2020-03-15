@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-    <title>pypilot hat configuration</title>
+    <title>{{_('pypilot hat configuration')}}</title>
     <link rel="stylesheet" type="text/css" href="static/w3.css" />
     <script type="text/javascript" src="static/jquery.min.js"></script>
     <script type="text/javascript" src="static/socket.io.min.js"></script>
@@ -13,24 +13,29 @@
 </head>
 <body>
   <div>
-    <h2>lcd and remote control setup</h2>
-    <p><button id="clear">clear</button><button id="default">default</button>
-    <p>Press button(s) on the keypad or remote then assign a command with the button.
+    <h2>{{_('lcd and remote control setup')}}</h2>
+    <p><button id="clear">{{_('clear')}}</button><button id="default">{{_('default')}}</button>
+    <p>{{_('press button(s) on the keypad or remote then assign a command with the button.')}}
         {{ actionkeys }}
     <p>
-      <h2>IR (infared receiver port)</h2>
-      The ir port can be handled direcly from the pi or the arduino.   Using the arduino can receive from many different remotes without special calibration recordings.
+      <h2>IR ({{_('infared receiver port')}})</h2>
+      {{_('The ir port can be handled direcly from the pi or the arduino.  Using the arduino can receive from many different remotes without special calibration recordings.')}}
     <p>
       {{ ir_settings }}
     <p>
       <h2>hat NMEA port</h2>
       {{ nmea_settings }}
 
-      <br>nmea current baud rate: <b><span id="baudrate"></span></b>
-      <br>voltages: <b><span id="voltage"></span></b>
-      <br>pypilot status: <b><span id="status"></span></b>
-      <br>connection: <b><span id="connection"></span></b>
-      <br>Web Server Latency: <b><span id="ping-pong"></span> ms</b>
+      <h2>{{_('remote mode')}}</h2>
+      {{ remote_settings }}
+
+      <br>
+      <p>
+      <br>{{_('nmea current baud rate')}}: <b><span id="baudrate"></span></b>
+      <br>{{_('voltages')}}: <b><span id="voltage"></span></b>
+      <br>pypilot {{_('status')}}: <b><span id="status"></span></b>
+      <br>{{_('connection')}}: <b><span id="connection"></span></b>
+      <br>{{_('Web Server Latency')}}: <b><span id="ping-pong"></span> ms</b>
     </div>
 </body>
 </html>
