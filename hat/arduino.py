@@ -12,7 +12,7 @@
 # pins for more functionallity (tack button, 
 # spi port.
 
-import os, sys, time, socket, errno
+import os, sys, time, socket, errno, select
 import json
 import lircd
 
@@ -110,6 +110,7 @@ class arduino(object):
         except Exception as e:
             print('failed to communicate with arduino', device, e)
             self.hatconfig = False
+            self.spi = False
 
     def close(self, e):
         print('failed to read spi:', e)
@@ -179,16 +180,13 @@ class arduino(object):
         # don't exceed 90% of baud rate
         baud = self.config['nmea']['baud'] *.9
         while True:
-            if self.nmea_socket:
+            if self.nmea_socket and len(self.socketdata) < 200 and self.nmea_socket_poller.poll(0):
                 try:
                     b = self.nmea_socket.recv(40)
-                    b = b''
+                    #print('b', b)
+                    #b = b''
                     self.socketdata += b
                     self.serial_in_count += len(b)
-                    if len(self.socketdata) > 160:
-                        print('overflow, dropping 64 bytes')
-                        self.socketdata = self.socketdata[:64]
-                        self.serial_in_count -= 64
                 except Exception as e:
                     if e.args[0] is errno.EWOULDBLOCK:
                         pass
@@ -283,6 +281,8 @@ class arduino(object):
         return events
 
     def open_nmea(self):
+        self.socketdata = b''
+        return
         if self.nmea_socket:
             return
         if time.monotonic() < self.nmea_connect_time:
@@ -290,24 +290,24 @@ class arduino(object):
 
         self.nmea_connect_time += 8
         nmea = self.config['nmea']
+
         if not nmea['in'] and not nmea['out']:
             return
         try:
-            self.socketdata = b''
             self.nmea_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.nmea_socket.setblocking(0)
-            print('connect nmea', self.config['host'])
             self.nmea_socket.connect((self.config['host'], 20220))
         except OSError as e:
             print('os error', e)
             if e.args[0] is errno.EINPROGRESS:
+                self.nmea_socket_poller = select.poll()
+                self.nmea_socket_poller.register(self.nmea_socket, select.POLLIN)
                 return True
         except Exception as e:
             print('exception', e)
             self.nmea_socket = False
         except:
             print('MOOOOOOOOOOOOOOORE')
-            self.nmea_socket = False
 
     def flash(self, filename, c):
         global GPIO
@@ -340,11 +340,17 @@ class arduino(object):
 
 def arduino_process(pipe, config):
     a = arduino(config)
+    period = .05
+    periodtime = 0
     while True:
         t0 = time.monotonic()
         events = a.poll()
         if events:
             pipe.send(events)
+            period = .025
+            periodtime = t0
+        elif periodtime - t0 > 5:
+            period = .05
 
         baud_rate = a.get_baud_rate()
         if baud_rate:
@@ -373,7 +379,7 @@ def arduino_process(pipe, config):
         t1 = time.monotonic()
         # max period to handle 38400 with 192 byte buffers is (192*10) / 38400 = 0.05
         # for now use 0.025, eventually dynamic depending on baud?
-        dt = .025 - (t1-t0)
+        dt = period - (t1-t0)
         if dt > 0:
             time.sleep(dt)      
     
@@ -396,7 +402,6 @@ def main():
             print('baud rate', baud_rate)
         t1 = time.monotonic()
         dt = t1 - t0
-        #print('dt', dt)
         time.sleep(.02)
     
 if __name__ == '__main__':

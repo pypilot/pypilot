@@ -34,7 +34,6 @@ class ActionKeypad(Action):
         self.index = index
 
     def trigger(self, count):
-        print("trigger",count, time.monotonic())
         self.lcd.keypad[self.index].update(count, count)
         self.lcd.lastframetime = 0 # trigger immediate refresh
         
