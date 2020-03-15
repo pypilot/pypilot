@@ -28,7 +28,7 @@ class gpsProcess(multiprocessing.Process):
     def __init__(self):
         # split pipe ends
         self.gpsd_failed_connect = False
-        self.pipe, pipe = NonBlockingPipe('gps_pipe', True)
+        self.pipe, pipe = NonBlockingPipe('gps pipe', True)
         super(gpsProcess, self).__init__(target=self.gps_process, args=(pipe,), daemon=True)
         
     def connect(self):

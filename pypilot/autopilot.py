@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2018 Sean D'Epagnier
+#   Copyright (C) 2021 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -70,6 +70,24 @@ class TimeStamp(SensorValue):
     def __init__(self):
         super(TimeStamp, self).__init__('timestamp', 0)
         self.info['type'] = 'TimeStamp' # not a sensor value to be scoped
+
+class TimedQueue(object):
+  def __init__(self, length):
+    self.data = []
+    self.length = length
+
+  def add(self, data):
+    t = time.monotonic()
+    while self.data and self.data[0][1] < t-self.length:
+      self.data = self.data[1:]
+    self.data.append((data, t))
+
+  def take(self, t):
+    while self.data and self.data[0][1] < t:
+        self.data = self.data[1:]
+    if self.data:
+      return self.data[0][0]
+    return 0
         
 class Autopilot(object):
     def __init__(self):
@@ -115,6 +133,11 @@ class Autopilot(object):
         self.heading_error_int = self.register(SensorValue, 'heading_error_int')
         self.heading_error_int_time = time.monotonic()
 
+        # track heading command changes
+        self.heading_command_rate = self.register(SensorValue, 'heading_command_rate')
+        self.heading_command_rate.time = 0
+        self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
+        
         self.tack = tacking.Tack(self)
 
         self.gps_compass_offset = HeadingOffset()
@@ -128,6 +151,7 @@ class Autopilot(object):
 
         self.runtime = self.register(TimeValue, 'runtime') #, persistent=True)
         self.timings = self.register(SensorValue, 'timings', False)
+        self.last_heading_mode = False
 
         device = '/dev/watchdog0'
         try:
@@ -349,16 +373,31 @@ class Autopilot(object):
             self.runtime.stop()
 
         # reset filters when autopilot is enabled
-        reset = False
         if self.enabled.value != self.lastenabled:
             self.lastenabled = self.enabled.value
             if self.enabled.value:
                 self.heading_error_int.set(0) # reset integral
-                reset = True
-      
+                self.heading_command_rate.set(0)
+                # reset feed-forward gain
+                self.last_heading_mode = False
+
+        # reset feed-forward error if mode changed, or last command is older than 1 second
+        if self.last_heading_mode != self.mode.value or t0 - self.heading_command_rate.time > 1:
+            self.last_heading_command = self.heading_command.value
+
+        # filter the heading command to compute feed-forward gain
+        heading_command_diff = resolv(self.heading_command.value - self.last_heading_command)
+        self.last_heading_command = self.heading_command.value
+        self.heading_command_rate.time = t0
+        lp = .1
+        command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
+        self.heading_command_rate.update(command_rate)
+            
+        self.last_heading_mode = self.mode.value
+                
         # perform tacking or pilot specific calculation
         if not self.tack.process():
-            pilot.process(reset) # implementation specific process
+            pilot.process() # implementation specific process
 
         # servo can only disengage under manual control
         self.servo.force_engaged = self.enabled.value
