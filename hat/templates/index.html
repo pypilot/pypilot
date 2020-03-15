@@ -20,17 +20,12 @@
     <p>
       <h2>IR (infared receiver port)</h2>
       The ir port can be handled direcly from the pi or the arduino.   Using the arduino can receive from many different remotes without special calibration recordings.
-      <p>
-        <input type="radio" id="pi_ir" /> raspberry
-        <input type="radio" id="arduino_ir" /> arduino
+    <p>
+      {{ ir_settings }}
     <p>
       <h2>hat NMEA port</h2>
-      <input type="checkbox" id="arduino_nmea_in" /> Input
-      <input type="checkbox" id="arduino_nmea_out" /> Output
-      <select id="arduino_nmea_baud">
-        <option value="4800">4800</option>
-        <option value="38400">38400</option>
-      </select>
+      {{ nmea_settings }}
+
       <br>nmea current baud rate: <b><span id="baudrate"></span></b>
       <br>voltages: <b><span id="voltage"></span></b>
       <br>pypilot status: <b><span id="status"></span></b>

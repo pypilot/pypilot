@@ -107,9 +107,9 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
         from PIL import ImageFont
         from PIL import ImageChops
 
-    except:
+    except Exception as e:
         # we will get respawn hopefully after python-PIL is loaded
-        print('failed to load PIL to create fonts, aborting...')
+        print('failed to load PIL to create fonts, aborting...', e)
         return False
         #import time
         #time.sleep(3) # wait 3 seconds to avoid respawning too quickly

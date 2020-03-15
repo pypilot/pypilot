@@ -59,11 +59,6 @@ class arduino(object):
         if not self.hatconfig:
             print('No hat config, arduino not found')
 
-        if not 'ir' in config:
-            self.config['ir'] = False
-        if not 'nmea' in config:
-            self.config['nmea'] = {'in': False, 'out': False, 'baud': 38400}
-
         self.lasttime=0
 
         self.sent_count = 0
@@ -76,7 +71,6 @@ class arduino(object):
 
         self.packetout_data = []
         self.packetin_data = []
-        self.lastbacklight = 0, 0, 0
 
     def open(self):
         if not self.hatconfig:
@@ -99,7 +93,6 @@ class arduino(object):
                         print('failed to verify or upload', filename)
                         #self.hatconfig['device'] = False # prevent retry
                         #return
-
                 self.resetpin = self.hatconfig['resetpin']
 
                 try:
@@ -118,6 +111,9 @@ class arduino(object):
                 self.spi = spidev.SpiDev()
                 self.spi.open(port, slave)
                 self.spi.max_speed_hz=100000
+
+                self.set_backlight(self.config['lcd']['backlight'])
+                self.set_baud(self.config['arduino.nmea.baud'])
 
         except Exception as e:
             print('failed to communicate with arduino', device, e)
@@ -145,22 +141,17 @@ class arduino(object):
             self.packetout_data += bytes([d | 0x80])
         self.packetout_data += bytes([p | 0x80])
 
-    def set_backlight(self, value, polarity):
-        lvalue, lpolarity, ltime = self.lastbacklight
-        if value == lvalue and polarity == lpolarity and time.monotonic() - ltime < 9:
-            return
-        self.lastbacklight = value, polarity, time.monotonic()
-
-        value = min(max(int(value), 0), 120)
+    def set_backlight(self, value):
+        value = min(max(int(value*5), 0), 120)
+        polarity = self.hatconfig['device'] == 'nokia5110'
         backlight = [value, polarity]
         self.send(SET_BACKLIGHT, backlight)
 
-    def set_baud(self):
+    def set_baud(self, baud):
         try:
-            baud = int(self.config['nmea']['baud'])
+            baud = int(baud)
         except:
             baud = 38400
-        self.config['nmea']['baud'] = baud
 
         # 0, 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600
         if baud == 4800:
@@ -197,13 +188,13 @@ class arduino(object):
         self.open_nmea()
 
         # don't exceed 90% of baud rate
-        baud = self.config['nmea']['baud'] *.9
+        baud = int(self.config['arduino.nmea.baud']) *.9
         while True:
             if self.nmea_socket and len(self.socketdata) < 100 and self.nmea_socket_poller.poll(0):
                 try:
                     b = self.nmea_socket.recv(40)
                     #print('b', b)
-                    if self.config['nmea']['out']:
+                    if self.config['arduino.nmea.out']:
                         self.socketdata += b
                         self.serial_in_count += len(b)
                 except Exception as e:
@@ -287,7 +278,7 @@ class arduino(object):
 
         if self.nmea_socket and serial_data:# and self.config['nmea']['out']:
             #print('nmea>', bytes(serial_data))
-            if self.config['nmea']['in']:
+            if self.config['arduino.nmea.in']:
                 self.nmea_socket.send(bytes(serial_data))
                 self.serial_out_count += len(serial_data)
             #print('nmea', self.serial_in_count, self.serial_out_count, self.serial_in_count - self.serial_out_count)
@@ -295,8 +286,8 @@ class arduino(object):
         return events
 
     def open_nmea(self):
-        nmea = self.config['nmea']
-        if not nmea['in'] and not nmea['out']:
+        c = self.config
+        if not c['arduino.nmea.in'] and not c['arduino.nmea.out']:
             if self.nmea_socket:
                 self.nmea_socket.close()
                 self.nmea_socket = False
@@ -383,23 +374,18 @@ def arduino_process(pipe, config):
                 msg = pipe.recv()
                 if not msg:
                     break
-                cmd, value = msg
+                name, value = msg
             except Exception as e:
                 print('pipe recv failed!!\n')
                 return
-            if cmd.startswith('nmea'):
-                name = cmd[5:]
-                a.config['nmea'][name] = value
-                if name == 'baud':
-                    a.set_baud()
-            elif cmd == 'ir':
-                a.config['ir'] = value
-            elif cmd == 'backlight':
-                a.set_backlight(*value)
-            elif cmd == 'buzzer':
+
+            config[name] = value
+            if name == 'backlight':
+                a.set_backlight(value)
+            elif name == 'buzzer':
                 a.set_buzzer(*value)
-            else:
-                print('unhandled command', cmd)
+            elif name == 'arduino.nmea.baud':
+                a.set_baud(value)
         t1 = time.monotonic()
         # max period to handle 38400 with 192 byte buffers is (192*10) / 38400 = 0.05
         # for now use 0.025, eventually dynamic depending on baud?

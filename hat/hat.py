@@ -17,7 +17,6 @@ class Action(object):
     def  __init__(self, hat, name):
         self.hat = hat
         self.name = name
-        self.keys = []
 
 class ActionNone(Action):
     def __init__(self):
@@ -91,11 +90,11 @@ class Process():
         if self.process:
             self.pipe.send(value)
 
-    def create(self, process, arg):
+    def create(self, process):
         import multiprocessing
         from pypilot.nonblockingpipe import NonBlockingPipe
         self.pipe, pipe = NonBlockingPipe(str(self), True)
-        self.process = multiprocessing.Process(target=process, args=(pipe, arg), daemon=True)
+        self.process = multiprocessing.Process(target=process, args=(pipe, self.hat.config), daemon=True)
         self.process.start()
             
 class Web(Process):
@@ -110,19 +109,16 @@ class Web(Process):
         self.send({'status': value})
 
     def create(self):
-        def process(pipe, action_keys):
+        def process(pipe, config):
             while True:
                 #time.sleep(10) # delay loading web and wait until modules are loaded
-                try:
-                    import web
-                    web.web_process(pipe, action_keys)
-                except Exception as e:
-                    print('web failed to run process:', e)
+                #try:
+                import web
+                web.web_process(pipe, config)
+                #except Exception as e:
+                #    print('web failed to run process:', e)
 
-        action_keys = {}
-        for action in self.hat.actions:
-            action_keys[action.name] = action.keys
-        super(Web, self).create(process, action_keys)
+        super(Web, self).create(process)
         self.send({'status': self.status})
         
     def poll(self):
@@ -130,15 +126,7 @@ class Web(Process):
         if msg:
             for name in msg:
                 value = msg[name]
-                if name.startswith('arduino.') and self.hat.arduino:
-                    self.hat.arduino.config(name[8:], value)
-                elif name == 'pi.ir':
-                    self.hat.lirc.enabled = value
-                else:
-                    for action in self.hat.actions:
-                        if name == action.name:
-                            action.keys = value
-
+                self.hat.update_config(name, value);
             self.hat.write_config()
 
 class Arduino(Process):
@@ -146,16 +134,10 @@ class Arduino(Process):
         super(Arduino, self).__init__(hat)
         self.voltage = {'vcc': 5, 'vin': 3.3}
         self.status = 'Not Connected'
-        self.backlight = None
+        self.backlight = self.hat.config['lcd']['backlight']
 
     def config(self, name, value):
-        print('arduino config', name, value)
         self.send((name, value))
-
-    def set_backlight(self, value, polarity):
-        if value != self.backlight:
-            self.backlight = value
-            self.send(('backlight', (value, polarity)))
 
     def set_buzzer(self, duration, frequency):
         self.send(('buzzer', (duration, frequency)))
@@ -166,11 +148,15 @@ class Arduino(Process):
             print('arduino process on ', os.getpid())
             while True:
                 arduino.arduino_process(pipe, config)
-                time.sleep(5)
-        super(Arduino, self).create(process, self.hat.config)
+                time.sleep(15)
+        super(Arduino, self).create(process)
 
     def poll(self):
         ret = []
+        backlight = self.hat.config['lcd']['backlight']
+        if backlight != self.backlight:
+            self.backlight = backlight
+            self.send(('backlight', value))
         while True:
             msgs = self.pipe.recv()
             if not msgs:
@@ -189,7 +175,10 @@ class Arduino(Process):
 class Hat(object):
     def __init__(self):
         # read config
-        self.config = {'remote': False, 'host': '127.0.0.1', 'actions': {}, 'lcd': {}, 'arduino': {}}
+        self.config = {'remote': False, 'host': '127.0.0.1', 'actions': {},
+                       'pi.ir': True, 'arduino.ir': False,
+                       'arduino.nmea.in': False, 'arduino.nmea.out': False,
+                       'arduino.nmea.baud': 38400}
         self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf' 
         print('loading config file:', self.configfilename)
         try:
@@ -210,13 +199,8 @@ class Hat(object):
         except Exception as e:
             print('failed to load', configfile, ':', e)
             hatconfig = {'lcd':{'driver':'nokia5110',
-                                'port':'/dev/spidev0.0'},
-                         'lirc':'gpio4'}
-            if False: # for test
-                hatconfig['lcd']['driver'] = 'jlx12864'
-                hatconfig['arduino'] = {'device':'/dev/spidev0.1',
-                                        'resetpin':16,
-                                        'hardware':0.21}
+                                     'port':'/dev/spidev0.0'},
+                              'lirc':'gpio4'}
             print('assuming original 26 pin tinypilot with nokia5110 display')
         self.config['hat'] = hatconfig
 
@@ -242,11 +226,8 @@ class Hat(object):
         self.poller = select.poll()
         self.poller.register(self.arduino.pipe, select.POLLIN)
 
-        # use raspberry pi lirc if there is no arduino
-        #if not 'arduino' in hatconfig and 'lirc' in hatconfig:
-        self.lirc = lircd.lirc()
-        #else:
-        #    self.lirc = False
+        self.lirc = lircd.lirc(self.config)
+        self.lirc.registered = False
         self.keytimes = {}
         
         # keypad for lcd interface
@@ -259,15 +240,18 @@ class Hat(object):
         # stateless actions for autopilot control
         self.actions += [ActionEngage(self),
                          ActionPypilot(self, 'disengage', 'ap.enabled', False),
-                         ActionHeading(self, 1),
+                         ActionHeading(self,  1),
                          ActionHeading(self, -1),
-                         ActionHeading(self, 2),
+                         ActionHeading(self,  2),
                          ActionHeading(self, -2),
-                         ActionHeading(self, 10),
+                         ActionHeading(self,  5),
+                         ActionHeading(self, -5),
+                         ActionHeading(self,  10),
                          ActionHeading(self, -10),
                          ActionPypilot(self, 'compassmode', 'ap.mode', 'compass'),
                          ActionPypilot(self, 'gpsmode', 'ap.mode', 'gps'),
                          ActionPypilot(self, 'windmode', 'ap.mode', 'wind'),
+                         ActionPypilot(self, 'center', 'servo.position', 0),
                          ActionTack(self, 'tackport', 'port'),
                          ActionTack(self, 'tackstarboard', 'starboard'),
                          ActionNone()]
@@ -314,22 +298,29 @@ class Hat(object):
         atexit.register(lambda : cleanup('atexit'))
 
     def write_config(self):
-        actions = {}
-        for action in self.actions:
-            if action.name != 'none':
-                actions[action.name] = action.keys
-
-        self.config['actions'] = actions
         try:
             file = open(self.configfilename, 'w')
             file.write(pyjson.dumps(self.config) + '\n')
         except IOError:
             print('failed to save config file:', self.configfilename)
 
+    def update_config(self, name, value):
+        if name in self.config and self.config[name] == value:
+            return
+        
+        if name.startswith('arduino.') and self.arduino:
+            self.arduino.config(name, value)
+
+        self.config[name] = value
+            
     def apply_code(self, key, count):
         self.web.send({'key': key})
+        actions = self.config['actions']
         for action in self.actions:
-            if key in action.keys:
+            if not action.name in actions:
+                actions[action.name] = []
+            keys = actions[action.name]
+            if key in keys:
                 if not count:
                     self.web.send({'action': action.name})
                     if key in self.keytimes:
@@ -396,7 +387,13 @@ class Hat(object):
         dt = t3-t0
         period = max(.2 - dt, .01)
 
-        self.poller.poll(1000*period)
+        if not self.lirc.registered:
+            fileno = self.lirc.fileno()
+            if fileno:
+                self.poller.register(fileno, select.POLLIN)
+                self.lirc.registered = True
+        
+        e=self.poller.poll(1000*period)
         #print('hat times', t1-t0, t2-t1, t3-t2, t4-t3, period, dt)
 
 def main():

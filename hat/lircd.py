@@ -24,39 +24,45 @@ class LoadLIRC(threading.Thread):
                 t0 = time.monotonic()
                 import lirc as LIRC
                 self.LIRC = LIRC
-                self.version = 2
+                version = 2
                 print('have lirc for remote control', time.monotonic()-t0)
             except Exception as e:
                 print('failed to load lirc', e)
                 try:
                     import pylirc as LIRC
                     self.LIRC = LIRC
-                    self.version = 1
+                    version = 1
                     print('have old lirc for remote control')
                 except Exception as e:
                     print('no lirc available', e)
 
             try:
-                if self.version == 1:
+                if version == 1:
                     LIRC.init('pypilot')
                     break
-                elif self.version == 2:
+                elif version == 2:
                     self.lircd = LIRC.RawConnection()
                     break
             except Exception as e:
                 print('failed to initialize lirc. is .lircrc missing?', e)
             time.sleep(10)
+        self.version = version
 
 class lirc(object):
-    def __init__(self):
+    def __init__(self, config):
         self.lastkey = False
         self.lasttime = time.time()
-        self.enabled = False
+        self.config = config
         self.LIRC = None
+
+    def fileno(self):
+        if self.LIRC and self.LIRC.version == 2:
+            return self.LIRC.lircd.fileno()
+        return None
 
     def poll(self):
         if not self.LIRC:
-            if self.enabled:
+            if self.config['pi.ir']:
                 self.LIRC = LoadLIRC()
                 self.LIRC.start()
             else:
@@ -82,7 +88,7 @@ class lirc(object):
                 key = codes[2]
 
             # continue to read from lirc but do not send event
-            if not self.enabled:
+            if not self.config['pi.ir']:
                 continue
                 
             if self.lastkey and self.lastkey != key:

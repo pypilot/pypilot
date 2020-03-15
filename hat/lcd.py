@@ -50,7 +50,6 @@ class Key():
 class LCD():
     def __init__(self, hat):
         self.hat = hat
-        self.backlight_polarity = 0
 
         if hat:
             self.config = hat.config['lcd']
@@ -97,7 +96,6 @@ class LCD():
             self.surface = screen
         elif driver == 'nokia5110' or (driver == 'default' and not use_glut):
             screen = ugfx.spiscreen(0)
-            self.backlight_polarity = 1
         elif driver == 'jlx12864':
             screen = ugfx.spiscreen(1)
         elif driver == 'glut' or (driver == 'default' and use_glut):
@@ -276,10 +274,7 @@ class LCD():
         if 'contrast' in self.config:
             self.screen.contrast = int(self.config['contrast'])
 
-        if 'backlight' in self.config and self.hat:
-            backlight = int(self.config['backlight'])*5;
-            self.hat.arduino.set_backlight(backlight, self.backlight_polarity)
-        else:
+        if micropython:
             self.screen.hue = int(float(self.config['backlight'])*255/100)
 
         self.screen.refresh()    
