@@ -55,8 +55,18 @@ ugfx_module = Extension('pypilot/hat/ugfx/_ugfx',
                                  'hat/ugfx/ugfx.i'],
                         extra_compile_args=['-Wno-unused-result'] + ugfx_defs,
                         libraries=ugfx_libraries,
-                        swig_opts=['-c++'] + ugfx_defs
-)
+                        swig_opts=['-c++'] + ugfx_defs)
+
+if ugfx_libraries:
+    spireader_module = Extension('pypilot/hat/spireader/_spireader',
+                        sources=['hat/spireader/spireader.cpp',
+                                 'hat/spireader/spireader.i'],
+                        extra_compile_args=['-Wno-unused-result'],
+                        libraries=ugfx_libraries,
+                        swig_opts=['-c++'])
+
+else:
+    spireader_module = None
 
 def find_locales(name, dir = 'locale'):
     locale_files = []
@@ -70,7 +80,7 @@ def find_locales(name, dir = 'locale'):
 
 from pypilot import version
 
-packages = ['pypilot', 'pypilot/pilots', 'pypilot/arduino_servo', 'ui', 'hat', 'web', 'pypilot/linebuffer', 'hat/ugfx']
+packages = ['pypilot', 'pypilot/pilots', 'pypilot/arduino_servo', 'ui', 'hat', 'web', 'pypilot/linebuffer', 'hat/ugfx', 'hat/spireader']
 try:
     from setuptools import find_packages
     packages = find_packages()
@@ -103,7 +113,7 @@ setup (name = 'pypilot',
        url='http://pypilot.org/',
        packages=packages,
        package_dir=package_dirs,
-       ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module],
+       ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module, spireader_module],
        package_data=package_data,
        entry_points={
            'console_scripts': [
