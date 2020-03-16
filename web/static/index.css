@@ -38,6 +38,13 @@
 
 .center { text-align:center; }
 
+#headerTab {
+	position: fixed;
+	z-index: 800;
+	width: 100%;
+}
+
+
 
 html, body{
     min-height:100%;
@@ -81,7 +88,6 @@ body{
 }
 
 
-
 /* progress */
 .myProgress {
     position: relative;
@@ -105,5 +111,30 @@ body{
 }
 
 .tab {
-    display:none;
+    margin-top: 32px;
+    overflow-x: hidden;
+}
+
+#configuration_container {
+    display:table;
+}
+
+.tabItem {
+	text-align: center;
+	width:20%;
+	float: left;
+}
+
+.tabItem:hover {
+    background-color: #2694f3;
+}
+
+.tabItem div {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+body .heading_info {
+    display: flex;
+    align-items: center;
 }

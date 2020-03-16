@@ -33,15 +33,7 @@ body[theme="dark"] {
 	font-size: 3vw; /*Most of it is overrided by some javascript that do inline style injection, Only here for fallback cases*/
 }
 
-body[theme="dark"] div.w3-container {
-	width: 100%;
-}
 
-/* Overriding inline style injection. */
-body[theme="dark"] #star2,
-body[theme="dark"] #star10 {
-	/*float:none !important; */ /* Don't do it until html is ordered correctly*/
-}
 
 body[theme="dark"] input[type=radio],
 body[theme="dark"] input[type=checkbox]{
@@ -78,11 +70,6 @@ body[theme="dark"] .tabItem div:hover {
 	transition: 0.2s;
 	border-bottom: 4px solid #2694f3 ;
   	color: white;
-}
-
-body[theme="dark"] .tab {
-	margin-top: 32px;
-	overflow-x: hidden;
 }
 
 
@@ -159,15 +146,8 @@ body[theme="dark"] .data_block {
 	display: inline-block;
 }
 
-/* The Label of the nave:value pair */
-body[theme="dark"] .data_block .data_label {
-	float: left;
-	clear: left;
-}
-
 /* The value of the name:value pair */
 body[theme="dark"] .data_block .data_value {
-	float: right;
 	font-weight: bold;
 }
 
@@ -211,43 +191,26 @@ body[theme="dark"] #headerTab {
 	width: 100%;
 	top: 0px;
 	left: 0px;
-	box-shadow: 0px 2px 5px 1px rgba(0, 0, 0, .2);
+	box-shadow: 0px 2px 2px 1px rgba(0, 0, 0, .2);
 }
 
 body[theme="dark"] #headerTab .tabItem {
-	width:20%;
 	margin: auto 0px;
 	text-align: center;
-	display: inline-block;
 	box-shadow: 0px 2px 5px 1px rgba(0, 0, 0, .2) inset;
-}
-
-body[theme="dark"] .tabItem div {
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-body[theme="dark"] #heading_info {
-	margin: auto 5% auto auto;
-	float: right;
 }
 
 body[theme="dark"] #mode {
 	margin-left: 0px;
 }
 
-body[theme="dark"] #heading_mode_container {
-	width: 100%;
-	clear:both;
-	margin-left: 5%;
-}
 
-body[theme="dark"]  #configuration_container .w3-col {
+body[theme="dark"] #configuration_container .w3-col {
 	display:inline-block;
 	width:25%;
 }
 
-body[theme="dark"]  #configuration_container .w3-row {
+body[theme="dark"] #configuration_container .w3-row {
 	clear:both;
 }
 
@@ -261,8 +224,6 @@ body[theme="dark"] #steer_buttons_container {
 	padding-left: 5px;
 	padding-right: 5px;
 	border: 1px solid #253036;
-	background-color: #2a353b;
-	box-shadow: 0px 2px 5px 1px rgba(0, 0, 0, .2);
 	border-radius: 3px;
 	overflow: hidden;
 }
@@ -298,6 +259,3 @@ body[theme="dark"] #steer_buttons_container button:active {
 	text-shadow: 0px 0px 40px #ffffff;
 	box-shadow: 0px 2px 5px 1px rgba(255, 255, 255, .2);
 }
-
-
-

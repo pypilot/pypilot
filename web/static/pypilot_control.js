@@ -55,7 +55,7 @@ $(document).ready(function() {
         pilot =$('#pilot').val();
         x = document.getElementsByClassName('pilot'+pilot);
         for (i = 0; i < x.length; i++)
-            x[i].style.display = 'inline';
+            x[i].style.display = 'table-row';
     }
     
     // Event handler for new connections.
@@ -110,7 +110,12 @@ $(document).ready(function() {
             var min = info['min'];
             var max = info['max'];
             var iname = 'gain'+pilot+subname
-            $('#gain_container').append('<div class="gain pilot' + pilot + '"><p>'+subname+' <input type="range" id="' + iname + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" style="width:'+w*3/4+'px" name="'+gains[i]+'"></input><span id="' + iname + 'label"></span></div>');
+            html = '<div class="gain pilot' + pilot + '" style="display: table-row">'
+            html += '<div style="display: table-cell">'+subname+'</div>'
+            html += '<div style="display: table-cell;width: 100%"><input type="range" id="' + iname + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" name="'+gains[i]+'" style="width: 100%"></input></div>'
+            html += '<div id="' + iname + 'label" style="display: table-cell"></div>';
+            html += '</div>'
+            $('#gain_container').append(html)
             $('#'+iname).change(function(event) {
                 pypilot_set(this.name, this.valueAsNumber);
             });
@@ -149,11 +154,12 @@ $(document).ready(function() {
 
             var iname = 'confname'+i;
 
-            $('#configuration_container').append('<div class="w3-row"><div class="w3-col s4 m4 l4">' + name + '</div><div class="w3-col s3 m3 l3"><input type="range" id="'+iname+'" min="' + min + '" max="' + max + '" step=".01" value="2" style="width: 240px" name="'+name+'"></input></div><div class="w3-col s2 m2 l2"><span id="'+ iname+'label"></span></div><div class="w3-col s3 m3 l3">' + unit + '</div></div>');
+            $('#configuration_container').append('<div style="display: table-row"><div style="display: table-cell">' + name + '</div><div style="display: table-cell; width: 100%"><input type="range" id="'+iname+'" min="' + min + '" max="' + max + '" step=".01" value="2" style="width: 100%" name="'+name+'"></div><div style="display: table-cell"><span id="'+ iname+'label"></span></div><div style="display: table-cell">' + unit + '</div></div>');
             $('#'+iname).change(function(event) {
                 pypilot_set(this.name, this.valueAsNumber);
             });
         }
+        $('#configuration_container').append('</table>')
 
         if(tinypilot) {
             $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>')
