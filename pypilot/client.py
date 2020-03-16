@@ -77,6 +77,7 @@ class ClientValues(Value):
         
     def set(self, values):
         self.updated = True
+        #print('line', values)
         if self.value is False:
             self.value = values
         else:
@@ -224,6 +225,7 @@ class pypilotClient(object):
             line = self.connection.readline()
             if not line:
                 return
+            #print('line', line.rstrip())
             try:
                 name, data = line.rstrip().split('=', 1)
                 if name == 'error':
@@ -310,8 +312,7 @@ class pypilotClient(object):
         return value
 
     def list_values(self, timeout=0):
-        self.
-watch('values')
+        self.watch('values')
         t0, dt, ret = time.monotonic(), timeout, False
         while not ret and dt > 0:
             self.poll(dt)
@@ -338,17 +339,37 @@ def pypilotClientFromArgs(args, period=True):
             exit(1)
 
     # set any value specified with path=value
+    watches = []
     for arg in args[2:]:
         if '=' in arg:
+            name, value = arg.split('=', 1)
             self.send(arg + '\n')
-            arg, value = line.rstrip().split('=', 1)
-        watches.append(arg)
+        else:
+            name = arg
+        watches.append(name)
 
     # args without = are watched
     for name in watches:
         client.watch(name, period)
     return client
-    
+
+
+# ujson makes very ugly results like -0.28200000000000003
+# round all floating point to 8 places here
+def nice_str(value):
+    if type(value) == type([]):
+        s = '['
+        if len(value):
+            s += nice_str(value[0])
+        for v in value[1:]:
+            s += ', ' + nice_str(v)
+        s += ']'
+        return s
+    if type(value) == type(1.0):
+        return '%.8g' % value
+    return str(value)
+
+
 # this simple test client for an autopilot server
 # connects, enumerates the values, and then requests
 # each value, printing them
@@ -379,7 +400,10 @@ def main():
     period = True if continuous else 100 # 100 second period to just get the value once
     client = pypilotClientFromArgs(args, period)
     if not client.watches: # retrieve all values
-        watches = client.list_values()
+        watches = client.list_values(10)
+        if not watches:
+            print('failed to retrieve value list!!!')
+            exit(1)
         for name in watches:
             client.watch(name, period)
 
@@ -389,8 +413,11 @@ def main():
         while len(values) < len(client.watches):
             dt = time.monotonic() - t0
             if dt > 10:
-                print('timeout retrieving values')
-                exit(1)
+                print('timeout retrieving values', len(values), len(client.watches))
+                for name in client.watches:
+                    if not name in values:
+                        print('missing', name)
+                break
                     
             client.poll(.1)
             msgs = client.receive()
@@ -404,7 +431,7 @@ def main():
                 print(name, client.info(name), '=', values[name])
             else:
                 maxlen = 76
-                result = name + ' = ' + str(values[name])
+                result = name + ' = ' + nice_str(values[name])
                 if len(result) > maxlen:
                     result = result[:maxlen] + ' ...'
                 print(result)
@@ -412,12 +439,14 @@ def main():
         while True:
             client.poll(1)
             msg = client.receive_single()
-            if msg:
+            while msg:
                 name, data = msg
+                data = nice_str(data)
                 if info:
                     print(name, client.info(name), '=', data)
                 else:
                     print(name, '=', data)
+                msg = client.receive_single()
 
 if __name__ == '__main__':
     main()
