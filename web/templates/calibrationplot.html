@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+  <body>
+    <H2>Compass Calibration Plot</H2>
+      <canvas width = "570" height = "570" id = "canvas"></canvas>
+      <script type="text/javascript" src="static/jquery.min.js"></script>
+      <script type="text/javascript" src="static/socket.io.min.js"></script>
+      <script type="text/javascript" src="static/calibration_plot.js"></script>
+      <script>
+        var pypilot_web_port = {{pypilot_web_port}};
+      </script>
+      <br>Compass Calibration: <span id="compass_calibration"></span>
+      <br>Connection: <span id="connection"></span>
+   </body>
+</html> 

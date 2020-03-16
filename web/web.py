@@ -85,6 +85,10 @@ def wifi():
 
     return render_template('wifi.html', async_mode=socketio.async_mode, wifi=Markup(wifi))
 
+@app.route('/calibrationplot')
+def calibrationplot():
+    return render_template('calibrationplot.html', async_mode=socketio.async_mode,pypilot_web_port=pypilot_web_port)
+
 
 @app.route('/')
 def index():
