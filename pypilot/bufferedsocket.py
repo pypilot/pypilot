@@ -83,6 +83,9 @@ except Exception as e:
     def close(self):
         self.socket.close()
         
+    def fileno(self):
+        return self.socket.fileno()
+
     def send(self, data):
         self.out_buffer += data
 

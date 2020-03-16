@@ -9,7 +9,7 @@
 
 # automatically probe serial ports for gps informing gpsd
 
-import gps, time, sys, socket, os
+import time, sys, socket, os
 
 class GpsProbe():
     def __init__(self):
@@ -20,12 +20,13 @@ class GpsProbe():
     def connect(self):
         while True: # connection to gpsd loop
             try:
+                import gps
                 self.gpsd = gps.gps(mode=gps.WATCH_ENABLE) #starting the stream of info
                 self.gpsd.next() # flush initial message
                 self.gpsd.activated = False
                 return
 
-            except socket.error:
+            except:
                 time.sleep(3)
 
     def probe(self):
@@ -45,7 +46,7 @@ class GpsProbe():
             if not os.system('timeout -s KILL -t 5 gpsctl -f ' + device + ' 2> /dev/null'):
                 os.environ['GPSD_SOCKET'] = '/tmp/gpsd.sock'
                 os.system('gpsdctl add ' + device)
-                print 'GPS found: ' + device
+                print('GPS found: ' + device)
                 self.lastgpsdevice = device
                 return True
             sys.stdout.flush()
@@ -59,18 +60,18 @@ class GpsProbe():
                 if 'devices' in result:
                     activated = len(result['devices']) > 0
                     if activated != self.gpsd.activated:
-                        print 'GPS ' + ('' if activated else 'de') + 'activated'
+                        print('GPS ' + ('' if activated else 'de') + 'activated')
                     self.gpsd.activated = activated
                     break
                     
             except StopIteration:
-                print 'GPS lost gpsd'
+                print('GPS lost gpsd')
                 return
 
         if not self.gpsd.activated:
             if self.probe():
                 self.gpsd.activated = True
-                print 'GPS probe success'
+                print('GPS probe success')
 
         activated = self.gpsd.activated
         del self.gpsd
@@ -90,7 +91,8 @@ def main():
             gpsprobe.verify()
 
     except KeyboardInterrupt:
-        print 'Keyboard interrupt, gpsprobe exit'
+        print('Keyboard interrupt, gpsprobe exit')
+
 
 if __name__ == "__main__":
     main()

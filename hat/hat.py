@@ -173,6 +173,7 @@ class Hat(object):
         
         self.last_msg = {}
 
+        self.client = False
         self.connect()
         self.lcd = lcd.LCD(self)
         self.gpio = gpio.gpio()

@@ -38,8 +38,8 @@ class NonBlockingPipeEnd(object):
             print('error pipe block on recv!', self.name)
         return False
 
-    def send(self, value):
-        if self.pollout.poll(0):
+    def send(self, value, block=False):
+        if block or self.pollout.poll(0):
             self.pipe.send(value)
             return True
         
@@ -76,6 +76,9 @@ class NoMPLineBufferedPipeEnd(object):
         return 0
 
     def flush(self):
+        pass
+
+    def close(self):
         pass
 
     def recv(self, timeout=0):

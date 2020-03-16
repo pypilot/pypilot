@@ -232,6 +232,8 @@ class pypilotClient(object):
                     print('server error', data)
                     continue
                 value = pyjson.loads(data)
+            except ValueError:
+                print('va erropr', data)
             except Exception as e:
                 print('invalid message from server:', line)
                 print('reason', e)

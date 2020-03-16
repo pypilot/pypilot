@@ -19,8 +19,10 @@
 SRCNAM=pypilot
 WRKDIR=.
 EXTNAM=pypilot
+PYTHONVERSION=`cat /opt/python`
+PYTHON="python"$PYTHONVERSION
 TMPDIR=/tmp/$EXTNAM
-PYTDIR=/usr/local/lib/python2.7/site-packages
+PYTDIR=/usr/local/lib/$PYTHON/site-packages
 
 ######################################################
 # Prepare extension creation                         #
@@ -59,8 +61,8 @@ rm -rf dist build
 
 # Build and Install
 
-python setup.py build # stupid script copies files before swigging!
-python setup.py bdist
+$PYTHON setup.py build # stupid script copies files before swigging!
+$PYTHON setup.py bdist
 tar xvf dist/*tar.gz -C $TMPDIR
 
 # Delete compilation work directory
