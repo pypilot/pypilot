@@ -21,6 +21,7 @@ try:
 except:
     from pypilot.client import pypilotClient
     import font
+    import select
     def gettime():
         return time.monotonic()
     from pypilot.hat.ugfx import ugfx
@@ -62,15 +63,11 @@ class Key():
         return 0
 
 class LCD():
-    def __init__(self, hat):
-        self.hat = hat
-        if hat:
-            self.config = hat.config['lcd']
-        elif micropython:
-            from config_esp32 import read_config
-            self.config = read_config()
-        else:
-            self.config = {}
+    def __init__(self, config):
+        self.config = config['lcd']
+        self.pipe = False
+        self.poller = False
+        self.voltage = False
             
         default = {'contrast': 60, 'invert': False, 'backlight': 20,
                    'hue': 214, 'flip': False, 'language': 'en', 'bigstep': 10,
@@ -82,10 +79,10 @@ class LCD():
 
         global driver
         # set the driver to the one read from hat eeprom, or specified in hat.conf
-        if self.hat and 'hat' in self.hat.config:
+        if 'hat' in config:
             if driver == 'default':
-                driver = self.hat.config['hat']['lcd']['driver']
-            self.host = self.hat.client.config['host']
+                driver = config['hat']['lcd']['driver']
+            self.host = config['host']
         else:
             self.host = False
 
@@ -158,7 +155,6 @@ class LCD():
         else:
             self.surface = None
 
-        self.lastframetime = 0
         self.screen = screen
         
         set_language(self.config['language'])
@@ -198,12 +194,16 @@ class LCD():
 
         self.client = pypilotClient(self.host)
 
+    def send(self, key, code):
+        if self.pipe:
+            self.pipe.send((key, code))
+
     def write_config(self):
-        if self.hat:
-            self.hat.write_config()
         if micropython:
             from config_esp32 import write_config
             write_config(self.config)
+        else:
+            self.send('write_config')
 
     def get_values(self):
         return self.client.get_values()
@@ -262,7 +262,6 @@ class LCD():
             return #optimization
         t1=gettime();
 
-                    
         self.need_refresh = False
         surface = self.surface
 
@@ -317,10 +316,37 @@ class LCD():
             for name, value in msgs.items():
                 self.last_msg[name] = value
 
+        if self.pipe:
+            if not self.poller:
+                self.poller = select.poll()
+                self.poller.register(self.pipe, select.POLLIN)
+                self.registered = True
+                
+            while True:
+                msg = self.pipe.recv()
+                if not msg:
+                    break
+                index, count = msg
+                if index == 'voltage':
+                    self.voltage = count
+                else:
+                    self.keypad[index].update(count, count)
+
     def reset_keys(self):
         for key in self.keypad:
             key.down = 0
             key.up = False
+
+    def check_voltage(self):
+        if not self.voltage:
+            return False
+
+        vin, vcc = self.voltage['vin'], self.voltage['vcc']
+        if vin < 3 or vin > 3.6:
+            return '3v3 Voltage Bad' + (': %.2f' % vin)
+        if vcc < 4.5 or vcc > 5.5:
+            return '5v Voltage Bad' + (': %.2f' % vcc)
+        return False
             
     def poll(self):
         if self.screen == None:
@@ -331,13 +357,12 @@ class LCD():
         t1 = gettime()
         
         if not self.page:
-            frameperiod = 1;
+            frameperiod = 1
+            
         else:
             frameperiod = self.page.frameperiod
 
         t = gettime()
-        dt = t - self.lastframetime
-
         next_page = self.page.process()
         if next_page and next_page != self.page:
             self.page = next_page
@@ -346,11 +371,17 @@ class LCD():
             self.need_refresh = True
         t2 = gettime()
         
-        if dt >= frameperiod or dt < 0:
-            self.display()
-            self.update_watches()
-            self.lastframetime = t
+        #        if dt >= frameperiod or dt < 0:
+        self.display()
+        self.update_watches()
+        
         t3 = gettime()
+
+        #dt = t3-t0
+        if self.poller:
+            self.poller.poll(1000*frameperiod)
+        else:
+            time.sleep(frameperiod)
 
         #print('lcd times', t1-t0, t2-t1, t3-t2, dt,t)
 
