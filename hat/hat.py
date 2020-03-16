@@ -123,10 +123,10 @@ class Web(object):
     def poll(self):
         if not self.process:
             import multiprocessing
-            from pypilot.pipeserver import NonBlockingPipe
+            from pypilot.nonblockingpipe import NonBlockingPipe
             self.pipe, pipe = NonBlockingPipe('webpipe', True)
             keyspipe, self.keyspipe = NonBlockingPipe('webkeyspipe', True)
-            self.process = multiprocessing.Process(target=web_process, args=(pipe, keyspipe, self.hat.actions))
+            self.process = multiprocessing.Process(target=web_process, args=(pipe, keyspipe, self.hat.actions), daemon=True)
             self.process.start()
             self.send({'status': self.status})
 
@@ -279,8 +279,7 @@ class Hat(object):
 
         # timeout manual move
         if self.servo_timeout:
-            dtt = t - self.servo_timeout
-            if dtt > 0:
+            if time.monotonic() > self.servo_timeout:
                 if self.client:
                     self.client.set('servo.command', 0) # stop
                 self.servo_timeout = 0

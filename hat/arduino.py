@@ -14,7 +14,6 @@
 
 from __future__ import print_function
 import os, sys, time, json
-import spidev
 import crc
 
 try:
@@ -63,6 +62,7 @@ class arduino(object):
 
                 port, slave = int(device[11]), int(device[13])
                 print('arduino on spidev%d.%d' % (port, slave))
+                import spidev
                 self.spi = spidev.SpiDev()
                 self.spi.open(port, slave)
                 self.spi.max_speed_hz=5000

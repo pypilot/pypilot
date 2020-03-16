@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
+from pypilot.client import pypilotClient
 import sys, os, time, math
 
 import gettext
@@ -246,13 +246,15 @@ class LCD():
         self.control = False # used to keep track of what is drawn on screen to avoid redrawing it
         self.wifi = False
 
+        self.client = False
+        self.watches = {}
         self.connect()
 
     def connect(self):
         self.last_msg = {}
         if self.client:
             self.client.disconnect()
-        self.client = pypilotClient(hat.client.config['host'])
+        self.client = pypilotClient(self.hat.client.config['host'])
         self.client.list_values()
 
     def set_language(self, name):
@@ -1013,9 +1015,6 @@ class LCD():
                 return True
             return False
 
-        watch('ap.enabled')
-        watch('ap.heading', 0.5)
-
         if self.keypadup[AUTO]: # AUTO
             if self.last_val('ap.enabled') == False and self.display_page == self.display_control:
                 self.set('ap.heading_command', self.last_val('ap.heading'))
@@ -1183,7 +1182,7 @@ class LCD():
                 self.lastframetime = max(self.lastframetime+self.frameperiod,
                                          t-self.frameperiod)
 
-        self.client.update_watches(watches)
+        self.client.update_watches(self.watches)
         msgs = self.client.receive()
         for msg in msgs:
             name, value = msg
