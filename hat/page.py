@@ -177,7 +177,7 @@ class page(object):
 
         surface = self.lcd.surface
         w, h = surface.width - 1, surface.height - 1
-        return [int(x1*w), int(y1*h), int(x2*w), int(y2*h)]
+        return [int(round(x1*w)), int(round(y1*h)), int(round(x2*w)), int(round(y2*h))]
 
     def invertrectangle(self, rect):
         self.lcd.surface.invert(*self.convbox(rect.x, rect.y, rect.x+rect.width, rect.y+rect.height))
@@ -551,9 +551,9 @@ class control(controlbase):
             # in wind mode draw indicator showing sign
             if windmode:
                 if heading > 0:
-                    self.box(rectangle(.7, pos+.3, .3, .05), white)
+                    self.box(rectangle(.7, pos+.3, .3, .025), white)
                 elif heading < 0:
-                    self.box(rectangle(0, pos+.3, .3, .05), white)
+                    self.box(rectangle(0, pos+.3, .3, .025), white)
 
         if self.last_val('imu.frequency', 1) is False:
             r = rectangle(0, 0, 1, .8)
