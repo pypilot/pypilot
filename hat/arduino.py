@@ -247,6 +247,8 @@ class arduino(object):
             count = d[4]
 
             if cmd == RF:
+                if key == '33297C00': # pypilot remote keyup code, ignore
+                    continue
                 key = 'rf' + key
             elif cmd == IR:
                 if not self.config['arduino.ir']:

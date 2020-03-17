@@ -104,7 +104,7 @@ class WebConfig(Namespace):
         emit('pong')
 
     def on_keys(self, command):
-        actions = config['actions']
+        actions = self.config['actions']
         if command == 'clear':
             for name in actions:
                 actions[name] = []
@@ -126,12 +126,12 @@ class WebConfig(Namespace):
         
         action_keys = {}
         # remove this key from any actions
-        for name, keys in self.actions.items():
+        for name, keys in actions.items():
             while self.last_key in keys:
                 keys.remove(self.last_key)
 
         # add the last key to the action
-        self.actions[command].append(self.last_key)
+        actions[command].append(self.last_key)
         self.emit_keys()
 
     def on_config(self, config):

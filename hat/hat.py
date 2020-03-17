@@ -365,7 +365,7 @@ class Hat(object):
                     continue
                 events = i.poll()
                 for event in events:
-                    print('apply', event, time.monotonic())
+                    #print('apply', event, time.monotonic())
                     self.apply_code(*event)
             except Exception as e:
                 print('WARNING, failed to poll!!', e, i)
