@@ -496,10 +496,10 @@ def FitAccel(debug, accel_cal):
     dev = ComputeDeviation(p, fit)
     return [fit, dev]
 
-def FitCompass(debug, compass_points, compass_calibration, norm):
+def FitCompass(debug, compass_points, compass_calibration, cur_coverage, norm):
     p = compass_points.Points(True)
     if len(p) < 8:
-        return False
+        return
 
     fit = FitPointsCompass(debug, p, compass_calibration, norm)
     if not fit:
@@ -530,7 +530,7 @@ def FitCompass(debug, compass_points, compass_calibration, norm):
     coverage = ComputeCoverage(p, c[0][:3], norm)
     #debug('coverage', coverage)
     if coverage < 14: # require 280 degrees
-        debug('insufficient coverage:', coverage, ' need 12')
+        debug('insufficient coverage:', coverage, ' need 14')
         if c == fit[1]: # must have had 3d fit to use 1d fit
             return
         c = fit[0]
@@ -568,6 +568,7 @@ def FitCompass(debug, compass_points, compass_calibration, norm):
         debug('new calibration same as previous')
         return
 
+    c[1].append(coverage)
     return c
 
 class CalibrationProperty(RoundedValue):
@@ -636,7 +637,8 @@ def CalibrationProcess(cal_pipe, client):
                 s += str(a) + ' '
             client.set('imu.'+name+'.calibration.log', s)
         return debug_by_name
-    
+
+    last_compass_coverage = 0
     while True:
         t = time.monotonic()
         addedpoint = False
@@ -697,8 +699,15 @@ def CalibrationProcess(cal_pipe, client):
         compass_points.RemoveOlder(20*60) # 20 minutes
         fit = FitCompass(debug('compass'), compass_points, compass_calibration.value[0], norm)
         if fit:
-            compass_calibration.set(fit)
-            compass_calibration.points.set(compass_points.Points())
+            # ignore decreasing compass coverage
+            new_coverage = fit[1][2]
+            if new_coverage < last_compass_coverage:
+                debug('compass')('ignoring decreasing coverage')
+            else:
+                compass_calibration.set(fit)
+                compass_calibration.points.set(compass_points.Points())
+        else:
+            last_compass_coverage = 0 # reset
 
 def ExtraFit():
     ellipsoid_fit = False
