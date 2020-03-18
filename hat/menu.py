@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time
+import time, os
 
 from page import *
 from page import _
@@ -359,9 +359,16 @@ class motor(menu):
                                      ValueEdit(_('max speed'), _('relative'), 'servo.speed.max'),
                                      ValueEdit(_('max current'), _('amps'), 'servo.max_current'),
                                      ValueEdit(_('period'), _('seconds'), 'servo.period')])
-        
+
+networking = '/home/tc/.pypilot/networking.txt'
+default_network = {'mode': 'Master', 'ssid': 'pypilot', 'key':'', 'client_ssid': 'openplotter', 'client_key': '12345678'}
+
 class select_wifi(page):
-    def setup_network():
+    def __init__(self, name, wifi_settings):
+        self.wifi_settings = wifi_settings
+        super(select_wifi, self).__init__(name)
+
+    def setup_network(self):
         try:
             f = open(networking, 'w')
             for setting in self.wifi_settings:
@@ -373,54 +380,68 @@ class select_wifi(page):
         
 class select_wifi_ap_toggle(select_wifi):
     def process(self):
-        ap = self.lcd.hat.wifi_settings['mode'] == 'Master'
+        ap = self.wifi_settings['mode'] == 'Master'
         self.wifi_settings['mode'] = 'Managed' if ap else 'Master'
         self.setup_network()
         return self.lcd.menu
 
 class select_wifi_defaults(select_wifi):
     def process(self):
-        self.wifi_settings = default
+        for n, v in default_network.items():
+            self.wifi_settings[n] = v
         self.setup_network()
-        return self.lcd.menu
-
-class wifi_remote(page):
-    def process(self):
-        self.lcd.hat.config['remote'] = not self.lcd.hat.config['remote']
-        self.lcd.hat.write_config()
-        self.lcd.hat.connect()
-        self.lcd.connect()
         return self.lcd.menu
             
 class wifi(menu):
     def __init__(self):
-        self.wifi = False
-        super(wifi, self).__init__('WIFI',
-                                [select_wifi_ap_toggle('AP'),
-                                 select_wifi_defaults(_('defaults')),
-                                 wifi_remote(_('remote'))])
+        self.wifi_settings = None
+        try:
+            wifi_settings = default_network.copy()
+            f = open(networking, 'r')
+            while True:
+                l = f.readline()
+                if not l:
+                    break
+                for setting in wifi_settings:
+                    if l.startswith(setting+'='):
+                        wifi_settings[setting] = l[len(setting)+1:].strip()
+            f.close()
+            items = [select_wifi_ap_toggle('AP/Client', wifi_settings),
+                     select_wifi_defaults(_('defaults'), wifi_settings)]
+            self.wifi_settings = wifi_settings
+        except Exception as e:
+            print('failed to read', networking, e)
+            items = []
+        super(wifi, self).__init__('WIFI', items)
 
     def display(self, refresh):
         if not test_wifi():
             self.fill(black)
             self.fittext(rectangle(0, 0, 1, 1), _('No Wifi detected'), True)
             return
-                
-        networking = '/home/tc/.pypilot/networking.txt'
-        default = {'mode': 'Master', 'ssid': 'pypilot', 'key':'', 'client_ssid': 'pypilot', 'client_key': ''} # defaults
-        self.wifi_settings = default
-        try:
-            f = open(networking, 'r')
-            while True:
-                l = f.readline()
-                if not l:
-                    break
-                for setting in self.wifi_settings:
-                    if l.startswith(setting+'='):
-                        self.wifi_settings[setting] = l[len(setting)+1:].strip()
-            f.close()
-        except:
-            pass
+
+        if not self.wifi_settings:
+            self.fill(black)
+            self.fittext(rectangle(0, 0, 1, 1), _('Wifi not managed'), True)
+            return
+
+        super(wifi, self).display(refresh)
+        if self.wifi_settings['mode'] == 'Master':
+            info = 'mode: AP\n'
+            ssid = 'ssid'
+            key = 'key'
+        else:
+            info = 'mode: Client\n'
+            ssid = 'client_ssid'
+            key = 'client_key'
+        self.fittext(rectangle(0, .6, 1, .13), info)
+
+        info = self.wifi_settings[ssid]
+        self.fittext(rectangle(0, .73, 1, .14), info)
+
+        if self.wifi_settings[key]:
+            info = self.wifi_settings[key]
+            self.fittext(rectangle(0, .87, 1, .13), info)
 
     def process(self):
         if not test_wifi():
