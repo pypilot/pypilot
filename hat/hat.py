@@ -218,8 +218,8 @@ class Hat(object):
             if os.path.exists('/dev/spidev0.0'):
                 print('assuming original 26 pin tinypilot with nokia5110 display')
                 self.config['hat'] = {'lcd':{'driver':'nokia5110',
-                                            'port':'/dev/spidev0.0'},
-                                    'lirc':'gpio4'}
+                                             'port':'/dev/spidev0.0'},
+                                      'lirc':'gpio4'}
             self.write_config()
 
         self.servo_timeout = time.monotonic() + 1

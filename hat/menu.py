@@ -205,7 +205,6 @@ class RangeEdit(page):
         bp = spd(BIG_PORT)
         bs = spd(BIG_STARBOARD)
 
-
         speed = 0;
         sign = 0;
         if sp or ss:
@@ -533,7 +532,7 @@ class display(menu):
             bl = [ConfigEdit(_('hue'), '', 'hue', 0, 255, 1)]
         else:
             bl = [ConfigEdit(_('backlight'), '', 'backlight', 0, 40, 1),
-                  ConfigEdit(_('buzzer'), _('volume'), 'buzzer', 0, 3, 2)]
+                  ConfigEdit(_('buzzer'), _('buzzer'), 'buzzer', 0, 2, .25)]
         super(display, self).__init__(_('display'),
                                       [ConfigEdit(_('contrast'), '', 'contrast', 0, 120, 1),
                                        invert(_('invert')), flip(_('flip'))] + bl)

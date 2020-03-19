@@ -273,8 +273,9 @@ class page(object):
     def testkeydown(self, key):
         k = self.lcd.keypad[key]
         if k.down:
-            if self.lcd.hat:
+            if self.lcd.hat and self.lcd.config['buzzer'] > 1:
                 self.lcd.hat.arduino.set_buzzer(1, .1)
+
             k.down -= 1
             return True
         return False
@@ -667,7 +668,7 @@ class control(controlbase):
                 warning += flag[:-6] + ' '
 
         if warning:
-            if self.lcd.hat:
+            if self.lcd.hat and self.lcd.config['buzzer']:
                 self.lcd.hat.arduino.set_buzzer(2, 1)
             warning = warning.lower()
             warning += 'fault'
@@ -740,6 +741,8 @@ class control(controlbase):
             return connecting(self.lcd)
 
         if self.testkeydown(AUTO): # AUTO
+            self.lcd.reset_keys()
+
             if self.last_val('ap.enabled') == False:
                 self.set_ap_heading_command(self.last_val('ap.heading'))
                 self.set('ap.enabled', True)

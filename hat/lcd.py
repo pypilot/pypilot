@@ -66,7 +66,7 @@ class LCD():
             
         default = {'contrast': 60, 'invert': False, 'backlight': 20,
                    'hue': 214, 'flip': False, 'language': 'en', 'bigstep': 10,
-                   'smallstep': 1};
+                   'smallstep': 1, 'buzzer': 2};
 
         for name in default:
             if not name in self.config:
@@ -314,6 +314,11 @@ class LCD():
             self.data_update = True # allow cursor to blink
             for name, value in msgs.items():
                 self.last_msg[name] = value
+
+    def reset_keys(self):
+        for key in self.keypad:
+            key.down = 0
+            key.up = False
             
     def poll(self):
         if self.screen == None:
@@ -335,11 +340,7 @@ class LCD():
         if next_page and next_page != self.page:
             self.page = next_page
             self.update_watches()
-            for key in self.keypad:
-                if key.down and self.hat and self.config['buzzer'] > 1:
-                    self.hat.arduino.set_buzzer(1, .1)
-                key.down = 0
-                key.up = False
+            self.reset_keys()
             self.need_refresh = True
         t2 = gettime()
         
@@ -349,7 +350,6 @@ class LCD():
             self.lastframetime = t
         t3 = gettime()
 
-        t4 = gettime()
         #print('lcd times', t1-t0, t2-t1, t3-t2, t4-t3, dt,t)
 
 def main():
