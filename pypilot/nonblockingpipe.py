@@ -167,8 +167,9 @@ class PipeNonBlockingPipeEnd(object):
         t0 = time.monotonic()
         try:
             data = pyjson.dumps(value) + '\n'
-            os.write(self.w, data.encode())
+            data = data.encode()
             t1 = time.monotonic()
+            os.write(self.w, data)
             self.flush()
             t2 = time.monotonic()
             if t2-t0 > .024:
