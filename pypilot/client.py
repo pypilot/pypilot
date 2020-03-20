@@ -7,8 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
-
 import socket, select, sys, os, time
 import heapq
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -29,9 +27,6 @@ except:
     print('select.POLLNVAL not defined, using 32')
     ourPOLLNVAL = 32
     
-class ConnectionLost(Exception):
-    pass
-
 class Watch(object):
     def __init__(self, value, period):
         self.value = value
