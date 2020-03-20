@@ -72,6 +72,8 @@ $(document).ready(function() {
         // control
         pypilot_watch('ap.enabled');
         pypilot_watch('ap.mode');
+        pypilot_watch('ap.tack.timeout');
+        pypilot_watch('ap.tack.state');
         pypilot_watch('ap.tack.direction');
 
         pypilot_watch('ap.heading_command', .5);
@@ -241,6 +243,12 @@ $(document).ready(function() {
             $('#heading').text(heading_str(heading));
         }
 
+        if('ap.tack.timeout' in data)
+            $('#tack_timeout').text(data['ap.tack.timeout']);
+
+        if('ap.tack.state' in data)
+            $('#tack_state').text(data['ap.tack.state']);
+        
         if('ap.tack.direction' in data) {
             value = data['ap.tack.direction'];
             if(value == 'port')

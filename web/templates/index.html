@@ -79,11 +79,12 @@
             <option value="true wind">true wind</option>
           </select>
         </div>
-        <div class="w3-col s3 m3 l3 data_label">
+        <div class="w3-col l3">
           <button id="tack_button" class="button button-resizable1 font-resizable2">{{_('Tack')}}</button>
         </div>
-        <div class="w3-col s1 m1 l1"></div>
-        <div class="w3-col s3 m3 l3 data_label">
+        <div id="tack_timeout" class="w3-col l1"></div>
+        <div id="tack_state" class="w3-col l3"></div>
+        <div class="w3-col l3 data_label">
           <select id="tack_direction">
             <option value="port">--&gt; starboard</option>
             <option value="starboard">&lt;-- port</option>
