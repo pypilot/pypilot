@@ -130,13 +130,14 @@ class Sensors(object):
         from nmea import Nmea
         from signalk import signalk
 
+        self.client = client
+
         # services that can receive sensor data
         self.nmea = Nmea(self)
         self.signalk = signalk(self)
         self.gpsd = gpsd(self)
 
         # actual sensors supported
-        self.client = client
         self.gps = gps(client)
         self.wind = Wind(client)
         self.rudder = Rudder(client)

@@ -35,6 +35,7 @@ class signalk(object):
 
         self.initialized = False
         if self.multiprocessing:
+            import multiprocessing
             self.process = multiprocessing.Process(target=self.process, daemon=True)
             self.process.start()
         else:

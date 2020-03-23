@@ -124,8 +124,13 @@ PWR+             VIN
 // run at 4mhz instead of 16mhz to save power,
 // and somehow at slower clock atmega328 is able to measure lower current from the shunt
 
-#define DIV_CLOCK 4  // 1 for 16mhz, 2 for 8mhz, 4 for 4mhz
+#define DIV_CLOCK 4  // speed board runs at  1 for 16mhz, 2 for 8mhz, 4 for 4mhz (recommended 4mhz)
+#define DIV_BOARD 2 // actual crystal/resonator speed 1 if 16mhz, 2 if 8mhz
 #define QUIET  // don't use 1khz
+
+#if (DIV_CLOCK != 1 && DIV_CLOCK !=2 && DIV_CLOCK != 4) || (DIV_BOARD != 1 && DIV_BOARD != 2) || (DIV_CLOCK < DIV_BOARD)
+#error "invalid DIV_CLOCK and/or DIV_BOARD combination"
+#endif
 
 #if DIV_CLOCK==4
 #define dead_time \
@@ -309,13 +314,15 @@ uint8_t adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
 
 void setup()
 {
-#if DIV_CLOCK==4
-    CLKPR = _BV(CLKPCE);
-    CLKPR = _BV(CLKPS1); // divide by 4
-#elif DIV_CLOCK==2
-    CLKPR = _BV(CLKPCE);
-    CLKPR = _BV(CLKPS0); // divide by 2
-#endif
+    int div_clock = DIV_CLOCK/DIV_BOARD;
+    if(div_clock==4) {
+        CLKPR = _BV(CLKPCE);
+        CLKPR = _BV(CLKPS1); // divide by 4
+    } else if(div_clock == 2) {
+        CLKPR = _BV(CLKPCE);
+        CLKPR = _BV(CLKPS0); // divide by 2
+    }
+
     // Disable all interrupts
     cli();
 
@@ -334,7 +341,7 @@ void setup()
     uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
     uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
     // uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS); // too many clones don't set lock bits and there is no spm
-    if(lowBits != 0xFF ||
+    if((lowBits != 0xFF && lowBits != 0x7F) ||
        (highBits != 0xda && highBits != 0xde) ||
        (extendedBits != 0xFD && extendedBits != 0xFC)
        // || lockBits != 0xCF // too many clones don't set lock bits and there is no spm
