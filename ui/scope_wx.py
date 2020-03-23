@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import wx, wx.glcanvas, sys, socket, time
+import wx, wx.glcanvas, sys, socket, time, os
 from OpenGL.GL import *
 from pypilot.client import pypilotClient, pypilotClientFromArgs, ConnectionLost
 

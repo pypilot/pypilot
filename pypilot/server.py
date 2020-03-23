@@ -8,8 +8,8 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-import select, socket, time, numbers
-import json
+import select, socket, time, numbers, json
+
 import fcntl, os
 from pypilot.values import *
 from pypilot.bufferedsocket import LineBufferedNonBlockingSocket
