@@ -11,6 +11,7 @@ import wx, wx.glcanvas, sys, socket, time
 from OpenGL.GL import *
 from pypilot.client import pypilotClient, pypilotClientFromArgs, ConnectionLost
 
+import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from scope_ui import pypilotScopeBase
 from scope import pypilotPlot

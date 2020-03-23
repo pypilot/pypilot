@@ -9,7 +9,7 @@
 
 from __future__ import print_function
 import select, socket, time, numbers
-from pypilot import json
+import json
 import fcntl, os
 from pypilot.values import *
 from pypilot.bufferedsocket import LineBufferedNonBlockingSocket
