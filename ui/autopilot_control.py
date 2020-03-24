@@ -163,10 +163,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.client.set('ap.heading_command', self.heading_command)
                 self.sCommand.SetValue(0)
             else:
-                if command > 0:
-                    command -= 1
-                elif command < 0:
-                    command += 1
+                if True:
+                    if command > 0:
+                        command -= 1
+                    elif command < 0:
+                        command += 1
                 self.servo_command(-command / 100.0)
                 self.sCommand.SetValue(command)
 

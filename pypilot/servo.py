@@ -213,8 +213,8 @@ class Servo(object):
         self.current.offset = self.Register(RangeProperty, 'current.offset', 0, -1.2, 1.2, persistent=True)
         self.voltage.factor = self.Register(RangeProperty, 'voltage.factor', 1, 0.8, 1.2, persistent=True)
         self.voltage.offset = self.Register(RangeProperty, 'voltage.offset', 0, -1.2, 1.2, persistent=True)
-        self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 60, 45, 100, persistent=True)
-        self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
+        self.max_controller_temp = self.Register(RangeProperty, 'max_controller_temp', 60, 45, 80, persistent=True)
+        self.max_motor_temp = self.Register(RangeProperty, 'max_motor_temp', 60, 30, 80, persistent=True)
 
         self.max_slew_speed = self.Register(RangeSetting, 'max_slew_speed', 18, 0, 100, '')
         self.max_slew_slow = self.Register(RangeSetting, 'max_slew_slow', 28, 0, 100, '')
@@ -715,7 +715,7 @@ def main():
     from sensors import Sensors
     sensors = Sensors(server)
     servo = Servo(server, sensors)
-    servo.max_current.set(10)
+    servo.max_current.set(20)
 
     period = .1
     start = lastt = time.time()
