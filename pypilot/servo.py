@@ -209,8 +209,8 @@ class Servo(object):
         self.current.offset = self.register(RangeProperty, 'current.offset', 0, -1.2, 1.2, persistent=True)
         self.voltage.factor = self.register(RangeProperty, 'voltage.factor', 1, 0.8, 1.2, persistent=True)
         self.voltage.offset = self.register(RangeProperty, 'voltage.offset', 0, -1.2, 1.2, persistent=True)
-        self.max_controller_temp = self.register(RangeProperty, 'max_controller_temp', 60, 45, 100, persistent=True)
-        self.max_motor_temp = self.register(RangeProperty, 'max_motor_temp', 60, 30, 100, persistent=True)
+        self.max_controller_temp = self.register(RangeProperty, 'max_controller_temp', 60, 45, 80, persistent=True)
+        self.max_motor_temp = self.register(RangeProperty, 'max_motor_temp', 60, 30, 80, persistent=True)
 
         self.max_slew_speed = self.register(RangeSetting, 'max_slew_speed', 18, 0, 100, '')
         self.max_slew_slow = self.register(RangeSetting, 'max_slew_slow', 28, 0, 100, '')

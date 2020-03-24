@@ -280,10 +280,10 @@ void ArduinoServo::params(double _raw_max_current, double _rudder_min, double _r
     max_current = fmin(60, fmax(0, _max_current));
     eeprom.set_max_current(max_current);
 
-    max_controller_temp = fmin(80, fmax(30, _max_controller_temp));
+    max_controller_temp = fmin(100, fmax(30, _max_controller_temp));
     eeprom.set_max_controller_temp(max_controller_temp);
 
-    max_motor_temp = fmin(80, fmax(30, _max_motor_temp));
+    max_motor_temp = fmin(100, fmax(30, _max_motor_temp));
     eeprom.set_max_motor_temp(max_motor_temp);
 
     rudder_range = fmin(120, fmax(0, _rudder_range));

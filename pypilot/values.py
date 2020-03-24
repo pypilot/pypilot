@@ -10,7 +10,6 @@
 import os, time, math
 import pyjson
 
-
 class Value(object):
     def __init__(self, name, initial, **kwargs):
         self.name = name
