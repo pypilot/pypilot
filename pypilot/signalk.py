@@ -33,41 +33,30 @@ class signalk(object):
             self.multiprocessing = server.multiprocessing
             self.client = pypilotClient(server)
 
-        self.initialized = False
         if self.multiprocessing:
             import multiprocessing
             self.process = multiprocessing.Process(target=self.process, daemon=True)
             self.process.start()
         else:
             self.process = False
+        self.initialized = False
 
     def setup(self):
-        self.initialized = True
-        
         self.last_values = {}
 
         self.sensor_priority = {}
         for sensor in signalk_table:
             self.sensor_priority[sensor] = source_priority['none']
         self.sensor_priority['imu'] = 0 # override to never read imu from signalk
-
+        
         self.period = 0.5
+        self.signalk_host_port = False
         self.signalk_ws_url = False
         self.ws = False
-        
-        # try to detect signalk server using zerconf
         self.detect_signalk()
-        if self.probe_signalk():
-            if not self.connect_signalk():
-                return # don't bother watching anything
-
-        # setup pypilot watches
-        watches = ['imu.heading_lowpass', 'imu.roll', 'imu.pitch']
-        for watch in watches:
-            self.client.watch(watch, self.period)
+        self.initialized = True
 
     def detect_signalk(self):
-        self.signalk_host_port = False
         try:
             from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
         except Exception as e:
@@ -87,16 +76,8 @@ class signalk(object):
                 self.signalk_host_port = socket.inet_ntoa(info.addresses[0]) + ':' + str(info.port)
                 print('signalk server found', self.signalk_host_port)
         
-        zeroconf = Zeroconf()
-        browser = ServiceBrowser(zeroconf, "_http._tcp.local.", handlers=[on_service_change])
-        t0 = time.monotonic()
-        while not self.signalk_host_port:
-            if time.monotonic() - t0 > 3:
-                print('failed to find signalk server')
-                self.signalk_host_port = 'localhost:3000' # default
-                break
-            time.sleep(.2)
-        #zeroconf.close()  # takes a long time
+        self.zeroconf = Zeroconf()
+        self.browser = ServiceBrowser(self.zeroconf, "_http._tcp.local.", handlers=[on_service_change])
 
     def probe_signalk(self):
         print('signalk probe...', self.signalk_host_port)
@@ -104,16 +85,15 @@ class signalk(object):
             import requests
         except Exception as e:
             print('signalk could not import requests, install with pip3 install requests')
-            return False
+            return
         try:
             r = requests.get('http://' + self.signalk_host_port + '/signalk')
             contents = pyjson.loads(r.content)
             self.signalk_ws_url = contents['endpoints']['v1']['signalk-ws']# + '?subscribe=none'
         except Exception as e:
-            print('failed to retrieve/parse data from', signalk_host_port, e)
-            return False
+            print('failed to retrieve/parse data from', self.signalk_host_port, e)
+            return
         print('signalk found', self.signalk_ws_url)
-        return True
 
     def connect_signalk(self):
         try:
@@ -125,22 +105,47 @@ class signalk(object):
         try:
             self.ws = create_connection(self.signalk_ws_url)
             self.ws.settimeout(0) # nonblocking
-            return True
         except Exception as e:
             print('failed to connect signalk', e)
-            return False
 
     def send_signalk(self, msg):
         print('would send signalk server', msg)
             
     def process(self):
-        self.setup()
         while True:
             self.poll(1)
 
     def poll(self, timeout=0):
+        t0 = time.monotonic()
         if not self.initialized:
             self.setup()
+            return
+
+        if not self.signalk_host_port:
+            time.sleep(timeout)
+            return # waiting for signalk to detect
+
+        if not self.signalk_ws_url:
+            #zeroconf.close()  # takes a long time
+            self.probe_signalk()
+            time.sleep(max(timeout - (time.monotonic()-t0), 0))
+            return
+        
+        if not self.ws:
+            self.connect_signalk()
+            time.sleep(max(timeout - (time.monotonic()-t0), 0))
+            return # don't bother watching anything
+
+        # at this point we have a connection
+        # setup pypilot watches
+        watches = ['imu.heading_lowpass', 'imu.roll', 'imu.pitch']
+        for watch in watches:
+            self.client.watch(watch, self.period)
+
+            self.setup()
+            if not self.ws:
+                return
+            
         self.client.poll(timeout)
 
         # read all messages from pypilot
@@ -188,17 +193,22 @@ class signalk(object):
 
         if updates:
             msg = {"updates":[{"$source":"pypilot","values":updates}]}
-            if self.ws:
+            try:
                 self.ws.send(pyjson.dumps(msg)+'\n')
+            except Exception as e:
+                print('signalk failed to send', e)
+                self.ws.close()
+                self.ws = False
+                return
 
         signalk_values = {}
         while True:
             try:
                 self.receive_signalk(self.ws.recv(), signalk_values)
-            except OSError as e:
-                break
             except Exception as e:
-                print('exception', e)
+                print('signalk failed to receive', e)
+                self.ws.close()
+                self.ws = False
                 return
 
         for sensor, sensor_table in signalk_table.items():
