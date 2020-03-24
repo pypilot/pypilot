@@ -4,18 +4,8 @@
  * modify it under the terms of the GNU General Public
  * License as published by the Free Software Foundation; either
  * version 3 of the License, or (at your option) any later version.
- */
 
-#include <Arduino.h>
-#include <stdint.h>
-#include <HardwareSerial.h>
 
-#include <avr/wdt.h>
-#include <avr/sleep.h>
-#include <avr/boot.h>
-#include <util/delay.h>
-
-/*
 This program is meant to interface with pwm based
 motor controller either brushless or brushed, or a regular RC servo
 
@@ -113,7 +103,18 @@ PWR+             VIN
                  gnd        gnd
 */
 
+#include <Arduino.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <HardwareSerial.h>
 
+#include <avr/wdt.h>
+#include <avr/sleep.h>
+#include <avr/boot.h>
+#include <avr/eeprom.h>
+#include <avr/pgmspace.h>
+#include <util/delay.h>
+#include "crc.h"
 
 //#define VNH2SP30 // defined if this board is used
 //#define DISABLE_TEMP_SENSE    // if no temp sensors avoid errors
@@ -124,8 +125,15 @@ PWR+             VIN
 // run at 4mhz instead of 16mhz to save power,
 // and somehow at slower clock atmega328 is able to measure lower current from the shunt
 
-#define DIV_CLOCK 4  // 1 for 16mhz, 2 for 8mhz, 4 for 4mhz
+#define DIV_CLOCK 4  // speed board runs at  1 for 16mhz, 2 for 8mhz, 4 for 4mhz (recommended 4mhz)
+#define DIV_BOARD 2 // actual crystal/resonator speed 1 if 16mhz, 2 if 8mhz
+#define BLINK  // blink status led while detached to avoid quiecent consumption of on led (3mA)
 #define QUIET  // don't use 1khz
+
+
+#if (DIV_CLOCK != 1 && DIV_CLOCK !=2 && DIV_CLOCK != 4) || (DIV_BOARD != 1 && DIV_BOARD != 2) || (DIV_CLOCK < DIV_BOARD)
+#error "invalid DIV_CLOCK and/or DIV_BOARD combination"
+#endif
 
 #if DIV_CLOCK==4
 #define dead_time \
@@ -210,7 +218,6 @@ uint16_t max_voltage = 1600; // 16 volts max by default
 
 #define led_pin 13 // led is on when engaged
 
-#include <stdarg.h>
 void debug(char *fmt, ... ){
     char buf[128]; // resulting string limited to 128 chars
     va_list args;
@@ -228,8 +235,6 @@ enum {SYNC=1, OVERTEMP_FAULT=2, OVERCURRENT_FAULT=4, ENGAGED=8, INVALID=16*1, PO
 
 uint16_t flags = 0, faults = 0;
 uint8_t serialin, packet_count = 0;
-
-#include <avr/eeprom.h>
 
 // we need these to be atomic for 16 bytes
 
@@ -292,7 +297,6 @@ void eeprom_update_8(int address, uint8_t value)
 }
 
 
-#include "crc.h"
 
 uint16_t max_current = 2000; // 20 Amps
 uint16_t max_controller_temp= 7000; // 70C
@@ -305,17 +309,18 @@ uint8_t eeprom_read_end = 0;
 
 uint8_t adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
 
-#include <avr/pgmspace.h>
 
 void setup()
 {
-#if DIV_CLOCK==4
-    CLKPR = _BV(CLKPCE);
-    CLKPR = _BV(CLKPS1); // divide by 4
-#elif DIV_CLOCK==2
-    CLKPR = _BV(CLKPCE);
-    CLKPR = _BV(CLKPS0); // divide by 2
-#endif
+    int div_clock = DIV_CLOCK/DIV_BOARD;
+    if(div_clock==4) {
+        CLKPR = _BV(CLKPCE);
+        CLKPR = _BV(CLKPS1); // divide by 4
+    } else if(div_clock == 2) {
+        CLKPR = _BV(CLKPCE);
+        CLKPR = _BV(CLKPS0); // divide by 2
+    }
+
     // Disable all interrupts
     cli();
 
@@ -334,7 +339,7 @@ void setup()
     uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
     uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
     // uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS); // too many clones don't set lock bits and there is no spm
-    if(lowBits != 0xFF ||
+    if((lowBits != 0xFF && lowBits != 0x7F) ||
        (highBits != 0xda && highBits != 0xde) ||
        (extendedBits != 0xFD && extendedBits != 0xFC)
        // || lockBits != 0xCF // too many clones don't set lock bits and there is no spm
@@ -403,7 +408,6 @@ void setup()
     // test current
     low_current = digitalRead(low_current_pin);
 
-#if 1
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
     if(pwm_style == 2 || ratiometric_mode)
@@ -419,7 +423,6 @@ void setup()
     ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
 #endif
     ADCSRA |= _BV(ADSC); // start conversion
-#endif    
 }
 
 uint8_t in_bytes[3];
@@ -575,7 +578,6 @@ void disengage()
     flags &= ~ENGAGED;
     timeout = 120/DIV_CLOCK+1; // detach in about 62ms
     digitalWrite(clutch_pin, LOW); // clutch
-    digitalWrite(led_pin, LOW); // status LED
 }
 
 void detach()
@@ -600,6 +602,20 @@ void detach()
         b_bottom_off;
     }
     TIMSK2 = 0;
+
+#ifdef BLINK
+    static uint32_t led_blink;
+    led_blink++;
+    if(led_blink < 1500)
+        digitalWrite(led_pin, HIGH); // status LED
+    else
+        digitalWrite(led_pin, LOW); // status LED
+    if(led_blink > 20000)
+        led_blink = 0;
+#else
+    digitalWrite(led_pin, LOW); // status LED
+#endif
+    
     timeout = 128/DIV_CLOCK; // avoid overflow
 }
 
