@@ -50,7 +50,6 @@ class ClientWatch(Value):
                     period = 0
                 value.watch = Watch(value, period)
                 value.pwatch = True
-                
                 self.client.send(name + '=' + value.get_msg() + '\n') # initial send
 
 class ClientValues(Value):
@@ -220,18 +219,17 @@ class pypilotClient(object):
             line = self.connection.readline()
             if not line:
                 return
-            #print('line', line.rstrip())
             try:
                 name, data = line.rstrip().split('=', 1)
                 if name == 'error':
                     print('server error', data)
                     continue
                 value = pyjson.loads(data)
-            except ValueError:
-                print('va erropr', data)
+            except ValueError as e:
+                print('value error', line, e)
+                continue
             except Exception as e:
-                print('invalid message from server:', line)
-                print('reason', e)
+                print('invalid message from server:', line, e)
                 raise Exception
 
             if name in self.values.values:
@@ -399,7 +397,7 @@ def main():
     if not client.watches: # retrieve all values
         watches = client.list_values(10)
         if not watches:
-            print('failed to retrieve value list!!!')
+            print('failed to retrieve value list!')
             exit(1)
         for name in watches:
             client.watch(name, period)
@@ -407,11 +405,11 @@ def main():
     if not continuous:
         values = {}
         t0 = time.monotonic()
-        while len(values) < len(client.watches):
+        while len(values) < len(watches):
             dt = time.monotonic() - t0
             if dt > 10:
-                print('timeout retrieving values', len(values), len(client.watches))
-                for name in client.watches:
+                print('timeout retrieving', len(watches) - len(values), 'values')
+                for name in watches:
                     if not name in values:
                         print('missing', name)
                 break
@@ -421,7 +419,6 @@ def main():
             for name in msgs:
                 values[name] = msgs[name]
 
-            
         names = sorted(values)
         for name in names:
             if info:

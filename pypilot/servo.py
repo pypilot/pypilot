@@ -102,9 +102,9 @@ class ServoFlags(Value):
 
     def __init__(self, name):
         super(ServoFlags, self).__init__(name, 0)
-          
-    def get_msg(self):
-        ret = ''
+
+    def get_str(self):
+        ret = ""
         if self.value & self.SYNC:
             ret += 'SYNC '
         if self.value & self.OVERTEMP_FAULT:
@@ -136,6 +136,9 @@ class ServoFlags(Value):
         if self.value & self.SATURATED:
             ret += 'SATURATED '
         return ret
+
+    def get_msg(self):
+        return '"' + self.get_str().strip() + '"'
 
     def setbit(self, bit, t=True):
         if t:
@@ -713,7 +716,7 @@ def main():
     while True:
 
         if servo.controller.value != 'none':
-            print('voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', sensors.rudder.angle.value, 'flags', servo.flags.strvalue())
+            print('voltage:', servo.voltage.value, 'current', servo.current.value, 'ctrl temp', servo.controller_temp.value, 'motor temp', servo.motor_temp.value, 'rudder pos', sensors.rudder.angle.value, 'flags', servo.flags.get_str())
             pass
 
         servo.poll()

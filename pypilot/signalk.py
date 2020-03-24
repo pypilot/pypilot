@@ -33,13 +33,13 @@ class signalk(object):
             self.multiprocessing = server.multiprocessing
             self.client = pypilotClient(server)
 
+        self.initialized = False
         if self.multiprocessing:
             import multiprocessing
             self.process = multiprocessing.Process(target=self.process, daemon=True)
             self.process.start()
         else:
             self.process = False
-        self.initialized = False
 
     def setup(self):
         self.last_values = {}

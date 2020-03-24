@@ -37,11 +37,7 @@ class pypilotScope(pypilotScopeBase):
         self.plot = pypilotPlot()
         self.glContext =  wx.glcanvas.GLContext(self.glArea)
 
-        def on_con(client):
-            self.plot.on_con(client)
-
         self.client = pypilotClientFromArgs(sys.argv)
-        self.host_port = self.client.host_port
 
         self.timer = wx.Timer(self, wx.ID_ANY)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
@@ -50,19 +46,11 @@ class pypilotScope(pypilotScopeBase):
         self.sTime.SetValue(self.plot.disptime)
         self.plot_reshape = False
 
-    def on_con(self, client):
-        self.plot.on_con(client)
-        self.plot.add_blank()
-        for i in range(self.clValues.GetCount()):
-            if self.clValues.IsChecked(i):
-                client.watch(self.clValues.GetString(i))
-                self.watches[self.clValues.GetString(i)] = True
-
     def enumerate_values(self, value_list):
         self.watches = {}
         watches = sys.argv[1:]
-        for name in sorted(self.value_list):
-            if self.value_list[name]['type'] != 'SensorValue':
+        for name in sorted(value_list):
+            if value_list[name]['type'] != 'SensorValue':
                 continue
 
             i = self.clValues.Append(name)
@@ -71,16 +59,17 @@ class pypilotScope(pypilotScopeBase):
                 if arg == name:
                     self.clValues.Check(i, True)
                     self.watches[name] = True
-                    watches.remove(name)
-        for arg in watches:
-            print('value not found:', arg)
-        
+                    break
+            else:
+                print('value not found:', arg)
                 
     def receive_messages(self, event):
-        value_list = self.client.list_values()
-        if value_list:
-            self.enumerate_values(value_list)
-            self.plot.init(value_list)
+        if not self.clValues.Count:
+            value_list = self.client.list_values()
+            if value_list:
+                self.enumerate_values(value_list)
+                self.plot.init(value_list)
+            return
 
         refresh = False
         self.client.poll()

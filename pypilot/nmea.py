@@ -589,7 +589,7 @@ class nmeaBridge(object):
             elif sock == self.server:
                 self.new_socket_connection(*self.server.accept())
             elif sock == self.pipe:
-                self.recieve_pipe()
+                self.receive_pipe()
             elif flag & select.POLLIN:
                 if not sock.recv():
                     self.socket_lost(sock, fd)
@@ -602,8 +602,7 @@ class nmeaBridge(object):
             else:
                 print('nmea bridge unhandled poll flag', flag)
 
-        if not self.mp:
-            self.recieve_pipe()
+        self.receive_pipe()
                 
         t2 = time.monotonic()
 
