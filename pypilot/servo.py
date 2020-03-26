@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import os, math, sys, time
 import select, serial
 
@@ -172,13 +171,25 @@ class ServoTelemetry(object):
 # a property which records the time when it is updated
 class TimedProperty(Property):
     def __init__(self, name):
-        self.time = 0
         super(TimedProperty, self).__init__(name, 0)
+        self.time = 0
 
     def set(self, value):
         self.time = time.monotonic()
         return super(TimedProperty, self).set(value)
 
+class TimeoutSensorValue(SensorValue):
+    def __init__(self, name):
+        super(TimeoutSensorValue, self).__init__(name, False, fmt='%.3f')
+
+    def set(self, value):
+        self.time = time.monotonic()
+        super(TimeoutSensorValue, self).set(value)
+
+    def timeout(self):
+        if self.value and time.monotonic() - self.time > 8:
+            self.set(False)
+    
 class Servo(object):
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
 
@@ -203,8 +214,8 @@ class Servo(object):
         self.voltage = self.register(SensorValue, 'voltage')
         self.current = self.register(SensorValue, 'current')
         self.current.lasttime = time.monotonic()
-        self.controller_temp = self.register(SensorValue, 'controller_temp')
-        self.motor_temp = self.register(SensorValue, 'motor_temp')
+        self.controller_temp = self.register(TimeoutSensorValue, 'controller_temp')
+        self.motor_temp = self.register(TimeoutSensorValue, 'motor_temp')
 
         self.engaged = self.register(BooleanValue, 'engaged', False)
         self.max_current = self.register(RangeSetting, 'max_current', 7, 0, 60, 'amps')
@@ -661,6 +672,8 @@ class Servo(object):
             self.position.set(self.sensors.rudder.angle.value)
 
         self.send_command()
+        self.controller_temp.timeout()
+        self.motor_temp.timeout()
 
     def fault(self):
         if not self.driver:

@@ -46,13 +46,16 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.stStatus.SetLabel('No Connection')
         self.client = pypilotClient(self.host)
 
-        # add continuous value to avoid timeout
-        if not 'ap.heading' in value_list:
-            self.watchlist.append('servo.current')
+        self.value_list = False
         
-        for name in self.watchlist:
-            if name in value_list:
-                self.client.watch(name)
+        watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
+                          'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
+                          'ap.heading', 'ap.pilot',
+                          'gps.source', 'wind.source',
+                          'servo.controller', 'servo.engaged', 'servo.flags',
+                          'rudder.angle']
+        for name in watchlist:
+            self.client.watch(name)
 
     def servo_command(self, command):
         if self.lastcommand != command or command != 0:
@@ -77,12 +80,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.set_mode_color()
         
         self.fgGains.Clear(True)
-        self.watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
-                          'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
-                          'ap.heading', 'ap.pilot',
-                          'gps.source', 'wind.source',
-                          'servo.controller', 'servo.engaged', 'servo.flags',
-                          'rudder.angle']
         self.gains = {}
         pilots = {}
         for name in value_list:
@@ -138,7 +135,13 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.SetSize(wx.Size(570, 420))
         
         
-    def receive_messages(self, event):            
+    def receive_messages(self, event):
+        if not self.value_list:
+            self.value_list = self.client.list_values(10)
+            if self.value_list:
+                self.enumerate_controls(self.value_list)
+            return
+        
         command = self.sCommand.GetValue()
         if command != 0:
             if self.tbAP.GetValue():
@@ -164,10 +167,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                time.monotonic() - gain['last_change'] > 1:
                 gain['slider'].SetValue(gain['sliderval'])
 
-
-        value_list = self.client.list_values()
-        if value_list:
-            self.enumerate_controls(value_list)
                 
         msgs = self.client.receive()
 
