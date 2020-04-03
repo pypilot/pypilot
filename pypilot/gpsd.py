@@ -31,7 +31,7 @@ class gpsProcess(multiprocessing.Process):
                 time.sleep(3)
                 continue
             except Exception as e:
-                print('gpsd error:', e)
+                print('failed to load gps module', e)
             time.sleep(600)
 
     def read(self, pipe):

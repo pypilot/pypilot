@@ -44,7 +44,7 @@ def read_allowed():
 def scan_devices():
     devices = []
     #rpi3, orange pi have ttyS, othes have ttyAMA
-    devicesp = ['ttyAMA', 'ttyS']
+    devicesp = ['ttyAMA']
         
     by_id = '/dev/serial/by-id'
     if os.path.exists(by_id):

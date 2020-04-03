@@ -324,10 +324,11 @@ def pypilotClientFromArgs(args, period=True):
         host = args[1]
 
     client = pypilotClient(host)
-    if not client.connect(False):
+    if client.connect(False):
+        args.remove(host)
+    else:
         if host:
             client = pypilotClient()
-            watches = args[1:]
             client.connect()
         if not client.connection:
             print('failed to connect')
@@ -335,17 +336,23 @@ def pypilotClientFromArgs(args, period=True):
 
     # set any value specified with path=value
     watches = []
-    for arg in args[2:]:
+    sets = False
+    for arg in args[1:]:
         if '=' in arg:
             name, value = arg.split('=', 1)
-            self.send(arg + '\n')
+            client.send(arg + '\n')
+            sets = True
         else:
             name = arg
         watches.append(name)
 
-    # args without = are watched
+    if sets:
+        client.poll(1)
+        time.sleep(.5) # todo: wait until value set to what we set or fail
+        
     for name in watches:
         client.watch(name, period)
+
     return client
 
 
@@ -405,11 +412,11 @@ def main():
     if not continuous:
         values = {}
         t0 = time.monotonic()
-        while len(values) < len(watches):
+        while len(values) < len(client.watches):
             dt = time.monotonic() - t0
             if dt > 10:
-                print('timeout retrieving', len(watches) - len(values), 'values')
-                for name in watches:
+                print('timeout retrieving', len(client.watches) - len(values), 'values')
+                for name in client.watches:
                     if not name in values:
                         print('missing', name)
                 break

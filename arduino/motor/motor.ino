@@ -126,8 +126,8 @@ PWR+             VIN
 // and somehow at slower clock atmega328 is able to measure lower current from the shunt
 
 #define DIV_CLOCK 4  // speed board runs at  1 for 16mhz, 2 for 8mhz, 4 for 4mhz (recommended 4mhz)
-#define DIV_BOARD 2 // actual crystal/resonator speed 1 if 16mhz, 2 if 8mhz
-#define BLINK  // blink status led while detached to avoid quiecent consumption of on led (3mA)
+#define DIV_BOARD 1 // actual crystal/resonator speed 1 if 16mhz, 2 if 8mhz
+//#define BLINK  // blink status led while detached to avoid quiecent consumption of on led (3mA)
 #define QUIET  // don't use 1khz
 
 

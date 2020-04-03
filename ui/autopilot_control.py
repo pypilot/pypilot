@@ -171,11 +171,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         msgs = self.client.receive()
 
         for name in msgs:
-            data = msgs[name]
-            if not 'value' in data:
-                print('no value?!?!', data)
-                continue
-            value = data['value']
+            value = msgs[name]
             self.recv[name] = True
 
             found = False
