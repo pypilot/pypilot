@@ -95,12 +95,15 @@ class ServoFlags(Value):
     CURRENT_RANGE=256*4
     BAD_FUSES=256*8
 
-    DRIVER_MASK = 4095 # bits used for driver flags
+    REBOOTED=256*16*8
 
-    PORT_FAULT=4096*1 # overcurrent faults
-    STARBOARD_FAULT=4096*2
-    DRIVER_TIMEOUT = 4096*4
-    SATURATED = 4096*8
+    sz = 256*256
+    DRIVER_MASK = sz-1 # bits used for driver flags
+
+    PORT_FAULT=sz*1 # overcurrent faults
+    STARBOARD_FAULT=sz*2
+    DRIVER_TIMEOUT = sz*4
+    SATURATED = sz*8
 
     def __init__(self, name):
         super(ServoFlags, self).__init__(name, 0)
@@ -137,6 +140,8 @@ class ServoFlags(Value):
             ret += 'DRIVER_TIMEOUT '
         if self.value & self.SATURATED:
             ret += 'SATURATED '
+        if self.value & self.REBOOTED:
+            ret += 'REBOOTED'
         return ret
 
     def setbit(self, bit, t=True):
@@ -553,7 +558,7 @@ class Servo(object):
             print('servo lost')
             self.close_driver()
             return
-        
+
         t = time.time()
         if result == 0:
             d = t - self.lastpolltime
