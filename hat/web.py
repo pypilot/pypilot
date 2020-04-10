@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 from flask import Flask, render_template, request, Markup
 from flask_socketio import SocketIO, Namespace, emit, disconnect
 import time, math, select, os

@@ -12,7 +12,6 @@
 # pins for more functionallity (tack button, 
 # spi port.
 
-from __future__ import print_function
 import os, sys, time, json
 import crc
 
