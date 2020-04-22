@@ -179,7 +179,7 @@ uint8_t low_current = 1;
 uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 2
 
 #define port_fault_pin 7 // use pin 7 for optional fault
-#define starboard_fault_pin 8 // use pin 7 for optional fault
+#define starboard_fault_pin 8 // use pin 8 for optional fault
 // if switches pull this pin low, the motor is disengaged
 // and will be noticed by the control program
 
