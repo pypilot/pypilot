@@ -38,16 +38,16 @@ class BasicPilot(AutopilotPilot):
     self.heading_command_rate.time = 0
     self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
 
-    # create simple pid filter
+    # create extended pid filter
     self.gains = {}
         
-    self.PosGain('P', .003, .02)  # position (heading error)
-    self.PosGain('I', 0.005, .1)      # integral
+    self.PosGain('P', .003, .02)   # position (heading error)
+    self.PosGain('I', 0.005, .1)   # integral
     self.PosGain('D',  .09, 1.0)   # derivative (gyro)
     self.PosGain('DD',  .075, 1.0) # rate of derivative
-    self.PosGain('PR',  .005, .05)  # position root
-    self.PosGain('FF',  .6, 3.0) # feed forward
-    self.PosGain('R',  0.0, 1.0)  # reactive
+    self.PosGain('PR',  .005, .05) # position square root
+    self.PosGain('FF',  .6, 3.0)   # feed forward
+    self.PosGain('R',  0.0, 1.0)   # reactive
     self.reactive_time = self.Register(RangeProperty, 'Rtime', 1, 0, 3)
 
     self.reactive_value = self.Register(SensorValue, 'reactive_value')
