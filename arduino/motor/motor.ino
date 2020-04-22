@@ -210,7 +210,7 @@ uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 
 #define voltage_sense_pin 12
 uint8_t voltage_sense = 1;
 uint8_t voltage_mode = 0;  // 0 = 12 volts, 1 = 24 volts
-uint16_t max_voltage = 1600; // 16 volts max by default
+uint16_t max_voltage = 1600; // 16 volts max in 12 volt mode
 
 #define led_pin 13 // led is on when engaged
 
@@ -539,10 +539,10 @@ void position(uint16_t value)
     }
 }
 
-uint16_t command_value = 1000;
+uint16_t command_value = 1000; // range is 0 to 2000 for forward and backward
 void stop()
 {
-    position(1000);
+    position(1000); // 1000 is stopped
     command_value = 1000;
 }
 
@@ -638,10 +638,8 @@ void detach()
 
 void engage()
 {
-    if(flags & ENGAGED) {
-        //update_command(); // 30hz
-        return;
-    }
+    if(flags & ENGAGED)
+        return; // already engaged
 
     if(pwm_style == 1) {
         TCNT1 = 0x1fff;
@@ -933,14 +931,15 @@ ISR(WDT_vect)
     wdt_reset();
     wdt_disable();
     if(!calculated_clock) {
-        calculated_clock = 1;
+        calculated_clock = 1; // use watchdog interrupt once at startup to compute the crystal's frequency
         return;
     }
+    // normal watchdog event (program stuck)
     disengage();
     delay(50);
     detach();
 
-    asm volatile ("ijmp" ::"z" (0x0000));
+    asm volatile ("ijmp" ::"z" (0x0000)); // soft reset
 }
 
 ISR(TIMER1_OVF_vect) __attribute__((naked));
@@ -1032,7 +1031,6 @@ void process_packet()
         unsigned int max_max_current = low_current ? 2000 : 4000;
         if(value > max_max_current) // maximum is 20 or 40 amps
             value = max_max_current;
-
         max_current = value;
     } break;
     case MAX_CONTROLLER_TEMP_CODE:
@@ -1045,12 +1043,6 @@ void process_packet()
             value = 10000;
         max_motor_temp = value;
         break;
-#if 0 // ignore obsolete rudder range code
-    case RUDDER_RANGE_CODE:
-      rudder_max = in_bytes[1]<<8;
-      rudder_min = in_bytes[2]<<8;
-      break;
-#endif
     case RUDDER_MIN_CODE:
         rudder_min = value;
         break;
@@ -1071,21 +1063,18 @@ void process_packet()
             max_slew_speed = 250;
         if(max_slew_slow > 250)
             max_slew_slow = 250;
-
         // must have some slew
         if(max_slew_speed < 1)
             max_slew_speed = 1;
         if(max_slew_slow < 1)
             max_slew_slow = 1;
     } break;
-
     case EEPROM_READ_CODE:
         if(eeprom_read_addr == eeprom_read_end) {
             eeprom_read_addr = in_bytes[1];
             eeprom_read_end = in_bytes[2];
         }        
     break;
-
     case EEPROM_WRITE_CODE:
         eeprom_update_8(in_bytes[1], in_bytes[2]);
     break;
@@ -1102,11 +1091,10 @@ void loop()
         if(flags & ENGAGED) {
             static uint8_t update_d;
             if(++update_d >= 4/DIV_CLOCK) {
-                update_command(); // 30hz
+                update_command();
                 update_d = 0;
             }
         }
-
         timeout++;
         TCNT2 -= 78;
     }
@@ -1187,11 +1175,10 @@ void loop()
     if(CountADC(VOLTAGE, 1) > react_count) {
         uint16_t volts = TakeVolts(1);
         if(volts >= 1800 && !voltage_mode && !voltage_sense) {
-            // switch to higher voltage
-            voltage_mode = 1; // higher voltage
-            digitalWrite(voltage_sense_pin, LOW);
+            voltage_mode = 1; // switch from 12v mode to 24v mode
+            digitalWrite(voltage_sense_pin, LOW); // changes voltage divider
             pinMode(voltage_sense_pin, OUTPUT);
-            max_voltage = 3200; // 32 v max in 24v mode
+            max_voltage = 3200; // increase max voltage to 32v
             delay(2);
             TakeVolts(0); // clear readings
             TakeVolts(1);
