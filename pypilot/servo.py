@@ -100,8 +100,8 @@ class ServoFlags(Value):
     sz = 256*256
     DRIVER_MASK = sz-1 # bits used for driver flags
 
-    PORT_FAULT=sz*1 # overcurrent faults
-    STARBOARD_FAULT=sz*2
+    PORT_OVERCURRENT_FAULT=sz*1 # overcurrent faults
+    STARBOARD_OVERCURRENT_FAULT=sz*2
     DRIVER_TIMEOUT = sz*4
     SATURATED = sz*8
 
@@ -132,10 +132,10 @@ class ServoFlags(Value):
             ret += 'MAX_RUDDER_FAULT '
         if self.value & self.BAD_FUSES:
             ret += 'BAD_FUSES '
-        if self.value & self.PORT_FAULT:
-            ret += 'PORT_FAULT '
-        if self.value & self.STARBOARD_FAULT:
-            ret += 'STARBOARD_FAULT '
+        if self.value & self.PORT_OVERCURRENT_FAULT:
+            ret += 'PORT_OVERCURRENT_FAULT '
+        if self.value & self.STARBOARD_OVERCURRENT_FAULT:
+            ret += 'STARBOARD_OVERCURRENT_FAULT '
         if self.value & self.DRIVER_TIMEOUT:
             ret += 'DRIVER_TIMEOUT '
         if self.value & self.SATURATED:
@@ -154,12 +154,12 @@ class ServoFlags(Value):
         self.setbit(bit, False)
             
     def port_fault(self):
-        self.update((self.value | ServoFlags.PORT_FAULT) \
-                    & ~ServoFlags.STARBOARD_FAULT)
+        self.update((self.value | ServoFlags.PORT_OVERCURRENT_FAULT) \
+                    & ~ServoFlags.STARBOARD_OVERCURRENT_FAULT)
 
     def starboard_fault(self):
-        self.update((self.value | ServoFlags.STARBOARD_FAULT) \
-                    & ~ServoFlags.PORT_FAULT)
+        self.update((self.value | ServoFlags.STARBOARD_OVERCURRENT_FAULT) \
+                    & ~ServoFlags.PORT_OVERCURRENT_FAULT)
         
     def get_pypilot(self):
         return '{"' + self.name + '": {"value": "' + self.strvalue() + '"}}'
@@ -197,8 +197,8 @@ class Servo(object):
         self.calibration = self.Register(JSONValue, 'calibration', {})
         self.load_calibration()
 
-        self.command = self.Register(TimedProperty, 'command')
         self.position_command = self.Register(TimedProperty, 'position_command')
+        self.command = self.Register(TimedProperty, 'command')
 
         self.speed_gain = self.Register(RangeProperty, 'speed_gain', 0, 0, 1)
         self.duty = self.Register(SensorValue, 'duty')
@@ -335,8 +335,8 @@ class Servo(object):
             return
 
         # prevent moving the wrong direction if flags set
-        if self.flags.value & (ServoFlags.PORT_FAULT | ServoFlags.MAX_RUDDER_FAULT) and speed > 0 or \
-           self.flags.value & (ServoFlags.STARBOARD_FAULT | ServoFlags.MIN_RUDDER_FAULT) and speed < 0:
+        if self.flags.value & (ServoFlags.PORT_OVERCURRENT_FAULT | ServoFlags.MAX_RUDDER_FAULT) and speed > 0 or \
+           self.flags.value & (ServoFlags.STARBOARD_OVERCURRENT_FAULT | ServoFlags.MIN_RUDDER_FAULT) and speed < 0:
             self.raw_command(0)
             return # abort
 
@@ -348,9 +348,9 @@ class Servo(object):
         # clear faults from overcurrent if moved sufficiently the other direction
         rudder_range = self.sensors.rudder.range.value
         if self.position.value < .9*rudder_range:
-            self.flags.clearbit(ServoFlags.PORT_FAULT)
+            self.flags.clearbit(ServoFlags.PORT_OVERCURRENT_FAULT)
         if self.position.value > -.9*rudder_range:
-            self.flags.clearbit(ServoFlags.STARBOARD_FAULT)
+            self.flags.clearbit(ServoFlags.STARBOARD_OVERCURRENT_FAULT)
 
         # compensate for fluxuating battery voltage
         if self.compensate_voltage.value and self.voltage.value:
@@ -431,12 +431,14 @@ class Servo(object):
                 return
 
             command = cal[0] + abs(speed)*cal[1]
-            if speed < 0:
-                command = -command
-            self.raw_command(command)
         except:
             print ('servo calibration invalid', self.calibration.value)
-            self.calibration.set({'port': [.2, .8], 'starboard': [.2, .8]})            
+            self.calibration.set({'port': [.2, .8], 'starboard': [.2, .8]})
+            return
+
+        if speed < 0:
+            command = -command
+        self.raw_command(command)
 
     def raw_command(self, command):
         # compute duty cycle
@@ -470,8 +472,8 @@ class Servo(object):
                 self.driver.disengage()
             else:
                 mul = 1
-                if self.flags.value & ServoFlags.PORT_FAULT or \
-                   self.flags.value & ServoFlags.STARBOARD_FAULT: # allow more current to "unstuck" ram
+                if self.flags.value & ServoFlags.PORT_OVERCURRENT_FAULT or \
+                   self.flags.value & ServoFlags.STARBOARD_OVERCURRENT_FAULT: # allow more current to "unstuck" ram
                     mul = 2
                 self.send_driver_params(mul)
 
@@ -651,8 +653,8 @@ class Servo(object):
             self.gain.set(self.driver.gain)
 
         if self.fault():
-            if not self.flags.value & ServoFlags.PORT_FAULT and \
-               not self.flags.value & ServoFlags.STARBOARD_FAULT:
+            if not self.flags.value & ServoFlags.PORT_OVERCURRENT_FAULT and \
+               not self.flags.value & ServoFlags.STARBOARD_OVERCURRENT_FAULT:
                 self.faults.set(self.faults.value + 1)
             
             # if overcurrent then fault in the direction traveled
@@ -722,7 +724,7 @@ def main():
     servo = Servo(server, sensors)
     servo.max_current.set(20)
 
-    period = .1
+    period = 1/20.0
     start = lastt = time.time()
     while True:
         servo.poll()
