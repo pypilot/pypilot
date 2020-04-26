@@ -268,7 +268,7 @@ class pypilotClient(object):
             if names:
                 self.get(names.pop())
             else:
-                time.sleep(.1)
+                time.sleep(.05)
 
             if time.time()-t0 >= timeout:
                 return False
@@ -380,7 +380,7 @@ def main():
         exit(0)
     signal.signal(signal.SIGINT, quit)
     while True:
-        msg = client.receive_single(.1)
+        msg = client.receive_single(.05)
         if not msg:
             continue
         

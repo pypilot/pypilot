@@ -138,13 +138,13 @@ def pipe_server_process(pipe, port, persistent_path):
     while time.time() - t0 < 2:
       while server.HandlePipeMessage():
         pass
-      time.sleep(.1)
+      time.sleep(.05)
 
     while True:
         while server.HandlePipeMessage():
             pass
         server.HandleRequests()
-        time.sleep(.1)
+        time.sleep(.05)
 
 
 class pypilotPipeServer(object):

@@ -66,7 +66,7 @@ class pypilotScope(pypilotScopeBase):
 
         self.timer = wx.Timer(self, wx.ID_ANY)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
-        self.timer.Start(100)
+        self.timer.Start(50)
 
         self.sTime.SetValue(self.plot.disptime)
         self.plot_reshape = False
@@ -84,7 +84,7 @@ class pypilotScope(pypilotScopeBase):
             try:
                 host, port = self.host_port
                 self.client = pypilotClient(self.on_con, host, port, autoreconnect=False)
-                self.timer.Start(100)
+                self.timer.Start(50)
             except socket.error:
                 self.timer.Start(1000)
                 return

@@ -127,7 +127,12 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def servo_command(self, command):
         if self.lastcommand != command or command != 0:
             self.lastcommand = command
+            #if command > .2:
+            #   command = .87
+            #elif command < -.2:
+            #    command = -.87
             self.client.set('servo.command', command)
+            
 
     def send_gain(self, name, gain):
         slidervalue = gain['slider'].GetValue() / 1000.0 * (gain['max'] - gain['min']) + gain['min']

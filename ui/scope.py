@@ -199,8 +199,10 @@ class pypilotPlot():
         if name == 'timestamp':
             self.timestamp = data['value']
             return
-        #timestamp = time.time()
-        timestamp = self.timestamp
+        try:
+            timestamp = self.timestamp
+        except:
+            timestamp = time.time()
 
         value = data['value']
         if type(value) == type([]):
