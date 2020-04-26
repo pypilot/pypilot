@@ -125,21 +125,17 @@ PWR+             VIN
 // run at 4mhz instead of 16mhz to save power
 // and somehow at slower clock atmega328 is able to measure lower current from the shunt
 
-#define DIV_CLOCK 4  // speed board runs at  1 for 16mhz, 2 for 8mhz, 4 for 4mhz (recommended 4mhz)
+#define DIV_CLOCK 2  // speed board runs at  1 for 16mhz, 2 for 8mhz, 4 for 4mhz (recommended 4 or 8mhz)
 //#define BLINK  // blink status led while detached to avoid quiecent consumption of on led (3mA)
-#define QUIET  // don't use 1khz
 
+static volatile uint8_t timer1_state;
 
 #if DIV_CLOCK==4
 #define dead_time \
     asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
     asm volatile ("nop");
 #elif DIV_CLOCK==2
 #define dead_time \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
     asm volatile ("nop"); \
     asm volatile ("nop"); \
     asm volatile ("nop"); \
@@ -155,16 +151,19 @@ PWR+             VIN
     asm volatile ("nop"); \
     asm volatile ("nop"); \
     asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
     asm volatile ("nop");
 #warning "DIV_CLOCK set to 1, this will only work with 16mhz xtal"
 #else
 #error "invalid DIV_CLOCK"
 #endif
+
+
+// time to charge bootstrap capacitor
+#define charge_time \
+        dead_time;
+        dead_time;
+        dead_time;
+        dead_time;
 
 #define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
 uint8_t shunt_resistance = 1;
@@ -207,6 +206,8 @@ uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 
 #define clutch_on PORTB |= _BV(PB3)
 #define clutch_off PORTB &= ~_BV(PB3)
 
+#define USE_ADC_ISR 0 // set to 1 to use interrupt (recommend 0)
+
 #define voltage_sense_pin 12
 uint8_t voltage_sense = 1;
 uint8_t voltage_mode = 0;  // 0 = 12 volts, 1 = 24 volts
@@ -230,7 +231,7 @@ enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, M
 enum {SYNC=1, OVERTEMP_FAULT=2, OVERCURRENT_FAULT=4, ENGAGED=8, INVALID=16, PORT_PIN_FAULT=32, STARBOARD_PIN_FAULT=64, BADVOLTAGE_FAULT=128, MIN_RUDDER_FAULT=256, MAX_RUDDER_FAULT=512, CURRENT_RANGE=1024, BAD_FUSES=2048, /* PORT_FAULT=4096  STARBOARD_FAULT=8192 */ REBOOTED=32768};
 
 uint16_t flags = REBOOTED, faults = 0;
-uint8_t serialin, packet_count = 0;
+uint8_t serialin;
 
 // we need these to be atomic for 16 bytes
 
@@ -432,13 +433,12 @@ void setup()
     else
         adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
     ADMUX = adcref | _BV(MUX0);
+#if USE_ADC_ISR
     ADCSRA = _BV(ADEN) | _BV(ADIE); // enable adc with interrupts
-#if DIV_CLOCK==4
-    ADCSRA |= _BV(ADPS2) | _BV(ADPS1); // divide clock by 64
-//    ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
 #else
-    ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
+    ADCSRA = _BV(ADEN); // enable adc
 #endif
+    ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
     ADCSRA |= _BV(ADSC); // start conversion
 }
 
@@ -478,44 +478,48 @@ void position(uint16_t value)
         // some cycling is required to refresh the bootstrap capacitor
         // but the current through the motor remains continuous
         if(value > 1100) {
-#ifndef QUIET                
-            ICR1_u=16000/DIV_CLOCK;  //fPWM=1khz
-            if(value > 1980)
-                value = 1980;
-            OCR1A_u = 20 + (2000 - value)*(16/DIV_CLOCK);
-#else
             if(value > 1900) {
                 if(low_current)
                     ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
                 else
                     ICR1_u=16000;  //faster frequency for high current board
-                OCR1A_u = 120; // 99.8125% duty cycle
+#if 0
+                OCR1A_u = 120; // 99.8% duty cycle (not used anymore)
+                timer1_state = 1;
+                TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
+#else
+                timer1_state = 4; // take advantage of special state
+                TIMSK1 = _BV(TOIE1);
+#endif
             } else {
                 ICR1_u=1000/DIV_CLOCK;  //fPWM=16khz
-                OCR1A_u = 20 + (2000 - value)/DIV_CLOCK;
+                OCR1A_u = 30 + (1900 - value)/DIV_CLOCK; // 30 is minimum time for interrupts to complete
+                timer1_state = 1;
+                TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
             }
-#endif
-            TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
+
         } else if(value < 900) {
-#ifndef QUIET                
-            ICR1_u=16000/DIV_CLOCK;  //fPWM=1khz
-            if(value < 20)
-                value = 20;
-            OCR1B_u = 20 + (value)*16/DIV_CLOCK;
-#else
             if(value < 100) {
                 if(low_current)
                     ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
                 else
                     ICR1_u=16000;  //faster frequency for high current board
-                OCR1B_u = 120;
+#if 0
+                OCR1B_u = 120;  // using old state, 80/64000 = .99875 deadtime
+                timer1_state = 2;
+                TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);
+#else
+                timer1_state = 8; // take advantage of special state
+                TIMSK1 = _BV(TOIE1);
+#endif
             } else {
                 ICR1_u=1000/DIV_CLOCK;  //fPWM=16khz
-                OCR1B_u = 20 + (value)/DIV_CLOCK;
+                OCR1B_u = 30 + (value-100)/DIV_CLOCK;
+                timer1_state = 2;
+                TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);
             }
-#endif
-            TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);
         } else {
+            timer1_state = 0;
             TIMSK1 = 0;//_BV(TOIE1);
             a_top_off;
             b_top_off;
@@ -526,10 +530,10 @@ void position(uint16_t value)
             b_bottom_off;
         }
 
-        if(TIMSK1) {
+        if(TIMSK1) { // timer has interrupts, update registers
             OCR1A = OCR1A_u;
             OCR1B = OCR1B_u;
-            if(ICR1 != ICR1_u) {
+            if(ICR1 != ICR1_u) { // if frequency changed
                 cli();
                 ICR1 = ICR1_u;
                 TCNT1 = ICR1_u - 40; // ensure timer is before new end
@@ -612,6 +616,7 @@ void detach()
     } else {
         TCCR1A=0;
         TCCR1B=0;
+        timer1_state = 0;
         TIMSK1 = 0;
         a_top_off;
         a_bottom_off;
@@ -670,6 +675,7 @@ void engage()
         digitalWrite(enable_pin, HIGH);
     } else {
         //Configure TIMER1
+        timer1_state = 0;
         TIMSK1 = 0;
         TCNT1 = 0;
         TCCR1A=_BV(WGM11);        //NON Inverted PWM
@@ -718,16 +724,11 @@ uint8_t adc_cnt;
 // channel change takes 12 cycles, total is 854 cycles,
 // 16mhz / 128 / 854 = 146 samples/s, except for current,
 // has 6862 samples/s
-ISR(ADC_vect)
+void adc_isr()
 {
-    if(pwm_style)
-        ADCSRA |= _BV(ADSC); // enable conversion
-    else
-        sei(); // enable nested interrupts to ensure correct operation
-
     uint16_t adcw = ADCW;
     if(++adc_cnt <= 3) // discard first few readings after changing channel
-        goto ret;
+        return;
 
     for(int i=0; i<2; i++) {
         if(adc_results[adc_counter][i].count < 4000) {
@@ -738,13 +739,13 @@ ISR(ADC_vect)
 
     if(adc_counter == CURRENT) { // take more current measurements
         if(adc_cnt < 50)
-            goto ret;
+            return;
     } else if(adc_counter == VOLTAGE) {
         if(adc_cnt < 8)
-            goto ret;
+            return;
     } else if(adc_counter == RUDDER && rudder_sense)
         if(adc_cnt < 16) // take more samples for rudder, if sampled
-            goto ret;
+            return;
 
     // advance to next channel
     adc_cnt = 0;
@@ -764,9 +765,13 @@ ISR(ADC_vect)
         adc_counter=0;
 #endif
     ADMUX = adcref | muxes[adc_counter];
-ret:;
-    if(!pwm_style)
-        ADCSRA |= _BV(ADSC); // enable conversion
+}
+
+ISR(ADC_vect)
+{
+    sei();
+    adc_isr();
+    ADCSRA |= _BV(ADSC); // enable conversion
 }
 
 uint16_t CountADC(uint8_t index, uint8_t p)
@@ -936,7 +941,7 @@ ISR(WDT_vect)
     }
     // normal watchdog event (program stuck)
     disengage();
-    delay(50);
+    _delay_ms(50);
     detach();
 
     asm volatile ("ijmp" ::"z" (0x0000)); // soft reset
@@ -945,22 +950,49 @@ ISR(WDT_vect)
 ISR(TIMER1_OVF_vect) __attribute__((naked));
 ISR(TIMER1_OVF_vect)
 {
-    asm volatile ("push r24"); // this register used to read TIMSK1
+    asm volatile ("push r24"); // this register used to read timer1_state
+    // bitwise and because compiler generates sbrs that does not affect flags and works in naked isr
+    if(timer1_state & 1) {  // forward pwm
+        asm volatile ("nop"); // balance 2 cycle delay of rjmp
+        asm volatile ("nop"); // to get symmetric drive times
+        asm volatile ("nop"); // waste 3 more cycles: lds
+        asm volatile ("nop"); // (stupid compiler loads timer1_state into r24 every time)
+        asm volatile ("nop");
+        a_top_off;
+        dead_time;
+        a_bottom_on;
+        asm volatile ("pop r24");  // no need to rjmp
+        asm volatile ("reti");
+    }
 
-    if(TIMSK1 & _BV(TOIE1)) {
-        if(TIMSK1 & _BV(OCIE1A)) {
-            asm volatile ("nop"); // balance 2 cycle delay of rjmp
-            asm volatile ("nop"); // to get symmetric drive times
-            a_top_off;
-            dead_time;
-            a_bottom_on;
-            asm volatile ("pop r24");  // no need to rjmp
-            asm volatile ("reti");
-        } else {
-            b_top_off;
-            dead_time;
-            b_bottom_on;
-        }
+    if(timer1_state & 2) { // backward pwm
+        b_top_off;
+        dead_time;
+        b_bottom_on;
+        asm volatile ("pop r24");  // no need to rjmp
+        asm volatile ("reti");
+    }
+
+    if(timer1_state & 4) { // forward steady (pulse to recharge gate cap)
+        a_top_off;
+        dead_time;
+        a_bottom_on;
+        charge_time;
+        a_bottom_off;
+        b_top_off;
+        dead_time;
+        a_top_on;
+        b_bottom_on;
+    } else if(timer1_state & 8) { // reverse steady
+        b_top_off;
+        dead_time;
+        b_bottom_on;
+        charge_time;
+        b_bottom_off;
+        a_top_off;
+        dead_time;
+        b_top_on;
+        a_bottom_on;
     }
     
     asm volatile ("pop r24");
@@ -974,7 +1006,7 @@ ISR(TIMER1_COMPA_vect) __attribute__((naked));
 ISR(TIMER1_COMPA_vect)
 {
     a_bottom_off;
-    b_top_off;
+    b_top_off; // should already be off
     dead_time;
     a_top_on;
     b_bottom_on;
@@ -985,7 +1017,7 @@ ISR(TIMER1_COMPB_vect) __attribute__((naked));
 ISR(TIMER1_COMPB_vect)
 {
     b_bottom_off;
-    a_top_off;
+    a_top_off; // should already be off
     dead_time;
     b_top_on;
     a_bottom_on;
@@ -1081,10 +1113,24 @@ void process_packet()
     }
 }
 
+#if USE_ADC_ISR
+#define service_adc(X) // do nothing
+#else
+void service_adc() {
+    if(ADCSRA & _BV(ADSC)) // data not ready
+        return;
+
+    adc_isr();
+    ADCSRA |= _BV(ADSC); // start conversion
+}
+#endif
+
 void loop()
 {
+    TIMSK0 &= ~_BV(TOIE0); // disable timer0 interrupt: millis is not used!
     wdt_reset(); // strobe watchdog
-
+    service_adc();
+ 
     // did timer2 pass 78?
     // Timer2 ticks at 3906hz (4mhz), so this is ~50hz
     if(TCNT2 > 78) {
@@ -1108,15 +1154,24 @@ void loop()
     // wait for characters
     // boot powered down, wake on data
 #if 0 // hardly worth it
-    if(!Serial.available()) {
+    while(ADCSRA & _BV(ADSC)) { // wait for conversion
         set_sleep_mode(SLEEP_MODE_IDLE);
         sleep_enable();
         sleep_cpu();
     }
 #endif
+
+#if 0
+    // hack to output this command always (for testing)
+    timeout = 0;
+    command_value = 1900;
+    engage();
+#endif
+    
     // serial input
     while(Serial.available()) {
       uint8_t c = Serial.read();
+      service_adc();
       if(sync_b < 3) {
           in_bytes[sync_b] = c;
           sync_b++;
@@ -1124,6 +1179,7 @@ void loop()
           if(c == crc8(in_bytes, 3)) {
               if(in_sync_count >= 2) { // if crc matches, we have a valid packet
                   process_packet();
+                  service_adc();
               } else
                   in_sync_count++;
 
@@ -1134,7 +1190,6 @@ void loop()
               flags &= ~SYNC;
               stop(); //disengage();
               in_sync_count = 0;
-              packet_count = 0;
               in_bytes[0] = in_bytes[1]; // shift input 1 byte
               in_bytes[1] = in_bytes[2];
               in_bytes[2] = c;
@@ -1156,13 +1211,10 @@ void loop()
         flags |= STARBOARD_PIN_FAULT;
     } else
       flags &= ~STARBOARD_PIN_FAULT;
+    service_adc();
 
-    // test current
-#if DIV_CLOCK == 1
-    const int react_count = 600; // need 600 for .1 reaction
-#else
-    const int react_count = 300;
-#endif
+    // test current   2000sps @ 8mhz
+    const int react_count = 400/DIV_CLOCK; // need 400 samples for .1 reaction
     if(CountADC(CURRENT, 1) > react_count) {
         uint16_t amps = TakeAmps(1);
         if(amps >= max_current) {
@@ -1171,15 +1223,17 @@ void loop()
         } else
             faults &= ~OVERCURRENT_FAULT;
     }
+    service_adc();
 
-    if(CountADC(VOLTAGE, 1) > react_count) {
+    const int voltage_react_count = 400/DIV_CLOCK; // 200sps @ 8mhz 1s reaction
+    if(CountADC(VOLTAGE, 1) > voltage_react_count) { // 1 second
         uint16_t volts = TakeVolts(1);
         if(volts >= 1800 && !voltage_mode && !voltage_sense) {
             voltage_mode = 1; // switch from 12v mode to 24v mode
             digitalWrite(voltage_sense_pin, LOW); // changes voltage divider
             pinMode(voltage_sense_pin, OUTPUT);
             max_voltage = 3200; // increase max voltage to 32v
-            delay(2);
+            _delay_ms(2);
             TakeVolts(0); // clear readings
             TakeVolts(1);
         } else
@@ -1190,11 +1244,12 @@ void loop()
         } else
             flags &= ~BADVOLTAGE_FAULT;
     }
+    service_adc();
 
     flags |= faults;
 
     // test over temp
-    const int temp_react_count = 50; // 1 second
+    const int temp_react_count = 100/DIV_CLOCK; // 1 second
     if(CountADC(CONTROLLER_TEMP, 1) > temp_react_count &&
        CountADC(MOTOR_TEMP, 1) > temp_react_count) {
         uint16_t controller_temp = TakeTemp(CONTROLLER_TEMP, 1);
@@ -1212,8 +1267,9 @@ void loop()
             asm volatile ("ijmp" ::"z" (0x0000)); // attempt soft reset
         }
     }
+    service_adc();
 
-    const int rudder_react_count = 40; // approx 0.1 second reaction
+    const int rudder_react_count = 80/DIV_CLOCK; // 400sps @ DIV_CLOCK=2 ~ approx 0.1 second reaction
     if(CountADC(RUDDER, 1) > rudder_react_count) {
         uint16_t v = TakeRudder(1);
         if(rudder_sense) {
@@ -1238,6 +1294,7 @@ void loop()
             flags &= ~(MIN_RUDDER_FAULT | MAX_RUDDER_FAULT);
         }
     }
+    service_adc();
 
     // output 1 byte
     switch(out_sync_b) {
@@ -1267,9 +1324,6 @@ void loop()
             v = TakeAmps(0);
             code = CURRENT_CODE;
             serialin-=4; // fix current output rate to input rate
-            delay(1); // small dead time to break serial transmission
-            if(packet_count < 255)
-                packet_count++;
             break;
         case 2: case 5: case 8: case 12: case 15: case 18: case 22: case 25: case 28: case 32: case 35: case 38: case 41:
             if(CountADC(RUDDER, 0) < 10 || (!rudder_sense && out_sync_pos > 3))
