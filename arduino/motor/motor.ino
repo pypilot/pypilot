@@ -1214,7 +1214,7 @@ void loop()
     service_adc();
 
     // test current   2000sps @ 8mhz
-    const int react_count = 400/DIV_CLOCK; // need 400 samples for .1 reaction
+    const int react_count = 400/DIV_CLOCK;
     if(CountADC(CURRENT, 1) > react_count) {
         uint16_t amps = TakeAmps(1);
         if(amps >= max_current) {
@@ -1269,7 +1269,7 @@ void loop()
     }
     service_adc();
 
-    const int rudder_react_count = 80/DIV_CLOCK; // 400sps @ DIV_CLOCK=2 ~ approx 0.1 second reaction
+    const int rudder_react_count = 100/DIV_CLOCK; // 400sps @ DIV_CLOCK=2 ~ approx 0.125 second reaction
     if(CountADC(RUDDER, 1) > rudder_react_count) {
         uint16_t v = TakeRudder(1);
         if(rudder_sense) {
