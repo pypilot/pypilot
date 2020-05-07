@@ -418,6 +418,31 @@ void setup()
         digitalWrite(pwm_output_pin, LOW); /* enable internal pullups */
         pinMode(pwm_output_pin, OUTPUT);
     }
+
+#if defined(__AVR_ATmega328pb__)
+    // read device signature bytes to identify processor
+    uint8_t sig[3], c = 0;
+    for (uint8_t i = 0; i < 5; i += 2)
+        sig[c++] = Serial.print(boot_signature_byte_get(i));
+    if(0/*disable for now*/   &&   sig[0] == 0x1e && sig[1] == 0x95 && sig[2] == 0x16) {
+        // detected atmega328pb processor, we have timers 3 and 4 with hardware pwm possible
+        if(pwm_style == 0) {
+            // upgrade to use hardware pwm (style 3)
+            pwm_style = 3;
+            // use timers 1, 2, 3 for pwm (with deadtime)
+            // use timer 4 in place of timer 2 for count
+            // stop all timers
+            GTCCR = (1<<TSM)|(1<<PSRASY)|(1<<PSRSYNC); // halt all timers
+            ICR1 = 0x255; // use timer1 as 8 bit timer
+            ICR4 = 0x255; // use timer2 also as 8 bit timer
+            TCNT1 = 0;
+            TCNT2 = 10; // deadtime
+            TCNT3 = 10;
+            GTCCR = 0; // restart timers 
+        }
+    }
+#endif    
+    
     // test shunt type, if pin wired to ground, we have 0.01 ohm, otherwise 0.05 ohm
     shunt_resistance = digitalRead(shunt_sense_pin);
 
@@ -596,8 +621,10 @@ void update_command()
 void disengage()
 {
     stop();
-    flags &= ~ENGAGED;
-    timeout = 120/DIV_CLOCK+1; // detach in about 62ms
+    if(flags | ENGAGED) {
+        flags &= ~ENGAGED;
+        timeout = 30; // detach in about 62ms
+    }
     digitalWrite(clutch_pin, LOW); // clutch
 }
 
@@ -623,7 +650,12 @@ void detach()
         b_top_off;
         b_bottom_off;
     }
-    TIMSK2 = 0;
+#if defined(__AVR_ATmega328pb__)
+    if(pwm_style == 3)
+        TIMSK4 = 0;
+    else
+#endif
+        TIMSK2 = 0;
 
 #ifdef BLINK
     static uint32_t led_blink;
@@ -638,7 +670,7 @@ void detach()
     digitalWrite(led_pin, LOW); // status LED
 #endif
     
-    timeout = 128/DIV_CLOCK; // avoid overflow
+    timeout = 33; // avoid overflow
 }
 
 void engage()
@@ -697,10 +729,19 @@ void engage()
     digitalWrite(clutch_pin, HIGH); // clutch
     digitalWrite(led_pin, HIGH); // status LED
 
-// use timer2 as timeout
     timeout = 0;
-    TCNT2 = 0;
-    TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20); // divide 1024
+#if defined(__AVR_ATmega328pb__)
+    if(pwm_style == 3) {
+        TCNT4 = 0;
+        /// fix this TCCR4B = _BV(CS22) | _BV(CS21) | _BV(CS20); // divide 1024
+        // use timer5 as timeout
+    } else
+#endif        
+    {
+        // use timer2 as timeout
+        TCNT2 = 0;
+        TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20); // divide 1024
+    }
 
     flags |= ENGAGED;
 }
@@ -1133,22 +1174,34 @@ void loop()
  
     // did timer2 pass 78?
     // Timer2 ticks at 3906hz (4mhz), so this is ~50hz
-    if(TCNT2 > 78) {
-        if(flags & ENGAGED) {
-            static uint8_t update_d;
-            if(++update_d >= 4/DIV_CLOCK) {
-                update_command();
-                update_d = 0;
-            }
+    uint8_t ticks;
+#if defined(__AVR_ATmega328pb__)
+    if(pwm_style == 3)
+        ticks = TCNT4;
+    else
+#endif        
+        ticks = TCNT2;
+    if(ticks > 78) {
+        static uint8_t timeout_d;
+        // divide timeout for faster clocks, timeout counts at 50hz
+        if(++timeout_d >= 4/DIV_CLOCK) {
+            if(flags & ENGAGED)
+                update_command(); // update speed changes to slew speed
+            timeout_d = 0;
+            timeout++;
         }
-        timeout++;
-        TCNT2 -= 78;
+#if defined(__AVR_ATmega328pb__)
+        if(pwm_style == 3)
+            TCNT4 -= 78;
+        else
+#endif
+            TCNT2 -= 78;
     }
 
-    if(timeout == 120/DIV_CLOCK)
+    if(timeout == 30)
         disengage();
 
-    if(timeout >= 128/DIV_CLOCK) // detach 60 ms later so esc gets stop
+    if(timeout > 32) // detach 62 ms later so esc gets stop
         detach();
 
     // wait for characters
