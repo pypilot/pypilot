@@ -105,7 +105,8 @@ class APB(Sensor):
             if data['isgp'] != 'GP':
                 mode.set(data['mode'])
             else:
-                return # APB is from GP no gps mode selected so exit
+                return 
+                # APB is from GP with no gps mode selected so exit
 
         command = data['track'] + self.gain.value*data['xte']
 
