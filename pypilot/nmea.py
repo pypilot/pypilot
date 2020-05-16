@@ -157,13 +157,17 @@ def parse_nmea_apb(line):
         return False
     try:
         data = line[7:len(line)-3].split(',')
-        mode = 'compass' if data[13] == 'M' else 'gps'
+        isgp = line[1:3]
+        if isgp != 'GP':
+            mode = 'compass' if data[13] == 'M' else 'gps'
+        else:
+            mode = 'gps'
         track = float(data[12])
         xte = float(data[2])
         xte = min(xte, 0.15) # maximum 0.15 miles
         if data[3] == 'L':
             xte = -xte
-        return 'apb', {'mode': mode, 'track':  track, 'xte': xte, '**': line[1:3] == 'GP'}
+        return 'apb', {'mode': mode, 'track':  track, 'xte': xte, 'isgp': isgp}
     except Exception as e:
         print('ex', e)
         return False
