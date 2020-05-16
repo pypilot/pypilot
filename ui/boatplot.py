@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+ #!/usr/bin/env python
 #
 #   Copyright (C) 2016 Sean D'Epagnier
 #
@@ -26,6 +26,7 @@ except Exception as e:
     print('failed to load pywavefront:', e)
     pywavefront = False
 
+
 from pypilot import quaternion
 
 class BoatPlot():
@@ -33,7 +34,7 @@ class BoatPlot():
         # looking at boat from nice angle
         self.Q = [-0.32060682, -0.32075041, 0.73081691, -0.51013437]
         #self.Q = [1, 0, 0, 0]
-        self.Scale = 2
+        self.Scale = 3
         self.compasstex = 0
         self.obj = False
         self.texture_compass = True
@@ -46,6 +47,21 @@ class BoatPlot():
         os.chdir(os.path.abspath(path))
 
     def display(self, fusionQPose):
+        width, height = self.dim
+        glViewport(0, 0, width, height)
+
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        if width < 10 or height < 10:
+            print('boatplot: invalid display dimensions', width, height)
+            return
+        
+        ar = 0.5 * width / height
+        glFrustum(-ar, ar, -0.5, 0.5, 2.0, 300.0)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+
+        
         glClearColor(0, .2, .7, 0)
         glClearDepth(100)
         
@@ -176,14 +192,7 @@ class BoatPlot():
         glDisable(GL_TEXTURE_2D)
 
     def reshape(self, width, height):
-        glViewport(0, 0, width, height)
-
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        ar = 0.5 * width / height
-        glFrustum(-ar, ar, -0.5, 0.5, 2.0, 300.0)
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
+        self.dim = width, height
 
 if __name__ == '__main__':
     plot = BoatPlot()

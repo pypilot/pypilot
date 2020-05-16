@@ -1,3 +1,8 @@
+To compile and upload arduino sketches:
+
+sudo apt install arduino
+
+
 pypilot can communicate with arduinos over serial port
 
 motor - motor controller   binary checksum 4 byte protocol (38400 baud)
@@ -7,7 +12,7 @@ weather sensors - nmea0183 wind, presure and air temp (38400 baud)
 
 
 NOTE, if BAD_FUSES flag is raised, it because the
-cheapest arduino clones sometimes has wrong fuses set:
+cheapest arduino clones sometimes have wrong fuses set. If BOD levels are not set then it's possible to cause data corruption from poor wiring which then requires reprogramming.  Better to set fuses correctly.
 
 load arduino isp sketch to one arduino to program another, connect 6 wires as described in arduinoisp sketch
 

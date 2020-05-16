@@ -245,14 +245,21 @@ def probe(name, bauds, timeout=5):
     serial_device = device, bauds[0]
 
     try:
-        import serial
+        try:
+            import serial
+            serial.Serial
+        except Exception as e:
+            print('No serial.Serial available')
+            print('pip3 uninstall serial')
+            print('pip3 install pyserial')
+            exit(1)
         serial.Serial(*serial_device)
     except serial.serialutil.SerialException as err:
         arg = err.args[0]
         if type(arg) == type('') and 'Errno ' in  arg:
             arg = int(arg[arg.index('Errno ')+6: arg.index(']')])
         if arg == 16: # device busy, retry later
-            print('busy, try again later', probe['device'], name)
+            print('busy, try again later', serial_device, probe['device'], name)
         elif arg == 6: # No such device or address, don't try again
             devices.remove(device)
         elif arg == 5: # input output error (unusable)

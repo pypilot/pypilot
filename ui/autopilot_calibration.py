@@ -10,11 +10,12 @@
 from __future__ import print_function
 import tempfile, time, math, sys, subprocess, json, socket, os
 import wx, wx.glcanvas
-import autopilot_control_ui
-import calibration_plot, pypilot.quaternion, boatplot
-import signalk.scope_wx
-from signalk.client import SignalKClient, ConnectionLost
-from signalk.client_wx import round3
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import calibration_plot, boatplot, autopilot_control_ui
+import pypilot.quaternion
+import scope_wx
+from pypilot.client import pypilotClient, ConnectionLost
+from client_wx import round3
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -34,7 +35,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.host = sys.argv[1]
 
         self.client = False
-
         self.accel_calibration_plot = calibration_plot.AccelCalibrationPlot()
         self.accel_calibration_glContext =  wx.glcanvas.GLContext(self.AccelCalibration)
 
@@ -43,46 +43,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.boat_plot = boatplot.BoatPlot()
         self.boat_plot_glContext =  wx.glcanvas.GLContext(self.BoatPlot)
-
-        self.dsServoMaxCurrent.SetIncrement(.1)
-        self.dsServoMaxCurrent.SetDigits(1)
-        self.dsServoMaxCurrent.Bind( wx.EVT_SPINCTRLDOUBLE, self.onMaxCurrent )
-
-        self.dsServoMaxControllerTemp.SetRange(45, 100)
-        self.dsServoMaxControllerTemp.Bind( wx.EVT_SPINCTRL, self.onMaxControllerTemp )
-
-        self.dsServoMaxMotorTemp.SetRange(30, 100)
-        self.dsServoMaxMotorTemp.Bind( wx.EVT_SPINCTRL, self.onMaxMotorTemp )
-
-        self.dsServoCurrentFactor.SetRange(.8, 1.2)
-        self.dsServoCurrentFactor.SetIncrement(.0016)
-        self.dsServoCurrentFactor.SetDigits(4)
-        self.dsServoCurrentFactor.Bind( wx.EVT_SPINCTRLDOUBLE, self.onCurrentFactor )
-
-        self.dsServoCurrentOffset.SetRange(-1.2, 1.2)
-        self.dsServoCurrentOffset.SetIncrement(.01)
-        self.dsServoCurrentOffset.SetDigits(2)
-        self.dsServoCurrentOffset.Bind( wx.EVT_SPINCTRLDOUBLE, self.onCurrentOffset )
-
-        self.dsServoVoltageFactor.SetRange(.8, 1.2)
-        self.dsServoVoltageFactor.SetIncrement(.0016)
-        self.dsServoVoltageFactor.SetDigits(4)
-        self.dsServoVoltageFactor.Bind( wx.EVT_SPINCTRLDOUBLE, self.onVoltageFactor )
-
-        self.dsServoVoltageOffset.SetRange(-1.2, 1.2)
-        self.dsServoVoltageOffset.SetIncrement(.01)
-        self.dsServoVoltageOffset.SetDigits(2)
-        self.dsServoVoltageOffset.Bind( wx.EVT_SPINCTRLDOUBLE, self.onVoltageOffset )
-
-        self.dsServoMaxSlewSpeed.SetRange(0, 100)
-        self.dsServoMaxSlewSpeed.Bind( wx.EVT_SPINCTRL, self.onMaxSlewSpeed )
-
-        self.dsServoMaxSlewSlow.SetRange(0, 100)
-        self.dsServoMaxSlewSlow.Bind( wx.EVT_SPINCTRL, self.onMaxSlewSlow )
-
-        self.dsServoGain.SetIncrement(.1)
-        self.dsServoGain.SetDigits(1)
-        self.dsServoGain.Bind( wx.EVT_SPINCTRLDOUBLE, self.onServoGain )
         
         self.lastmouse = False
         self.alignment_count = 0
@@ -92,10 +52,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=self.ID_MESSAGES)
 
         self.heading_offset_timer = wx.Timer(self, self.ID_HEADING_OFFSET)
-        self.Bind(wx.EVT_TIMER, lambda e : self.sHeadingOffset.SetValue(round3(self.signalk_heading_offset)), id = self.ID_HEADING_OFFSET)
-
-        self.servo_timer = wx.Timer(self, self.ID_CALIBRATE_SERVO)
-        self.Bind(wx.EVT_TIMER, self.calibrate_servo_timer, id=self.ID_CALIBRATE_SERVO)
+        self.Bind(wx.EVT_TIMER, lambda e : self.sHeadingOffset.SetValue(round3(self.pypilot_heading_offset)), id = self.ID_HEADING_OFFSET)
 
         self.have_rudder = False
 
@@ -103,29 +60,30 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.Bind(wx.EVT_TIMER, self.request_msg, id=self.ID_REQUEST_MSG)
         self.request_msg_timer.Start(250)
         
-        self.servoprocess = False
-
         self.fusionQPose = [1, 0, 0, 0]
         self.controltimes = {}
+
+        self.settings = {}
 
     def set_watches(self, client):
         if not client:
             return
 
+        def calwatch(name):
+            name = 'imu.' + name
+            return [name + '.calibration', name + '.calibration.age',
+                    name, name + '.calibration.sigmapoints',
+                    name + '.calibration.locked', name + '.calibration.log']
+        
         watchlist = [
             ['imu.fusionQPose', 'imu.alignmentCounter', 'imu.heading',
              'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading_offset'],
-            ['imu.accel.calibration', 'imu.accel.calibration.age', 'imu.accel',
-             'imu.accel.calibration.sigmapoints', 'imu.accel.calibration.locked'],
-            ['imu.fusionQPose', 'imu.compass.calibration', 'imu.compass.calibration.age', 'imu.compass',
-             'imu.compass.calibration.sigmapoints', 'imu.compass.calibration.locked'],
-            ['servo.flags',
-             'servo.max_current', 'servo.max_controller_temp', 'servo.max_motor_temp',
-             'servo.current.factor', 'servo.current.offset','servo.voltage.factor',
-             'servo.voltage.offset', 'servo.max_slew_speed', 'servo.max_slew_slow',
-             'servo.gain'],
+            calwatch('accel'),
+            calwatch('compass') + ['imu.fusionQPose', 'imu.alignmentQ'],
             ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity',
-             'rudder.range', 'rudder.calibration_state']]
+             'rudder.range', 'servo.flags']]
+
+        watchlist.append(list(self.settings))
 
         pageindex = 0
         for pagelist in watchlist:
@@ -135,14 +93,55 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         pageindex = self.m_notebook.GetSelection()
         for name in watchlist[pageindex]:
             client.watch(name)
-        
+
     def on_con(self, client):
+        # clear out plots
+        self.accel_calibration_plot.points = []
+        self.compass_calibration_plot.points = []
+
+        values = client.list_values()
+
+        if not self.settings:
+            fgSettings = wx.FlexGridSizer( 0, 3, 0, 0 )
+            fgSettings.AddGrowableCol( 1 )
+            fgSettings.SetFlexibleDirection( wx.BOTH )
+            fgSettings.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+            self.m_pSettings.SetSizer( fgSettings )
+            self.m_pSettings.Layout()
+            fgSettings.Fit( self.m_pSettings )
+
+            lvalues = list(values)
+            lvalues.sort()
+            for name in lvalues:
+                if 'units' in values[name]:
+                    v = values[name]
+                    def proc():
+                        s = wx.SpinCtrlDouble(self.m_pSettings, wx.ID_ANY)
+                        s.SetRange(v['min'], v['max'])
+                        s.SetIncrement(min(1, (v['max'] - v['min']) / 100.0))
+                        s.SetDigits(-math.log(s.GetIncrement()) / math.log(10) + 1)
+                        self.settings[name] = s
+                        fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, name), 0, wx.ALL, 5)
+                        fgSettings.Add(s, 0, wx.ALL | wx.EXPAND, 5)
+                        fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, v['units']), 0, wx.ALL, 5)
+
+                        sname = name
+                        def onspin(event):
+                            self.client.set(sname, s.GetValue())
+                        s.Bind( wx.EVT_SPINCTRLDOUBLE, onspin )
+                    proc()
+            fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+            fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+            b = wx.Button( self.m_pSettings, wx.ID_OK )
+            fgSettings.Add ( b, 1, wx.ALIGN_RIGHT, 5)
+
         self.set_watches(client)
 
     def receive_messages(self, event):
         if not self.client:
             try:
-                self.client = SignalKClient(self.on_con, self.host, autoreconnect=False)
+                self.client = pypilotClient(self.on_con, self.host, autoreconnect=False)
             except socket.error:
                 self.timer.Start(5000)
                 return
@@ -154,12 +153,14 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.timer.Start(50)
         except ConnectionLost:
             self.client = False
+        except Exception as e:
+            print(e)
 
     def request_msg(self, event):
         if not self.client:
             return
 
-        page_gets = [[], [], [], ['servo.voltage', 'servo.current'], ['rudder.angle']]
+        page_gets = [[], [], [], ['rudder.angle'], []]
         i = self.m_notebook.GetSelection()
         for name in page_gets[i]:
             self.client.get(name)
@@ -180,29 +181,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         name, data = msg
         value = data['value']
 
-        if self.m_notebook.GetSelection() == 1:
-            self.accel_calibration_plot.read_data(msg)
-            if name == 'imu.accel':
-                self.AccelCalibration.Refresh()
-            elif name == 'imu.accel.calibration':
-                self.stAccelCal.SetLabel(str(round3(value)))
-            elif name == 'imu.accel.calibration.age':
-                self.stAccelCalAge.SetLabel(str(value))
-            elif name == 'imu.accel.calibration.locked':
-                self.cbAccelCalibrationLocked.SetValue(value)
-
-        elif self.m_notebook.GetSelection() == 2:
-            self.compass_calibration_plot.read_data(msg)
-            if name == 'imu.compass':
-                self.CompassCalibration.Refresh()
-            elif name == 'imu.compass.calibration':
-                self.stCompassCal.SetLabel(str(round3(value[0])))
-            elif name == 'imu.compass.calibration.age':
-                self.stCompassCalAge.SetLabel(str(value))
-            elif name == 'imu.compass.calibration.locked':
-                self.cbCompassCalibrationLocked.SetValue(value)
-
-        elif self.m_notebook.GetSelection() == 0:
+        if self.m_notebook.GetSelection() == 0:
             if name == 'imu.alignmentQ':
                 self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(pypilot.quaternion.angle(value))))
             elif name == 'imu.fusionQPose':
@@ -231,44 +210,36 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             elif name == 'imu.heading':
                 self.stHeading.SetLabel(str(round3(value)))
             elif name == 'imu.heading_offset':
-                self.signalk_heading_offset = value
+                self.pypilot_heading_offset = value
                 self.heading_offset_timer.Start(1000, True)
 
-        elif self.m_notebook.GetSelection() == 3:
-            if name == 'servo.flags':
-                self.UpdateLabel(self.stServoFlags, value)
-            elif name == 'servo.calibration':
-                s = ''
-                for name in value:
-                    s += name + ' = ' + str(value[name]) + '\n'
-                self.stServoCalibration.SetLabel(s)
-                self.SetSize(wx.Size(self.GetSize().x+1, self.GetSize().y))
-            elif name == 'servo.max_current':
-                self.UpdatedSpin(self.dsServoMaxCurrent, round3(value))
-            elif name == 'servo.max_controller_temp':
-                self.UpdatedSpin(self.dsServoMaxControllerTemp, value)
-            elif name == 'servo.max_motor_temp':
-                self.UpdatedSpin(self.dsServoMaxMotorTemp, value)
-            elif name == 'servo.current.factor':
-                self.UpdatedSpin(self.dsServoCurrentFactor, round(value, 4))
-            elif name == 'servo.current.offset':
-                self.UpdatedSpin(self.dsServoCurrentOffset, value)
-            elif name == 'servo.voltage.factor':
-                self.UpdatedSpin(self.dsServoVoltageFactor, round(value, 4))
-            elif name == 'servo.voltage.offset':
-                self.UpdatedSpin(self.dsServoVoltageOffset, value)
-            elif name == 'servo.max_slew_speed':
-                self.UpdatedSpin(self.dsServoMaxSlewSpeed, value)
-            elif name == 'servo.max_slew_slow':
-                self.UpdatedSpin(self.dsServoMaxSlewSlow, value)
-            elif name == 'servo.gain':
-                self.UpdatedSpin(self.dsServoGain, value)
-            elif name == 'servo.voltage':
-                self.UpdateLabel(self.m_stServoVoltage, (str(round3(value))))
-            elif name == 'servo.current':
-                self.UpdateLabel(self.m_stServoCurrent, (str(round3(value))))
+        elif self.m_notebook.GetSelection() == 1:
+            self.accel_calibration_plot.read_data(msg)
+            if name == 'imu.accel':
+                self.AccelCalibration.Refresh()
+            elif name == 'imu.accel.calibration':
+                self.stAccelCal.SetLabel(str(round3(value)))
+            elif name == 'imu.accel.calibration.age':
+                self.stAccelCalAge.SetLabel(str(value))
+            elif name == 'imu.accel.calibration.locked':
+                self.cbAccelCalibrationLocked.SetValue(value)
+            elif name == 'imu.accel.calibration.log':
+                self.tAccelCalibrationLog.WriteText(value+'\n')
 
-        elif self.m_notebook.GetSelection() == 4:
+        elif self.m_notebook.GetSelection() == 2:
+            self.compass_calibration_plot.read_data(msg)
+            if name == 'imu.compass':
+                self.CompassCalibration.Refresh()
+            elif name == 'imu.compass.calibration':
+                self.stCompassCal.SetLabel(str(round3(value)))
+            elif name == 'imu.compass.calibration.age':
+                self.stCompassCalAge.SetLabel(str(value))
+            elif name == 'imu.compass.calibration.locked':
+                self.cbCompassCalibrationLocked.SetValue(value)
+            elif name == 'imu.compass.calibration.log':
+                self.tCompassCalibrationLog.WriteText(value+'\n')
+        
+        elif self.m_notebook.GetSelection() == 3:
             if name == 'rudder.angle':
                 self.UpdateLabel(self.stRudderAngle, str(round3(value)))
                 self.have_rudder = type(value) != type(bool)
@@ -280,37 +251,19 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 self.UpdateLabel(self.stRudderNonlinearity, str(round3(value)))
             elif name == 'rudder.range':
                 self.UpdatedSpin(self.sRudderRange, value)
+            elif name == 'servo.flags':
+                self.stServoFlags.SetLabel(value)
+
+        elif self.m_notebook.GetSelection() == 4:
+            for n in self.settings:
+                if name == n:
+                    self.UpdatedSpin(self.settings[name], value)
+                    break
 
 
     def servo_console(self, text):
         self.stServoCalibrationConsole.SetLabel(self.stServoCalibrationConsole.GetLabel() + text + '\n')
     
-    def calibrate_servo_timer(self, event):
-        if not self.servoprocess:
-            return
-
-        self.servoprocess.poll()
-
-        print('servotimer', self.servoprocess.returncode, self.servoprocess.returncode==None)
-        if self.servoprocess.returncode == None:
-            self.servoprocess.communicate()
-            line = self.servoprocess.stdout.readline()
-            print('line', line)
-            if line:
-                self.servo_console(line)
-            self.servo_timer.Start(150, True)
-        else:
-            self.bCalibrateServo.Enable()
-            if self.servoprocess.returncode == 0:
-                file = open('servo_calibration')
-                calibration = json.loads(file.readline())
-                self.client.set('servo.calibration', calibration)
-                self.servo_console('calibration sent.')
-            else:
-                self.servo_console('calibration failed.')
-
-            self.servoprocess = False
-
     def PageChanged( self, event ):
         self.set_watches(self.client)
             
@@ -321,7 +274,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.onKeyPress(event, self.compass_calibration_plot)
         
     def onKeyPress( self, event, plot ):
-        signalk.scope_wx.wxglutkeypress(event, plot.special, plot.key)
+        scope_wx.wxglutkeypress(event, plot.special, plot.key)
 
     def onClearAccel( self, event ):
         self.accel_calibration_plot.points = []
@@ -385,14 +338,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def onSizeGLCompass( self, event ):
         self.compass_calibration_plot.reshape(event.GetSize().x, event.GetSize().y)
 
-    def StartAlignment(self):
-        self.client.set('imu.alignmentCounter', 100)
-
     def onResetAlignment(self, event):
-        self.client.set('imu.alignmentQ', [1, 0, 0, 0])
+        self.client.set('imu.alignmentQ', False)
 
     def onLevel( self, event ):
-        self.StartAlignment()
+        self.client.set('imu.alignmentCounter', 100)
         
     def onIMUHeadingOffset( self, event ):
         self.client.set('imu.heading_offset', self.sHeadingOffset.GetValue())
@@ -415,7 +365,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         if event.Dragging():
             dx, dy = pos[0] - self.lastmouse[0], pos[1] - self.lastmouse[1]
             q = pypilot.quaternion.angvec2quat((dx**2 + dy**2)**.4/180*math.pi, [dy, dx, 0])
-            
             self.boat_plot.Q = pypilot.quaternion.multiply(q, self.boat_plot.Q)
             self.BoatPlot.Refresh()
             self.lastmouse = pos
@@ -450,54 +399,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onIMUScope( self, event ):
         host, port = self.client.host_port
-        args = ['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/scope_wx.py', host + ':' + str(port),
+        args = ['pypilot_scope', host + ':' + str(port),
                 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading']
         subprocess.Popen(args)
-        
-    def onCalibrateServo( self, event ):
-        try:
-            self.servoprocess = subprocess.Popen(['python', 'servo_calibration.py', sys.argv[1]], stdout=subprocess.PIPE)
-            self.servo_console('executed servo_calibration.py...')
-            self.servo_timer.Start(150, True)
-            self.bCalibrateServo.Disable()
-        except OSError:
-            self.servo_console('Failed to execute servo_calibration.py.\n')
 
-    def onMaxCurrent( self, event ):
-        self.client.set('servo.max_current', event.GetValue())
-
-    def onMaxControllerTemp( self, event ):
-        self.client.set('servo.max_controller_temp', event.GetValue())
-
-    def onMaxMotorTemp( self, event ):
-        self.client.set('servo.max_motor_temp', event.GetValue())
-
-    def onCurrentFactor( self, event ):
-        self.client.set('servo.current.factor', event.GetValue())
-
-    def onCurrentOffset( self, event ):
-        self.client.set('servo.current.offset', event.GetValue())
-
-    def onVoltageFactor( self, event ):
-        self.client.set('servo.voltage.factor', event.GetValue())
-
-    def onVoltageOffset( self, event ):
-        self.client.set('servo.voltage.offset', event.GetValue())
-
-    def onMaxSlewSpeed( self, event ):
-        self.client.set('servo.max_slew_speed', event.GetValue())
-
-    def onMaxSlewSlow( self, event ):
-        self.client.set('servo.max_slew_slow', event.GetValue())
-
-    def onServoGain( self, event ):
-        self.client.set('servo.gain', event.GetValue())
-
-    def onServoAutoGain( self, event ):
-        if self.have_rudder:
-            self.client.set('rudder.calibration_state', 'auto gain')
-        else:
-            wx.MessageDialog(self, _('Auto gain calibration requires a rudder sensor'), _('Warning'), wx.OK).ShowModal()
     def onRudderResetCalibration( self, event ):
         self.client.set('rudder.calibration_state', 'reset')
 

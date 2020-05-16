@@ -31,12 +31,26 @@ static uint16_t frombase255(uint16_t x)
     return h*255 + l;
 }
 
+static uint16_t tobase255s(int16_t x)
+{
+    if(x<-32512 || x>32512)
+        return 0xffff;
+    return tobase255((int32_t)x+32512);
+}
+
+static int16_t frombase255s(uint16_t x)
+{
+    int32_t z = frombase255(x);
+    return z  - 32512;
+}
+
+
 arduino_servo_eeprom::arduino_servo_eeprom()
     : initial_read(false)
 {
     memset(&local, 0, sizeof local);
     memset(&verified, 0, sizeof verified);
-    memcpy(local.signature, "arsv24", 6); // change this if the format changes
+    memcpy(local.signature, "arsv25", 6); // change this if the format changes
 }
 
 double arduino_servo_eeprom::get_max_current()
@@ -79,36 +93,37 @@ void arduino_servo_eeprom::set_rudder_range(double rudder_range)
     local.rudder_range = round(rudder_range * 2); // from 0 to 120 in 0.5 increments
 }
 
+// store offset as s9.6 fixed point
 double arduino_servo_eeprom::get_rudder_offset()
 {
-    return arduino.rudder_offset/2.0;
+    return frombase255s(arduino.rudder_offset)/64.0;
 }
 
 void arduino_servo_eeprom::set_rudder_offset(double rudder_offset)
 {
-    local.rudder_offset = round(rudder_offset * 2); // from 0 to 120
+    local.rudder_offset = tobase255s(round(rudder_offset * 64));
 }
 
-// store rudder scale from -512 to 512 for s9.6 fixed point
+// store rudder scale s12.3 fixed point
 double arduino_servo_eeprom::get_rudder_scale()
 {
-    return frombase255(arduino.rudder_scale)/64.0;
+    return frombase255s(arduino.rudder_scale)/8.0;
 }
 
 void arduino_servo_eeprom::set_rudder_scale(double rudder_scale)
 {
-    local.rudder_scale = tobase255(round(rudder_scale * 64));
+    local.rudder_scale = tobase255s(round(rudder_scale * 8.0));
 }
 
-// store nonlinearity from -1 to 1 for s1.14 fixed point
+// store nonlinearity s12.3 fixed point
 double arduino_servo_eeprom::get_rudder_nonlinearity()
 {
-    return (int16_t)frombase255(arduino.rudder_nonlinearity)/16250.0;
+    return frombase255s(arduino.rudder_nonlinearity)/8.0;
 }
 
 void arduino_servo_eeprom::set_rudder_nonlinearity(double rudder_nonlinearity)
 {
-    local.rudder_nonlinearity = tobase255(round(rudder_nonlinearity * 16250));
+    local.rudder_nonlinearity = tobase255s(round(rudder_nonlinearity * 8.0));
 }
 
 double arduino_servo_eeprom::get_max_slew_speed()
@@ -171,35 +186,35 @@ void arduino_servo_eeprom::set_voltage_offset(double voltage_offset)
     local.voltage_offset = 127 + round(voltage_offset*100.0);
 }
 
-double arduino_servo_eeprom::get_min_motor_speed()
+double arduino_servo_eeprom::get_min_speed()
 {
-    return arduino.min_motor_speed/200.0;
+    return arduino.min_speed/2.0;
 }
      
-void arduino_servo_eeprom::set_min_motor_speed(double min_motor_speed)
+void arduino_servo_eeprom::set_min_speed(double min_speed)
 {
-    local.min_motor_speed = round(min_motor_speed*200.0);
+    local.min_speed = round(min_speed*2.0);
 }
 
-double arduino_servo_eeprom::get_max_motor_speed()
+double arduino_servo_eeprom::get_max_speed()
 {
-    return arduino.max_motor_speed/200.0;
+    return arduino.max_speed/2.0;
 }
      
-void arduino_servo_eeprom::set_max_motor_speed(double max_motor_speed)
+void arduino_servo_eeprom::set_max_speed(double max_speed)
 {
-    local.max_motor_speed = round(max_motor_speed*200.0);
+    local.max_speed = round(max_speed*2.0);
 }
 
-
+// record gain in thousandths
 double arduino_servo_eeprom::get_gain()
 {
-    return frombase255(arduino.gain)/1000.0;
+    return frombase255s(arduino.gain)/1000.0;
 }
 
 void arduino_servo_eeprom::set_gain(double gain)
 {
-    local.gain = tobase255(round(gain*1000.0));
+    local.gain = tobase255s(round(gain*1000.0));
 }
 
 int arduino_servo_eeprom::need_read(uint8_t *end)
@@ -247,12 +262,12 @@ bool arduino_servo_eeprom::initial()
 
     // signature failed, discard this data
     if(memcmp(arduino.signature, local.signature, sizeof local.signature)) {
-        printf("Arudino EEPROM Signature FAILED!\n");
+        printf("Arduino EEPROM Signature FAILED!\n");
         return false;
     }
 
-    uint8_t *l = (uint8_t*)&local, *a = (uint8_t*)&arduino;
-    int ls = sizeof local;
+    uint8_t *a = (uint8_t*)&arduino;
+    int ls = sizeof arduino;
 
     // discard if any byte is 0xff.
     // This is invalid data and is also the initial eeprom value

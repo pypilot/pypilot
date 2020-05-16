@@ -7,23 +7,20 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-try:
-  from autopilot import *
-except:
-  from pypilot.autopilot import *
+from pilot import AutopilotPilot
 
 class SimplePilot(AutopilotPilot):
   def __init__(self, ap):
     super(SimplePilot, self).__init__('simple', ap)
+    self.disabled = True # IMPORTANT:  remove this line enable the simple pilot
 
     # create simple pid filter
     self.gains = {}
-    timestamp = self.ap.server.TimeStamp('ap')
     self.Gain('P', .005, 0, .025)
     self.Gain('I', 0, 0, .05)
     self.Gain('D', .15, 0, .5)
 
-  def process_imu_data(self):
+  def process(self, reset):
     ap = self.ap
     headingrate = ap.boatimu.SensorValues['headingrate'].value
     gain_values = {'P': ap.heading_error.value,
@@ -34,3 +31,5 @@ class SimplePilot(AutopilotPilot):
 
     if ap.enabled.value:
       ap.servo.command.set(command)
+
+pilot = SimplePilot

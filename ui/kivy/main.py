@@ -27,7 +27,7 @@ from kivy.animation import Animation
 #from kivy.lang import Builder
 from kivy.clock import Clock
 
-from client import SignalKClient
+from client import pypilotClient
 
 class AutopilotControl(TabbedPanel):
     pass
@@ -60,7 +60,7 @@ class AutopilotControlApp(App):
                 client.watch(name)
 
         try:
-            self.client = SignalKClient(on_con, autoreconnect=True)
+            self.client = pypilotClient(on_con, autoreconnect=True)
             pass
         except:
             return

@@ -9,7 +9,7 @@
 
 from __future__ import print_function
 import time, sys
-from signalk.client import SignalKClient
+from pypilot.client import pypilotClient
 import json, math, numpy
 from pypilot import quaternion
 from pypilot import vector
@@ -101,7 +101,7 @@ class CalibrationPlot(object):
         glPushMatrix()
 
         if not self.fusionQPose:
-            return
+            return [0, 0, 1]
 
         down = [0, 0, 1]
         q = [1, 0, 0, 0]
@@ -116,7 +116,7 @@ class CalibrationPlot(object):
         glPointSize(4)
         glColor3f(1,.3,.3)
         glBegin(GL_POINTS)
-        for i in xrange(max(len(self.recent_points) - recent_point_count, 0), \
+        for i in range(max(len(self.recent_points) - recent_point_count, 0), \
                         len(self.recent_points)):
             glVertex3fv(self.recent_points[i])
         glEnd()
@@ -124,7 +124,7 @@ class CalibrationPlot(object):
         glPointSize(4)
         glColor3f(0,1,0)
         glBegin(GL_POINTS)
-        for i in xrange(len(self.points)):
+        for i in range(len(self.points)):
             glVertex3fv(self.points[i])
         glEnd()
 
@@ -276,10 +276,10 @@ class CompassCalibrationPlot(CalibrationPlot):
 
         try:
             glColor3f(.8, .8, .8)
-            glVertex3fv(map(lambda x, y :-x*cal_sphere[3]+y, down, cal_sphere[:3]))
-            glVertex3fv(map(lambda x, y : x*cal_sphere[3]+y, down, cal_sphere[:3]))
-        except:
-            print('ERROR!!!!!!!!!!!!!!', self.accel, cal_sphere)
+            glVertex3fv(list(map(lambda x, y :-x*cal_sphere[3]+y, down, cal_sphere[:3])))
+            glVertex3fv(list(map(lambda x, y : x*cal_sphere[3]+y, down, cal_sphere[:3])))
+        except Exception as e:
+            print('ERROR!', down, cal_sphere, e)
         glEnd()
         self.draw_points()
 
@@ -289,11 +289,11 @@ if __name__ == '__main__':
         host = sys.argv[1]
 
     def on_con(client):
-        watchlist = ['imu.accel', 'imu.compass', 'imu.compass.calibration', 'imu.compass.calibration', 'imu.compass.calibration.sigmapoints', 'imu.fusionQPose']
+        watchlist = ['imu.accel', 'imu.compass', 'imu.compass.calibration', 'imu.compass.calibration', 'imu.compass.calibration.sigmapoints', 'imu.fusionQPose', 'imu.alignmentQ']
         for name in watchlist:
             client.watch(name)
         
-    client = SignalKClient(on_con, host, autoreconnect=True)
+    client = pypilotClient(on_con, host, autoreconnect=True)
     plot = CompassCalibrationPlot()
 
     def display():

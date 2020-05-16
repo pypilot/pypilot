@@ -7,7 +7,7 @@
  */
 
 /* this program interfaces with the bmp280 pressure sensor and outputs
-   calibrated signalk data over serial at 38400 baud
+   calibrated nmea0183 data over serial at 38400 baud
  */
 
 /* anemometer wires
@@ -39,10 +39,10 @@ extern "C" {
 // comment/uncomment these settings as needed
 #define ANEMOMETER   // comment to show only baro graph
 
-#define LCD          // if nokia5110 lcd on spi port
-//#define DAVIS     // uncomment only for davis sensors
+//#define LCD          // if nokia5110 lcd on spi port
+#define DAVIS     // uncomment only for davis sensors
 #define LCD_BL_HIGH  // if backlight pin is high rather than gnd
-#define FARENHEIT  // farenheit temperature on lcd display
+//#define FARENHEIT  // farenheit temperature on lcd display
 
 
 
@@ -423,12 +423,12 @@ void read_anemometer()
             Serial.println("Calibration Finished");
             cross_count--;
             // use new calibration
-            memcpy(eeprom_data, new_eeprom_data, sizeof eeprom_data);
+            memcpy(&eeprom_data, &new_eeprom_data, sizeof eeprom_data);
             
             struct eeprom_data_struct ram_eeprom;
             eeprom_read_block(&ram_eeprom, 0, sizeof ram_eeprom);
             // don't write update unless there is a significant change
-            if(abs(eeprom_data.wind_max_reading - ram_data.wind_max_reading) > 20 || abs(eeprom_data.wind_min_reading - ram_data.wind_min_reading) > 20)
+            if(abs(eeprom_data.wind_max_reading - ram_eeprom.wind_max_reading) > 20 || abs(eeprom_data.wind_min_reading - ram_eeprom.wind_min_reading) > 20)
                 eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
         }
         return;

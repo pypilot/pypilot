@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from signalk.values import *
+from values import *
 from resolv import *
 
 class TackSensorLog(object):
@@ -71,10 +71,10 @@ class Tack(object):
     self.state = self.Register(EnumProperty, 'state', 'none', ['none', 'begin', 'waiting', 'tacking'])
     self.timeout = self.Register(Value, 'timeout', 0)
 
-    self.delay = self.Register(RangeProperty, 'delay', 0, 0, 60)
-    self.angle = self.Register(RangeProperty, 'angle', 100, 10, 180)
-    self.rate = self.Register(RangeProperty, 'rate', 20, 1, 100)
-    self.threshold = self.Register(RangeProperty, 'threshold', .5, .1, 1)
+    self.delay = self.Register(RangeSetting, 'delay', 0, 0, 60, 'sec')
+    self.angle = self.Register(RangeSetting, 'angle', 100, 10, 180, 'deg')
+    self.rate = self.Register(RangeSetting, 'rate', 20, 1, 100, 'deg/s')
+    self.threshold = self.Register(RangeSetting, 'threshold', 50, 10, 100, '%')
     self.count = self.Register(ResettableValue, 'count', 0, persistent=True)
     self.direction = self.Register(EnumProperty, 'direction', 'port', ['port', 'starboard'])
     self.current_direction = 'port' # so user can't change while tacking
@@ -88,19 +88,20 @@ class Tack(object):
 
   def process(self):
     t = time.time()
+    ap = self.ap
 
     # disengage cancels any tacking
-    if not self.ap.enabled.value:
+    if not ap.enabled.value:
       self.state.set('none')
 
     if self.state.value == 'none': # not tacking
       # if we have wind data, use it to determine the tacking direction
       r = False
-      if self.ap.sensors.wind.source.value != 'none':
-        d = resolv(self.ap.sensors.wind.direction.value)
+      if ap.sensors.wind.source.value != 'none':
+        d = resolv(ap.sensors.wind.direction.value)
         r = self.wind_log.update(d)
       elif t-self.time > 30:
-        r = self.heel_log.update(self.ap.boatimu.heel)
+        r = self.heel_log.update(ap.boatimu.heel)
 
       if r:
         self.direction.update(r)
@@ -119,8 +120,8 @@ class Tack(object):
       else:
         self.timeout.set(0)
         self.state.set('tacking')
-        if 'wind' in self.ap.mode.value:
-          self.tack_angle = 2*self.ap.command # opposite wind direction for wind  mode
+        if 'wind' in ap.mode.value:
+          self.tack_angle = 2*ap.command # opposite wind direction for wind  mode
         else:
           self.tack_angle = self.angle.value
 
@@ -135,16 +136,16 @@ class Tack(object):
       P = headingrate - mul*self.rate.value
       D = headingraterate
       command = .1*P + .1*D
-      self.ap.servo.command(command)
+      ap.servo.do_command(command)
 
       mul = 1 if self.current_direction == 'port' else -1
-      current = mul*resolv(self.ap.command.value - self.ap.heading) / self.tack_angle
-
+      heading_command = ap.heading_command.value
+      current = mul*resolv(heading_command - ap.heading.value) / self.tack_angle
       # if we reach the threshold, tacking is complete, set the heading command
       # to the new value
       if current > self.threshold.value:
-        command = self.ap.command - mul*tack_angle
-        self.ap.command.set(resolv(command, 180))
+        heading_command -= mul*tack_angle
+        ap.command.set(resolv(heading_command, 180))
         self.state.set('none')
 
     return self.state.value == 'tacking'

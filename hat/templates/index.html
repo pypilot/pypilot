@@ -1,0 +1,27 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>pypilot keypad and remote configuration</title>
+    <link rel="stylesheet" type="text/css" href="static/w3.css" />
+    <script type="text/javascript" src="static/jquery.min.js"></script>
+    <script type="text/javascript" src="static/socket.io.min.js"></script>
+    <script type="text/javascript" src="static/hat_config.js"></script>
+    <script>
+      var web_port = {{web_port}};
+      var action_names = {{ action_names }};
+    </script>
+</head>
+<body>
+  <div>
+    <h2>pypilot lcd and remote control setup</h2>
+    <p>Press button(s) on the keypad or remote then assign a command with the button.
+        {{ actionkeys }}
+      <p>
+      <br>key: <b><span id="key"></span></b>
+      <br>action: <b><span id="action"></span></b>
+      <br>pypilot status: <b><span id="status"></span></b>
+      <br>connection: <b><span id="connection"></span></b>
+      <br>Web Server Latency: <b><span id="ping-pong"></span> ms</b>
+    </div>
+</body>
+</html>

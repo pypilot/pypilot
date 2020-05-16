@@ -7,7 +7,7 @@
 
 from __future__ import print_function
 import time, sys, json, os
-from signalk.client import SignalKClient
+from pypilot.client import pypilotClient
 from servo import *
 
 import threading
@@ -93,7 +93,7 @@ def ServoCalibrationThread(calibration):
             servo.fwd_fault = False
         elif self.rev_fault and value > 0:
             servo.rev_fault = False
-        engauge()
+        engage()
         calibration.raw_command.set(value)
 
     def stop():
@@ -257,7 +257,7 @@ def ServoCalibrationThread(calibration):
     brake_hack = False
     servo.brake_hack.set(brake_hack)
     servo.max_current.set(10)
-    servo.disengauge_on_timeout.set(False)
+    servo.disengage_on_timeout.set(False)
     calibration.raw_command(0)
 
     timeout = 40 # max time to move end to end
@@ -393,7 +393,7 @@ class ServoCalibration(object):
     def __init__(self, servo):
         self.server = servo.server
         self.run = self.Register(BooleanProperty, 'run', False)
-        self.rawcommand = self.Register(SensorValue, 'raw_command', self.server.TimeStamp('servo'))
+        self.rawcommand = self.Register(SensorValue, 'raw_command')
         self.console = self.Register(Value, 'console', '')
         self.current_total = self.voltage_total = 0, 0
         self.servo = servo
@@ -407,7 +407,7 @@ class ServoCalibration(object):
         return self.server.Register(_type(*(['servo.calibration.' + name] + list(args)), **kwargs))
 
         def fault(self):
-            return (ServoFlags.OVERCURRENT | ServoFlags.FALTPIN) & self.servo.flags.value or \
+            return (ServoFlags.OVERCURRENT_FAULT | ServoFlags.FALTPIN) & self.servo.flags.value or \
                 not self.servo.engaged.value
     
     def poll(self):
@@ -440,7 +440,7 @@ class ServoCalibration(object):
             self.fwd_fault = False
         elif self.rev_fault and self.rawcommand.value > 0:
             self.rev_fault = False
-        self.servo.engauge()
+        self.servo.engage()
         self.servo.raw_command(self.rawcommand.value)
 
     def stop(self):
@@ -464,7 +464,7 @@ if __name__ == '__main__':
     import serialprobe
     print('Servo Server')
     printconsole = True
-    server = SignalKServer()
+    server = pypilotServer()
     serial_probe = serialprobe.SerialProbe()
     servo = Servo(server, serial_probe)
     servo.servo_calibration.run = True

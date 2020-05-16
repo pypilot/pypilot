@@ -9,8 +9,8 @@
 
 from __future__ import print_function
 import wx, sys, subprocess, socket, os, time
-import autopilot_control_ui
-from signalk.client import *
+from pypilot.ui import autopilot_control_ui
+from pypilot.client import *
 
 class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     ID_MESSAGES = 1000
@@ -102,7 +102,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             self.cPilot.Append(pilot)
                 
         self.GetSizer().Fit(self)
-        self.SetSize(wx.Size(500, 580))
+        self.SetSize(wx.Size(570, 420))
 
         # add continuous value to avoid timeout
         if not 'ap.heading' in value_list:
@@ -127,7 +127,12 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def servo_command(self, command):
         if self.lastcommand != command or command != 0:
             self.lastcommand = command
+            #if command > .2:
+            #   command = .87
+            #elif command < -.2:
+            #    command = -.87
             self.client.set('servo.command', command)
+            
 
     def send_gain(self, name, gain):
         slidervalue = gain['slider'].GetValue() / 1000.0 * (gain['max'] - gain['min']) + gain['min']
@@ -146,7 +151,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         if not self.client:
             self.stStatus.SetLabel('No Connection')
             try:
-                self.client = SignalKClient(self.on_con, self.host, autoreconnect=False)
+                self.client = pypilotClient(self.on_con, self.host, autoreconnect=False)
                 self.timer.Start(100)
                 self.lastmsgtime = time.time()
 
@@ -163,10 +168,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.client.set('ap.heading_command', self.heading_command)
                 self.sCommand.SetValue(0)
             else:
-                if command > 0:
-                    command -= 1
-                elif command < 0:
-                    command += 1
+                if True:
+                    if command > 0:
+                        command -= 1
+                    elif command < 0:
+                        command += 1
                 self.servo_command(-command / 100.0)
                 self.sCommand.SetValue(command)
 
@@ -381,13 +387,13 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.client.set('servo.position_command', 0)
 
     def onScope( self, event ):
-        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/scope_wx.py'] + sys.argv[1:])
+        subprocess.Popen(['pypilot_scope'] + sys.argv[1:])
 	
     def onClient( self, event ):
-        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/../signalk/client_wx.py'] + sys.argv[1:])
+        subprocess.Popen(['pypilot_client_wx'] + sys.argv[1:])
 	
     def onCalibration( self, event ):
-        subprocess.Popen(['python', os.path.abspath(os.path.dirname(__file__)) + '/autopilot_calibration.py'] + sys.argv[1:])
+        subprocess.Popen(['pypilot_calibration'] + sys.argv[1:])
 	
     def onClose( self, event ):
         self.Close()
