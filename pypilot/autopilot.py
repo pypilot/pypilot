@@ -277,7 +277,8 @@ class Autopilot(object):
       if t2-t1 > period/2:
           print('sensors is running too _slowly_', t2-t1)
       
-      for tries in range(14): # try 14 times to read from imu 
+      for tries in range(14): # try 14 times to read from imu
+          timu = time.monotonic()
           data = self.boatimu.read()
           if data:
               break
@@ -304,7 +305,6 @@ class Autopilot(object):
           
       if self.enabled.value:
           self.runtime.update()
-          self.servo.servo_calibration.stop()
       else:
           self.runtime.stop()
 
@@ -338,7 +338,7 @@ class Autopilot(object):
           self.watchdog_device.write('c')
 
       while True: # sleep remainder of period
-          dt = period - (time.monotonic() - t0)
+          dt = period - (time.monotonic() - timu)
           if dt >= period or dt <= 0:
               break
           time.sleep(dt)

@@ -173,9 +173,12 @@ class ServerValues(pypilotValue):
             for name in self.values:
                 if name == 'values' or name == 'watch':
                     continue
+                info = self.values[name].info
+                if not info: # placeholders that are watched
+                    continue
                 if notsingle:
                     msg += ','
-                msg += '"' + name + '":' + pyjson.dumps(self.values[name].info)
+                msg += '"' + name + '":' + pyjson.dumps(info)
                 notsingle = True
             self.msg = msg + '}\n'
         return self.msg
@@ -249,7 +252,8 @@ class ServerValues(pypilotValue):
     def HandleRequest(self, msg, connection):
         name, data = msg.split('=', 1)        
         if not name in self.values:
-            connection.send('invalid unknown value' + name + '\n')
+            connection.send('invalid unknown value: ' + name + '\n')
+            return
         self.values[name].set(msg, connection)
 
     def load_file(self, f):

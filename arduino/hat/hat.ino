@@ -29,8 +29,7 @@ enum {RF=0xa1, IR=0x06, AR=0x9c};
 #include <RCSwitch.h>
 
 #define DATA_PIN 2
-#define DIR_PIN 3
-#define PWR_PIN 4
+#define DIR_PIN 4
 
 RCSwitch rf = RCSwitch();
 uint8_t backlight_value = 128; // determines when backlight turns on
@@ -120,16 +119,24 @@ void setup() {
       Serial.print("Begin");
 #endif
 
-  pinMode(DATA_PIN, INPUT);
+  pinMode(DATA_PIN,                                                                     INPUT);
   pinMode(DIR_PIN, INPUT);
-  pinMode(PWR_PIN, OUTPUT);
-  digitalWrite(PWR_PIN, HIGH);
   
   rf.enableReceive(0);  // Receiver on interrupt 0 => that is pin #2
 
   // turn backlight on
-  pinMode(A0, OUTPUT);
-  digitalWrite(A0, HIGH);
+  pinMode(A0, INPUT);
+
+  digitalWrite(9, LOW); /* enable internal pullups */
+  pinMode(9, OUTPUT);
+
+  TCNT1 = 0x1fff;
+  //Configure TIMER1
+        TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
+        TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
+        ICR1=800;  // 400hz
+        TIMSK1 = 0;
+        OCR1A = 200;
 }
 
 void loop() {
@@ -138,7 +145,8 @@ void loop() {
     if(spiin.pop_packet(d)) {
         if(d[0] == SET_BACKLIGHT) {
             // turn on backlight
-            backlight_value = d[1];
+            backlight_value = d[4];
+	    OCR1A = backlight_value;
         }
     }
 

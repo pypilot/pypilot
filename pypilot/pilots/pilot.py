@@ -13,12 +13,8 @@ from pypilot.resolv import resolv
 class AutopilotGain(RangeProperty):
   def __init__(self, *cargs):
       super(AutopilotGain, self).__init__(*cargs, persistent=True)
+      self.info['AutopilotGain'] = True
 
-  def type(self):
-      d = super(AutopilotGain, self).type()
-      d['AutopilotGain'] = True
-      return d
-    
 class AutopilotPilot(object):
   def __init__(self, name, ap):
     super(AutopilotPilot, self).__init__()

@@ -61,23 +61,13 @@ class ClientValues(Value):
         self.values['watch'] = ClientWatch(self.values, client)
         self.wvalues = {}
         self.pqwatches = []
-        self.updated = False
 
-    def list(self):
-        if self.updated:
-            self.updated = False
-            return self.value
-        return False
-        
     def set(self, values):
-        self.updated = True
-        #print('line', values)
         if self.value is False:
             self.value = values
         else:
             for name in values:
                 self.value[name] = values[name]
-                
 
     def send_watches(self):
         t0 = time.monotonic()
@@ -109,6 +99,7 @@ class pypilotClient(object):
         self.watches = {}
         self.wwatches = {}
         self.received = []
+        self.last_values_list = False
 
         if host and type(host) != type(''):
             # host is the server object
@@ -158,6 +149,8 @@ class pypilotClient(object):
         self.connection = False # connect later
 
     def onconnected(self, connection):
+        self.last_values_list = False
+        
         # write config if connection succeeds
         try:
             file = open(self.configfilename, 'w')
@@ -172,7 +165,8 @@ class pypilotClient(object):
         self.connection = LineBufferedNonBlockingSocket(connection)
         self.poller = select.poll()
         self.poller.register(self.connection.socket, select.POLLIN)
-        self.wwatches = self.watches
+        for name, value in self.watches.items():
+            self.wwatches[name] = value
         for name in self.values.values:
             if name != 'values' and name != 'watch':
                 self.values.wvalues[name] = self.values.values[name].info
@@ -183,9 +177,25 @@ class pypilotClient(object):
                 time.sleep(timeout)
                 return
             
-        # inform server of any watches we have
+        # inform server of any watches we have changed
         if self.wwatches:
-            self.connection.send('watch=' + pyjson.dumps(self.wwatches) + '\n')
+            watches = {}
+            for name, value in self.wwatches.items():
+                if name in self.watches: # already watching
+                    if value is False:
+                        del self.watches[name] # stop watching
+                        watches[name] = value
+                        continue
+                    elif self.watches[name] is value:
+                        continue # already watching at this period
+                elif not value:
+                    continue # already not watching
+                self.watches[name] = value # update watch
+                watches[name] = value
+
+            if watches:
+                self.connection.send('watch=' + pyjson.dumps(watches) + '\n')
+                #print('watch', watches, self.wwatches, self.watches)
             self.wwatches = {}
 
         # send any delayed watched values
@@ -206,12 +216,10 @@ class pypilotClient(object):
                 return # no data ready
             
             fd, flag = events.pop()
-            if flag & select.POLLIN:
-                if self.connection and not self.connection.recv():
-                    self.disconnect() # recv returns 0 means connection closed
-                    return
-            else: # other flags indicate disconnect
-                self.disconnect()
+            if not (flag & select.POLLIN) or (self.connection and not self.connection.recv()):
+                # other flags indicate disconnect
+                self.disconnect() # recv returns 0 means connection closed
+                return
 
         # read incoming data line by line
         while True:
@@ -226,8 +234,9 @@ class pypilotClient(object):
                     continue
                 value = pyjson.loads(data)
             except ValueError as e:
-                print('value error', line, e)
-                continue
+                print('client value error:', line, e)
+                raise Exception
+                #continue
 
             except Exception as e:
                 print('invalid message from server:', line, e)
@@ -244,6 +253,9 @@ class pypilotClient(object):
         self.connection = False
 
     def connect(self, verbose=True):
+        if self.connection:
+            print('warning, client aleady has connection')
+
         try:
             host_port = self.config['host'], self.config['port']
             connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -251,8 +263,7 @@ class pypilotClient(object):
             connection.connect(host_port)
         except Exception as e:
             if verbose:
-                print('connect failed to %s:%d' % host_port)
-                print('reason', e)
+                print('connect failed to %s:%d' % host_port, e)
             return False
 
         self.onconnected(connection)
@@ -287,20 +298,7 @@ class pypilotClient(object):
         self.send(name + '=' + str(value) + '\n')
 
     def watch(self, name, value=True):
-        if value is False:
-            del self.watches[name]
-        elif name in self.watches and self.watches[name] is value:
-            return
-        else:
-            self.watches[name] = value
         self.wwatches[name] = value
-
-    def update_watches(self, watches):
-        for name in list(self.watches):
-            if not name in watches:
-                self.watch(name, False)
-        for name, period in watches.items():
-            self.watch(name, period)
 
     def register(self, value):
         self.values.register(value)
@@ -309,11 +307,14 @@ class pypilotClient(object):
 
     def list_values(self, timeout=0):
         self.watch('values')
-        t0, dt, ret = time.monotonic(), timeout, False
+        t0, dt, ret = time.monotonic(), timeout, self.values.value
         while not ret and dt > 0:
             self.poll(dt)
-            ret = self.values.list()
+            ret = self.values.value
             dt = timeout - (t0-time.monotonic())
+        if self.last_values_list == ret:
+            return False
+        self.last_values_list = ret
         return ret
 
     def info(self, name):
@@ -326,7 +327,8 @@ def pypilotClientFromArgs(args, period=True):
 
     client = pypilotClient(host)
     if client.connect(False):
-        args.remove(host)
+        if host in args:
+            args.remove(host)
     else:
         if host:
             client = pypilotClient()
@@ -402,8 +404,10 @@ def main():
         
     period = True if continuous else 100 # 100 second period to just get the value once
     client = pypilotClientFromArgs(args, period)
-    if not client.watches: # retrieve all values
-        watches = client.list_values(10)
+    if client.watches: # retrieve all values
+        watches = list(client.watches)
+    else:
+        watches = list(client.list_values(10))
         if not watches:
             print('failed to retrieve value list!')
             exit(1)
@@ -413,11 +417,11 @@ def main():
     if not continuous:
         values = {}
         t0 = time.monotonic()
-        while len(values) < len(client.watches):
+        while len(values) < len(watches):
             dt = time.monotonic() - t0
             if dt > 10:
-                print('timeout retrieving', len(client.watches) - len(values), 'values')
-                for name in client.watches:
+                print('timeout retrieving', len(watches) - len(values), 'values')
+                for name in watches:
                     if not name in values:
                         print('missing', name)
                 break

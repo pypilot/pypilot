@@ -340,7 +340,7 @@ class BoatIMU(object):
         value = _type(*(['imu.' + name] + list(args)), **kwargs)
         return self.client.register(value)
       
-    def update_alpignment(self, q):
+    def update_alignment(self, q):
         a2 = 2*math.atan2(q[3], q[0])
         heading_offset = a2*180/math.pi
         off = self.heading_off.value - heading_offset
@@ -386,12 +386,11 @@ class BoatIMU(object):
         gyro_q = quaternion.rotvecquat(data['gyro'], data['fusionQPose'])
     
         data['pitchrate'], data['rollrate'], data['headingrate'] = map(math.degrees, gyro_q)
-        origfusionQPose = data['fusionQPose']
         
         aligned = quaternion.multiply(data['fusionQPose'], self.alignmentQ.value)
-        data['fusionQPose'] = quaternion.normalize(aligned) # floating point precision errors
+        aligned = quaternion.normalize(aligned) # floating point precision errors
     
-        data['roll'], data['pitch'], data['heading'] = map(math.degrees, quaternion.toeuler(data['fusionQPose']))
+        data['roll'], data['pitch'], data['heading'] = map(math.degrees, quaternion.toeuler(aligned))
   
         if data['heading'] < 0:
             data['heading'] += 360
@@ -426,18 +425,19 @@ class BoatIMU(object):
             self.SensorValues[name].set(data[name])
 
         self.uptime.update()
-  
+
         # count down to alignment
         if self.alignmentCounter.value != self.last_alignmentCounter:
             self.alignmentPose = [0, 0, 0, 0]
 
         if self.alignmentCounter.value > 0:
-            self.alignmentPose = list(map(lambda x, y : x + y, self.alignmentPose, data['fusionQPose']))
+            self.alignmentPose = list(map(lambda x, y : x + y, self.alignmentPose, aligned))
             self.alignmentCounter.set(self.alignmentCounter.value-1)
 
             if self.alignmentCounter.value == 0:
                 self.alignmentPose = quaternion.normalize(self.alignmentPose)
                 adown = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(self.alignmentPose))
+
                 alignment = []
                 alignment = quaternion.vec2vec2quat([0, 0, 1], adown)
                 alignment = quaternion.multiply(self.alignmentQ.value, alignment)
@@ -456,12 +456,14 @@ class BoatIMU(object):
 
 
         if self.auto_cal.cal_pipe:
+            print('warning, cal pipe always sending despite locks')
             cal_data = {}
-            if not self.accel_calibration.locked.value:
-                cal_data['accel'] = list(data['accel'])
-            if not self.compass_calibration.locked.value:
-                cal_data['compass'] = list(data['compass'])
-                cal_data['down'] = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(origfusionQPose))
+            #how to check this here??  if not 'imu.accel.calibration.locked'
+            cal_data['accel'] = list(data['accel'])
+            
+            #how to check this here??  if not 'imu.compass.calibration.locked'
+            cal_data['compass'] = list(data['compass'])
+            cal_data['down'] = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(data['fusionQPose']))
 
             if cal_data:
                 self.auto_cal.cal_pipe.send(cal_data)
@@ -493,7 +495,7 @@ def main():
             printline('pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading'])
         boatimu.poll()
         while True:
-            dt = 1/boatimu.rate - (time.monotonic() - t0)
+            dt = 1/boatimu.rate.value - (time.monotonic() - t0)
             if dt < 0:
                 break
             if dt > 0:

@@ -588,7 +588,7 @@ class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
         super(AgeValue, self).__init__(name, time.monotonic(), **kwargs)
         self.lastupdate = 0
-        self.readable = 0
+        self.lastreadable = 0
         self.lastage = ''
 
     def reset(self):
@@ -631,14 +631,14 @@ def CalibrationProcess(cal_pipe, client):
 
     norm = [0, 0, 1]
 
-    accel_calibration = RegisterCalibration(client, 'accel', [[0, 0, 0, 1], 1])
-    compass_calibration = RegisterCalibration(client, 'compass', [[0, 0, 0, 30, 0], [1, 1], 0])
+    accel_calibration = RegisterCalibration(client, 'imu.accel', [[0, 0, 0, 1], 1])
+    compass_calibration = RegisterCalibration(client, 'imu.compass', [[0, 0, 0, 30, 0], [1, 1], 0])
     
     client.watch('imu.alignmentQ')
     if not cal_pipe: # get these through client rather than direct pipe
         client.watch('imu.accel')
         client.watch('imu.compass')
-        client.watch('imu.down')
+        client.watch('imu.fusionQPose')
 
     def debug(name):
         def debug_by_name(*args):
@@ -661,16 +661,20 @@ def CalibrationProcess(cal_pipe, client):
                     norm = quaternion.rotvecquat([0, 0, 1], value)
                     compass_points.Reset()
                 elif name == 'imu.accel':
-                    accel_points.AddPoint(value)
+                    if value:
+                        accel_points.AddPoint(value)
                     addedpoint = True
                 elif name == 'imu.compass' and down:
-                    compass_points.AddPoint(value, down)
+                    if value and down:
+                        compass_points.AddPoint(value, down)
                     addedpoint = True
-                elif name == 'imu.down':
-                    down = value
+                elif name == 'imu.fusionQPose':
+                    if value:
+                        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(value))
 
             # receive calibration data
             if cal_pipe:
+                print('calpipe!!!!!!!!!!!!')
                 p = cal_pipe.recv()
                 if p:
                     if 'accel' in p:

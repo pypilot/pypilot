@@ -103,11 +103,7 @@ class CalibrationPlot(object):
         if not self.fusionQPose:
             return [0, 0, 1]
 
-        down = [0, 0, 1]
-        q = [1, 0, 0, 0]
-        q = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
-        q = quaternion.normalize(q) # correct possible rounding errors
-        down = quaternion.rotvecquat(down, quaternion.conjugate(q))
+        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(self.fusionQPose))
             
         glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
         return down

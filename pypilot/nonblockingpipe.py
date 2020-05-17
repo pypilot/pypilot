@@ -32,10 +32,13 @@ class NonBlockingPipeEnd(object):
 
     def recv(self, timeout=0):
 #        if self.pipe.poll(timeout):
-        if self.pollin.poll(0):
-            return self.pipe.recv()
-        if not self.recvfailok:
-            print('error pipe block on recv!', self.name)
+        try:
+            if self.pollin.poll(0):
+                return self.pipe.recv()
+            if not self.recvfailok:
+                print('error pipe block on recv!', self.name)
+        except:
+            print('failed to recv nonblocking pipe!', self.name)
         return False
 
     def send(self, value, block=False):

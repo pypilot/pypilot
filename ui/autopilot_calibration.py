@@ -14,7 +14,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import calibration_plot, boatplot, autopilot_control_ui
 import pypilot.quaternion
 import scope_wx
-from pypilot.client import pypilotClient, ConnectionLost
+from pypilot.client import pypilotClient
 from client_wx import round3
 
 from OpenGL.GL import *
@@ -55,7 +55,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.have_rudder = False
 
-        self.fusionQPose = [1, 0, 0, 0]
+        self.aligned = [1, 0, 0, 0]
+        self.alignmentQ = [1, 0, 0, 0]        
         self.controltimes = {}
 
         self.client = pypilotClient(self.host)
@@ -85,7 +86,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
              'rudder.range', 'servo.flags']]
             
         pageindex = self.m_notebook.GetSelection()
-        for i in range(len(pagelist)):
+        watches = {}
+        for i in range(len(watchlist)):
             pagelist = watchlist[i]
             for name in watchlist[pageindex]:
                 if i == pageindex:
@@ -93,10 +95,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                         name, watch = name
                     else:
                         watch = True
-                else:
-                    watch = False
-                        
-                client.watch(name, watch)
+                    watches[name] = watch
+                elif name in self.client.watches:
+                    self.client.watch(name, False)
+
+        for name, watch in watches.items():
+            self.client.watch(name, watch)
 
     def enumerate_settings(self, values):
         fgSettings = wx.FlexGridSizer( 0, 3, 0, 0 )
@@ -136,7 +140,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def receive_messages(self, event):
         self.client.poll()
 
-        values_list = client.list_values()
+        values_list = self.client.list_values()
         if values_list:
             self.enumerate_settings(values_list)
         
@@ -146,10 +150,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 self.receive_message(msg)
                 msg = self.client.receive_single()
             self.timer.Start(50)
-        except ConnectionLost:
-            self.client = False
         except Exception as e:
-            print(e)
+            print('exception in calibration:', e)
 
     def UpdateControl(self, control, update):
         t = time.monotonic()
@@ -170,18 +172,21 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         if self.m_notebook.GetSelection() == 0:
             if name == 'imu.alignmentQ':
                 self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(pypilot.quaternion.angle(value))))
+                self.alignmentQ = value
             elif name == 'imu.fusionQPose':
+                aligned = quaternion.normalize(quaternion.multiply(value, self.alignmentQ))
+                
                 if not value:
                     return # no imu!  show warning?
                     
                 if self.cCoords.GetSelection() == 1:
-                    self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, self.fusionQPose)
+                    self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, aligned)
                     self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, pypilot.quaternion.conjugate(value))
                 elif self.cCoords.GetSelection() == 2:
-                    ang = pypilot.quaternion.toeuler(self.fusionQPose)[2] - pypilot.quaternion.toeuler(value)[2]
+                    ang = pypilot.quaternion.toeuler(aligned)[2] - pypilot.quaternion.toeuler(value)[2]
                     self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, pypilot.quaternion.angvec2quat(ang, [0, 0, 1]))
 
-                self.fusionQPose = value
+                self.aligned = value
                 self.BoatPlot.Refresh()
             elif name=='imu.alignmentCounter':
                 self.gAlignment.SetValue(100 - value)
@@ -372,7 +377,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         # stupid hack
         self.boat_plot.reshape(self.BoatPlot.GetSize().x, self.BoatPlot.GetSize().y)
         
-        self.boat_plot.display(self.fusionQPose)
+        self.boat_plot.display(self.aligned)
         self.BoatPlot.SwapBuffers()
 
     def onSizeGLBoatPlot( self, event ):

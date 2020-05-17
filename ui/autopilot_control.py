@@ -45,9 +45,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def init(self):
         self.stStatus.SetLabel('No Connection')
         self.client = pypilotClient(self.host)
+        self.enumerated = False
 
-        self.value_list = False
-        
         watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
                           'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
                           'ap.heading', 'ap.pilot',
@@ -92,8 +91,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 sizer.AddGrowableRow( 2 )
                 sizer.SetFlexibleDirection( wx.VERTICAL )
         
-                self.watch(name)
-                self.watch(name+'gain')
+                self.client.watch(name)
+                self.client.watch(name+'gain')
 
                 lname = name
                 sname = name.split('.')
@@ -136,10 +135,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         
         
     def receive_messages(self, event):
-        if not self.value_list:
-            self.value_list = self.client.list_values(10)
-            if self.value_list:
-                self.enumerate_controls(self.value_list)
+        if not self.enumerated:
+            value_list = self.client.list_values(10)
+            if value_list:
+                self.enumerate_controls(value_list)
+                self.enumerated = True
             return
         
         command = self.sCommand.GetValue()
