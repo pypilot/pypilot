@@ -99,11 +99,14 @@ class APB(Sensor):
             return
 
         mode = self.server.values['ap.mode']
+       
         if mode.value != data['mode']:
             # for GPAPB, ignore message on wrong mode
-            if data['**'] == 'GP':
-                return
-            mode.set(data['mode'])
+            if data['isgp'] != 'GP':
+                mode.set(data['mode'])
+            else:
+                return 
+                # APB is from GP with no gps mode selected so exit
 
         command = data['track'] + self.gain.value*data['xte']
 
