@@ -688,9 +688,10 @@ public:
     JLX12864G() : spilcd(rstPIN, rsPIN) {}
     virtual ~JLX12864G() {}
     void refresh(int contrast, surface *s) {
-//        command(0x25); // Coarse Contrast, setting range is from 20 to 27
-//      command(0x81); // Trim Contrast
-//        command(0x1f); // Trim Contrast value range can be set from 0 to 63
+      // alas, these have no effect
+      //        command(0x27); // Coarse Contrast, setting range is from 20 to 27
+      //command(0x81); // Trim Contrast
+      //command(63); // Trim Contrast value range can be set from 0 to 63
 
         unsigned char cmd[] = {0xe2, // Soft Reset
                             0x2c, // Boost 1

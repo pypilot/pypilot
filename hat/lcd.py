@@ -174,8 +174,8 @@ class LCD():
             print('using glut')
             import glut
             #screen = glut.screen((120, 210))
-            #screen = glut.screen((64, 128))
-            screen = glut.screen((48, 84))
+            screen = glut.screen((64, 128))
+            #screen = glut.screen((48, 84))
             #screen = glut.screen((96, 168))
             
             from OpenGL.GLUT import glutKeyboardFunc, glutKeyboardUpFunc
@@ -227,12 +227,7 @@ class LCD():
                       'true wind': self.have_true_wind};
 
         self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
-        self.watchlist = ['ap.enabled', 'ap.mode', 'ap.pilot', 'ap.heading_command',
-                          'gps.source', 'wind.source', 'servo.controller', 'servo.flags',
-                          'imu.compass.calibration', 'imu.compass.calibration.sigmapoints',
-                          'imu.compass.calibration.locked', 'imu.alignmentQ',
-                          'rudder.calibration_state', 'servo.speed.min', 'servo.speed.max',
-                          'servo.max_current', 'servo.period', 'imu.alignmentCounter']
+        self.watchlist = {'ap.pilot': True}
 
         self.create_mainmenu()
 
@@ -252,10 +247,14 @@ class LCD():
 
     def connect(self):
         self.last_msg = {}
+        self.last_msg['gps.source'] = 'none'
+        self.last_msg['wind.source'] = 'none'
+        
         if self.client:
             self.client.disconnect()
+
         self.client = pypilotClient(self.hat.client.config['host'])
-        self.client.list_values()
+        ret = self.client.list_values()
 
     def set_language(self, name):
         try:
@@ -272,7 +271,10 @@ class LCD():
         self.hat.write_config
 
     def value_list(self):
-        return self.client.values.value
+        v = self.client.values.value
+        if v:
+            return v
+        return {}
             
     def create_mainmenu(self):
         def value_edit(name, desc, pypilot_name, value=False):
@@ -321,7 +323,7 @@ class LCD():
                     return self.display_menu
                 return thunk
                 
-            self.menu = LCDMenu(self, _('Pilot'), map(lambda name : (name, set_pilot(name)), self.value_list()['ap.pilot']['choices']), self.menu)
+            self.menu = LCDMenu(self, _('Pilot'), list(map(lambda name : (name, set_pilot(name)), self.value_list()['ap.pilot']['choices'])), self.menu)
             index = 0
             for pilot in pilots:
                 if pilot == self.last_val('ap.pilot'):
@@ -336,7 +338,7 @@ class LCD():
                 if 'AutopilotGain' in value:
                     if 'ap.pilot.' in name:
                         s = name.split('.')
-                        if self.hat.last_val('ap.pilot') == s[2]:
+                        if self.last_val('ap.pilot') == s[2]:
                             ret.append(name)
                     else:
                         ret.append(name)
@@ -352,7 +354,7 @@ class LCD():
             
             self.menu = LCDMenu(self, _('Gain'),
                                 [(_('pilot'), pilot)] +
-                                map(gain_edit, curgains()),
+                                list(map(gain_edit, curgains())),
                                  self.menu)
             return self.display_menu
 
@@ -369,7 +371,7 @@ class LCD():
                 options.remove('idle')
 
             self.menu = LCDMenu(self, _('Rudder') + '\n' + _('Feedback'),
-                                map(lambda option : (option, lambda : self.set('rudder.calibration_state', option)), options), self.menu)
+                                list(map(lambda option : (option, lambda : self.set('rudder.calibration_state', option)), options)), self.menu)
 
             def display_rudder():
                 fit = self.fittext(rectangle(0, .5, 1, .25), str(self.last_val('rudder.angle')))
@@ -664,9 +666,14 @@ class LCD():
     def round_last_val(self, name, places):
         n = 10**places
         try:
-            return str(round(self.hat.last_msg[name]*n)/n)
+            v = self.hat.last_msg[name]
+        except Exception as e:
+            v = self.last_val(name)
+
+        try:
+            return str(round(v*n)/n)
         except:
-            return str(self.last_val(name))
+            return v
             
     def have_compass(self):
         return True
@@ -896,7 +903,7 @@ class LCD():
         elif self.info_page == 1:
             spacing = .11
             v = self.round_last_val('servo.voltage', 3)
-            rate = self.round_last_val('imu.loopfreq', 0)
+            rate = self.round_last_val('imu.loopfreq', 2)
             uptime = self.last_val('imu.uptime')[:7]
             items = [_('voltage'), v, _('rate'), rate, _('uptime'), uptime]
         elif self.info_page == 2:
@@ -1174,7 +1181,7 @@ class LCD():
             self.screen.contrast = int(self.config['contrast'])
 
         if 'backlight' in self.config:
-            self.hat.arduino.backlight = int(self.config['backlight'])
+            self.hat.arduino.set_backlight(int(self.config['backlight']))
 
     def poll(self):
         if self.screen:
@@ -1185,10 +1192,15 @@ class LCD():
                 self.lastframetime = max(self.lastframetime+self.frameperiod,
                                          t-self.frameperiod)
 
-        self.client.update_watches(self.watches)
+                for name in list(self.client.watches):
+                    if name != 'values' and not name in list(self.watches):
+                        self.client.watch(name, False)
+                for name, period in self.watches.items():
+                    self.client.watch(name, period)
+
         msgs = self.client.receive()
         for name, value in msgs.items():
             self.last_msg[name] = value
                 
-        self.watches = {}
+        self.watches = self.watchlist
         self.process_keys()

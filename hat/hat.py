@@ -12,7 +12,7 @@ import json
 from pypilot.client import pypilotClient
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import lcd, gpio, arduino, lirc, buzzer
+import lcd, gpio, arduino, lircd, buzzer
 
 class Action(object):
     def  __init__(self, hat, name):
@@ -93,11 +93,16 @@ class Web(object):
         self.hat = hat
         import atexit, signal
         def cleanup(signal_number, frame=None):
-            print('cleanup web process', signal_number)            
+            print('cleanup web process', signal_number)
+            if signal_number == signal.SIGCHLD:
+                pid = os.waitpid(-1, 0)
+                if not self.process or pid != self.process.pid:
+                    # flask makes process at startup that dies
+                    return
             if self.process:
                 print('pid kill ', self.process.pid)
                 os.kill(self.process.pid, signal.SIGTERM) # get backtrace
-            self.process = False
+                self.process = False
             sys.stdout.flush()
             if signal_number:
                 raise KeyboardInterrupt # to get backtrace on all processes
@@ -106,7 +111,9 @@ class Web(object):
         for s in range(1, 16):
             if s != 9 and s != 13:
                 signal.signal(s, cleanup)
-        #signal.signal(signal.SIGCHLD, cleanup)
+        signal.signal(signal.SIGCHLD, cleanup)
+        import atexit
+        atexit.register(lambda : cleanup('atexit'))
 
     def send(self, value):
         if self.process:
@@ -177,7 +184,7 @@ class Hat(object):
         self.lcd = lcd.LCD(self)
         self.gpio = gpio.gpio()
         self.arduino = arduino.arduino(self.hatconfig)
-        self.lirc = lirc.lirc()
+        self.lirc = lircd.lirc()
         self.buzzer = buzzer.buzzer(self.hatconfig)
         
         # keypad for lcd interface
@@ -284,7 +291,7 @@ class Hat(object):
 
 def main():
     hat = Hat()
-    if hat.lcd.use_glut:
+    if hat.lcd and hat.lcd.use_glut:
         from OpenGL.GLUT import glutMainLoop, glutIdleFunc
         glutIdleFunc(hat.poll)
         glutMainLoop()

@@ -36,6 +36,10 @@ class arduino(object):
             self.config = config['arduino']
         else:
             self.config = False
+
+            # hack
+        if True:
+            self.config = {"device":"/dev/spidev0.1", "resetpin":16}
             
         if not self.config:
             print('No hat config, arduino not found')
@@ -52,8 +56,11 @@ class arduino(object):
             if device.startswith('/dev/spidev'):
                 # update flash if needed
                 filename = os.getenv('HOME') + '/.pypilot/hat.hex'
+                if not os.path.exists(filename):
+                    print('hat firmware not in', filename)
+                    print('skipping verification')
                 # try to verify twice because sometimes this fails
-                if not self.verify(filename) and not self.verify(filename):
+                elif not self.verify(filename) and not self.verify(filename):
                     if not self.write(filename) or not self.verify(filename):
                         print('failed to verify or upload', filename)
                         #self.config['device'] = False # prevent retry
@@ -79,7 +86,7 @@ class arduino(object):
             raise 'invalid packet'
         return d + [crc.crc8(d)]
 
-    def backlight(self, value):
+    def set_backlight(self, value):
         if (self.backlight != value):
             self.backlight = min(max(int(value), 0), 200)
             self.next_packet = [SET_BACKLIGHT, 0, 0, 0, self.backlight]
@@ -111,7 +118,7 @@ class arduino(object):
                 break
 
             if i == s:
-                print('failed to syncronize spi packet')
+                print('failed to syncronize spi packet', ck, x[s])
                 return False
                 
             try:
@@ -134,21 +141,20 @@ class arduino(object):
         else:
             return False
         self.events.append((key, count))
-        return True
 
     def flash(self, filename, c):
         global GPIO
         if not GPIO:
             return False
 
-        resetpin = self.config['resetpin']
+        self.resetpin = self.config['resetpin']
 
         try:
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(self.resetpin, GPIO.OUT)
             GPIO.output(self.resetpin, 0)
         except Exception as e:
-            print('failed to setup gpio reset pin for arduino')
+            print('failed to setup gpio reset pin for arduino', e)
             GPIO = False # prevent further tries
             return False
 
