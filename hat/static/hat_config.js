@@ -30,11 +30,13 @@ $(document).ready(function() {
     });
 
     socket.on('key', function(key) {
-        $('#key').text(key);
+        $('#key0').text(key);
+        $('#key1').text(key);
     });
 
     socket.on('action', function(action) {
-        $('#action').text(action);
+        $('#action0').text(action);
+        $('#action1').text(action);
     });
     
     socket.on('action_keys', function(keys) {

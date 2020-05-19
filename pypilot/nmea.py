@@ -521,6 +521,7 @@ class nmeaBridge(object):
         self.process = True
         self.setup()
         while True:
+            t0 = time.monotonic()
             timeout = 100 if self.sockets else 10000
             self.process_poll(timeout)
 
@@ -576,6 +577,9 @@ class nmeaBridge(object):
         t0 = time.monotonic()
         events = self.poller.poll(timeout)
         t1 = time.monotonic()
+        if t1-t0 > timeout:
+            print('poll took too long in nmea process!')
+
         while events:
             fd, flag = events.pop()
             sock = self.fd_to_socket[fd]
@@ -643,10 +647,5 @@ class nmeaBridge(object):
                                 
         t6 = time.monotonic()
 
-        # run tcp nmea traffic at rate of 10hz
-        period = .1
-        dt = t6-t0
-        if dt > period:
+        if t6-t1 > .1:
             print('nmea process loop too slow:', dt, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
-        else:
-            time.sleep(period - dt)

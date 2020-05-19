@@ -84,7 +84,7 @@ class pypilotValue(object):
             watching = server_persistent_period
         for watch in self.awatches:
             if len(watch.connections) == 0:
-                print("ERRORRRR  no connections in watch")
+                print('ERROR no connections in watch') # should never hit
             if watching is False or watch.period < watching:
                 watching = watch.period
                 
@@ -335,7 +335,7 @@ class pypilotServer(object):
         return pipe0
         
     def run(self):
-        print('pypilotServer on', os.getpid())
+        print('pypilotServer pid', os.getpid())
         # if server is in a separate process
         self.init()
         while True:
@@ -481,8 +481,7 @@ class pypilotServer(object):
                     try:
                         self.HandleRequest(connection, line)
                     except Exception as e:
-                        #print('invalid request from connection', line, e)
-                        connection.send('invalid request: ' + line + '\n')
+                        connection.send('error=invalid request: ' + line)
                         try:
                             print('invalid request from connection', e, line)
                         except Exception as e2:

@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2020 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -6,8 +6,8 @@
  * version 3 of the License, or (at your option) any later version.
  */
 
-/* this program reads rf key codes from the spi port, and applies
-   commands as configured by the web on port 33333
+/* this program reads rf on pin2, and ir on pin3 and outputs
+   received remote presses as a spi slave
 */
 
 #include <Arduino.h>
@@ -21,9 +21,10 @@
 
 #include "crc.h"
 
-//#define DEBUG_SERIAL
-
+// input packet types
 enum {SET_BACKLIGHT=0xa1};
+
+// output packet types
 enum {RF=0xa1, IR=0x06, AR=0x9c};
 
 #include <RCSwitch.h>
@@ -32,6 +33,20 @@ enum {RF=0xa1, IR=0x06, AR=0x9c};
 #define DIR_PIN 4
 
 RCSwitch rf = RCSwitch();
+
+#include <IRLibRecvPCI.h> 
+#include <IRLibDecodeBase.h>
+#include <IRLib_P01_NEC.h>    //Lowest numbered protocol 1st
+#include <IRLib_P02_Sony.h>   // Include only protocols you want
+#include <IRLib_P03_RC5.h>
+#include <IRLib_P04_RC6.h>
+#include <IRLib_P05_Panasonic_Old.h>
+#include <IRLib_P07_NECx.h>
+#include <IRLib_HashRaw.h>    //We need this for IRsendRaw
+#include <IRLibCombo.h>
+IRdecode myDecoder;   //create decoder
+IRrecvPCI ir(3);//pin number for the receiver
+
 uint8_t backlight_value = 128; // determines when backlight turns on
 
 #define PKTSZ 5
@@ -119,24 +134,52 @@ void setup() {
       Serial.print("Begin");
 #endif
 
-  pinMode(DATA_PIN,                                                                     INPUT);
+  pinMode(DATA_PIN, INPUT);
+  pinMode(3, INPUT);
   pinMode(DIR_PIN, INPUT);
   
   rf.enableReceive(0);  // Receiver on interrupt 0 => that is pin #2
+  ir.enableIRIn();
 
   // turn backlight on
   pinMode(A0, INPUT);
 
   digitalWrite(9, LOW); /* enable internal pullups */
   pinMode(9, OUTPUT);
-
+#if 0
   TCNT1 = 0x1fff;
   //Configure TIMER1
         TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
         TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
-        ICR1=800;  // 400hz
+        ICR1=800;  // 1.25khz
         TIMSK1 = 0;
         OCR1A = 200;
+#endif
+}
+
+static uint32_t lvalue, ltime;
+static uint8_t count, lsource;
+
+void send_code(uint8_t source, uint32_t value)
+{
+    if(source == lsource && value == lvalue)
+        count++;
+    else {
+        // send code up for last key if key changed
+        if(lvalue) {
+            uint8_t *plvalue = (uint8_t*)&lvalue;
+            uint8_t d[PKTSZ] = {lsource, plvalue[0], plvalue[1], plvalue[2], 0};
+            spiout.push_packet(d);
+        }
+        count = 1;
+    }
+            
+    uint8_t *pvalue = (uint8_t*)&value;
+    uint8_t d[PKTSZ] = {source, pvalue[0], pvalue[1], pvalue[2], count};
+    spiout.push_packet(d);
+    lvalue = value;
+    lsource = source;
+    ltime = millis();
 }
 
 void loop() {
@@ -146,66 +189,31 @@ void loop() {
         if(d[0] == SET_BACKLIGHT) {
             // turn on backlight
             backlight_value = d[4];
-	    OCR1A = backlight_value;
+//	    OCR1A = backlight_value*10;
         }
     }
 
 
-    static uint32_t lvalue, ltime;
-    static uint8_t count;
-    uint8_t *plvalue = (uint8_t*)&lvalue;
     // send code up message on timeout
-    if(lvalue && millis() - ltime > 100) {
-        uint8_t d[PKTSZ] = {RF, plvalue[0], plvalue[1], plvalue[2], 0};
+    if(lvalue && millis() - ltime > 400) {
+        uint8_t *plvalue = (uint8_t*)&lvalue;
+        uint8_t d[PKTSZ] = {lsource, plvalue[0], plvalue[1], plvalue[2], 0};
         spiout.push_packet(d);
         lvalue = 0;
     }
-    
-    if (!rf.available())
-        return;
-    
-    uint32_t rvalue = rf.getReceivedValue();
-    uint8_t *pvalue = (uint8_t*)&rvalue;
 
-    
-#ifdef DEBUG_SERIAL
-    if (rvalue == 0) {
-        Serial.print("Unknown encoding");
-    } else {
-        Serial.print("Received ");
-        Serial.print( rf.getReceivedValue() );
-        Serial.print(" / ");
-        Serial.print( rf.getReceivedBitlength() );
-        Serial.print("bit ");
-        Serial.print("Protocol: ");
-        Serial.println( rf.getReceivedProtocol() );
-        unsigned int *raw = rf.getReceivedRawdata();
-        Serial.print("timings: ");
-        for(int i=0; i<16; i++) {
-            Serial.print(raw[i]);
-            Serial.print(" ");
-        }
-        Serial.println("");
-    }
-#endif
-
-    if(rvalue && rf.getReceivedBitlength() == 24) {
-        if(rvalue == lvalue)
-            count++;
-        else {
-            // send code up for last key if key changed
-            if(lvalue) {
-                uint8_t d[PKTSZ] = {RF, plvalue[0], plvalue[1], plvalue[2], 0};
-                spiout.push_packet(d);
-            }
-            count = 1;
-        }
-            
-        uint8_t d[PKTSZ] = {RF, pvalue[0], pvalue[1], pvalue[2], count};
-        spiout.push_packet(d);
-        lvalue = rvalue;
-        ltime = millis();
+    // read from IR??
+    if (ir.getResults()) {
+        myDecoder.decode();
+        send_code(IR, (myDecoder.value<<8) | myDecoder.protocolNum);
+        ir.enableIRIn();      //Restart receiver
     }
 
-    rf.resetAvailable();
+    if (rf.available()) {
+        uint32_t value = rf.getReceivedValue();
+        if(value && rf.getReceivedBitlength() == 24)
+            send_code(RF, value);
+
+        rf.resetAvailable();
+    }
 }

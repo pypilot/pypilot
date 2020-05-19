@@ -587,7 +587,6 @@ class CalibrationProperty(RoundedValue):
 class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
         super(AgeValue, self).__init__(name, time.monotonic(), **kwargs)
-        self.lastupdate = 0
         self.lastreadable = 0
         self.lastage = ''
 
@@ -596,12 +595,6 @@ class AgeValue(StringValue):
 
     def set(self, value):
         super(AgeValue, self).set(value)
-        
-    def update(self):
-        t = time.monotonic()
-        if t - self.lastupdate > 1:
-          self.lastupdate = t
-          self.set(t) # update every second
 
     def get_msg(self):
         t = time.monotonic()
@@ -684,9 +677,6 @@ def CalibrationProcess(cal_pipe, client):
                         compass_points.AddPoint(p['compass'], p['down'])
                         addedpoint = True
 
-            accel_calibration.age.update()
-            compass_calibration.age.update()
-
         if not addedpoint: # don't bother to run fit if no new data
             continue
 
@@ -697,6 +687,7 @@ def CalibrationProcess(cal_pipe, client):
             if dist > .01: # only update when bias changes more than this
                 if dist > .08: # reset compass cal from large change in accel bias
                     compass_points.Reset()
+                accel_calibration.set(fit)
 
         compass_points.RemoveOlder(20*60) # 20 minutes
         fit = FitCompass(debug('compass'), compass_points, compass_calibration.value[0], norm)

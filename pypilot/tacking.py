@@ -92,7 +92,7 @@ class Tack(object):
 
     # disengage cancels any tacking
     if not ap.enabled.value:
-      self.state.set('none')
+      self.state.update('none')
 
     if self.state.value == 'none': # not tacking
       # if we have wind data, use it to determine the tacking direction
@@ -110,7 +110,7 @@ class Tack(object):
     if self.state.value == 'begin':
       self.time = t
       self.current_direction = self.direction.value
-      self.state.set('waiting')
+      self.state.update('waiting')
 
     # waiting to tack, update timeout
     if self.state.value == 'waiting':
@@ -119,7 +119,7 @@ class Tack(object):
         self.timeout.set(remaining)
       else:
         self.timeout.set(0)
-        self.state.set('tacking')
+        self.set.update('tacking')
         if 'wind' in ap.mode.value:
           self.tack_angle = 2*ap.command # opposite wind direction for wind  mode
         else:
@@ -146,6 +146,6 @@ class Tack(object):
       if current > self.threshold.value:
         heading_command -= mul*tack_angle
         ap.command.set(resolv(heading_command, 180))
-        self.state.set('none')
+        self.set.update('none')
 
     return self.state.value == 'tacking'

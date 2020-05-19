@@ -138,7 +138,7 @@ class Autopilot(object):
     self.wind_speed = 0
 
     self.runtime = self.register(TimeValue, 'runtime') #, persistent=True)
-    self.timings = self.register(Value, 'timings', False)
+    self.timings = self.register(SensorValue, 'timings', False)
 
     device = '/dev/watchdog0'
     try:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -127,13 +127,14 @@ class arduino(object):
                 self.close(e)
                 return False
             x = x[1:] + y
+        #print('spi packet', x)
 
         command = x[0]
         if x[0] == RF:
             key = 'rf%02X%02X%02X' % (x[1], x[2], x[3])
             count = x[4]
         elif x[0] == IR:
-            key = 'ir%d' % x[1]
+            key = 'ir%02X%02X%02X' % (x[1], x[2], x[3])
             count = x[4]
         elif x[0] == AR:
             key = 'gpio' % x[1]
@@ -177,17 +178,10 @@ def main():
                            'resetpin':'gpio16'}}
     ar = arduino(c)
 
-    print('opening...')
-    ar.open()
-
     t0 = time.monotonic()
 
     while True:
         ar.poll()
-        while True:
-            v = ar.read()
-            if v:
-                print('read', time.monotonic()-t0 , v)
         time.sleep(.01)
     
 if __name__ == '__main__':

@@ -178,9 +178,9 @@ class IMU(object):
             print('compass out of range, resetting', compass)
             self.init()
 
-class LoopFreqValue(Value):
-    def __init__(self, name, initial):
-        super(LoopFreqValue, self).__init__(name, initial)
+class LoopFreqValue(SensorValue):
+    def __init__(self, name):
+        super(LoopFreqValue, self).__init__(name)
         self.loopc = 0
         self.t0 = time.monotonic()
 
@@ -290,7 +290,7 @@ class BoatIMU(object):
         self.timestamp = client.register(SensorValue('timestamp', 0))
         self.rate = self.register(EnumProperty, 'rate', 10, [10, 25], persistent=True)
 
-        self.loopfreq = self.register(LoopFreqValue, 'loopfreq', 0)
+        self.loopfreq = self.register(LoopFreqValue, 'loopfreq')
         self.alignmentQ = self.register(QuaternionValue, 'alignmentQ', [2**.5/2, -2**.5/2, 0, 0], persistent=True)
         self.alignmentQ.last = False
         self.heading_off = self.register(RangeProperty, 'heading_offset', 0, -180, 180, persistent=True)
@@ -366,7 +366,7 @@ class BoatIMU(object):
         if not data:
             if time.monotonic() - self.last_imuread > 1 and self.loopfreq.value:
                 print('IMURead failed!')
-                self.loopfreq.set(0)
+                self.loopfreq.set(False)
                 for name in self.SensorValues:
                     self.SensorValues[name].set(False)
                 self.uptime.reset()

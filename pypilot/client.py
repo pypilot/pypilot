@@ -166,7 +166,8 @@ class pypilotClient(object):
         self.poller = select.poll()
         self.poller.register(self.connection.socket, select.POLLIN)
         for name, value in self.watches.items():
-            self.wwatches[name] = value
+            self.wwatches[name] = value # resend watches
+
         for name in self.values.values:
             if name != 'values' and name != 'watch':
                 self.values.wvalues[name] = self.values.values[name].info
@@ -179,23 +180,8 @@ class pypilotClient(object):
             
         # inform server of any watches we have changed
         if self.wwatches:
-            watches = {}
-            for name, value in self.wwatches.items():
-                if name in self.watches: # already watching
-                    if value is False:
-                        del self.watches[name] # stop watching
-                        watches[name] = value
-                        continue
-                    elif self.watches[name] is value:
-                        continue # already watching at this period
-                elif not value:
-                    continue # already not watching
-                self.watches[name] = value # update watch
-                watches[name] = value
-
-            if watches:
-                self.connection.send('watch=' + pyjson.dumps(watches) + '\n')
-                #print('watch', watches, self.wwatches, self.watches)
+            self.connection.send('watch=' + pyjson.dumps(self.wwatches) + '\n')
+            #print('watch', watches, self.wwatches, self.watches)
             self.wwatches = {}
 
         # send any delayed watched values
@@ -230,7 +216,7 @@ class pypilotClient(object):
             try:
                 name, data = line.rstrip().split('=', 1)
                 if name == 'error':
-                    print('server error', data)
+                    print('server error:', data)
                     continue
                 value = pyjson.loads(data)
             except ValueError as e:
@@ -298,6 +284,15 @@ class pypilotClient(object):
         self.send(name + '=' + str(value) + '\n')
 
     def watch(self, name, value=True):
+        if name in self.watches: # already watching
+            if value is False:
+                del self.watches[name]
+            elif self.watches[name] is value:
+                return # same watch ignore
+        elif value is False:
+            return # already not watching
+
+        self.watches[name] = value
         self.wwatches[name] = value
 
     def register(self, value):

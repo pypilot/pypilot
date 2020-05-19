@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -20,6 +20,13 @@ class Action(object):
         self.name = name
         self.keys = []
 
+class ActionNone(Action):
+    def __init__(self):
+        super(ActionNone, self).__init__(None, 'none')
+
+    def trigger(self, count):
+        pass
+        
 class ActionKeypad(Action):
     def __init__(self, lcd, index, name):
         super(ActionKeypad, self).__init__(None, name)
@@ -47,7 +54,7 @@ class ActionEngage(ActionPypilot):
     def trigger(self, count):
         super(ActionEngage, self).trigger(count)
         # set heading to current heading
-        if self.hat.client and not count:
+        if self.hat.client and not count and 'ap.heading' in self.hat.last_msg:
             self.hat.client.set('ap.heading_command', self.hat.last_msg['ap.heading'])
             
 class ActionHeading(Action):
@@ -207,7 +214,8 @@ class Hat(object):
                          ActionPypilot(self, 'gpsmode', 'ap.mode', 'gps'),
                          ActionPypilot(self, 'windmode', 'ap.mode', 'wind'),
                          ActionTack(self, 'tackport', 'port'),
-                         ActionTack(self, 'tackstarboard', 'starboard')]
+                         ActionTack(self, 'tackstarboard', 'starboard'),
+                         ActionNone()]
 
         for action in self.actions:
             if action.name in self.config['actions']:
@@ -235,7 +243,8 @@ class Hat(object):
     def write_config(self):
         actions = {}
         for action in self.actions:
-            actions[action.name] = action.keys
+            if action.name != 'none':
+                actions[action.name] = action.keys
 
         self.config['actions'] = actions
                                 
@@ -253,7 +262,9 @@ class Hat(object):
                 if not count:
                     self.web.send({'action': action.name})
                 action.trigger(count)
-            
+                return
+        self.web.send({'action': 'none'})
+                
     def poll(self):
         if self.client.connection:
             self.web.set_status('connected')
@@ -275,6 +286,10 @@ class Hat(object):
 
                 r = i.events[0]
                 i.events = i.events[1:]
+                if i == self.arduino:
+                    if r[0].startswith('ir'):
+                        lircd.LIRC_version = 0 # disable lircd if we got ir from arduino
+                    
                 self.apply_code(*r)
 
         time.sleep(.1)

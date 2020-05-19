@@ -38,6 +38,8 @@ class pypilotScope(pypilotScopeBase):
         self.glContext =  wx.glcanvas.GLContext(self.glArea)
 
         self.client = pypilotClientFromArgs(sys.argv)
+        self.client.watch('timestamp')
+        self.watches = {}
 
         self.timer = wx.Timer(self, wx.ID_ANY)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
@@ -47,7 +49,6 @@ class pypilotScope(pypilotScopeBase):
         self.plot_reshape = False
 
     def enumerate_values(self, value_list):
-        self.watches = {}
         watches = sys.argv[1:]
         for name in sorted(value_list):
             if value_list[name]['type'] != 'SensorValue':
@@ -59,9 +60,11 @@ class pypilotScope(pypilotScopeBase):
                 if arg == name:
                     self.clValues.Check(i, True)
                     self.watches[name] = True
+                    watches.remove(name)
                     break
-            else:
-                print('value not found:', arg)
+
+        if watches:
+            print('values not found:', watches)
                 
     def receive_messages(self, event):
         if not self.clValues.Count:
@@ -69,16 +72,21 @@ class pypilotScope(pypilotScopeBase):
             if value_list:
                 self.enumerate_values(value_list)
                 self.plot.init(value_list)
-            return
 
         refresh = False
         self.client.poll()
+
+        if not self.client.connection:
+            self.plot.add_blank()
+            return
+            
         while True:
             result = self.client.receive_single()
             if not result:
                 break
 
-            if self.watches[result[0]] or result[0] == 'timestamp':
+            name, value = result
+            if name == 'timestamp' or self.watches[name]:
                 if self.plot.read_data(result):
                     refresh = True
 

@@ -160,6 +160,7 @@ class pypilotPlot():
 
     def reset(self):
         self.traces = []
+        self.timestamp = False
 
     def add_data(self, name, group, timestamp, value):
         t = False
@@ -184,10 +185,6 @@ class pypilotPlot():
         # time must change by 1 pixel to bother to log and display
         mindt = self.disptime / float(self.width)
         return t.add(timestamp, value, mindt) and t.visible
-
-    def on_con(self, client):
-        client.watch('timestamp')
-        self.add_blank()
         
     def add_blank(self, group=False):
         for t in self.traces:
@@ -195,14 +192,15 @@ class pypilotPlot():
                 t.add_blank()
 
     def read_data(self, msg):
-        name, data = msg
+        name, value = msg
         if name == 'timestamp':
-            self.timestamp = data['value']
+            self.timestamp = value
             return
         #timestamp = time.monotonic()
+        if not self.timestamp:
+            return
         timestamp = self.timestamp
 
-        value = data['value']
         if type(value) == type([]):
             ret = False
             for i in range(len(value)):
@@ -410,13 +408,6 @@ class pypilotPlot():
                 break
 
 def main():
-    def usage():
-        print('usage: ' + sys.argv[0] + ' [host] [VAR1] [VAR2] .. [VARN]')
-        exit(1)
-
-    if len(sys.argv) < 2:
-        usage()
-
     plot = pypilotPlot()
     client = pypilotClientFromArgs(sys.argv)
     
@@ -437,7 +428,7 @@ def main():
     glutInitWindowPosition(250, 0)
     glutInitWindowSize(1000, 500)
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB)
-    glutCreateWindow ("glplot")
+    glutCreateWindow ('glplot')
 
     def display():
         plot.display()
@@ -451,12 +442,13 @@ def main():
 
     plot.init(client.list_values(10))
 
+    fps = 30
     def timeout(arg):
         glutPostRedisplay()
-        glutTimerFunc(arg, timeout, arg)
+        print('res')
+        glutTimerFunc(int(1000/fps), timeout, arg)
 
-    fps = 30
-    glutTimerFunc(0, timeout, 1000/fps)
+    glutTimerFunc(0, timeout, None)
     glutMainLoop()
 
 if __name__ == '__main__':

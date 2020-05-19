@@ -145,7 +145,7 @@ $(document).ready(function() {
     });
 
     socket.on('pypilot_disconnect', function(msg) {
-        $('#connection').text('Disconnected')
+//        $('#connection').text('Disconnected')
     });
 
     // we poll rather than watch some values to avoid excessive cpu in browser

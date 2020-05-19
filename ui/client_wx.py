@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2018 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import wx, sys, math, subprocess, os, socket
 from pypilot.client import pypilotClient
 
@@ -40,6 +39,7 @@ class MainFrame(wx.Frame):
 
         self.scrolledWindow = wx.ScrolledWindow(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.HSCROLL|wx.VSCROLL )
         self.scrolledWindow.SetScrollRate(5, 5)
+        self.Refresh(None)
 
         ssizer.Add(self.scrolledWindow, 1, wx.EXPAND | wx.ALL, 5)
 
@@ -68,32 +68,32 @@ class MainFrame(wx.Frame):
         self.timer = wx.Timer(self, wx.ID_ANY)
         self.timer.Start(500)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
-
-        self.Refresh()
-
+        
     def layout_widgets(self, value_list):
-        sizer = wx.FlexGridSizer(0, 3, 0, 0)
-        sizer.AddGrowableCol( 2 )
-        sizer.SetFlexibleDirection( wx.BOTH )
-        sizer.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+        sizer = self.scrolledWindow.GetSizer()
+        if not sizer:
+            sizer = wx.FlexGridSizer(0, 3, 0, 0)
+            sizer.AddGrowableCol( 2 )
+            sizer.SetFlexibleDirection( wx.BOTH )
+            sizer.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-        self.values = {}
-        self.controls = {}
-        self.sliderrange = {}
-        for name in sorted(self.value_list):
-            t = self.value_list[name]['type']
+        for name in sorted(value_list):
+            t = value_list[name]['type']
             watch = True
             if t == 'SensorValue':
-                watch=2 # update only every 2 seconds
-                client.watch(name, watch)
+                watch=10 # update only every 10 seconds
+            self.client.watch(name, watch)
 
-        for name in sorted(self.value_list):
+        for name in sorted(value_list):
+            if name in self.values:
+                continue
+
             sizer.Add( wx.StaticText(self.scrolledWindow, wx.ID_ANY, name), 0, wx.ALL, 5 )
                     
             self.values[name] = wx.StaticText(self.scrolledWindow, wx.ID_ANY)
             sizer.Add( self.values[name], 0, wx.ALL, 5 )
 
-            t = self.value_list[name]['type']
+            t = value_list[name]['type']
 
             if t == 'Property':
                 tb = wx.TextCtrl(self.scrolledWindow, wx.ID_ANY)
@@ -115,7 +115,7 @@ class MainFrame(wx.Frame):
             elif t == 'RangeProperty' or t == 'RangeSetting':
                 useSlider = True
                 def proc():
-                    r = self.value_list[name]['min'], self.value_list[name]['max']
+                    r = value_list[name]['min'], value_list[name]['max']
                     if useSlider:
                         s = wx.Slider(self.scrolledWindow)
                         s.SetRange(0, 1000)
@@ -143,7 +143,7 @@ class MainFrame(wx.Frame):
             elif t == 'EnumProperty':
                 def proc():
                     c = wx.Choice(self.scrolledWindow, wx.ID_ANY)
-                    for choice in self.value_list[name]['choices']:
+                    for choice in value_list[name]['choices']:
                         c.Append(str(choice))
                     sizer.Add( c, 0, wx.EXPAND)
                     self.controls[name] = c
@@ -165,10 +165,22 @@ class MainFrame(wx.Frame):
 
             else:
                 sizer.Add( wx.StaticText(self.scrolledWindow, wx.ID_ANY, ''))
-        return sizer
+
+
+        self.scrolledWindow.SetSizer(sizer)
+        self.scrolledWindow.Layout()
+
+        sizer.Fit(self.scrolledWindow)
         
-    def Refresh(self):
-        print('refresh does nothing')
+    def Refresh(self, event):
+        if self.client.connection:
+            self.client.disconnect()
+        sizer = self.scrolledWindow.GetSizer()
+        if sizer:
+            sizer.Clear(True)
+        self.values = {}
+        self.controls = {}
+        self.sliderrange = {}
         
     def receive_messages(self, event):
         if self.client.connection != self.connected:
@@ -180,12 +192,7 @@ class MainFrame(wx.Frame):
 
         value_list = self.client.list_values()
         if value_list:
-            sizer = self.layout_widgets(value_list)
-
-            self.scrolledWindow.SetSizer(sizer)
-            self.scrolledWindow.Layout()
-
-            sizer.Fit(self.scrolledWindow)
+            self.layout_widgets(value_list)
                 
         while True:
             result = self.client.receive()

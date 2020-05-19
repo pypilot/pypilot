@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import time, sys, os
 from flask import Flask, render_template, session, request, Markup
 
@@ -45,7 +44,6 @@ DEFAULT_PORT = 21311
 
 import networking
 
-
 @app.route('/')
 def index():
     return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=networking.tinypilot)
@@ -60,17 +58,24 @@ class pypilotWeb(Namespace):
         print('processing clients')
         x = 0
         while True:
-            print('thread')
             socketio.sleep(.25)
             sys.stdout.flush() # update log
-            for sid in self.clients:
+            sids = list(self.clients)
+            for sid in sids:
+                if not sid in self.clients:
+                    print('removed')
+                    continue # was removed
+
                 client = self.clients[sid]
-                values = client.values.list()
+                values = client.list_values()
                 if values:
-                    socketio.emit('pypilot_values', values, room=sid)
+                    values = {}
+                    socketio.emit('pypilot_values', pyjson.dumps(values), room=sid)
+                    print('values')
                 if not client.connection:
                     socketio.emit('pypilot_disconnect', room=sid)
-                msgs = self.client.receive()
+                    print('conndis', client, client.connection)
+                msgs = client.receive()
                 socketio.emit('pypilot', msgs, room=sid)
 
     def on_pypilot(self, message):
@@ -87,7 +92,7 @@ class pypilotWeb(Namespace):
 
     def on_disconnect(self):
         print('Client disconnected', request.sid)
-        client = self.clients[request.sid].client
+        client = self.clients[request.sid]
         client.disconnect()
         del self.clients[request.sid]
 

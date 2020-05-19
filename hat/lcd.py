@@ -140,7 +140,7 @@ class LCD():
         self.hat = hat
 
         self.config = hat.config['lcd']
-        default = {'contrast': 60, 'invert': False, 'backlight': 200,
+        default = {'contrast': 60, 'invert': False, 'backlight': 30,
                    'flip': False, 'language': 'en', 'bigstep': 10,
                    'smallstep': 1};
 
@@ -249,6 +249,7 @@ class LCD():
         self.last_msg = {}
         self.last_msg['gps.source'] = 'none'
         self.last_msg['wind.source'] = 'none'
+        self.last_msg['ap.heading_command'] = 0
         
         if self.client:
             self.client.disconnect()
@@ -518,7 +519,7 @@ class LCD():
                 self.menu = LCDMenu(self, _('Display'),
                                     [config_edit(_('contrast'), '', 'contrast', 30, 90, 1),
                                      (_('invert'), invert),
-                                     config_edit(_('backlight'), '', 'backlight', 0, 200, 1),
+                                     config_edit(_('backlight'), '', 'backlight', 0, 40, 1),
                                      (_('flip'), flip)],
                                     self.menu)
                 return self.display_menu
@@ -779,7 +780,7 @@ class LCD():
                 self.surface.box(*(self.convrect(rectangle(x, pos[1], .34, .4)) + [black]))
                 self.text((x, pos[1]), num[i], size, True)
 
-        if self.last_val('imu.loopfreq', 1) == 0:
+        if self.last_val('imu.loopfreq', 1) is False:
             r = rectangle(0, 0, 1, .92)
             self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
             self.control['heading'] = 'no imu'
