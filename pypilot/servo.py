@@ -500,7 +500,7 @@ class Servo(object):
 
     def close_driver(self):
         print('servo lost connection')
-        self.controller.set('none')
+        self.controller.update('none')
         self.sensors.rudder.update(False)
 
         # for unknown reasons setting timeout to 0 here (already 0)

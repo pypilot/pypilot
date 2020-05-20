@@ -63,22 +63,23 @@ class pypilotWeb(Namespace):
             sids = list(self.clients)
             for sid in sids:
                 if not sid in self.clients:
-                    print('removed')
+                    print('client was removed')
                     continue # was removed
 
                 client = self.clients[sid]
                 values = client.list_values()
                 if values:
-                    values = {}
+                    #print('values', values)
                     socketio.emit('pypilot_values', pyjson.dumps(values), room=sid)
-                    print('values')
                 if not client.connection:
                     socketio.emit('pypilot_disconnect', room=sid)
-                    print('conndis', client, client.connection)
                 msgs = client.receive()
-                socketio.emit('pypilot', msgs, room=sid)
+                if msgs:
+                    # convert back to json (format is nicer)
+                    socketio.emit('pypilot', pyjson.dumps(msgs), room=sid)
 
     def on_pypilot(self, message):
+        #print('message', message)
         self.clients[request.sid].send(message + '\n')
 
     def on_ping(self):
@@ -87,7 +88,6 @@ class pypilotWeb(Namespace):
     def on_connect(self):
         print('Client connected', request.sid)
         client = pypilotClient()
-        client.watch('values')
         self.clients[request.sid] = client
 
     def on_disconnect(self):

@@ -37,6 +37,11 @@ class LearningPilot(AutopilotPilot):
       self.meta = json.loads(f.read())
     except Exception as e:
       print('failed to load model')
+      self.meta = {'sensors' : []}
+
+  def initialize(self):
+      self.load()
+      self.initialized = True
 
   def process(self, reset):
     ap = self.ap

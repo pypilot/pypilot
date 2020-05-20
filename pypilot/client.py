@@ -221,8 +221,8 @@ class pypilotClient(object):
                 value = pyjson.loads(data)
             except ValueError as e:
                 print('client value error:', line, e)
-                raise Exception
-                #continue
+                #raise Exception
+                continue
 
             except Exception as e:
                 print('invalid message from server:', line, e)
@@ -235,7 +235,8 @@ class pypilotClient(object):
 
     # polls at least as long as timeout
     def disconnect(self):
-        self.connection.close()
+        if self.connection:
+            self.connection.close()
         self.connection = False
 
     def connect(self, verbose=True):

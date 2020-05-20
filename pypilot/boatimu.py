@@ -442,8 +442,8 @@ class BoatIMU(object):
                 alignment = quaternion.vec2vec2quat([0, 0, 1], adown)
                 alignment = quaternion.multiply(self.alignmentQ.value, alignment)
         
-            if len(alignment):
-                self.update_alignment(alignment)
+                if len(alignment):
+                    self.update_alignment(alignment)
 
             self.last_alignmentCounter = self.alignmentCounter.value
 

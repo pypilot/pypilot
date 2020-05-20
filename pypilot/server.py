@@ -115,19 +115,20 @@ class pypilotValue(object):
             if not self.unwatch(connection, True):
                 # inform client there was no watch
                 connection.send('error=cannot remove unknown watch for ' + self.name + '\n')
+            return
+        
+        if period is True:
+            period = 0 # True is same as a period of 0, for fastest watch
+
+        # unwatch by removing
+        self.unwatch(connection, False)
+        for watch in self.awatches:
+            if watch.period == period: # already watching at this rate, add connection
+                watch.connections.append(connection)
+                if period > self.watching: # only need to update if period is relaxed
+                    self.calculate_watch_period()
+                break
         else:
-            if period is True:
-                period = 0 # True is same as a period of 0, for fastest watch
-
-            # unwatch by removing
-            self.unwatch(connection, False)
-            for watch in self.awatches:
-                if watch.period == period: # already watching at this rate, add connection
-                    watch.connections.append(connection)
-                    if period > self.watching: # only need to update if period is relaxed
-                        self.calculate_watch_period()
-                    return
-
             # need a new watch for this unique period
             watch = Watch(self, connection, period)
             if period == 0: # make sure period 0 is always at start of list
@@ -138,8 +139,8 @@ class pypilotValue(object):
             if period:
                 self.pwatches.append(watch)
 
-            if self.msg: # for initial retrieval
-                connection.send(self.get_msg())
+        if self.msg: # for initial retrieval
+            connection.send(self.get_msg())
 
 class ServerWatch(pypilotValue):
     def __init__(self, values):
