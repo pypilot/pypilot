@@ -298,6 +298,11 @@ class pypilotClient(object):
         self.watches[name] = value
         self.wwatches[name] = value
 
+    def clear_watches(self):
+        for name in self.watches:
+            self.wwatches[name] = False
+        self.watches = {}
+
     def register(self, value):
         self.values.register(value)
         value.client = self

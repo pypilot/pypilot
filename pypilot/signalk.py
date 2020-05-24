@@ -115,6 +115,7 @@ class signalk(object):
             return
 
         self.subscriptions = [] # track signalk subscriptions
+        self.signalk_values = {}
         try:
             self.ws = create_connection(self.signalk_ws_url)
             self.ws.settimeout(0) # nonblocking
@@ -180,27 +181,32 @@ class signalk(object):
 
         self.send_signalk()
 
-        signalk_values = {}
         while True:
             try:
                 msg = self.ws.recv()
             except:
                 break
-            self.receive_signalk(msg, signalk_values)
+            self.receive_signalk(msg)
 
         for sensor, sensor_table in signalk_table.items():
-            for source, values in signalk_values.items():
+            for source, values in self.signalk_values.items():
                 data = {}
-                for signalk_path, signalk_value in values.items():
-                    if signalk_path in sensor_table:
-                        pypilot_path = sensor_table[signalk_path]
-                        data[pypilot_path] = signalk_value
-                if data:
+                for signalk_path, pypilot_path in sensor_table.items():
+                    if signalk_path in values:
+                        data[pypilot_path] = values[signalk_path]
+                    else:
+                        break
+                else:
+                    for signalk_path in sensor_table:
+                        del values[signalk_path]
+                    # all needed sensor data is found 
                     data['device'] = source
+                    #print('data', data, sensor)
                     if self.sensors:
                         self.sensors.write(sensor, data, 'signalk')
                     else:
                         print('signalk received', sensor, data)
+                    break
 
     def send_signalk(self):
         # see if we can produce any signalk output from the data we have read
@@ -217,7 +223,7 @@ class signalk(object):
                             break
                         v[signalk_key] = self.last_values[key]                        
                     else:
-                        updates.append({'path': signalk_path, 'value': v})
+                        updates.append({'paths': signalk_path, 'value': v})
                         self.signalk_msgs[signalk_path] = True                        
                 else:
                     key = sensor+'.'+pypilot_path
@@ -228,6 +234,7 @@ class signalk(object):
         if updates:
             # send signalk updates
             msg = {'updates':[{'$source':'pypilot','values':updates}]}
+            #print('signalk updates', msg)
             try:
                 self.ws.send(pyjson.dumps(msg)+'\n')
             except Exception as e:
@@ -239,7 +246,7 @@ class signalk(object):
         self.ws = False
         self.client.clear_watches() # don't need to receive pypilot data
 
-    def receive_signalk(self, msg, values):
+    def receive_signalk(self, msg):
         try:
             data = pyjson.loads(msg)
         except:
@@ -255,12 +262,12 @@ class signalk(object):
                     source = update['$source']
                 if 'timestamp' in update:
                     timestamp = update['timestamp']
-                if not source in values:
-                    values[source] = {}
+                if not source in self.signalk_values:
+                    self.signalk_values[source] = {}
                 for value in update['values']:
                     path = value['path']
                     if path in self.signalk_msgs_skip:
-                        values[source][path] = value['value']
+                        self.signalk_values[source][path] = value['value']
                     else:
                         self.signalk_msgs_skip[path] = True
                     
