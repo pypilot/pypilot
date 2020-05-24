@@ -288,6 +288,8 @@ class pypilotClient(object):
         if name in self.watches: # already watching
             if value is False:
                 del self.watches[name]
+                self.wwatches[name] = value
+                return
             elif self.watches[name] is value:
                 return # same watch ignore
         elif value is False:
