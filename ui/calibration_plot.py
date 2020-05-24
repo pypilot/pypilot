@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import time, sys
 from pypilot.client import pypilotClient
 import json, math, numpy
@@ -65,15 +64,15 @@ class CalibrationPlot(object):
                 self.points = self.points[1:]
 
     def read_data_plot(self, msg):
-        name, data = msg
+        name, value = msg
         if name == 'imu.fusionQPose':
-            self.fusionQPose = data['value']
+            self.fusionQPose = value
         elif name == 'imu.alignmentQ':
-            self.alignmentQ = data['value']
+            self.alignmentQ = value
         elif name == 'imu.'+self.name:
-            self.add_point(data['value'])
+            self.add_point(value)
         elif name == 'imu.'+self.name+'.calibration.sigmapoints':
-            self.sigmapoints = data['value']
+            self.sigmapoints = value
                 
     def display_setup(self):
         width, height = self.dim
@@ -104,8 +103,7 @@ class CalibrationPlot(object):
             return [0, 0, 1]
 
         down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(self.fusionQPose))
-            
-        glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
+        glRotatef(-math.degrees(quaternion.angle(self.fusionQPose)), *self.fusionQPose[1:])
         return down
 
     def draw_points(self):
@@ -189,11 +187,11 @@ class AccelCalibrationPlot(CalibrationPlot):
 
     def read_data(self, msg):
         self.read_data_plot(msg)
-        name, data = msg
-        if name == 'imu.accel.calibration' and data['value']:
+        name, value = msg
+        if name == 'imu.accel.calibration' and value:
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
-            self.cal_sphere = data['value'][0]
+            self.cal_sphere = value[0]
             self.fit_sphere = Spherical(self.cal_sphere, fsphere,  32, 16);
 
     def display(self):
@@ -229,15 +227,15 @@ class CompassCalibrationPlot(CalibrationPlot):
 
     def read_data(self, msg):
         self.read_data_plot(msg)
-        name, data = msg
+        name, value = msg
         if name == 'imu.accel':
-            self.accel = data['value']
+            self.accel = value
         elif name == 'imu.heading':
-            self.heading = data['value']
-        elif name == 'imu.compass.calibration' and data['value']:
+            self.heading = value
+        elif name == 'imu.compass.calibration' and value:
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
-            self.mag_cal_sphere = data['value'][0]
+            self.mag_cal_sphere = value[0]
             self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  32, 16);
             self.mag_fit_cone = Conical(self.mag_cal_sphere, 32, 16);
         

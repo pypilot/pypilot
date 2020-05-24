@@ -1,18 +1,17 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import tempfile, time, math, sys, subprocess, json, socket, os
 import wx, wx.glcanvas
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import calibration_plot, boatplot, autopilot_control_ui
-import pypilot.quaternion
+from pypilot import quaternion
 import scope_wx
 from pypilot.client import pypilotClient
 from client_wx import round3
@@ -55,7 +54,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.have_rudder = False
 
-        self.aligned = [1, 0, 0, 0]
+        self.fusionQPose = [1, 0, 0, 0]
         self.alignmentQ = [1, 0, 0, 0]        
         self.controltimes = {}
 
@@ -74,12 +73,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         def calwatch(name):
             name = 'imu.' + name
             return [name + '.calibration', name + '.calibration.age',
-                    name, name + '.calibration.sigmapoints',
+                    (name, .2), name + '.calibration.sigmapoints',
                     name + '.calibration.locked', name + '.calibration.log']
         
         watchlist = [
-            ['imu.fusionQPose', 'imu.alignmentCounter', 'imu.heading',
-             'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading_offset'],
+            ['imu.fusionQPose', ('imu.alignmentCounter', .2), ('imu.heading', .5),
+             ('imu.alignmentQ', 1), ('imu.pitch', .5), ('imu.roll', .5), ('imu.heel', .5), ('imu.heading_offset', 1)],
             calwatch('accel'),
             calwatch('compass') + ['imu.fusionQPose', 'imu.alignmentQ'],
             ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity', ('rudder.angle', 1),
@@ -92,7 +91,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             for name in watchlist[pageindex]:
                 if i == pageindex:
                     if type(name) == type(()):
-                        name, watch = name
+                        name, watch = name # if a pair, it specifies the period
                     else:
                         watch = True
                     watches[name] = watch
@@ -179,12 +178,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.UpdateControl(dspin, lambda : dspin.SetValue(value))
                 
     def receive_message(self, msg):
-        name, data = msg
-        value = data['value']
+        name, value = msg
 
         if self.m_notebook.GetSelection() == 0:
             if name == 'imu.alignmentQ':
-                self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(pypilot.quaternion.angle(value))))
+                self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(quaternion.angle(value))))
                 self.alignmentQ = value
             elif name == 'imu.fusionQPose':
                 aligned = quaternion.normalize(quaternion.multiply(value, self.alignmentQ))
@@ -193,13 +191,13 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                     return # no imu!  show warning?
                     
                 if self.cCoords.GetSelection() == 1:
-                    self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, aligned)
-                    self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, pypilot.quaternion.conjugate(value))
+                    self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, aligned)
+                    self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, quaternion.conjugate(value))
                 elif self.cCoords.GetSelection() == 2:
-                    ang = pypilot.quaternion.toeuler(aligned)[2] - pypilot.quaternion.toeuler(value)[2]
-                    self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, pypilot.quaternion.angvec2quat(ang, [0, 0, 1]))
+                    ang = quaternion.toeuler(aligned)[2] - quaternion.toeuler(value)[2]
+                    self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, quaternion.angvec2quat(ang, [0, 0, 1]))
 
-                self.aligned = value
+                self.fusionQPose = value
                 self.BoatPlot.Refresh()
             elif name=='imu.alignmentCounter':
                 self.gAlignment.SetValue(100 - value)
@@ -264,12 +262,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                     self.UpdatedSpin(self.settings[name], value)
                     break
 
-
     def servo_console(self, text):
         self.stServoCalibrationConsole.SetLabel(self.stServoCalibrationConsole.GetLabel() + text + '\n')
     
     def PageChanged( self, event ):
-        self.set_watches(self.client)
+        self.set_watches()
             
     def onKeyPressAccel( self, event ):
         self.onKeyPress(event, self.compass_calibration_plot)
@@ -368,8 +365,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         if event.Dragging():
             dx, dy = pos[0] - self.lastmouse[0], pos[1] - self.lastmouse[1]
-            q = pypilot.quaternion.angvec2quat((dx**2 + dy**2)**.4/180*math.pi, [dy, dx, 0])
-            self.boat_plot.Q = pypilot.quaternion.multiply(q, self.boat_plot.Q)
+            q = quaternion.angvec2quat((dx**2 + dy**2)**.4/180*math.pi, [dy, dx, 0])
+            self.boat_plot.Q = quaternion.multiply(q, self.boat_plot.Q)
             self.BoatPlot.Refresh()
             self.lastmouse = pos
 
@@ -390,7 +387,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         # stupid hack
         self.boat_plot.reshape(self.BoatPlot.GetSize().x, self.BoatPlot.GetSize().y)
         
-        self.boat_plot.display(self.aligned)
+        self.boat_plot.display(self.fusionQPose)
         self.BoatPlot.SwapBuffers()
 
     def onSizeGLBoatPlot( self, event ):
