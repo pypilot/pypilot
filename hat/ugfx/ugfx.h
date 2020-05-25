@@ -70,7 +70,7 @@ public:
     void refresh();
 
     int contrast;
-
+    int m_driver;
 private:
     spilcd *disp;
 };
