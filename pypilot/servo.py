@@ -97,8 +97,8 @@ class ServoFlags(Value):
     sz = 256*256
     DRIVER_MASK = sz-1 # bits used for driver flags
 
-    PORT_FAULT=sz*1 # overcurrent faults
-    STARBOARD_FAULT=sz*2
+    PORT_OVERCURRENT_FAULT=sz*1 # overcurrent faults
+    STARBOARD_OVERCURRENT_FAULT=sz*2
     DRIVER_TIMEOUT = sz*4
     SATURATED = sz*8
 
@@ -129,10 +129,10 @@ class ServoFlags(Value):
             ret += 'MAX_RUDDER_FAULT '
         if self.value & self.BAD_FUSES:
             ret += 'BAD_FUSES '
-        if self.value & self.PORT_FAULT:
-            ret += 'PORT_FAULT '
-        if self.value & self.STARBOARD_FAULT:
-            ret += 'STARBOARD_FAULT '
+        if self.value & self.PORT_OVERCURRENT_FAULT:
+            ret += 'PORT_OVERCURRENT_FAULT '
+        if self.value & self.STARBOARD_OVERCURRENT_FAULT:
+            ret += 'STARBOARD_OVERCURRENT_FAULT '
         if self.value & self.DRIVER_TIMEOUT:
             ret += 'DRIVER_TIMEOUT '
         if self.value & self.SATURATED:
@@ -153,13 +153,13 @@ class ServoFlags(Value):
     def clearbit(self, bit):
         self.setbit(bit, False)
             
-    def port_fault(self):
-        self.update((self.value | ServoFlags.PORT_FAULT) \
-                    & ~ServoFlags.STARBOARD_FAULT)
+    def port_overcurrent_fault(self):
+        self.update((self.value | ServoFlags.PORT_OVERCURRENT_FAULT) \
+                    & ~ServoFlags.STARBOARD_OVERCURRENT_FAULT)
 
-    def starboard_fault(self):
-        self.update((self.value | ServoFlags.STARBOARD_FAULT) \
-                    & ~ServoFlags.PORT_FAULT)
+    def starboard_overcurrent_fault(self):
+        self.update((self.value | ServoFlags.STARBOARD_OVERCURRENT_FAULT) \
+                    & ~ServoFlags.PORT_OVERCURRENT_FAULT)
 
 
 class ServoTelemetry(object):
@@ -318,14 +318,12 @@ class Servo(object):
         pid = p + i + d
         #print('pid', pid, p, i, d)
         # map in min_speed to max_speed range
-        
-
         self.do_command(pid)
             
     def do_command(self, speed):
         speed *= self.gain.value # apply gain
 
-        # if not moving or faulted, disengauge
+        # if not moving or faulted stop
         if not speed or self.fault():
             #print('timeout', t - self.command_timeout)
             if self.disengage_on_timeout.value and \
@@ -335,43 +333,23 @@ class Servo(object):
             self.raw_command(0)
             return
 
-        # save computation if not moving
-        if speed == 0 and self.speed.value == 0: # optimization
-            self.raw_command(0)
-            return
-
         # prevent moving the wrong direction if flags set
-        if self.flags.value & (ServoFlags.PORT_FAULT | ServoFlags.MAX_RUDDER_FAULT) and speed > 0 or \
-           self.flags.value & (ServoFlags.STARBOARD_FAULT | ServoFlags.MIN_RUDDER_FAULT) and speed < 0:
+        if self.flags.value & (ServoFlags.PORT_OVERCURRENT_FAULT | ServoFlags.MAX_RUDDER_FAULT) and speed > 0 or \
+           self.flags.value & (ServoFlags.STARBOARD_OVERCURRENT_FAULT | ServoFlags.MIN_RUDDER_FAULT) and speed < 0:
             self.raw_command(0)
             return # abort
-
-        # compute time and dt
-        t = time.monotonic()
-        dt = t - self.position.inttime
-        self.position.inttime = t
 
         # clear faults from overcurrent if moved sufficiently the other direction
         rudder_range = self.sensors.rudder.range.value
         if self.position.value < .9*rudder_range:
-            self.flags.clearbit(ServoFlags.PORT_FAULT)
+            self.flags.clearbit(ServoFlags.PORT_OVERCURRENT_FAULT)
         if self.position.value > -.9*rudder_range:
-            self.flags.clearbit(ServoFlags.STARBOARD_FAULT)
+            self.flags.clearbit(ServoFlags.STARBOARD_OVERCURRENT_FAULT)
 
+            
         # compensate for fluxuating battery voltage
         if self.compensate_voltage.value and self.voltage.value:
             speed *= 12 / self.voltage.value
-
-        if self.compensate_current.value:
-            # get current
-            ampseconds = 3600*(self.amphours.value - self.position.amphours)
-            current = ampseconds / dt
-            self.position.amphours = self.amphours.value
-            pass #todo fix this
-        # allow higher current with higher voltage???
-        #max_current = self.max_current.value
-        #if self.compensate_voltage.value:
-        #    max_current *= self.voltage.value/voltage
         
         # ensure speed max is at least speed min
         if self.speed.min.value > self.speed.max.value:
@@ -380,50 +358,51 @@ class Servo(object):
         min_speed = self.speed.min.value/100.0 # convert percent to 0-1
         max_speed = self.speed.max.value/100.0
         
-        # adjust speed based on current duty
+        # adjust minimum speed based on current duty
         min_speed += (max_speed - min_speed)*self.duty.value*self.speed_gain.value
 
         # ensure it is in range
         min_speed = min(min_speed, max_speed)
-        
-        # integrate windup
-        self.windup += (speed - self.speed.value) * dt
 
-        # if windup overflows, move at least minimum speed
-        if abs(self.windup) > self.period.value*min_speed / 1.5:
-            if abs(speed) < min_speed:
-                speed = min_speed if self.windup > 0 else -min_speed
-        else:
-            speed = 0
+        if self.force_engaged:  # use servo period when autopilot is in control
+            # integrate windup
+            self.windup += (speed - self.speed.value) * dt
 
-        # don't let windup overflow
-        max_windup = 1.5*self.period.value
-        if abs(self.windup) > max_windup:
-            self.flags.setbit(ServoFlags.SATURATED)
-            self.windup = max_windup*sign(self.windup)
-        else:
-            self.flags.clearbit(ServoFlags.SATURATED)
-
-        last_speed = self.speed.value
-        if speed * last_speed <= 0: # switched direction or stopped?
-            if t - self.windup_change < self.period.value:
-                # less than period, keep previous direction, but use minimum speed
-                if last_speed > 0:
-                    speed = min_speed
-                elif last_speed < 0:
-                    speed = -min_speed
-                else:
-                    speed = 0
+            # if windup overflows, move at least minimum speed
+            if abs(self.windup) > self.period.value*min_speed / 1.5:
+                if abs(speed) < min_speed:
+                    speed = min_speed if self.windup > 0 else -min_speed
             else:
-                self.windup_change = t
+                speed = 0
 
+            # don't let windup overflow
+            max_windup = 1.5*self.period.value
+            if abs(self.windup) > max_windup:
+                self.flags.setbit(ServoFlags.SATURATED)
+                self.windup = max_windup*sign(self.windup)
+            else:
+                self.flags.clearbit(ServoFlags.SATURATED)
+
+            last_speed = self.speed.value
+            if speed * last_speed <= 0: # switched direction or stopped?
+                if t - self.windup_change < self.period.value:
+                    # less than period, keep previous direction, but use minimum speed
+                    if last_speed > 0:
+                        speed = min_speed
+                    elif last_speed < 0:
+                        speed = -min_speed
+                    else:
+                        speed = 0
+                else:
+                    self.windup_change = t
+        
         # clamp to max speed
         speed = min(max(speed, -max_speed), max_speed)
         self.speed.set(speed)
 
         # estimate position
         if self.sensors.rudder.invalid():
-            # crude integration of position from speed
+            # crude integration of position from speed without rudder feedback
             position = self.position.value + speed*rudder_range/10 * dt
             self.position.set(min(max(position, -rudder_range), rudder_range))
 
@@ -476,8 +455,8 @@ class Servo(object):
                 self.driver.disengage()
             else:
                 mul = 1
-                if self.flags.value & ServoFlags.PORT_FAULT or \
-                   self.flags.value & ServoFlags.STARBOARD_FAULT: # allow more current to "unstuck" ram
+                if self.flags.value & ServoFlags.PORT_OVERCURRENT_FAULT or \
+                   self.flags.value & ServoFlags.STARBOARD_OVERCURRENT_FAULT: # allow more current to "unstuck" ram
                     mul = 2
                 self.send_driver_params(mul)
 
@@ -654,17 +633,17 @@ class Servo(object):
             self.gain.set(self.driver.gain)
 
         if self.fault():
-            if not self.flags.value & ServoFlags.PORT_FAULT and \
-               not self.flags.value & ServoFlags.STARBOARD_FAULT:
+            if not self.flags.value & ServoFlags.PORT_OVERCURRENT_FAULT and \
+               not self.flags.value & ServoFlags.STARBOARD_OVERCURRENT_FAULT:
                 self.faults.set(self.faults.value + 1)
             
             # if overcurrent then fault in the direction traveled
             # this prevents moving further in this direction
             if self.flags.value & ServoFlags.OVERCURRENT_FAULT:
                 if self.lastdir > 0:
-                    self.flags.port_fault()                    
+                    self.flags.port_overcurrent_fault()
                 elif self.lastdir < 0:
-                    self.flags.starboard_fault()
+                    self.flags.starboard_overcurrent_fault()
                 if self.sensors.rudder.invalid() and self.lastdir:
                     rudder_range = self.sensors.rudder.range.value
                     self.position.set(self.lastdir*rudder_range)
