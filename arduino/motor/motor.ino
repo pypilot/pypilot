@@ -158,11 +158,9 @@ static volatile uint8_t timer1_state;
 #endif
 
 
-// time to charge bootstrap capacitor
+// time to charge bootstrap capacitor, twice dead time
 #define charge_time \
-        dead_time;
-        dead_time;
-        dead_time;
+        dead_time; \
         dead_time;
 
 #define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
