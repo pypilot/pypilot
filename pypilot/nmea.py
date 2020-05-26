@@ -19,7 +19,6 @@
 # inputs nmea: wind, rudder, autopilot commands (serial and tcp)
 # outputs nmea: pitch, roll, and heading messages, wind, rudder (tcp)
 
-from __future__ import print_function
 
 DEFAULT_PORT = 20220
 

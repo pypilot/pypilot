@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -10,7 +10,6 @@
 import os, math, sys, time
 import select, serial
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pyjson
 from client import pypilotClient
 from values import *
