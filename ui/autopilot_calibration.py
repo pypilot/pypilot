@@ -59,12 +59,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.controltimes = {}
 
         self.client = pypilotClient(self.host)
-        self.set_watches()
 
         # clear out plots
         self.accel_calibration_plot.points = []
         self.compass_calibration_plot.points = []
         self.settings = {}
+        self.set_watches()
 
     def set_watches(self):
         if not self.client:
@@ -82,7 +82,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             calwatch('accel'),
             calwatch('compass') + ['imu.fusionQPose', 'imu.alignmentQ'],
             ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity', ('rudder.angle', 1),
-             'rudder.range', 'servo.flags']]
+             'rudder.range', 'servo.flags'], list(self.settings)]
             
         pageindex = self.m_notebook.GetSelection()
         watches = {}
@@ -257,10 +257,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 self.stServoFlags.SetLabel(value)
 
         elif self.m_notebook.GetSelection() == 4:
-            for n in self.settings:
-                if name == n:
-                    self.UpdatedSpin(self.settings[name], value)
-                    break
+            if name in self.settings:
+                self.UpdatedSpin(self.settings[name], value)
 
     def servo_console(self, text):
         self.stServoCalibrationConsole.SetLabel(self.stServoCalibrationConsole.GetLabel() + text + '\n')
