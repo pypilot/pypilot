@@ -254,7 +254,7 @@ class Servo(object):
 
         self.use_eeprom = self.register(BooleanValue, 'use_eeprom', True, persistent=True)
 
-        self.position.inttime = time.monotonic()
+        self.inttime = 0
         self.position.amphours = 0
 
         self.windup = 0
@@ -344,7 +344,6 @@ class Servo(object):
             self.flags.clearbit(ServoFlags.PORT_OVERCURRENT_FAULT)
         if self.position.value > -.9*rudder_range:
             self.flags.clearbit(ServoFlags.STARBOARD_OVERCURRENT_FAULT)
-
             
         # compensate for fluxuating battery voltage
         if self.compensate_voltage.value and self.voltage.value:
@@ -363,6 +362,10 @@ class Servo(object):
         # ensure it is in range
         min_speed = min(min_speed, max_speed)
 
+        t = time.monotonic()
+        dt = t - self.inttime
+        self.inttime = t
+        
         if self.force_engaged:  # use servo period when autopilot is in control
             # integrate windup
             self.windup += (speed - self.speed.value) * dt

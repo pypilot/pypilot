@@ -531,8 +531,8 @@ def FitCompass(debug, compass_points, compass_calibration, norm):
         if c == fit[1]: # must have had 3d fit to use 1d fit
             return
         c = fit[0]
+        return # for now disallow 1d fit
         debug('using 1d fit')
-        #return # for now disallow 1d fit
 
     # make sure the magnitude is sane
     mag = c[0][3]
@@ -588,27 +588,26 @@ class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
         super(AgeValue, self).__init__(name, time.monotonic(), **kwargs)
         self.lastreadable = 0
-        self.lastage = ''
 
     def reset(self):
         self.set(time.monotonic())
 
-    def set(self, value):
-        super(AgeValue, self).set(value)
-
-    def get_msg(self):
+    def update(self):
         t = time.monotonic()
         if t - self.lastreadable > 1:
             self.lastreadable = t
-            dt = t - self.value
-            self.lastage = boatimu.readable_timespan(dt)
-        return '"'+self.lastage+'"'
+            self.set(self.value)
+
+    def get_msg(self):
+        t = time.monotonic()
+        return '"' + boatimu.readable_timespan(t - self.value) + '"'
 
 def RegisterCalibration(client, name, default):
     calibration = client.register(CalibrationProperty(name, default))
     calibration.age = client.register(AgeValue(name+'.calibration.age'))
     calibration.locked = client.register(BooleanProperty(name+'.calibration.locked', False, persistent=True))
     calibration.sigmapoints = client.register(RoundedValue(name+'.calibration.sigmapoints', False))
+    calibration.points = client.register(RoundedValue(name+'.calibration.points', False, persistent=True))
     calibration.log = client.register(Property(name+'.calibration.log', ''))
     return calibration
         
@@ -677,6 +676,12 @@ def CalibrationProcess(cal_pipe, client):
                         compass_points.AddPoint(p['compass'], p['down'])
                         addedpoint = True
 
+            cals = [(accel_calibration, accel_points), (compass_calibration, compass_points)]
+            for calibration, points in cals:
+                calibration.age.update()
+                if points.Updated():
+                    calibration.sigmapoints.set(points.Points())
+
         if not addedpoint: # don't bother to run fit if no new data
             continue
 
@@ -688,11 +693,13 @@ def CalibrationProcess(cal_pipe, client):
                 if dist > .08: # reset compass cal from large change in accel bias
                     compass_points.Reset()
                 accel_calibration.set(fit)
+                accel_calibration.points.set(accel_points.Points())
 
         compass_points.RemoveOlder(20*60) # 20 minutes
         fit = FitCompass(debug('compass'), compass_points, compass_calibration.value[0], norm)
         if fit:
             compass_calibration.set(fit)
+            compass_calibration.points.set(compass_points.Points())
 
 def ExtraFit():
     ellipsoid_fit = False

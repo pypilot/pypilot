@@ -48,6 +48,8 @@ class pypilotValue(object):
         t0 = time.monotonic()
         if self.connection == connection:
             # received new value from owner, inform watchers
+            if self.name == 'compass.calibration.age':
+                print('msg', msg)
             self.msg = msg
 
             if self.awatches:

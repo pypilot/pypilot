@@ -146,12 +146,12 @@ void setup() {
 
   digitalWrite(9, LOW); /* enable internal pullups */
   pinMode(9, OUTPUT);
-#if 0
+#if 1
   TCNT1 = 0x1fff;
   //Configure TIMER1
         TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
         TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
-        ICR1=800;  // 1.25khz
+        ICR1=1000;
         TIMSK1 = 0;
         OCR1A = 200;
 #endif
@@ -189,7 +189,7 @@ void loop() {
         if(d[0] == SET_BACKLIGHT) {
             // turn on backlight
             backlight_value = d[4];
-//	    OCR1A = backlight_value*10;
+	    OCR1A = backlight_value*10;
         }
     }
 

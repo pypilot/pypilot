@@ -326,24 +326,24 @@ class pypilotClient(object):
 def pypilotClientFromArgs(args, period=True):
     host = False
     if len(args) > 1:
-        host = args[1]
+        if not args[1].startswith('-'):
+            host = args[1]
+            args.remove(args[1])
 
     client = pypilotClient(host)
-    if client.connect(False):
-        if host in args:
-            args.remove(host)
-    else:
-        if host:
-            client = pypilotClient()
-            client.connect()
-        if not client.connection:
-            print('failed to connect')
-            exit(1)
+    if not client.connect(True):
+        print('failed to connect to', host)
+        exit(1)
+
+    rargs = []
+    for arg in args[1:]:
+        if not arg.startswith('-'):
+            rargs.append(arg)
 
     # set any value specified with path=value
     watches = []
     sets = False
-    for arg in args[1:]:
+    for arg in rargs:
         if '=' in arg:
             name, value = arg.split('=', 1)
             client.send(arg + '\n')
@@ -398,17 +398,14 @@ def main():
 
     args = list(sys.argv)
     continuous = '-c' in args
-    if continuous:
-        args.remove('-c')
-
     info = '-i' in args
-    if info:
-        args.remove('-i')
         
     period = True if continuous else 100 # 100 second period to just get the value once
     client = pypilotClientFromArgs(args, period)
     if client.watches: # retrieve all values
         watches = list(client.watches)
+        if info:
+            client.list_values(10)
     else:
         watches = list(client.list_values(10))
         if not watches:

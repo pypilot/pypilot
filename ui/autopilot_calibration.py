@@ -73,14 +73,14 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         def calwatch(name):
             name = 'imu.' + name
             return [name + '.calibration', name + '.calibration.age',
-                    (name, .2), name + '.calibration.sigmapoints',
+                    (name, .2), name + '.calibration.sigmapoints', name + '.calibration.points',
                     name + '.calibration.locked', name + '.calibration.log']
         
         watchlist = [
             ['imu.fusionQPose', ('imu.alignmentCounter', .2), ('imu.heading', .5),
              ('imu.alignmentQ', 1), ('imu.pitch', .5), ('imu.roll', .5), ('imu.heel', .5), ('imu.heading_offset', 1)],
             calwatch('accel'),
-            calwatch('compass') + ['imu.fusionQPose', 'imu.alignmentQ'],
+            calwatch('compass') + ['imu.fusionQPose'],
             ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity', ('rudder.angle', 1),
              'rudder.range', 'servo.flags'], list(self.settings)]
             
