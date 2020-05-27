@@ -519,7 +519,7 @@ class LCD():
                 self.menu = LCDMenu(self, _('Display'),
                                     [config_edit(_('contrast'), '', 'contrast', 30, 90, 1),
                                      (_('invert'), invert),
-                                     config_edit(_('backlight'), '', 'backlight', 0, 40, 1),
+                                     config_edit(_('backlight'), '', 'backlight', 0, 100, 1),
                                      (_('flip'), flip)],
                                     self.menu)
                 return self.display_menu
