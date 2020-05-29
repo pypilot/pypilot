@@ -194,14 +194,14 @@ class NMEASocket(object):
     def readline(self):
         if self.b: # optimized version in c
             return self.b.readline_nmea()
-        line = self.readline()
-        if not line:
-            return False
-        if len(line) > 4 and line[0] == '$':
-            cksum = int(buf[-2:])
-            if cksum == nmea_cksum(line[1:-2]):
-                return line
-        return self.readline()
+        while True:
+            line = self.readline()
+            if not line:
+                return False
+            if len(line) > 4 and (line[0] == '$' || line[0] == '!'):
+                cksum = int(buf[-2:])
+                if cksum == nmea_cksum(line[1:-2]):
+                    return line
 
 class Nmea(object):
     def __init__(self, sensors):
