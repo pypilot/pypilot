@@ -74,7 +74,7 @@ static int nmea_cksum(const char *buf, int len)
 
 static bool check_nmea_cksum(char *buf, int len)
 {
-    if(len < 4 || buf[0] != '$')
+    if(len < 4 || (buf[0] != '$' buf[1] != '!'))
         return false;
         
     int cksum = strtol(buf+len-2, 0, 16);
