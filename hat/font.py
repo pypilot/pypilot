@@ -107,5 +107,5 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
     
 if __name__ == '__main__':
     print('ugfx test program')
-    screen = ugfx.display("/dev/fb0")
-    draw(screen, (0, 100), "1234567890", 28);
+    screen = ugfx.screen('/dev/fb0'.encode('utf-8'))
+    draw(screen, (0, 100), "1234567890", 28, False);

@@ -74,7 +74,7 @@ class arduino(object):
                 self.spi.max_speed_hz=5000
         except Exception as e:
             print('failed to communicate with arduino', device, e)
-            exit(1)
+            self.config = False
 
     def close(self, e):
         print('failed to read spi:', e)

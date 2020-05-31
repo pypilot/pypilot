@@ -57,7 +57,6 @@ public:
     long int screensize;
 };
 
-#ifdef WIRINGPI
 
 // nokia5110 spi device
 class spilcd;
@@ -74,5 +73,3 @@ public:
 private:
     spilcd *disp;
 };
-
-#endif

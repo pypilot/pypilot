@@ -23,7 +23,7 @@ class screen(ugfx.surface):
         glutInitWindowPosition(250, 0)
         glutInitWindowSize(int(640*size[0]/size[1]), 640)
         glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB)
-        glutCreateWindow ("lcd screen as window")
+        glutCreateWindow ("virtual lcd screen as glut window")
 
         def display():
             glEnable(GL_TEXTURE_2D)

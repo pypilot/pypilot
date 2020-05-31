@@ -90,8 +90,8 @@ def web_process(pipe, keyspipe, actions):
             web.web_process(pipe, keyspipe, actions)
         except Exception as e:
             print('failed to run web server:', e)
-            #time.sleep(5)
-            exit(0)            
+            while True:
+                time.sleep(5)
 
 class Web(object):
     def __init__(self, hat):
@@ -185,10 +185,21 @@ class Hat(object):
         self.servo_timeout = time.monotonic() + 1
         
         self.last_msg = {}
+        self.last_msg['ap.enabled'] = False
+        self.last_msg['ap.heading_command'] = 0
 
-        self.client = False
-        self.connect()
-        self.lcd = lcd.LCD(self)
+        if self.config['remote']:
+            host = self.config['host']
+        else:
+            host = 'localhost'
+
+        self.client = pypilotClient(host)
+        self.watchlist = ['ap.enabled', 'ap.heading_command']
+        for name in self.watchlist:
+            self.client.watch(name)
+        
+        self.lcd = lcd.lcd
+        self.lcd.configure(hat.config['lcd'])
         self.gpio = gpio.gpio()
         self.arduino = arduino.arduino(self.hatconfig)
         self.lirc = lircd.lirc()
@@ -222,23 +233,6 @@ class Hat(object):
                 action.keys = self.config['actions'][action.name]
 
         self.web = Web(self)
-
-    def connect(self):
-        if self.client:
-            self.client.disconnect()
-
-        self.last_msg['ap.enabled'] = False
-        self.last_msg['ap.heading_command'] = 0
-
-        if self.config['remote']:
-            host = self.config['host']
-        else:
-            host = 'localhost'
-
-        self.client = pypilotClient(host)
-        self.watchlist = ['ap.enabled', 'ap.heading_command']
-        for name in self.watchlist:
-            self.client.watch(name)
 
     def write_config(self):
         actions = {}
