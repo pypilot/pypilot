@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -598,8 +598,6 @@ public:
 
     virtual ~spilcd() {
     }
-
-
     void command(uint8_t c) {
     }
 
@@ -610,8 +608,167 @@ public:
 
     int spifd, rst, dc;
 };
-
 #endif
+    
+#define DC 6 //25
+#define RST 5 //24
+
+#define LCDWIDTH 84
+#define LCDHEIGHT 48
+#define ROWPIXELS LCDHEIGHT/6
+#define PCD8544_POWERDOWN 0x04
+#define PCD8544_ENTRYMODE 0x02
+#define PCD8544_EXTENDEDINSTRUCTION 0x01
+#define PCD8544_DISPLAYBLANK 0x0
+#define PCD8544_DISPLAYNORMAL 0x4
+#define PCD8544_DISPLAYALLON 0x1
+#define PCD8544_DISPLAYINVERTED 0x5
+#define PCD8544_FUNCTIONSET 0x20
+#define PCD8544_DISPLAYCONTROL 0x08
+#define PCD8544_SETYADDR 0x40
+#define PCD8544_SETXADDR 0x80
+#define PCD8544_SETTEMP 0x04
+#define PCD8544_SETBIAS 0x10
+#define PCD8544_SETVOP 0x80
+
+class PCD8544 : public spilcd
+{
+public:
+    PCD8544() : spilcd(RST, DC) {}
+    virtual ~PCD8544() {} 
+
+    void extended_command(uint8_t c) {
+        command(PCD8544_FUNCTIONSET | PCD8544_EXTENDEDINSTRUCTION);
+        command(c);
+
+        command(PCD8544_FUNCTIONSET);
+        command(PCD8544_DISPLAYCONTROL | PCD8544_DISPLAYNORMAL);
+    }
+    
+    void set_contrast(int contrast) {
+        contrast = contrast > 0x7f ? 0x7f : contrast;
+        contrast = contrast < 0 ? 0 : contrast;
+        extended_command(PCD8544_SETVOP | contrast);
+    }
+
+    void set_bias(int bias) {
+        extended_command(PCD8544_SETBIAS | bias);
+    }
+
+    void refresh(int contrast, surface *s) {
+        if(s->bypp != 1)
+            return;
+
+        set_bias(4);
+        set_contrast(contrast);
+
+        command(PCD8544_SETYADDR);
+        command(PCD8544_SETXADDR);
+
+        digitalWrite (dc, HIGH) ;
+
+        int size = 84*48/8;
+
+        char binary[size];
+        for(int col = 0; col<6; col++)
+            for(int y = 0; y < s->height; y++) {
+                int index = y + (5-col)*s->height;
+                uint8_t bits = 0;
+                for(int bit = 0; bit<8; bit++) {
+                    bits <<= 1;
+                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+bit))
+                        bits |= 1;
+                }
+                binary[index] = bits;
+            }
+        
+        // write up to 64 bytes at a time
+        for (int pos=0; pos<size; pos += 64) {
+            int len = 64;
+            if (size - pos < 64)
+                len = size - pos;
+            write(spifd, binary + pos, len);
+        }
+    }
+};
+
+// JLX12864G-086
+
+
+#define LCD_C LOW
+#define LCD_D HIGH
+
+#define LCD_X 128
+#define LCD_Y 64
+#define LCD_CMD 0
+
+const int rstPIN  = 5;    // RST
+const int  rsPIN  = 6;    // RS
+
+class JLX12864G : public spilcd
+{
+public:
+    JLX12864G() : spilcd(rstPIN, rsPIN) {}
+    virtual ~JLX12864G() {}
+    void refresh(int contrast, surface *s) {
+//        command(0x25); // Coarse Contrast, setting range is from 20 to 27
+//      command(0x81); // Trim Contrast
+//        command(0x1f); // Trim Contrast value range can be set from 0 to 63
+
+        unsigned char cmd[] = {0xe2, // Soft Reset
+                            0x2c, // Boost 1
+                            0x2e, // Boost 2
+                            0x2f, // Boost 3
+                            0xa2, // 1/9 bias ratio
+                            0xc0, // Line scan sequence : from top to bottom
+                            0xa0, // column scan order : from left to right
+                            0xa6, // not reverse
+                            0xa4, // not all on
+                            0x40, // start of first line
+                            0xaf}; // Open the display
+
+        digitalWrite (dc, LOW) ;	// Off
+        write(spifd, cmd, sizeof cmd);
+        digitalWrite (dc, HIGH) ;	// Off
+
+        unsigned char binary[128*64];//width*height/8];
+        for(int col = 0; col<8; col++)
+            for(int y = 0; y < 128; y++) {
+                int index = y + col*s->height;
+                uint8_t bits = 0;
+                for(int bit = 0; bit<8; bit++) {
+                    bits <<= 1;
+//                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+7-bit))
+                    if(*(uint8_t*)(s->p + (127-y)*s->line_length + (7-col)*8+bit))
+                        bits |= 1;
+                }
+                binary[index] = bits;
+            }
+
+//        for(int k=0; k<10; k++)
+        for(uint8_t i=0;i<8;i++)
+        {
+            unsigned char c1 = 0xb0+i;
+            unsigned char cmd[] = {c1, 0x10, 0x00};
+            digitalWrite (dc, LOW) ;	// Off
+            write(spifd, cmd, sizeof cmd);
+            digitalWrite (dc, HIGH) ;	// Off
+#if 0
+            unsigned char *address = binary + i*128; //pointer
+            for (unsigned int pos=0; pos<128; pos ++) {
+                char data[1] = {binary[i*128+pos]};
+                write(spifd, data, 1);
+                address++;
+            }
+#else
+            unsigned char *address = binary + i*128; //pointer
+            write(spifd, address, 128);
+#endif
+        }
+     }
+};
+
+
 
 static int detect(int driver) {
     if(driver != -1)
@@ -632,14 +789,11 @@ static int detect(int driver) {
 }
 const int spilcdsizes[][2] = {{48, 84}, {64, 128}};
 
-#include "nokia5110.h"
-#include "jlx12864.h"
-
 spiscreen::spiscreen(int driver)
-    : m_driver(detect(driver)),
-      surface(spilcdsizes[m_driver][0], spilcdsizes[m_driver][1], 1, NULL)
+    : surface(spilcdsizes[detect(driver)][0], spilcdsizes[detect(driver)][1], 1, NULL)
 {
-    switch (m_driver) {
+    driver = detect(driver);
+    switch (driver) {
     case 0: disp = new PCD8544(); break;
     case 1: disp = new JLX12864G(); break;
     default:

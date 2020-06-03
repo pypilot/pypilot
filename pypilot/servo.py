@@ -205,13 +205,8 @@ class Servo(object):
         self.calibration = self.register(JSONValue, 'calibration', {})
         self.load_calibration()
 
-<<<<<<< HEAD
-        self.command = self.register(TimedProperty, 'command')
-        self.position_command = self.register(TimedProperty, 'position_command')
-=======
         self.position_command = self.Register(TimedProperty, 'position_command')
         self.command = self.Register(TimedProperty, 'command')
->>>>>>> master
 
         self.speed_gain = self.register(RangeProperty, 'speed_gain', 0, 0, 1)
         self.duty = self.register(SensorValue, 'duty')

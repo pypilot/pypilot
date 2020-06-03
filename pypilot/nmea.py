@@ -198,7 +198,7 @@ class NMEASocket(object):
             line = self.readline()
             if not line:
                 return False
-            if len(line) > 4 and (line[0] == '$' || line[0] == '!'):
+            if len(line) > 4 and (line[0] == '$' or line[0] == '!'):
                 cksum = int(buf[-2:])
                 if cksum == nmea_cksum(line[1:-2]):
                     return line
