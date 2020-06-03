@@ -41,7 +41,7 @@ def draw(surface, pos, text, size, bw, crop=False):
             height += lineheight
             lineheight = 0
             continue
-        
+
         if not c in font:
             filename = fontpath + '/%03d%03d' % (size, ord(c))
             if bw:
@@ -53,9 +53,13 @@ def draw(surface, pos, text, size, bw, crop=False):
             font[c] = ugfx.surface(filename.encode('utf-8'))
             if font[c].bypp != surface.bypp:
                 font[c] = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
+                if not font[c]:
+                    continue
                 print('store grey', filename)
                 font[c].store_grey(filename.encode('utf-8'))
-
+        if not font[c]:
+            continue
+                
         if pos:
             surface.blit(font[c], x, y)
         x += font[c].width
@@ -74,13 +78,13 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
     except:
         # we will get respawn hopefully after python-PIL is loaded
         print('failed to load PIL to create fonts, aborting...')
-        import time
-        time.sleep(3) # wait 3 seconds to avoid respawning too quickly
+        return False
+        #import time
+        #time.sleep(3) # wait 3 seconds to avoid respawning too quickly
 
         
-        return ugfx.surface(size, size, bypp, bytes([0]*(size*size*bypp)))
-
-        exit(1)
+        #return ugfx.surface(size, size, bypp, bytes([0]*(size*size*bypp)))
+        #exit(1)
 
     ifont = ImageFont.truetype(fontpath, size)
     size = ifont.getsize(c)

@@ -23,7 +23,6 @@ class menu(page):
         for p in self.items:
             p.lcd = self.lcd
             p.prev = self
-            print('parents', p.name)
             if isinstance(p, menu):
                 p.find_parents()
 
@@ -304,7 +303,7 @@ class calibrate(menu):
     
 class motor(menu):
     def __init__(self):
-        super(motor, self).__init__(_('Motor'),
+        super(motor, self).__init__(_('motor'),
                                     [ValueEdit(_('speed.min'), _('relative'), 'servo.speed.min'),
                                      ValueEdit(_('speed.max'), _('relative'), 'servo.speed.max'),
                                      ValueEdit(_('max current'), _('amps'), 'servo.max_current'),
@@ -380,7 +379,7 @@ class wifi(menu):
         
 class control_menu(menu):
     def __init__(self):
-        super(control_menu, self).__init__(_('Control'),
+        super(control_menu, self).__init__(_('control'),
                                       [wifi(),
                                        ConfigEdit(_('small step'), _('degrees'), 'smallstep', 1, 5, 1),
                                        ConfigEdit(_('big step'), _('degrees'), 'bigstep', 5, 20, 5)])

@@ -246,7 +246,7 @@ class pypilotClient(object):
         try:
             host_port = self.config['host'], self.config['port']
             connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            connection.settimeout(3)
+            connection.settimeout(0)
             connection.connect(host_port)
         except Exception as e:
             if verbose:

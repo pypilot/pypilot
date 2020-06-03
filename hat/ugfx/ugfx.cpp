@@ -11,11 +11,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
-/*
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/ioctl.h>
-*/
 #include "ugfx.h"
 
 static uint16_t color16(uint32_t c)
@@ -488,7 +483,11 @@ int surface::getpixel(int x, int y)
     exit(1);
 }
 
-#if 0
+#ifdef __linux__
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+
 screen::screen(const char *device)
 {
     // Open the file for reading and writing
@@ -720,6 +719,7 @@ public:
       //command(0x81); // Trim Contrast
       //command(63); // Trim Contrast value range can be set from 0 to 63
 
+#ifdef WIRINGPI
         unsigned char cmd[] = {0xe2, // Soft Reset
                             0x2c, // Boost 1
                             0x2e, // Boost 2
@@ -731,8 +731,6 @@ public:
                             0xa4, // not all on
                             0x40, // start of first line
                             0xaf}; // Open the display
-
-#ifdef WIRINGPI
         digitalWrite (dc, LOW) ;	// Off
         write(spifd, cmd, sizeof cmd);
         digitalWrite (dc, HIGH) ;	// Off
@@ -756,8 +754,8 @@ public:
         for(uint8_t i=0;i<8;i++)
         {
             unsigned char c1 = 0xb0+i;
-            unsigned char cmd[] = {c1, 0x10, 0x00};
 #ifdef WIRINGPI
+            unsigned char cmd[] = {c1, 0x10, 0x00};
             digitalWrite (dc, LOW) ;	// Off
             write(spifd, cmd, sizeof cmd);
             digitalWrite (dc, HIGH) ;	// Off

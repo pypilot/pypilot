@@ -16,7 +16,6 @@ from page import _
 try:
     from pypilot.client import pypilotClient
     import font
-    import gettext
     def gettime():
         return time.monotonic()
 except:
@@ -51,7 +50,6 @@ class LCD():
         else:
             #use_tft = True
             self.host = '10.10.10.1'
-        print('hiost', self.host)
             
         for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'tft', 'none']:
             if pdriver in sys.argv:
@@ -79,8 +77,8 @@ class LCD():
             print('using glut')
             import glut
             # emulate which screen resolution?
-            screen = glut.screen((240, 320))
-            #screen = glut.screen((64, 128))
+            #screen = glut.screen((240, 320))
+            screen = glut.screen((150, 240))
             #screen = glut.screen((48, 84))
             #screen = glut.screen((96, 168))
             

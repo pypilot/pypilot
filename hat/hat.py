@@ -112,7 +112,7 @@ class Web(object):
                 self.process = False
             sys.stdout.flush()
             if signal_number:
-                raise KeyboardInterrupt # to get backtrace on all processes
+                exit(0)
 
         atexit.register(lambda : cleanup(None)) # get backtrace
         for s in range(1, 16):
@@ -198,8 +198,7 @@ class Hat(object):
         for name in self.watchlist:
             self.client.watch(name)
         
-        self.lcd = lcd.lcd
-        self.lcd.configure(hat.config['lcd'])
+        self.lcd = lcd.LCD(self)
         self.gpio = gpio.gpio()
         self.arduino = arduino.arduino(self.hatconfig)
         self.lirc = lircd.lirc()

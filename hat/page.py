@@ -28,11 +28,12 @@ def _(x):
 
 def set_language(lang):
     try:
+        import gettext, os
         language = gettext.translation('pypilot_hat',
                                        os.path.abspath(os.path.dirname(__file__)) + '/locale',
                                        languages=[lang], fallback=True)
         global translate
-        translate = language.ugettext
+        translate = language.gettext
     except Exception as e:
         print('no language', lang, e)
 
@@ -200,7 +201,7 @@ class page(object):
         self.lcd.client.set(name, value)
 
     def display(self):
-        print('warning, current page does not define display()')
+        pass # some pages only perform an action
         
     def process(self):
         if self.testkeydown(AUTO):
