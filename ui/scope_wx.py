@@ -67,11 +67,14 @@ class pypilotScope(pypilotScopeBase):
             print('values not found:', watches)
                 
     def receive_messages(self, event):
-        if not self.clValues.Count:
-            value_list = self.client.list_values()
-            if value_list:
-                self.enumerate_values(value_list)
-                self.plot.init(value_list)
+        if not self.client:
+            try:
+                host, port = self.host_port
+                self.client = pypilotClient(self.on_con, host, port, autoreconnect=False)
+                self.timer.Start(50)
+            except socket.error:
+                self.timer.Start(1000)
+                return
 
         refresh = False
         self.client.poll()

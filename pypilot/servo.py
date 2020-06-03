@@ -160,7 +160,6 @@ class ServoFlags(Value):
         self.update((self.value | ServoFlags.STARBOARD_OVERCURRENT_FAULT) \
                     & ~ServoFlags.PORT_OVERCURRENT_FAULT)
 
-
 class ServoTelemetry(object):
     FLAGS = 1
     CURRENT = 2
@@ -206,8 +205,13 @@ class Servo(object):
         self.calibration = self.register(JSONValue, 'calibration', {})
         self.load_calibration()
 
+<<<<<<< HEAD
         self.command = self.register(TimedProperty, 'command')
         self.position_command = self.register(TimedProperty, 'position_command')
+=======
+        self.position_command = self.Register(TimedProperty, 'position_command')
+        self.command = self.Register(TimedProperty, 'command')
+>>>>>>> master
 
         self.speed_gain = self.register(RangeProperty, 'speed_gain', 0, 0, 1)
         self.duty = self.register(SensorValue, 'duty')
@@ -344,7 +348,7 @@ class Servo(object):
             self.flags.clearbit(ServoFlags.PORT_OVERCURRENT_FAULT)
         if self.position.value > -.9*rudder_range:
             self.flags.clearbit(ServoFlags.STARBOARD_OVERCURRENT_FAULT)
-            
+
         # compensate for fluxuating battery voltage
         if self.compensate_voltage.value and self.voltage.value:
             speed *= 12 / self.voltage.value
@@ -418,12 +422,14 @@ class Servo(object):
                 return
 
             command = cal[0] + abs(speed)*cal[1]
-            if speed < 0:
-                command = -command
-            self.raw_command(command)
         except:
             print ('servo calibration invalid', self.calibration.value)
-            self.calibration.set({'port': [.2, .8], 'starboard': [.2, .8]})            
+            self.calibration.set({'port': [.2, .8], 'starboard': [.2, .8]})
+            return
+
+        if speed < 0:
+            command = -command
+        self.raw_command(command)
 
     def raw_command(self, command):
         # compute duty cycle

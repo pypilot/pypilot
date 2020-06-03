@@ -425,14 +425,20 @@ def main():
                     if not name in values:
                         print('missing', name)
                 break
-                    
-            client.poll(.1)
-            msgs = client.receive()
-            for name in msgs:
-                values[name] = msgs[name]
-
-        names = sorted(values)
-        for name in names:
+        exit()
+        
+    import signal
+    def quit(sign, frame):
+        exit(0)
+    signal.signal(signal.SIGINT, quit)
+    while True:
+        msg = client.receive_single(.05)
+        if not msg:
+            continue
+        
+        if not continuous:
+            # split on separate lines if not continuous
+            name, value = msg
             if info:
                 print(name, client.info(name), '=', values[name])
             else:

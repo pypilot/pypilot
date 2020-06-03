@@ -133,7 +133,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.GetSizer().Fit(self)
         self.SetSize(wx.Size(570, 420))
         
-        
     def receive_messages(self, event):
         if not self.enumerated:
             value_list = self.client.list_values(10)

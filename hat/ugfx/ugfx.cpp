@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2020 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -798,11 +798,14 @@ static int detect(int driver) {
 }
 const int spilcdsizes[][2] = {{48, 84}, {64, 128}};
 
+#include "nokia5110.h"
+#include "jlx12864.h"
+
 spiscreen::spiscreen(int driver)
-    : surface(spilcdsizes[detect(driver)][0], spilcdsizes[detect(driver)][1], 1, NULL)
+    : m_driver(detect(driver)),
+      surface(spilcdsizes[m_driver][0], spilcdsizes[m_driver][1], 1, NULL)
 {
-    driver = detect(driver);
-    switch (driver) {
+    switch (m_driver) {
     case 0: disp = new PCD8544(); break;
     case 1: disp = new JLX12864G(); break;
     default:
