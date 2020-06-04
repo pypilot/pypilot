@@ -147,8 +147,9 @@ class pypilotClient(object):
         self.config = config
             
         self.connection = False # connect later
+        self.connection_in_progress = False
 
-    def onconnected(self, connection):
+    def onconnected(self):
         self.last_values_list = False
         
         # write config if connection succeeds
@@ -162,7 +163,8 @@ class pypilotClient(object):
         except Exception as e:
             print('Exception writing config file:', self.configfilename, e)
         
-        self.connection = LineBufferedNonBlockingSocket(connection)
+        self.connection = LineBufferedNonBlockingSocket(self.connection_in_progress)
+        self.connection_in_progress = False
         self.poller = select.poll()
         self.poller.register(self.connection.socket, select.POLLIN)
         for name, value in self.watches.items():
@@ -174,9 +176,19 @@ class pypilotClient(object):
 
     def poll(self, timeout=0):
         if not self.connection:
-            if not self.connect(False):
-                time.sleep(timeout)
-                return
+            if self.connection_in_progress:
+                try:
+                    test = self.connection_in_progress.send(b'')
+                except:
+                    print('connecting...')
+                    time.sleep(timeout)
+                    return
+                print('connected!')
+                self.onconnected()
+            else:
+                if not self.connect(False):
+                    time.sleep(timeout)
+            return
             
         # inform server of any watches we have changed
         if self.wwatches:
@@ -246,14 +258,15 @@ class pypilotClient(object):
         try:
             host_port = self.config['host'], self.config['port']
             connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.connection_in_progress = connection
             connection.settimeout(0)
             connection.connect(host_port)
         except Exception as e:
             if verbose:
                 print('connect failed to %s:%d' % host_port, e)
-            return False
+            return True
 
-        self.onconnected(connection)
+        self.onconnected()
         return True
     
     def receive_single(self):

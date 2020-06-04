@@ -609,7 +609,8 @@ public:
     int spifd, rst, dc;
 };
 #endif
-    
+
+#ifdef WIRINGPI
 #define DC 6 //25
 #define RST 5 //24
 
@@ -768,7 +769,7 @@ public:
      }
 };
 
-
+#endif
 
 static int detect(int driver) {
     if(driver != -1)
@@ -794,8 +795,10 @@ spiscreen::spiscreen(int driver)
 {
     driver = detect(driver);
     switch (driver) {
+#ifdef WIRINGPI
     case 0: disp = new PCD8544(); break;
     case 1: disp = new JLX12864G(); break;
+#endif
     default:
         //  fprintf(stderr, "invalid driver: %d", driver);
         exit(1);
