@@ -220,7 +220,7 @@ void surface::store_grey(const char *filename)
 void surface::blit(surface *src, int xoff, int yoff, bool flip)
 {
     if(bypp != src->bypp) {
-        ;//        printf("incompatible surfaces cannot be blit\n");
+        printf("incompatible surfaces cannot be blit\n");
         return;
     }
 

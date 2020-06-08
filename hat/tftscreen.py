@@ -1,7 +1,7 @@
 import display
 import time
 
-class screen(object):
+class screen(ugfx.surface):
     def __init__(self):
         print('inmitit')
         self.width = 320
@@ -14,25 +14,6 @@ class screen(object):
 
     def refresh(self):
         pass
-        
-    def blit(self, surface, x, y, flip=False):
-        pass
-        
-    def fill(self, color):
-        self.tft.set_bg(color)
-        self.tft.clear()
-
-    def box(self, x1, y1, x2, y2, color):
-        self.tft.rect(min(x1, x2), min(y1, y2), abs(x2-x1), abs(y2-y1), color, color)
-
-    def invert(self, x1, y1, x2, y2):
-        pass
-
-    def putpixel(self, x, y, color):
-        self.tft.pixel(x, y, color)
-
-    def line(self, x1, y1, x2, y2, color):
-        self.tft.line(x1, y1, x2, y2, color)
 
 class dfont(object):
     def draw(self, surface, pos, text, size, bw, crop=False):
