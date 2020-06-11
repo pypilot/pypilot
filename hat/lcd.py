@@ -9,20 +9,19 @@
 
 import sys, os, time, math
 
-from menu import mainmenu, connecting
 from page import *
 from page import _
 
 try:
+    import micropython
+    from upy_client import pypilotClient
+    def gettime():
+        return time.time()
+except:
     from pypilot.client import pypilotClient
     import font
     def gettime():
         return time.monotonic()
-except:
-    from upy_client import pypilotClient
-    from tftscreen import font
-    def gettime():
-        return time.time()
 
 class LCD():
     def __init__(self, hat):
@@ -43,32 +42,38 @@ class LCD():
 
         # set the driver to the one from hat eeprom
         driver = 'default'
-        use_tft = False
         if self.hat and self.hat.hatconfig:
             driver = self.hat.hatconfig['lcd']['driver']
             self.host = self.hat.client.config['host']
         else:
-            #use_tft = True
-            self.host = '10.10.10.1'
+            #self.host = '10.10.10.1'
+            self.host = '127.0.0.1'
+            self.host = '192.168.14.1'
             
         for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'tft', 'none']:
             if pdriver in sys.argv:
                 sys.argv.remove(pdriver)
                 driver = pdriver
                 break
-            
-        print('using lcd driver', driver)
-        from ugfx import ugfx
+
+        self.battery_voltage = 0
+        try:
+            import micropython
+            import ugfx
+            use_tft = True
+        except:        
+            use_tft = False
 
         if not use_tft:
             use_glut = 'DISPLAY' in os.environ
-        self.surface = False
         self.use_glut = False
+        self.surface = None
+
         if driver == 'none':
             page = None
         elif driver == 'tft' or (driver == 'default' and use_tft):
-            import tftscreen
-            self.surface = screen = tftscreen.screen()
+            screen = ugfx.surface(138, 240, 1)            
+            self.surface = screen
         elif driver == 'nokia5110' or (driver == 'default' and not use_glut):
             screen = ugfx.spiscreen(0)
         elif driver == 'jlx12864':
@@ -80,7 +85,7 @@ class LCD():
             import glut
             # emulate which screen resolution?
             #screen = glut.screen((240, 320))
-            screen = glut.screen((150, 240))
+            screen = glut.screen((138, 240))
             #screen = glut.screen((48, 84))
             #screen = glut.screen((96, 168))
             
@@ -100,7 +105,7 @@ class LCD():
                 screen.height= min(screen.height, 640)
                 
         if screen:
-            self.bw = 1 if screen.width < 240 else False
+            self.bw = 1 if screen.width < 120 else False
             self.mag=1
 
             if not self.surface:
@@ -115,7 +120,7 @@ class LCD():
                     print('magnifying lcd surface to fit screen')
                     self.magsurface = ugfx.surface(screen)
 
-                self.invsurface = ugfx.surface(self.surface)            
+                self.invsurface = ugfx.surface(self.surface)
         else:
             self.surface = None
 
@@ -126,14 +131,20 @@ class LCD():
         self.client = False
         self.connect()
 
-        self.menu = mainmenu(self)
+        self.menu = False
         self.page = connecting(self)
+        self.need_refresh = True
 
-        self.keypad = [False, False, False, False, False, False, False, False]
+        self.keypad = [0]*NUM_KEYS
         self.keypadup = list(self.keypad)
 
         self.blink = black, white
-        self.wifi = False
+
+    def getmenu(self):
+        if not self.menu:
+            from menu import mainmenu
+            self.menu = mainmenu(self)
+        return self.menu
         
     def set_language(self, lang):
         set_language(lang)
@@ -150,33 +161,18 @@ class LCD():
             self.client.disconnect()
 
         self.client = pypilotClient(self.host)
-        ret = self.client.list_values()
+        self.client.list_values()
 
     def write_config(self):
         if self.hat:
             self.hat.write_config()
 
     def value_list(self):
-        v = self.client.values.value
+        v = self.client.get_values()
         if v:
             return v
         return {}
             
-    def display(self):
-        self.page.display()
-
-        # status cursor
-        t0 = gettime()
-        try:
-            if t0-self.blinktime > .5:
-                self.blink = self.blink[1], self.blink[0]
-                self.blinktime = t0
-        except:
-            self.blinktime = 0
-        w, h = self.surface.width, self.surface.height
-        size = h // 40
-        self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
-
     def key(self, k, down):
         if k >= 0 and k < len(self.keypad):
             if down:
@@ -213,28 +209,43 @@ class LCD():
     def glutspecial(self, k, down=True):
         from OpenGL import GLUT as glut
         if k == glut.GLUT_KEY_UP:
-            self.key(UP, down)
+            self.key(SMALL_PORT, down)
         elif k == glut.GLUT_KEY_DOWN:
-            self.key(DOWN, down)
+            self.key(SMALL_STARBOARD, down)
         elif k == glut.GLUT_KEY_LEFT:
-            self.key(LEFT, down)
+            self.key(BIG_PORT, down)
         elif k == glut.GLUT_KEY_RIGHT:
-            self.key(RIGHT, down)
+            self.key(BIG_STARBOARD, down)
 
     def display(self):
-        self.page.display()
+        self.page.display(self.need_refresh)
+        self.need_refresh = False
         surface = self.surface
-            
-        if self.config['invert']:
-            self.invsurface.blit(surface, 0, 0)
-            surface = self.invsurface
-            surface.invert(0, 0, surface.width, surface.height)
 
-        if self.mag != 1:
-            self.magsurface.magnify(surface, self.mag)
-            surface = magsurface
+        # status cursor
+        t0 = gettime()
+        try:
+            if t0-self.blinktime > .5:
+                self.blink = self.blink[1], self.blink[0]
+                self.blinktime = t0
+        except:
+            self.blinktime = 0
+        w, h = self.surface.width, self.surface.height
+        size = h // 40
+        self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
 
-        self.screen.blit(surface, 0, 0, self.config['flip'])
+        if self.screen != surface:
+            if self.config['invert']:
+                self.invsurface.blit(surface, 0, 0)
+                surface = self.invsurface
+                surface.invert(0, 0, surface.width, surface.height)
+
+            if self.mag != 1:
+                self.magsurface.magnify(surface, self.mag)
+                surface = magsurface
+
+            self.screen.blit(surface, 0, 0, self.config['flip'])
+
         self.screen.refresh()
 
         if 'contrast' in self.config:
@@ -251,32 +262,38 @@ class LCD():
             self.client.watch(name, period)
             
     def poll(self):
+        t0 = gettime()
+
         msgs = self.client.receive()
+        t1 = gettime()
         for name, value in msgs.items():
             self.last_msg[name] = value
-
+        
         if not self.page:
             frameperiod = 1;
         else:
             frameperiod = self.page.frameperiod
-        
         t = gettime()
         dt = t - self.lastframetime
         if dt > frameperiod:
             self.display()
             self.update_watches()
             self.lastframetime = max(self.lastframetime+frameperiod, t-frameperiod)
+        t2 = gettime()
 
         next_page = self.page.process()
         if next_page and next_page != self.page:
             self.page = next_page
             self.update_watches()
+            self.need_refresh = True
 
         for key in range(len(self.keypad)):
             if self.keypadup[key]:
                 self.keypad[key] = self.keypadup[key] = False
                 if self.hat:
                     self.hat.buzzer.beep()
+        t3 = gettime()
+        #print('lcd times', t1-t0, t2-t1, t3-t2)
 
 def main():
     lcd = LCD(False)
@@ -287,8 +304,7 @@ def main():
     else:
         while True:
             lcd.poll()
-            time.sleep(.25)
+            time.sleep(.1)
             
 if __name__ == '__main__':
     main() 
-

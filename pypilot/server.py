@@ -540,7 +540,7 @@ if __name__ == '__main__':
         print_msgs('client2', client2.receive())
         print_msgs('client3', client3.receive())
 
-        time.sleep(.004)
+        time.sleep(.04)
         dt = time.monotonic() - t0
         if dt > .01:
             clock.set(time.monotonic()-t00)

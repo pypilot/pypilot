@@ -147,8 +147,9 @@ class pypilotClient(object):
         self.config = config
             
         self.connection = False # connect later
+        self.connection_in_progress = False
 
-    def onconnected(self, connection):
+    def onconnected(self):
         self.last_values_list = False
         
         # write config if connection succeeds
@@ -162,7 +163,8 @@ class pypilotClient(object):
         except Exception as e:
             print('Exception writing config file:', self.configfilename, e)
         
-        self.connection = LineBufferedNonBlockingSocket(connection)
+        self.connection = LineBufferedNonBlockingSocket(self.connection_in_progress)
+        self.connection_in_progress = False
         self.poller = select.poll()
         self.poller.register(self.connection.socket, select.POLLIN)
         for name, value in self.watches.items():
@@ -174,12 +176,25 @@ class pypilotClient(object):
 
     def poll(self, timeout=0):
         if not self.connection:
-            if not self.connect(False):
-                time.sleep(timeout)
+            if self.connection_in_progress:
+                events = self.poller_in_progress.poll(0)
+                if not events:
+                    return
+                fd, flag = events.pop()
+                if not (flag & select.POLLOUT):
+                    self.connection_in_progress.close()
+                    self.connection_in_progress = False
+                    return
+                self.onconnected()
+            else:
+                if not self.connect(False):
+                    time.sleep(timeout)
                 return
             
         # inform server of any watches we have changed
         if self.wwatches:
+            #print('send wwatchd', 'watch=' + pyjson.dumps(self.wwatches))
+
             self.connection.send('watch=' + pyjson.dumps(self.wwatches) + '\n')
             #print('watch', watches, self.wwatches, self.watches)
             self.wwatches = {}
@@ -246,14 +261,25 @@ class pypilotClient(object):
         try:
             host_port = self.config['host'], self.config['port']
             connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            connection.settimeout(0)
+            self.connection_in_progress = connection
+            self.poller_in_progress = select.poll()
+            self.poller_in_progress.register(self.connection_in_progress.fileno(), select.POLLOUT)
+            
+            connection.settimeout(1)
             connection.connect(host_port)
-        except Exception as e:
-            if verbose:
-                print('connect failed to %s:%d' % host_port, e)
+        except OSError as e:
+            import errno
+            if e.args[0] is errno.EINPROGRESS:
+                return True
+            print('connect failed to %s:%d' % host_port, e)
+            time.sleep(.1)
             return False
+                
+        #except Exception as e:
+        #    if verbose:
+        #        print('connect failed to %s:%d' % host_port, e)
 
-        self.onconnected(connection)
+        self.onconnected()
         return True
     
     def receive_single(self):
@@ -308,10 +334,13 @@ class pypilotClient(object):
         value.client = self
         return value
 
+    def get_values(self):
+        return self.values.value
+
     def list_values(self, timeout=0):
         self.watch('values')
         t0, dt, ret = time.monotonic(), timeout, self.values.value
-        while not ret and dt > 0:
+        while not ret and dt >= 0:
             self.poll(dt)
             ret = self.values.value
             dt = timeout - (t0-time.monotonic())
@@ -425,20 +454,14 @@ def main():
                     if not name in values:
                         print('missing', name)
                 break
-        exit()
-        
-    import signal
-    def quit(sign, frame):
-        exit(0)
-    signal.signal(signal.SIGINT, quit)
-    while True:
-        msg = client.receive_single(.05)
-        if not msg:
-            continue
-        
-        if not continuous:
-            # split on separate lines if not continuous
-            name, value = msg
+                    
+            client.poll(.1)
+            msgs = client.receive()
+            for name in msgs:
+                values[name] = msgs[name]
+
+        names = sorted(values)
+        for name in names:
             if info:
                 print(name, client.info(name), '=', values[name])
             else:

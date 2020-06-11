@@ -76,6 +76,13 @@ class pypilotScope(pypilotScopeBase):
                 self.timer.Start(1000)
                 return
 
+        if not self.plot.value_list:
+            value_list = self.client.list_values()
+            if value_list:
+                self.enumerate_values(value_list)
+                self.plot.init(value_list)
+            return
+            
         refresh = False
         self.client.poll()
 

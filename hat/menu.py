@@ -31,10 +31,16 @@ class menu(page):
             return self.prev.mainmenu()
         return self
 
-    def display(self):
+    def display(self, refresh):
         self.lcd.menu = self
+        if not refresh:
+            if self.selection == self.last_selection:
+                return
+        self.last_selection = self.selection
+            
         self.fill(black)
         fit = self.fittext(rectangle(0, 0, 1, .25), self.name)
+    
         sy = y = fit[1] + .03
         items = min(int((1 - y)/.15), len(self.items))
         scroll = max(self.selection - int(items/2), 0)
@@ -59,22 +65,23 @@ class menu(page):
                 except:
                     pass
             y += .15
-            if y >= 1:
+            if y >= .9:
                 break
 
         # invert selected menu item
-        y = .15*(self.selection-scroll) + sy
-        self.invertrectangle(rectangle(0, y+.03, 1, .12))
+        if self.selection >= 0:
+            y = .15*(self.selection-scroll) + sy
+            self.invertrectangle(rectangle(0, y+.03, 1, .12))
 
     def process(self):
         if self.testkeydown(AUTO):
             self.lcd.menu = self.lcd.menu.mainmenu()
             return control(self.lcd)
-        if self.testkeydown(UP) or self.testkeydown(LEFT):
+        if self.testkeydown(SMALL_PORT) or self.testkeydown(BIG_PORT):
             self.selection -= 1
             if self.selection < 0:
                 self.selection = len(self.items)-1
-        elif self.testkeydown(DOWN) or self.testkeydown(RIGHT):
+        elif self.testkeydown(SMALL_STARBOARD) or self.testkeydown(BIG_STARBOARD):
             self.selection += 1
             if self.selection == len(self.items):
                 self.selection = 0
@@ -97,10 +104,13 @@ class RangeEdit(page):
         self.value = None
         super(RangeEdit, self).__init__(name)
      
-    def display(self):
-        self.fill(black)
-        self.fittext(rectangle(0, 0, 1, .3), self.name, True)
-        self.fittext(rectangle(0, .3, 1, .3), self.desc(), True)
+    def display(self, refresh):
+        if refresh:
+            self.fill(black)
+            self.fittext(rectangle(0, 0, 1, .3), self.name, True)
+            self.fittext(rectangle(0, .3, 1, .3), self.desc(), True)
+        else:
+            self.box(rectangle(0, .6, 1, .4), black)
 
         # update name
         if time.time()-self.lastmovetime > 1:
@@ -156,7 +166,7 @@ class RangeEdit(page):
     def process(self):
         if self.testkeydown(MENU):
             if not self.pypilot:
-                self.write_config()
+                self.lcd.write_config()
             return self.prev
 
         speed = self.speed_of_keys()
@@ -174,12 +184,16 @@ class ValueEdit(RangeEdit):
                                         True, 0, 1, .1)
         self.range = False
 
-    def display(self):
+    def display(self, refresh):
         if not self.range:
-            info = self.lcd.value_list()[self.id]
+            values = self.lcd.value_list()
+            if self.id in values:
+                info = values[self.id]
+            else:
+                info = {'min': 0, 'max': 0}
             self.range = info['min'], info['max']
             self.step = (self.range[1]-self.range[0])/100.0
-        super(ValueEdit, self).display()
+        super(ValueEdit, self).display(refresh)
 
 class ValueCheck(page):
     def __init__(self, name, pypilot_path=False):
@@ -187,7 +201,7 @@ class ValueCheck(page):
         self.pypilot_path = pypilot_path
 
     def process(self):
-        self.lcd.set(pypilot_name, not self.last_val(pypilot_name))
+        self.set(self.pypilot_path, not self.last_val(self.pypilot_path))
         return self.lcd.menu
 
 class ValueEnumSelect(page):
@@ -210,9 +224,12 @@ class ValueEnum(menu):
     def process(self):
         if not self.items:
             try:
-                values = self.lcd.client.values.value
-                info = values[self.pypilot_path]
-                choices = info['choices']
+                values = self.lcd.client.get_values()
+                if values:
+                    info = values[self.pypilot_path]
+                    choices = info['choices']
+                else:
+                    choices = []
                 for choice in self.hide_choices:
                     if choice in choices:
                         choices.remove(choice)
@@ -268,9 +285,21 @@ class calibrate_rudder_feedback(ValueEnum):
     def __init__(self):
         super(calibrate_rudder_feedback, self).__init__(_('rudder'), 'rudder.calibration_state', ['idle'])
 
-    def display(self):
-        super(calibrate_rudder_feedback, self).display()
-        fit = self.fittext(rectangle(0, .5, 1, .25), str(self.last_val('rudder.angle')))
+    def process(self):
+        if not self.last_val('rudder.angle'):
+            if self.testkeydown(MENU):
+                return self.prev
+            
+        super(calibrate_rudder_feedback, self).process()
+        
+    def display(self, refresh):
+        if not self.last_val('rudder.angle'):
+            self.box(rectangle(0, .18, 1, .82), black)
+            self.fittext(rectangle(0, .4, 1, .4), "No Rudder Feedback Detected", True)
+            return
+        super(calibrate_rudder_feedback, self).display(True)
+            
+        fit = self.fittext(rectangle(0, .9, 1, .1), str(self.last_val('rudder.angle')))
 
 class calibrate(menu):
     def __init__(self):
@@ -280,15 +309,18 @@ class calibrate(menu):
                                          ValueCheck(_('lock'), 'imu.compass.calibration.locked'),
                                          calibrate_rudder_feedback(),
                                          calibrate_info()])
+        self.lastcounter = 0
+
     def getheading(self):
         try:
             return '%.1f' % self.last_val('imu.heading')
         except:
             return str(self.last_val('imu.heading'))
         
-    def display(self):
-        super(calibrate, self).display()
+    def display(self, refresh):
         counter = self.last_val('imu.alignmentCounter', 0, 0)
+        super(calibrate, self).display(refresh or counter != self.lastcounter)
+        self.lastcounter = counter
         if counter:
             r = rectangle(0, 0, 1, .15)
             r.height = .2
@@ -349,7 +381,7 @@ class wifi(menu):
                                  select_wifi_defaults(_('defaults')),
                                  wifi_remote(_('remote'))])
 
-    def display(self):
+    def display(self, refresh):
         if not test_wifi():
             self.fill(black)
             self.fittext(rectangle(0, 0, 1, 1), _('No Wifi detected'), True)

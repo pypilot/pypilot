@@ -26,7 +26,7 @@ dependencies = True
 try:
     from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
 except Exception as e:
-    print('signalk: failed to import zeroconf, autodetection not possible using', self.signalk_ws_url)
+    print('signalk: failed to import zeroconf, autodetection not possible')
     print('try pip3 install zeroconf')
     dependencies = False
 

@@ -144,6 +144,7 @@ class pypilotPlot():
     FONT = GLUT_BITMAP_TIMES_ROMAN_24
 
     def __init__(self):
+        self.value_list = False
         self.freeze = False
         self.drawpoints = False
 
@@ -445,7 +446,6 @@ def main():
     fps = 30
     def timeout(arg):
         glutPostRedisplay()
-        print('res')
         glutTimerFunc(int(1000/fps), timeout, arg)
 
     glutTimerFunc(0, timeout, None)

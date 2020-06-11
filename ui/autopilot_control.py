@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import wx, sys, subprocess, socket, os, time
 from pypilot.ui import autopilot_control_ui
 from pypilot.client import *
@@ -17,6 +16,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
     def __init__(self):
         super(AutopilotControl, self).__init__(None)
+
         self.sliderlabels = [-120, -40, -10, -5, 0, 5, 10, 40, 120]
         self.fgGains = self.swGains.GetSizer()
 
@@ -35,7 +35,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.apenabled = False
         self.tackstate = False
         #self.bCenter.Show(False)
-
         self.timer = wx.Timer(self, self.ID_MESSAGES)
         self.timer.Start(100)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=self.ID_MESSAGES)
@@ -45,6 +44,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def init(self):
         self.stStatus.SetLabel('No Connection')
         self.client = pypilotClient(self.host)
+        self.client.connect(True)
+        self.gains = {}
         self.enumerated = False
 
         watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
@@ -134,7 +135,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.SetSize(wx.Size(570, 420))
         
     def receive_messages(self, event):
-        if not self.enumerated:
+        if not self.enumerated and self.client.connection:
             value_list = self.client.list_values(10)
             if value_list:
                 self.enumerate_controls(value_list)
@@ -166,7 +167,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                time.monotonic() - gain['last_change'] > 1:
                 gain['slider'].SetValue(gain['sliderval'])
 
-                
         msgs = self.client.receive()
 
         for name in msgs:

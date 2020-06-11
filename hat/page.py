@@ -8,16 +8,17 @@
 # version 3 of the License, or (at your option) any later version.  
 
 white = 0xffffff
-black = 0x000000
+black = 0x00
 #white = ugfx.color(255, 255, 255)
 #black = ugfx.color(0, 0, 0)
 
-AUTO, MENU, UP, DOWN, SELECT, LEFT, RIGHT = range(7)
+AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, NUM_KEYS = range(9)
 
 class rectangle():
     def __init__(self, x, y, width, height):
         self.x, self.y, self.width, self.height = x, y, width, height
 
+import time
 import json
 import font
 
@@ -42,6 +43,7 @@ class page(object):
         self.name = name
         self.frameperiod = frameperiod
         self.watches = {}
+        self.fittext_cache = {}
 
     def fill(self, color):
         self.lcd.surface.fill(color)
@@ -53,6 +55,56 @@ class page(object):
         size = font.draw(surface, pos, text, size, self.lcd.bw, crop)
         return float(size[0])/surface.width, float(size[1])/surface.height
 
+
+    def fittextsizewordwrap(self, rect, text, font, metric_size, bw, surface):
+        words = text.split(' ')
+        spacewidth = font.draw(surface, False, ' ', metric_size, self.lcd.bw)[0]
+        #if len(words) < 2: # need at least 2 words to wrap
+        #    return self.fittext(rect, text, False, fill)
+        metrics = list(map(lambda word : (word, font.draw(surface, False, word, metric_size, bw)), words))
+
+        widths = list(map(lambda metric : metric[1][0], metrics))
+        maxwordwidth = max(*widths+[0])
+        totalwidth = sum(widths) + spacewidth * (len(words) - 1)
+
+        size = 0
+        # not very efficient... just tries each x position
+        # for wrapping to maximize final font size
+        for wrappos in range(maxwordwidth, totalwidth+1):
+            posx, posy = 0, 0
+            curtext = ''
+            lineheight = 0
+            maxw = 0
+            for metric in metrics:
+                word, (width, height) = metric
+                if posx > 0:
+                    width += spacewidth
+                if posx + width > wrappos:
+                    curtext += '\n'
+                    posx = 0
+                    posy += lineheight
+                    lineheight = 0
+
+                if posx > 0:
+                    curtext += ' '
+                curtext += word
+                lineheight = max(lineheight, height)
+                posx += width
+                maxw = max(maxw, posx)
+            maxh = posy + lineheight
+                    
+            s = maxw, maxh
+            if s[0] == 0 or s[1] == 0:
+                continue
+            sw = surface.width * float(rect.width) / s[0]
+            sh = surface.height * float(rect.height) / s[1]
+            cursize = int(min(sw*metric_size, sh*metric_size))
+            if cursize > size:
+                size = cursize
+                text = curtext
+        return size, text
+        
+    
     def fittext(self, rect, text, wordwrap=False, fill='none'):
         surface = self.lcd.surface
         bw = self.lcd.bw
@@ -60,62 +112,27 @@ class page(object):
         if fill != 'none':
             surface.box(*(self.convrect(rect) + [fill]))
         metric_size = 16
-        if wordwrap:
-            words = text.split(' ')
-            spacewidth = font.draw(surface, False, ' ', metric_size, self.lcd.bw)[0]
-            if len(words) < 2: # need at least 2 words to wrap
-                return self.fittext(rect, text, False, fill)
-            metrics = list(map(lambda word : (word, font.draw(surface, False, word, metric_size, bw)), words))
+        ptext = text
+        if text in self.fittext_cache:
+            size, r, ptext = self.fittext_cache[text]
+            if r.width != rect.width or r.height != rect.height:
+                del self.fittext_cache[text]
 
-            widths = list(map(lambda metric : metric[1][0], metrics))
-            maxwordwidth = max(*widths)
-            totalwidth = sum(widths) + spacewidth * (len(words) - 1)
-
-            size = 0
-            # not very efficient... just tries each x position
-            # for wrapping to maximize final font size
-            for wrappos in range(maxwordwidth, totalwidth+1):
-                posx, posy = 0, 0
-                curtext = ''
-                lineheight = 0
-                maxw = 0
-                for metric in metrics:
-                    word, (width, height) = metric
-                    if posx > 0:
-                        width += spacewidth
-                    if posx + width > wrappos:
-                        curtext += '\n'
-                        posx = 0
-                        posy += lineheight
-                        lineheight = 0
-
-                    if posx > 0:
-                        curtext += ' '
-                    curtext += word
-                    lineheight = max(lineheight, height)
-                    posx += width
-                    maxw = max(maxw, posx)
-                maxh = posy + lineheight
-                    
-                s = maxw, maxh
+        if not text in self.fittext_cache:
+            if wordwrap:
+                size, ptext = self.fittextsizewordwrap(rect, text, font, metric_size, bw, surface)
+            else:
+                s = font.draw(surface, False, text, metric_size, bw)
                 if s[0] == 0 or s[1] == 0:
-                    continue
+                    return 0, 0
                 sw = surface.width * float(rect.width) / s[0]
                 sh = surface.height * float(rect.height) / s[1]
-                cursize = int(min(sw*metric_size, sh*metric_size))
-                if cursize > size:
-                    size = cursize
-                    text = curtext
-        else:
-            s = font.draw(surface, False, text, metric_size, bw)
-            if s[0] == 0 or s[1] == 0:
-                return 0, 0
-            sw = surface.width * float(rect.width) / s[0]
-            sh = surface.height * float(rect.height) / s[1]
-            size = int(min(sw*metric_size, sh*metric_size))
+                size = int(min(sw*metric_size, sh*metric_size))
+
+            self.fittext_cache[text] = size, rect, ptext
 
         pos = int(rect.x*surface.width), int(rect.y*surface.height)
-        size = font.draw(surface, pos, text, size, bw)
+        size = font.draw(surface, pos, ptext, size, bw)
         return float(size[0])/surface.width, float(size[1])/surface.height
 
     def line(self, x1, y1, x2, y2):
@@ -178,15 +195,15 @@ class page(object):
     def speed_of_keys(self):
         # for up and down keys providing acceration
         keypad, keypadup = self.lcd.keypad, self.lcd.keypadup
-        down = keypad[DOWN] or keypadup[DOWN]
-        up = keypad[UP] or keypadup[UP]
-        left = keypad[LEFT] or keypadup[LEFT]
-        right = keypad[RIGHT] or keypadup[RIGHT]
-        updownup = keypadup[LEFT] or keypadup[RIGHT]
-        updownheld = keypad[LEFT] > 10 or keypad[RIGHT] > 10
-        speed = float(1 if updownup else min(10, .004*max(keypad[LEFT], keypad[RIGHT])**2.5))
+        down = keypad[SMALL_STARBOARD] or keypadup[SMALL_STARBOARD]
+        up = keypad[SMALL_PORT] or keypadup[SMALL_PORT]
+        left = keypad[BIG_PORT] or keypadup[BIG_PORT]
+        right = keypad[BIG_STARBOARD] or keypadup[BIG_STARBOARD]
+        updownup = keypadup[BIG_PORT] or keypadup[BIG_STARBOARD]
+        updownheld = keypad[BIG_PORT] > 10 or keypad[BIG_STARBOARD] > 10
+        speed = float(1 if updownup else min(10, .004*max(keypad[BIG_PORT], keypad[BIG_STARBOARD])**2.5))
         updown = updownheld or updownup
-        if keypadup[UP] or keypadup[DOWN]:
+        if keypadup[SMALL_PORT] or keypadup[SMALL_STARBOARD]:
             updown = True
             speed = 10
         if down or left:
@@ -200,14 +217,14 @@ class page(object):
     def set(self, name, value):
         self.lcd.client.set(name, value)
 
-    def display(self):
+    def display(self, refresh):
         pass # some pages only perform an action
         
     def process(self):
         if self.testkeydown(AUTO):
             return control(self.lcd)
         if self.testkeydown(MENU):
-            return self.lcd.menu
+            return self.lcd.getmenu()
         if self.testkeydown(SELECT):
             return self.prev
 
@@ -218,12 +235,12 @@ class info(page):
         self.page = 0
 
     def bound_page(self):
-        if self.page > self.num_pages:
+        if self.page >= self.num_pages:
             self.page = 0
         elif self.page < 0:
             self.page = self.num_pages
         
-    def display(self):
+    def display(self, refresh):
         self.bound_page()
         self.watches = {} # clear watches so they can be page specific
         self.fill(black)
@@ -261,9 +278,9 @@ class info(page):
             even, odd = odd, even
 
     def process(self):
-        if self.testkeyup(UP) or self.testkeyup(RIGHT):
+        if self.testkeyup(SMALL_PORT) or self.testkeyup(BIG_STARBOARD):
             self.page += 1
-        if self.testkeyup(DOWN) or self.testkeyup(LEFT):
+        if self.testkeyup(SMALL_STARBOARD) or self.testkeyup(BIG_PORT):
             self.page -= 1
         return super(info, self).process()
         
@@ -271,7 +288,7 @@ class calibrate_info(info):
     def __init__(self):
         super(calibrate_info, self).__init__(3)
 
-    def display(self):
+    def display(self, refresh):
         self.bound_page()
         self.fill(black)
         self.fittext(rectangle(0, 0, 1, .24), _('Calibrate Info'), True)
@@ -310,12 +327,16 @@ class calibrate_info(info):
 
             self.fittext(rectangle(0, .3, 1, .7), raw)
         else:
-            import time, math
+            import math
             mod = int(time.time()%11)/3
             self.fittext(rectangle(0, .24, 1, .15), 'sigma plot')
             cal = self.last_val('imu.compass.calibration')[0]
-            m = cal[3]
-            dip = math.radians(cal[4])
+            if len(cal) >= 5:
+                m = cal[3]
+                dip = math.radians(cal[4])
+            else:
+                m, dip = 0, 0 # not connected
+
             if mod == 1:
                 m *= math.cos(dip)
             try:
@@ -337,7 +358,13 @@ class calibrate_info(info):
                 self.fittext(rectangle(0, .3, 1, .7), 'N/A')
 
 def test_wifi():
-    wifi = False
+    try:
+        import micropython
+        import wifi_esp32
+        return wifi_esp32.connected
+    except:
+        pass
+        
     try:
         wlan0 = open('/sys/class/net/wlan0/operstate')
         line = wlan0.readline().rstrip()
@@ -352,21 +379,42 @@ class controlbase(page):
     def __init__(self, lcd):
         super(controlbase, self).__init__()
         self.lcd = lcd
+        self.batt = False
         self.wifi = False
 
-    def display(self):
+    def display(self, refresh):
+        if refresh:
+            self.box(rectangle(0, .9, 1, 1), black)
+            self.wifi = False
+            
+        battrect = rectangle(0.03, .92, .25, .07)
+        
+        if self.lcd.battery_voltage:
+            if self.lcd.battery_voltage > 3.6:
+                batt = .85 if self.batt == 1 else 1 # flash
+            else:
+                batt = max((self.lcd.battery_voltage-3)/.6, 0)
+            if batt != self.batt or refresh:
+                self.batt = batt
+                self.lcd.surface.box(*(self.convrect(battrect) + [black]))
+                self.rectangle(battrect, width=0.015)
+                self.rectangle(rectangle(0.28, .94, .03, .03))
+                if batt:
+                    battrect = rectangle(.06, .93, .19*float(batt), .045)
+                    self.box(battrect, white)
+        
         wifi = test_wifi()
-        if self.wifi == wifi:
-            return
-        wifirect = rectangle(.3, .9, .6, .12)
+        if self.wifi == wifi and not refresh:
+            return # done displaying
+        self.wifi = wifi
+        wifirect = rectangle(.35, .9, .6, .1)
         if wifi:
             text = 'WIFI'
             if self.lcd.hat and self.lcd.hat.config['remote']:
                 text += ' R'
             self.fittext(wifirect, text)
         else:
-            self.surface.box(*(self.convrect(wifirect) + [black]))
-        self.wifi = wifi
+            self.lcd.surface.box(*(self.convrect(wifirect) + [black]))
 
 class control(controlbase):
     def __init__(self, lcd):
@@ -408,9 +456,9 @@ class control(controlbase):
             if self.last_val('ap.mode') == mode:
                 r = modes[mode][2]
                 marg = .02
-                self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
+                self.rectangle(rectangle(r.x, r.y+marg, r.width-marg, r.height), .015)
 
-    def display(self):
+    def display(self, refresh):
         if not self.control:
             self.fill(black)
             self.control = {'heading': '   ', 'heading_command': '   ', 'mode': False, 'modes': []}
@@ -434,7 +482,7 @@ class control(controlbase):
                 self.fittext(r, num, False, black)
                 return
 
-            if self.lcd.surface.width < 256:
+            if self.lcd.surface.width < 120:
                 size = 34
             else:
                 size = 30
@@ -524,7 +572,7 @@ class control(controlbase):
 
         if not warning:
             self.display_mode()
-        super(control, self).display()
+        super(control, self).display(refresh)
 
     def process(self):
         if not self.lcd.client.connection:
@@ -538,23 +586,22 @@ class control(controlbase):
                 self.set('servo.command', 0) # stop
                 self.set('ap.enabled', False)
         if self.testkeydown(SELECT):
-            if self.display_page == self.display_control:
-                # change mode
-                for t in range(len(self.modes_list)):
-                    #self.modes_list = [self.modes_list[-1]] + self.modes_list[:-1]
-                    self.modes_list = self.modes_list[1:] + [self.modes_list[0]]
-                    next_mode = self.modes_list[0]
-                    if next_mode != self.last_val('ap.mode') and \
-                       self.modes[next_mode]():
-                        self.set('ap.mode', next_mode)
-                        return
+            # change mode
+            for t in range(len(self.modes_list)):
+                #self.modes_list = [self.modes_list[-1]] + self.modes_list[:-1]
+                self.modes_list = self.modes_list[1:] + [self.modes_list[0]]
+                next_mode = self.modes_list[0]
+                if next_mode != self.last_val('ap.mode') and \
+                   self.modes[next_mode]():
+                    self.set('ap.mode', next_mode)
+                    return
                     
         speed = self.speed_of_keys()
         if not speed:
             return super(control, self).process()
         
         if self.last_val('ap.enabled'):
-            if self.keypadup[UP] or self.keypadup[DOWN]:
+            if self.keypadup[SMALL_PORT] or self.keypadup[SMALL_STARBOARD]:
                 speed = self.config['bigstep']
             else:
                 speed = self.config['smallstep']                        
@@ -569,20 +616,23 @@ class connecting(controlbase):
         super(connecting, self).__init__(lcd)
         self.connecting_dots = 0
         
-    def display(self):
-        self.lcd.surface.fill(black)
-        self.fittext(rectangle(0, 0, 1, .4), _('connect to server'), True)
+    def display(self, refresh):
+        if refresh:
+            self.box(rectangle(0, 0, 1, .4), black)
+            self.fittext(rectangle(0, 0, 1, .4), _('connect to server'), True)
+            self.drawn_text = True
+        self.box(rectangle(0, .4, 1, .5), black)
         dots = ''
         for i in range(self.connecting_dots):
             dots += '.'
         size = self.text((0, .4), dots, 12)
         self.connecting_dots += 1
-        if size[0] >= 1:
+        if size[0] >= 1 or self.connecting_dots > 20:
             self.connecting_dots = 0
-        super(connecting, self).display()
+        super(connecting, self).display(refresh)
 
     def process(self):
         if self.lcd.client.connection:
             return control(self.lcd)
         if self.testkeydown(MENU):
-            return self.lcd.menu
+            return self.lcd.getmenu()

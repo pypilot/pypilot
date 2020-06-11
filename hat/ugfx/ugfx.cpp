@@ -88,27 +88,27 @@ uint32_t cksum(const char *gray_data, int size)
     return crc;
 }
 
-surface::surface(const char* filename)
+surface::surface(const char* filename, int tbypp)
 {
     width = height = bypp = 0;
     p = NULL;
 
-    FILE *f = 0;//fopen(filename, "r");
+    FILE *f = fopen(filename, "r");
     if(!f)
         return;
 
     uint16_t width16, height16, bypp16, colors16;
     if(fread(&width16, 2, 1, f) != 1 || fread(&height16, 2, 1, f) != 1 ||
        fread(&bypp16, 2, 1, f) != 1 || fread(&colors16, 2, 1, f) != 1) {
-//        fprintf(stderr, "failed reading surface header\n");
+        fprintf(stderr, "failed reading surface header\n");
         goto fail;
     }
 
     width = width16;
     height = height16;
-    bypp = bypp16;
+    bypp = tbypp;
     if(width*height > 65536) {
-//        fprintf(stderr, "invalid surface size\n");
+        fprintf(stderr, "invalid surface size\n");
         goto fail;
     }
     
@@ -151,10 +151,12 @@ surface::surface(const char* filename)
             ;//            fprintf(stderr, "bypp incompatible reading %s\n", filename);
     }
 
+    fclose(f);
     return;
 
 fail:
 //    fprintf(stderr, "failed ot open %s\n", filename);
+    delete [] p;
     fclose(f);
     bypp = 0;
 }
@@ -166,7 +168,7 @@ surface::~surface()
 
 void surface::store_grey(const char *filename)
 {
-    FILE *f = 0;//fopen(filename, "w");
+    FILE *f = fopen(filename, "w");
     if(!f) {
         //        fprintf(stderr, "failed to open for writing %s\n", filename);
         return;
@@ -220,7 +222,7 @@ void surface::store_grey(const char *filename)
 void surface::blit(surface *src, int xoff, int yoff, bool flip)
 {
     if(bypp != src->bypp) {
-        ;//        printf("incompatible surfaces cannot be blit\n");
+        printf("incompatible surfaces cannot be blit\n");
         return;
     }
 
@@ -609,7 +611,8 @@ public:
     int spifd, rst, dc;
 };
 #endif
-    
+
+#ifdef WIRINGPI
 #define DC 6 //25
 #define RST 5 //24
 
@@ -768,7 +771,7 @@ public:
      }
 };
 
-
+#endif
 
 static int detect(int driver) {
     if(driver != -1)
@@ -794,8 +797,10 @@ spiscreen::spiscreen(int driver)
 {
     driver = detect(driver);
     switch (driver) {
+#ifdef WIRINGPI
     case 0: disp = new PCD8544(); break;
     case 1: disp = new JLX12864G(); break;
+#endif
     default:
         //  fprintf(stderr, "invalid driver: %d", driver);
         exit(1);

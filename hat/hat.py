@@ -79,9 +79,9 @@ class ActionTack(ActionPypilot):
         self.direction = direction
                                 
     def trigger(self):
-        super(ActionEngage, self).trigger()
         if self.hat.client:
             self.hat.client.set('ap.tack.direction', self.direction)
+        super(ActionTack, self).trigger()
 
 def web_process(pipe, keyspipe, actions):
     while True:

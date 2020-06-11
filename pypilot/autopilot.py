@@ -110,14 +110,15 @@ class Autopilot(object):
     self.last_heading = False
     self.last_heading_off = self.boatimu.heading_off.value
 
-    self.pilots = []
+    self.pilots = {}
     for pilot_type in pilots.default:
         try:
-            self.pilots.append(pilot_type(self))
+            pilot = pilot_type(self)
+            self.pilots[pilot.name] = pilot
         except Exception as e:
             print('failed to load pilot', pilot_type, e)
 
-    pilot_names = list(map(lambda pilot : pilot.name, self.pilots))
+    pilot_names = list(self.pilots)
     print('Loaded Pilots:', pilot_names)
     self.pilot = self.register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True)
 
@@ -294,10 +295,7 @@ class Autopilot(object):
       self.fix_compass_calibration_change(data, t0)
       self.compute_offsets()
 
-      pilot = None # select pilot
-      for p in self.pilots:
-          if p.name == self.pilot.value or not pilot:
-              pilot = p
+      pilot = self.pilots[self.pilot.value] # select pilot
 
       self.adjust_mode(pilot)
       pilot.compute_heading()
