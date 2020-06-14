@@ -56,25 +56,36 @@ class page(object):
         return float(size[0])/surface.width, float(size[1])/surface.height
 
 
-    def fittextsizewordwrap(self, rect, text, font, metric_size, bw, surface):
+    def fittextsizewordwrap(self, rect, text, metric_size, bw, surface):
+        t0 = time.time()
         words = text.split(' ')
+        if not words or not words[0]:
+            return 0, ''
+
         spacewidth = font.draw(surface, False, ' ', metric_size, self.lcd.bw)[0]
-        #if len(words) < 2: # need at least 2 words to wrap
-        #    return self.fittext(rect, text, False, fill)
-        metrics = list(map(lambda word : (word, font.draw(surface, False, word, metric_size, bw)), words))
+
+        metrics = []
+        for word in words:
+            metrics.append((word, font.draw(surface, False, word, metric_size, bw)))
+            self.lcd.client.receive()
+
+        t1 = time.time()
 
         widths = list(map(lambda metric : metric[1][0], metrics))
         maxwordwidth = max(*widths+[0])
         totalwidth = sum(widths) + spacewidth * (len(words) - 1)
+        t2 = time.time()
 
         size = 0
-        # not very efficient... just tries each x position
-        # for wrapping to maximize final font size
-        for wrappos in range(maxwordwidth, totalwidth+1):
+
+        # calculate where to wrap words to maximize font size
+        wrappos = maxwordwidth
+        while True:
             posx, posy = 0, 0
             curtext = ''
             lineheight = 0
             maxw = 0
+            minfirstwidth = maxwordwidth
             for metric in metrics:
                 word, (width, height) = metric
                 if posx > 0:
@@ -83,6 +94,8 @@ class page(object):
                     curtext += '\n'
                     posx = 0
                     posy += lineheight
+                    if width < minfirstwidth:
+                        minfirstwidth = width;
                     lineheight = 0
 
                 if posx > 0:
@@ -99,9 +112,18 @@ class page(object):
             sw = surface.width * float(rect.width) / s[0]
             sh = surface.height * float(rect.height) / s[1]
             cursize = int(min(sw*metric_size, sh*metric_size))
-            if cursize > size:
-                size = cursize
-                text = curtext
+            if cursize < size:
+                break
+            
+            size = cursize
+            text = curtext
+            if posy == 0:
+                break
+
+            wrappos += minfirstwidth
+
+        t3 = time.time()
+
         return size, text
         
     
@@ -120,7 +142,7 @@ class page(object):
 
         if not text in self.fittext_cache:
             if wordwrap:
-                size, ptext = self.fittextsizewordwrap(rect, text, font, metric_size, bw, surface)
+                size, ptext = self.fittextsizewordwrap(rect, text, metric_size, bw, surface)
             else:
                 s = font.draw(surface, False, text, metric_size, bw)
                 if s[0] == 0 or s[1] == 0:
@@ -128,10 +150,16 @@ class page(object):
                 sw = surface.width * float(rect.width) / s[0]
                 sh = surface.height * float(rect.height) / s[1]
                 size = int(min(sw*metric_size, sh*metric_size))
-
-            self.fittext_cache[text] = size, rect, ptext
+            try:
+                self.lcd.client.reset_timeout()
+            except:
+                pass
+            #time.sleep(.02)  # this line is required!  needed to process wifi packets durning long sleep
+            if wordwrap: # only cache wordwrap fit!!
+                self.fittext_cache[text] = size, rect, ptext
 
         pos = int(rect.x*surface.width), int(rect.y*surface.height)
+
         size = font.draw(surface, pos, ptext, size, bw)
         return float(size[0])/surface.width, float(size[1])/surface.height
 
@@ -141,6 +169,11 @@ class page(object):
         surface.line(int(x1*w), int(y1*h), int(x2*w+.5), int(y2*h+.5), white)
 
     def convbox(self, x1, y1, x2, y2):
+        if min(x1, y1, x2, y2) < 0 or max(x1, y2, x2, y2) > 1:
+            print('invalid box!', x1, y1, x2, y2)
+            raise 1
+            return [0, 0, 0, 0]
+
         surface = self.lcd.surface
         w, h = surface.width - 1, surface.height - 1
         return [int(x1*w), int(y1*h), int(x2*w), int(y2*h)]
@@ -166,6 +199,7 @@ class page(object):
     def box(self, rect, color):
         surface = self.lcd.surface
         surface.box(*(self.convrect(rect) + [color]))
+        
                 
     def last_val(self, name, period=-1, default='N/A'):
         if period is -1:
@@ -226,7 +260,9 @@ class page(object):
         if self.testkeydown(MENU):
             return self.lcd.getmenu()
         if self.testkeydown(SELECT):
-            return self.prev
+            if self.prev:
+                return self.prev
+            return control(self.lcd)
 
 class info(page):
     def __init__(self, num_pages=4):
@@ -238,7 +274,7 @@ class info(page):
         if self.page >= self.num_pages:
             self.page = 0
         elif self.page < 0:
-            self.page = self.num_pages
+            self.page = self.num_pages-1
         
     def display(self, refresh):
         self.bound_page()
@@ -384,23 +420,20 @@ class controlbase(page):
 
     def display(self, refresh):
         if refresh:
-            self.box(rectangle(0, .9, 1, 1), black)
+            self.box(rectangle(0, .9, 1, .1), black)
             self.wifi = False
             
-        battrect = rectangle(0.03, .92, .25, .07)
+        battrect = rectangle(0.03, .93, .25, .06)
         
         if self.lcd.battery_voltage:
-            if self.lcd.battery_voltage > 3.6:
-                batt = .85 if self.batt == 1 else 1 # flash
-            else:
-                batt = max((self.lcd.battery_voltage-3)/.6, 0)
+            batt = min(max((self.lcd.battery_voltage-3)/.7, 0), 1)
             if batt != self.batt or refresh:
                 self.batt = batt
                 self.lcd.surface.box(*(self.convrect(battrect) + [black]))
                 self.rectangle(battrect, width=0.015)
-                self.rectangle(rectangle(0.28, .94, .03, .03))
+                self.rectangle(rectangle(0.28, .95, .03, .02))
                 if batt:
-                    battrect = rectangle(.06, .93, .19*float(batt), .045)
+                    battrect = rectangle(.06, .95, .19*float(batt), .02)
                     self.box(battrect, white)
         
         wifi = test_wifi()
@@ -433,15 +466,14 @@ class control(controlbase):
 
     def have_true_wind(self):
         return self.have_gps() and self.have_wind()
-
+    
     def display_mode(self):
-        def modes():
-            return [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
         mode = self.last_val('ap.mode')
-        if self.control['mode'] == mode and self.control['modes'] == modes():
+        modes = [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
+        if self.control['mode'] == mode and self.control['modes'] == modes:
             return # no need to refresh
         self.control['mode'] = mode
-        self.control['modes'] = modes()
+        self.control['modes'] = modes
 
         #print('mode', self.last_val('ap.mode'))
         modes = {'compass': ('C', self.have_compass, rectangle(0, .74, .25, .16)),
@@ -458,7 +490,7 @@ class control(controlbase):
                 marg = .02
                 self.rectangle(rectangle(r.x, r.y+marg, r.width-marg, r.height), .015)
 
-    def display(self, refresh):
+    def display(self, refresh):        
         if not self.control:
             self.fill(black)
             self.control = {'heading': '   ', 'heading_command': '   ', 'mode': False, 'modes': []}
@@ -485,7 +517,7 @@ class control(controlbase):
             if self.lcd.surface.width < 120:
                 size = 34
             else:
-                size = 30
+                size = 32
 
             for i in range(3):
                 try:
@@ -493,8 +525,8 @@ class control(controlbase):
                         continue
                 except:
                     pass
-                x = pos[0]+float(i)/3
-                self.box(rectangle(x, pos[1], .34, .4), black)
+                x = pos[0]+float(i)*.33
+                self.box(rectangle(x, pos[1], .33, .4), black)
                 self.text((x, pos[1]), num[i], size, True)
 
         if self.last_val('imu.loopfreq', 1) is False:
@@ -503,9 +535,10 @@ class control(controlbase):
             self.control['heading'] = 'no imu'
             self.control['heading_command'] = 'no imu'
             return
-
+        
         draw_big_number((0,0), self.last_val('ap.heading'), self.control['heading'])
         self.control['heading'] = self.last_val('ap.heading')
+        #print('heading', self.last_val('ap.heading'))
 
         mode = self.last_val('ap.mode')
 
@@ -586,13 +619,13 @@ class control(controlbase):
                 self.set('servo.command', 0) # stop
                 self.set('ap.enabled', False)
         if self.testkeydown(SELECT):
+            have_mode = {'compass': self.have_compass, 'gps': self.have_gps,
+                          'wind': self.have_wind, 'true wind': self.have_true_wind}
             # change mode
             for t in range(len(self.modes_list)):
-                #self.modes_list = [self.modes_list[-1]] + self.modes_list[:-1]
                 self.modes_list = self.modes_list[1:] + [self.modes_list[0]]
                 next_mode = self.modes_list[0]
-                if next_mode != self.last_val('ap.mode') and \
-                   self.modes[next_mode]():
+                if next_mode != self.last_val('ap.mode') and have_mode[next_mode]():
                     self.set('ap.mode', next_mode)
                     return
                     
@@ -601,7 +634,7 @@ class control(controlbase):
             return super(control, self).process()
         
         if self.last_val('ap.enabled'):
-            if self.keypadup[SMALL_PORT] or self.keypadup[SMALL_STARBOARD]:
+            if self.lcd.keypadup[SMALL_PORT] or self.lcd.keypadup[SMALL_STARBOARD]:
                 speed = self.config['bigstep']
             else:
                 speed = self.config['smallstep']                        

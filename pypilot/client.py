@@ -163,7 +163,7 @@ class pypilotClient(object):
         except Exception as e:
             print('Exception writing config file:', self.configfilename, e)
         
-        self.connection = LineBufferedNonBlockingSocket(self.connection_in_progress)
+        self.connection = LineBufferedNonBlockingSocket(self.connection_in_progress, self.config['host'])
         self.connection_in_progress = False
         self.poller = select.poll()
         self.poller.register(self.connection.socket, select.POLLIN)
@@ -272,7 +272,7 @@ class pypilotClient(object):
             if e.args[0] is errno.EINPROGRESS:
                 return True
             print('connect failed to %s:%d' % host_port, e)
-            time.sleep(.1)
+            time.sleep(.25)
             return False
                 
         #except Exception as e:
@@ -335,7 +335,9 @@ class pypilotClient(object):
         return value
 
     def get_values(self):
-        return self.values.value
+        if self.values.value:
+            return self.values.value
+        return {}
 
     def list_values(self, timeout=0):
         self.watch('values')
@@ -343,7 +345,7 @@ class pypilotClient(object):
         while not ret and dt >= 0:
             self.poll(dt)
             ret = self.values.value
-            dt = timeout - (t0-time.monotonic())
+            dt = timeout - (time.monotonic()-t0)
         if self.last_values_list == ret:
             return False
         self.last_values_list = ret

@@ -290,7 +290,7 @@ class pypilotPlot():
         glLoadIdentity()
         glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0)
 
-        glEnable(GL_LINE_SMOOTH)
+        #glEnable(GL_LINE_SMOOTH)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
