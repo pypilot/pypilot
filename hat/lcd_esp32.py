@@ -66,7 +66,7 @@ while True:
     t3 = time.time()
     
     dt = t3-t0
-    print('dt', t1-t0, t2-t1, t3-t2, dt/period)
+    #print('dt', t1-t0, t2-t1, t3-t2, dt/period)
     time.sleep(max(period - dt, .01))
     if time.time() - sleeptime > 600:
         #tft.backlight(False)

@@ -23,8 +23,8 @@ except:
     import font
     def gettime():
         return time.monotonic()
+    from pypilot.hat.ugfx import ugfx
     micropython = False
-    from ugfx import ugfx
 
 class LCD():
     def __init__(self, hat):
@@ -67,6 +67,7 @@ class LCD():
             use_glut = 'DISPLAY' in os.environ
         self.use_glut = False
         self.surface = None
+
 
         if driver == 'none':
             page = None
@@ -218,9 +219,8 @@ class LCD():
         self.page.display(self.need_refresh)
 
         if micropython:
-            self.page.watches['imu.loopfreq'] = True
+            self.page.watches['imu.gyro'] = True # heartbeat
             #self.page.watches['imu.accel'] = True
-            #self.page.watches['imu.gyro'] = True
                     
         self.need_refresh = False
         surface = self.surface
