@@ -178,9 +178,9 @@ class IMU(object):
             print('compass out of range, resetting', compass)
             self.init()
 
-class LoopFreqValue(SensorValue):
+class FrequencyValue(SensorValue):
     def __init__(self, name):
-        super(LoopFreqValue, self).__init__(name)
+        super(FrequencyValue, self).__init__(name)
         self.loopc = 0
         self.t0 = time.monotonic()
 
@@ -284,13 +284,11 @@ class AutomaticCalibrationProcess(multiprocessing.Process):
 
 class BoatIMU(object):
     def __init__(self, client):
-        self.starttime = time.monotonic()
         self.client = client
 
-        self.timestamp = client.register(SensorValue('timestamp', 0))
         self.rate = self.register(EnumProperty, 'rate', 10, [10, 25], persistent=True)
 
-        self.loopfreq = self.register(LoopFreqValue, 'loopfreq')
+        self.frequency = self.register(FrequencyValue, 'frequency')
         self.alignmentQ = self.register(QuaternionValue, 'alignmentQ', [2**.5/2, -2**.5/2, 0, 0], persistent=True)
         self.alignmentQ.last = False
         self.heading_off = self.register(RangeProperty, 'heading_offset', 0, -180, 180, persistent=True)
@@ -364,9 +362,9 @@ class BoatIMU(object):
     def read(self):
         data = self.IMUread()
         if not data:
-            if time.monotonic() - self.last_imuread > 1 and self.loopfreq.value:
+            if time.monotonic() - self.last_imuread > 1 and self.frequency.value:
                 print('IMURead failed!')
-                self.loopfreq.set(False)
+                self.frequency.set(False)
                 for name in self.SensorValues:
                     self.SensorValues[name].set(False)
                 self.uptime.reset()
@@ -376,11 +374,8 @@ class BoatIMU(object):
             print('accel values invalid', data['accel'])
             return False
   
-        t = time.monotonic()
-        self.timestamp.set(t-self.starttime)
-  
-        self.last_imuread = t
-        self.loopfreq.strobe()
+        self.last_imuread = time.monotonic()
+        self.frequency.strobe()
   
         # apply alignment calibration
         gyro_q = quaternion.rotvecquat(data['gyro'], data['fusionQPose'])

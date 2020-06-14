@@ -98,6 +98,8 @@ class Autopilot(object):
     self.sensors = Sensors(self.client)
     self.servo = servo.Servo(self.client, self.sensors)
     self.version = self.register(Value, 'version', 'pypilot' + ' ' + strversion)
+    self.timestamp = self.client.register(SensorValue('timestamp', 0))
+    self.starttime = time.monotonic()
     self.heading_command = self.register(HeadingProperty, 'heading_command', 0)
     self.enabled = self.register(BooleanProperty, 'enabled', False)
     self.lastenabled = False
@@ -106,7 +108,7 @@ class Autopilot(object):
     self.lastmode = False    
     self.mode = self.register(ModeProperty, 'mode')
     self.mode.ap = self
-
+  
     self.last_heading = False
     self.last_heading_off = self.boatimu.heading_off.value
 
@@ -262,8 +264,7 @@ class Autopilot(object):
                                         (self.heading_error.value/1500)*dt, 1))          
   def iteration(self):
       data = False
-      t0 = time.monotonic()
-
+      t0 = time.monotonic()  
       self.server.poll()
       msgs = self.client.receive()
       for msg in msgs:
@@ -331,6 +332,7 @@ class Autopilot(object):
           print('servo is running too _slowly_', t5-t4)
 
       self.timings.set([t1-t0, t2-t1, t3-t2, t4-t3, t5-t4])
+      self.timestamp.set(t0-self.starttime)
           
       if self.watchdog_device:
           self.watchdog_device.write('c')

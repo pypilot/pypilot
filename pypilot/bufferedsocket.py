@@ -89,6 +89,7 @@ try:
         except Exception as e:
             print('pypilot socket exception', self.address, e)
             self.socket.close()
+            raise e
   
 except Exception as e:
   print('falling back to python nonblocking socket', e)
