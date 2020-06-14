@@ -67,7 +67,7 @@ class arduino(object):
                 import spidev
                 self.spi = spidev.SpiDev()
                 self.spi.open(port, slave)
-                self.spi.max_speed_hz=100000
+                self.spi.max_speed_hz=1000000
         except Exception as e:
             print('failed to communicate with arduino', device, e)
             self.config = False
@@ -123,7 +123,9 @@ class arduino(object):
                 self.close(e)
                 return False
             x = x[1:] + y
-        #print('spi packet', x)
+        else:
+            print('not hit!')
+            #print('spi packet', x)
 
         command = x[0]
         if x[0] == RF:
