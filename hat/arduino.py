@@ -36,10 +36,6 @@ class arduino(object):
             self.config = config['arduino']
         else:
             self.config = False
-
-            # hack
-        if True:
-            self.config = {"device":"/dev/spidev0.1", "resetpin":16}
             
         if not self.config:
             print('No hat config, arduino not found')
