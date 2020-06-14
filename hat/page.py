@@ -526,7 +526,7 @@ class control(controlbase):
                 except:
                     pass
                 x = pos[0]+float(i)*.33
-                self.box(rectangle(x, pos[1], .33, .4), black)
+                self.box(rectangle(x, pos[1], .34, .4), black)
                 self.text((x, pos[1]), num[i], size, True)
 
         if self.last_val('imu.loopfreq', 1) is False:
@@ -635,9 +635,9 @@ class control(controlbase):
         
         if self.last_val('ap.enabled'):
             if self.lcd.keypadup[SMALL_PORT] or self.lcd.keypadup[SMALL_STARBOARD]:
-                speed = self.config['bigstep']
+                speed = self.lcd.config['bigstep']
             else:
-                speed = self.config['smallstep']                        
+                speed = self.lcd.config['smallstep']                        
                 cmd = self.last_val('ap.heading_command') + sign*speed
             self.set('ap.heading_command', cmd)
         else: # manual control

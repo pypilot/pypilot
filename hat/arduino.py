@@ -36,7 +36,7 @@ class arduino(object):
             self.config = config['arduino']
         else:
             self.config = False
-            
+
         if not self.config:
             print('No hat config, arduino not found')
 
@@ -67,7 +67,7 @@ class arduino(object):
                 import spidev
                 self.spi = spidev.SpiDev()
                 self.spi.open(port, slave)
-                self.spi.max_speed_hz=5000
+                self.spi.max_speed_hz=100000
         except Exception as e:
             print('failed to communicate with arduino', device, e)
             self.config = False
@@ -113,7 +113,7 @@ class arduino(object):
             if ck == x[s]:
                 break
 
-            if i == s:
+            if i == s+1:
                 print('failed to syncronize spi packet', ck, x[s])
                 return False
                 
@@ -137,6 +137,7 @@ class arduino(object):
             count = x[4]
         else:
             return False
+        print('arduino', key, count)
         self.events.append((key, count))
 
     def flash(self, filename, c):
