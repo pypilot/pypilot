@@ -31,7 +31,7 @@ class Watch(object):
     def __init__(self, value, period):
         self.value = value
         self.period = period
-        self.time = time.monotonic()
+        self.time = time.monotonic() + period
 
 class ClientWatch(Value):
     def __init__(self, values, client):
@@ -48,9 +48,10 @@ class ClientWatch(Value):
             else:
                 if period is True:
                     period = 0
+                if not value.watch:
+                    self.client.send(name + '=' + value.get_msg() + '\n') # initial send
                 value.watch = Watch(value, period)
                 value.pwatch = True
-                self.client.send(name + '=' + value.get_msg() + '\n') # initial send
 
 class ClientValues(Value):
     def __init__(self, client):
@@ -76,7 +77,9 @@ class ClientValues(Value):
                 break # no more are ready
             t, i, watch = heapq.heappop(self.pqwatches) # pop first element
             self.client.send(watch.value.name + '=' + watch.value.get_msg() + '\n')
-            watch.time = t0+watch.period
+            watch.time += watch.period
+            if watch.time < t0:
+                watch.time = t0
             watch.value.pwatch = True # can watch again once updated
             
     def insert_watch(self, watch):
@@ -162,7 +165,7 @@ class pypilotClient(object):
             print('failed to write config file:', self.configfilename)
         except Exception as e:
             print('Exception writing config file:', self.configfilename, e)
-        
+
         self.connection = LineBufferedNonBlockingSocket(self.connection_in_progress, self.config['host'])
         self.connection_in_progress = False
         self.poller = select.poll()
@@ -178,13 +181,12 @@ class pypilotClient(object):
         if not self.connection:
             if self.connection_in_progress:
                 events = self.poller_in_progress.poll(0)
-                if not events:
-                    return
-                fd, flag = events.pop()
-                if not (flag & select.POLLIN):
+                if events:
+                    # hung hup
                     self.connection_in_progress.close()
                     self.connection_in_progress = False
                     return
+
                 self.onconnected()
             else:
                 if not self.connect(False):
@@ -263,7 +265,7 @@ class pypilotClient(object):
             connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.connection_in_progress = connection
             self.poller_in_progress = select.poll()
-            self.poller_in_progress.register(self.connection_in_progress.fileno(), select.POLLIN)
+            self.poller_in_progress.register(self.connection_in_progress.fileno(), 0)
             
             connection.settimeout(1)
             connection.connect(host_port)

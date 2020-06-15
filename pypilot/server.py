@@ -26,7 +26,7 @@ class Watch(object):
         self.value = value
         self.connections = [connection]
         self.period = period
-        self.time = 0 # send first update immediate
+        self.time = 0
 
 class pypilotValue(object):
     def __init__(self, values, name, info={}, connection=False, msg=False):
@@ -48,8 +48,6 @@ class pypilotValue(object):
         t0 = time.monotonic()
         if self.connection == connection:
             # received new value from owner, inform watchers
-            if self.name == 'compass.calibration.age':
-                print('msg', msg)
             self.msg = msg
 
             if self.awatches:
@@ -123,7 +121,11 @@ class pypilotValue(object):
             period = 0 # True is same as a period of 0, for fastest watch
 
         # unwatch by removing
-        self.unwatch(connection, False)
+        watching = self.unwatch(connection, False)
+        print('watch', self.name, period, watching)
+        if not watching and self.msg:
+            connection.send(self.get_msg()) # initial retrieval
+
         for watch in self.awatches:
             if watch.period == period: # already watching at this rate, add connection
                 watch.connections.append(connection)
@@ -141,8 +143,6 @@ class pypilotValue(object):
             if period:
                 self.pwatches.append(watch)
 
-        if self.msg: # for initial retrieval
-            connection.send(self.get_msg())
 
 class ServerWatch(pypilotValue):
     def __init__(self, values):
@@ -159,18 +159,33 @@ class ServerWatch(pypilotValue):
             values[name].watch(connection, watches[name])
 
 class ServerUDP(pypilotValue):
-    def __init__(self, values):
+    def __init__(self, values, server):
         super(ServerUDP, self).__init__(values, 'udp_port')
+        self.server = server
 
     def set(self, msg, connection):
-        name, data = msg.rstrip().split('=', 1)        
-        self.msg = pyjson.loads(data)
+        try:
+            name, data = msg.rstrip().split('=', 1)
+            self.msg = pyjson.loads(data)
+            if not (self.msg is False) and self.msg < 1024 or self.msg > 65535:
+                raise Exception('port out of range')
+        except Exception as e:
+            connection.send('error=invalid udp_port:' + msg + e + '\n')
+            return
+
         connection.udp_port = self.msg # output streams on this port
+        for c in self.server.sockets:
+            if c == connection:
+                continue
+            if c.address[0] == connection.address[0] and c.udp_port == connection.udp_port:
+                print('remove duplicate udp connection')
+                c.udp_socket.close()
+                c.udp_port = False
 
 class ServerValues(pypilotValue):
-    def __init__(self):
+    def __init__(self, server):
         super(ServerValues, self).__init__(self, 'values')
-        self.values = {'values': self, 'watch': ServerWatch(self), 'udp_port': ServerUDP(self)}
+        self.values = {'values': self, 'watch': ServerWatch(self), 'udp_port': ServerUDP(self, server)}
         self.internal = list(self.values)
         self.pipevalues = {}
         self.msg = 'new'
@@ -213,6 +228,8 @@ class ServerValues(pypilotValue):
             for connection in watch.connections:
                 connection.send(watch.value.get_msg(), True)
             watch.time += watch.period
+            if watch.time < t0:
+                watch.time = t0
             watch.value.pwatches.append(watch) # put back on value periodic watch list
             
     def insert_watch(self, watch):
@@ -375,7 +392,7 @@ class pypilotServer(object):
         self.sockets = []
         self.fd_to_pipe = {}
 
-        self.values = ServerValues()
+        self.values = ServerValues(self)
 
         while True:
             try:

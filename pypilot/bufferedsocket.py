@@ -34,6 +34,8 @@ try:
 
     def close(self):
         self.socket.close()
+        if self.udp_socket:
+          self.udp_socket.close()
         
     def recv(self):
         return self.b.recv()
@@ -89,7 +91,6 @@ try:
         except Exception as e:
             print('pypilot socket exception', self.address, e)
             self.socket.close()
-            raise e
   
 except Exception as e:
   print('falling back to python nonblocking socket', e)

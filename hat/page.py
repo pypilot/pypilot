@@ -641,7 +641,7 @@ class control(controlbase):
                 speed = self.lcd.config['bigstep']
             else:
                 speed = self.lcd.config['smallstep']                        
-                cmd = self.last_val('ap.heading_command') + sign*speed
+            cmd = self.last_val('ap.heading_command') + speed
             self.set('ap.heading_command', cmd)
         else: # manual control
             sign = -1 if speed < 0 else 1

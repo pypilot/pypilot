@@ -98,29 +98,6 @@ class Web(object):
         self.process = False
         self.status = 'Not Connected'
         self.hat = hat
-        import atexit, signal
-        def cleanup(signal_number, frame=None):
-            print('cleanup web process', signal_number)
-            if signal_number == signal.SIGCHLD:
-                pid = os.waitpid(-1, 0)
-                if not self.process or pid != self.process.pid:
-                    # flask makes process at startup that dies
-                    return
-            if self.process:
-                print('pid kill ', self.process.pid)
-                os.kill(self.process.pid, signal.SIGTERM) # get backtrace
-                self.process = False
-            sys.stdout.flush()
-            if signal_number:
-                exit(0)
-
-        atexit.register(lambda : cleanup(None)) # get backtrace
-        for s in range(1, 16):
-            if s != 9 and s != 13:
-                signal.signal(s, cleanup)
-        signal.signal(signal.SIGCHLD, cleanup)
-        import atexit
-        atexit.register(lambda : cleanup('atexit'))
 
     def send(self, value):
         if self.process:
@@ -142,6 +119,34 @@ class Web(object):
             self.process = multiprocessing.Process(target=web_process, args=(pipe, keyspipe, self.hat.actions), daemon=True)
             self.process.start()
             self.send({'status': self.status})
+
+
+            def cleanup(signal_number, frame=None):
+                print('cleanup web process', signal_number)
+                if signal_number == signal.SIGCHLD:
+                    pid = os.waitpid(-1, 0)
+                    if not self.process or pid[0] != self.process.pid:
+                        print('proce', self.process, pid, self.process.pid)
+                        # flask makes process at startup that dies
+                        return
+                if self.process:
+                    try:
+                        os.kill(self.process.pid, signal.SIGTERM) # get backtrace
+                    except Exception as e:
+                        if e.args[0] != 3: # no such process, already died
+                            raise e
+                        
+                    self.process = False
+                sys.stdout.flush()
+                if signal_number:
+                    exit(0)
+
+            import signal
+            for s in range(3, 16):
+                if s != 9 and s != 13:
+                    signal.signal(s, cleanup)
+            signal.signal(signal.SIGCHLD, cleanup)
+            
 
         if not self.process.is_alive():
             self.process = False

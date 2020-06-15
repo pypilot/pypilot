@@ -67,7 +67,7 @@ class arduino(object):
                 import spidev
                 self.spi = spidev.SpiDev()
                 self.spi.open(port, slave)
-                self.spi.max_speed_hz=1000000
+                self.spi.max_speed_hz=40000
         except Exception as e:
             print('failed to communicate with arduino', device, e)
             self.config = False
@@ -112,10 +112,6 @@ class arduino(object):
             ck = crc.crc8(x[:s])
             if ck == x[s]:
                 break
-
-            if i == s+1:
-                print('failed to syncronize spi packet', ck, x[s])
-                return False
                 
             try:
                 y = self.spi.xfer([0])
@@ -124,8 +120,8 @@ class arduino(object):
                 return False
             x = x[1:] + y
         else:
-            print('not hit!')
-            #print('spi packet', x)
+            print('failed to syncronize spi packet', ck, x[s])
+            return True
 
         command = x[0]
         if x[0] == RF:
@@ -138,9 +134,10 @@ class arduino(object):
             key = 'gpio' % x[1]
             count = x[4]
         else:
-            return False
+            return True
         print('arduino', key, count)
         self.events.append((key, count))
+        return True
 
     def flash(self, filename, c):
         global GPIO
