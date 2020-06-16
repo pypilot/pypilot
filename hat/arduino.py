@@ -14,6 +14,7 @@
 
 import os, sys, time, json
 import crc
+import lircd
 
 try:
     import RPi.GPIO as GPIO
@@ -130,12 +131,15 @@ class arduino(object):
         elif x[0] == IR:
             key = 'ir%02X%02X%02X' % (x[1], x[2], x[3])
             count = x[4]
+            lircd.LIRC_version = 0 # disable lircd if we got ir from arduino
         elif x[0] == AR:
             key = 'gpio' % x[1]
             count = x[4]
         else:
             return True
         print('arduino', key, count)
+
+        
         self.events.append((key, count))
         return True
 

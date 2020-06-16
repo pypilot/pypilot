@@ -285,7 +285,9 @@ class LCD():
             frameperiod = self.page.frameperiod
         t = gettime()
         dt = t - self.lastframetime
+        
         if dt > frameperiod:
+            ta = time.time()
             self.display()
             self.update_watches()
             self.lastframetime = max(self.lastframetime+frameperiod, t-frameperiod)
