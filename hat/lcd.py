@@ -26,6 +26,26 @@ except:
     from pypilot.hat.ugfx import ugfx
     micropython = False
 
+class Key():
+    def __init__(self):
+        self.count = 0
+        self.down = self.up = False
+
+    def update(self, down, count=None):
+        if down:
+            if not self.count:
+                self.down = True
+            if count:
+                self.count = count
+            else:
+                self.count += 1
+        elif self.count:
+            self.up = True
+            self.count = 0
+
+    def active(self):
+        return self.count or self.up
+    
 class LCD():
     def __init__(self, hat):
         self.hat = hat
@@ -133,8 +153,9 @@ class LCD():
         self.page = connecting(self)
         self.need_refresh = True
 
-        self.keypad = [0]*NUM_KEYS
-        self.keypadup = list(self.keypad)
+        self.keypad = []
+        for i in range(NUM_KEYS):
+            self.keypad.append(Key())
 
         self.blink = black, white # two cursor states
         self.data_update = False
@@ -172,11 +193,9 @@ class LCD():
         return self.client.get_values()
             
     def key(self, k, down):
-        if k >= 0 and k < len(self.keypad):
-            if down:
-                self.keypad[k] = True
-            else:
-                self.keypadup[k] = True
+        if k < 0 or k >= len(self.keypad):
+            return
+        self.keypad[k].update(down)
 
     def glutkeydown(self, k, x, y):
         self.glutkey(k);
@@ -299,11 +318,15 @@ class LCD():
             self.update_watches()
             self.need_refresh = True
 
-        for key in range(len(self.keypad)):
-            if self.keypadup[key]:
-                self.keypad[key] = self.keypadup[key] = False
+        for key in self.keypad:
+            if key.down:
+                print('reset key', key)
+                key.down = False
+            if key.up:
+                key.up = False
                 if self.hat:
                     self.hat.buzzer.beep()
+                    
         t3 = gettime()
         #print('lcd times', t1-t0, t2-t1, t3-t2)
         dt = t3-t0

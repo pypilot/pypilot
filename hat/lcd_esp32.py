@@ -57,7 +57,7 @@ while True:
 
     gpio_esp32.poll(lcd)
 
-    if any(lcd.keypad):
+    if any(list(map(lambda key : key.count, lcd.keypad))):
         sleeptime = time.time()
         tft.backlight(True)
     

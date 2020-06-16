@@ -137,9 +137,7 @@ class arduino(object):
             count = x[4]
         else:
             return True
-        print('arduino', key, count)
 
-        
         self.events.append((key, count))
         return True
 

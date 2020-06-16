@@ -201,7 +201,7 @@ void loop() {
 
 
     // send code up message on timeout
-    if(lvalue && millis() - ltime > 400) {
+    if(lvalue && millis() - ltime > 250) {
         uint8_t *plvalue = (uint8_t*)&lvalue;
         uint8_t d[PKTSZ] = {lsource, plvalue[0], plvalue[1], plvalue[2], 0};
         spiout.push_packet(d);

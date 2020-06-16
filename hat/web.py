@@ -36,7 +36,7 @@ class WebConfig(Namespace):
         acts += Markup('<p>Actions for LCD interface<table border=0>')
         i = 0
         for action in actions:
-            if i == 7:
+            if i == 10:
                 acts += Markup('</tr></table>')
                 acts += Markup('<p><br>key: <b><span id="key0"></span></b>')
                 acts += Markup('<br>action: <b><span id="action0"></span></b>')

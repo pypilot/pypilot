@@ -34,8 +34,7 @@ class ActionKeypad(Action):
         self.index = index
 
     def trigger(self, count):
-        self.lcd.keypadup[self.index] = not count
-        self.lcd.keypad[self.index] = count
+        self.lcd.keypad[self.index].update(count, count)
         
 class ActionPypilot(Action):
     def  __init__(self, hat, name, pypilot_name, pypilot_value):
@@ -211,7 +210,7 @@ class Hat(object):
         
         # keypad for lcd interface
         self.actions = []
-        keypadnames = ['auto', 'menu', '-1', '+1', 'select', '-10', '+10', 'tack', 'nudge port', 'nudge starboard']
+        keypadnames = ['auto', 'menu', 'port1', 'starboard1', 'select', 'port10', 'starboard10', 'tack', 'nudge_port', 'nudge_starboard']
         
         for i in range(len(keypadnames)):
             self.actions.append(ActionKeypad(self.lcd, i, keypadnames[i]))

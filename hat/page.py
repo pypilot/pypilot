@@ -220,27 +220,21 @@ class page(object):
             return v
 
     def testkeydown(self, key):
-        if self.lcd.keypad[key]==1:
-            self.lcd.keypad[key]=2
-            return True
-        return False
+        return self.lcd.keypad[key].down
 
     def testkeyup(self, key):
-        return self.lcd.keypadup[key]
+        return self.lcd.keypad[key].up
 
     def speed_of_keys(self):
         # for up and down keys providing acceration
-        keypad, keypadup = self.lcd.keypad, self.lcd.keypadup
-        down = keypad[SMALL_STARBOARD] or keypadup[SMALL_STARBOARD]
-        up = keypad[SMALL_PORT] or keypadup[SMALL_PORT]
-        left = keypad[BIG_PORT] or keypadup[BIG_PORT]
-        right = keypad[BIG_STARBOARD] or keypadup[BIG_STARBOARD]
-        updownup = keypadup[BIG_PORT] or keypadup[BIG_STARBOARD]
-        updownheld = keypad[BIG_PORT] > 10 or keypad[BIG_STARBOARD] > 10
-        speed = float(1 if updownup else min(10, .004*max(keypad[BIG_PORT], keypad[BIG_STARBOARD])**2.5))
-        updown = updownheld or updownup
-        if keypadup[SMALL_PORT] or keypadup[SMALL_STARBOARD]:
-            updown = True
+        keypad = self.lcd.keypad
+        down =  keypad[SMALL_STARBOARD].active()
+        up =    keypad[SMALL_PORT].active()
+        left =  keypad[BIG_PORT].active()
+        right = keypad[BIG_STARBOARD].active()
+        updownup = keypad[BIG_PORT].up or keypad[BIG_STARBOARD].up
+        speed = float(1 if updownup else min(10, .004*max(keypad[BIG_PORT].count, keypad[BIG_STARBOARD].count)**2.5))
+        if keypad[SMALL_PORT].up or keypad[SMALL_STARBOARD].up:
             speed = 10
         if down or left:
             sign = -1
@@ -267,11 +261,11 @@ class page(object):
             return control(self.lcd)
 
         # these work from any page (even menu) to dodge
-        if self.lcd.keypad[NUDGE_PORT]:
+        if self.lcd.keypad[NUDGE_PORT].count:
             lcd.client.set('servo.command', -1)
-        if self.lcd.keypad[NUDGE_STARBOARD]:
+        if self.lcd.keypad[NUDGE_STARBOARD].count:
             lcd.client.set('servo.command', 1)           
-        if self.lcd.keypadup[NUDGE_PORT] or self.lcd.keypadup[NUDGE_STARBOARD]:
+        if self.lcd.keypad[NUDGE_PORT].up or self.lcd.keypad[NUDGE_STARBOARD].up:
             lcd.client.set('servo.command', 0)           
         
 
@@ -645,14 +639,14 @@ class control(controlbase):
         if self.testkeydown(TACK):
             # in wind mode just tack
             # in other modes look for lspeed of keys was port or starboard
-            print('tacking not implemented here yet')
+            print('tacking not implemented here yet', TACK)
                 
         speed = self.speed_of_keys()
         if not speed:
             return super(control, self).process()
         
         if self.last_val('ap.enabled'):
-            if self.lcd.keypadup[SMALL_PORT] or self.lcd.keypadup[SMALL_STARBOARD]:
+            if self.lcd.keypad[SMALL_PORT].up or self.lcd.keypad[SMALL_STARBOARD].up:
                 speed = self.lcd.config['bigstep']
             else:
                 speed = self.lcd.config['smallstep']                        
