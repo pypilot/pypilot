@@ -1,4 +1,10 @@
+##  python3 -m mpy_cross -v -march=xtensawin testmodule.py 
+
+import wifi_esp32
+
+
 import socket, time, json
+
 DEFAULT_PORT = 23322
 
 class pypilotClient(object):
@@ -12,7 +18,7 @@ class pypilotClient(object):
         if not self.connection:
             return
 
-        self.connection.disconnect()
+        self.connection.close()
         self.connection = False
         
     def connect(self):
@@ -22,18 +28,22 @@ class pypilotClient(object):
         addr_info = socket.getaddrinfo(self.host, DEFAULT_PORT)
         addr = addr_info[0][-1]
         self.connection = socket.socket()
-        self.connection.settimeout(3)
+        for name, value in self.watches.items():
+            self.wwatches[name] = value # resend watches
+        self.connection.settimeout(0)
+        import uselect
+        self.poller = uselect.poll()
+        self.poller.register(self.connection, uselect.POLLIN)
+        
         print('connect to pypilot....')
         try:
             self.connection.connect(addr)
             self.connection.settimeout(0)
-
-            for name, value in self.watches.items():
-                self.wwatches[name] = value # resend watches
-
-        except Exception as e:
-            print('failed to connect', e)
-            self.connection = False
+        except OSError as e:
+            import errno
+            if e.args[0] not in [errno.EINPROGRESS, errno.ETIMEDOUT]:
+                print('failed to connect', e)
+                self.connection = False
 
     def receive(self):
         if not self.connection:
@@ -42,14 +52,14 @@ class pypilotClient(object):
 
         # inform server of any watches we have changed
         if self.wwatches:
-            #print('watching', self.wwatches, self.connection)
             self.set('watch', self.wwatches)
             self.wwatches = {}
-            return {}
 
         msgs = {}
         while True:
             try:
+                if not self.poller.poll(0):
+                    break
                 line = self.connection.readline()
                 if not line:
                     break
@@ -68,6 +78,8 @@ class pypilotClient(object):
         return {}
     
     def watch(self, name, period=True):
+        if name in self.watches and self.watches[name] is period:
+            return
         self.wwatches[name] = period
         self.watches[name] = period
         

@@ -7,8 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-white = 0xffffff
-black = 0x000000
+white = 0xff
+black = 0x00
 #white = ugfx.color(255, 255, 255)
 #black = ugfx.color(0, 0, 0)
 
@@ -18,6 +18,7 @@ class rectangle():
     def __init__(self, x, y, width, height):
         self.x, self.y, self.width, self.height = x, y, width, height
 
+import time
 import json
 import font
 
@@ -310,7 +311,7 @@ class calibrate_info(info):
 
             self.fittext(rectangle(0, .3, 1, .7), raw)
         else:
-            import time, math
+            import math
             mod = int(time.time()%11)/3
             self.fittext(rectangle(0, .24, 1, .15), 'sigma plot')
             cal = self.last_val('imu.compass.calibration')[0]
@@ -434,7 +435,7 @@ class control(controlbase):
                 self.fittext(r, num, False, black)
                 return
 
-            if self.lcd.surface.width < 256:
+            if self.lcd.surface.width < 120:
                 size = 34
             else:
                 size = 30
@@ -538,16 +539,15 @@ class control(controlbase):
                 self.set('servo.command', 0) # stop
                 self.set('ap.enabled', False)
         if self.testkeydown(SELECT):
-            if self.display_page == self.display_control:
-                # change mode
-                for t in range(len(self.modes_list)):
-                    #self.modes_list = [self.modes_list[-1]] + self.modes_list[:-1]
-                    self.modes_list = self.modes_list[1:] + [self.modes_list[0]]
-                    next_mode = self.modes_list[0]
-                    if next_mode != self.last_val('ap.mode') and \
-                       self.modes[next_mode]():
-                        self.set('ap.mode', next_mode)
-                        return
+            # change mode
+            for t in range(len(self.modes_list)):
+                #self.modes_list = [self.modes_list[-1]] + self.modes_list[:-1]
+                self.modes_list = self.modes_list[1:] + [self.modes_list[0]]
+                next_mode = self.modes_list[0]
+                if next_mode != self.last_val('ap.mode') and \
+                   self.modes[next_mode]():
+                    self.set('ap.mode', next_mode)
+                    return
                     
         speed = self.speed_of_keys()
         if not speed:

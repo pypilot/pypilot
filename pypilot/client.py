@@ -180,7 +180,6 @@ class pypilotClient(object):
                 try:
                     test = self.connection_in_progress.send(b'')
                 except:
-                    print('connecting...')
                     time.sleep(timeout)
                     return
                 print('connected!')
