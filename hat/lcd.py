@@ -9,7 +9,6 @@
 
 import sys, os, time, math
 
-from menu import mainmenu, connecting
 from page import *
 from page import _
 
@@ -55,6 +54,7 @@ class LCD():
                 driver = pdriver
                 break
 
+        self.battery_voltage = 0
         try:
             import micropython
             import ugfx
@@ -129,13 +129,19 @@ class LCD():
         self.client = False
         self.connect()
 
-        self.menu = mainmenu(self)
+        self.menu = False
         self.page = connecting(self)
 
-        self.keypad = [False, False, False, False, False, False, False, False]
+        self.keypad = [0]*NUM_KEYS
         self.keypadup = list(self.keypad)
 
         self.blink = black, white
+
+    def getmenu(self):
+        if not self.menu:
+            from menu import mainmenu
+            self.menu = mainmenu(self)
+        return self.menu
         
     def set_language(self, lang):
         set_language(lang)
@@ -152,16 +158,6 @@ class LCD():
             self.client.disconnect()
 
         self.client = pypilotClient(self.host)
-
-        try:
-            import micropython
-            from wifi_esp32 import wifimanager
-            self.wifimanager2 = wifimanager(self.client)
-            print('connect wifi')
-        except Exception as e:
-            print('not managing wifi')
-            self.wifimanager2 = False
-            pass
             
         ret = self.client.list_values()
 
@@ -170,7 +166,7 @@ class LCD():
             self.hat.write_config()
 
     def value_list(self):
-        v = self.client.values.value
+        v = self.client.get_values()
         if v:
             return v
         return {}
@@ -211,13 +207,13 @@ class LCD():
     def glutspecial(self, k, down=True):
         from OpenGL import GLUT as glut
         if k == glut.GLUT_KEY_UP:
-            self.key(UP, down)
+            self.key(SMALL_PORT, down)
         elif k == glut.GLUT_KEY_DOWN:
-            self.key(DOWN, down)
+            self.key(SMALL_STARBOARD, down)
         elif k == glut.GLUT_KEY_LEFT:
-            self.key(LEFT, down)
+            self.key(BIG_PORT, down)
         elif k == glut.GLUT_KEY_RIGHT:
-            self.key(RIGHT, down)
+            self.key(BIG_STARBOARD, down)
 
     def display(self):
         self.page.display()
@@ -263,10 +259,9 @@ class LCD():
             self.client.watch(name, period)
             
     def poll(self):
-        if self.wifimanager2:
-            self.wifimanager2.poll()
-
+        t0 = gettime()
         msgs = self.client.receive()
+        t1 = gettime()
         for name, value in msgs.items():
             self.last_msg[name] = value
 
@@ -281,6 +276,7 @@ class LCD():
             self.display()
             self.update_watches()
             self.lastframetime = max(self.lastframetime+frameperiod, t-frameperiod)
+        t2 = gettime()
 
         next_page = self.page.process()
         if next_page and next_page != self.page:
@@ -292,6 +288,8 @@ class LCD():
                 self.keypad[key] = self.keypadup[key] = False
                 if self.hat:
                     self.hat.buzzer.beep()
+        t3 = gettime()
+        print('lcd times', t1-t0, t2-t1, t3-t2)
 
 def main():
     lcd = LCD(False)
@@ -306,5 +304,3 @@ def main():
             
 if __name__ == '__main__':
     main() 
-
-main()

@@ -12,7 +12,7 @@ black = 0x00
 #white = ugfx.color(255, 255, 255)
 #black = ugfx.color(0, 0, 0)
 
-AUTO, MENU, UP, DOWN, SELECT, LEFT, RIGHT = range(7)
+AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, NUM_KEYS = range(9)
 
 class rectangle():
     def __init__(self, x, y, width, height):
@@ -179,15 +179,15 @@ class page(object):
     def speed_of_keys(self):
         # for up and down keys providing acceration
         keypad, keypadup = self.lcd.keypad, self.lcd.keypadup
-        down = keypad[DOWN] or keypadup[DOWN]
-        up = keypad[UP] or keypadup[UP]
-        left = keypad[LEFT] or keypadup[LEFT]
-        right = keypad[RIGHT] or keypadup[RIGHT]
-        updownup = keypadup[LEFT] or keypadup[RIGHT]
-        updownheld = keypad[LEFT] > 10 or keypad[RIGHT] > 10
-        speed = float(1 if updownup else min(10, .004*max(keypad[LEFT], keypad[RIGHT])**2.5))
+        down = keypad[SMALL_STARBOARD] or keypadup[SMALL_STARBOARD]
+        up = keypad[SMALL_PORT] or keypadup[SMALL_PORT]
+        left = keypad[BIG_PORT] or keypadup[BIG_PORT]
+        right = keypad[BIG_STARBOARD] or keypadup[BIG_STARBOARD]
+        updownup = keypadup[BIG_PORT] or keypadup[BIG_STARBOARD]
+        updownheld = keypad[BIG_PORT] > 10 or keypad[BIG_STARBOARD] > 10
+        speed = float(1 if updownup else min(10, .004*max(keypad[BIG_PORT], keypad[BIG_STARBOARD])**2.5))
         updown = updownheld or updownup
-        if keypadup[UP] or keypadup[DOWN]:
+        if keypadup[SMALL_PORT] or keypadup[SMALL_STARBOARD]:
             updown = True
             speed = 10
         if down or left:
@@ -208,7 +208,7 @@ class page(object):
         if self.testkeydown(AUTO):
             return control(self.lcd)
         if self.testkeydown(MENU):
-            return self.lcd.menu
+            return self.lcd.getmenu()
         if self.testkeydown(SELECT):
             return self.prev
 
@@ -262,9 +262,9 @@ class info(page):
             even, odd = odd, even
 
     def process(self):
-        if self.testkeyup(UP) or self.testkeyup(RIGHT):
+        if self.testkeyup(SMALL_PORT) or self.testkeyup(BIG_STARBOARD):
             self.page += 1
-        if self.testkeyup(DOWN) or self.testkeyup(LEFT):
+        if self.testkeyup(SMALL_STARBOARD) or self.testkeyup(BIG_PORT):
             self.page -= 1
         return super(info, self).process()
         
@@ -315,8 +315,12 @@ class calibrate_info(info):
             mod = int(time.time()%11)/3
             self.fittext(rectangle(0, .24, 1, .15), 'sigma plot')
             cal = self.last_val('imu.compass.calibration')[0]
-            m = cal[3]
-            dip = math.radians(cal[4])
+            if len(cal) >= 5:
+                m = cal[3]
+                dip = math.radians(cal[4])
+            else:
+                m, dip = 0, 0 # not connected
+
             if mod == 1:
                 m *= math.cos(dip)
             try:
@@ -338,7 +342,13 @@ class calibrate_info(info):
                 self.fittext(rectangle(0, .3, 1, .7), 'N/A')
 
 def test_wifi():
-    wifi = False
+    try:
+        import micropython
+        import wifi_esp32
+        return wifi_esp32.connected
+    except:
+        pass
+        
     try:
         wlan0 = open('/sys/class/net/wlan0/operstate')
         line = wlan0.readline().rstrip()
@@ -353,12 +363,34 @@ class controlbase(page):
     def __init__(self, lcd):
         super(controlbase, self).__init__()
         self.lcd = lcd
+        self.batt = False
         self.wifi = False
 
-    def display(self):
+    def display(self, force_refresh=False):
+        if force_refresh:
+            self.box(rectangle(0, .9, 1, 1), black)
+            self.wifi = False
+            
+        battrect = rectangle(0.03, .92, .25, .07)
+        
+        if self.lcd.battery_voltage:
+            if self.lcd.battery_voltage > 3.7:
+                batt = .85 if self.batt == 1 else 1 # flash
+            else:
+                batt = max((self.lcd.battery_voltage-3)/.7, 0)
+            if batt != self.batt or force_refresh:
+                self.batt = batt
+                self.lcd.surface.box(*(self.convrect(battrect) + [black]))
+                self.rectangle(battrect, width=0.015)
+                self.rectangle(rectangle(0.28, .94, .03, .03))
+                if batt:
+                    battrect = rectangle(.06, .93, .19*float(batt), .045)
+                    self.box(battrect, white)
+        
         wifi = test_wifi()
-        if self.wifi == wifi:
-            return
+        if self.wifi == wifi and not force_refresh:
+            return # done displaying
+        self.wifi = wifi
         wifirect = rectangle(.3, .9, .6, .12)
         if wifi:
             text = 'WIFI'
@@ -366,8 +398,7 @@ class controlbase(page):
                 text += ' R'
             self.fittext(wifirect, text)
         else:
-            self.surface.box(*(self.convrect(wifirect) + [black]))
-        self.wifi = wifi
+            self.lcd.surface.box(*(self.convrect(wifirect) + [black]))
 
 class control(controlbase):
     def __init__(self, lcd):
@@ -554,7 +585,7 @@ class control(controlbase):
             return super(control, self).process()
         
         if self.last_val('ap.enabled'):
-            if self.keypadup[UP] or self.keypadup[DOWN]:
+            if self.keypadup[SMALL_PORT] or self.keypadup[SMALL_STARBOARD]:
                 speed = self.config['bigstep']
             else:
                 speed = self.config['smallstep']                        
@@ -570,7 +601,9 @@ class connecting(controlbase):
         self.connecting_dots = 0
         
     def display(self):
-        self.lcd.surface.fill(black)
+        #self.lcd.surface.fill(black)
+        self.box(rectangle(0, 0, 1, .9), black)
+        
         self.fittext(rectangle(0, 0, 1, .4), _('connect to server'), True)
         dots = ''
         for i in range(self.connecting_dots):
@@ -579,10 +612,10 @@ class connecting(controlbase):
         self.connecting_dots += 1
         if size[0] >= 1:
             self.connecting_dots = 0
-        super(connecting, self).display()
+        super(connecting, self).display(True)
 
     def process(self):
         if self.lcd.client.connection:
             return control(self.lcd)
         if self.testkeydown(MENU):
-            return self.lcd.menu
+            return self.lcd.getmenu()

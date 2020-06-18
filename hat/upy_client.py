@@ -13,6 +13,7 @@ class pypilotClient(object):
         self.host = host
         self.watches = {}
         self.wwatches = {}
+        self.values = {}
 
     def disconnect(self):
         if not self.connection:
@@ -30,6 +31,8 @@ class pypilotClient(object):
         self.connection = socket.socket()
         for name, value in self.watches.items():
             self.wwatches[name] = value # resend watches
+        self.wwatches['values'] = True # watch values
+        self.values = {}
         self.connection.settimeout(0)
         import uselect
         self.poller = uselect.poll()
@@ -43,7 +46,9 @@ class pypilotClient(object):
             import errno
             if e.args[0] not in [errno.EINPROGRESS, errno.ETIMEDOUT]:
                 print('failed to connect', e)
-                self.connection = False
+                import time
+                time.sleep(.25)
+                self.disconnect()
 
     def receive(self):
         if not self.connection:
@@ -66,13 +71,19 @@ class pypilotClient(object):
                 line = line.decode()
                 #print('line', line)
                 name, value = line.split('=', 1)
-                if name == 'error':
+                if name == 'values':
+                    for n, v in value.items:
+                        self.values[n] = v
+                elif name == 'error':
                     print('server error:', value)
                 else:
                     msgs[name] = json.loads(value.rstrip())
             except Exception as e:
                 print('failed read line', e)
         return msgs
+
+    def get_values(self):
+        return self.values
 
     def list_values(self, timeout=0):
         return {}

@@ -9,7 +9,6 @@
 
 try:
     import micropython
-    print('micropython detected, using tft')
     import ugfx
     fontpath = '/_#!#_spiffs/ugfxfonts'
 except:

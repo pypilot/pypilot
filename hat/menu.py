@@ -70,11 +70,11 @@ class menu(page):
         if self.testkeydown(AUTO):
             self.lcd.menu = self.lcd.menu.mainmenu()
             return control(self.lcd)
-        if self.testkeydown(UP) or self.testkeydown(LEFT):
+        if self.testkeydown(SMALL_PORT) or self.testkeydown(BIG_PORT):
             self.selection -= 1
             if self.selection < 0:
                 self.selection = len(self.items)-1
-        elif self.testkeydown(DOWN) or self.testkeydown(RIGHT):
+        elif self.testkeydown(SMALL_STARBOARD) or self.testkeydown(BIG_STARBOARD):
             self.selection += 1
             if self.selection == len(self.items):
                 self.selection = 0
@@ -176,7 +176,11 @@ class ValueEdit(RangeEdit):
 
     def display(self):
         if not self.range:
-            info = self.lcd.value_list()[self.id]
+            values = self.lcd.value_list()
+            if self.id in values:
+                info = values[self.id]
+            else:
+                info = {'min': 0, 'max': 0}
             self.range = info['min'], info['max']
             self.step = (self.range[1]-self.range[0])/100.0
         super(ValueEdit, self).display()
@@ -210,9 +214,12 @@ class ValueEnum(menu):
     def process(self):
         if not self.items:
             try:
-                values = self.lcd.client.values.value
-                info = values[self.pypilot_path]
-                choices = info['choices']
+                values = self.lcd.client.get_values()
+                if values:
+                    info = values[self.pypilot_path]
+                    choices = info['choices']
+                else:
+                    choices = []
                 for choice in self.hide_choices:
                     if choice in choices:
                         choices.remove(choice)
