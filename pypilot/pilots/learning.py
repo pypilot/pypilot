@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -9,94 +9,137 @@
 
 import multiprocessing, select
 from pilot import AutopilotPilot, AutopilotGain
-from pypilot.values import * # needed?
-#from pypilot.pipeserver import NonBlockingPipe
+from intellect import *
+
+def build_actions(current, period_count, count):
+    if count <= 0:
+        return []
+    ret = []
+    def actions(command):
+      if count <= period_count:
+        return [[command]*count]
+      return list(map(lambda acts : [command]*period_count + acts, build_actions(command, period_count, count - period_count)))
+    if current <= 0:
+        ret += actions(-1)
+    if current >= 0:
+        ret += actions(1)
+    ret += actions(0)
+    return ret
+
+# use tensor flow lite for prediction to achieve realtime performance
+class TFliteModel(Model):
+    def __init__(self):
+        super(TFliteModel, self).__init__()
+
+    def load(self, state):
+        filename = model_filename(state)
+        try:
+            import tflite_runtime.interpreter as tflite
+            f = open(filename + '.conf')
+            self.conf = json.loads(f.read())
+            f.close()
+            t0 = time.monotonic()
+            interpreter = tf.lite.Interpreter(model_path=filename + '.tflite_model')
+            t1 = time.monotonic()
+            interpreter.allocate_tensors()
+            t2 = time.monotonic()
+            input_details = interpreter.get_input_details()
+            output_details = interpreter.get_output_details()
+            t3 = time.monotonic()
+            input_shape = input_details[0]['shape']
+            print ('input details', input_details)
+            t4 = time.monotonic()
+            t5 = time.monotonic()
+            t6 = time.monotonic()
+            print('interpreter timings', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
+            self.interpreter = interpreter
+            self.history = History(self.conf, state)
+        except Exception as e:
+            self.start_time = time.monotonic()          
+            print('failed to load model', filename)
+            self.interpreter = False
+
+    def predict(self, loss):
+        # feed input sensors
+        p = self.present()
+        # inputs are the sensors over past time
+        sensors_data = intellect.inputs(self.history.data, self.conf['sensors'])
+
+        # this many future actions
+        count = self.history.samples - self.present()
+        rate = state['imu.rate']
+        current = self.servo.command.value
+        period = .4;
+
+        # actions can be stored to optimize this
+        actions = self.build_actions(current, period/rate, count)
+
+        # inputs are past sensors and future actions
+        inputs = list(map(lambda action : sensors_data + action, actions))
+
+        self.interpreter.set_tensor(input_details[0]['index'], np.array(inputs))
+        self.interpreter.invoke()
+        outputs = interpreter.get_tensor(output_details[0]['index'])
+            
+        pnames = self.conf['predictions']
+  
+        # find best prediction based on loss
+        besti = False
+        for i in len(inputs):
+            output = outputs[i].reshape(-1, len(pnames))
+            weight = 0
+            for j in len(output):
+                prediction = {}
+                for k in len(pnames):
+                    prediction[pnames[j]] = output[j][k], self.conf['accuracy'][j][k]
+                action = actions[i][j]
+                weight += loss(prediction, action)
+                
+            if not besti or weight < best:
+                besti = i
+                best = weight
+            
+        return actions[besti]
 
 class LearningPilot(AutopilotPilot):
-  def __init__(self, ap):
-    super(LearningPilot, self).__init__('learning', ap)
-    # create filters
-    # gains for training pilot
-    self.P = self.register(AutopilotGain, 'P', .001, .0001, .01)
-    self.D = self.register(AutopilotGain, 'D', .03, .01, .1)
-    self.W = self.register(AutopilotGain, 'W', 0, 0, .1)
+    def __init__(self, ap):
+        super(LearningPilot, self).__init__('learning', ap)
+        self.P = self.register(AutopilotGain, 'P', .001, .0001, .01)
+        self.D = self.register(AutopilotGain, 'D', .03, .01, .1)
+        self.W = self.register(AutopilotGain, 'W', 0, 0, .1)
 
-    self.servo_rules = self.register(BooleanProperty, 'servo_rules', True)
+        self.state = False
+        self.start_time = time.monotonic()
 
-    self.initialized = False
-    self.start_time = time.monotonic()
+    def loss(predictions, action):
+        heading, heading_accuracy = predictions['imu.heading_error']
+        headingrate, headingrate_accuracy = predictions['imu.headingrate_lowpass']
+        return (self.P.value*heading + self.D.value*headingrate)**2 + self.W.value*action**2
 
-  def loss(predictions, actions):
-    heading = predictions['imu.heading']
-    headingrate = predictions['imu.headingrate']
-    return self.P.value*heading + self.D.value*headingrate + self.W.value*actions['servo.command']**2
-    
-  def load():
-    try:
-      f = open('filename')
-      self.meta = json.loads(f.read())
-    except Exception as e:
-      print('failed to load model')
-      self.meta = {'sensors' : []}
+    def process(self, reset):
+        ap = self.ap
+        state = {'ap.mode', ap.mode.value, 'imu.rate', ap.imu.rate.value}
+        if self.state != state or not self.model:
+            if time.monotonic() - self.start_time < 2:
+                return
+            self.load(state)
+            if not self.model:
+                ap.pilot.set('basic') # fall back to basic pilot if no model loaded
+                return
 
-  def initialize(self):
-      self.load()
-      self.initialized = True
+        data = {}
+        for sensor in self.conf['sensors'] + self.conf['predictions']:
+            data[sensor] = self.ap.client.values[sensor].value
+        self.model.history.put(data)
 
-  def process(self, reset):
-    ap = self.ap
+        if not self.history.full():
+            # defer to basic pilot control until history fills
+            self.ap.pilots['basic'].process(reset)
+            return
 
-    if not self.initialized:
-      if time.monotonic() - self.start_time < 2:
-        return
-      self.initialize()
-
-    data = {}
-    for sensor in self.meta['sensors']:
-      v = self.ap.server.values[sensor].value
-      if v:
-        data[sensor] = v
-    self.history.put(data)
-
-    learning_history = self.history.data[lag_samples:]
-    if len(learning_history) == samples:
-      #error = 0
-      #for d in self.history.data[:lag_samples]:
-      #  error += d[0]*self.P.value + d[1]*self.D.value # calculate error from current state
-      #error /= lag_samples
-      d = self.history.data[0]
-      e = d[0]*self.P.value + d[1]*self.D.value # calculate error from current state
-
-      # see what our command was to find the better command
-      data = {'input': learning_history[0], 'error': e, 'uid': self.model_uid}
-      self.learning_pipe.send(data)
-
-      if len(history) == samples:
-        if self.model_pipe_poller.poll():
-          tflite_model, self.model_uid = self.model_pipe.recv()
-          open('converted.tflite', 'wb').write(tflite_model)
-
-        if self.model_uid:
-          t0 = time.monotonic()
-          interpreter = tf.lite.Interpreter(model_path="converted.tflite")
-          t1 = time.monotonic()
-          interpreter.allocate_tensors()
-          t2 = time.monotonic()
-          input_details = interpreter.get_input_details()
-          output_details = interpreter.get_output_details()
-          t3 = time.monotonic()
-          input_shape = input_details[0]['shape']
-          print ('input details', input_details)
-          t4 = time.monotonic()
-          interpreter.set_tensor(input_details[0]['index'], np.array(history))
-          interpreter.invoke()
-          t5 = time.monotonic()
-          output_data = interpreter.get_tensor(output_details[0]['index'])
-          t6 = time.monotonic()
-          print('interpreter timings', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
-      
-    if ap.enabled.value and len(self.history.data) >= samples:
-        ap.servo.command.set(command)
+        if ap.enabled.value:
+            actions = self.model.predict(self.loss)
+            ap.servo.command.set(actions[0])
 
         
 pilot = LearningPilot
