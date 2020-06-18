@@ -46,7 +46,8 @@ class LCD():
             driver = self.hat.hatconfig['lcd']['driver']
             self.host = self.hat.client.config['host']
         else:
-            self.host = '10.10.10.1'
+            #self.host = '10.10.10.1'
+            self.host = '127.0.0.1'
             
         for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'tft', 'none']:
             if pdriver in sys.argv:
@@ -289,7 +290,7 @@ class LCD():
                 if self.hat:
                     self.hat.buzzer.beep()
         t3 = gettime()
-        print('lcd times', t1-t0, t2-t1, t3-t2)
+        #print('lcd times', t1-t0, t2-t1, t3-t2)
 
 def main():
     lcd = LCD(False)

@@ -10,6 +10,7 @@ DEFAULT_PORT = 23322
 class pypilotClient(object):
     def __init__(self, host=False):
         self.connection = False
+        self.connection_in_progress = False
         self.host = host
         self.watches = {}
         self.wwatches = {}
@@ -28,20 +29,17 @@ class pypilotClient(object):
     
         addr_info = socket.getaddrinfo(self.host, DEFAULT_PORT)
         addr = addr_info[0][-1]
-        self.connection = socket.socket()
+        self.connection_in_progress = socket.socket()
         for name, value in self.watches.items():
             self.wwatches[name] = value # resend watches
         self.wwatches['values'] = True # watch values
         self.values = {}
-        self.connection.settimeout(0)
-        import uselect
-        self.poller = uselect.poll()
-        self.poller.register(self.connection, uselect.POLLIN)
+        self.connection_in_progress.settimeout(0)
         
         print('connect to pypilot....')
         try:
-            self.connection.connect(addr)
-            self.connection.settimeout(0)
+            self.connection_in_progress.connect(addr)
+            #self.connection.settimeout(0)
         except OSError as e:
             import errno
             if e.args[0] not in [errno.EINPROGRESS, errno.ETIMEDOUT]:
@@ -52,8 +50,21 @@ class pypilotClient(object):
 
     def receive(self):
         if not self.connection:
-            self.connect()
-            return {}
+            if self.connection_in_progress:
+                try:
+                    self.connection_in_progress.send('')
+                except:
+                    return {}
+                
+                print('connected!')
+                self.connection = self.connection_in_progress
+                self.connection_in_progress = False
+                import uselect
+                self.poller = uselect.poll()
+                self.poller.register(self.connection, uselect.POLLIN)
+            else:
+                self.connect()
+                return {}
 
         # inform server of any watches we have changed
         if self.wwatches:
@@ -101,7 +112,7 @@ class pypilotClient(object):
             line = json.dumps(value)+'\n'
             self.connection.send(name + '=' + line)
         except Exception as e:
-            print('failed to watch', e)
+            print('failed to set', name, value, e)
             self.connection = False
 
 def main():
