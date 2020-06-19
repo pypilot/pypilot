@@ -25,7 +25,6 @@ except Exception as e:
 
 class lirc(object):
     def __init__(self):
-        self.events = []
         self.lastkey = False
         self.lasttime = time.monotonic()
 
@@ -42,9 +41,10 @@ class lirc(object):
 
     def poll(self):
         if not LIRC_version:
-            return
+            return []
 
         t = time.monotonic()
+        events = []
         while True:
             if LIRC_version == 1:
                 code = LIRC.nextcode(0)
@@ -61,15 +61,16 @@ class lirc(object):
                 key = codes[2]
 
             if self.lastkey and self.lastkey != key:
-                self.events.append((self.lastkey, 0))
+                events.append((self.lastkey, 0))
             self.lastkey = key
             self.lasttime = t
             self.events.append((key, count))
 
         # timeout keyup
         if self.lastkey and t - self.lasttime > .25:
-            self.events.append((self.lastkey, 0))
+            events.append((self.lastkey, 0))
             self.lastkey = False
+        return events
 
 def main():
     lircd = lirc()

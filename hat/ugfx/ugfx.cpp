@@ -560,7 +560,7 @@ public:
         pinMode(dc, OUTPUT);
 
 	for(int port=0; port<2; port++)
-	    if((spifd = wiringPiSPISetup(port, 1000000)) != -1)
+	    if((spifd = wiringPiSPISetup(port, 400000)) != -1)
 		break;
 	  
 	if(spifd == -1) {
