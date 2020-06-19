@@ -177,19 +177,24 @@ class pypilotClient(object):
     def poll(self, timeout=0):
         if not self.connection:
             if self.connection_in_progress:
-                try:
-                    test = self.connection_in_progress.send(b'')
-                except Exception as e:
-                    time.sleep(timeout)
+                events = self.poller_in_progress.poll(0)
+                if not events:
+                    return
+                fd, flag = events.pop()
+                if not (flag & select.POLLOUT):
+                    self.connection_in_progress.close()
+                    self.connection_in_progress = False
                     return
                 self.onconnected()
             else:
                 if not self.connect(False):
                     time.sleep(timeout)
-            return
+                return
             
         # inform server of any watches we have changed
         if self.wwatches:
+            #print('send wwatchd', 'watch=' + pyjson.dumps(self.wwatches))
+
             self.connection.send('watch=' + pyjson.dumps(self.wwatches) + '\n')
             #print('watch', watches, self.wwatches, self.watches)
             self.wwatches = {}
@@ -257,12 +262,22 @@ class pypilotClient(object):
             host_port = self.config['host'], self.config['port']
             connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.connection_in_progress = connection
-            connection.settimeout(0)
+            self.poller_in_progress = select.poll()
+            self.poller_in_progress.register(self.connection_in_progress.fileno(), select.POLLOUT)
+            
+            connection.settimeout(1)
             connection.connect(host_port)
-        except Exception as e:
-            if verbose:
-                print('connect failed to %s:%d' % host_port, e)
-            return True
+        except OSError as e:
+            import errno
+            if e.args[0] is errno.EINPROGRESS:
+                return True
+            print('connect failed to %s:%d' % host_port, e)
+            time.sleep(.1)
+            return False
+                
+        #except Exception as e:
+        #    if verbose:
+        #        print('connect failed to %s:%d' % host_port, e)
 
         self.onconnected()
         return True
@@ -319,13 +334,13 @@ class pypilotClient(object):
         value.client = self
         return value
 
-    def get_values(self, timeout=0):
+    def get_values(self):
         return self.values.value
 
     def list_values(self, timeout=0):
         self.watch('values')
         t0, dt, ret = time.monotonic(), timeout, self.values.value
-        while not ret and dt > 0:
+        while not ret and dt >= 0:
             self.poll(dt)
             ret = self.values.value
             dt = timeout - (t0-time.monotonic())
