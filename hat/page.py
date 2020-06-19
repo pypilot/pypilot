@@ -235,7 +235,7 @@ class info(page):
         self.page = 0
 
     def bound_page(self):
-        if self.page > self.num_pages:
+        if self.page >= self.num_pages:
             self.page = 0
         elif self.page < 0:
             self.page = self.num_pages
@@ -407,7 +407,7 @@ class controlbase(page):
         if self.wifi == wifi and not refresh:
             return # done displaying
         self.wifi = wifi
-        wifirect = rectangle(.3, .9, .6, .12)
+        wifirect = rectangle(.35, .9, .6, .1)
         if wifi:
             text = 'WIFI'
             if self.lcd.hat and self.lcd.hat.config['remote']:
@@ -456,7 +456,7 @@ class control(controlbase):
             if self.last_val('ap.mode') == mode:
                 r = modes[mode][2]
                 marg = .02
-                self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
+                self.rectangle(rectangle(r.x, r.y+marg, r.width-marg, r.height), .015)
 
     def display(self, refresh):
         if not self.control:

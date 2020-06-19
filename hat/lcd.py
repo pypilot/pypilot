@@ -48,6 +48,7 @@ class LCD():
         else:
             #self.host = '10.10.10.1'
             self.host = '127.0.0.1'
+            self.host = '192.168.14.1'
             
         for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'tft', 'none']:
             if pdriver in sys.argv:
@@ -160,8 +161,7 @@ class LCD():
             self.client.disconnect()
 
         self.client = pypilotClient(self.host)
-            
-        ret = self.client.list_values()
+        self.client.list_values()
 
     def write_config(self):
         if self.hat:
@@ -263,16 +263,16 @@ class LCD():
             
     def poll(self):
         t0 = gettime()
+
         msgs = self.client.receive()
         t1 = gettime()
         for name, value in msgs.items():
             self.last_msg[name] = value
-
+        
         if not self.page:
             frameperiod = 1;
         else:
             frameperiod = self.page.frameperiod
-        
         t = gettime()
         dt = t - self.lastframetime
         if dt > frameperiod:

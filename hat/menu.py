@@ -69,8 +69,9 @@ class menu(page):
                 break
 
         # invert selected menu item
-        y = .15*(self.selection-scroll) + sy
-        self.invertrectangle(rectangle(0, y+.03, 1, .12))
+        if self.selection >= 0:
+            y = .15*(self.selection-scroll) + sy
+            self.invertrectangle(rectangle(0, y+.03, 1, .12))
 
     def process(self):
         if self.testkeydown(AUTO):
@@ -200,7 +201,7 @@ class ValueCheck(page):
         self.pypilot_path = pypilot_path
 
     def process(self):
-        self.lcd.set(pypilot_name, not self.last_val(pypilot_name))
+        self.set(self.pypilot_path, not self.last_val(self.pypilot_path))
         return self.lcd.menu
 
 class ValueEnumSelect(page):
@@ -284,9 +285,21 @@ class calibrate_rudder_feedback(ValueEnum):
     def __init__(self):
         super(calibrate_rudder_feedback, self).__init__(_('rudder'), 'rudder.calibration_state', ['idle'])
 
+    def process(self):
+        if not self.last_val('rudder.angle'):
+            if self.testkeydown(MENU):
+                return self.prev
+            
+        super(calibrate_rudder_feedback, self).process()
+        
     def display(self, refresh):
-        super(calibrate_rudder_feedback, self).display(refresh)
-        fit = self.fittext(rectangle(0, .5, 1, .25), str(self.last_val('rudder.angle')))
+        if not self.last_val('rudder.angle'):
+            self.box(rectangle(0, .18, 1, .82), black)
+            self.fittext(rectangle(0, .4, 1, .4), "No Rudder Feedback Detected", True)
+            return
+        super(calibrate_rudder_feedback, self).display(True)
+            
+        fit = self.fittext(rectangle(0, .9, 1, .1), str(self.last_val('rudder.angle')))
 
 class calibrate(menu):
     def __init__(self):
@@ -296,6 +309,8 @@ class calibrate(menu):
                                          ValueCheck(_('lock'), 'imu.compass.calibration.locked'),
                                          calibrate_rudder_feedback(),
                                          calibrate_info()])
+        self.lastcounter = 0
+
     def getheading(self):
         try:
             return '%.1f' % self.last_val('imu.heading')
@@ -303,8 +318,9 @@ class calibrate(menu):
             return str(self.last_val('imu.heading'))
         
     def display(self, refresh):
-        super(calibrate, self).display(refresh)
         counter = self.last_val('imu.alignmentCounter', 0, 0)
+        super(calibrate, self).display(refresh or counter != self.lastcounter)
+        self.lastcounter = counter
         if counter:
             r = rectangle(0, 0, 1, .15)
             r.height = .2

@@ -25,16 +25,16 @@ class pypilotClient(object):
         
     def connect(self):
         if self.connection or not self.host:
-            return
+            return False
     
         addr_info = socket.getaddrinfo(self.host, DEFAULT_PORT)
         addr = addr_info[0][-1]
         self.connection_in_progress = socket.socket()
         for name, value in self.watches.items():
             self.wwatches[name] = value # resend watches
-        self.wwatches['values'] = True # watch values
+        #self.wwatches['values'] = True # watch values
         self.values = {}
-        self.connection_in_progress.settimeout(0)
+        self.connection_in_progress.settimeout(1)
         
         print('connect to pypilot....')
         try:
@@ -42,24 +42,43 @@ class pypilotClient(object):
             #self.connection.settimeout(0)
         except OSError as e:
             import errno
-            if e.args[0] not in [errno.EINPROGRESS, errno.ETIMEDOUT]:
+            if not (e.args[0] is errno.EINPROGRESS):
                 print('failed to connect', e)
                 import time
-                time.sleep(.25)
+                time.sleep(.1)
+                self.connection_in_progress.close()
+                self.connection_in_progress = False
                 self.disconnect()
+                return False
+
+        print('connected in one shot')
+        self.connection_in_progress.settimeout(0)
+
+        
+        print('connected!')
+        self.connection = self.connection_in_progress
+        self.connection_in_progress = False
+        import uselect
+        self.poller = uselect.poll()
+        self.poller.register(self.connection, uselect.POLLIN)
+        return True
 
     def receive(self):
         if not self.connection:
             if self.connection_in_progress:
-                try:
-                    self.connection_in_progress.send('')
-                except:
+                import uselect
+                events = self.poller_in_progress.poll(0)
+                if not events:
                     return {}
+                fd, flag = events.pop()
+                if not (flag & uselect.POLLOUT):
+                    self.connection_in_progress.close()
+                    self.connection_in_progress = False
+                    return
                 
                 print('connected!')
                 self.connection = self.connection_in_progress
                 self.connection_in_progress = False
-                import uselect
                 self.poller = uselect.poll()
                 self.poller.register(self.connection, uselect.POLLIN)
             else:
@@ -73,24 +92,41 @@ class pypilotClient(object):
 
         msgs = {}
         while True:
+            line = False
             try:
-                if not self.poller.poll(0):
+                #if not self.poller.poll(0):
+                #break
+                data = self.connection.recv(100)
+                print('len', len(data), data)
+                if not data:
                     break
+                continue
+            
                 line = self.connection.readline()
                 if not line:
                     break
                 line = line.decode()
-                #print('line', line)
-                name, value = line.split('=', 1)
+                print('line', line)
+                name, data = line.split('=', 1)
+                value = json.loads(data.rstrip())
                 if name == 'values':
-                    for n, v in value.items:
+                    for n, v in value.items():
                         self.values[n] = v
                 elif name == 'error':
-                    print('server error:', value)
+                    print('server error:', data)
                 else:
-                    msgs[name] = json.loads(value.rstrip())
+                    msgs[name] = value
+                    
+            except OSError as e:
+                import errno
+                if e.args[0] is errno.EAGAIN:
+                    break
+                print('oserror', e)
+                break
             except Exception as e:
-                print('failed read line', e)
+                print('failed read line', e, line)
+                self.disconnect()
+                break
         return msgs
 
     def get_values(self):
@@ -110,6 +146,7 @@ class pypilotClient(object):
             return
         try:
             line = json.dumps(value)+'\n'
+            print('sendline', name, line)
             self.connection.send(name + '=' + line)
         except Exception as e:
             print('failed to set', name, value, e)

@@ -7,4 +7,4 @@ if False: # reset on failure
 
 # get backtrace for debugging
 import lcd_esp32
-        
+

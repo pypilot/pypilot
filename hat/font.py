@@ -16,7 +16,7 @@ except:
     micropython = False
     import os
     from ugfx import ugfx
-    fontpath = os.path.abspath(os.getenv('HOME') + '/.pypilot/ugfxfonts/')
+    fontpath = os.path.abspath(os.getenv('HOME') + '/.pypilot/ugfxfonts/') + '/'
 
     if not os.path.exists(fontpath):
         os.makedirs(fontpath)
@@ -50,7 +50,9 @@ def draw(surface, pos, text, size, bw, crop=False):
             lineheight = 0
             continue
 
-        if not c in font:
+        if c in font:
+            src = font[c]
+        else:
             filename = fontpath + '%03d%03d' % (size, ord(c))
             if bw:
                 filename += 'b';
@@ -58,33 +60,38 @@ def draw(surface, pos, text, size, bw, crop=False):
                 filename += 'c';
 
             #print('ord', ord(c), filename)
-            font[c] = ugfx.surface(filename.encode('utf-8'), surface.bypp)
-            if font[c].bypp != surface.bypp:
+            #print('filename', filename)
+            src = ugfx.surface(filename.encode('utf-8'), surface.bypp)
+            if src.bypp != surface.bypp:
                 if not micropython:
-                    print('create', size, font[c].bypp, surface.bypp)
-                    font[c] = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
-                    if not font[c]:
+                    print('create', size, src.bypp, surface.bypp)
+                    src = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
+                    if not src:
                         continue
                     print('store grey', filename)
-                    font[c].store_grey(filename.encode('utf-8'))
+                    src.store_grey(filename.encode('utf-8'))
                 else:
-                    print('failed to loads character', ord(c), filename, font[c], font[c].bypp, surface.bypp, font[c].width, font[c].height)
-                    font[c] = False
+                    print('failed to loads character', ord(c), filename, src, src.bypp, surface.bypp, src.width, src.height)
+                    src = False
                               
             else:
                 pass
-                #print('loaded success', ord(c), size, font[c])
+                #print('loaded success', ord(c), size, src)
                     
-        if not font[c]:
+        if not src:
             #print('dont have', ord(c), size)
             continue
                 
         if pos:
-            surface.blit(font[c], x, y)
+            surface.blit(src, x, y)
 
-        x += font[c].width
+        x += src.width
         width = max(width, x-origx)
-        lineheight = max(lineheight, font[c].height)
+        lineheight = max(lineheight, src.height)
+        if micropython:
+            src.free()
+        else:
+            font[c] = src
 
     # free data for micropython
     if micropython:

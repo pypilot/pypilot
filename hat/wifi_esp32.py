@@ -1,28 +1,31 @@
 import network
 
-essid, psk = 'openplotter', '12345678'
+#essid, psk = 'openplotter', '12345678'
+essid, psk = 'pypilot', None
 
 station = network.WLAN(network.STA_IF)  # client, not AP
 station.active(True) # enable wifi
-station.connect(essid, psk)
+if psk:
+    station.connect(essid, psk)
+else:
+    station.connect(essid)
 connected = False
         
 def poll(client):
     global connected
     isconnected = station.isconnected()
-    #print('wifi connected', isconnected)
     if connected == isconnected: # no change
-        return
+        return connected
     connected = isconnected
-    if not connected:
-        addrs = self.station.ifconfig()
+    if connected:
+        addrs = station.ifconfig()
         print('wifi connection success', addrs)
 
         host = addrs[3]
         if client.host != host:
             print('wifi connecting to pypilot at', host)
         client.host = host
-        client.disconnect()
     else: # disconnected
         print('wifi disconnected')
         client.disconnect()
+    return connected
