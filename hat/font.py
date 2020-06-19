@@ -6,11 +6,12 @@
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
-
+import time
 try:
     import micropython
     import ugfx
-    fontpath = '/_#!#_spiffs/ugfxfonts'
+    #fontpath = '/_#!#_spiffs/ugfxfonts/'
+    fontpath = ''
 except:
     micropython = False
     import os
@@ -27,6 +28,7 @@ global fonts
 fonts = {}
 
 def draw(surface, pos, text, size, bw, crop=False):
+    t0 = time.time()
     if not size in fonts:
         fonts[size] = {}
 
@@ -49,7 +51,7 @@ def draw(surface, pos, text, size, bw, crop=False):
             continue
 
         if not c in font:
-            filename = fontpath + '/%03d%03d' % (size, ord(c))
+            filename = fontpath + '%03d%03d' % (size, ord(c))
             if bw:
                 filename += 'b';
             if crop:
@@ -80,16 +82,16 @@ def draw(surface, pos, text, size, bw, crop=False):
         if pos:
             surface.blit(font[c], x, y)
 
-
         x += font[c].width
         width = max(width, x-origx)
         lineheight = max(lineheight, font[c].height)
 
-        # free data for micropython
-        if micropython:
-            font[c].free()
-            del font[c]
-
+    # free data for micropython
+    if micropython:
+        for c in font:
+            if font[c]:
+                font[c].free()
+        fonts[size] = {}
     return width, height+lineheight
 
 def create_character(fontpath, size, c, bypp, crop, bpp):

@@ -132,6 +132,7 @@ class LCD():
 
         self.menu = False
         self.page = connecting(self)
+        self.need_refresh = True
 
         self.keypad = [0]*NUM_KEYS
         self.keypadup = list(self.keypad)
@@ -217,7 +218,8 @@ class LCD():
             self.key(BIG_STARBOARD, down)
 
     def display(self):
-        self.page.display()
+        self.page.display(self.need_refresh)
+        self.need_refresh = False
         surface = self.surface
 
         # status cursor
@@ -283,6 +285,7 @@ class LCD():
         if next_page and next_page != self.page:
             self.page = next_page
             self.update_watches()
+            self.need_refresh = True
 
         for key in range(len(self.keypad)):
             if self.keypadup[key]:

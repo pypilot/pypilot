@@ -31,10 +31,16 @@ class menu(page):
             return self.prev.mainmenu()
         return self
 
-    def display(self):
+    def display(self, refresh):
         self.lcd.menu = self
+        if not refresh:
+            if self.selection == self.last_selection:
+                return
+        self.last_selection = self.selection
+            
         self.fill(black)
         fit = self.fittext(rectangle(0, 0, 1, .25), self.name)
+    
         sy = y = fit[1] + .03
         items = min(int((1 - y)/.15), len(self.items))
         scroll = max(self.selection - int(items/2), 0)
@@ -59,7 +65,7 @@ class menu(page):
                 except:
                     pass
             y += .15
-            if y >= 1:
+            if y >= .9:
                 break
 
         # invert selected menu item
@@ -97,10 +103,13 @@ class RangeEdit(page):
         self.value = None
         super(RangeEdit, self).__init__(name)
      
-    def display(self):
-        self.fill(black)
-        self.fittext(rectangle(0, 0, 1, .3), self.name, True)
-        self.fittext(rectangle(0, .3, 1, .3), self.desc(), True)
+    def display(self, refresh):
+        if refresh:
+            self.fill(black)
+            self.fittext(rectangle(0, 0, 1, .3), self.name, True)
+            self.fittext(rectangle(0, .3, 1, .3), self.desc(), True)
+        else:
+            self.box(rectangle(0, .6, 1, .4), black)
 
         # update name
         if time.time()-self.lastmovetime > 1:
@@ -156,7 +165,7 @@ class RangeEdit(page):
     def process(self):
         if self.testkeydown(MENU):
             if not self.pypilot:
-                self.write_config()
+                self.lcd.write_config()
             return self.prev
 
         speed = self.speed_of_keys()
@@ -174,7 +183,7 @@ class ValueEdit(RangeEdit):
                                         True, 0, 1, .1)
         self.range = False
 
-    def display(self):
+    def display(self, refresh):
         if not self.range:
             values = self.lcd.value_list()
             if self.id in values:
@@ -183,7 +192,7 @@ class ValueEdit(RangeEdit):
                 info = {'min': 0, 'max': 0}
             self.range = info['min'], info['max']
             self.step = (self.range[1]-self.range[0])/100.0
-        super(ValueEdit, self).display()
+        super(ValueEdit, self).display(refresh)
 
 class ValueCheck(page):
     def __init__(self, name, pypilot_path=False):
@@ -275,8 +284,8 @@ class calibrate_rudder_feedback(ValueEnum):
     def __init__(self):
         super(calibrate_rudder_feedback, self).__init__(_('rudder'), 'rudder.calibration_state', ['idle'])
 
-    def display(self):
-        super(calibrate_rudder_feedback, self).display()
+    def display(self, refresh):
+        super(calibrate_rudder_feedback, self).display(refresh)
         fit = self.fittext(rectangle(0, .5, 1, .25), str(self.last_val('rudder.angle')))
 
 class calibrate(menu):
@@ -293,8 +302,8 @@ class calibrate(menu):
         except:
             return str(self.last_val('imu.heading'))
         
-    def display(self):
-        super(calibrate, self).display()
+    def display(self, refresh):
+        super(calibrate, self).display(refresh)
         counter = self.last_val('imu.alignmentCounter', 0, 0)
         if counter:
             r = rectangle(0, 0, 1, .15)
@@ -356,7 +365,7 @@ class wifi(menu):
                                  select_wifi_defaults(_('defaults')),
                                  wifi_remote(_('remote'))])
 
-    def display(self):
+    def display(self, refresh):
         if not test_wifi():
             self.fill(black)
             self.fittext(rectangle(0, 0, 1, 1), _('No Wifi detected'), True)

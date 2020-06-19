@@ -319,6 +319,9 @@ class pypilotClient(object):
         value.client = self
         return value
 
+    def get_values(self, timeout=0):
+        return self.values.value
+
     def list_values(self, timeout=0):
         self.watch('values')
         t0, dt, ret = time.monotonic(), timeout, self.values.value

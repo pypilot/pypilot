@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-white = 0xff
+white = 0xffffff
 black = 0x00
 #white = ugfx.color(255, 255, 255)
 #black = ugfx.color(0, 0, 0)
@@ -43,6 +43,7 @@ class page(object):
         self.name = name
         self.frameperiod = frameperiod
         self.watches = {}
+        self.fittext_cache = {}
 
     def fill(self, color):
         self.lcd.surface.fill(color)
@@ -54,6 +55,56 @@ class page(object):
         size = font.draw(surface, pos, text, size, self.lcd.bw, crop)
         return float(size[0])/surface.width, float(size[1])/surface.height
 
+
+    def fittextsizewordwrap(self, rect, text, font, metric_size, bw, surface):
+        words = text.split(' ')
+        spacewidth = font.draw(surface, False, ' ', metric_size, self.lcd.bw)[0]
+        #if len(words) < 2: # need at least 2 words to wrap
+        #    return self.fittext(rect, text, False, fill)
+        metrics = list(map(lambda word : (word, font.draw(surface, False, word, metric_size, bw)), words))
+
+        widths = list(map(lambda metric : metric[1][0], metrics))
+        maxwordwidth = max(*widths+[0])
+        totalwidth = sum(widths) + spacewidth * (len(words) - 1)
+
+        size = 0
+        # not very efficient... just tries each x position
+        # for wrapping to maximize final font size
+        for wrappos in range(maxwordwidth, totalwidth+1):
+            posx, posy = 0, 0
+            curtext = ''
+            lineheight = 0
+            maxw = 0
+            for metric in metrics:
+                word, (width, height) = metric
+                if posx > 0:
+                    width += spacewidth
+                if posx + width > wrappos:
+                    curtext += '\n'
+                    posx = 0
+                    posy += lineheight
+                    lineheight = 0
+
+                if posx > 0:
+                    curtext += ' '
+                curtext += word
+                lineheight = max(lineheight, height)
+                posx += width
+                maxw = max(maxw, posx)
+            maxh = posy + lineheight
+                    
+            s = maxw, maxh
+            if s[0] == 0 or s[1] == 0:
+                continue
+            sw = surface.width * float(rect.width) / s[0]
+            sh = surface.height * float(rect.height) / s[1]
+            cursize = int(min(sw*metric_size, sh*metric_size))
+            if cursize > size:
+                size = cursize
+                text = curtext
+        return size, text
+        
+    
     def fittext(self, rect, text, wordwrap=False, fill='none'):
         surface = self.lcd.surface
         bw = self.lcd.bw
@@ -61,62 +112,27 @@ class page(object):
         if fill != 'none':
             surface.box(*(self.convrect(rect) + [fill]))
         metric_size = 16
-        if wordwrap:
-            words = text.split(' ')
-            spacewidth = font.draw(surface, False, ' ', metric_size, self.lcd.bw)[0]
-            if len(words) < 2: # need at least 2 words to wrap
-                return self.fittext(rect, text, False, fill)
-            metrics = list(map(lambda word : (word, font.draw(surface, False, word, metric_size, bw)), words))
+        ptext = text
+        if text in self.fittext_cache:
+            size, r, ptext = self.fittext_cache[text]
+            if r.width != rect.width or r.height != rect.height:
+                del self.fittext_cache[text]
 
-            widths = list(map(lambda metric : metric[1][0], metrics))
-            maxwordwidth = max(*widths)
-            totalwidth = sum(widths) + spacewidth * (len(words) - 1)
-
-            size = 0
-            # not very efficient... just tries each x position
-            # for wrapping to maximize final font size
-            for wrappos in range(maxwordwidth, totalwidth+1):
-                posx, posy = 0, 0
-                curtext = ''
-                lineheight = 0
-                maxw = 0
-                for metric in metrics:
-                    word, (width, height) = metric
-                    if posx > 0:
-                        width += spacewidth
-                    if posx + width > wrappos:
-                        curtext += '\n'
-                        posx = 0
-                        posy += lineheight
-                        lineheight = 0
-
-                    if posx > 0:
-                        curtext += ' '
-                    curtext += word
-                    lineheight = max(lineheight, height)
-                    posx += width
-                    maxw = max(maxw, posx)
-                maxh = posy + lineheight
-                    
-                s = maxw, maxh
+        if not text in self.fittext_cache:
+            if wordwrap:
+                size, ptext = self.fittextsizewordwrap(rect, text, font, metric_size, bw, surface)
+            else:
+                s = font.draw(surface, False, text, metric_size, bw)
                 if s[0] == 0 or s[1] == 0:
-                    continue
+                    return 0, 0
                 sw = surface.width * float(rect.width) / s[0]
                 sh = surface.height * float(rect.height) / s[1]
-                cursize = int(min(sw*metric_size, sh*metric_size))
-                if cursize > size:
-                    size = cursize
-                    text = curtext
-        else:
-            s = font.draw(surface, False, text, metric_size, bw)
-            if s[0] == 0 or s[1] == 0:
-                return 0, 0
-            sw = surface.width * float(rect.width) / s[0]
-            sh = surface.height * float(rect.height) / s[1]
-            size = int(min(sw*metric_size, sh*metric_size))
+                size = int(min(sw*metric_size, sh*metric_size))
+
+            self.fittext_cache[text] = size, rect, ptext
 
         pos = int(rect.x*surface.width), int(rect.y*surface.height)
-        size = font.draw(surface, pos, text, size, bw)
+        size = font.draw(surface, pos, ptext, size, bw)
         return float(size[0])/surface.width, float(size[1])/surface.height
 
     def line(self, x1, y1, x2, y2):
@@ -201,7 +217,7 @@ class page(object):
     def set(self, name, value):
         self.lcd.client.set(name, value)
 
-    def display(self):
+    def display(self, refresh):
         pass # some pages only perform an action
         
     def process(self):
@@ -224,7 +240,7 @@ class info(page):
         elif self.page < 0:
             self.page = self.num_pages
         
-    def display(self):
+    def display(self, refresh):
         self.bound_page()
         self.watches = {} # clear watches so they can be page specific
         self.fill(black)
@@ -272,7 +288,7 @@ class calibrate_info(info):
     def __init__(self):
         super(calibrate_info, self).__init__(3)
 
-    def display(self):
+    def display(self, refresh):
         self.bound_page()
         self.fill(black)
         self.fittext(rectangle(0, 0, 1, .24), _('Calibrate Info'), True)
@@ -366,19 +382,19 @@ class controlbase(page):
         self.batt = False
         self.wifi = False
 
-    def display(self, force_refresh=False):
-        if force_refresh:
+    def display(self, refresh):
+        if refresh:
             self.box(rectangle(0, .9, 1, 1), black)
             self.wifi = False
             
         battrect = rectangle(0.03, .92, .25, .07)
         
         if self.lcd.battery_voltage:
-            if self.lcd.battery_voltage > 3.7:
+            if self.lcd.battery_voltage > 3.6:
                 batt = .85 if self.batt == 1 else 1 # flash
             else:
-                batt = max((self.lcd.battery_voltage-3)/.7, 0)
-            if batt != self.batt or force_refresh:
+                batt = max((self.lcd.battery_voltage-3)/.6, 0)
+            if batt != self.batt or refresh:
                 self.batt = batt
                 self.lcd.surface.box(*(self.convrect(battrect) + [black]))
                 self.rectangle(battrect, width=0.015)
@@ -388,7 +404,7 @@ class controlbase(page):
                     self.box(battrect, white)
         
         wifi = test_wifi()
-        if self.wifi == wifi and not force_refresh:
+        if self.wifi == wifi and not refresh:
             return # done displaying
         self.wifi = wifi
         wifirect = rectangle(.3, .9, .6, .12)
@@ -442,7 +458,7 @@ class control(controlbase):
                 marg = .02
                 self.rectangle(rectangle(r.x-marg, r.y+marg, r.width-marg, r.height), .015)
 
-    def display(self):
+    def display(self, refresh):
         if not self.control:
             self.fill(black)
             self.control = {'heading': '   ', 'heading_command': '   ', 'mode': False, 'modes': []}
@@ -556,7 +572,7 @@ class control(controlbase):
 
         if not warning:
             self.display_mode()
-        super(control, self).display()
+        super(control, self).display(refresh)
 
     def process(self):
         if not self.lcd.client.connection:
@@ -600,19 +616,20 @@ class connecting(controlbase):
         super(connecting, self).__init__(lcd)
         self.connecting_dots = 0
         
-    def display(self):
-        #self.lcd.surface.fill(black)
-        self.box(rectangle(0, 0, 1, .9), black)
-        
-        self.fittext(rectangle(0, 0, 1, .4), _('connect to server'), True)
+    def display(self, refresh):
+        if refresh:
+            self.box(rectangle(0, 0, 1, .4), black)
+            self.fittext(rectangle(0, 0, 1, .4), _('connect to server'), True)
+            self.drawn_text = True
+        self.box(rectangle(0, .4, 1, .5), black)
         dots = ''
         for i in range(self.connecting_dots):
             dots += '.'
         size = self.text((0, .4), dots, 12)
         self.connecting_dots += 1
-        if size[0] >= 1:
+        if size[0] >= 1 or self.connecting_dots > 20:
             self.connecting_dots = 0
-        super(connecting, self).display(True)
+        super(connecting, self).display(refresh)
 
     def process(self):
         if self.lcd.client.connection:
