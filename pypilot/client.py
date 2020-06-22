@@ -335,7 +335,9 @@ class pypilotClient(object):
         return value
 
     def get_values(self):
-        return self.values.value
+        if self.values.value:
+            return self.values.value
+        return {}
 
     def list_values(self, timeout=0):
         self.watch('values')
