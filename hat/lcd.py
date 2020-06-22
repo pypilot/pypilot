@@ -22,6 +22,7 @@ except:
     import font
     def gettime():
         return time.monotonic()
+    micropython = False
 
 class LCD():
     def __init__(self, hat):
@@ -29,10 +30,13 @@ class LCD():
 
         if hat:
             self.config = hat.config['lcd']
+        elif micropython:
+            from config_esp32 import read_config
+            self.config = read_config()
         else:
             self.config = {}
             
-        default = {'contrast': 60, 'invert': False, 'backlight': 30,
+        default = {'contrast': 60, 'invert': False, 'backlight': 50,
                    'flip': False, 'language': 'en', 'bigstep': 10,
                    'smallstep': 1};
 
@@ -46,9 +50,7 @@ class LCD():
             driver = self.hat.hatconfig['lcd']['driver']
             self.host = self.hat.client.config['host']
         else:
-            #self.host = '10.10.10.1'
-            self.host = '127.0.0.1'
-            self.host = '192.168.14.1'
+            self.host = False
             
         for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'tft', 'none']:
             if pdriver in sys.argv:
@@ -57,12 +59,8 @@ class LCD():
                 break
 
         self.battery_voltage = 0
-        try:
-            import micropython
-            import ugfx
-            use_tft = True
-        except:        
-            use_tft = False
+        import ugfx
+        use_tft = True if micropython else False
 
         if not use_tft:
             use_glut = 'DISPLAY' in os.environ
@@ -72,7 +70,7 @@ class LCD():
         if driver == 'none':
             page = None
         elif driver == 'tft' or (driver == 'default' and use_tft):
-            screen = ugfx.surface(138, 240, 1)            
+            screen = ugfx.surface(138, 240, 1)
             self.surface = screen
         elif driver == 'nokia5110' or (driver == 'default' and not use_glut):
             screen = ugfx.spiscreen(0)
@@ -101,8 +99,9 @@ class LCD():
             print('using framebuffer')
             screen = ugfx.screen("/dev/fb0")
             if screen.width > 480:
-                screen.width = 480
-                screen.height= min(screen.height, 640)
+                print('warning huge width')
+                #screen.width = 480
+                #screen.height= min(screen.height, 640)
                 
         if screen:
             self.bw = 1 if screen.width < 120 else False
@@ -138,7 +137,8 @@ class LCD():
         self.keypad = [0]*NUM_KEYS
         self.keypadup = list(self.keypad)
 
-        self.blink = black, white
+        self.blink = black, white # two cursor states
+        self.data_update = False
 
     def getmenu(self):
         if not self.menu:
@@ -161,17 +161,16 @@ class LCD():
             self.client.disconnect()
 
         self.client = pypilotClient(self.host)
-        self.client.list_values()
 
     def write_config(self):
         if self.hat:
             self.hat.write_config()
+        if micropython:
+            from config_esp32 import write_config
+            write_config(self.config)
 
-    def value_list(self):
-        v = self.client.get_values()
-        if v:
-            return v
-        return {}
+    def get_values(self):
+        return self.client.get_values()
             
     def key(self, k, down):
         if k >= 0 and k < len(self.keypad):
@@ -219,6 +218,12 @@ class LCD():
 
     def display(self):
         self.page.display(self.need_refresh)
+
+        if micropython:
+            self.page.watches['imu.loopfreq'] = True
+            #self.page.watches['imu.accel'] = True
+            #self.page.watches['imu.gyro'] = True
+                    
         self.need_refresh = False
         surface = self.surface
 
@@ -226,7 +231,9 @@ class LCD():
         t0 = gettime()
         try:
             if t0-self.blinktime > .5:
-                self.blink = self.blink[1], self.blink[0]
+                if self.data_update:
+                    self.blink = self.blink[1], self.blink[0]
+                    self.data_update = False
                 self.blinktime = t0
         except:
             self.blinktime = 0
@@ -246,13 +253,15 @@ class LCD():
 
             self.screen.blit(surface, 0, 0, self.config['flip'])
 
-        self.screen.refresh()
-
         if 'contrast' in self.config:
             self.screen.contrast = int(self.config['contrast'])
 
         if 'backlight' in self.config and self.hat:
             self.hat.arduino.set_backlight(int(self.config['backlight']))
+        else:
+            self.screen.hue = int(float(self.config['backlight'])*255/100)
+        self.screen.refresh()
+            
 
     def update_watches(self):
         for name in list(self.client.watches):
@@ -260,11 +269,14 @@ class LCD():
                 self.client.watch(name, False)
         for name, period in self.page.watches.items():
             self.client.watch(name, period)
-            
+
     def poll(self):
         t0 = gettime()
 
         msgs = self.client.receive()
+        if msgs:
+            self.data_update = True # allow cursor to blink
+
         t1 = gettime()
         for name, value in msgs.items():
             self.last_msg[name] = value

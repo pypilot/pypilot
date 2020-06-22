@@ -9,7 +9,7 @@
 
 from machine import Pin
 
-keypad_pin_numbers = [21, 0, 35]
+keypad_pin_numbers = [21, 0, 35, 22, 17, 2, 33, 25]#, 26, 27]
 
 def make_pin(pin):
     if pin >= 34:
@@ -18,7 +18,8 @@ def make_pin(pin):
 
 keypad_pins = list(map(make_pin, keypad_pin_numbers))
 
-nudge = [(make_pin(23), -1), (make_pin(12), 1)]
+#nudge = [(make_pin(0), -1), (make_pin(35), 1)]
+nudge = [(make_pin(12), -1), (make_pin(13), 1)]
 def poll(lcd):
     anykey = False
     for i in range(len(keypad_pins)):

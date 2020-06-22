@@ -1,9 +1,16 @@
-##  python3 -m mpy_cross -v -march=xtensawin testmodule.py 
+#!/usr/bin/env python
+#
+#   Copyright (C) 2020 Sean D'Epagnier
+#
+# This Program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.  
+
 
 import wifi_esp32
-
-
 import socket, time, json
+import errno
 
 DEFAULT_PORT = 23322
 
@@ -15,6 +22,14 @@ class pypilotClient(object):
         self.watches = {}
         self.wwatches = {}
         self.values = {}
+        self.lastlinetime = time.time()
+        self.addr = False
+        self.need_values = False
+
+        self.udp_port = 8317
+        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_socket.bind(('0.0.0.0', self.udp_port))
+        self.udp_socket.settimeout(0)
 
     def disconnect(self):
         if not self.connection:
@@ -22,163 +37,258 @@ class pypilotClient(object):
 
         self.connection.close()
         self.connection = False
+        time.sleep(.25)
         
     def connect(self):
         if self.connection or not self.host:
             return False
+
+        print('connect to host', self.host)
+        if not self.addr or self.addr[1] != self.host:
+            addr_info = socket.getaddrinfo(self.host, DEFAULT_PORT)
+            self.addr = addr_info[0][-1], self.host
     
-        addr_info = socket.getaddrinfo(self.host, DEFAULT_PORT)
-        addr = addr_info[0][-1]
-        self.connection_in_progress = socket.socket()
+        try:
+            connection = socket.socket()
+        except Exception as e:
+            print("couldn't create socket", e)
+            import machine
+            machine.reset()
+        
+        self.wwatches = {}
         for name, value in self.watches.items():
             self.wwatches[name] = value # resend watches
-        #self.wwatches['values'] = True # watch values
-        self.values = {}
-        self.connection_in_progress.settimeout(1)
+        #self.values = {}
+        connection.settimeout(1)
+        print('connecting...')
         
-        print('connect to pypilot....')
         try:
-            self.connection_in_progress.connect(addr)
-            #self.connection.settimeout(0)
+            connection.connect(self.addr[0])
         except OSError as e:
-            import errno
+            if e.args[0] is errno.EHOSTUNREACH:
+                print('unrechable.. restarting')
+                import machine
+                machine.reset()
             if not (e.args[0] is errno.EINPROGRESS):
                 print('failed to connect', e)
-                import time
-                time.sleep(.1)
-                self.connection_in_progress.close()
-                self.connection_in_progress = False
-                self.disconnect()
+                connection.close()
                 return False
 
-        print('connected in one shot')
-        self.connection_in_progress.settimeout(0)
-
-        
         print('connected!')
-        self.connection = self.connection_in_progress
-        self.connection_in_progress = False
-        import uselect
-        self.poller = uselect.poll()
-        self.poller.register(self.connection, uselect.POLLIN)
+        connection.settimeout(0)
+        self.connection_in_progress = connection
         return True
 
+    def reset_timeout(self):
+        self.lastlinetime = time.time()+1.5
+
+
+    def decode_line(self, line, msgs):
+        self.lastlinetime = time.time()
+        try:
+            name, data = line.split('=', 1)
+            if name == 'error':
+                print('server error:', data)
+            else:
+                value = json.loads(data.rstrip())
+                if name == 'values':
+                    print('values should not hit here!!!!!!')
+                else:
+                    msgs[name] = value
+        except Exception as e:
+            print('failed decoding line', e)
+            print('line', line)
+
+            f=open('badline', 'w')
+            f.write(line)
+            f.close()
+                    
+                    
     def receive(self):
         if not self.connection:
             if self.connection_in_progress:
-                import uselect
-                events = self.poller_in_progress.poll(0)
-                if not events:
-                    return {}
-                fd, flag = events.pop()
-                if not (flag & uselect.POLLOUT):
-                    self.connection_in_progress.close()
-                    self.connection_in_progress = False
-                    return
-                
-                print('connected!')
                 self.connection = self.connection_in_progress
                 self.connection_in_progress = False
-                self.poller = uselect.poll()
-                self.poller.register(self.connection, uselect.POLLIN)
+                self.valuesbuffer = ''
+                if self.udp_port:
+                    self.set('udp_port', self.udp_port)
+                self.requested_values = False
             else:
                 self.connect()
+                time.sleep(.25)
                 return {}
 
+        if not self.values and self.need_values:
+            if not self.requested_values:
+                self.requested_values = True
+                self.wwatches['values'] = True # watch values
+            
         # inform server of any watches we have changed
         if self.wwatches:
             self.set('watch', self.wwatches)
             self.wwatches = {}
 
         msgs = {}
-        while True:
-            line = False
+        some_lines = False
+        while self.udp_socket:
             try:
-                #if not self.poller.poll(0):
-                #break
-                data = self.connection.recv(100)
-                print('len', len(data), data)
-                if not data:
-                    break
-                continue
-            
-                line = self.connection.readline()
-                if not line:
-                    break
-                line = line.decode()
-                print('line', line)
-                name, data = line.split('=', 1)
-                value = json.loads(data.rstrip())
-                if name == 'values':
-                    for n, v in value.items():
-                        self.values[n] = v
-                elif name == 'error':
-                    print('server error:', data)
-                else:
-                    msgs[name] = value
-                    
+                data, addr = self.udp_socket.recvfrom(512)
+                lines = data.decode().rstrip().split('\n')
             except OSError as e:
-                import errno
                 if e.args[0] is errno.EAGAIN:
-                    break
-                print('oserror', e)
+                    pass
+                else:
+                    print('os error', e)
                 break
             except Exception as e:
-                print('failed read line', e, line)
+                print('udp socket exception!?!', e)
+                import machine
+                machine.reset() # reboot
+
+            for line in lines:
+                self.decode_line(line, msgs)
+            some_lines = not not lines
+
+        t0 = time.time()
+        while self.connection:
+            line = False
+            try:
+                line = self.connection.readline(300)
+                if not line:
+                    break
+            except OSError as e:
+                if e.args[0] is errno.EAGAIN:
+                    break
+                if e.args[0] is errno.ETIMEDOUT:
+                    break
+                print('OSerror', e)
                 self.disconnect()
                 break
+
+            if self.valuesbuffer:
+                self.valuesbuffer += line.decode()
+                line = ''
+            elif line.startswith('values={'):
+                self.valuesbuffer = line[8:].decode()
+                line = ''
+
+            while self.valuesbuffer:
+                curly = 0
+                try:
+                    name, rest = self.valuesbuffer.split(':', 1)
+                except Exception as e:
+                    if self.valuesbuffer.startswith('}\n'):
+                        line = self.valuesbuffer[3:]
+                        self.valuesbuffer = ''
+                    break
+ 
+                for i in range(len(rest)):
+                    c = rest[i]
+                    if c == '{':
+                        curly += 1
+                    elif c == '}':
+                        curly -= 1                   
+                    if curly == 0:
+                        data = rest[:i+1]
+                        fields = ['AutopilotGain', 'min', 'max', 'choices']
+                        for field in fields:
+                            if field in data:
+                                data = json.loads(data)
+                                self.reset_timeout()
+
+                                info = {}
+                                for field in fields:
+                                    if field in data:
+                                        info[field] = data[field]
+                                if info:
+                                    name = json.loads(name)
+                                    #print('name ', name, ' = ', info)
+                                    self.values[name] = info
+                                break
+
+                        j = i
+                        while rest[i] != ',' and i < len(rest)-1:
+                            i += 1
+                        else:
+                            i = j
+                        self.valuesbuffer=rest[i+1:]
+                        break
+                else:
+                    break
+
+            if time.time() - t0 > 1: # 1 second maximum
+                break
+                
+            if self.valuesbuffer:
+                continue
+            if len(line) < 4:
+                self.valuesbuffer = ''                
+                continue
+
+            if line[-1] == ord('\n'):
+                    self.decode_line(line.decode(), msgs)
+                    some_lines = True
+            else:
+                print('overflow messages!', len(line))
+
+        if not some_lines:
+            t = time.time()
+            dt = t - self.lastlinetime            
+            if dt > 1.0:
+                print('dt', dt, t)
+            if dt > 2.5:
+                print('timeout on socket', dt, 'reset wifi')
+                from wifi_esp32 import connect
+                connect()
+                self.disconnect()
+
         return msgs
 
-    def get_values(self):
-        return self.values
+    def list_values(self):
+        self.need_values = True
+        return False
 
-    def list_values(self, timeout=0):
-        return {}
+    def get_values(self):
+        if self.valuesbuffer:
+            return {}
+        return self.values
     
     def watch(self, name, period=True):
         if name in self.watches and self.watches[name] is period:
             return
         self.wwatches[name] = period
-        self.watches[name] = period
+        if period:
+            self.watches[name] = period
+        elif name in self.watches:
+            del self.watches[name]
         
     def set(self, name, value):
         if not self.connection:
             return
         try:
             line = json.dumps(value)+'\n'
-            print('sendline', name, line)
+            self.reset_timeout()
             self.connection.send(name + '=' + line)
+        except OSError as e:
+            if not (e.args[0] is errno.EINPROGRESS):
+                print('failed to set', e)
+                self.disconnect()
+                return False
         except Exception as e:
             print('failed to set', name, value, e)
-            self.connection = False
+            self.disconnect()
 
 def main():
-    essid, psk = 'openplotter', '12345678'
-    
-    import network
-    station = network.WLAN(network.STA_IF)  # client, not AP    
-    client = pypilotClient('10.10.10.1')
-    client.watch('imu.heading') # fastest rate
-    client.watch('ap.heading', 1) # once per second
+    client = pypilotClient('192.168.14.1')
+    #client.watch('imu.heading') # fastest rate
+    client.watch('imu.loopfreq', 1.0) # once per second
+    client.watch('ap.heading', .25) # once per second
 
     while True:
-        if not station.isconnected():
-            print('connection', station.isconnected(), station.status())
-            station.active(True) # enable wifi
-            station.connect(essid, psk)
-            for x in range(100):
-                if station.isconnected():
-                    print('connection success', station.ifconfig())
-                    break
-                time.sleep(.1)
-            else:
-                print('failed to connect to', essid)
-                time.sleep(3)
-            continue
-        
         msgs = client.receive()
         if not msgs:
-            time.sleep(.1)
+            time.sleep(.03)
+            continue
 
         for name, value in msgs.items():
             print(name, '=', value)

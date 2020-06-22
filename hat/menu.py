@@ -51,7 +51,7 @@ class menu(page):
                 val = self.last_val(item.pypilot_path)
                 if val: # draw if value is true
                     self.invertrectangle(rectangle(.8, y+.07, .1, .07))
-            elif isinstance(item, RangeEdit):
+            elif isinstance(item, RangeEdit) and size < 1:
                 # slider, draw box showing value
                 sliderarea = rectangle(size, y+.05, (1-size), .07)
                 self.rectangle(sliderarea, .015)
@@ -71,7 +71,8 @@ class menu(page):
         # invert selected menu item
         if self.selection >= 0:
             y = .15*(self.selection-scroll) + sy
-            self.invertrectangle(rectangle(0, y+.03, 1, .12))
+            if y < .85:
+                self.invertrectangle(rectangle(0, y+.03, 1, .12))
 
     def process(self):
         if self.testkeydown(AUTO):
@@ -120,7 +121,7 @@ class RangeEdit(page):
         if not self.pypilot and not self.value:
             self.value = self.lcd.config[self.id]
 
-        if not self.value:
+        if self.value is False:
             return
         v = self.value
         try:
@@ -142,11 +143,11 @@ class RangeEdit(page):
             pass
 
     def move(self, delta):
-        if not self.value:
+        if self.value is False:
             return
-        if self.pypilot: #config items rounded to integer
+        if self.pypilot:
             v = self.value + delta*self.step
-        else:
+        else: #config items rounded to integer
             if delta > 0:
                 delta = max(1, delta)
             else:
@@ -186,7 +187,7 @@ class ValueEdit(RangeEdit):
 
     def display(self, refresh):
         if not self.range:
-            values = self.lcd.value_list()
+            values = self.lcd.get_values()
             if self.id in values:
                 info = values[self.id]
             else:
@@ -257,7 +258,7 @@ class gain(menu):
 
     def curgains(self):
         ret = []
-        for name, value in self.lcd.value_list().items():
+        for name, value in self.lcd.get_values().items():
             if 'AutopilotGain' in value:
                 if 'ap.pilot.' in name:
                     s = name.split('.')
@@ -271,9 +272,9 @@ class gain(menu):
     def process(self):
         pilot = self.last_val('ap.pilot')
         if pilot != self.last_pilot:
-            self.items = [self.pilot] + list(map(GainEdit, self.curgains()))
+            self.items = list(map(GainEdit, self.curgains())) + [self.pilot]
             self.find_parents()
-            self.last_pilot = pilot
+            self.lcd.need_refresh = True
         return super(gain, self).process()
 
 class level(page):
@@ -318,7 +319,7 @@ class calibrate(menu):
             return str(self.last_val('imu.heading'))
         
     def display(self, refresh):
-        counter = self.last_val('imu.alignmentCounter', 0, 0)
+        counter = self.last_val('imu.alignmentCounter', default=0)
         super(calibrate, self).display(refresh or counter != self.lastcounter)
         self.lastcounter = counter
         if counter:
@@ -327,7 +328,7 @@ class calibrate(menu):
             self.fittext(r, ' %d%%' % (100-counter), False, black)
             r.width = 1-float(counter)/100
             r.height = .25
-            self.invertrectangle(r)
+            #self.invertrectangle(r)
             
         self.fittext(rectangle(0, .86, .5, .14), self.round_last_val('imu.pitch', 1))
         self.fittext(rectangle(.5, .86, .5, .14), self.round_last_val('imu.heel', 1))
@@ -433,7 +434,7 @@ class display(menu):
                                       [ConfigEdit(_('contrast'), '', 'contrast', 30, 90, 1),
                                        invert(_('invert')),
                                        ConfigEdit(_('backlight'), '', 'backlight', 0, 100, 1),
-                                       flip(_('flip'))])
+                                       flip(_('flip'))])                                   
 class select_language(page):
     def __init__(self, lang):
         super(select_language, self).__init__(lang[0]) # frameperiod = 0 ?
@@ -441,7 +442,8 @@ class select_language(page):
 
     def process(self):
         self.lcd.set_language(self.lang)
-        return mainmenu(self.lcd) # recreate main menu for language change
+        self.lcd.menu = mainmenu(self.lcd) # recreate main menu for language change
+        return self.lcd.menu
 
 class language(menu):
     def __init__(self):
@@ -470,3 +472,32 @@ class mainmenu(menu):
         super(mainmenu, self).__init__(_('Menu'), [gain(), calibrate(), settings(), info()])
         self.lcd = lcd
         self.find_parents()
+        self.loadtime = 0
+
+    def display(self, refresh):
+        values = self.lcd.get_values()
+        if not values:
+            if not self.loadtime:
+                self.loadtime = time.time()
+                self.lcd.client.list_values()
+            else:
+                dt = time.time() - self.loadtime
+                self.lcd.surface.fill(black)
+                if dt > .4:
+                    self.fittext(rectangle(0, 0, 1, .4), _('Loading'))
+        else:
+            if self.loadtime:
+                refresh = True
+            self.loadtime = 0
+
+        if self.loadtime:
+            dt = time.time() - self.loadtime
+            if dt > 5:
+                self.fittext(rectangle(0, .4, 1, .2), _('timeout'))
+            elif dt > 6:
+                self.loadtime = 0
+            elif dt > .6:
+                self.fittext(rectangle(0, .4, 1, .2), '.'*int(dt+.5))
+        else:
+            super(mainmenu, self).display(refresh)
+        

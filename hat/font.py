@@ -42,6 +42,7 @@ def draw(surface, pos, text, size, bw, crop=False):
     width = 0
     lineheight = 0
     height = 0
+    removes = {}
     for c in text:
         if c == '\n':
             x = origx
@@ -61,8 +62,10 @@ def draw(surface, pos, text, size, bw, crop=False):
 
             #print('ord', ord(c), filename)
             #print('filename', filename)
+
             src = ugfx.surface(filename.encode('utf-8'), surface.bypp)
-            if src.bypp != surface.bypp:
+            
+            if src and src.bypp != surface.bypp:
                 if not micropython:
                     print('create', size, src.bypp, surface.bypp)
                     src = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
@@ -79,26 +82,26 @@ def draw(surface, pos, text, size, bw, crop=False):
                 #print('loaded success', ord(c), size, src)
                     
         if not src:
-            #print('dont have', ord(c), size)
+            print('dont have', ord(c), size)
             continue
                 
         if pos:
             surface.blit(src, x, y)
+            pass
 
         x += src.width
         width = max(width, x-origx)
         lineheight = max(lineheight, src.height)
-        if micropython:
-            src.free()
-        else:
-            font[c] = src
+        
+        if micropython and pos:
+            removes[c] = True
+        font[c] = src
 
-    # free data for micropython
-    if micropython:
-        for c in font:
-            if font[c]:
-                font[c].free()
-        fonts[size] = {}
+    for c in removes:
+        font[c].free()
+        del font[c]
+        time.sleep(.01)
+
     return width, height+lineheight
 
 def create_character(fontpath, size, c, bypp, crop, bpp):
