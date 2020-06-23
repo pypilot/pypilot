@@ -11,6 +11,7 @@ import sys, os, time, math
 
 from page import *
 from page import _
+import ugfx
 
 try:
     import micropython
@@ -22,6 +23,7 @@ except:
     import font
     def gettime():
         return time.monotonic()
+    #from pypilot.hat.ugfx import ugfx
     micropython = False
 
 class LCD():
@@ -59,7 +61,6 @@ class LCD():
                 break
 
         self.battery_voltage = 0
-        import ugfx
         use_tft = True if micropython else False
 
         if not use_tft:
@@ -110,7 +111,6 @@ class LCD():
             if not self.surface:
                 w, h = screen.width, screen.height
                 from pypilot.hat.ugfx import ugfx
-                
                 self.surface = ugfx.surface(w, h, screen.bypp, None)
 
                 # magnify to fill screen
