@@ -260,9 +260,9 @@ class page(object):
         if self.testkeydown(MENU):
             return self.lcd.getmenu()
         if self.testkeydown(SELECT):
-            return control(self.lcd)
             if self.prev:
                 return self.prev
+            return control(self.lcd)
 
 class info(page):
     def __init__(self, num_pages=4):
@@ -517,7 +517,7 @@ class control(controlbase):
             if self.lcd.surface.width < 120:
                 size = 34
             else:
-                size = 30
+                size = 32
 
             for i in range(3):
                 try:

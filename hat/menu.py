@@ -40,34 +40,41 @@ class menu(page):
             
         self.fill(black)
         fit = self.fittext(rectangle(0, 0, 1, .25), self.name)
-    
+
         sy = y = fit[1] + .03
         items = min(int((1 - y)/.15), len(self.items))
         scroll = max(self.selection - int(items/2), 0)
         scroll = min(scroll, len(self.items) - items)
+        maxsizeslider = 0
+        sliders = []
         for item in self.items[scroll:]:
-            size = self.fittext(rectangle(0, y, 1, .15), item.name)[0] + .25
+            size = self.fittext(rectangle(0, y, 1, .15), item.name)
             if isinstance(item, ValueCheck):
                 val = self.last_val(item.pypilot_path)
                 if val: # draw if value is true
                     self.invertrectangle(rectangle(.8, y+.07, .1, .07))
-            elif isinstance(item, RangeEdit) and size < 1:
-                # slider, draw box showing value
-                sliderarea = rectangle(size, y+.05, (1-size), .07)
-                self.rectangle(sliderarea, .015)
-                try:
-                    values = self.lcd.client.values.value
-                    minv = values[pypilot_name]['min']
-                    maxv = values[pypilot_name]['max']
-                    val = (self.last_val(pypilot_name, 0, 0)-minv) / (maxv - minv)
-                    sliderarea.width *= val
-                    self.rectangle(sliderarea)
-                except:
-                    pass
+            elif isinstance(item, RangeEdit) and size[0] < .8:
+                maxsizeslider = max(size[0] + .02, maxsizeslider)
+                sliders.append((item,y))
             y += .15
             if y >= .9:
                 break
 
+        for item, y in sliders:
+            # slider, draw box showing value
+            sliderarea = rectangle(maxsizeslider, y+.05, (1-maxsizeslider), .07)
+            self.rectangle(sliderarea, .015)
+            try:
+                values = self.lcd.client.get_values()
+                name = item.pypilot_path
+                minv = values[name]['min']
+                maxv = values[name]['max']
+                val = (self.last_val(name, 0, 0)-minv) / (maxv - minv)
+                sliderarea.width *= val
+                self.rectangle(sliderarea)
+            except Exception as e:
+                pass
+            
         # invert selected menu item
         if self.selection >= 0:
             y = .15*(self.selection-scroll) + sy
@@ -88,17 +95,22 @@ class menu(page):
                 self.selection = 0
         elif self.testkeydown(MENU):
             return self.items[self.selection]
+
+        # in case server changes the number of items
+        if self.selection >= len(self.items):
+            self.selection = len(self.items)-1
+
         return super(menu, self).process()
 
 class RangeEdit(page):
-    def __init__(self, name, desc, id, pypilot, minval, maxval, step):
+    def __init__(self, name, desc, id, pypilot_path, minval, maxval, step):
         self.name = name
         if type(desc) == type('') or type(desc) == type(u''):
             self.desc = lambda : desc
         else:
             self.desc = desc
         self.id = id
-        self.pypilot = pypilot
+        self.pypilot_path = pypilot_path
         self.range = minval, maxval
         self.step = step
         self.lastmovetime = 0
@@ -115,10 +127,10 @@ class RangeEdit(page):
 
         # update name
         if time.time()-self.lastmovetime > 1:
-            if self.pypilot:
-                self.value = self.last_val(self.id)
+            if self.pypilot_path:
+                self.value = self.last_val(self.pypilot_path)
 
-        if not self.pypilot and not self.value:
+        if not self.pypilot_path and not self.value:
             self.value = self.lcd.config[self.id]
 
         if self.value is False:
@@ -145,7 +157,7 @@ class RangeEdit(page):
     def move(self, delta):
         if self.value is False:
             return
-        if self.pypilot:
+        if self.pypilot_path:
             v = self.value + delta*self.step
         else: #config items rounded to integer
             if delta > 0:
@@ -158,15 +170,15 @@ class RangeEdit(page):
         v = min(v, self.range[1])
         v = max(v, self.range[0])
         self.value = v
-        if self.pypilot:
-            self.lcd.client.set(self.id, v)
+        if self.pypilot_path:
+            self.lcd.client.set(self.pypilot_path, v)
         else:
             self.lcd.config[self.id] = v
         self.lastmovetime = time.time()
 
     def process(self):
         if self.testkeydown(MENU):
-            if not self.pypilot:
+            if not self.pypilot_path:
                 self.lcd.write_config()
             return self.prev
 
@@ -180,16 +192,15 @@ def ConfigEdit(name, desc, config_name, min, max, step):
     return RangeEdit(name, desc, config_name, False, min, max, step)
         
 class ValueEdit(RangeEdit):
-    def __init__(self, name, desc, pypilot_name, value=False):
-        super(ValueEdit, self).__init__(name, desc, pypilot_name,
-                                        True, 0, 1, .1)
+    def __init__(self, name, desc, pypilot_path, value=False):
+        super(ValueEdit, self).__init__(name, desc, False, pypilot_path, 0, 1, .1)
         self.range = False
 
     def display(self, refresh):
         if not self.range:
             values = self.lcd.get_values()
-            if self.id in values:
-                info = values[self.id]
+            if self.pypilot_path in values:
+                info = values[self.pypilot_path]
             else:
                 info = {'min': 0, 'max': 0}
             self.range = info['min'], info['max']
@@ -291,7 +302,7 @@ class calibrate_rudder_feedback(ValueEnum):
             if self.testkeydown(MENU):
                 return self.prev
             
-        super(calibrate_rudder_feedback, self).process()
+        return super(calibrate_rudder_feedback, self).process()
         
     def display(self, refresh):
         if not self.last_val('rudder.angle'):
@@ -483,7 +494,7 @@ class mainmenu(menu):
             else:
                 dt = time.time() - self.loadtime
                 self.lcd.surface.fill(black)
-                if dt > .4:
+                if dt > .2:
                     self.fittext(rectangle(0, 0, 1, .4), _('Loading'))
         else:
             if self.loadtime:

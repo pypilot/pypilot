@@ -54,40 +54,33 @@ def draw(surface, pos, text, size, bw, crop=False):
         if c in font:
             src = font[c]
         else:
-            filename = fontpath + '%03d%03d' % (size, ord(c))
-            if bw:
-                filename += 'b';
-            if crop:
-                filename += 'c';
+            while size>15:
+                filename = fontpath + '%03d%03d' % (size, ord(c))
+                if bw:
+                    filename += 'b';
+                if crop:
+                    filename += 'c';
 
-            #print('ord', ord(c), filename)
-            #print('filename', filename)
-
-            src = ugfx.surface(filename.encode('utf-8'), surface.bypp)
+                src = ugfx.surface(filename.encode('utf-8'), surface.bypp)
             
-            if src and src.bypp != surface.bypp:
+                if src.bypp == surface.bypp:
+                    break # loaded
+                
                 if not micropython:
-                    print('create', size, src.bypp, surface.bypp)
+                    #print('create', size, src.bypp, surface.bypp)
                     src = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
-                    if not src:
-                        continue
-                    print('store grey', filename)
-                    src.store_grey(filename.encode('utf-8'))
-                else:
-                    print('failed to loads character', ord(c), filename, src, src.bypp, surface.bypp, src.width, src.height)
-                    src = False
-                              
-            else:
-                pass
-                #print('loaded success', ord(c), size, src)
+                    if src:
+                        print('store grey', filename)
+                        src.store_grey(filename.encode('utf-8'))
+                        break
+                size -= 1 # try smaller size
                     
-        if not src:
+        if src.bypp != surface.bypp:
             print('dont have', ord(c), size)
             continue
                 
         if pos:
             surface.blit(src, x, y)
-            pass
 
         x += src.width
         width = max(width, x-origx)

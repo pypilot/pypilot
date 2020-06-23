@@ -8,8 +8,8 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from machine import Pin
-
-keypad_pin_numbers = [21, 0, 35, 22, 17, 2, 33, 25]#, 26, 27]
+#22, 17, 2, 33, 
+keypad_pin_numbers = [21, 0, 35,39, 12 , 32, 2]
 
 def make_pin(pin):
     if pin >= 34:

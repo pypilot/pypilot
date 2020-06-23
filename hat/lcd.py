@@ -70,7 +70,7 @@ class LCD():
         if driver == 'none':
             page = None
         elif driver == 'tft' or (driver == 'default' and use_tft):
-            screen = ugfx.surface(138, 240, 1)
+            screen = ugfx.surface(136, 240, 1)
             self.surface = screen
         elif driver == 'nokia5110' or (driver == 'default' and not use_glut):
             screen = ugfx.spiscreen(0)
@@ -83,7 +83,7 @@ class LCD():
             import glut
             # emulate which screen resolution?
             #screen = glut.screen((240, 320))
-            screen = glut.screen((138, 240))
+            screen = glut.screen((136, 240))
             #screen = glut.screen((48, 84))
             #screen = glut.screen((96, 168))
             
@@ -306,6 +306,9 @@ class LCD():
                     self.hat.buzzer.beep()
         t3 = gettime()
         #print('lcd times', t1-t0, t2-t1, t3-t2)
+        dt = t3-t0
+        period = .1
+        time.sleep(max(period - dt, .01))
 
 def main():
     lcd = LCD(False)

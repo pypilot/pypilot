@@ -44,7 +44,7 @@ print ('loaded', t5-t0, ':',t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
 while True:
     import gc
     gc.collect()
-    micropython.mem_info()
+    #micropython.mem_info()
 
     v = vbatt.read() * 0.0017728937728937728
     if not lcd.battery_voltage:
@@ -65,8 +65,8 @@ while True:
     wifi_esp32.poll(lcd.client)
     t3 = time.time()
     
-    #print('dt', t1-t0, t2-t1, t3-t2)
     dt = t3-t0
+    print('dt', t1-t0, t2-t1, t3-t2, dt/period)
     time.sleep(max(period - dt, .01))
     if time.time() - sleeptime > 600:
         #tft.backlight(False)
