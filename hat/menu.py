@@ -508,7 +508,7 @@ class mainmenu(menu):
             elif dt > 6:
                 self.loadtime = 0
             elif dt > .6:
-                self.fittext(rectangle(0, .4, 1, .2), '.'*int(dt+.5))
+                self.fittext(rectangle(0, .4, 1, .2), '.'*int(dt*2+.5))
         else:
             super(mainmenu, self).display(refresh)
         

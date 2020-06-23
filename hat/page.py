@@ -292,7 +292,7 @@ class info(page):
         elif self.page == 1:
             spacing = .11
             v = self.round_last_val('servo.voltage', 3)
-            rate = self.round_last_val('imu.loopfreq', 2)
+            rate = self.round_last_val('imu.frequency', 2)
             uptime = self.last_val('imu.uptime')[:7]
             items = [_('voltage'), v, _('rate'), rate, _('uptime'), uptime]
         elif self.page == 2:
@@ -525,11 +525,11 @@ class control(controlbase):
                         continue
                 except:
                     pass
-                x = pos[0]+float(i)*.33
+                x = pos[0]+float(i)*.333
                 self.box(rectangle(x, pos[1], .33, .4), black)
                 self.text((x, pos[1]), num[i], size, True)
 
-        if self.last_val('imu.loopfreq', 1) is False:
+        if self.last_val('imu.frequency', 1) is False:
             r = rectangle(0, 0, 1, .92)
             self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
             self.control['heading'] = 'no imu'

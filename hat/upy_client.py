@@ -66,7 +66,7 @@ class pypilotClient(object):
             connection.connect(self.addr[0])
         except OSError as e:
             if e.args[0] is errno.EHOSTUNREACH:
-                print('unrechable.. restarting')
+                print('unreachable.. restarting')
                 import machine
                 machine.reset()
             if not (e.args[0] is errno.EINPROGRESS):
@@ -177,7 +177,7 @@ class pypilotClient(object):
                 try:
                     name, rest = self.valuesbuffer.split(':', 1)
                 except Exception as e:
-                    if self.valuesbuffer.startswith('}\n'):
+                    if self.valuesbuffer.startswith(' }\n'):
                         line = self.valuesbuffer[3:]
                         self.valuesbuffer = ''
                     break
@@ -211,12 +211,12 @@ class pypilotClient(object):
                             i += 1
                         else:
                             i = j
-                        self.valuesbuffer=rest[i+1:]
+                        self.valuesbuffer=' '+rest[i+1:]
                         break
                 else:
                     break
 
-            if time.time() - t0 > 1: # 1 second maximum
+            if time.time() - t0 > 1: # .5 second maximum
                 break
                 
             if self.valuesbuffer:
@@ -229,7 +229,7 @@ class pypilotClient(object):
                     self.decode_line(line.decode(), msgs)
                     some_lines = True
             else:
-                print('overflow messages!', len(line))
+                print('overflow messages!', len(line), line)
 
         if not some_lines:
             t = time.time()
@@ -281,7 +281,7 @@ class pypilotClient(object):
 def main():
     client = pypilotClient('192.168.14.1')
     #client.watch('imu.heading') # fastest rate
-    client.watch('imu.loopfreq', 1.0) # once per second
+    client.watch('imu.frequency', 1.0) # once per second
     client.watch('ap.heading', .25) # once per second
 
     while True:

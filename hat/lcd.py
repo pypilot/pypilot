@@ -11,19 +11,19 @@ import sys, os, time, math
 
 from page import *
 from page import _
-import ugfx
 
 try:
     import micropython
     from upy_client import pypilotClient
     def gettime():
         return time.time()
+    import ugfx
 except:
     from pypilot.client import pypilotClient
     import font
     def gettime():
         return time.monotonic()
-    #from pypilot.hat.ugfx import ugfx
+    from pypilot.hat.ugfx import ugfx
     micropython = False
 
 class LCD():
@@ -68,6 +68,7 @@ class LCD():
         self.use_glut = False
         self.surface = None
 
+
         if driver == 'none':
             page = None
         elif driver == 'tft' or (driver == 'default' and use_tft):
@@ -76,7 +77,6 @@ class LCD():
         elif driver == 'nokia5110' or (driver == 'default' and not use_glut):
             screen = ugfx.spiscreen(0)
         elif driver == 'jlx12864':
-            print('ugfx', ugfx)
             screen = ugfx.spiscreen(1)
         elif driver == 'glut' or (driver == 'default' and use_glut):
             self.use_glut = True
@@ -110,7 +110,6 @@ class LCD():
 
             if not self.surface:
                 w, h = screen.width, screen.height
-                from pypilot.hat.ugfx import ugfx
                 self.surface = ugfx.surface(w, h, screen.bypp, None)
 
                 # magnify to fill screen
@@ -220,9 +219,8 @@ class LCD():
         self.page.display(self.need_refresh)
 
         if micropython:
-            self.page.watches['imu.loopfreq'] = True
+            self.page.watches['imu.gyro'] = True # heartbeat
             #self.page.watches['imu.accel'] = True
-            #self.page.watches['imu.gyro'] = True
                     
         self.need_refresh = False
         surface = self.surface

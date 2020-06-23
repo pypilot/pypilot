@@ -17,25 +17,32 @@ def connect():
 
     config = config_esp32.read_config()
     essid = config['essid']
-    psk = config['psk']
+    psk = str(config['psk'])
     address = config['address']
 
     print('wifi connecting to', essid)
     station.active(False)
     station.active(True) # enable wifi
     if psk:
+        print('connect to', essid, psk)
         station.connect(essid, psk)
     else:
         station.connect(essid)
 
-connected = False
+import time
+connected = False, time.time()
 connect()
+
 def poll(client):
     global connected
     isconnected = station.isconnected()
-    if connected == isconnected: # no change
-        return connected
-    connected = isconnected
+    if connected[0] == isconnected: # no change
+        if not isconnected and time.time() - connected[1] > 8:
+            print('wifi timeout, reconnecting wifi', time.time() - connected[1])
+            connect()
+        connected = isconnected, time.time()
+        return isconnected
+    connected = isconnected, time.time()
     if connected:
         if address:
             host = address
