@@ -32,6 +32,8 @@ enum {RF=0xa1, IR=0x06, AR=0x9c};
 #define DATA_PIN 2
 #define DIR_PIN 4
 
+#define LED_PIN 8
+
 RCSwitch rf = RCSwitch();
 
 #include <IRLibRecvPCI.h> 
@@ -141,6 +143,9 @@ void setup() {
   rf.enableReceive(0);  // Receiver on interrupt 0 => that is pin #2
   ir.enableIRIn();
 
+  digitalWrite(LED_PIN, LOW); /* enable internal pullups */
+  pinMode(LED_PIN, OUTPUT);
+  
   // turn backlight on
   pinMode(A0, INPUT);
 
@@ -180,6 +185,7 @@ void send_code(uint8_t source, uint32_t value)
     lvalue = value;
     lsource = source;
     ltime = millis();
+    digitalWrite(LED_PIN, HIGH); // turn on led to indicate remote received
 }
 
 void loop() {
@@ -200,6 +206,7 @@ void loop() {
         uint8_t d[PKTSZ] = {lsource, plvalue[0], plvalue[1], plvalue[2], 0};
         spiout.push_packet(d);
         lvalue = 0;
+        digitalWrite(LED_PIN, LOW);
     }
 
     // read from IR??

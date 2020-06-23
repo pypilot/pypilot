@@ -181,7 +181,7 @@ class pypilotClient(object):
                 if not events:
                     return
                 fd, flag = events.pop()
-                if not (flag & select.POLLOUT):
+                if not (flag & select.POLLIN):
                     self.connection_in_progress.close()
                     self.connection_in_progress = False
                     return
@@ -263,7 +263,7 @@ class pypilotClient(object):
             connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.connection_in_progress = connection
             self.poller_in_progress = select.poll()
-            self.poller_in_progress.register(self.connection_in_progress.fileno(), select.POLLOUT)
+            self.poller_in_progress.register(self.connection_in_progress.fileno(), select.POLLIN)
             
             connection.settimeout(1)
             connection.connect(host_port)
@@ -271,8 +271,12 @@ class pypilotClient(object):
             import errno
             if e.args[0] is errno.EINPROGRESS:
                 return True
-            print('connect failed to %s:%d' % host_port, e)
+            if e.args[0] == 111: # refused
+                pass
+            else:
+                print('connect failed to %s:%d' % host_port, e)
             time.sleep(.25)
+                
             return False
                 
         #except Exception as e:

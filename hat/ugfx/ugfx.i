@@ -56,7 +56,6 @@ public:
     int fbfd = 0;
     long int screensize = 0;
 };
-
 #ifdef WIRINGPI
 class spiscreen : public surface
 {

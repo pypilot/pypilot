@@ -83,14 +83,14 @@ class BasicPilot(AutopilotPilot):
     self.heading_command_rate.time = t;
     lp = .1
     command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
-    self.heading_command_rate.set(command_rate)
+    self.heading_command_rate.update(command_rate)
 
     # compute command
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
     feedforward_value = self.heading_command_rate.value
     reactive_value = self.servocommand_queue.take(t - self.reactive_time.value)
-    self.reactive_value.set(reactive_value)
+    self.reactive_value.update(reactive_value)
     
     if not 'wind' in ap.mode.value: # wind mode needs opposite gain
         feedforward_value = -feedforward_value

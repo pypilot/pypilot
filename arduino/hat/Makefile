@@ -79,7 +79,7 @@ obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 
 AVRDUDE = sudo avrdude
 BOOTLOADER = linuxspi
-BAUDRATE = 500000
+BAUDRATE = 200000
 upload: $(SKETCHNAME).cpp.hex
 	echo 16 > /sys/class/gpio/export || echo ok
 	echo in > /sys/class/gpio/gpio16/direction
@@ -95,6 +95,12 @@ download:
 
 install: $(SKETCHNAME).cpp.hex
 	cp $(SKETCHNAME).cpp.hex ~/.pypilot/$(SKETCHNAME).hex
+
+setfuses:
+	echo 16 > /sys/class/gpio/export || echo ok
+	echo out > /sys/class/gpio/gpio16/direction
+	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -b $(BAUDRATE) -Ulock:w:0xff:m -Uefuse:w:0xfd:m -Uhfuse:w:0xDA:m -Ulfuse:w:0xFF:m 
+	echo in > /sys/class/gpio/gpio16/direction
 
 serial:
 	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5 38400

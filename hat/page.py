@@ -169,10 +169,12 @@ class page(object):
         surface.line(int(x1*w), int(y1*h), int(x2*w+.5), int(y2*h+.5), white)
 
     def convbox(self, x1, y1, x2, y2):
-        if min(x1, y1, x2, y2) < 0 or max(x1, y2, x2, y2) > 1:
-            print('invalid box!', x1, y1, x2, y2)
-            raise 1
-            return [0, 0, 0, 0]
+        def bound(x):
+            return min(max(x, 0), 1)
+        x1 = bound(x1)
+        y1 = bound(y1)
+        x2 = bound(x2)
+        y2 = bound(y2)
 
         surface = self.lcd.surface
         w, h = surface.width - 1, surface.height - 1
@@ -525,8 +527,8 @@ class control(controlbase):
                         continue
                 except:
                     pass
-                x = pos[0]+float(i)*.333
-                self.box(rectangle(x, pos[1], .33, .4), black)
+                x = pos[0]+float(i)*.33
+                self.box(rectangle(x, pos[1], .34, .4), black)
                 self.text((x, pos[1]), num[i], size, True)
 
         if self.last_val('imu.frequency', 1) is False:
@@ -534,6 +536,7 @@ class control(controlbase):
             self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
             self.control['heading'] = 'no imu'
             self.control['heading_command'] = 'no imu'
+            super(control, self).display(refresh)
             return
         
         draw_big_number((0,0), self.last_val('ap.heading'), self.control['heading'])
@@ -635,9 +638,9 @@ class control(controlbase):
         
         if self.last_val('ap.enabled'):
             if self.lcd.keypadup[SMALL_PORT] or self.lcd.keypadup[SMALL_STARBOARD]:
-                speed = self.config['bigstep']
+                speed = self.lcd.config['bigstep']
             else:
-                speed = self.config['smallstep']                        
+                speed = self.lcd.config['smallstep']                        
                 cmd = self.last_val('ap.heading_command') + sign*speed
             self.set('ap.heading_command', cmd)
         else: # manual control

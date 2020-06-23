@@ -54,7 +54,7 @@ def draw(surface, pos, text, size, bw, crop=False):
         if c in font:
             src = font[c]
         else:
-            while size>15:
+            while size>1:
                 filename = fontpath + '%03d%03d' % (size, ord(c))
                 if bw:
                     filename += 'b';
