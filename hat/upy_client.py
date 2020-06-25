@@ -144,10 +144,10 @@ class pypilotClient(object):
                 print('udp socket exception!?!', e)
                 import machine
                 machine.reset() # reboot
-
             for line in lines:
                 self.decode_line(line, msgs)
             some_lines = not not lines
+
 
         t0 = time.time()
         while self.connection:

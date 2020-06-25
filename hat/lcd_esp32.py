@@ -38,6 +38,8 @@ import machine, micropython
 vbatt = machine.ADC(34)
 vbatt.atten(3) # only one that works!!
 
+gpio_esp32.init(lcd)
+
 t5= time.time()
 print ('loaded', t5-t0, ':',t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
 
@@ -53,21 +55,29 @@ while True:
     lcd.battery_voltage = (1-lp)*lcd.battery_voltage + lp*v
     #print('batt', lcd.battery_voltage)
 
+    gpio_esp32.poll(lcd)
 
+    if any(lcd.keypad):
+        sleeptime = time.time()
+        tft.backlight(True)
+    
     t0 = time.time()
     lcd.poll()
     t1 = time.time()
-    if gpio_esp32.poll(lcd):
-        sleeptime = time.time()
-        tft.backlight(True)
+    gpio_esp32.poll(lcd)
     t2 = time.time()
         
     wifi_esp32.poll(lcd.client)
     t3 = time.time()
     
     dt = t3-t0
-    #print('dt', t1-t0, t2-t1, t3-t2, dt/period)
-    time.sleep(max(period - dt, .01))
+    s = period - dt
+    if s <= .01:
+        s = .01
+        #print('sleep ', t1-t0, t2-t1, t3-t2, s*100/(t3-t0+s), '%')
+
+    time.sleep(s)
+
     if time.time() - sleeptime > 600:
         #tft.backlight(False)
         #esp.sleep_type(esp.SLEEP_MODEM) # SLEEP_LIGHT

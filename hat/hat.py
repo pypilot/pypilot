@@ -206,9 +206,9 @@ class Hat(object):
         
         # keypad for lcd interface
         self.actions = []
-        keypadnames = ['auto', 'menu', 'up', 'down', 'select', 'left', 'right']
+        keypadnames = ['auto', 'menu', '-1', '+1', 'select', '-10', '+10', 'tack', 'nudge port', 'nudge starboard']
         
-        for i in range(7):
+        for i in range(len(keypadnames)):
             self.actions.append(ActionKeypad(self.lcd, i, keypadnames[i]))
 
         # stateless actions for autopilot control
@@ -279,9 +279,6 @@ class Hat(object):
 
                 r = i.events[0]
                 i.events = i.events[1:]
-                if i == self.arduino:
-                    if r[0].startswith('ir'):
-                        lircd.LIRC_version = 0 # disable lircd if we got ir from arduino
                     
                 self.apply_code(*r)
 

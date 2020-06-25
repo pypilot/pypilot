@@ -12,7 +12,7 @@ black = 0x00
 #white = ugfx.color(255, 255, 255)
 #black = ugfx.color(0, 0, 0)
 
-AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, NUM_KEYS = range(9)
+AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, NUDGE_PORT, NUDGE_STARBOARD, NUM_KEYS = range(11)
 
 class rectangle():
     def __init__(self, x, y, width, height):
@@ -39,7 +39,7 @@ def set_language(lang):
         print('no language', lang, e)
 
 class page(object):
-    def __init__(self, name=None, frameperiod=.25):
+    def __init__(self, name=None, frameperiod=.4):
         self.name = name
         self.frameperiod = frameperiod
         self.watches = {}
@@ -266,6 +266,15 @@ class page(object):
                 return self.prev
             return control(self.lcd)
 
+        # these work from any page (even menu) to dodge
+        if self.lcd.keypad[NUDGE_PORT]:
+            lcd.client.set('servo.command', -1)
+        if self.lcd.keypad[NUDGE_STARBOARD]:
+            lcd.client.set('servo.command', 1)           
+        if self.lcd.keypadup[NUDGE_PORT] or self.lcd.keypadup[NUDGE_STARBOARD]:
+            lcd.client.set('servo.command', 0)           
+        
+
 class info(page):
     def __init__(self, num_pages=4):
         super(info, self).__init__('info')
@@ -399,7 +408,7 @@ def test_wifi():
     try:
         import micropython
         import wifi_esp32
-        return wifi_esp32.connected
+        return wifi_esp32.connected[0]
     except:
         pass
         
@@ -414,8 +423,8 @@ def test_wifi():
     return False
 
 class controlbase(page):
-    def __init__(self, lcd):
-        super(controlbase, self).__init__()
+    def __init__(self, lcd, frameperiod = .4):
+        super(controlbase, self).__init__(frameperiod = frameperiod)
         self.lcd = lcd
         self.batt = False
         self.wifi = False
@@ -453,7 +462,7 @@ class controlbase(page):
 
 class control(controlbase):
     def __init__(self, lcd):
-        super(control, self).__init__(lcd)
+        super(control, self).__init__(lcd, .2)
         self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
         self.control = {} # used to keep track of what is drawn on screen to avoid redrawing it
 
@@ -492,7 +501,7 @@ class control(controlbase):
                 marg = .02
                 self.rectangle(rectangle(r.x, r.y+marg, r.width-marg, r.height), .015)
 
-    def display(self, refresh):        
+    def display(self, refresh):
         if not self.control:
             self.fill(black)
             self.control = {'heading': '   ', 'heading_command': '   ', 'mode': False, 'modes': []}
@@ -621,6 +630,7 @@ class control(controlbase):
             else:
                 self.set('servo.command', 0) # stop
                 self.set('ap.enabled', False)
+
         if self.testkeydown(SELECT):
             have_mode = {'compass': self.have_compass, 'gps': self.have_gps,
                           'wind': self.have_wind, 'true wind': self.have_true_wind}
@@ -631,7 +641,12 @@ class control(controlbase):
                 if next_mode != self.last_val('ap.mode') and have_mode[next_mode]():
                     self.set('ap.mode', next_mode)
                     return
-                    
+
+        if self.testkeydown(TACK):
+            # in wind mode just tack
+            # in other modes look for lspeed of keys was port or starboard
+            print('tacking not implemented here yet')
+                
         speed = self.speed_of_keys()
         if not speed:
             return super(control, self).process()
@@ -641,7 +656,7 @@ class control(controlbase):
                 speed = self.lcd.config['bigstep']
             else:
                 speed = self.lcd.config['smallstep']                        
-                cmd = self.last_val('ap.heading_command') + sign*speed
+            cmd = self.last_val('ap.heading_command') + speed
             self.set('ap.heading_command', cmd)
         else: # manual control
             sign = -1 if speed < 0 else 1

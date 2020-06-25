@@ -9,31 +9,44 @@
 
 from machine import Pin
 #22, 17, 2, 33, 
-keypad_pin_numbers = [21, 0, 35,39, 12 , 32, 2]
+keypad_pin_numbers = [21, 0, 35, 12, 13, 32, 2, 33, 17, 22]
 
-def make_pin(pin):
+noisr = False
+def make_pin(pin, i, lcd):
+    global noisr
     if pin >= 34:
-        return Pin(pin, Pin.IN)
-    return Pin(pin, Pin.IN, Pin.PULL_UP)
+        pin = Pin(pin, Pin.IN)
+    else:
+        pin = Pin(pin, Pin.IN, Pin.PULL_UP)
 
-keypad_pins = list(map(make_pin, keypad_pin_numbers))
+    def cbr(pin):
+        handle_pin(pin, i, lcd)
 
-#nudge = [(make_pin(0), -1), (make_pin(35), 1)]
-nudge = [(make_pin(12), -1), (make_pin(13), 1)]
-def poll(lcd):
-    anykey = False
-    for i in range(len(keypad_pins)):
-        up = keypad_pins[i].value()
-        lcd.keypadup[i] = up and lcd.keypad[i]
-        if not up:
+    if not noisr:
+        try:
+            Pin.irq(handler = cbr, trigger=Pin.IRQ_FALLING | Pin.IRQ_RISING)
+        except:
+            print('no Pin.irq!! keypresses will lag')
+            noisr = True
+
+    return pin
+
+def handle_pin(pin, i, lcd):
+    up = pin()
+    if up:
+        if lcd.keypad[i]:
+            lcd.keypadup[i] = True
+        lcd.keypad[i] = False
+    else:
+        if lcd.keypad[i] != 1:
             lcd.keypad[i] += 1
-            anykey = True
-        else:
-            lcd.keypad[i] = 0
+            
+keypad_pins = []
+def init(lcd):
+    global keypad_pins
+    for i in range(len(keypad_pin_numbers)):
+        keypad_pins.append(make_pin(keypad_pin_numbers[i], i, lcd))
 
-    # force motor movement from these keys
-    for pin, d in nudge:
-        if not pin.value():
-            lcd.client.set('servo.command', d)
-            anykey = True
-    return anykey
+def poll(lcd):
+    for i in range(len(keypad_pins)):
+        handle_pin(keypad_pins[i], i, lcd)
