@@ -7,12 +7,13 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, os, sys
+import time, os, sys, signal
 import json
 from pypilot.client import pypilotClient
+import arduino, web
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import lcd, gpio, arduino, lircd, buzzer
+import lcd, gpio, lircd
 
 class Action(object):
     def  __init__(self, hat, name):
@@ -26,7 +27,7 @@ class ActionNone(Action):
 
     def trigger(self, count):
         pass
-        
+
 class ActionKeypad(Action):
     def __init__(self, lcd, index, name):
         super(ActionKeypad, self).__init__(None, name)
@@ -82,25 +83,64 @@ class ActionTack(ActionPypilot):
             self.hat.client.set('ap.tack.direction', self.direction)
         super(ActionTack, self).trigger()
 
-def web_process(pipe, keyspipe, actions):
-    while True:
-        try:
-            import web
-            web.web_process(pipe, keyspipe, actions)
-        except Exception as e:
-            print('failed to run web server:', e)
-            while True:
-                time.sleep(5)
-
-class Web(object):
+class Process():
     def __init__(self, hat):
         self.process = False
-        self.status = 'Not Connected'
         self.hat = hat
-
+    
     def send(self, value):
         if self.process:
             self.pipe.send(value)
+
+    def create(self, process, arg):
+        def cleanup(signal_number, frame=None):
+            print('cleanup web process', signal_number)
+            if signal_number == signal.SIGCHLD:
+                pid = os.waitpid(-1, 0)
+                if not self.process or pid[0] != self.process.pid:
+                    print('proce', self.process, pid, self.process.pid)
+                    # flask makes process at startup that dies
+                    return
+            if self.process:
+                try:
+                    os.kill(self.process.pid, signal.SIGTERM) # get backtrace
+                except Exception as e:
+                    if e.args[0] != 3: # no such process, already died
+                        raise e                        
+                self.process = False
+            sys.stdout.flush()
+            if signal_number:
+                exit(0)
+
+        for s in range(3, 16):
+            if s != 9 and s != 13:
+                signal.signal(s, cleanup)
+        signal.signal(signal.SIGCHLD, cleanup)
+
+        import multiprocessing
+        from pypilot.nonblockingpipe import NonBlockingPipe
+        self.pipe, pipe = NonBlockingPipe('webpipe', True)
+        self.process = multiprocessing.Process(target=process, args=(pipe, arg), daemon=True)
+        self.process.start()
+
+    def poll_ready(self):
+        if not self.process:
+            self.create()            
+
+        if not self.process.is_alive():
+            self.process = False
+            return False
+        return True
+
+    def poll(self):
+        if not self.poll_ready():
+            return
+        return self.pipe.recv()
+            
+class Web(Process):
+    def __init__(self, hat):
+        super(Web, self).__init__(hat)
+        self.status = 'Not Connected'
 
     def set_status(self, value):
         if self.status == value:
@@ -109,57 +149,58 @@ class Web(object):
         self.status = value
         self.send({'status': value})
 
+    def create(self):
+        def web_process(pipe, actions):
+            while True:
+                try:
+                    web.web_process(pipe, actions)
+                except Exception as e:
+                    print('failed to run web server:', e)
+                    while True:
+                time.sleep(5)
+        super(self, Web).create(web_process, self.hat.actions)
+        self.send({'status': self.status})
+        
     def poll(self):
-        if not self.process:
-            import multiprocessing
-            from pypilot.nonblockingpipe import NonBlockingPipe
-            self.pipe, pipe = NonBlockingPipe('webpipe', True)
-            keyspipe, self.keyspipe = NonBlockingPipe('webkeyspipe', True)
-            self.process = multiprocessing.Process(target=web_process, args=(pipe, keyspipe, self.hat.actions), daemon=True)
-            self.process.start()
-            self.send({'status': self.status})
-
-
-            def cleanup(signal_number, frame=None):
-                print('cleanup web process', signal_number)
-                if signal_number == signal.SIGCHLD:
-                    pid = os.waitpid(-1, 0)
-                    if not self.process or pid[0] != self.process.pid:
-                        print('proce', self.process, pid, self.process.pid)
-                        # flask makes process at startup that dies
-                        return
-                if self.process:
-                    try:
-                        os.kill(self.process.pid, signal.SIGTERM) # get backtrace
-                    except Exception as e:
-                        if e.args[0] != 3: # no such process, already died
-                            raise e
-                        
-                    self.process = False
-                sys.stdout.flush()
-                if signal_number:
-                    exit(0)
-
-            import signal
-            for s in range(3, 16):
-                if s != 9 and s != 13:
-                    signal.signal(s, cleanup)
-            signal.signal(signal.SIGCHLD, cleanup)
-            
-
-        if not self.process.is_alive():
-            self.process = False
+        if not self.poll_ready():
             return
-
-        msg = self.keyspipe.recv()
+        
+        msg = self.pipe.recv()
         if msg:
             for name in msg:
                 for action in self.hat.actions:
                     if name == action.name:
                         action.keys = msg[name]
+                else:
+                    if name == 'baud':
+                        self.hat.arduino.set_baud(msg[name])
 
             self.hat.write_config()
 
+
+class Arduino(Process)
+    def __init__(self, hat):
+        self.process = False
+        self.status = 'Not Connected'
+        self.hat = hat
+
+    def set_baud(self, baud):
+        self.send(('baud', baud))
+
+    def set_buzzer(self, duration, frequency):
+        self.send(('buzzer', (duration, frequency)))
+
+    def create(self):
+        def web_process(pipe, config):
+            while True:
+                try:
+                    arduino.arduino_process(pipe, config)
+                except Exception as e:
+                    print('failed to run web server:', e)
+                    while True:
+                time.sleep(5)
+        super(self, Arduino).create(arduino_process, config)
+            
 class Hat(object):
     def __init__(self):
         # read config
@@ -174,7 +215,7 @@ class Hat(object):
             print('assuming original 26 pin tinypilot')
             self.hatconfig = False
 
-        self.config = {'remote': False, 'host': 'pypilot', 'actions': {}, 'lcd': {}}
+        self.config = {'remote': False, 'host': 'pypilot', 'actions': {}, 'lcd': {}, 'arduino': {}}
         self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf' 
         print('loading config file:', self.configfilename)
         try:
@@ -204,9 +245,8 @@ class Hat(object):
         
         self.lcd = lcd.LCD(self)
         self.gpio = gpio.gpio()
-        self.arduino = arduino.arduino(self.hatconfig)
+        self.arduino = arduino.arduino(self.config, self.hatconfig, host)
         self.lirc = lircd.lirc()
-        self.buzzer = buzzer.buzzer(self.hatconfig)
         
         # keypad for lcd interface
         self.actions = []
@@ -252,8 +292,10 @@ class Hat(object):
             print('failed to save config file:', self.configfilename)
 
     def apply_code(self, key, count):
-        if count == 1:
-            self.web.send({'key': key})
+        if key == 'baudrate': # statistics
+            print('baudrate', count)
+            self.web.send({'baudrate': str(count)})
+        self.web.send({'key': key})
         for action in self.actions:
             if key in action.keys:
                 if not count:
@@ -272,21 +314,18 @@ class Hat(object):
         for name, value in msgs.items():
             self.last_msg[name] = value
 
-        for i in [self.lcd, self.buzzer, self.web]:
+        t0 = time.time()
+        for i in [self.lcd, self.web]:
             i.poll()
+            #print('dt', time.time()-t0)
 
         for i in [self.gpio, self.arduino, self.lirc]:
-            i.poll()
-            while True:
-                if not i.events:
-                    break
+            events = i.poll()
+            for event in events:
+                print('event', event)
+                self.apply_code(*event)
 
-                r = i.events[0]
-                i.events = i.events[1:]
-                    
-                self.apply_code(*r)
-
-        time.sleep(.1)
+        time.sleep(.01)
 
         # receive heading once per second if autopilot is not enabled
         self.client.watch('ap.heading', False if self.last_msg['ap.enabled'] else 1)

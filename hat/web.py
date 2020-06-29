@@ -18,11 +18,10 @@ socketio = SocketIO(app, async_mode=None)
 web_port = 33333
 
 class WebConfig(Namespace):
-    def __init__(self, name, pipe, keyspipe, actions):
+    def __init__(self, name, pipe, actions):
         super(Namespace, self).__init__(name)
         socketio.start_background_task(target=self.background_thread)
         self.pipe = pipe
-        self.keyspipe = keyspipe
         self.actions = actions
         self.status = 'N/A'
 
@@ -36,11 +35,12 @@ class WebConfig(Namespace):
         acts += Markup('<p>Actions for LCD interface<table border=0>')
         i = 0
         for action in actions:
-            if i == 10:
+            if i == 8:
                 acts += Markup('</tr></table>')
                 acts += Markup('<p><br>key: <b><span id="key0"></span></b>')
                 acts += Markup('<br>action: <b><span id="action0"></span></b>')
-                acts += Markup('<p>These actions do not depend on the display.')
+                acts += Markup('<p>These actions do not depend on the state')
+                acts += Markup(' of the display and are intended for wireless remotes')
                 acts += Markup('<table border=0>')
                 col = 0
             i+=1
@@ -88,8 +88,11 @@ class WebConfig(Namespace):
                 action_keys[action.name] = action.keys
                 break
 
-        self.keyspipe.send(action_keys)
+        self.pipe.send(action_keys)
         self.emit_keys()
+
+    def on_nmea(self, config):
+        self.nmeapipe.send(config)
 
     def emit_keys(self):
         for action in self.actions:
@@ -121,9 +124,12 @@ class WebConfig(Namespace):
 
             if not self.pipe:
                 continue
-            
-            msg = self.pipe.recv()
-            if msg:
+
+            while True:
+                msg = self.pipe.recv()
+                if not msg:
+                    break
+
                 if 'key' in msg:
                     self.last_key = msg['key']
                     last_key_time = time.monotonic()
@@ -133,10 +139,10 @@ class WebConfig(Namespace):
                     self.status = msg['status']
                     socketio.emit('status', self.status)
 
-def web_process(pipe, keyspipe, actions):
+def web_process(pipe, actions):
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
-    socketio.on_namespace(WebConfig('', pipe, keyspipe, actions))
+    socketio.on_namespace(WebConfig('', pipe, actions))
     socketio.run(app, debug=False, host='0.0.0.0', port=web_port)
     
 if __name__ == '__main__':

@@ -39,7 +39,7 @@ class Key():
                 self.count = count
             else:
                 self.count += 1
-        elif self.count:
+        else:
             self.up = True
             self.count = 0
 
@@ -49,6 +49,7 @@ class Key():
 class LCD():
     def __init__(self, hat):
         self.hat = hat
+        self.backlight_polarity = 0
 
         if hat:
             self.config = hat.config['lcd']
@@ -96,6 +97,7 @@ class LCD():
             self.surface = screen
         elif driver == 'nokia5110' or (driver == 'default' and not use_glut):
             screen = ugfx.spiscreen(0)
+            self.backlight_polarity = 1
         elif driver == 'jlx12864':
             screen = ugfx.spiscreen(1)
         elif driver == 'glut' or (driver == 'default' and use_glut):
@@ -274,7 +276,7 @@ class LCD():
             self.screen.contrast = int(self.config['contrast'])
 
         if 'backlight' in self.config and self.hat:
-            self.hat.arduino.set_backlight(int(self.config['backlight']))
+            self.hat.arduino.set_backlight(int(self.config['backlight']), self.backlight_polarity)
         else:
             self.screen.hue = int(float(self.config['backlight'])*255/100)
         self.screen.refresh()
@@ -320,12 +322,11 @@ class LCD():
 
         for key in self.keypad:
             if key.down:
-                print('reset key', key)
                 key.down = False
             if key.up:
                 key.up = False
                 if self.hat:
-                    self.hat.buzzer.beep()
+                    self.hat.arduino.set_buzzer(128, .1)
                     
         t3 = gettime()
         #print('lcd times', t1-t0, t2-t1, t3-t2)

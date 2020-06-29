@@ -1,6 +1,5 @@
 /*
-#
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -48,6 +47,14 @@ $(document).ready(function() {
             socket.emit('keys', event.target.innerText);
         });
     }
+
+    function nmea_config(event) {
+        socket.emit('baud', {'in': $('#nmea_in').value(), 'out': $('#nmea_out').value, 'baud': $('#nmea_baud')})
+    }
+
+    $('#nmea_in'.click(nmea_config);
+    $('#nmea_out'.click(nmea_config);
+    $('#nmea_baud'.click(nmea_config);
 
     // Interval function that tests message latency by sending a "ping"
     var ping_pong_times = [];
