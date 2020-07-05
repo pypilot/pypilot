@@ -13,7 +13,7 @@ import sys, os, heapq
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pyjson
 from bufferedsocket import LineBufferedNonBlockingSocket
-from nonblockingpipe import LineBufferedNonBlockingPipe
+from nonblockingpipe import NonBlockingPipe
 
 DEFAULT_PORT = 23322
 max_connections = 30
@@ -122,7 +122,6 @@ class pypilotValue(object):
 
         # unwatch by removing
         watching = self.unwatch(connection, False)
-        print('watch', self.name, period, watching)
         if not watching and self.msg:
             connection.send(self.get_msg()) # initial retrieval
 
@@ -226,7 +225,7 @@ class ServerValues(pypilotValue):
             if not watch.connections:
                 continue # forget this watch
             for connection in watch.connections:
-                connection.send(watch.value.get_msg(), True)
+                connection.send(watch.value.get_msg())
             watch.time += watch.period
             if watch.time < t0:
                 watch.time = t0
@@ -259,6 +258,7 @@ class ServerValues(pypilotValue):
                     connection.send(value.get_msg()) # send value
                 value.calculate_watch_period()
                 continue
+
             value = pypilotValue(self, name, info, connection)
             if 'persistent' in info and info['persistent']:
                 value.calculate_watch_period()
@@ -280,7 +280,8 @@ class ServerValues(pypilotValue):
                         c.send(msg)
 
     def HandleRequest(self, msg, connection):
-        name, data = msg.split('=', 1)        
+        name, data = msg.split('=', 1)
+        
         if not name in self.values:
             connection.send('error=invalid unknown value: ' + name + '\n')
             return
@@ -360,7 +361,7 @@ class pypilotServer(object):
             print('direct pipe clients must be created before the server is run')
             exit(0)
 
-        pipe0, pipe1 = LineBufferedNonBlockingPipe('pypilotServer pipe' + str(len(self.pipes)), self.multiprocessing)
+        pipe0, pipe1 = NonBlockingPipe('pypilotServer pipe' + str(len(self.pipes)), self.multiprocessing)
         self.pipes.append(pipe1)
         return pipe0
         
@@ -501,7 +502,7 @@ class pypilotServer(object):
                             break
                         self.HandleRequest(connection, line)
                     continue
-                if not connection.recv():
+                if not connection.recvdata():
                     self.RemoveSocket(connection)
                     continue
                 while True:
@@ -546,6 +547,7 @@ if __name__ == '__main__':
     client1 = pypilotClient(server) # direct pipe to server
     clock = client1.register(Value('clock', 0))
     test1 = client1.register(Property('test', 1234))
+    print('client values1', client1.values)
     client1.watch('test2', 10)
 
     client2 = pypilotClient('localhost') # tcp socket connection

@@ -15,7 +15,7 @@ import serialprobe
 class gpsProcess(multiprocessing.Process):
     def __init__(self):
         # split pipe ends
-        self.pipe, pipe = NonBlockingPipe('gps_pipe')
+        self.pipe, pipe = NonBlockingPipe('gps_pipe', True)
         super(gpsProcess, self).__init__(target=self.gps_process, args=(pipe,), daemon=True)
         self.devices = []
 
