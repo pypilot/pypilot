@@ -45,7 +45,7 @@ class lirc(object):
 
         t = time.monotonic()
         events = []
-        while True:
+        while LIRC_version:
             if LIRC_version == 1:
                 code = LIRC.nextcode(0)
                 if not code:
@@ -64,7 +64,7 @@ class lirc(object):
                 events.append((self.lastkey, 0))
             self.lastkey = key
             self.lasttime = t
-            self.events.append((key, count))
+            events.append((key, count))
 
         # timeout keyup
         if self.lastkey and t - self.lasttime > .25:
@@ -75,9 +75,9 @@ class lirc(object):
 def main():
     lircd = lirc()
     while True:
-        lircd.poll()
-        if lircd.events:
-            print('events', lircd.events)
+        events = lircd.poll()
+        if events:
+            print('events', events)
             lircd.events = []
         time.sleep(.1)
             

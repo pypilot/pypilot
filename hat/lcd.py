@@ -326,7 +326,7 @@ class LCD():
             if key.up:
                 key.up = False
                 if self.hat:
-                    self.hat.arduino.set_buzzer(128, .1)
+                    self.hat.arduino.set_buzzer(32, 64)
                     
         t3 = gettime()
         #print('lcd times', t1-t0, t2-t1, t3-t2)
