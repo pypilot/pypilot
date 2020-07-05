@@ -12,45 +12,57 @@
 # pins for more functionallity (tack button, 
 # spi port.
 
-import os, sys, time, json
-import crc
+import os, sys, time, socket, errno
+import json
 import lircd
 
-END=0xfe
-REWIND=0xfb # reset state
-READ=0xf9 # read next byte from output buffer, null terminated
-WRITE=0xf6 # bytes are any bytes the master sends 
-VALIDATE=0xf3 # release output buffer
-AGAIN=0xf0
-VERIFY=0xac # master test input buffer for OK, INVALID, AGAIN
-OK=0xa8
-INVALID=0xa4
+REWIND=0xab # reset state
+READ_SERIAL = 0xb9 # read next serial byte
+DISCARD_SERIAL = 0xd1 # once data read is verified
+WRITE_DONE = 0xce # backup two bytes since verification failed
+WRITE_SERIAL = 0xd6 # set state writing to serial
+READ_DATA = 0xea # read next data byte
+DISCARD_DATA = 0xa4 # validate read data
+WRITE_DATA = 0xb6 # set state for writing data
+OK = 0xc8 # returned from sucessful operations
+END=0xe3 # returned if reading reaches end
+ZERO = 0x85 # encode a 0 byte
+INVALID=0x96
 
 RF=0x01
 IR=0x02
 GP=0x03
-SERIAL_DATA=0x40
-SET_BACKLIGHT=0x6
-SET_BUZZER=0x7
-SET_BAUD=0x8
+
+SET_BACKLIGHT=0x16
+SET_BUZZER=0x17
+SET_BAUD=0x18
+
+PACKET_LEN=6
 
 try:
     import RPi.GPIO as GPIO
 except:
     GPIO = False
     
-class arduino(object):
+class arduino(object):    
     def __init__(self, config):
+        self.xfers=0
         self.spi = False
         self.nmea_socket = False
+        self.nmea_connect_time = time.monotonic()
+        self.pollt0 = [0, time.monotonic()]
 
         self.config = config
+        self.hatconfig = False
         if 'hat' in config:
             hatconfig = config['hat']
-        if hatconfig and 'arduino' in hatconfig:
-            self.hatconfig = hatconfig['arduino']
-        else:
-            self.hatconfig = False
+            if hatconfig and 'arduino' in hatconfig:
+                self.hatconfig = hatconfig['arduino']
+        if not self.hatconfig:
+            print('No hat config, arduino not found')
+
+        if not 'nmea' in config:
+            self.config['nmea'] = {'in': True, 'out': False, 'baud': 38400}
 
         self.lasttime=0
 
@@ -59,10 +71,10 @@ class arduino(object):
 
         self.serial_in_count = 0
         self.serial_out_count = 0
-        self.serial_time = self.sent_start
+        self.serial_time = self.sent_start + 2
 
-        if not self.hatconfig:
-            print('No hat config, arduino not found')
+        self.packetout_data = []
+        self.packetin_data = []
 
     def open(self):
         if not self.hatconfig:
@@ -91,8 +103,7 @@ class arduino(object):
                 import spidev
                 self.spi = spidev.SpiDev()
                 self.spi.open(port, slave)
-                self.spi.max_speed_hz=200000
-                self.lastdata = []
+                self.spi.max_speed_hz=1000000
 
         except Exception as e:
             print('failed to communicate with arduino', device, e)
@@ -103,161 +114,107 @@ class arduino(object):
         self.spi.close()
         self.spi = False
 
+    def xfer(self, x):
+        return self.spi.xfer([x])[0]
 
-    def send(self, data, id):
-        if not self.spi:
-            return
-        data = [id] + data
-        while True:
-            t0 = time.monotonic()
-            x = AGAIN
-            while x != WRITE:
-                x = self.spi.xfer([WRITE])[0]
-                #print('value write %x %x' % (WRITE, x))
-                x = self.spi.xfer([END])[0]
-                #time.sleep(.01)
-            t1 = time.monotonic()
-            for c in data:
-                x = self.spi.xfer([c])
-                #print('value data %x' % c, [c], x)
-            t2 = time.monotonic()
-            crc7 = 0x7f & crc.crc8(data)
-            #print('computecrc', data, len(data))
-            x=self.spi.xfer([crc7])
-            #print('value crc %x' % crc7, crc7, x)
-            t3 = time.monotonic()
-            while x != END:
-                x=self.spi.xfer([END])[0]
+    def send(self, id, data):
+        self.packetout_data += b'$' + bytes([id]) + bytes(data)
 
-            t4 = time.monotonic()
-            x = AGAIN
-            while x != OK and x != INVALID:
-                x = self.spi.xfer([VERIFY])[0]
-                if time.monotonic() - t4 > .5:
-                    print('caught invalid on timeout!!!!')
-                    x = INVALID
-                    break
-                #print('verify %x' % x)
-            t5 = time.monotonic()
-            #print('times', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
-            if x == OK:
-                #print('verified', x)
-                return
-            if x == INVALID:
-                #print('failed to verify write, retry')
-                pass
-            else:
-                print('invalid verification value!!!!', x)
-
-    def recv(self):
-        if not self.spi:
-            return []
-        while True:
-            x = 0
-            while x != REWIND:
-                x = self.spi.xfer([REWIND])[0]
-                #'endprint('rewind %x' % x)
-                if x == END:
-                    return []
-            data = []
-            while True:
-                x = self.spi.xfer([READ])[0]
-                #print('read %x' % x)
-                if x == REWIND:
-                    continue
-                if x == END:
-                    if not data:
-                        return data
-                    crc7 = 0x7f & crc.crc8(data[:-1])
-                    #print('end', crc7, x)
-                    if crc7 != data[-1]:
-                        #print('crc match failed recv, try again', crc7, data[-1])
-                        break # bad crc, retry read
-                    # inform arduino we read it
-                    while x != VALIDATE:
-                        y = self.spi.xfer([VALIDATE])[0]
-                        x = self.spi.xfer([REWIND])[0]
-                        #print('validate', x)
-                    return data
-                if x >= 128:
-                    #print('invalid char read %x' % x)
-                    # bad state, reset
-                    break
-                data.append(x) # otherwise record this byte
-            
     def set_backlight(self, value, polarity):
         value = min(max(int(value), 0), 100)
         backlight = [value, polarity]
-        self.send(backlight, SET_BACKLIGHT)
+        self.send(SET_BACKLIGHT, backlight)
 
-    def set_baud(self, value):
-        self.baud = value
-        baud = value['baud']
-        baud = [baud%256, baud/256]
-        self.send(baud, SET_BAUD)
+    def set_baud(self, baud):
+        self.config['nmea']['baud'] = baud
+        baud = int(baud/100)
+        baud = [baud%128, baud//128]
+        self.send(SET_BAUD, baud)
 
     def set_buzzer(self, duration, frequency):
-        self.send((duration, frequency), SET_BUZZER)
+        self.send(SET_BUZZER, (duration, frequency))
 
     def get_baud_rate(self):
         t = time.monotonic()
         dt = t - self.serial_time
+        if dt < 10:
+            return False
         self.serial_time = t
         rate_in = self.serial_in_count*10/dt
         rate_out = self.serial_out_count*10/dt
-        self.serial_in_count =self.serial_out_count = 0
-        return rate_in, rate_out
+        self.serial_in_count = self.serial_out_count = 0
+        return 'TX: %.1f  RX %.1f' % (rate_in, rate_out)
 
     def poll(self):
         if not self.spi:
             self.open()
             return []
 
-        while self.nmea_socket:
-            try:
-                data = self.nmea_socket.recv()
-                if not data:
-                    break
-                count = 0
-                self.serial_in_count += len(data)
-                while data:
-                    count += 1
-                    if count > 10:
-                        print('too much serial data, dropping', data)
-                        break
-                    # up to 64 bytes at a time
-                    self.send(data[:64], SERIAL_DATA)
-                    data = data[64:]
-            except Exception as e:
-                print('nmea socket exception', e)
-                self.nmea_socket.close()
-                self.nmea_socket = False
-        
         events = []
+        serial_data =  []
+        self.open_nmea()
+
+        # don't exceed 90% of baud rate
+        baud = self.config['nmea']['baud'] *.9
         while True:
-            data = self.recv()
-            if not data:
+            if self.nmea_socket:
+                try:
+                    b = self.nmea_socket.recv(40)
+                    self.socketdata += b
+                    self.serial_in_count += len(b)
+                    if len(self.socketdata) > 160:
+                        print('overflow, dropping 64 bytes')
+                        self.socketdata = self.socketdata[:64]
+                        self.serial_in_count -= 64
+                except Exception as e:
+                    if e.args[0] is errno.EWOULDBLOCK:
+                        pass
+                    else:
+                        print('nmea socket exception', e)
+                        self.nmea_socket.close()
+                        self.nmea_socket = False
+
+            i = 0
+            if self.socketdata:
+                count, t0 = self.pollt0
+                dt = time.monotonic() - t0
+                rate = 10*(count)/dt
+                if rate < baud:
+                    if self.socketdata[0] and self.socketdata[0] < 128:
+                        i = self.socketdata[0]
+                        self.pollt0[0] += 1
+                        self.socketdata = self.socketdata[1:]
+            else:
+                self.pollt0 = [0, time.monotonic()] # reset
+
+            if not i and self.packetout_data:
+                i = self.packetout_data[0]
+                self.packetout_data = self.packetout_data[1:]
+
+            o = self.xfer(i)
+            if not i and not o:
                 break
-            cmd, data = data[0], data[1:]
-            if cmd == SERIAL_DATA:
-                if self.lastdata == data:
-                    print('duplicate data!!')
-                    continue
-                self.lastdata = data
-                self.serial_out_count += len(data)
-                if not self.nmea_socket:
-                    if not self.open_nmea():
-                        print('failed to send serial data')
-                if self.nmea_socket:
-                    self.nmea_socket.send(data)
+            
+            if o > 127:
+                self.packetin_data.append(o&0x7f)
+            elif o:
+                serial_data.append(o)
+
+                
+        # now read packet data
+        while len(self.packetin_data) >= PACKET_LEN+2:
+            if self.packetin_data[0] != ord('$'):
+                print('out of packet sunc!!!', self.packetin_data[0])
+                self.packetin_data = self.packetin_data[1:]
                 continue
 
-            if len(data) < 4:
-                print('invalid packet!!')
-                continue
+            cmd = self.packetin_data[1]
+            d = self.packetin_data[2:PACKET_LEN+2]
 
-            key = '%02X%02X%02X%02X' % (data[0], data[1], data[2], data[3])
-            count = data[4]
+            self.packetin_data = self.packetin_data[2+PACKET_LEN:]
+
+            key = '%02X%02X%02X%02X' % (d[0], d[1], d[2], d[3])
+            count = d[4]
                 
             if cmd == RF:
                 key = 'rf' + key
@@ -269,15 +226,42 @@ class arduino(object):
             elif cmd == GP:
                 key = 'gpio_ext' + key
             else:
-                print('unknown message')
+                print('unknown message', cmd, data)
                 continue
 
             events.append((key, count))
+
+        if self.nmea_socket and serial_data:# and self.config['nmea']['out']:
+            #print('nmea>', bytes(serial_data))
+            self.nmea_socket.send(bytes(serial_data))
+            self.serial_out_count += len(serial_data)
+            #self.open_nmea()
+            #print('nmea', self.serial_in_count, self.serial_out_count, self.serial_in_count - self.serial_out_count)
+            
         return events
 
     def open_nmea(self):
-        self.nmea_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.nmea_socket.connect((self.config['host'], 20220))
+        if self.nmea_socket:
+            return
+        if time.monotonic() < self.nmea_connect_time:
+            return
+
+        self.nmea_connect_time += 4
+        nmea = self.config['nmea']
+        if not nmea['in'] and not nmea['out']:
+            return
+        try:
+            self.socketdata = b''
+            self.nmea_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.nmea_socket.setblocking(0)
+            print('connect nmea', self.config['host'])
+            self.nmea_socket.connect((self.config['host'], 20220))
+        except OSError as e:
+            if e.args[0] is errno.EINPROGRESS:
+                return True
+        except Exception as e:
+            print('exception', e)
+            self.nmea_socket = False
 
     def flash(self, filename, c):
         global GPIO
@@ -308,15 +292,22 @@ class arduino(object):
     def write(self, filename):
         return self.flash(filename, 'w')
 
-def arduino_process(pipe, config)
+def arduino_process(pipe, config):
     a = arduino(config)
     while True:
         t0 = time.monotonic()
         events = a.poll()
         if events:
             pipe.send(events)
-        baud_rate = a.getbaudrate()
-        pipe.send(('baudrate', baud_rate))
+
+        baud_rate = a.get_baud_rate()
+        if baud_rate:
+            a.set_baud(38400)
+            if a.nmea_socket:
+                pipe.send([('baudrate', baud_rate)])
+            else:
+                pipe.send([('baudrate', 'ERROR: no connection to server for nmea')])
+
         while True:
             try:
                 msg = pipe.recv()
@@ -328,28 +319,35 @@ def arduino_process(pipe, config)
                 return
             if cmd == 'baud':
                 a.set_baud(value)
+            elif cmd == 'backlight':
+                a.set_backlight(*value)
             elif cmd == 'buzzer':
                 a.set_buzzer(*value)
             else:
                 print('unhandled command', cmd)
         t1 = time.monotonic()
-        dt = .03 - (t1-t0)
+        dt = .01 - (t1-t0)
         if dt > 0:
             time.sleep(dt)      
     
 def main():
     print('initializing arduino')
-    config = {'arduino':{'device':'/dev/spidev0.1',
-                         'resetpin':'gpio16'}}
+    config = {'host':'localhost','hat':{'arduino':{'device':'/dev/spidev0.1',
+                         'resetpin':'gpio16'}}}
     a = arduino(config)
 
-    t0 = time.monotonic()
-
     while True:
+        t0 = time.monotonic()
         events = a.poll()
         if events:
             print(events)
-        time.sleep(.01)
+        baud_rate = a.get_baud_rate()
+        if baud_rate:
+            print('baud rate', baud_rate)
+        t1 = time.monotonic()
+        dt = t1 - t0
+        #print('dt', dt)
+        time.sleep(.02)
     
 if __name__ == '__main__':
     main()

@@ -74,7 +74,7 @@ $(document).ready(function() {
         pypilot_watch('ap.enabled')
         pypilot_watch('ap.mode')
 
-        pypilot_watch('ap.heading_command')
+        pypilot_watch('ap.heading_command', .5)
 
         // gain
         pypilot_watch('ap.pilot')
@@ -115,9 +115,9 @@ $(document).ready(function() {
         }
 
         // calibration
-        pypilot_watch('imu.heading_offset');
-        pypilot_watch('imu.alignmentQ');
-        pypilot_watch('imu.alignmentCounter');
+        pypilot_watch('imu.heading_offset', .5);
+        pypilot_watch('imu.alignmentQ', .5);
+        pypilot_watch('imu.alignmentCounter', .25);
         pypilot_watch('imu.compass_calibration_locked');
         $('#calibration_locked').change(function(event) {
             check = $('#calibration_locked').prop('checked');

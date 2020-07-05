@@ -96,6 +96,11 @@ class ClientValues(Value):
         self.wvalues = {}
         return ret
 
+    def onconnected(self):
+        for name in self.values:
+            if name != 'values' and name != 'watch':
+                self.wvalues[name] = self.values[name].info
+
 class pypilotClient(object):
     def __init__(self, host=False):        
         self.values = ClientValues(self)
@@ -112,6 +117,7 @@ class pypilotClient(object):
             fd = self.connection.fileno()
             if fd:
                 self.poller.register(fd, select.POLLIN)
+                self.values.onconnected()
             return
 
         config = {}
@@ -120,7 +126,7 @@ class pypilotClient(object):
             if not os.path.exists(configfilepath):
                 os.makedirs(configfilepath)
             if not os.path.isdir(configfilepath):
-                raise configfilepath + 'should be a directory'
+                raise Exception(configfilepath + 'should be a directory')
         except Exception as e:
             print('os not supported')
             configfilepath = '/.pypilot/'
@@ -170,12 +176,11 @@ class pypilotClient(object):
         self.connection_in_progress = False
         self.poller = select.poll()
         self.poller.register(self.connection.socket, select.POLLIN)
+        self.wwatches = {}
         for name, value in self.watches.items():
             self.wwatches[name] = value # resend watches
 
-        for name in self.values.values:
-            if name != 'values' and name != 'watch':
-                self.values.wvalues[name] = self.values.values[name].info
+        self.values.onconnected()
 
     def poll(self, timeout=0):
         if not self.connection:
@@ -195,8 +200,6 @@ class pypilotClient(object):
             
         # inform server of any watches we have changed
         if self.wwatches:
-            #print('send wwatchd', 'watch=' + pyjson.dumps(self.wwatches))
-
             self.connection.send('watch=' + pyjson.dumps(self.wwatches) + '\n')
             #print('watch', watches, self.wwatches, self.watches)
             self.wwatches = {}
@@ -219,7 +222,7 @@ class pypilotClient(object):
                 return # no data ready
             
             fd, flag = events.pop()
-            if not (flag & select.POLLIN) or (self.connection and not self.connection.recv()):
+            if not (flag & select.POLLIN) or (self.connection and not self.connection.recvdata()):
                 # other flags indicate disconnect
                 self.disconnect() # recv returns 0 means connection closed
                 return
@@ -243,7 +246,7 @@ class pypilotClient(object):
 
             except Exception as e:
                 print('invalid message from server:', line, e)
-                raise Exception
+                raise Exception()
 
             if name in self.values.values: # did this client register this value
                 self.values.values[name].set(value)
@@ -267,7 +270,7 @@ class pypilotClient(object):
             self.poller_in_progress = select.poll()
             self.poller_in_progress.register(self.connection_in_progress.fileno(), 0)
             
-            connection.settimeout(1)
+            connection.settimeout(1) # set to 0 ?
             connection.connect(host_port)
         except OSError as e:
             import errno

@@ -10,7 +10,6 @@
 import time, os, sys, signal
 import json
 from pypilot.client import pypilotClient
-import arduino, web
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import lcd, gpio, lircd
@@ -94,11 +93,11 @@ class Process():
 
     def create(self, process, arg):
         def cleanup(signal_number, frame=None):
-            print('cleanup web process', signal_number)
+            print('cleanup process', signal_number)
             if signal_number == signal.SIGCHLD:
                 pid = os.waitpid(-1, 0)
                 if not self.process or pid[0] != self.process.pid:
-                    print('proce', self.process, pid, self.process.pid)
+                    print('process', self.process, pid, self.process.pid)
                     # flask makes process at startup that dies
                     return
             if self.process:
@@ -119,7 +118,7 @@ class Process():
 
         import multiprocessing
         from pypilot.nonblockingpipe import NonBlockingPipe
-        self.pipe, pipe = NonBlockingPipe('webpipe', True)
+        self.pipe, pipe = NonBlockingPipe(str(self), True)
         self.process = multiprocessing.Process(target=process, args=(pipe, arg), daemon=True)
         self.process.start()
 
@@ -131,11 +130,6 @@ class Process():
             self.process = False
             return False
         return True
-
-    def poll(self):
-        if not self.poll_ready():
-            return
-        return self.pipe.recv()
             
 class Web(Process):
     def __init__(self, hat):
@@ -150,15 +144,15 @@ class Web(Process):
         self.send({'status': value})
 
     def create(self):
-        def web_process(pipe, actions):
+        def process(pipe, actions):
             while True:
                 try:
+                    import web
                     web.web_process(pipe, actions)
                 except Exception as e:
-                    print('failed to run web server:', e)
-                    while True:
+                    print('failed to run process:', e)
                 time.sleep(5)
-        super(self, Web).create(web_process, self.hat.actions)
+        super(Web, self).create(process, self.hat.actions)
         self.send({'status': self.status})
         
     def poll(self):
@@ -177,8 +171,7 @@ class Web(Process):
 
             self.hat.write_config()
 
-
-class Arduino(Process)
+class Arduino(Process):
     def __init__(self, hat):
         self.process = False
         self.status = 'Not Connected'
@@ -187,35 +180,35 @@ class Arduino(Process)
     def set_baud(self, baud):
         self.send(('baud', baud))
 
+    def set_backlight(self, value, polarity):
+        self.send(('backlight', (value, polarity)))
+
     def set_buzzer(self, duration, frequency):
         self.send(('buzzer', (duration, frequency)))
 
     def create(self):
-        def web_process(pipe, config):
+        def process(pipe, config):
+            import arduino
             while True:
-                try:
-                    arduino.arduino_process(pipe, config)
-                except Exception as e:
-                    print('failed to run web server:', e)
-                    while True:
+                arduino.arduino_process(pipe, config)
                 time.sleep(5)
-        super(self, Arduino).create(arduino_process, config)
+        super(Arduino, self).create(process, self.hat.config)
+
+    def poll(self):
+        if not self.poll_ready():
+            return
+        msgs = []
+        while True:
+            msg = self.pipe.recv()
+            if not msg:
+                break
+            msgs += msg
+        return msgs
             
 class Hat(object):
     def __init__(self):
         # read config
-        try:
-            configfile = '/proc/device-tree/hat/custom_0'
-            f = open(configfile)
-            self.hatconfig = json.loads(f.read())
-
-            f.close()
-        except Exception as e:
-            print('failed to load', configfile, ':', e)
-            print('assuming original 26 pin tinypilot')
-            self.hatconfig = False
-
-        self.config = {'remote': False, 'host': 'pypilot', 'actions': {}, 'lcd': {}, 'arduino': {}}
+        self.config = {'remote': False, 'host': '127.0.0.1', 'actions': {}, 'lcd': {}, 'arduino': {}}
         self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf' 
         print('loading config file:', self.configfilename)
         try:
@@ -226,6 +219,22 @@ class Hat(object):
                 self.config[name] = config[name]
         except Exception as e:
             print('config failed:', e)
+
+        try:
+            configfile = '/proc/device-tree/hat/custom_0'
+            f = open(configfile)
+            hatconfig = json.loads(f.read())
+            f.close()
+        except Exception as e:
+            print('failed to load', configfile, ':', e)
+            hatconfig = {"lcd":{"driver":"nokia5110",
+                                "port":"/dev/spidev0.0"},
+                         "arduino":{"device":"/dev/spidev0.1",
+                                    "resetpin":16,
+                                    "hardware":0.21},
+                         "lirc":"gpio4"}
+            print('assuming original 26 pin tinypilot')
+        self.config['hat'] = hatconfig
 
         self.servo_timeout = time.monotonic() + 1
         
@@ -245,8 +254,9 @@ class Hat(object):
         
         self.lcd = lcd.LCD(self)
         self.gpio = gpio.gpio()
-        self.arduino = arduino.arduino(self.config, self.hatconfig, host)
+        self.arduino = Arduino(self)
         self.lirc = lircd.lirc()
+        self.keytimes = {}
         
         # keypad for lcd interface
         self.actions = []
@@ -293,18 +303,23 @@ class Hat(object):
 
     def apply_code(self, key, count):
         if key == 'baudrate': # statistics
-            print('baudrate', count)
-            self.web.send({'baudrate': str(count)})
+            self.web.send({'baudrate': count})
+            return
         self.web.send({'key': key})
         for action in self.actions:
             if key in action.keys:
                 if not count:
                     self.web.send({'action': action.name})
+                    if key in self.keytimes:
+                        del self.keytimes[key]
+                else:
+                    self.keytimes[key] = time.monotonic()
                 action.trigger(count)
                 return
         self.web.send({'action': 'none'})
                 
     def poll(self):
+        t0 = time.monotonic()
         if self.client.connection:
             self.web.set_status('connected')
         else:
@@ -313,17 +328,24 @@ class Hat(object):
         msgs = self.client.receive()
         for name, value in msgs.items():
             self.last_msg[name] = value
+        t1 = time.monotonic()
 
-        t0 = time.time()
         for i in [self.lcd, self.web]:
             i.poll()
-            #print('dt', time.time()-t0)
 
         for i in [self.gpio, self.arduino, self.lirc]:
-            events = i.poll()
-            for event in events:
-                print('event', event)
-                self.apply_code(*event)
+            try:
+                events = i.poll()
+                for event in events:
+                    self.apply_code(*event)
+            except Exception as e:
+                print('WARNING, failed to poll!!')
+
+        for key, t in self.keytimes.items():
+            dt = time.monotonic() - t
+            if dt > .5:
+                print('keyup event lost, releasing key from timeout', key, dt)
+                self.apply_code(key, 0)
 
         time.sleep(.01)
 

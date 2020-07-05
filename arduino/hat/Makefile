@@ -25,7 +25,6 @@ $(ARDUINO_PATH)/libraries/Wire/Wire.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/avr-libc/realloc.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/avr-libc/malloc.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_digital.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_analog.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_shift.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_pulse.c \
@@ -34,10 +33,9 @@ $(ARDUINO_PATH)/hardware/arduino/cores/arduino/new.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/WString.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/Stream.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/Print.cpp \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/HardwareSerial.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/WMath.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/main.cpp \
-/usr/share/arduino/libraries/SPI/SPI.cpp \
+$(ARDUINO_PATH)/libraries/SPI/SPI.cpp \
 $(ARDUINO_PATH)/libraries/Wire/utility/twi.c \
 
 IRLib2_SRCS = \
@@ -54,7 +52,8 @@ IRLib2/IRLibProtocols/IRLibHardware.cpp \
 IRLib2/IRLibRecv/IRLibRecv.cpp
 
 
-SRCS = $(ARDUINO_SRCS) $(IRLib2_SRCS) RCSwitch.cpp
+
+SRCS = $(ARDUINO_SRCS) $(IRLib2_SRCS) RCSwitch.cpp wiring.c
 
 OBJSC = $(SRCS:.cpp=.o)
 OBJSD = $(OBJSC:.c=.o)
@@ -79,7 +78,7 @@ obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 
 AVRDUDE = sudo avrdude
 BOOTLOADER = linuxspi
-BAUDRATE = 200000
+BAUDRATE = 2000000
 upload: $(SKETCHNAME).cpp.hex
 	echo 16 > /sys/class/gpio/export || echo ok
 	echo in > /sys/class/gpio/gpio16/direction
@@ -111,9 +110,5 @@ serial:
 	$(CXX) $(CXXFLAGS) -c $< -o obj/$@
 
 %.o : %.c
-	mkdir -p obj$(@:.o=)
-	$(CC) $(CXXFLAGS) -c $< -o obj$@
-
-
-charset.h: make_charset.py font.ttf
-	python make_charset.py > charset.h
+	mkdir -p obj/$(@:.o=)
+	$(CC) $(CXXFLAGS) -c $< -o obj/$@
