@@ -194,13 +194,13 @@ class arduino(object):
             o = self.xfer(i)
             if not i and not o:
                 break
-            
+
             if o > 127:
-                self.packetin_data.append(o&0x7f)
+                o&=0x7f
+                self.packetin_data.append(o)
             elif o:
                 serial_data.append(o)
 
-                
         # now read packet data
         while len(self.packetin_data) >= PACKET_LEN+2:
             if self.packetin_data[0] != ord('$'):
@@ -226,7 +226,7 @@ class arduino(object):
             elif cmd == GP:
                 key = 'gpio_ext' + key
             else:
-                print('unknown message', cmd, data)
+                print('unknown message', cmd, d)
                 continue
 
             events.append((key, count))
@@ -326,7 +326,9 @@ def arduino_process(pipe, config):
             else:
                 print('unhandled command', cmd)
         t1 = time.monotonic()
-        dt = .01 - (t1-t0)
+        # max period to handle 38400 with 192 byte buffers is (192*10) / 38400 = 0.05
+        # for now use 0.025, eventually dynamic depending on baud?
+        dt = .025 - (t1-t0)
         if dt > 0:
             time.sleep(dt)      
     
