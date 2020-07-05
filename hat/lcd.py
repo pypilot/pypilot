@@ -69,8 +69,8 @@ class LCD():
 
         # set the driver to the one from hat eeprom
         driver = 'default'
-        if self.hat and self.hat.hatconfig:
-            driver = self.hat.hatconfig['lcd']['driver']
+        if self.hat and 'hat' in self.hat.config:
+            driver = self.hat.config['hat']['lcd']['driver']
             self.host = self.hat.client.config['host']
         else:
             self.host = False

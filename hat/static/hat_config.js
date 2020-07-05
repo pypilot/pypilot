@@ -28,6 +28,10 @@ $(document).ready(function() {
         $('#status').text(msg);
     });
 
+    socket.on('baudrate', function(msg) {
+        $('#baudrate').text(msg);
+    });
+    
     socket.on('key', function(key) {
         $('#key0').text(key);
         $('#key1').text(key);
@@ -52,9 +56,9 @@ $(document).ready(function() {
         socket.emit('baud', {'in': $('#nmea_in').value(), 'out': $('#nmea_out').value, 'baud': $('#nmea_baud')})
     }
 
-    $('#nmea_in'.click(nmea_config);
-    $('#nmea_out'.click(nmea_config);
-    $('#nmea_baud'.click(nmea_config);
+    $('#nmea_in').click(nmea_config);
+    $('#nmea_out').click(nmea_config);
+    $('#nmea_baud').click(nmea_config);
 
     // Interval function that tests message latency by sending a "ping"
     var ping_pong_times = [];
