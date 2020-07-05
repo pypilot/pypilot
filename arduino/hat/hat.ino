@@ -88,7 +88,7 @@ RB_CREATE(data_in, 128)
 
 ISR(USART_RX_vect)
 {
-    sei();
+    sei(); // needed because spi runs faster
     RB_PUT(serial_out, UDR0);
 }
 
@@ -292,13 +292,17 @@ void send(uint8_t id, uint8_t d[PACKET_LEN])
     cli();
     RB_PUT(serial_out, id);
     sei();
+    uint8_t parity = 0;
     for(int i = 0; i < PACKET_LEN; i++) {
         uint8_t v = d[i] | 0x80;
+        parity ^= d[i];
         cli();
         RB_PUT(serial_out, v);
         sei();
     }
-//    sei();
+    cli();
+    RB_PUT(serial_out, parity | 0x80);
+    sei();
 }
 
 void send_code(uint8_t source, uint32_t value)
@@ -405,11 +409,10 @@ void loop() {
 
     // send code up message on timeout
     static uint32_t t=0;
-    uint32_t timeout[] = {0, 350, 500, 100};
+    uint32_t timeout[] = {0, 300, 400, 100};
     for(uint8_t source=1; source<4; source++) {
         uint32_t dt = t - codes[source].ltime;
         if(codes[source].lvalue && (dt > timeout[source] && dt < 10000)) {
-        
             send_code(source, 0);
             codes[source].repeat_count = 0;
             codes[source].lvalue = 0;

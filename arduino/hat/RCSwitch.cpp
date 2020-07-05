@@ -636,7 +636,6 @@ void RECEIVE_ATTR RCSwitch::handleInterrupt() {
   static unsigned int repeatCount = 0;
 
   const long time = micros();
-    sei();  // needed if we are a spi slave
   const unsigned int duration = time - lastTime;
 
   if (duration > RCSwitch::nSeparationLimit) {
