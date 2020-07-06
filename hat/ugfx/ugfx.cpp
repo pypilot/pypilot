@@ -1,3 +1,4 @@
+
 /* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
@@ -12,6 +13,17 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "ugfx.h"
+
+#define INTERNAL_FONTS
+
+#ifdef INTERNAL_FONTS
+//#define ICACHE_RODATA_ATTR  __attribute__((section(".drom.text")))
+//#define PROGMEM   ICACHE_RODATA_ATTR
+#define PROGMEM
+extern "C" {
+#include "fonts.h"
+}
+#endif
 
 static uint16_t color16(uint32_t c)
 {
@@ -93,71 +105,123 @@ surface::surface(const char* filename, int tbypp)
     width = height = bypp = 0;
     p = NULL;
 
+#ifdef INTERNAL_FONTS
+    const struct character *c = 0;
+    int cp = 0;
+    for(int i=0; i<(sizeof fonts)/(sizeof *fonts); i++)
+        if(!memcmp(fonts[i]->fn, filename, 3)) {
+            const struct font *f = fonts[i];
+            for(int j=0; j< f->count; j++) {
+                const character *ch = f->characters + j;
+                if(!strcmp(ch->cn, filename+3)) {
+                    c = ch;
+                    break;
+                }
+            }
+            break;
+        }
+    if(!c)
+        return;
+#else
     FILE *f = fopen(filename, "r");
     if(!f)
-        return;
+         return;
+#endif
+    bypp = tbypp;
 
     uint16_t width16, height16, bypp16, colors16;
-    if(fread(&width16, 2, 1, f) != 1 || fread(&height16, 2, 1, f) != 1 ||
-       fread(&bypp16, 2, 1, f) != 1 || fread(&colors16, 2, 1, f) != 1) {
+    uint8_t d[8];
+#ifdef INTERNAL_FONTS
+    memcpy(d, c->data, 8);
+    cp+=8;
+#else
+    if(fread(&d, 8, 1, f) != 1) {
         fprintf(stderr, "failed reading surface header\n");
         goto fail;
     }
+#endif
+    width16 = *(uint16_t*)(d+0);
+    height16 = *(uint16_t*)(d+2);
+    bypp16 = *(uint16_t*)(d+4);
+    colors16 = *(uint16_t*)(d+6);
 
     width = width16;
     height = height16;
-    bypp = tbypp;
+
     if(width*height > 65536) {
         fprintf(stderr, "invalid surface size\n");
         goto fail;
     }
     
     xoffset = yoffset = 0;
-    p = new char [width*height*bypp];
     line_length = width*bypp;
 
-    if(colors16 != 1) // only greyscale supported
-        goto fail;  
+    
+    p = new char [width*height*bypp];
 
+
+    if(colors16 != 1) // only greyscale supported
+        goto fail;
+    if(1)
     {
-        char gray_data[width*height];
+        int sz = width * height;
         unsigned int i=0;
-        while(i<sizeof gray_data) {
+        while(i<sz) {
+            if(cp >= c->len-1) {
+                fprintf(stderr, "end of data\n");
+                break;
+            }
+
             uint8_t run, value;
+#ifdef INTERNAL_FONTS
+            run = c->data[cp++];
+            value = c->data[cp++];
+#else
             if(fread(&run, 1, 1, f) != 1 || fread(&value, 1, 1, f) != 1) {
-//                fprintf(stderr, "failed reading surface data\n");
+                fprintf(stderr, "failed reading surface data\n");
                 goto fail;
             }
-            while(run-- > 0)
-                gray_data[i++] = value;
+#endif            
+            while(run-- > 0) {
+                if(i >= sz) {
+                    fprintf(stderr, "outside grey range\n");
+                    break;
+                }
+                if(bypp == 1)
+                    p[i++] = value;
+/*                else if(bypp == 2)
+                    for(int i = 0; i<width*height; i++)
+                        ((uint16_t*)p)[i] = color16gray(gray_data[i]);
+                else if(bypp == 4)
+                    for(int i = 0; i<width*height; i++)
+                    memset(p + 4*i, gray_data[i], 3);*/
+                else
+                    fprintf(stderr, "bypp incompatible reading %s\n", filename);
+
+            }
         }
 
-        uint32_t computed_crc = cksum(gray_data, sizeof gray_data);
+        uint32_t computed_crc = 0;//cksum(gray_data, sizeof gray_data);
         uint32_t crc = 0;
+#ifdef INTERNAL_FONTS
+#else
         if(fread(&crc, 4, 1, f) != 1 || computed_crc != crc) {
-//            printf("crc doesn't match %x %x\n", computed_crc, crc);
-            goto fail;
+            //fprintf(stderr, "crc doesn't match %x %x\n", computed_crc, crc);
+            //goto fail;
         }
-
-        if(bypp == 1)
-            memcpy(p, gray_data, width*height);
-        else if(bypp == 2)
-            for(int i = 0; i<width*height; i++)
-                ((uint16_t*)p)[i] = color16gray(gray_data[i]);
-        else if(bypp == 4)
-            for(int i = 0; i<width*height; i++)
-                memset(p + 4*i, gray_data[i], 3);
-        else
-            ;//            fprintf(stderr, "bypp incompatible reading %s\n", filename);
+#endif
     }
 
+#ifndef INTERNAL_FONTS
     fclose(f);
+#endif    
     return;
 
 fail:
 //    fprintf(stderr, "failed ot open %s\n", filename);
-    delete [] p;
+#ifndef INTERNAL_FONTS
     fclose(f);
+#endif
     bypp = 0;
 }
 
@@ -221,6 +285,8 @@ void surface::store_grey(const char *filename)
 
 void surface::blit(surface *src, int xoff, int yoff, bool flip)
 {
+    if(!src->p)
+        return;
     if(bypp != src->bypp) {
         printf("incompatible surfaces cannot be blit\n");
         return;
@@ -303,6 +369,9 @@ void surface::magnify(surface *src, int factor)
 
 void surface::putpixel(int x, int y, uint32_t c)
 {
+    if(x < 0 || y < 0 || x >= width || y >= height)
+        return;
+
     long dl = x * bypp + y * line_length;
     switch(bypp) {
     case 1: *(uint8_t*)(p + dl) = c&0xff;      break;
@@ -315,6 +384,11 @@ void surface::putpixel(int x, int y, uint32_t c)
 
 void surface::line(int x1, int y1, int x2, int y2, uint32_t c)
 {
+    x1 = x1 > 0 ? x1 : 0;
+    x2 = x2 < width ? x2 : width-1;
+    y1 = y1 > 0 ? y1 : 0;
+    y2 = y2 < height ? y2 : height-1;
+
     if (abs(x2 - x1) > abs(y2 - y1)) {
         if (x2 < x1)
             line(x2, y2, x1, y1, c);
@@ -381,6 +455,11 @@ void surface::vline(int x, int y1, int y2, uint32_t c)
 
 void surface::box(int x1, int y1, int x2, int y2, uint32_t c)
 {
+    x1 = x1 > 0 ? x1 : 0;
+    x2 = x2 < width ? x2 : width-1;
+    y1 = y1 > 0 ? y1 : 0;
+    y2 = y2 < height ? y2 : height-1;
+
     switch(bypp) {
     case 1:
     {
