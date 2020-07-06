@@ -280,7 +280,7 @@ class pypilotClient(object):
                 pass
             else:
                 print('connect failed to %s:%d' % host_port, e)
-            time.sleep(.25)
+            #time.sleep(.25)
                 
             return False
                 

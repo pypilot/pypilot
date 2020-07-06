@@ -32,6 +32,7 @@ INVALID=0x96
 RF=0x01
 IR=0x02
 GP=0x03
+VOLTAGE=0x04
 
 SET_BACKLIGHT=0x16
 SET_BUZZER=0x17
@@ -75,6 +76,7 @@ class arduino(object):
 
         self.packetout_data = []
         self.packetin_data = []
+        self.lastbacklight = 0, 0, 0
 
     def open(self):
         if not self.hatconfig:
@@ -118,18 +120,38 @@ class arduino(object):
         return self.spi.xfer([x])[0]
 
     def send(self, id, data):
-        self.packetout_data += b'$' + bytes([id]) + bytes(data)
+        p = id
+        self.packetout_data += bytes([ord('$') | 0x80, id | 0x80])
+        for i in range(PACKET_LEN-1):
+            if i < len(data):
+                d = data[i]
+            else:
+                d = 0
+            p ^= d
+            self.packetout_data += bytes([d | 0x80])
+        self.packetout_data += bytes([p | 0x80])
 
     def set_backlight(self, value, polarity):
-        value = min(max(int(value), 0), 100)
+        lvalue, lpolarity, ltime = self.lastbacklight
+        if value == lvalue and polarity == lpolarity and time.monotonic() - ltime < 9:
+            return
+        self.lastbacklight = value, polarity, time.monotonic()
+
+        value = min(max(int(value), 0), 120)
         backlight = [value, polarity]
         self.send(SET_BACKLIGHT, backlight)
 
     def set_baud(self, baud):
         self.config['nmea']['baud'] = baud
-        baud = int(baud/100)
-        baud = [baud%128, baud//128]
-        self.send(SET_BAUD, baud)
+        # 0, 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600
+        if baud == 4800:
+            d = [5]
+        elif baud == 38400:
+            d = [8]
+        else:
+            print('invalid baud', baud)
+            d = [8]
+        self.send(SET_BAUD, d)
 
     def set_buzzer(self, duration, frequency):
         self.send(SET_BUZZER, (duration, frequency))
@@ -190,6 +212,7 @@ class arduino(object):
 
             if not i and self.packetout_data:
                 i = self.packetout_data[0]
+                #print('send %c %x' %(i,i))
                 self.packetout_data = self.packetout_data[1:]
 
             o = self.xfer(i)
@@ -236,6 +259,14 @@ class arduino(object):
                     lircd.LIRC_version = 0 # disable lircd if we got ir from arduino
             elif cmd == GP:
                 key = 'gpio_ext' + key
+            elif cmd == VOLTAGE:
+                vcc = (d[0] + (d[1]<<7))/1000.0
+                vin = (d[2] + (d[3]<<7))/1000.0
+                if vin < 3 or vin > 3.5:
+                    print('3v3 VOLTAGE BAD!!!', vin)
+                if vcc < 4.5 or vcc > 5.5:
+                    print('5v VOLTAGE BAD!!!', vcc)
+                continue
             else:
                 print('unknown message', cmd, d)
                 continue
@@ -313,7 +344,6 @@ def arduino_process(pipe, config):
 
         baud_rate = a.get_baud_rate()
         if baud_rate:
-            a.set_baud(38400)
             if a.nmea_socket:
                 pipe.send([('baudrate', baud_rate)])
             else:

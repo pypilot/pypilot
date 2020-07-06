@@ -25,9 +25,10 @@
 #define DIR_PIN 4
 #define LED_PIN 8
 
+// start byte $ followed by PACKET_LEN bytes, and a parity byte
 #define PACKET_LEN 6
-/* first byte defines message type followed by data and finally crc in last byte */
-// only values below 128 are valid
+
+// of packet bytes, first byte defines message type 
 enum {RF=0x01, IR=0x02, GP=0x03, VOLTAGE=0x04, SET_BACKLIGHT=0x16, SET_BUZZER=0x17, SET_BAUD=0x18};
 
 RCSwitch rf = RCSwitch();
@@ -46,7 +47,7 @@ RCSwitch rf = RCSwitch();
 IRdecode myDecoder;   //create decoder
 IRrecvPCI ir(3);//pin number for the receiver
 
-uint8_t backlight_value = 128; // determines when backlight turns on
+uint8_t backlight_value = 64; // determines when backlight turns on
 uint8_t backlight_polarity = 0;
 uint8_t backlight_value_ee EEMEM = 128; // determines when backlight turns on
 uint8_t backlight_polarity_ee EEMEM = 0;
@@ -123,14 +124,22 @@ ISR(WDT_vect)
     asm volatile ("ijmp" ::"z" (0x0000)); // soft reset
 }
 
-void Serial_begin(unsigned long baud)
+void Serial_begin(uint8_t baud)
 {
 
     UCSR0A = 0;//_BV(U2X0);
     
     // assign the baud_setting, a.k.a. ubbr (USART Baud Rate Register)
-    UBRR0H = 0;
-    UBRR0L = 12;
+    // 0, 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600
+    if(baud == 5) {
+        // allow 4800
+        UBRR0H = 0;
+        UBRR0L = 103;
+    } else {
+        // otherwise 38400
+        UBRR0H = 0;
+        UBRR0L = 12;
+    }
     
     UCSR0B = _BV(TXEN0) | _BV(RXEN0) | _BV(RXCIE0);
 }
@@ -148,14 +157,12 @@ void setup() {
 
     backlight_value = eeprom_read_byte(&backlight_value_ee);
     backlight_polarity = eeprom_read_byte(&backlight_polarity_ee);
-    uint32_t baud = eeprom_read_byte(&serial_baud_ee);
-    if(baud)
-        baud = 38400;
-    else
-        baud = 4800;
+    uint8_t baud = eeprom_read_byte(&serial_baud_ee);
+    Serial_begin(baud);
 
     // enable adc with 128 division
     ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
+    ADCSRA |= _BV(ADSC);
 
     // turn on SPI in slave mode
     SPCR |= _BV(SPE);
@@ -167,10 +174,6 @@ void setup() {
     pinMode(5, OUTPUT);
     pinMode(6, OUTPUT);
 
-    baud=38400;
-//    baud=4800;
-    //Serial_begin(baud);
-    Serial_begin(baud);
 
     pinMode(DATA_PIN, INPUT);
     pinMode(3, INPUT);
@@ -194,7 +197,7 @@ void setup() {
     TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
     ICR1 = 1000; // 1khz
     TIMSK1 = 0;
-    OCR1A = 200;
+//    OCR1A = 100;
 }
 
 ISR(TIMER2_OVF_vect) __attribute__((naked));
@@ -237,28 +240,45 @@ struct codes_type {
 };
 
 static struct codes_type codes[4] = {0};
+static uint16_t adc_avg[3], adc_count, adc_cycles=64;
+static uint32_t adc_a;
 
 void read_data()
 {
     uint8_t data[PACKET_LEN];
     uint8_t start = 0;
     while(start != '$') {
-        if(RB_COUNT(data_in) < PACKET_LEN + 1)
+        if(RB_COUNT(data_in) < PACKET_LEN + 2)
             return;
         RB_GET(data_in, start);
+        start &= 0x7f;
     }
         
-    for(uint8_t i=0; i<sizeof data; i++) 
+    uint8_t parity, p=0;
+    for(uint8_t i=0; i<PACKET_LEN; i++) {
         RB_GET(data_in, data[i]);
+        data[i] &= 0x7f;
+        p ^= data[i];
+    }
+
+    RB_GET(data_in, parity);
+    parity &= 0x7f;
+
+    // ensure we don't get bad commands
+    if(p != parity)
+        return;
 
     uint8_t cmd = data[0], *d = data+1;
     switch(cmd) {
     case SET_BACKLIGHT:
         // turn on backlight
+        if(backlight_value == d[0] && backlight_polarity == d[1])
+            break;
+        adc_cycles=64; // update timer from adc and ambient
         backlight_value = d[0];
         backlight_polarity = d[1];
-        //eeprom_update_byte(&backlight_value_ee, backlight_value);
-        //eeprom_update_byte(&backlight_polarity_ee, backlight_polarity);
+        eeprom_write_byte(&backlight_value_ee, backlight_value);
+        eeprom_write_byte(&backlight_polarity_ee, backlight_polarity);
         break;
 
     case SET_BUZZER:
@@ -267,17 +287,8 @@ void read_data()
 
     case SET_BAUD:
     {
-        break; // disable for now
-        int baud = d[0] | (d[1] << 7);
-        baud *= 100;
-        uint8_t b;
-        if(baud == 38400)
-            b = 1;
-        else
-            b = 0;
-
-        eeprom_update_byte(&serial_baud_ee, b);
-        Serial.begin(baud);
+        eeprom_update_byte(&serial_baud_ee, d[0]);
+        Serial_begin(d[0]);
     } break;
     }
 }
@@ -340,14 +351,12 @@ void send_code(uint8_t source, uint32_t value)
     }
 }
 
-static uint16_t adc_avg[3], adc_count, adc_cycles;
-static uint32_t adc_a;
 void read_analog() {
     static uint8_t channel;
     const uint8_t channels[] = {_BV(MUX1) | _BV(MUX2),              // 5v through divider
                                 _BV(MUX0) | _BV(MUX1) | _BV(MUX2),  // ambient light sensor
                                 _BV(MUX1) | _BV(MUX2) | _BV(MUX3)}; // reference voltage
-    if(ADCSRA | _BV(ADSC))
+    if(ADCSRA & _BV(ADSC))
         return; // not ready yet
 
     adc_a += ADCW;
@@ -365,30 +374,36 @@ void read_analog() {
     ADMUX = _BV(REFS0) | channels[channel]; // select channel at 5 volts
     ADCSRA |= _BV(ADSC);
 
-    if(++adc_cycles < 32)
+    if(++adc_cycles < 64)
+        return;
+
+    if(!RB_EMPTY(serial_out)) // don't report volts if other data is being sent
         return;
 
     adc_cycles = 0;
-    uint16_t vcc = adc_avg[0] * 2;
     uint16_t ambient = adc_avg[1];
     uint16_t reference = adc_avg[2];
 
-    int ocr1a = backlight_value*10 - ambient;
+    int ocr1a = backlight_value*10 - ambient/100;
     if(ocr1a < 0)
         ocr1a = 0;
+    if(ocr1a > 1000)
+        ocr1a = 1000;
     if(backlight_polarity)
         ocr1a = 1000 - ocr1a;
     OCR1A = ocr1a;
 
     // calculate input voltage (should be near 3.3)
     // reference/16/1023*Vin = 1.1
-    // Vin = 1.1*1023*1000 / (reference/4*1000)
-    uint16_t vin = 4501200UL / reference; // in millivolts
+    // Vin = 1.1*1023*16*1000 / reference
+    uint16_t vin = 18004800UL / reference; // in millivolts
 
     // calculate input power voltage through input divider
     // Vcc = 2*power/4/1023*vin
-    vcc = ((uint32_t)vin*vcc)>>11;
-    uint8_t d[PACKET_LEN] = {((uint8_t*)&vcc)[0], ((uint8_t*)&vcc)[1], ((uint8_t*)&vin)[0], ((uint8_t*)&vin)[1]};
+    uint16_t vcc = adc_avg[0] * 2;
+//      uint16_t vcc = 6200 * 2;
+    vcc = ((uint32_t)vin*vcc)>>13;
+    uint8_t d[PACKET_LEN] = {vcc&0x7f, (vcc>>7)&0x7f, vin&0x7f, (vin>>7)&0x7f, 0};
     send(VOLTAGE, d);
 }
 
@@ -396,7 +411,7 @@ void loop() {
 //    TIMSK0 = 0;
     TIMSK1 = 0;
     TIMSK2 = 0;
-//    read_data();
+    read_data();
 
     if(buzzer_timeout) {
         if(buzzer_timeout < millis()) {
@@ -405,11 +420,11 @@ void loop() {
         }
     }
 
-    //  read_analog();
+    read_analog();
 
     // send code up message on timeout
     static uint32_t t=0;
-    uint32_t timeout[] = {0, 300, 400, 100};
+    uint32_t timeout[] = {0, 300, 350, 100};
     for(uint8_t source=1; source<4; source++) {
         uint32_t dt = t - codes[source].ltime;
         if(codes[source].lvalue && (dt > timeout[source] && dt < 10000)) {

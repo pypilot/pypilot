@@ -94,8 +94,9 @@ class menu(page):
             if self.selection == len(self.items):
                 self.selection = 0
         elif self.testkeydown(MENU):
-            return self.items[self.selection]
-
+            if self.selection >= 0 and self.selection < len(self.items):
+                return self.items[self.selection]
+            return
         # in case server changes the number of items
         if self.selection >= len(self.items):
             self.selection = len(self.items)-1
@@ -442,7 +443,7 @@ class flip(page):
 class display(menu):
     def __init__(self):
         super(display, self).__init__(_('display'),
-                                      [ConfigEdit(_('contrast'), '', 'contrast', 30, 90, 1),
+                                      [ConfigEdit(_('contrast'), '', 'contrast', 0, 120, 1),
                                        invert(_('invert')),
                                        ConfigEdit(_('backlight'), '', 'backlight', 0, 100, 1),
                                        flip(_('flip'))])                                   
@@ -489,8 +490,11 @@ class mainmenu(menu):
         values = self.lcd.get_values()
         if not values:
             if not self.loadtime:
-                self.loadtime = time.time()
-                self.lcd.client.list_values()
+                if self.lcd.client.connection:
+                    self.loadtime = time.time()
+                    self.lcd.client.list_values()
+                else:
+                    self.loadtime = 0
             else:
                 dt = time.time() - self.loadtime
                 self.lcd.surface.fill(black)

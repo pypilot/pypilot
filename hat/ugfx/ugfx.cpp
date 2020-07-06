@@ -548,7 +548,7 @@ screen::~screen()
 class spilcd
 {
 public:
-    spilcd(int _rst, int _dc)
+    spilcd(int _rst, int _dc, int baud)
         : rst(_rst), dc(_dc) {
     	setenv("WIRINGPI_CODES", "1", 1);
         if(wiringPiSetup () < 0) {
@@ -560,7 +560,7 @@ public:
         pinMode(dc, OUTPUT);
 
 	for(int port=0; port<2; port++)
-	    if((spifd = wiringPiSPISetup(port, 400000)) != -1)
+	    if((spifd = wiringPiSPISetup(port, baud)) != -1)
 		break;
 	  
 	if(spifd == -1) {
@@ -594,7 +594,7 @@ public:
 class spilcd
 {
 public:
-    spilcd(int _rst, int _dc)
+    spilcd(int _rst, int _dc, int baud)
         : rst(_rst), dc(_dc) {
     }
 
@@ -637,7 +637,7 @@ public:
 class PCD8544 : public spilcd
 {
 public:
-    PCD8544() : spilcd(RST, DC) {}
+    PCD8544() : spilcd(RST, DC, 5000000) {}
     virtual ~PCD8544() {} 
 
     void extended_command(uint8_t c) {
@@ -649,6 +649,7 @@ public:
     }
     
     void set_contrast(int contrast) {
+        contrast = 30 + contrast/2;  // use range 30-90 not 0-120
         contrast = contrast > 0x7f ? 0x7f : contrast;
         contrast = contrast < 0 ? 0 : contrast;
         extended_command(PCD8544_SETVOP | contrast);
@@ -711,24 +712,31 @@ const int  rsPIN  = 6;    // RS
 class JLX12864G : public spilcd
 {
 public:
-    JLX12864G() : spilcd(rstPIN, rsPIN) {}
+    JLX12864G() : spilcd(rstPIN, rsPIN, 1000000) {}
     virtual ~JLX12864G() {}
     void refresh(int contrast, surface *s) {
-//        command(0x25); // Coarse Contrast, setting range is from 20 to 27
-//      command(0x81); // Trim Contrast
-//        command(0x1f); // Trim Contrast value range can be set from 0 to 63
-
+        if(contrast < 0)
+            contrast = 0;
+        if(contrast > 120)
+            contrast = 120;
+        contrast = 30+contrast/4; // in range
         unsigned char cmd[] = {0xe2, // Soft Reset
-                            0x2c, // Boost 1
+                           0x2c, // Boost 1
                             0x2e, // Boost 2
                             0x2f, // Boost 3
-                            0xa2, // 1/9 bias ratio
-                            0xc0, // Line scan sequence : from top to bottom
+                               0xa2, // 1/9 bias ratio
+
+                               0x23, // Coarse Contrast, setting range is from 20 to 27
+                               0x81, // Trim Contrast
+                               (uint8_t)contrast, // Trim Contrast value range can be set from 0 to 63
+                               
+//                            0xc2, // Line scan sequence : from top to bottom
                             0xa0, // column scan order : from left to right
-                            0xa6, // not reverse
+                               0xa6, // not reverse
                             0xa4, // not all on
                             0x40, // start of first line
-                            0xaf}; // Open the display
+                            0xaf
+        }; // Open the display
 
         digitalWrite (dc, LOW) ;	// Off
         write(spifd, cmd, sizeof cmd);
@@ -742,7 +750,7 @@ public:
                 for(int bit = 0; bit<8; bit++) {
                     bits <<= 1;
 //                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+7-bit))
-                    if(*(uint8_t*)(s->p + (127-y)*s->line_length + (7-col)*8+bit))
+                    if(*(uint8_t*)(s->p + (127-y)*s->line_length + col*8+(7-bit)))
                         bits |= 1;
                 }
                 binary[index] = bits;
