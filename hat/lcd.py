@@ -276,7 +276,8 @@ class LCD():
             self.screen.contrast = int(self.config['contrast'])
 
         if 'backlight' in self.config and self.hat:
-            self.hat.arduino.set_backlight(int(self.config['backlight']), self.backlight_polarity)
+            backlight = int(self.config['backlight'])
+            self.hat.arduino.set_backlight(backlight, self.backlight_polarity)
         else:
             self.screen.hue = int(float(self.config['backlight'])*255/100)
         self.screen.refresh()
@@ -306,7 +307,7 @@ class LCD():
             frameperiod = self.page.frameperiod
         t = gettime()
         dt = t - self.lastframetime
-        
+
         if dt > frameperiod:
             ta = time.time()
             self.display()
@@ -330,9 +331,6 @@ class LCD():
                     
         t3 = gettime()
         #print('lcd times', t1-t0, t2-t1, t3-t2)
-        dt = t3-t0
-        period = .1
-        time.sleep(max(period - dt, .01))
 
 def main():
     lcd = LCD(False)

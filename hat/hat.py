@@ -34,7 +34,9 @@ class ActionKeypad(Action):
         self.index = index
 
     def trigger(self, count):
+        print("trigger",count, time.monotonic())
         self.lcd.keypad[self.index].update(count, count)
+        self.lcd.lastframetime = 0 # trigger immediate refresh
         
 class ActionPypilot(Action):
     def  __init__(self, hat, name, pypilot_name, pypilot_value):
@@ -109,7 +111,8 @@ class Process():
                 self.process = False
             sys.stdout.flush()
             if signal_number:
-                exit(0)
+                #exit(0)
+                pass
 
         for s in range(3, 16):
             if s != 9 and s != 13:
@@ -230,13 +233,13 @@ class Hat(object):
             f.close()
         except Exception as e:
             print('failed to load', configfile, ':', e)
-            hatconfig = {"lcd":{"driver":"nokia5110",
+            hatconfig = {"lcd":{"driver":"jlx12864",
                                 "port":"/dev/spidev0.0"},
                          "lirc":"gpio4"}
-            if False:
+            if True:
                 hatconfig["arduino"] = {"device":"/dev/spidev0.1",
                                         "resetpin":16,
-                                        "hardware":0.21},
+                                        "hardware":0.21}
             print('assuming original 26 pin tinypilot')
         self.config['hat'] = hatconfig
 
@@ -327,20 +330,20 @@ class Hat(object):
         self.web.send({'action': 'none'})
                 
     def poll(self):
-        t0 = time.monotonic()
         if self.client.connection:
             self.web.set_status('connected')
         else:
             self.web.set_status('disconnected')
             
+        t0 = time.monotonic()
         msgs = self.client.receive()
+        t1 = time.monotonic()
         for name, value in msgs.items():
             self.last_msg[name] = value
-        t1 = time.monotonic()
 
         for i in [self.lcd, self.web]:
             i.poll()
-
+        t2 = time.monotonic()
         for i in [self.gpio, self.arduino, self.lirc]:
             try:
                 if not i:
@@ -350,14 +353,13 @@ class Hat(object):
                     self.apply_code(*event)
             except Exception as e:
                 print('WARNING, failed to poll!!', e)
-
+        t3 = time.monotonic()
         for key, t in self.keytimes.items():
             dt = time.monotonic() - t
-            if dt > .5:
+            if dt > .6:
                 print('keyup event lost, releasing key from timeout', key, dt)
                 self.apply_code(key, 0)
-
-        time.sleep(.01)
+                break
 
         # receive heading once per second if autopilot is not enabled
         self.client.watch('ap.heading', False if self.last_msg['ap.enabled'] else 1)
@@ -368,6 +370,11 @@ class Hat(object):
                 if self.client:
                     self.client.set('servo.command', 0) # stop
                 self.servo_timeout = 0
+        t4 = time.monotonic()
+        dt = t3-t0
+        period = max(.04 - dt, .01)
+        time.sleep(period)
+        #print('times', t1-t0, t2-t1, t3-t2, t4-t3, period, dt)
 
 def main():
     hat = Hat()
