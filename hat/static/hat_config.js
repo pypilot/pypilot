@@ -52,6 +52,14 @@ $(document).ready(function() {
         });
     }
 
+    $('#clear').click(function(event) {
+        socket.emit('keys', 'clear');
+    });
+
+    $('#default').click(function(event) {
+        socket.emit('keys', 'default');
+    });
+
     function nmea_config(event) {
         socket.emit('baud', {'in': $('#nmea_in').value(), 'out': $('#nmea_out').value, 'baud': $('#nmea_baud')})
     }

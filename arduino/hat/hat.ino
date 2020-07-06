@@ -82,19 +82,20 @@ uint8_t serial_baud_ee EEMEM = 0;
 
 #define RB_EMPTY(NAME) (rb_##NAME##_head == rb_##NAME##_tail)
 
-RB_CREATE(serial_out, 248)
-RB_CREATE(serial_in, 248)
-RB_CREATE(data_in, 64)
+RB_CREATE(serial_out, 224)
+RB_CREATE(serial_in, 224)
+RB_CREATE(data_in, 128)
 
 ISR(USART_RX_vect)
 {
+    sei(); // needed because spi runs faster
     RB_PUT(serial_out, UDR0);
 }
 
 ISR(USART_UDRE_vect)
 {
-//    UCSR0B &= ~_BV(UDRIE0);
-//    sei();
+    UCSR0B &= ~_BV(UDRIE0);
+    sei();
     if(!RB_EMPTY(serial_in)) {
         RB_GET(serial_in, UDR0);
         UCSR0B |= _BV(UDRIE0);
@@ -291,12 +292,17 @@ void send(uint8_t id, uint8_t d[PACKET_LEN])
     cli();
     RB_PUT(serial_out, id);
     sei();
+    uint8_t parity = 0;
     for(int i = 0; i < PACKET_LEN; i++) {
         uint8_t v = d[i] | 0x80;
+        parity ^= d[i];
         cli();
         RB_PUT(serial_out, v);
         sei();
     }
+    cli();
+    RB_PUT(serial_out, parity | 0x80);
+    sei();
 }
 
 void send_code(uint8_t source, uint32_t value)
@@ -318,14 +324,14 @@ void send_code(uint8_t source, uint32_t value)
         // send code up for last key if key changed
         if(codes[source].lvalue) {
             uint8_t *plvalue = (uint8_t*)&codes[source].lvalue;
-            uint8_t d[PACKET_LEN] = {plvalue[0], plvalue[1], plvalue[2], plvalue[3], 0};
+            uint8_t d[PACKET_LEN] = {plvalue[0], plvalue[1], plvalue[2], plvalue[3], 0, 0};
             send(source, d);
         }
         codes[source].repeat_count = 1;
     }
 
     if(cvalue) {
-        uint8_t d[PACKET_LEN] = {pvalue[0], pvalue[1], pvalue[2], pvalue[3], codes[source].repeat_count};
+        uint8_t d[PACKET_LEN] = {pvalue[0], pvalue[1], pvalue[2], pvalue[3], codes[source].repeat_count, 0};
         send(source, d);
         codes[source].lvalue = cvalue;
 
@@ -390,7 +396,7 @@ void loop() {
 //    TIMSK0 = 0;
     TIMSK1 = 0;
     TIMSK2 = 0;
-    read_data();
+//    read_data();
 
     if(buzzer_timeout) {
         if(buzzer_timeout < millis()) {
@@ -399,20 +405,21 @@ void loop() {
         }
     }
 
-    read_analog();
+    //  read_analog();
 
     // send code up message on timeout
-    uint32_t t = millis();
-    uint32_t timeout[] = {0, 200, 250, 100};
+    static uint32_t t=0;
+    uint32_t timeout[] = {0, 300, 400, 100};
     for(uint8_t source=1; source<4; source++) {
         uint32_t dt = t - codes[source].ltime;
-        if(codes[source].lvalue && (dt > timeout[source])) {
+        if(codes[source].lvalue && (dt > timeout[source] && dt < 10000)) {
             send_code(source, 0);
             codes[source].repeat_count = 0;
             codes[source].lvalue = 0;
             digitalWrite(LED_PIN, LOW);
         }
     }
+    t = millis();
     // read from IR??
     if (ir.getResults()) {
         myDecoder.decode();

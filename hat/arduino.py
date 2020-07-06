@@ -160,6 +160,7 @@ class arduino(object):
             if self.nmea_socket:
                 try:
                     b = self.nmea_socket.recv(40)
+                    b = b''
                     self.socketdata += b
                     self.serial_in_count += len(b)
                     if len(self.socketdata) > 160:
@@ -194,24 +195,34 @@ class arduino(object):
             o = self.xfer(i)
             if not i and not o:
                 break
-            
+
             if o > 127:
-                self.packetin_data.append(o&0x7f)
+                o&=0x7f
+                self.packetin_data.append(o)
             elif o:
                 serial_data.append(o)
 
-                
         # now read packet data
-        while len(self.packetin_data) >= PACKET_LEN+2:
+        while len(self.packetin_data) >= PACKET_LEN+3:
             if self.packetin_data[0] != ord('$'):
-                print('out of packet sunc!!!', self.packetin_data[0])
                 self.packetin_data = self.packetin_data[1:]
                 continue
 
             cmd = self.packetin_data[1]
             d = self.packetin_data[2:PACKET_LEN+2]
+            parity = self.packetin_data[PACKET_LEN+2];
+            p = 0
+            for x in d:
+                p ^= x
 
-            self.packetin_data = self.packetin_data[2+PACKET_LEN:]
+            # spi interrupt collides with pin change interrupt, so sometimes
+            # bytes are lost when rf is receiving causing parity failure
+            # drop invalid packets
+            if p != parity:
+                self.packetin_data = self.packetin_data[1:]
+                continue
+
+            self.packetin_data = self.packetin_data[3+PACKET_LEN:]
 
             key = '%02X%02X%02X%02X' % (d[0], d[1], d[2], d[3])
             count = d[4]
@@ -226,7 +237,7 @@ class arduino(object):
             elif cmd == GP:
                 key = 'gpio_ext' + key
             else:
-                print('unknown message', cmd, data)
+                print('unknown message', cmd, d)
                 continue
 
             events.append((key, count))
@@ -326,21 +337,26 @@ def arduino_process(pipe, config):
             else:
                 print('unhandled command', cmd)
         t1 = time.monotonic()
-        dt = .01 - (t1-t0)
+        # max period to handle 38400 with 192 byte buffers is (192*10) / 38400 = 0.05
+        # for now use 0.025, eventually dynamic depending on baud?
+        dt = .025 - (t1-t0)
         if dt > 0:
             time.sleep(dt)      
     
 def main():
     print('initializing arduino')
     config = {'host':'localhost','hat':{'arduino':{'device':'/dev/spidev0.1',
-                         'resetpin':'gpio16'}}}
+                                                   'resetpin':'gpio16'}}}
     a = arduino(config)
 
+    dt = 0
+    lt = 0
     while True:
         t0 = time.monotonic()
         events = a.poll()
         if events:
-            print(events)
+            print(events, dt, t0-lt)
+            lt = t0
         baud_rate = a.get_baud_rate()
         if baud_rate:
             print('baud rate', baud_rate)

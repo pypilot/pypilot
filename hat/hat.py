@@ -144,15 +144,18 @@ class Web(Process):
         self.send({'status': value})
 
     def create(self):
-        def process(pipe, actions):
+        def process(pipe, action_keys):
             while True:
                 try:
                     import web
-                    web.web_process(pipe, actions)
+                    web.web_process(pipe, action_keys)
                 except Exception as e:
                     print('failed to run process:', e)
                 time.sleep(5)
-        super(Web, self).create(process, self.hat.actions)
+        action_keys = {}
+        for action in self.hat.actions:
+            action_keys[action.name] = action.keys
+        super(Web, self).create(process, action_keys)
         self.send({'status': self.status})
         
     def poll(self):
@@ -229,10 +232,11 @@ class Hat(object):
             print('failed to load', configfile, ':', e)
             hatconfig = {"lcd":{"driver":"nokia5110",
                                 "port":"/dev/spidev0.0"},
-                         "arduino":{"device":"/dev/spidev0.1",
-                                    "resetpin":16,
-                                    "hardware":0.21},
                          "lirc":"gpio4"}
+            if False:
+                hatconfig["arduino"] = {"device":"/dev/spidev0.1",
+                                        "resetpin":16,
+                                        "hardware":0.21},
             print('assuming original 26 pin tinypilot')
         self.config['hat'] = hatconfig
 
@@ -255,7 +259,12 @@ class Hat(object):
         self.lcd = lcd.LCD(self)
         self.gpio = gpio.gpio()
         self.arduino = Arduino(self)
-        self.lirc = lircd.lirc()
+
+        # use raspberry pi lirc if there is no arduino
+        if not 'arduino' in hatconfig and 'lirc' in hatconfig:
+            self.lirc = lircd.lirc()
+        else:
+            self.lirc = False
         self.keytimes = {}
         
         # keypad for lcd interface
@@ -294,7 +303,6 @@ class Hat(object):
                 actions[action.name] = action.keys
 
         self.config['actions'] = actions
-                                
         try:
             file = open(self.configfilename, 'w')
             file.write(json.dumps(self.config) + '\n')
@@ -335,11 +343,13 @@ class Hat(object):
 
         for i in [self.gpio, self.arduino, self.lirc]:
             try:
+                if not i:
+                    continue
                 events = i.poll()
                 for event in events:
                     self.apply_code(*event)
             except Exception as e:
-                print('WARNING, failed to poll!!')
+                print('WARNING, failed to poll!!', e)
 
         for key, t in self.keytimes.items():
             dt = time.monotonic() - t

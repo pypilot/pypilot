@@ -634,7 +634,8 @@ class control(controlbase):
                 next_mode = self.modes_list[0]
                 if next_mode != self.last_val('ap.mode') and have_mode[next_mode]():
                     self.set('ap.mode', next_mode)
-                    return
+                    break
+            return
 
         if self.testkeydown(TACK):
             # in wind mode just tack
