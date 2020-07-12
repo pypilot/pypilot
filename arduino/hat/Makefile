@@ -22,8 +22,6 @@ LDFLAGS = -Os -Wl,--gc-sections -lm
 
 ARDUINO_SRCS = \
 $(ARDUINO_PATH)/libraries/Wire/Wire.cpp \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/avr-libc/realloc.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/avr-libc/malloc.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_digital.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_analog.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_shift.c \
@@ -41,15 +39,9 @@ $(ARDUINO_PATH)/libraries/Wire/utility/twi.c \
 IRLib2_SRCS = \
 IRLib2/IRLibRecvPCI/IRLibRecvPCI.cpp \
 IRLib2/IRLib2/IRLibRecvBase.cpp \
-IRLib2/IRLib2/IRLibRecvLoop.cpp \
 IRLib2/IRLib2/IRLibDecodeBase.cpp \
-IRLib2/IRLibFreq/IRLibFreq.cpp \
-IRLib2/IRLibProtocols/IRLibSendBase.cpp \
-IRLib2/IRLibProtocols/IRLibSAMD21.cpp \
-IRLib2/IRLibProtocols/IRLibSAMD51.cpp \
-IRLib2/IRLibProtocols/IRLibProtocols.cpp \
 IRLib2/IRLibProtocols/IRLibHardware.cpp \
-IRLib2/IRLibRecv/IRLibRecv.cpp
+
 
 
 
@@ -104,6 +96,9 @@ setfuses:
 serial:
 	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5 38400
 	cat $(DEVICE)
+
+clean:
+	rm -rf obj objs
 
 %.o : %.cpp
 	mkdir -p obj/$(@:.o=)
