@@ -74,6 +74,14 @@ upload: $(SKETCHNAME).cpp.hex
 	#	./jump_bootloader
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:w:$(SKETCHNAME).cpp.hex -b $(BAUDRATE)
 
+readfuse:
+	stty -F /dev/ttyUSB0 -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 0 time 0
+	stty -F /dev/ttyUSB0 crtscts
+	$(AVRDUDE) -c avrisp -b19200 -P /dev/ttyUSB0 -u -p m328p -U efuse:r:-:h
+	$(AVRDUDE) -c avrisp -b19200 -P /dev/ttyUSB0 -u -p m328p -U lfuse:r:-:h
+	$(AVRDUDE) -c avrisp -b19200 -P /dev/ttyUSB0 -u -p m328p -U hfuse:r:-:h
+	$(AVRDUDE) -c avrisp -b19200 -P /dev/ttyUSB0 -u -p m328p -U lock:r:-:h
+
 bootloader:
 	stty -F /dev/ttyUSB0 -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 0 time 0
 	stty -F /dev/ttyUSB0 crtscts
