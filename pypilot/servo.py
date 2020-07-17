@@ -722,7 +722,7 @@ def main():
     from sensors import Sensors
     sensors = Sensors(server)
     servo = Servo(server, sensors)
-    servo.max_current.set(20)
+
 
     period = 1/20.0
     start = lastt = time.time()
