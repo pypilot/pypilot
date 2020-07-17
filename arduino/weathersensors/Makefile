@@ -92,4 +92,4 @@ obj/PCD8544.o : PCD8544.cpp charset.h
 
 
 charset.h: make_charset.py font.ttf
-	python make_charset.py > charset.h
+	python3 make_charset.py > charset.h
