@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include "ugfx.h"
 
-#define INTERNAL_FONTS
+//#define INTERNAL_FONTS
 
 #ifdef INTERNAL_FONTS
 //#define ICACHE_RODATA_ATTR  __attribute__((section(".drom.text")))
@@ -167,13 +167,12 @@ surface::surface(const char* filename, int tbypp)
         int sz = width * height;
         unsigned int i=0;
         while(i<sz) {
+            uint8_t run, value;
+#ifdef INTERNAL_FONTS
             if(cp >= c->len-1) {
                 fprintf(stderr, "end of data\n");
                 break;
             }
-
-            uint8_t run, value;
-#ifdef INTERNAL_FONTS
             run = c->data[cp++];
             value = c->data[cp++];
 #else
