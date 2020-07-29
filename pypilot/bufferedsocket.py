@@ -41,9 +41,9 @@ try:
         return self.b.recv()
         
     def readline(self):
-      return self.b.line()
+        return self.b.line()
 
-    def send(self, data, udp=False):
+    def write(self, data, udp=False):
         if udp and self.udp_port:
           self.udp_out_buffer += data
           if len(self.udp_out_buffer) > 400:
@@ -82,8 +82,8 @@ try:
             count = self.socket.send(self.out_buffer.encode())
             t1 = time.monotonic()
 
-            if t1-t0 > .1:
-                print('socket send took too long!?!?', self.address, t1-t0)
+            if t1-t0 > .02:
+                print('socket send took too long!?!?', self.address, t1-t0, len(self.out_buffer))
             if count < 0:
                 print('socket send error', self.address, count)
                 self.socket.close()
@@ -93,7 +93,7 @@ try:
             self.socket.close()
   
 except Exception as e:
-  print('falling back to python nonblocking socket', e)
+  print('falling back to python nonblocking socket, will consume more cpu', e)
   class LineBufferedNonBlockingSocket(object):
     def __init__(self, connection):
         connection.setblocking(0)

@@ -33,8 +33,9 @@ class Value(object):
     def set(self, value):
         self.value = value
         if self.watch:
-            if self.watch.period == 0 and False:   # disable immediate
+            if self.watch.period == 0: # and False:   # disable immediate
                 self.client.send(self.name+'='+self.get_msg()+'\n')
+
             elif self.pwatch:
                 t0 = time.monotonic()
                 if t0 >= self.watch.time:

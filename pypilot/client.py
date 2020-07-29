@@ -109,6 +109,10 @@ class pypilotClient(object):
         self.received = []
         self.last_values_list = False
 
+        if False:
+            self.server = host
+            host='127.0.0.1'
+
         if host and type(host) != type(''):
             # host is the server object
             self.server = host
@@ -200,7 +204,7 @@ class pypilotClient(object):
             
         # inform server of any watches we have changed
         if self.wwatches:
-            self.connection.send('watch=' + pyjson.dumps(self.wwatches) + '\n')
+            self.connection.write('watch=' + pyjson.dumps(self.wwatches) + '\n')
             #print('watch', watches, self.wwatches, self.watches)
             self.wwatches = {}
 
@@ -309,7 +313,7 @@ class pypilotClient(object):
 
     def send(self, msg):
         if self.connection:
-            self.connection.send(msg)
+            self.connection.write(msg)
     
     def set(self, name, value):
         # quote strings
