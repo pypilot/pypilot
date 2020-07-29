@@ -89,7 +89,6 @@ class LCD():
         self.use_glut = False
         self.surface = None
 
-
         if driver == 'none':
             page = None
         elif driver == 'tft' or (driver == 'default' and use_tft):

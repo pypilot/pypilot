@@ -210,6 +210,7 @@ class Nmea(object):
 
         self.sensors = sensors
         self.nmea_bridge = nmeaBridge(self.client.server)
+        self.process = self.nmea_bridge.process
         self.pipe = self.nmea_bridge.pipe_out
         self.sockets = False
 
@@ -520,16 +521,11 @@ class nmeaBridge(object):
             self.client_socket = False
 
     def nmea_process(self):
-        self.process = True
         self.setup()
         while True:
             t0 = time.monotonic()
             timeout = 100 if self.sockets else 10000
-            self.process_poll(timeout)
-
-    def poll(self):
-        if not self.process:
-            self.process_poll(0)
+            self.poll(timeout)
 
     def setup(self):
         self.sockets = []
@@ -575,7 +571,7 @@ class nmeaBridge(object):
             for sock in self.sockets:
                 sock.send(msg + '\r\n')
 
-    def process_poll(self, timeout=0):
+    def poll(self, timeout=0):
         t0 = time.monotonic()
         events = self.poller.poll(timeout)
         t1 = time.monotonic()

@@ -86,58 +86,24 @@ class ActionTack(ActionPypilot):
 
 class Process():
     def __init__(self, hat):
-        self.process = False
         self.hat = hat
+        self.create()            
     
     def send(self, value):
         if self.process:
             self.pipe.send(value)
 
     def create(self, process, arg):
-        def cleanup(signal_number, frame=None):
-            print('cleanup process', signal_number)
-            if signal_number == signal.SIGCHLD:
-                pid = os.waitpid(-1, 0)
-                if not self.process or pid[0] != self.process.pid:
-                    print('process', self.process, pid, self.process.pid)
-                    # flask makes process at startup that dies
-                    return
-            if self.process:
-                try:
-                    os.kill(self.process.pid, signal.SIGTERM) # get backtrace
-                except Exception as e:
-                    if e.args[0] != 3: # no such process, already died
-                        raise e                        
-                self.process = False
-            sys.stdout.flush()
-            if signal_number:
-                #exit(0)
-                pass
-
-        for s in range(3, 16):
-            if s != 9 and s != 13:
-                signal.signal(s, cleanup)
-        signal.signal(signal.SIGCHLD, cleanup)
-
         import multiprocessing
         from pypilot.nonblockingpipe import NonBlockingPipe
         self.pipe, pipe = NonBlockingPipe(str(self), True)
         self.process = multiprocessing.Process(target=process, args=(pipe, arg), daemon=True)
         self.process.start()
-
-    def poll_ready(self):
-        if not self.process:
-            self.create()            
-
-        if not self.process.is_alive():
-            self.process = False
-            return False
-        return True
             
 class Web(Process):
     def __init__(self, hat):
-        super(Web, self).__init__(hat)
         self.status = 'Not Connected'
+        super(Web, self).__init__(hat)
 
     def set_status(self, value):
         if self.status == value:
@@ -148,13 +114,13 @@ class Web(Process):
 
     def create(self):
         def process(pipe, action_keys):
-            while True:
-                try:
-                    import web
-                    web.web_process(pipe, action_keys)
-                except Exception as e:
-                    print('failed to run process:', e)
-                time.sleep(5)
+            print('web process on ', os.getpid())
+            try:
+                import web
+                web.web_process(pipe, action_keys)
+            except Exception as e:
+                print('failed to run process:', e)
+
         action_keys = {}
         for action in self.hat.actions:
             action_keys[action.name] = action.keys
@@ -162,9 +128,6 @@ class Web(Process):
         self.send({'status': self.status})
         
     def poll(self):
-        if not self.poll_ready():
-            return
-        
         msg = self.pipe.recv()
         if msg:
             for name in msg:
@@ -179,9 +142,8 @@ class Web(Process):
 
 class Arduino(Process):
     def __init__(self, hat):
-        self.process = False
+        super(Arduino, self).__init__(hat)
         self.status = 'Not Connected'
-        self.hat = hat
 
     def set_baud(self, baud):
         self.send(('baud', baud))
@@ -195,14 +157,13 @@ class Arduino(Process):
     def create(self):
         def process(pipe, config):
             import arduino
+            print('arduino process on ', os.getpid())
             while True:
                 arduino.arduino_process(pipe, config)
                 time.sleep(5)
         super(Arduino, self).create(process, self.hat.config)
 
     def poll(self):
-        if not self.poll_ready():
-            return
         msgs = []
         while True:
             msg = self.pipe.recv()
@@ -231,12 +192,13 @@ class Hat(object):
             f = open(configfile)
             hatconfig = json.loads(f.read())
             f.close()
+            print('loaded device tree hat config')
         except Exception as e:
             print('failed to load', configfile, ':', e)
             hatconfig = {"lcd":{"driver":"jlx12864",
                                 "port":"/dev/spidev0.0"},
                          "lirc":"gpio4"}
-            if True:
+            if False: # for test
                 hatconfig["arduino"] = {"device":"/dev/spidev0.1",
                                         "resetpin":16,
                                         "hardware":0.21}
@@ -258,7 +220,6 @@ class Hat(object):
         self.watchlist = ['ap.enabled', 'ap.heading_command']
         for name in self.watchlist:
             self.client.watch(name)
-        
         self.lcd = lcd.LCD(self)
         self.gpio = gpio.gpio()
         self.arduino = Arduino(self)
@@ -298,6 +259,41 @@ class Hat(object):
                 action.keys = self.config['actions'][action.name]
 
         self.web = Web(self)
+
+        def cleanup(signal_number, frame=None):
+            print('got signal', signal_number, 'cleaning up', os.getpid())
+            childpids = []
+            processes = [self.arduino, self.web]
+            for process in processes:
+                if process.process:
+                    childpids.append(process.process.pid)
+            if signal_number == signal.SIGCHLD:
+                pid = os.waitpid(-1, 0)
+                if not pid[0] in childpids:
+                    print('flask ret', pid, childpids)
+                    # flask makes process at startup that dies
+                    return
+                print('child process', pid, childpids)
+            while childpids:
+                pid = childpids.pop()
+                #print('kill!', pid, childpids, os.getpid())
+                try:
+                    os.kill(pid, signal.SIGTERM) # get backtrace
+                except ProcessLookupError:
+                    pass # ok, process is already terminated
+                sys.stdout.flush()
+            for process in processes:
+                process.process = False
+            if signal_number != 'atexit':
+                raise KeyboardInterrupt # to get backtrace on all processes
+            sys.stdout.flush()
+
+        for s in range(1, 16):
+            if s != 9 and s != 13:
+                signal.signal(s, cleanup)
+        signal.signal(signal.SIGCHLD, cleanup)
+        import atexit
+        atexit.register(lambda : cleanup('atexit'))
 
     def write_config(self):
         actions = {}
@@ -372,7 +368,7 @@ class Hat(object):
                 self.servo_timeout = 0
         t4 = time.monotonic()
         dt = t3-t0
-        period = max(.04 - dt, .01)
+        period = max(.2 - dt, .01)
         time.sleep(period)
         #print('times', t1-t0, t2-t1, t3-t2, t4-t3, period, dt)
 

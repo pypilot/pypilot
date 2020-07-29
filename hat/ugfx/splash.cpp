@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
     static_cast<spiscreen*>(framebuffer)->contrast = 60;
     framebuffer->refresh();
 
-#if 1 // for testing
+#if 0 // for testing
     while(1) {
         usleep(100000);
 /*        framebuffer->fill(0);

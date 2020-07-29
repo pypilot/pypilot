@@ -24,7 +24,10 @@ tinypilot = 1 if tinypilot else 0
 
 
 # for tinypilot provide wifi config
-if tinypilot:
+def wifi(app):
+    if not tinypilot:
+        return
+    
     @app.route('/wifi', methods=['GET', 'POST'])
     def wifi():
         networking = '/home/tc/.pypilot/networking.txt'

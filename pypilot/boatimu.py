@@ -38,6 +38,7 @@ class IMU(object):
             self.process = multiprocessing.Process(target=self.process, args=(pipe,), daemon=True)
             self.process.start()
             return
+        self.process = False
         self.setup()
           
     def setup(self):
@@ -186,7 +187,7 @@ class FrequencyValue(SensorValue):
 
     def strobe(self):
         self.loopc += 1
-        if self.loopc == 10:
+        if self.loopc == 4: # update timing from 5 cycles
             t1 = time.monotonic()
             self.set(self.loopc/(t1-self.t0))
             self.t0 = t1
@@ -327,7 +328,7 @@ class BoatIMU(object):
 
         self.imu = IMU(client.server)
 
-        self.last_imuread = time.monotonic()
+        self.last_imuread = time.monotonic() + 4 # ignore failed readings at startup
 
     def __del__(self):
         #print('terminate imu process')

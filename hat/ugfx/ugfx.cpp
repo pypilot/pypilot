@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include "ugfx.h"
 
-#define INTERNAL_FONTS
+//#define INTERNAL_FONTS
 
 #ifdef INTERNAL_FONTS
 //#define ICACHE_RODATA_ATTR  __attribute__((section(".drom.text")))
@@ -84,7 +84,7 @@ surface::surface(int w, int h, int internal_bypp, const char *data32)
     } else if(bypp == 4)
         memcpy(p, data32, 4*width*height);
     else
-        ;//        fprintf(stderr, "bypp incompatible with input data\n");
+        fprintf(stderr, "bypp incompatible with input data\n");
 }
 
 uint32_t cksum(const char *gray_data, int size)
@@ -167,13 +167,12 @@ surface::surface(const char* filename, int tbypp)
         int sz = width * height;
         unsigned int i=0;
         while(i<sz) {
+            uint8_t run, value;
+#ifdef INTERNAL_FONTS
             if(cp >= c->len-1) {
                 fprintf(stderr, "end of data\n");
                 break;
             }
-
-            uint8_t run, value;
-#ifdef INTERNAL_FONTS
             run = c->data[cp++];
             value = c->data[cp++];
 #else
@@ -218,7 +217,7 @@ surface::surface(const char* filename, int tbypp)
     return;
 
 fail:
-//    fprintf(stderr, "failed ot open %s\n", filename);
+    fprintf(stderr, "failed ot open %s\n", filename);
 #ifndef INTERNAL_FONTS
     fclose(f);
 #endif
@@ -234,7 +233,7 @@ void surface::store_grey(const char *filename)
 {
     FILE *f = fopen(filename, "w");
     if(!f) {
-        //        fprintf(stderr, "failed to open for writing %s\n", filename);
+        fprintf(stderr, "failed to open for writing %s\n", filename);
         return;
     }
 
@@ -248,7 +247,7 @@ void surface::store_grey(const char *filename)
         else if(bypp == 4)
             grey_data[i] = p[4*i];
         else
-            ;//            fprintf(stderr, "bypp incompatible storing %s\n", filename);
+            fprintf(stderr, "bypp incompatible storing %s\n", filename);
 
     uint16_t width16 = width, height16 = height, bypp16 = bypp, colors16 = 1; // grey
     fwrite(&width16, 2, 1, f);
@@ -339,7 +338,7 @@ void surface::magnify(surface *src, int factor)
 
     if(width < src->width*factor ||
        height < src->height*factor) {
-        //        printf("magnify surface not large enough\n");
+        printf("magnify surface not large enough\n");
         return;
     }
 
@@ -364,7 +363,7 @@ void surface::magnify(surface *src, int factor)
     } else if(bypp == 4) {
         MAG(4);
     } else
-        ;//        fprintf(stderr, "bypp incompatible with magnify\n");
+        fprintf(stderr, "bypp incompatible with magnify\n");
 }
 
 void surface::putpixel(int x, int y, uint32_t c)
@@ -378,7 +377,7 @@ void surface::putpixel(int x, int y, uint32_t c)
     case 2: *(uint16_t*)(p + dl) = color16(c); break;
     case 4: *(uint32_t*)(p + dl) = c;          break;
     default:
-        ;//        fprintf(stderr, "bypp incompatible with putpixel\n");
+        fprintf(stderr, "bypp incompatible with putpixel\n");
     }
 }
 
@@ -425,7 +424,7 @@ void surface::hline(int x1, int x2, int y, uint32_t c)
             *(uint32_t*)(p + y*line_length + x*bypp) = c;
         break;
     default:
-        ;//        fprintf(stderr, "bypp incompatible with hline\n");
+        fprintf(stderr, "bypp incompatible with hline\n");
     }
 }
 
@@ -449,7 +448,7 @@ void surface::vline(int x, int y1, int y2, uint32_t c)
             *(uint32_t*)(p + y*line_length + x*bypp) = c;
         break;
     default:
-        ;//        fprintf(stderr, "bypp incompatible with vline\n");
+        fprintf(stderr, "bypp incompatible with vline\n");
     }
 }
 
@@ -480,7 +479,7 @@ void surface::box(int x1, int y1, int x2, int y2, uint32_t c)
                 *(uint32_t*)(p + y*line_length + x*bypp) = c;
         break;
     default:
-        ;//        fprintf(stderr, "bypp incompatible with box\n");
+        fprintf(stderr, "bypp incompatible with box\n");
     }
 }
 
@@ -547,7 +546,7 @@ void surface::binary_write_sw(int sclk, int mosi)
 #else
 void surface::binary_write_sw(int sclk, int mosi)
 {
-//    fprintf(stderr, "no wiring pi\n");
+    fprintf(stderr, "no wiring pi, no binary write\n");
 }
 #endif
 
@@ -560,7 +559,7 @@ int surface::getpixel(int x, int y)
     else if(bypp == 4)
         return *(uint32_t*)(p + y*line_length + x*bypp);
 
-//    fprintf(stderr, "bypp incompatible with getpixel\n");
+    fprintf(stderr, "bypp incompatible with getpixel\n");
     exit(1);
 }
 
@@ -574,24 +573,24 @@ screen::screen(const char *device)
     // Open the file for reading and writing
     fbfd = open(device, O_RDWR);
     if (fbfd == -1) {
-//        perror("Error: cannot open framebuffer device");
+        perror("Error: cannot open framebuffer device");
         exit(1);
     }
-//    printf("The framebuffer device was opened successfully.\n");
+    printf("The framebuffer device was opened successfully.\n");
 
     // Get fixed screen information
     if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo) == -1) {
-//        perror("Error reading fixed information");
+        perror("Error reading fixed information");
         exit(2);
     }
 
     // Get variable screen information
     if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo) == -1) {
-//        perror("Error reading variable information");
+        perror("Error reading variable information");
         exit(3);
     }
 
-//    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
+    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
 
     // Figure out the size of the screen in bytes
     screensize = vinfo.yres * finfo.line_length;
@@ -599,10 +598,10 @@ screen::screen(const char *device)
     // Map the device to memory
     fbp = (char*)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
     if (fbp == (void*)-1) {
-//        perror("Error: failed to map framebuffer device to memory");
+        perror("Error: failed to map framebuffer device to memory");
         exit(4);
     }
-//    printf("The framebuffer device was mapped to memory successfully.\n");
+    printf("The framebuffer device was mapped to memory successfully.\n");
 
     p = fbp;
     width = vinfo.xres;
@@ -631,7 +630,7 @@ public:
         : rst(_rst), dc(_dc) {
     	setenv("WIRINGPI_CODES", "1", 1);
         if(wiringPiSetup () < 0) {
-//            printf("wiringPiSetup Failed (no permissions?)\n");
+            printf("wiringPiSetup Failed (no permissions?) aborting\n");
             exit(1);
         }
 
@@ -889,7 +888,7 @@ spiscreen::spiscreen(int driver)
     case 1: disp = new JLX12864G(); break;
 #endif
     default:
-        //  fprintf(stderr, "invalid driver: %d", driver);
+        fprintf(stderr, "invalid driver: %d", driver);
         exit(1);
     }
     contrast = 60;

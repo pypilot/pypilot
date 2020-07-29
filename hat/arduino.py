@@ -299,10 +299,14 @@ class arduino(object):
             print('connect nmea', self.config['host'])
             self.nmea_socket.connect((self.config['host'], 20220))
         except OSError as e:
+            print('os error', e)
             if e.args[0] is errno.EINPROGRESS:
                 return True
         except Exception as e:
             print('exception', e)
+            self.nmea_socket = False
+        except:
+            print('MOOOOOOOOOOOOOOORE')
             self.nmea_socket = False
 
     def flash(self, filename, c):
