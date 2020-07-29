@@ -39,7 +39,7 @@ class Key():
                 self.count = count
             else:
                 self.count += 1
-        else:
+        elif self.count:
             self.up = True
             self.count = 0
 

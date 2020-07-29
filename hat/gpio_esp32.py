@@ -8,8 +8,8 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from machine import Pin
-#22, 17, 2, 33, 
-keypad_pin_numbers = [21, 0, 35, 12, 13, 32, 2, 33, 17, 22]
+
+keypad_pin_numbers = [33, 25, 12, 13, 26, 15, 2, 27, 0, 35]
 
 noisr = False
 def make_pin(pin, i, lcd):
