@@ -1,15 +1,15 @@
 #!/bin/bash
 
 function translate() {
-    cp pypilot_lcdclient.pot $language/LC_MESSAGES/pypilot_lcdclient.po
-    python apertium-po.py $language/LC_MESSAGES/pypilot_lcdclient.po $mode
-    /usr/bin/msgfmt --check -o $language/LC_MESSAGES/pypilot_lcdclient.mo $language/LC_MESSAGES/pypilot_lcdclient.po
+    cp pypilot_hat.pot $language/LC_MESSAGES/pypilot_hat.po
+    ./apertium-po.py $language/LC_MESSAGES/pypilot_hat.po $mode
+    /usr/bin/msgfmt --check -o $language/LC_MESSAGES/pypilot_hat.mo $language/LC_MESSAGES/pypilot_hat.po
 }
 
 language=es
 mode=en-es
 translate
 
-language=es
+language=fr
 mode=en-es/es-fr
 translate
