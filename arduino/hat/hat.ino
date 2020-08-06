@@ -45,7 +45,7 @@ RCSwitch rf = RCSwitch();
 #include <IRLibCombo.h>
 
 IRdecode myDecoder;   //create decoder
-IRrecvPCI ir(3);//pin number for the receiver
+//IRrecvPCI ir(3);//pin number for the receiver
 
 uint8_t backlight_value = 64; // determines when backlight turns on
 uint8_t backlight_polarity = 0;
@@ -173,14 +173,14 @@ void setup() {
     // buzzer
     pinMode(5, OUTPUT);
     pinMode(6, OUTPUT);
-
+    pinMode(7, INPUT_PULLUP);
 
     pinMode(DATA_PIN, INPUT);
     pinMode(3, INPUT);
     pinMode(DIR_PIN, INPUT);
 
     rf.enableReceive(0);  // Receiver on interrupt 0 => that is pin #2
-    ir.enableIRIn();
+//    ir.enableIRIn();
 
     digitalWrite(LED_PIN, LOW); /* enable internal pullups */
     pinMode(LED_PIN, OUTPUT);
@@ -401,7 +401,7 @@ void read_analog() {
 
     // calculate input power voltage through input divider
     // Vcc = 2*power/4/1023*vin
-    uint16_t vcc = adc_avg[0] * 2;
+    uint16_t vcc = adc_avg[0];
 //      uint16_t vcc = 6200 * 2;
     vcc = ((uint32_t)vin*vcc)>>13;
     uint8_t d[PACKET_LEN] = {vcc&0x7f, (vcc>>7)&0x7f, vin&0x7f, (vin>>7)&0x7f, 0};
@@ -457,6 +457,8 @@ void loop() {
     if(dt > 40) { // do not send faster than 40 ms
         for(int i=0; i<6; i++)
             if(!digitalRead(A0+i))
-                send_code(GP, i);
+                send_code(GP, i+1);
+        if(!digitalRead(7))
+            send_code(GP, 7);
     }
 }
