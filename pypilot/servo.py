@@ -302,7 +302,7 @@ class Servo(object):
                 self.command.set(0)
             self.disengaged = False
         self.do_command(self.command.value)
-
+        
     def do_position_command(self, position):
         e = position - self.position.value
         d = self.speed.value * self.sensors.rudder.range.value
@@ -496,10 +496,10 @@ class Servo(object):
         self.driver = False
 
     def send_driver_params(self, mul=1):
-        uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value) / self.current.factor.value        
+        uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value) / self.current.factor.value
+        minmax = self.sensors.rudder.minmax
         self.driver.params(mul * uncorrected_max_current,
-                           self.sensors.rudder.minmax[0],
-                           self.sensors.rudder.minmax[1],
+                           minmax[0], minmax[1],
                            self.max_current.value,
                            self.max_controller_temp.value,
                            self.max_motor_temp.value,
@@ -520,20 +520,17 @@ class Servo(object):
     def poll(self):
         if not self.driver:
             device_path = serialprobe.probe('servo', [38400], 1)
-            return
             if device_path:
-                #from arduino_servo.arduino_servo_python import ArduinoServo
-                from arduino_servo.arduino_servo import ArduinoServo
-                return
                 try:
                     device = serial.Serial(*device_path)
                     device.timeout=0 #nonblocking
                     fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
-                    device.close()
-                    return
                 except Exception as e:
                     print('failed to open servo on:', device_path, e)
+                    device.close()
                     return
+                #print('driver', device_path, device)
+                from arduino_servo.arduino_servo import ArduinoServo
                 self.driver = ArduinoServo(device.fileno(), device_path[1])
                 self.send_driver_params()
                 self.device = device
@@ -615,9 +612,7 @@ class Servo(object):
                         flags |= ServoFlags.MAX_RUDDER_FAULT
                     else:
                         flags |= ServoFlags.MIN_RUDDER_FAULT
-
             self.flags.update(flags)
-
             self.engaged.update(not not self.driver.flags & ServoFlags.ENGAGED)
 
         if result & ServoTelemetry.EEPROM and self.use_eeprom.value: # occurs only once after connecting
