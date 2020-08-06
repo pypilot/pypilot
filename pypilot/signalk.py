@@ -103,6 +103,7 @@ class signalk(object):
         except Exception as e:
             print('signalk could not import requests')
             print('try pip3 install requests')
+            time.sleep(50)
             return
 
         try:
