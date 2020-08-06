@@ -715,7 +715,7 @@ public:
 class PCD8544 : public spilcd
 {
 public:
-    PCD8544() : spilcd(RST, DC, 5000000) {}
+    PCD8544() : spilcd(RST, DC, 500000) {}
     virtual ~PCD8544() {} 
 
     void extended_command(uint8_t c) {
@@ -828,7 +828,7 @@ public:
                 for(int bit = 0; bit<8; bit++) {
                     bits <<= 1;
 //                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+7-bit))
-                    if(*(uint8_t*)(s->p + (127-y)*s->line_length + col*8+(7-bit)))
+                    if(*(uint8_t*)(s->p + (127-y)*s->line_length + (7-col)*8+bit))
                         bits |= 1;
                 }
                 binary[index] = bits;

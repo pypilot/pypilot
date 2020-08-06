@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, select, socket
+import time, select, socket, os
 
 try:
   from pypilot.linebuffer import linebuffer
@@ -33,9 +33,12 @@ try:
         return self.socket.fileno()
 
     def close(self):
-        self.socket.close()
+        if self.socket:
+            self.socket.close()
+            self.socket = False
         if self.udp_socket:
-          self.udp_socket.close()
+            self.udp_socket.close()
+            self.udp_socket = False
         
     def recvdata(self):
         return self.b.recv()
@@ -52,9 +55,9 @@ try:
         else:
           self.out_buffer += data
           if len(self.out_buffer) > 65536:
-            print('overflow in pypilot socket', self.address, len(self.out_buffer))
+            print('overflow in pypilot socket', self.address, len(self.out_buffer), os.getpid())
             self.out_buffer = ''
-            self.socket.close()
+            self.close()
     
     def flush(self):
         if self.udp_out_buffer:
@@ -89,8 +92,8 @@ try:
                 self.socket.close()
             self.out_buffer = self.out_buffer[count:]
         except Exception as e:
-            print('pypilot socket exception', self.address, e)
-            self.socket.close()
+            print('pypilot socket exception', self.address, e, os.getpid(), self.socket)
+            self.close()
   
 except Exception as e:
   print('falling back to python nonblocking socket, will consume more cpu', e)

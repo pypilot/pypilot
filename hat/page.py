@@ -398,23 +398,22 @@ class calibrate_info(info):
             except:
                 self.fittext(rectangle(0, .3, 1, .7), 'N/A')
 
-def test_wifi():
-    try:
-        import micropython
-        import wifi_esp32
+try:
+    import micropython
+    import wifi_esp32
+    def test_wifi():
         return wifi_esp32.connected[0]
-    except:
-        pass
-        
-    try:
-        wlan0 = open('/sys/class/net/wlan0/operstate')
-        line = wlan0.readline().rstrip()
-        wlan0.close()
-        if line == 'up':
-            return True
-    except:
-        pass
-    return False
+except:
+    def test_wifi():
+        try:
+            wlan0 = open('/sys/class/net/wlan0/operstate')
+            line = wlan0.readline().rstrip()
+            wlan0.close()
+            if line == 'up':
+                return True
+        except:
+            pass
+        return False
 
 class controlbase(page):
     def __init__(self, lcd, frameperiod = .4):
@@ -456,7 +455,7 @@ class controlbase(page):
 
 class control(controlbase):
     def __init__(self, lcd):
-        super(control, self).__init__(lcd, .2)
+        super(control, self).__init__(lcd, .25)
         self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
         self.control = {} # used to keep track of what is drawn on screen to avoid redrawing it
 
@@ -500,20 +499,16 @@ class control(controlbase):
             self.fill(black)
             self.control = {'heading': '   ', 'heading_command': '   ', 'mode': False, 'modes': []}
         
+        def nr(x):
+            try:
+                s = str(int(round(x)))
+                while len(s) < 3:
+                    s = ' ' + s
+                return s
+            except:
+                return x
+
         def draw_big_number(pos, num, lastnum):
-            def nr(x):
-                try:
-                    s = str(int(round(x)))
-                    while len(s) < 3:
-                        s = ' ' + s
-                    return s
-                except:
-                    return x
-
-            num = nr(num)
-            if lastnum:
-                lastnum = nr(lastnum)
-
             if num == 'N/A' and lastnum != num:
                 r = rectangle(pos[0], pos[1], 1, .4)
                 self.fittext(r, num, False, black)
@@ -541,9 +536,10 @@ class control(controlbase):
             self.control['heading_command'] = 'no imu'
             super(control, self).display(refresh)
             return
-        
-        draw_big_number((0,0), self.last_val('ap.heading'), self.control['heading'])
-        self.control['heading'] = self.last_val('ap.heading')
+
+        ap_heading = nr(self.last_val('ap.heading'))
+        draw_big_number((0,0), ap_heading, self.control['heading'])
+        self.control['heading'] = ap_heading
         #print('heading', self.last_val('ap.heading'))
 
         mode = self.last_val('ap.mode')
@@ -584,8 +580,9 @@ class control(controlbase):
                     self.control['heading_command'] = 'standby'
             else:
                 if self.control['heading_command'] != self.last_val('ap.heading_command'):
-                    draw_big_number((0,.4), self.last_val('ap.heading_command'), self.control['heading_command'])
-                    self.control['heading_command'] = self.last_val('ap.heading_command')
+                    ap_heading_command = nr(self.last_val('ap.heading_command'))
+                    draw_big_number((0,.4), ap_heading_command, self.control['heading_command'])
+                    self.control['heading_command'] = ap_heading_command
 
                     self.control['mode'] = False # refresh mode
 

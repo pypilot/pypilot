@@ -236,6 +236,7 @@ class LCD():
             self.key(BIG_STARBOARD, down)
 
     def display(self):
+        t0 = gettime()
         self.page.display(self.need_refresh)
 
         if micropython:
@@ -246,7 +247,6 @@ class LCD():
         surface = self.surface
 
         # status cursor
-        t0 = gettime()
         try:
             if t0-self.blinktime > .5:
                 if self.data_update:
@@ -279,8 +279,8 @@ class LCD():
             self.hat.arduino.set_backlight(backlight, self.backlight_polarity)
         else:
             self.screen.hue = int(float(self.config['backlight'])*255/100)
-        self.screen.refresh()
-            
+
+        self.screen.refresh()    
 
     def update_watches(self):
         for name in list(self.client.watches):

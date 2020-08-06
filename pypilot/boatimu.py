@@ -148,7 +148,7 @@ class IMU(object):
         data = self.rtimu.getIMUData()
         data['accel.residuals'] = list(self.rtimu.getAccelResiduals())
 
-        #data['timestamp'] = t0 # imu timestamp is perfectly accurate
+        data['timestamp'] = t0 # imu timestamp is perfectly accurate
         
         if self.compass_calibration_updated:
             data['compass_calibration_updated'] = True
@@ -173,6 +173,7 @@ class IMU(object):
                 #rtimu.resetFusion()
             elif name == 'imu.rate':
                 self.rate = value
+                print('imu rate set to rate', value)
 
         if not self.lastdata:
             return
@@ -282,6 +283,11 @@ def heading_filter(lp, a, b):
 
 def CalibrationProcess(cal_pipe, client):
     time.sleep(30) # let other stuff load
+    import os
+    if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
+        print('warning, failed to make calibration process idle, trying renice')
+    if os.system("renice 20 %d" % os.getpid()):
+        print('warning, failed to renice calibration process')
     import calibration_fit
     print('calibration process', os.getpid())
     calibration_fit.CalibrationProcess(cal_pipe, client)
@@ -307,7 +313,7 @@ class BoatIMU(object):
     def __init__(self, client):
         self.client = client
 
-        self.rate = self.register(EnumProperty, 'rate', 10, [10, 25], persistent=True)
+        self.rate = self.register(EnumProperty, 'rate', 10, [10, 20], persistent=True)
 
         self.frequency = self.register(FrequencyValue, 'frequency')
         self.alignmentQ = self.register(QuaternionValue, 'alignmentQ', [2**.5/2, -2**.5/2, 0, 0], persistent=True)
@@ -325,9 +331,9 @@ class BoatIMU(object):
         self.lasttimestamp = 0
 
         self.headingrate = self.heel = 0
-        self.heading_lowpass_constant = self.register(RangeProperty, 'heading_lowpass_constant', .1, .01, 1)
-        self.headingrate_lowpass_constant = self.register(RangeProperty, 'headingrate_lowpass_constant', .1, .01, 1)
-        self.headingraterate_lowpass_constant = self.register(RangeProperty, 'headingraterate_lowpass_constant', .1, .01, 1)
+        self.heading_lowpass_constant = self.register(RangeProperty, 'heading_lowpass_constant', .2, .1, .5)
+        self.headingrate_lowpass_constant = self.register(RangeProperty, 'headingrate_lowpass_constant', .2, .1, .5)
+        self.headingraterate_lowpass_constant = self.register(RangeProperty, 'headingraterate_lowpass_constant', .2, .1, .5)
 
         sensornames = ['accel', 'gyro', 'compass', 'accel.residuals', 'pitch', 'roll']
         sensornames += ['pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']
@@ -410,7 +416,7 @@ class BoatIMU(object):
   
         dt = data['timestamp'] - self.lasttimestamp
         self.lasttimestamp = data['timestamp']
-        if dt > .02 and dt < .5:
+        if dt > .01 and dt < .2:
             data['headingraterate'] = (data['headingrate'] - self.headingrate) / dt
         else:
             data['headingraterate'] = 0

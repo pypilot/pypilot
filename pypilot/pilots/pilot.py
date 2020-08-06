@@ -39,7 +39,7 @@ class AutopilotPilot(object):
     for gain in self.gains:
       value = gain_values[gain]
       gains = self.gains[gain]
-      gains['sensor'].update(gains['compute'](value))
+      gains['sensor'].set(gains['compute'](value))
       command += gains['sensor'].value
     return command
 

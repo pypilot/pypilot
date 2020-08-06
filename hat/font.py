@@ -72,10 +72,10 @@ def draw(surface, pos, text, size, bw, crop=False):
                     if src:
                         print('store grey', filename)
                         src.store_grey(filename.encode('utf-8'))
-                        break
+                    break
                 size -= 1 # try smaller size
-                    
-        if src.bypp != surface.bypp:
+
+        if not src or src.bypp != surface.bypp:
             print('dont have', ord(c), size)
             continue
                 

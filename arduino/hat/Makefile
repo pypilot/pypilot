@@ -84,13 +84,21 @@ download:
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:r:download.hex -b $(BAUDRATE)
 	echo in > /sys/class/gpio/gpio16/direction
 
+reset:
+	echo 16 > /sys/class/gpio/export || echo ok
+	echo out > /sys/class/gpio/gpio16/direction
+	echo in > /sys/class/gpio/gpio16/direction
+
 install: $(SKETCHNAME).cpp.hex
 	cp $(SKETCHNAME).cpp.hex ~/.pypilot/$(SKETCHNAME).hex
 
 setfuses:
 	echo 16 > /sys/class/gpio/export || echo ok
+	echo in > /sys/class/gpio/gpio16/direction
+	sleep 1
 	echo out > /sys/class/gpio/gpio16/direction
-	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -b $(BAUDRATE) -Ulock:w:0xff:m -Uefuse:w:0xfd:m -Uhfuse:w:0xDA:m -Ulfuse:w:0xFF:m 
+	sleep 1
+	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -b $(BAUDRATE)  -Uefuse:w:0x05:m -Uhfuse:w:0xDA:m -Ulfuse:w:0xFF:m -Ulock:w:0x3f:m
 	echo in > /sys/class/gpio/gpio16/direction
 
 serial:
