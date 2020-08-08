@@ -523,10 +523,15 @@ class Servo(object):
             if device_path:
                 try:
                     device = serial.Serial(*device_path)
+                except Exception as e:
+                    print('failed to open servo on:', device_path, e)
+                    return
+
+                try:
                     device.timeout=0 #nonblocking
                     fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
                 except Exception as e:
-                    print('failed to open servo on:', device_path, e)
+                    print('failed set nonblocking/exclusive', e)
                     device.close()
                     return
                 #print('driver', device_path, device)
