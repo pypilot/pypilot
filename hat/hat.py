@@ -198,7 +198,7 @@ class Hat(object):
                                 'port':'/dev/spidev0.0'},
                          'lirc':'gpio4'}
             if True: # for test
-                #hatconfig['lcd']['driver'] = 'jlx12864'
+                hatconfig['lcd']['driver'] = 'jlx12864'
                 hatconfig['arduino'] = {'device':'/dev/spidev0.1',
                                         'resetpin':16,
                                         'hardware':0.21}
