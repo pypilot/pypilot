@@ -169,7 +169,7 @@ class WebConfig(Namespace):
                     socketio.emit('status', self.status)
 
 def web_process(pipe, action_keys):
-    print('web process pid111', os.getpid())
+    print('web process', os.getpid())
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
     socketio.on_namespace(WebConfig('', pipe, action_keys))

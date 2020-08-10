@@ -154,8 +154,9 @@ class arduino(object):
             d = [8]
         self.send(SET_BAUD, d)
 
-    def set_buzzer(self, duration, frequency):
-        self.send(SET_BUZZER, (duration, frequency))
+    def set_buzzer(self, mode, duration):
+        duration = int(min(max(duration, 0), 2)*100)
+        self.send(SET_BUZZER, (mode, duration))
 
     def get_baud_rate(self):
         t = time.monotonic()

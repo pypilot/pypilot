@@ -113,7 +113,6 @@ class Web(Process):
 
     def create(self):
         def process(pipe, action_keys):
-            print('web process on ', os.getpid())
             try:
                 import web
                 web.web_process(pipe, action_keys)
@@ -334,12 +333,6 @@ class Hat(object):
         t0 = time.monotonic()
         msgs = self.client.receive()
         t1 = time.monotonic()
-        for name, value in msgs.items():
-            self.last_msg[name] = value
-
-        for i in [self.lcd, self.web]:
-            i.poll()
-        t2 = time.monotonic()
         for i in [self.gpio, self.arduino, self.lirc]:
             try:
                 if not i:
@@ -349,6 +342,12 @@ class Hat(object):
                     self.apply_code(*event)
             except Exception as e:
                 print('WARNING, failed to poll!!', e)
+        t2 = time.monotonic()
+        for name, value in msgs.items():
+            self.last_msg[name] = value
+
+        for i in [self.lcd, self.web]:
+            i.poll()
         t3 = time.monotonic()
         for key, t in self.keytimes.items():
             dt = time.monotonic() - t

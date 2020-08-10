@@ -553,7 +553,7 @@ class control(controlbase):
 
         if warning:
             if self.hat:
-                self.hat.buzzer.alarm()
+                self.hat.arduino.set_buzzer(2, 1)
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:

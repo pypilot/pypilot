@@ -30,7 +30,9 @@ try:
         self.sendfail_cnt = 0
 
     def fileno(self):
-        return self.socket.fileno()
+        if self.socket:
+            return self.socket.fileno()
+        return 0
 
     def close(self):
         if self.socket:

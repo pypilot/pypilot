@@ -67,7 +67,7 @@ def draw(surface, pos, text, size, bw, crop=False):
                     break # loaded
                 
                 if not micropython:
-                    #print('create', size, src.bypp, surface.bypp)
+                    print('create', c, size, src.bypp, surface.bypp)
                     src = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
                     if src:
                         print('store grey', filename)

@@ -189,14 +189,18 @@ class pypilotClient(object):
     def poll(self, timeout=0):
         if not self.connection:
             if self.connection_in_progress:
-                events = self.poller_in_progress.poll(0)
+                events = self.poller_in_progress.poll(0)                
                 if events:
-                    # hung hup
-                    self.connection_in_progress.close()
-                    self.connection_in_progress = False
-                    return
+                    fd, flag = events.pop()
+                    if not (flag & select.POLLOUT):
+                        # hung hup
+                        print('hup')
+                        self.connection_in_progress.close()
+                        self.connection_in_progress = False
+                        return
 
-                self.onconnected()
+                    self.onconnected()
+                return
             else:
                 if not self.connect(False):
                     time.sleep(timeout)
@@ -211,10 +215,9 @@ class pypilotClient(object):
         # send any delayed watched values
         self.values.send_watches()
 
-        # flush output
-        self.connection.flush()
-
         if self.connection.fileno():
+            # flush output
+            self.connection.flush()
             try:
                 events = self.poller.poll(int(1000 * timeout))
             except Exception as e:
@@ -269,17 +272,19 @@ class pypilotClient(object):
 
         try:
             host_port = self.config['host'], self.config['port']
-            connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.connection_in_progress = connection
-            self.poller_in_progress = select.poll()
-            self.poller_in_progress.register(self.connection_in_progress.fileno(), 0)
+            self.connection_in_progress = False
+            self.connection_in_progress = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             
-            connection.settimeout(1) # set to 0 ?
-            connection.connect(host_port)
+            self.connection_in_progress.settimeout(1) # set to 0 ?
+            self.connection_in_progress.connect(host_port)
         except OSError as e:
             import errno
             if e.args[0] is errno.EINPROGRESS:
+                self.poller_in_progress = select.poll()
+                self.poller_in_progress.register(self.connection_in_progress.fileno(), select.POLLOUT)
                 return True
+
+            self.connection_in_progress = False
             if e.args[0] == 111: # refused
                 pass
             else:

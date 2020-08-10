@@ -275,7 +275,7 @@ class LCD():
             self.screen.contrast = int(self.config['contrast'])
 
         if 'backlight' in self.config and self.hat:
-            backlight = int(self.config['backlight'])
+            backlight = int(self.config['backlight'])*5;
             self.hat.arduino.set_backlight(backlight, self.backlight_polarity)
         else:
             self.screen.hue = int(float(self.config['backlight'])*255/100)
@@ -323,10 +323,10 @@ class LCD():
         for key in self.keypad:
             if key.down:
                 key.down = False
+                if self.hat:
+                    self.hat.arduino.set_buzzer(1, .1)
             if key.up:
                 key.up = False
-                if self.hat:
-                    self.hat.arduino.set_buzzer(32, 64)
                     
         t3 = gettime()
         #print('lcd times', t1-t0, t2-t1, t3-t2)

@@ -149,13 +149,17 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.client.set('ap.heading_command', self.heading_command)
                 self.sCommand.SetValue(0)
             else:
-                if True:
+                
+                if False:
                     if command > 0:
                         command -= 1
                     elif command < 0:
                         command += 1
-                self.servo_command(-command / 100.0)
+                else:
+                    if abs(command) < 3:
+                        command=0
                 self.sCommand.SetValue(command)
+                self.servo_command(-command / 100.0)
 
         for gain_name in self.gains:
             gain = self.gains[gain_name]
