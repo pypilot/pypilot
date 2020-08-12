@@ -178,7 +178,7 @@ def probe(name, bauds, timeout=5):
     
     t0 = time.monotonic()
     if not name in probes:
-        probes[name] = {'time': 0, 'device': False, 'probe last': True}
+        probes[name] = {'time': 0, 'device': False, 'probe last': True, 'starttime': t0}
     probe = probes[name]
 
     # prevent probing too often
@@ -205,6 +205,10 @@ def probe(name, bauds, timeout=5):
             probe['device'], probe['bauds'] = last
             return probe['device'], probe['bauds'][0]
     probe['probe last'] = True # next time try last working device if this fails
+
+    if t0 - probe['starttime'] < timeout:
+        # only probe new devices after booted so that last working devices are all found
+        return False
 
     # find a new device
     #t1 = time.monotonic()
