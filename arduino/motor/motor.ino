@@ -157,8 +157,9 @@ static volatile uint8_t timer1_state;
 #endif
 
 
-// time to charge bootstrap capacitor same as dead time
+// time to charge bootstrap capacitor twice dead time
 #define charge_time \
+        dead_time; \
         dead_time;
 
 #define shunt_sense_pin 4 // use pin 4 to specify shunt resistance
@@ -909,7 +910,8 @@ uint16_t TakeVolts(uint8_t p)
         v = v * 719 / 192 / 16;
     } else
         // 1815 / 896 = 100.0/1024*10560/560*1.1
-        v = v * 1815 / 896 / 16;
+        //    v = v * 1815 / 896 / 16;
+    v = v * 1790 / 896 / 16; // hack closer to actual voltage
 
     return v;
 }
