@@ -236,7 +236,10 @@ class Nmea(object):
         pass
 
     def read_process_pipe(self):
+      while True:
         msgs = self.pipe.recv()
+        if not msgs:
+            return
         if type(msgs) == type('string'):
             if msgs == 'sockets':
                 self.sockets = True
@@ -614,7 +617,7 @@ class nmeaBridge(object):
 
         # send any parsed nmea messages the server might care about
         if self.msgs:
-            #print('msgs', self.msgs)
+            #print('nmea msgs', self.msgs)
             if self.pipe.send(self.msgs):
                 self.msgs = {}
         t3 = time.monotonic()
