@@ -100,7 +100,7 @@ try:
 except Exception as e:
   print('falling back to python nonblocking socket, will consume more cpu', e)
   class LineBufferedNonBlockingSocket(object):
-    def __init__(self, connection):
+    def __init__(self, connection, address):
         connection.setblocking(0)
         self.socket = connection
         self.b = False # in python
@@ -114,7 +114,7 @@ except Exception as e:
     def fileno(self):
         return self.socket.fileno()
 
-    def send(self, data):
+    def write(self, data):
         self.out_buffer += data
 
     def flush(self):
@@ -133,7 +133,7 @@ except Exception as e:
             self.out_buffer = ''
             self.socket.close()
 
-    def recv(self):
+    def recvdata(self):
         size = 4096
         try:
           data = self.socket.recv(size).decode()
@@ -147,7 +147,7 @@ except Exception as e:
 
         self.in_buffer += data
         if l == size:
-            return l+self.recv()
+            return l+self.recvdata()
         return l
 
     def readline(self):
