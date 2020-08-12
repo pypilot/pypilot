@@ -83,20 +83,23 @@ uint8_t serial_baud_ee EEMEM = 0;
 
 #define RB_EMPTY(NAME) (rb_##NAME##_head == rb_##NAME##_tail)
 
-RB_CREATE(serial_out, 224)
-RB_CREATE(serial_in, 224)
-RB_CREATE(data_in, 128)
+RB_CREATE(serial_out, 124)
+RB_CREATE(serial_in, 124)
+RB_CREATE(data_in, 124)
 
 ISR(USART_RX_vect)
 {
+    UCSR0B &= ~_BV(RXCIE0);
     sei(); // needed because spi runs faster
-    RB_PUT(serial_out, UDR0);
+    uint8_t x = UDR0;
+    RB_PUT(serial_out, x);
+    UCSR0B |= _BV(RXCIE0);
 }
 
 ISR(USART_UDRE_vect)
 {
     UCSR0B &= ~_BV(UDRIE0);
-    sei();
+//    sei();
     if(!RB_EMPTY(serial_in)) {
         RB_GET(serial_in, UDR0);
         UCSR0B |= _BV(UDRIE0);
@@ -107,13 +110,13 @@ ISR(USART_UDRE_vect)
 ISR (SPI_STC_vect) // SPI interrupt routine
 {
     uint8_t c = SPDR;
+    RB_GET(serial_out, SPDR);
     if(c>127)
         RB_PUT(data_in, c)
     else if(c) {
-        UCSR0B |= _BV(UDRIE0);
         RB_PUT(serial_in, c);
+        UCSR0B |= _BV(UDRIE0);
     }
-    RB_GET(serial_out, SPDR);
 }
 
 /*
@@ -197,6 +200,8 @@ void setup() {
     uint8_t baud = eeprom_read_byte(&serial_baud_ee);
 
     Serial_begin(baud);
+    pinMode(0, INPUT_PULLUP);
+    pinMode(1, INPUT_PULLUP);
 
     // enable adc with 128 division
     ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
@@ -447,6 +452,23 @@ void loop() {
     wdt_reset();
     read_data();
 
+#if 1
+    if(UCSR0A & _BV(UDRE0) && !RB_EMPTY(serial_in)) {
+//        cli();
+//        RB_GET(serial_in, UDR0);
+//        sei();
+    }
+#endif
+#if 0
+    if(UCSR0A & _BV(RXC0)) {
+        cli();
+        uint8_t x = UDR0;
+        sei();
+        RB_PUT(serial_out, x);
+    }
+
+#endif
+    
     if(buzzer_timeout) {
         uint32_t t0 = millis();
         if(buzzer_timeout < t0) {
@@ -480,14 +502,11 @@ void loop() {
     }
     t = millis();
     // read from IR??
-    /*
     if (ir.getResults()) {
         myDecoder.decode();
         send_code(IR, (myDecoder.value<<8) | myDecoder.protocolNum);
         ir.enableIRIn();      //Restart receiver
     }
-    */
-
     if (rf.available()) {
         uint32_t value = rf.getReceivedValue();
         if(value && rf.getReceivedBitlength() == 24)
