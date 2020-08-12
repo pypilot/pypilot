@@ -54,7 +54,7 @@ class pypilotValue(object):
                 watch = self.awatches[0]
                 if watch.period == 0:
                     for connection in watch.connections:
-                        connection.send(msg, True)
+                        connection.write(msg)
 
                 for watch in self.pwatches:
                     if t0 >= watch.time:
@@ -64,9 +64,9 @@ class pypilotValue(object):
 
         elif self.connection: # inform owner of change if we are not owner
             if 'writable' in self.info and self.info['writable']:
-                self.connection.send(msg)
+                self.connection.write(msg)
             else: # inform key can not be set arbitrarily
-                connection.send('error='+self.name+' is not writable\n')
+                connection.write('error='+self.name+' is not writable\n')
 
     def remove_watches(self, connection):
         for watch in self.awatches:
@@ -108,13 +108,13 @@ class pypilotValue(object):
             
     def watch(self, connection, period):
         if connection == self.connection:
-            connection.send('error=can not add watch for own value: ' + self.name + '\n')
+            connection.write('error=can not add watch for own value: ' + self.name + '\n')
             return
         
         if period is False: # period is False: remove watch
             if not self.unwatch(connection, True):
                 # inform client there was no watch
-                connection.send('error=cannot remove unknown watch for ' + self.name + '\n')
+                connection.write('error=cannot remove unknown watch for ' + self.name + '\n')
             return
         
         if period is True:
@@ -123,7 +123,7 @@ class pypilotValue(object):
         # unwatch by removing
         watching = self.unwatch(connection, False)
         if not watching and self.msg:
-            connection.send(self.get_msg()) # initial retrieval
+            connection.write(self.get_msg()) # initial retrieval
 
         for watch in self.awatches:
             if watch.period == period: # already watching at this rate, add connection
@@ -169,7 +169,7 @@ class ServerUDP(pypilotValue):
             if not (self.msg is False) and self.msg < 1024 or self.msg > 65535:
                 raise Exception('port out of range')
         except Exception as e:
-            connection.send('error=invalid udp_port:' + msg + e + '\n')
+            connection.write('error=invalid udp_port:' + msg + e + '\n')
             return
 
         # remove any identical udp connection
@@ -234,7 +234,7 @@ class ServerValues(pypilotValue):
             if not watch.connections:
                 continue # forget this watch
             for connection in watch.connections:
-                connection.send(watch.value.get_msg())
+                connection.write(watch.value.get_msg())
             watch.time += watch.period
             if watch.time < t0:
                 watch.time = t0
@@ -259,12 +259,12 @@ class ServerValues(pypilotValue):
             if name in self.values:
                 value = self.values[name]
                 if value.connection:
-                    connection.send('error=value already held: ' + name + '\n')
+                    connection.write('error=value already held: ' + name + '\n')
                 value.connection = connection
                 value.info = info # update info
                 value.watching = False
                 if value.msg:
-                    connection.send(value.get_msg()) # send value
+                    connection.write(value.get_msg()) # send value
                 value.calculate_watch_period()
                 continue
 
@@ -286,16 +286,22 @@ class ServerValues(pypilotValue):
                     if c != connection:
                         if not msg:
                             msg = 'values=' + pyjson.dumps(values) + '\n'
-                        c.send(msg)
+                        c.write(msg)
 
     def HandleRequest(self, msg, connection):
         name, data = msg.split('=', 1)
-        
         if not name in self.values:
-            connection.send('error=invalid unknown value: ' + name + '\n')
+            connection.write('error=invalid unknown value: ' + name + '\n')
             return
         self.values[name].set(msg, connection)
 
+    def HandlePipeRequest(self, msg, connection):
+        name, data = msg.split('=', 1)
+        if not name in self.values:
+            connection.write('error=invalid unknown value: ' + name + '\n')
+            return
+        self.values[name].set(msg, connection)
+        
     def load_file(self, f):
         line = f.readline()
         while line:
@@ -304,7 +310,7 @@ class ServerValues(pypilotValue):
             if name in self.values:
                 value = self.values[name]
                 if value.connection:
-                    connection.send(line)
+                    connection.write(line)
                 else:
                     value.msg = line
                     
@@ -375,14 +381,18 @@ class pypilotServer(object):
         return pipe0
         
     def run(self):
-        print('pypilotServer pid', os.getpid())
+        print('pypilotServer process', os.getpid())
         # if server is in a separate process
         self.init()
         while True:
             dt = self.values.sleep_time()
-            #t0 = time.monotonic()
+            t0 = time.monotonic()
             self.poll(dt)
-            #print('times', time.monotonic() - t0, dt)
+            pt = time.monotonic() - t0
+            #print('times', pt, dt)
+            st = .04 - pt
+            if st > 0:
+                time.sleep(st)
 
     def init_process(self):
         if self.multiprocessing:
@@ -441,11 +451,8 @@ class pypilotServer(object):
         for pipe in self.pipes:
             pipe.close()
 
-    def HandleRequest(self, connection, request):
-        self.values.HandleRequest(request, connection)
-
     def RemoveSocket(self, socket):
-        #print('remove socket', socket.address)
+        print('server, remove socket', socket.address)
         self.sockets.remove(socket)
 
         found = False
@@ -457,7 +464,7 @@ class pypilotServer(object):
                 break
 
         if not found:
-            print('socket not found in fd_to_connection')
+            print('server error: socket not found in fd_to_connection')
 
         socket.close()
         self.values.remove(socket)
@@ -480,6 +487,7 @@ class pypilotServer(object):
         if timeout:
             timeout *= 1000 # milliseconds
 
+        timeout = .1
         events = self.poller.poll(timeout)
         while events:
             event = events.pop()
@@ -492,7 +500,7 @@ class pypilotServer(object):
                     print('pypilot server: max connections reached!!!', len(self.sockets))
                     self.RemoveSocket(self.sockets[0]) # dump first socket??
                 socket = LineBufferedNonBlockingSocket(connection, address)
-                #print('add socket', socket.address)
+                print('server add socket', socket.address)
 
                 self.sockets.append(socket)
                 fd = socket.fileno()
@@ -507,11 +515,13 @@ class pypilotServer(object):
                 self.RemoveSocket(connection)
             elif flag & select.POLLIN:
                 if fd in self.fd_to_pipe:
-                    while True:
+                    if not connection.recvdata():
+                        continue
+                    line = connection.readline() # shortcut since poll indicates data is ready
+                    while line:
+                        self.values.HandlePipeRequest(line, connection)                        
                         line = connection.readline()
-                        if not line:
-                            break
-                        self.HandleRequest(connection, line)
+
                     continue
                 if not connection.recvdata():
                     self.RemoveSocket(connection)
@@ -521,22 +531,22 @@ class pypilotServer(object):
                     if not line:
                         break
                     try:
-                        self.HandleRequest(connection, line)
+                        self.values.HandleRequest(line, connection)                        
                     except Exception as e:
-                        connection.send('error=invalid request: ' + line)
+                        connection.write('error=invalid request: ' + line)
                         try:
                             print('invalid request from connection', e, line)
                         except Exception as e2:
                             print('invalid request has malformed string', e, e2)
 
         if not self.multiprocessing:
-            # these pipes are not pollable
+            # these pipes are not pollable as they are implemented as a simple buffer
             for pipe in self.pipes:
                 while True:
                     line = pipe.readline()
                     if not line:
                         break
-                    self.HandleRequest(pipe, line)
+                    self.values.HandlePipeRequest(line, pipe)
                         
         # send periodic watches
         self.values.send_watches()
@@ -544,12 +554,23 @@ class pypilotServer(object):
         # send watches
         for connection in self.sockets + self.pipes:
             if connection.cwatches:
-                connection.send('watch=' + pyjson.dumps(connection.cwatches) + '\n')
+                connection.write('watch=' + pyjson.dumps(connection.cwatches) + '\n')
                 connection.cwatches = {}
 
         # flush all sockets
         for socket in self.sockets:
             socket.flush()
+        while True:
+            for socket in self.sockets:
+                if not socket.socket:
+                    print('server socket closed from flush!!')
+                    self.RemoveSocket(socket)
+                    break
+            else:
+                break
+                
+        for pipe in self.pipes:
+            pipe.flush()
 
 if __name__ == '__main__':
     server = pypilotServer()

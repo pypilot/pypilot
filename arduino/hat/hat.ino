@@ -49,7 +49,7 @@ IRrecvPCI ir(3);//pin number for the receiver
 
 uint8_t backlight_value = 64; // determines when backlight turns on
 uint8_t backlight_polarity = 0;
-uint8_t backlight_value_ee EEMEM = 128; // determines when backlight turns on
+uint8_t backlight_value_ee EEMEM = 64; // determines when backlight turns on
 uint8_t backlight_polarity_ee EEMEM = 0;
 uint8_t serial_baud_ee EEMEM = 0;
 
@@ -83,20 +83,23 @@ uint8_t serial_baud_ee EEMEM = 0;
 
 #define RB_EMPTY(NAME) (rb_##NAME##_head == rb_##NAME##_tail)
 
-RB_CREATE(serial_out, 224)
-RB_CREATE(serial_in, 224)
-RB_CREATE(data_in, 128)
+RB_CREATE(serial_out, 124)
+RB_CREATE(serial_in, 124)
+RB_CREATE(data_in, 124)
 
 ISR(USART_RX_vect)
 {
+    UCSR0B &= ~_BV(RXCIE0);
     sei(); // needed because spi runs faster
-    RB_PUT(serial_out, UDR0);
+    uint8_t x = UDR0;
+    RB_PUT(serial_out, x);
+    UCSR0B |= _BV(RXCIE0);
 }
 
 ISR(USART_UDRE_vect)
 {
     UCSR0B &= ~_BV(UDRIE0);
-    sei();
+//    sei();
     if(!RB_EMPTY(serial_in)) {
         RB_GET(serial_in, UDR0);
         UCSR0B |= _BV(UDRIE0);
@@ -107,15 +110,16 @@ ISR(USART_UDRE_vect)
 ISR (SPI_STC_vect) // SPI interrupt routine
 {
     uint8_t c = SPDR;
+    RB_GET(serial_out, SPDR);
     if(c>127)
         RB_PUT(data_in, c)
     else if(c) {
-        UCSR0B |= _BV(UDRIE0);
         RB_PUT(serial_in, c);
+        UCSR0B |= _BV(UDRIE0);
     }
-    RB_GET(serial_out, SPDR);
 }
- 
+
+/*
 ISR(WDT_vect)
 {
     wdt_reset();
@@ -123,10 +127,10 @@ ISR(WDT_vect)
 
     asm volatile ("ijmp" ::"z" (0x0000)); // soft reset
 }
+*/
 
 void Serial_begin(uint8_t baud)
 {
-
     UCSR0A = 0;//_BV(U2X0);
     
     // assign the baud_setting, a.k.a. ubbr (USART Baud Rate Register)
@@ -144,21 +148,60 @@ void Serial_begin(uint8_t baud)
     UCSR0B = _BV(TXEN0) | _BV(RXEN0) | _BV(RXCIE0);
 }
 
+uint32_t buzzer_timeout;
+uint8_t buzzer_mode;
+void set_buzzer(uint8_t mode, uint8_t timeout)
+{
+    buzzer_timeout = millis() + timeout*10; // duration
+    if(buzzer_timeout > 4294963200UL)
+        buzzer_timeout = 1; // in case of 32 bit wrap.. needed???
+        
+    TCCR2A = _BV(WGM20) | _BV(WGM21);
+    TCCR2B = _BV(WGM22) | _BV(CS22); // divide by 128
+
+    uint8_t freq;
+    switch(mode) {
+    case 0: // buzzer off
+        TIMSK2 = 0;
+        return;
+    case 1: // steady
+        freq = 200;
+        break;
+    case 2: // ... ... ...
+        freq = 60;
+        break;
+    }
+    buzzer_mode = mode;
+    OCR2A = freq;
+    OCR2B = freq/2;
+    
+    TIMSK2 |= _BV(OCIE2B) | _BV(TOIE2);
+}
+
 void setup() {
+    // turn led on booting
+    digitalWrite(LED_PIN, HIGH);
+    pinMode(LED_PIN, OUTPUT);
+
     cli();
     wdt_reset();
     // 250 millisecond
     wdt_disable();
-    //WDTCSR = (1<<WDCE)|(1<<WDE);
-//    WDTCSR = (1<<WDIE) | (1<<WDP2);
     WDTCSR = (1<<WDCE)|(1<<WDE);
     WDTCSR = 0;
+    WDTCSR = (1<<WDCE)|(1<<WDE);
+    WDTCSR = /*(1<<WDIE) |*/ (1<<WDE)|(1<<WDP2);
     sei();
 
     backlight_value = eeprom_read_byte(&backlight_value_ee);
+    if(backlight_value == 0xff)
+        backlight_value = 64;
     backlight_polarity = eeprom_read_byte(&backlight_polarity_ee);
     uint8_t baud = eeprom_read_byte(&serial_baud_ee);
+
     Serial_begin(baud);
+    pinMode(0, INPUT_PULLUP);
+    pinMode(1, INPUT_PULLUP);
 
     // enable adc with 128 division
     ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
@@ -173,17 +216,14 @@ void setup() {
     // buzzer
     pinMode(5, OUTPUT);
     pinMode(6, OUTPUT);
-
+    pinMode(7, INPUT_PULLUP);
 
     pinMode(DATA_PIN, INPUT);
     pinMode(3, INPUT);
     pinMode(DIR_PIN, INPUT);
 
     rf.enableReceive(0);  // Receiver on interrupt 0 => that is pin #2
-    ir.enableIRIn();
-
-    digitalWrite(LED_PIN, LOW); /* enable internal pullups */
-    pinMode(LED_PIN, OUTPUT);
+    ir.enableIRIn();    
 
     for(int i=0; i<6; i++)
         pinMode(A0+i, INPUT_PULLUP);
@@ -192,14 +232,20 @@ void setup() {
     pinMode(9, OUTPUT);
 
     TCNT1 = 0x1fff;
-    //Configure TIMER1 to drive backlight variable pwm
-    TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
-    TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
     ICR1 = 1000; // 1khz
     TIMSK1 = 0;
-//    OCR1A = 100;
+        //Configure TIMER1 to drive backlight variable pwm
+        TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
+        TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
+
+    if(MCUSR & 8) // beep on watchdog reset
+        set_buzzer(2, 200);
+    MCUSR = 0;
+
+    digitalWrite(LED_PIN, LOW); // setup complete
 }
 
+// interrupt driven pwm gives inverting signals (highest volume) with variable frequency
 ISR(TIMER2_OVF_vect) __attribute__((naked));
 ISR(TIMER2_OVF_vect)
 {
@@ -214,24 +260,6 @@ ISR(TIMER2_COMPB_vect)
     PORTD |= _BV(PD6);
     PORTD &= ~_BV(PD5);
     asm volatile ("reti");
-}
-
-uint32_t buzzer_timeout;
-void buzzer_on(uint8_t freq, uint8_t timeout)
-{
-    buzzer_timeout = millis() + timeout; // duration
-    if(buzzer_timeout > 4294963200UL)
-        buzzer_timeout = 1; // in case of 32 bit wrap.. needed???
-        
-    TCCR2A = _BV(WGM20) | _BV(WGM21);
-    TCCR2B = _BV(WGM22) | _BV(CS21) | _BV(CS20); // divide by 32
-
-    if(freq < 32)
-        freq = 32;
-    OCR2A = freq;
-    OCR2B = freq/2;
-    
-    TIMSK2 |= _BV(OCIE2A) | _BV(TOIE2);
 }
 
 struct codes_type {
@@ -282,7 +310,7 @@ void read_data()
         break;
 
     case SET_BUZZER:
-        //buzzer_on(data[1], data[2]); // frequency
+        set_buzzer(data[1], data[2]);
         break;
 
     case SET_BAUD:
@@ -384,14 +412,22 @@ void read_analog() {
     uint16_t ambient = adc_avg[1];
     uint16_t reference = adc_avg[2];
 
-    int ocr1a = backlight_value*10 - ambient/100;
-    if(ocr1a < 0)
-        ocr1a = 0;
-    if(ocr1a > 1000)
-        ocr1a = 1000;
-    if(backlight_polarity)
-        ocr1a = 1000 - ocr1a;
-    OCR1A = ocr1a;
+    if(backlight_value > 0) {
+        //Configure TIMER1 to drive backlight variable pwm
+        TCCR1A=_BV(COM1A1)|_BV(WGM11);        //NON Inverted PWM
+        TCCR1B=_BV(WGM13)|_BV(WGM12)|_BV(CS11); //PRESCALER=8 MODE 14(FAST PWM)
+        int ocr1a = backlight_value*backlight_value/11;// - ambient/100;
+        if(ocr1a < 0)
+            ocr1a = 0;
+        if(ocr1a > 1000)
+            ocr1a = 1000;
+        if(backlight_polarity)
+            ocr1a = 1000 - ocr1a;
+        OCR1A = ocr1a;
+    } else {
+        TCCR1A=0;
+        TCCR1B=0;
+    }
 
     // calculate input voltage (should be near 3.3)
     // reference/16/1023*Vin = 1.1
@@ -400,23 +436,53 @@ void read_analog() {
 
     // calculate input power voltage through input divider
     // Vcc = 2*power/4/1023*vin
-    uint16_t vcc = adc_avg[0] * 2;
+    uint16_t vcc = adc_avg[0];
 //      uint16_t vcc = 6200 * 2;
     vcc = ((uint32_t)vin*vcc)>>13;
-    uint8_t d[PACKET_LEN] = {vcc&0x7f, (vcc>>7)&0x7f, vin&0x7f, (vin>>7)&0x7f, 0};
+    uint8_t d[PACKET_LEN];
+    d[0] = vcc&0x7f;
+    d[1] = (vcc>>7)&0x7f;
+    d[2] = vin&0x7f;
+    d[3] = (vin>>7)&0x7f;
+    d[4] = 0;
     send(VOLTAGE, d);
 }
 
 void loop() {
-//    TIMSK0 = 0;
-    TIMSK1 = 0;
-    TIMSK2 = 0;
+    wdt_reset();
     read_data();
 
+#if 1
+    if(UCSR0A & _BV(UDRE0) && !RB_EMPTY(serial_in)) {
+//        cli();
+//        RB_GET(serial_in, UDR0);
+//        sei();
+    }
+#endif
+#if 0
+    if(UCSR0A & _BV(RXC0)) {
+        cli();
+        uint8_t x = UDR0;
+        sei();
+        RB_PUT(serial_out, x);
+    }
+
+#endif
+    
     if(buzzer_timeout) {
-        if(buzzer_timeout < millis()) {
+        uint32_t t0 = millis();
+        if(buzzer_timeout < t0) {
             buzzer_timeout = 0;
+            buzzer_mode = 0;
             TIMSK2 = 0;
+        } else {
+            if(buzzer_mode == 2) {
+                uint8_t pos = ((buzzer_timeout - t0) / 50)%16;
+                if(pos & 1 && pos != 7 && pos != 15)
+                    TIMSK2 |= _BV(OCIE2B) | _BV(TOIE2);
+                else
+                    TIMSK2 = 0;
+            }
         }
     }
 
@@ -441,7 +507,6 @@ void loop() {
         send_code(IR, (myDecoder.value<<8) | myDecoder.protocolNum);
         ir.enableIRIn();      //Restart receiver
     }
-
     if (rf.available()) {
         uint32_t value = rf.getReceivedValue();
         if(value && rf.getReceivedBitlength() == 24)
@@ -454,6 +519,8 @@ void loop() {
     if(dt > 40) { // do not send faster than 40 ms
         for(int i=0; i<6; i++)
             if(!digitalRead(A0+i))
-                send_code(GP, i);
+                send_code(GP, i+1);
+        if(!digitalRead(7))
+            send_code(GP, 7);
     }
 }

@@ -67,15 +67,15 @@ def draw(surface, pos, text, size, bw, crop=False):
                     break # loaded
                 
                 if not micropython:
-                    #print('create', size, src.bypp, surface.bypp)
+                    print('create', c, size, src.bypp, surface.bypp)
                     src = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
                     if src:
                         print('store grey', filename)
                         src.store_grey(filename.encode('utf-8'))
-                        break
+                    break
                 size -= 1 # try smaller size
-                    
-        if src.bypp != surface.bypp:
+
+        if not src or src.bypp != surface.bypp:
             print('dont have', ord(c), size)
             continue
                 

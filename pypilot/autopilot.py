@@ -89,7 +89,7 @@ class HeadingOffset(object):
   
 class Autopilot(object):
   def __init__(self):
-    super(Autopilot, self).__init__()
+    super(Autopilot, self).__init__()    
     self.watchdog_device = False
 
     self.server = pypilotServer()
@@ -150,6 +150,7 @@ class Autopilot(object):
         print('warning: failed to open special file', device, 'for writing')
         print('         cannot stroke the watchdog')
 
+    self.server.poll() # setup process before we switch main process to realtime
     if os.system('sudo chrt -pf 99 %d 2>&1 > /dev/null' % os.getpid()):
         print('warning, failed to make autopilot process realtime')
     
@@ -161,11 +162,14 @@ class Autopilot(object):
                            self.server.process]
     def cleanup(signal_number, frame=None):
         print('got signal', signal_number, 'cleaning up')
+        if signal_number == signal.SIGCHLD:
+            pid = os.waitpid(-1, 0)
+            print('pid', pid)
         while self.childprocesses:
             process = self.childprocesses.pop()
             if process:
                 pid = process.pid
-                print('kill', pid)
+                print('kill', pid, process)
                 os.kill(pid, signal.SIGTERM) # get backtrace
         sys.stdout.flush()
         if signal_number != 'atexit':
@@ -182,7 +186,7 @@ class Autopilot(object):
         if s == 13:
             signal.signal(s, printpipewarning)
         elif s != 9:
-            #signal.signal(s, cleanup)
+            signal.signal(s, cleanup)
             pass
 
     signal.signal(signal.SIGCHLD, cleanup)
@@ -299,17 +303,20 @@ class Autopilot(object):
                                         (self.heading_error.value/1500)*dt, 1))          
   def iteration(self):
       data = False
-      t0 = time.monotonic()  
-      self.server.poll()
+      t0 = time.monotonic()
+
+      self.server.poll() # needed if not multiprocessed
       msgs = self.client.receive()
-      for msg in msgs:
+      for msg in msgs: # we aren't usually subscribed to anything
           print('autopilot main process received:', msg, msgs[msg])
+
       t1 = time.monotonic()
       period = 1/self.boatimu.rate.value
       if t1 - t0 > period/2:
           print('server/client is running too _slowly_', t1-t0)
 
       self.sensors.poll()
+
       t2 = time.monotonic()
       if t2-t1 > period/2:
           print('sensors is running too _slowly_', t2-t1)
@@ -383,7 +390,6 @@ class Autopilot(object):
 
 def main():
     ap = Autopilot()
-    
     while True:
         ap.iteration()
 

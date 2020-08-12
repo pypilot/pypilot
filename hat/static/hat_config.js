@@ -31,6 +31,10 @@ $(document).ready(function() {
     socket.on('baudrate', function(msg) {
         $('#baudrate').text(msg);
     });
+
+    socket.on('voltage', function(msg) {
+        $('#voltage').text(msg);
+    });
     
     socket.on('key', function(key) {
         $('#key0').text(key);
@@ -60,16 +64,21 @@ $(document).ready(function() {
         socket.emit('keys', 'default');
     });
 
-    function nmea_config(event) {
-        socket.emit('baud', {'in': $('#nmea_in').value(), 'out': $('#nmea_out').value, 'baud': $('#nmea_baud')})
-    }
+    $('#nmea_in').click(function(event) {
+        socket.emit('config', {'nmea_in': document.getElementById('nmea_in').checked});
+    });
 
-    $('#nmea_in').click(nmea_config);
-    $('#nmea_out').click(nmea_config);
-    $('#nmea_baud').click(nmea_config);
+    $('#nmea_out').click(function(event) {
+        socket.emit('config', {'nmea_out': document.getElementById('nmea_out').checked});
+    });
+
+    $('#nmea_baud').click(function(event) {
+        socket.emit('config', {'nmea_baud': document.getElementById('nmea_baud').value});
+    });
 
     // Interval function that tests message latency by sending a "ping"
     var ping_pong_times = [];
+
     var start_time;
     window.setInterval(function() {
         start_time = (new Date).getTime();

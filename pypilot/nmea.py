@@ -236,7 +236,10 @@ class Nmea(object):
         pass
 
     def read_process_pipe(self):
+      while True:
         msgs = self.pipe.recv()
+        if not msgs:
+            return
         if type(msgs) == type('string'):
             if msgs == 'sockets':
                 self.sockets = True
@@ -521,6 +524,7 @@ class nmeaBridge(object):
             self.client_socket = False
 
     def nmea_process(self):
+        print('nmea process', os.getpid())
         self.setup()
         while True:
             t0 = time.monotonic()
@@ -569,7 +573,7 @@ class nmeaBridge(object):
                 return
             # relay nmea message from server to all tcp sockets
             for sock in self.sockets:
-                sock.send(msg + '\r\n')
+                sock.write(msg + '\r\n')
 
     def poll(self, timeout=0):
         t0 = time.monotonic()
@@ -613,7 +617,7 @@ class nmeaBridge(object):
 
         # send any parsed nmea messages the server might care about
         if self.msgs:
-            print('msgs', self.msgs)
+            #print('nmea msgs', self.msgs)
             if self.pipe.send(self.msgs):
                 self.msgs = {}
         t3 = time.monotonic()

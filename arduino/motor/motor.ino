@@ -130,37 +130,35 @@ PWR+             VIN
 
 static volatile uint8_t timer1_state;
 
-#if DIV_CLOCK==4
-#define dead_time \
+// 1.5uS
+#define dead_time4 \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
+    asm volatile ("nop"); \
     asm volatile ("nop"); \
     asm volatile ("nop");
+
+#if DIV_CLOCK==4
+#define dead_time dead_time4
 #elif DIV_CLOCK==2
 #define dead_time \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop");
+    dead_time4 \
+    dead_time4
 #elif DIV_CLOCK==1
 #define dead_time \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop"); \
-    asm volatile ("nop");
+    dead_time4 \
+    dead_time4 \
+    dead_time4 \
+    dead_time4
 #warning "DIV_CLOCK set to 1, this will only work with 16mhz xtal"
 #else
 #error "invalid DIV_CLOCK"
 #endif
 
 
-// time to charge bootstrap capacitor, twice dead time
+// time to charge bootstrap capacitor same as dead time
 #define charge_time \
-        dead_time; \
         dead_time;
 
 #define shunt_sense_pin 4 // use pin 4 to specify shunt resistance

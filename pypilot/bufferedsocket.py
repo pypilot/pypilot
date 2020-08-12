@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, select, socket
+import time, select, socket, os
 
 try:
   from pypilot.linebuffer import linebuffer
@@ -30,20 +30,25 @@ try:
         self.sendfail_cnt = 0
 
     def fileno(self):
-        return self.socket.fileno()
+        if self.socket:
+            return self.socket.fileno()
+        return 0
 
     def close(self):
-        self.socket.close()
+        if self.socket:
+            self.socket.close()
+            self.socket = False
         if self.udp_socket:
-          self.udp_socket.close()
+            self.udp_socket.close()
+            self.udp_socket = False
         
     def recvdata(self):
         return self.b.recv()
         
     def readline(self):
-      return self.b.line()
+        return self.b.line()
 
-    def send(self, data, udp=False):
+    def write(self, data, udp=False):
         if udp and self.udp_port:
           self.udp_out_buffer += data
           if len(self.udp_out_buffer) > 400:
@@ -52,9 +57,9 @@ try:
         else:
           self.out_buffer += data
           if len(self.out_buffer) > 65536:
-            print('overflow in pypilot socket', self.address, len(self.out_buffer))
+            print('overflow in pypilot socket', self.address, len(self.out_buffer), os.getpid())
             self.out_buffer = ''
-            self.socket.close()
+            self.close()
     
     def flush(self):
         if self.udp_out_buffer:
@@ -82,18 +87,18 @@ try:
             count = self.socket.send(self.out_buffer.encode())
             t1 = time.monotonic()
 
-            if t1-t0 > .1:
-                print('socket send took too long!?!?', self.address, t1-t0)
+            if t1-t0 > .02:
+                print('socket send took too long!?!?', self.address, t1-t0, len(self.out_buffer))
             if count < 0:
                 print('socket send error', self.address, count)
                 self.socket.close()
             self.out_buffer = self.out_buffer[count:]
         except Exception as e:
-            print('pypilot socket exception', self.address, e)
-            self.socket.close()
+            print('pypilot socket exception', self.address, e, os.getpid(), self.socket)
+            self.close()
   
 except Exception as e:
-  print('falling back to python nonblocking socket', e)
+  print('falling back to python nonblocking socket, will consume more cpu', e)
   class LineBufferedNonBlockingSocket(object):
     def __init__(self, connection):
         connection.setblocking(0)

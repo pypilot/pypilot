@@ -7,9 +7,11 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, socket, multiprocessing
+import time, socket, multiprocessing, os
+from nonblockingpipe import NonBlockingPipe
 import pyjson
 from client import pypilotClient
+from values import RangeProperty
 from sensors import source_priority
 
 # provide bi-directional translation of these keys
@@ -21,36 +23,24 @@ signalk_table = {'wind': {'environment.wind.speedApparent': 'speed',
                  'apb': {'steering.autopilot.target.headingTrue': 'track'},
                  'imu': {'navigation.headingMagnetic': 'heading_lowpass',
                          'navigation.attitude': {'pitch': 'pitch', 'roll': 'roll', 'yaw': 'heading_lowpass'}}}
-
-dependencies = True
-try:
-    from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
-except Exception as e:
-    print('signalk: failed to import zeroconf, autodetection not possible')
-    print('try pip3 install zeroconf or apt install python3-zeroconf')
-    dependencies = False
-
-try:
-    import requests
-except Exception as e:
-    print('signalk could not import requests')
-    print('try pip3 install requests')
-    dependencies = False
-    
     
 class signalk(object):
     def __init__(self, sensors=False):
         self.sensors = sensors
-        if not sensors: # standalone
+        if not sensors: # only signalk process for testing
             self.client = pypilotClient()
             self.multiprocessing = False
         else:
             server = sensors.client.server
-            #self.multiprocessing = server.multiprocessing
-            self.multiprocessing = False
+            self.multiprocessing = server.multiprocessing
             self.client = pypilotClient(server)
 
         self.initialized = False
+        self.signalk_access_url = False
+        self.last_access_request_time = 0
+        self.authenticated = False
+        self.token = False
+        self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('nmea pipe', self.multiprocessing)
         if self.multiprocessing:
             import multiprocessing
             self.process = multiprocessing.Process(target=self.process, daemon=True)
@@ -59,31 +49,32 @@ class signalk(object):
             self.process = False
 
     def setup(self):
+        try:
+            from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
+        except Exception as e:
+            print('signalk: failed to import zeroconf, autodetection not possible')
+            print('try pip3 install zeroconf or apt install python3-zeroconf')
+            return
+            
         self.last_values = {}
         self.signalk_msgs = {}
         self.signalk_msgs_skip = {}
 
-        self.sensor_priority = {}
-        for sensor in signalk_table:
-            self.sensor_priority[sensor] = source_priority['none']
-        self.sensor_priority['imu'] = 0 # override to never read imu from signalk
-        
-        self.period = 0.5
+        self.period = self.client.register(RangeProperty('signalk.period', .5, .1, 2, persistent=True))
+
         self.signalk_host_port = False
         self.signalk_ws_url = False
         self.ws = False
-
-        if not dependencies:
-            return
         
-        class MyListener:
+        class Listener:
             def __init__(self, signalk):
                 self.signalk = signalk
             
             def remove_service(self, zeroconf, type, name):
-                print("Service %s removed" % (name,))
+                print('zeroconf service %s removed' % (name,))
 
             def add_service(self, zeroconf, type, name):
+                print('zeroconf service add', name, type)
                 info = zeroconf.get_service_info(type, name)
                 if not info:
                     return
@@ -99,7 +90,7 @@ class signalk(object):
                     print('signalk server found', host_port)
 
         zeroconf = Zeroconf()
-        listener = MyListener(self)
+        listener = Listener(self)
         browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
         #zeroconf.close()
     
@@ -108,6 +99,15 @@ class signalk(object):
 
     def probe_signalk(self):
         print('signalk probe...', self.signalk_host_port)
+
+        try:
+            import requests
+        except Exception as e:
+            print('signalk could not import requests')
+            print('try pip3 install requests')
+            time.sleep(50)
+            return
+
         try:
             r = requests.get('http://' + self.signalk_host_port + '/signalk')
             contents = pyjson.loads(r.content)
@@ -117,14 +117,57 @@ class signalk(object):
             return
         print('signalk found', self.signalk_ws_url)
 
+    def request_access(self):
+        uid = "1234-45653343454";
+        import requests
+        if self.signalk_access_url:
+            dt = time.monotonic() - self.last_access_request_time            
+            if dt < 15:
+                return
+            self.last_access_request_time = time.monotonic()
+            try:
+                #print('signalk see if token is ready')
+                r = requests.get(self.signalk_access_url)
+                contents = pyjson.loads(r.content)
+                #print('got', contents)
+                if contents['state'] == 'COMPLETED':
+                    if 'accessRequest' in contents:
+                        access = contents['accessRequest']
+                        if access['permission'] == 'APPROVED':
+                            self.token = access['token']
+                            if self.ws:
+                                self.ws.send(pyjson.dumps({"clientId": uid, "validate":{"token": self.token}})+'\n')
+                                print('signalk recieved token', self.token)
+                else:
+                    self.signalk_access_url = 'http://' + self.signalk_host_port + contents['href']
+            except Exception as e:
+                print('error requesting access', e)
+                self.signalk_access_url = False
+            return
+
+        try:
+            r= requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":uid, "description": "pypilot"})
+            
+            contents = pyjson.loads(r.content)
+            print('post', contents)
+            if contents['statusCode'] == 202 or contents['statusCode'] == 400:
+                self.signalk_access_url = 'http://' + self.signalk_host_port + contents['href']
+                print('signalk request access url', self.signalk_access_url)
+        except Exception as e:
+            print('signalk error requesting access', e)
+        
     def connect_signalk(self):
         try:
             from websocket import create_connection
         except Exception as e:
             print('signalk cannot create connection:', e)
             print('try pip3 install websocket-client or apt install python3-websocket')
+            self.signalk_host_port = False
             return
 
+        self.subscribed = {}
+        for sensor in list(signalk_table):
+            self.subscribed[sensor] = False
         self.subscriptions = [] # track signalk subscriptions
         self.signalk_values = {}
         try:
@@ -137,25 +180,41 @@ class signalk(object):
         print('would send signalk server', msg)
             
     def process(self):
+        time.sleep(6) # let other stuff load
+        print('signalk process', os.getpid())
+        self.process = False
         while True:
+            time.sleep(.1)
             self.poll(1)
 
     def poll(self, timeout=0):
+        if self.process:
+            msg = self.sensors_pipe_out.recv()
+            while msg:
+                sensor, data = msg
+                self.sensors.write(sensor, data, 'signalk')
+                msg = self.sensors_pipe_out.recv()
+            return
+
         t0 = time.monotonic()
-        self.client.poll(timeout)
         if not self.initialized:
             self.setup()
             return
 
+        self.client.poll(timeout)
         if not self.signalk_host_port:
-            time.sleep(timeout)
             return # waiting for signalk to detect
 
+        t1 = time.monotonic()
         if not self.signalk_ws_url:
             #zeroconf.close()  # takes a long time
-            print('probe')
             self.probe_signalk()
             return
+
+        t2 = time.monotonic()
+        if not self.token:
+            self.request_access()
+        t3 = time.monotonic()
 
         if not self.ws:
             self.connect_signalk()
@@ -165,7 +224,7 @@ class signalk(object):
             # setup pypilot watches
             watches = ['imu.heading_lowpass', 'imu.roll', 'imu.pitch', 'timestamp']
             for watch in watches:
-                self.client.watch(watch, self.period)
+                self.client.watch(watch, self.period.value)
             for sensor in signalk_table:
                 self.client.watch(sensor+'.source')
             return
@@ -192,6 +251,7 @@ class signalk(object):
                         self.update_sensor_source(sensor, value)
 
         self.send_signalk()
+        t4 = time.monotonic()
 
         while True:
             try:
@@ -201,6 +261,7 @@ class signalk(object):
                 break
             self.receive_signalk(msg)
 
+        t5 = time.monotonic()
         for sensor, sensor_table in signalk_table.items():
             for source, values in self.signalk_values.items():
                 data = {}
@@ -214,12 +275,13 @@ class signalk(object):
                         del values[signalk_path]
                     # all needed sensor data is found 
                     data['device'] = source
-                    #print('data', data, sensor)
-                    if self.sensors:
-                        self.sensors.write(sensor, data, 'signalk')
+                    print('data', data, sensor)
+                    if self.sensors_pipe:
+                        self.sensors_pipe.send([sensor, data])
                     else:
                         print('signalk received', sensor, data)
                     break
+        #print('sigktimes', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
 
     def send_signalk(self):
         # see if we can produce any signalk output from the data we have read
@@ -286,16 +348,20 @@ class signalk(object):
                     
     def update_sensor_source(self, sensor, source):
         priority = source_priority[source]
-        self.sensor_priority[sensor] = priority
-        watch = priority < source_priority['signalk'] # translate from pypilot -> signalk
+        sk_priority = source_priority['signalk']
+        watch = priority < sk_priority # translate from pypilot -> signalk
         if watch:
-            watch = self.period
+            watch = self.period.value
         for signalk_path, pypilot_path in signalk_table[sensor].items():
             self.client.watch(pypilot_path, watch)
-        if priority != source_priority['signalk']:
-            self.subscribe_signalk(sensor, not watch)
+        self.subscribe_signalk(sensor, priority >= sk_priority)
 
     def subscribe_signalk(self, sensor, value):
+        # prevent duplicating subscriptions
+        if self.subscribed[sensor] == value:
+            return
+        self.subscribed[sensor] = value
+
         if not value:
             #signalk can't unsubscribe by path!?!?!
             subscription = {'context': '*', 'unsubscribe': [{'path': '*'}]}
@@ -307,7 +373,7 @@ class signalk(object):
             for signalk_path in signalk_sensor:
                 if signalk_path in self.signalk_msgs_skip:
                     del self.signalk_msgs_skip[signalk_path]
-                subscriptions.append({'path': signalk_path, 'minPeriod': self.period*1000, 'format': 'delta', 'policy': 'instant'})
+                subscriptions.append({'path': signalk_path, 'minPeriod': self.period.value*1000, 'format': 'delta', 'policy': 'instant'})
             self.subscriptions += subscriptions
         else:
             # remove this subscription and resend all subscriptions
@@ -323,6 +389,7 @@ class signalk(object):
             
         subscription = {'context': 'vessels.self'}
         subscription['subscribe'] = subscriptions
+        #print('signalk subscribe', subscription)
         self.ws.send(pyjson.dumps(subscription)+'\n')
 
 def main():

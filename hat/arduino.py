@@ -12,7 +12,7 @@
 # pins for more functionallity (tack button, 
 # spi port.
 
-import os, sys, time, socket, errno
+import os, sys, time, socket, errno, select
 import json
 import lircd
 
@@ -47,7 +47,6 @@ except:
     
 class arduino(object):    
     def __init__(self, config):
-        self.xfers=0
         self.spi = False
         self.nmea_socket = False
         self.nmea_connect_time = time.monotonic()
@@ -63,13 +62,14 @@ class arduino(object):
             print('No hat config, arduino not found')
 
         if not 'nmea' in config:
-            self.config['nmea'] = {'in': True, 'out': False, 'baud': 38400}
+            self.config['nmea'] = {'in': False, 'out': False, 'baud': 38400}
 
         self.lasttime=0
 
         self.sent_count = 0
         self.sent_start = time.monotonic()
 
+        self.socketdata = b''
         self.serial_in_count = 0
         self.serial_out_count = 0
         self.serial_time = self.sent_start + 2
@@ -105,11 +105,12 @@ class arduino(object):
                 import spidev
                 self.spi = spidev.SpiDev()
                 self.spi.open(port, slave)
-                self.spi.max_speed_hz=1000000
+                self.spi.max_speed_hz=100000
 
         except Exception as e:
             print('failed to communicate with arduino', device, e)
             self.hatconfig = False
+            self.spi = False
 
     def close(self, e):
         print('failed to read spi:', e)
@@ -117,6 +118,7 @@ class arduino(object):
         self.spi = False
 
     def xfer(self, x):
+        #time.sleep(.0001)
         return self.spi.xfer([x])[0]
 
     def send(self, id, data):
@@ -141,8 +143,13 @@ class arduino(object):
         backlight = [value, polarity]
         self.send(SET_BACKLIGHT, backlight)
 
-    def set_baud(self, baud):
+    def set_baud(self):
+        try:
+            baud = int(self.config['nmea']['baud'])
+        except:
+            baud = 38400
         self.config['nmea']['baud'] = baud
+
         # 0, 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600
         if baud == 4800:
             d = [5]
@@ -153,8 +160,9 @@ class arduino(object):
             d = [8]
         self.send(SET_BAUD, d)
 
-    def set_buzzer(self, duration, frequency):
-        self.send(SET_BUZZER, (duration, frequency))
+    def set_buzzer(self, mode, duration):
+        duration = int(min(max(duration, 0), 2)*100)
+        self.send(SET_BUZZER, (mode, duration))
 
     def get_baud_rate(self):
         t = time.monotonic()
@@ -179,16 +187,13 @@ class arduino(object):
         # don't exceed 90% of baud rate
         baud = self.config['nmea']['baud'] *.9
         while True:
-            if self.nmea_socket:
+            if self.nmea_socket and len(self.socketdata) < 100 and self.nmea_socket_poller.poll(0):
                 try:
                     b = self.nmea_socket.recv(40)
-                    b = b''
-                    self.socketdata += b
-                    self.serial_in_count += len(b)
-                    if len(self.socketdata) > 160:
-                        print('overflow, dropping 64 bytes')
-                        self.socketdata = self.socketdata[:64]
-                        self.serial_in_count -= 64
+                    #print('b', b)
+                    if self.config['nmea']['out']:
+                        self.socketdata += b
+                        self.serial_in_count += len(b)
                 except Exception as e:
                     if e.args[0] is errno.EWOULDBLOCK:
                         pass
@@ -239,6 +244,7 @@ class arduino(object):
                 p ^= x
 
             # spi interrupt collides with pin change interrupt, so sometimes
+            # (maybe even impossible at 100khz and below)
             # bytes are lost when rf is receiving causing parity failure
             # drop invalid packets
             if p != parity:
@@ -262,52 +268,54 @@ class arduino(object):
             elif cmd == VOLTAGE:
                 vcc = (d[0] + (d[1]<<7))/1000.0
                 vin = (d[2] + (d[3]<<7))/1000.0
-                if vin < 3 or vin > 3.5:
-                    print('3v3 VOLTAGE BAD!!!', vin)
-                if vcc < 4.5 or vcc > 5.5:
-                    print('5v VOLTAGE BAD!!!', vcc)
+                events.append(['voltage', {'vcc': vcc, 'vin': vin}])
                 continue
             else:
                 print('unknown message', cmd, d)
                 continue
 
-            events.append((key, count))
+            events.append([key, count])
 
         if self.nmea_socket and serial_data:# and self.config['nmea']['out']:
             #print('nmea>', bytes(serial_data))
-            self.nmea_socket.send(bytes(serial_data))
-            self.serial_out_count += len(serial_data)
-            #self.open_nmea()
+            if self.config['nmea']['in']:
+                self.nmea_socket.send(bytes(serial_data))
+                self.serial_out_count += len(serial_data)
             #print('nmea', self.serial_in_count, self.serial_out_count, self.serial_in_count - self.serial_out_count)
             
         return events
 
     def open_nmea(self):
+        nmea = self.config['nmea']
+        if not nmea['in'] and not nmea['out']:
+            if self.nmea_socket:
+                self.nmea_socket.close()
+                self.nmea_socket = False
+            return
+        
         if self.nmea_socket:
             return
         if time.monotonic() < self.nmea_connect_time:
             return
 
-        self.nmea_connect_time += 4
-        nmea = self.config['nmea']
-        if not nmea['in'] and not nmea['out']:
-            return
+        self.nmea_connect_time += 8
+
+        self.socketdata = b''
         try:
-            self.socketdata = b''
             self.nmea_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.nmea_socket.setblocking(0)
-            print('connect nmea', self.config['host'])
             self.nmea_socket.connect((self.config['host'], 20220))
         except OSError as e:
             print('os error', e)
             if e.args[0] is errno.EINPROGRESS:
+                self.nmea_socket_poller = select.poll()
+                self.nmea_socket_poller.register(self.nmea_socket, select.POLLIN)
                 return True
         except Exception as e:
             print('exception', e)
             self.nmea_socket = False
         except:
             print('MOOOOOOOOOOOOOOORE')
-            self.nmea_socket = False
 
     def flash(self, filename, c):
         global GPIO
@@ -326,7 +334,7 @@ class arduino(object):
             return False
 
         command = 'avrdude -P ' + self.hatconfig['device'] + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 500000'
-
+        print('cmd', command)
         ret = os.system(command)
         GPIO.output(self.resetpin, 1)
         GPIO.setup(self.resetpin, GPIO.IN)
@@ -340,18 +348,26 @@ class arduino(object):
 
 def arduino_process(pipe, config):
     a = arduino(config)
+    period = .05
+    periodtime = 0
     while True:
         t0 = time.monotonic()
         events = a.poll()
-        if events:
-            pipe.send(events)
 
         baud_rate = a.get_baud_rate()
         if baud_rate:
+            #print('baud', baud_rate)
             if a.nmea_socket:
-                pipe.send([('baudrate', baud_rate)])
+                events.append(['baudrate', baud_rate])
             else:
-                pipe.send([('baudrate', 'ERROR: no connection to server for nmea')])
+                events.append(['baudrate', 'ERROR: no connection to server for nmea'])
+
+        if events:
+            pipe.send(events)
+            period = .025
+            periodtime = t0
+        elif periodtime - t0 > 5:
+            period = .05
 
         while True:
             try:
@@ -362,8 +378,11 @@ def arduino_process(pipe, config):
             except Exception as e:
                 print('pipe recv failed!!\n')
                 return
-            if cmd == 'baud':
-                a.set_baud(value)
+            if cmd == 'nmea':
+                name, v = value
+                a.config['nmea'][name] = v
+                if name == 'baud':
+                    a.set_baud()
             elif cmd == 'backlight':
                 a.set_backlight(*value)
             elif cmd == 'buzzer':
@@ -373,7 +392,7 @@ def arduino_process(pipe, config):
         t1 = time.monotonic()
         # max period to handle 38400 with 192 byte buffers is (192*10) / 38400 = 0.05
         # for now use 0.025, eventually dynamic depending on baud?
-        dt = .025 - (t1-t0)
+        dt = period - (t1-t0)
         if dt > 0:
             time.sleep(dt)      
     
@@ -396,8 +415,7 @@ def main():
             print('baud rate', baud_rate)
         t1 = time.monotonic()
         dt = t1 - t0
-        #print('dt', dt)
-        time.sleep(.02)
+        time.sleep(.04)
     
 if __name__ == '__main__':
     main()

@@ -160,6 +160,8 @@ $(document).ready(function() {
 
         pypilot_watch('servo.controller');
         pypilot_watch('servo.flags');
+
+        setup_watches();
     });
 
     socket.on('pypilot_disconnect', function(msg) {
@@ -461,7 +463,7 @@ $(document).ready(function() {
     // should be called if tab changes
     setup_watches = function() {
         var tab = currentTab;
-        pypilot_watch('ap.heading', tab == 'Control', 0.5);
+        pypilot_watches(['ap.heading'], tab == 'Control', 0.5);
         pypilot_watches(gains, tab == 'Gain', 1);
         pypilot_watches(['imu.heading', 'imu.pitch', 'imu.roll', 'rudder.angle'], tab == 'Calibration', .5);
         pypilot_watches(conf_names, tab == 'Configuration', 1);

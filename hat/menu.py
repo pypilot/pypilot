@@ -445,7 +445,7 @@ class display(menu):
         super(display, self).__init__(_('display'),
                                       [ConfigEdit(_('contrast'), '', 'contrast', 0, 120, 1),
                                        invert(_('invert')),
-                                       ConfigEdit(_('backlight'), '', 'backlight', 0, 100, 1),
+                                       ConfigEdit(_('backlight'), '', 'backlight', 0, 20, 1),
                                        flip(_('flip'))])                                   
 class select_language(page):
     def __init__(self, lang):

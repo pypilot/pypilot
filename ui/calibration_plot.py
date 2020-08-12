@@ -42,6 +42,7 @@ class CalibrationPlot(object):
         self.name = name
         self.mode = GL_LINE
         self.fusionQPose = [1, 0, 0, 0]
+        self.alignmentQ = [1, 0, 0, 0]
         self.recentpoints = []
         self.historypoints = []
         self.sigmapoints = []
@@ -67,6 +68,8 @@ class CalibrationPlot(object):
         name, value = msg
         if name == 'imu.fusionQPose':
             self.fusionQPose = value
+        elif name == 'imu.alignmentQ':
+            self.alignmentQ = value
         elif name == 'imu.'+self.name:
             self.add_point(value)
         elif name == 'imu.'+self.name+'.calibration.sigmapoints':
@@ -102,8 +105,9 @@ class CalibrationPlot(object):
         if not self.fusionQPose:
             return [0, 0, 1]
 
-        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(self.fusionQPose))
-        glRotatef(-math.degrees(quaternion.angle(self.fusionQPose)), *self.fusionQPose[1:])
+        q = quaternion.multiply(self.fusionQPose, self.alignmentQ)
+        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(q))
+        glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
         return down
 
     def draw_points(self):

@@ -120,8 +120,8 @@ class WebConfig(Namespace):
         self.pipe.send(action_keys)
         self.emit_keys()
 
-    def on_nmea(self, config):
-        self.nmeapipe.send(config)
+    def on_config(self, config):
+        self.pipe.send(config)
 
     def emit_keys(self):
         for name, keys in self.action_keys.items():
@@ -130,11 +130,11 @@ class WebConfig(Namespace):
         
     def on_connect(self):
         self.emit_keys()
-        print('Client connected', request.sid)
+        print('web client connected', request.sid)
         socketio.emit('status', self.status)
 
     def on_disconnect(self):
-        print('Client disconnected', request.sid)
+        print('web client disconnected', request.sid)
 
     def background_thread(self):
         print('web process on port', web_port)
@@ -169,7 +169,7 @@ class WebConfig(Namespace):
                     socketio.emit('status', self.status)
 
 def web_process(pipe, action_keys):
-    print('web process pid111', os.getpid())
+    print('web process', os.getpid())
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
     socketio.on_namespace(WebConfig('', pipe, action_keys))

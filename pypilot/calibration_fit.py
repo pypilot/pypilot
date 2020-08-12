@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import sys, time, multiprocessing, math, numpy
+import sys, time, math, numpy
 import vector, resolv, quaternion
 import boatimu
 resolv = resolv.resolv
@@ -15,7 +15,7 @@ resolv = resolv.resolv
 from values import *
 from client import pypilotClientFromArgs
     
-calibration_fit_period = 20  # run every 20 seconds
+calibration_fit_period = 30  # run every 30 seconds
 
 def lmap(*cargs):
     return list(map(*cargs))
@@ -485,6 +485,9 @@ def FitAccel(debug, accel_cal):
         debug('need more spread', sum(diff))
         return # require more spread
     fit = FitPointsAccel(debug, p)
+    if not fit:
+        debug('FitPointsAccel failed', fit)
+        return False
 
     if abs(1-fit[3]) > .1:
         debug('scale factor out of range', fit)
@@ -612,12 +615,6 @@ def RegisterCalibration(client, name, default):
     return calibration
         
 def CalibrationProcess(cal_pipe, client):
-    import os
-    if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
-        print('warning, failed to make calibration process idle, trying renice')
-    if os.system("renice 20 %d" % os.getpid()):
-        print('warning, failed to renice calibration process')
-
     accel_points = SigmaPoints(.05**2, 12, 10)
     compass_points = SigmaPoints(1.1**2, 24, 3)
 
@@ -666,15 +663,17 @@ def CalibrationProcess(cal_pipe, client):
 
             # receive calibration data
             if cal_pipe:
-                print('calpipe!!!!!!!!!!!!')
                 p = cal_pipe.recv()
-                if p:
+                while p:
+                    #print('calpipe!!!!!!!!!!!!', type(p))
                     if 'accel' in p:
                         accel_points.AddPoint(p['accel'])
                         addedpoint = True
                     if 'compass' in p:
-                        compass_points.AddPoint(p['compass'], p['down'])
+                        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(p['fusionQPose']))
+                        compass_points.AddPoint(p['compass'], down)
                         addedpoint = True
+                    p = cal_pipe.recv()
 
             cals = [(accel_calibration, accel_points), (compass_calibration, compass_points)]
             for calibration, points in cals:

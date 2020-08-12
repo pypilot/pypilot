@@ -34,7 +34,6 @@ class ActionKeypad(Action):
         self.index = index
 
     def trigger(self, count):
-        print("trigger",count, time.monotonic())
         self.lcd.keypad[self.index].update(count, count)
         self.lcd.lastframetime = 0 # trigger immediate refresh
         
@@ -114,7 +113,6 @@ class Web(Process):
 
     def create(self):
         def process(pipe, action_keys):
-            print('web process on ', os.getpid())
             try:
                 import web
                 web.web_process(pipe, action_keys)
@@ -131,22 +129,24 @@ class Web(Process):
         msg = self.pipe.recv()
         if msg:
             for name in msg:
-                for action in self.hat.actions:
-                    if name == action.name:
-                        action.keys = msg[name]
+                if name.startswith('nmea_') and self.hat.arduino:
+                    print('got nmea', msg)
+                    self.hat.arduino.set_nmea(name[5:], msg[name])
                 else:
-                    if name == 'baud':
-                        self.hat.arduino.set_baud(msg[name])
+                    for action in self.hat.actions:
+                        if name == action.name:
+                            action.keys = msg[name]
 
             self.hat.write_config()
 
 class Arduino(Process):
     def __init__(self, hat):
         super(Arduino, self).__init__(hat)
+        self.voltage = {'vcc': 5, 'vin': 3.3}
         self.status = 'Not Connected'
 
-    def set_baud(self, baud):
-        self.send(('baud', baud))
+    def set_nmea(self, name, value):
+        self.send(('nmea', (name, value)))
 
     def set_backlight(self, value, polarity):
         self.send(('backlight', (value, polarity)))
@@ -164,13 +164,21 @@ class Arduino(Process):
         super(Arduino, self).create(process, self.hat.config)
 
     def poll(self):
-        msgs = []
+        ret = []
         while True:
-            msg = self.pipe.recv()
-            if not msg:
+            msgs = self.pipe.recv()
+            if not msgs:
                 break
-            msgs += msg
-        return msgs
+            for msg in msgs:
+                key, code = msg
+                if key == 'baudrate': # statistics
+                    self.hat.web.send({'baudrate': code})
+                elif key == 'voltage': # statistics
+                    self.hat.web.send({'voltage': '5v = %.3f, 3.3v = %.3f' % (code['vcc'], code['vin'])})
+                    self.voltage = code
+                else:
+                    ret.append(msg)
+        return ret
             
 class Hat(object):
     def __init__(self):
@@ -195,14 +203,15 @@ class Hat(object):
             print('loaded device tree hat config')
         except Exception as e:
             print('failed to load', configfile, ':', e)
-            hatconfig = {"lcd":{"driver":"jlx12864",
-                                "port":"/dev/spidev0.0"},
-                         "lirc":"gpio4"}
-            if False: # for test
-                hatconfig["arduino"] = {"device":"/dev/spidev0.1",
-                                        "resetpin":16,
-                                        "hardware":0.21}
-            print('assuming original 26 pin tinypilot')
+            hatconfig = {'lcd':{'driver':'nokia5110',
+                                'port':'/dev/spidev0.0'},
+                         'lirc':'gpio4'}
+            if True: # for test
+                hatconfig['lcd']['driver'] = 'jlx12864'
+                hatconfig['arduino'] = {'device':'/dev/spidev0.1',
+                                        'resetpin':16,
+                                        'hardware':0.21}
+            print('assuming original 26 pin tinypilot with nokia5110 display')
         self.config['hat'] = hatconfig
 
         self.servo_timeout = time.monotonic() + 1
@@ -309,9 +318,6 @@ class Hat(object):
             print('failed to save config file:', self.configfilename)
 
     def apply_code(self, key, count):
-        if key == 'baudrate': # statistics
-            self.web.send({'baudrate': count})
-            return
         self.web.send({'key': key})
         for action in self.actions:
             if key in action.keys:
@@ -324,6 +330,17 @@ class Hat(object):
                 action.trigger(count)
                 return
         self.web.send({'action': 'none'})
+
+    def check_voltage(self):
+        if not self.arduino:
+            return False
+
+        vin, vcc = self.arduino.voltage['vin'], self.arduino.voltage['vcc']
+        if vin < 3 or vin > 3.6:
+            return '3v3 Voltage Bad' + (': %.2f' % vin)
+        if vcc < 4.5 or vcc > 5.5:
+            return '5v Voltage Bad' + (': %.2f' % vcc)
+        return False
                 
     def poll(self):
         if self.client.connection:
@@ -334,12 +351,6 @@ class Hat(object):
         t0 = time.monotonic()
         msgs = self.client.receive()
         t1 = time.monotonic()
-        for name, value in msgs.items():
-            self.last_msg[name] = value
-
-        for i in [self.lcd, self.web]:
-            i.poll()
-        t2 = time.monotonic()
         for i in [self.gpio, self.arduino, self.lirc]:
             try:
                 if not i:
@@ -348,7 +359,13 @@ class Hat(object):
                 for event in events:
                     self.apply_code(*event)
             except Exception as e:
-                print('WARNING, failed to poll!!', e)
+                print('WARNING, failed to poll!!', e, i)
+        t2 = time.monotonic()
+        for name, value in msgs.items():
+            self.last_msg[name] = value
+
+        for i in [self.lcd, self.web]:
+            i.poll()
         t3 = time.monotonic()
         for key, t in self.keytimes.items():
             dt = time.monotonic() - t
