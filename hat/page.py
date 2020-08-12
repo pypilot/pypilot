@@ -571,6 +571,11 @@ class control(controlbase):
             if self.control['heading_command'] != 'no controller':
                 self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
                 self.control['heading_command'] = 'no controller'
+        elif self.lcd.hat and self.lcd.hat.check_voltage():
+            msg = self.lcd.hat.check_voltage()
+            if self.control['heading_command'] != msg:
+                self.fittext(rectangle(0, .4, 1, .35), msg, True, black)
+                self.control['heading_command'] = msg
         else:
             # no warning, display the desired course or 'standby'
             if self.last_val('ap.enabled') != True:
@@ -614,7 +619,7 @@ class control(controlbase):
         if not self.lcd.client.connection:
             return connecting(self.lcd)
 
-        if self.testkeyup(AUTO): # AUTO
+        if self.testkeydown(AUTO): # AUTO
             if self.last_val('ap.enabled') == False:
                 self.set('ap.heading_command', self.last_val('ap.heading'))
                 self.set('ap.enabled', True)
