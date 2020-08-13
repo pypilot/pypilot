@@ -192,7 +192,29 @@ class TimeoutSensorValue(SensorValue):
     def timeout(self):
         if self.value and time.monotonic() - self.time > 8:
             self.set(False)
-    
+
+# range setting bounded pairs, don't let max setting below min setting, and ensure max is at least min
+class MinRangeSetting(RangeSetting):
+    def __init__(self, name, initial, min_value, max_value, units, minvalue, **kwargs):
+        self.minvalue = minvalue
+        minvalue.maxvalue = self
+        super(MinRangeSetting, self).__init__(name, initial, min_value, max_value, units, **kwargs)
+
+    def set(self, value):
+        if value < self.minvalue.value:
+            value = self.minvalue.value;
+        super(MinRangeSetting, self).set(value)
+
+class MaxRangeSetting(RangeSetting):
+    def __init__(self, name, initial, min_value, max_value, units, **kwargs):
+        self.maxvalue = None
+        super(MaxRangeSetting, self).__init__(name, initial, min_value, max_value, units, **kwargs)
+
+    def set(self, value):
+        if self.maxvalue and value > self.maxvalue.value:
+            self.maxvalue.set(value)
+        super(MaxRangeSetting, self).set(value)
+            
 class Servo(object):
     calibration_filename = autopilot.pypilot_dir + 'servocalibration'
 
@@ -229,8 +251,9 @@ class Servo(object):
         self.max_controller_temp = self.register(RangeProperty, 'max_controller_temp', 60, 45, 80, persistent=True)
         self.max_motor_temp = self.register(RangeProperty, 'max_motor_temp', 60, 30, 80, persistent=True)
 
-        self.max_slew_speed = self.register(RangeSetting, 'max_slew_speed', 18, 0, 100, '')
-        self.max_slew_slow = self.register(RangeSetting, 'max_slew_slow', 28, 0, 100, '')
+        self.max_slew_speed = self.register(MaxRangeSetting, 'max_slew_speed', 18, 0, 100, '')
+        self.max_slew_slow = self.register(MinRangeSetting, 'max_slew_slow', 28, 0, 100, '', self.max_slew_speed)
+
         self.gain = self.register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
         self.period = self.register(RangeSetting, 'period', .4, .1, 3, 'sec')
         self.compensate_current = self.register(BooleanProperty, 'compensate_current', False, persistent=True)
@@ -239,8 +262,8 @@ class Servo(object):
         self.watts = self.register(SensorValue, 'watts')
 
         self.speed = self.register(SensorValue, 'speed')
-        self.speed.min = self.register(RangeSetting, 'speed.min', 100, 0, 100, '%')
-        self.speed.max = self.register(RangeSetting, 'speed.max', 100, 0, 100, '%')
+        self.speed.min = self.register(MaxRangeSetting, 'speed.min', 100, 0, 100, '%')
+        self.speed.max = self.register(MinRangeSetting, 'speed.max', 100, 0, 100, '%', self.speed.min)
 
         self.position = self.register(SensorValue, 'position')
         self.position.elp = 0
@@ -348,10 +371,6 @@ class Servo(object):
         if self.compensate_voltage.value and self.voltage.value:
             speed *= 12 / self.voltage.value
         
-        # ensure speed max is at least speed min
-        if self.speed.min.value > self.speed.max.value:
-            self.speed.max.set(self.speed.min.value)
-
         min_speed = self.speed.min.value/100.0 # convert percent to 0-1
         max_speed = self.speed.max.value/100.0
         
