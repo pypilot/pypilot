@@ -150,7 +150,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.sCommand.SetValue(0)
             else:
                 
-                if False:
+                if True:
                     if command > 0:
                         command -= 1
                     elif command < 0:

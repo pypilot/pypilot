@@ -285,7 +285,7 @@ class info(page):
         self.bound_page()
         self.watches = {} # clear watches so they can be page specific
         self.fill(black)
-        self.fittext(rectangle(0, 0, 1, .2), _('Info'))
+        self.fittext(rectangle(0, 0, 1, .2), _('info'))
 
         y = .2
         if self.page == 0:

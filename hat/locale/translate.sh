@@ -3,6 +3,7 @@
 function translate() {
     mkdir -p $1/LC_MESSAGES
     cp -n pypilot_hat.pot $1/LC_MESSAGES/pypilot_hat.po
+    msgmerge -N -U $1/LC_MESSAGES/pypilot_hat.po pypilot_hat.pot
     ./trans-po.py $1/LC_MESSAGES/pypilot_hat.po $1
     /usr/bin/msgfmt --check -o $1/LC_MESSAGES/pypilot_hat.mo $1/LC_MESSAGES/pypilot_hat.po
 }

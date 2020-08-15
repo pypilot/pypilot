@@ -159,7 +159,11 @@ class RangeEdit(page):
         if self.value is False:
             return
         if self.pypilot_path:
-            v = self.value + delta*self.step
+            v = self.value
+            try:
+                v += delta*self.step
+            except:
+                pass # not connected to server and value is N/A
         else: #config items rounded to integer
             if delta > 0:
                 delta = max(1, delta)

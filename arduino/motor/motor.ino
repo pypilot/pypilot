@@ -587,6 +587,7 @@ void stop_starboard()
 void update_command()
 {
     int16_t speed_rate = max_slew_speed;
+
     // value of 20 is 1 second full range at 50hz
     int16_t slow_rate = max_slew_slow;
 
@@ -1337,10 +1338,10 @@ void loop()
                 flags |= MAX_RUDDER_FAULT;
             } else
                 flags &= ~MAX_RUDDER_FAULT;
-            if(v < 1024 || v > 65472 - 1024)
+            if(v < 1024+1024 || v > 65472 - 1024)
                 rudder_sense = 0;
         } else {
-            if(v > 1536 && v < 65472 - 1536)
+            if(v > 1024+1536 && v < 65472 - 1536)
                 rudder_sense = 1;
             flags &= ~(MIN_RUDDER_FAULT | MAX_RUDDER_FAULT);
         }
