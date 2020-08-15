@@ -79,7 +79,7 @@ class menu(page):
         if self.selection >= 0:
             y = .15*(self.selection-scroll) + sy
             if y < .85:
-                self.invertrectangle(rectangle(0, y+.03, 1, .12))
+                self.invertrectangle(rectangle(0, y+.01, 1, .14))
 
     def process(self):
         if self.testkeydown(AUTO):
@@ -344,7 +344,7 @@ class calibrate(menu):
             self.fittext(r, ' %d%%' % (100-counter), False, black)
             r.width = 1-float(counter)/100
             r.height = .25
-            #self.invertrectangle(r)
+            self.invertrectangle(r)
             
         self.fittext(rectangle(0, .86, .5, .14), self.round_last_val('imu.pitch', 1))
         self.fittext(rectangle(.5, .86, .5, .14), self.round_last_val('imu.heel', 1))

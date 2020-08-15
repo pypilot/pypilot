@@ -12,7 +12,7 @@ LIRC = None
 LIRC_version = 0
 try:
     import lirc as LIRC
-    LIRC_version = 1
+    LIRC_version = 2
     print('have lirc for remote control')
 except Exception as e:
     try:
