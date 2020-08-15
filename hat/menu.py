@@ -462,7 +462,7 @@ class language(menu):
         languages = [('català', 'ca'),
                      ('dansk', 'da'),
                      ('deutsch', 'de'),
-                     ('Eλληνικά'),
+                     ('Eλληνικά', 'el'),
                      ('english', 'en'),
                      ('español', 'es'),
                      ('suomalainen', 'fi'),

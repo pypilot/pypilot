@@ -271,7 +271,7 @@ class page(object):
 
 class info(page):
     def __init__(self, num_pages=4):
-        super(info, self).__init__('info')
+        super(info, self).__init__(_('info'))
         self.num_pages = num_pages
         self.page = 0
 
