@@ -12,8 +12,8 @@ LIRC = None
 LIRC_version = 0
 try:
     import lirc as LIRC
-    LIRC_version = 2
-    print('have lirc for remonte control')
+    LIRC_version = 1
+    print('have lirc for remote control')
 except Exception as e:
     try:
         import pylirc as LIRC
@@ -47,9 +47,10 @@ class lirc(object):
         events = []
         while LIRC_version:
             if LIRC_version == 1:
-                code = LIRC.nextcode(0)
+                code = LIRC.nextcode()
                 if not code:
                     break
+                print('code', code)
                 count = code[0]['repeat']+1
                 key = 'lirc' + code[0]['config']
             elif LIRC_version == 2:

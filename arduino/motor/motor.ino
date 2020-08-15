@@ -27,7 +27,7 @@ D4  D5
  1   1        .05 ohm, (or .001 ohm x 50 gain)
  0   1        .01 ohm
  1   0        .0005 ohm x 50 gain
- 0   0        .0005 ohm x 200 gain   *ratiometric mode
+ 0   0        .00025 ohm x 200 gain   *ratiometric mode
 
 
 digital pin6 determines:

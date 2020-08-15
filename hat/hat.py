@@ -242,7 +242,7 @@ class Hat(object):
         
         # keypad for lcd interface
         self.actions = []
-        keypadnames = ['auto', 'menu', 'port1', 'starboard1', 'select', 'port10', 'starboard10', 'tack', 'nudge_port', 'nudge_starboard']
+        keypadnames = ['auto', 'menu', 'port1', 'starboard1', 'select', 'port10', 'starboard10', 'tack', 'dodge_port', 'dodge_starboard']
         
         for i in range(len(keypadnames)):
             self.actions.append(ActionKeypad(self.lcd, i, keypadnames[i]))

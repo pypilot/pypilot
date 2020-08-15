@@ -71,6 +71,7 @@ obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 AVRDUDE = sudo avrdude
 BOOTLOADER = linuxspi
 BAUDRATE = 1000000
+#sudo avrdude -P /dev/spidev0.1 -u -p atmega328p -c linuxspi -U f:w:hat.cpp.hex -b 1000000
 upload: $(SKETCHNAME).cpp.hex
 	echo 16 > /sys/class/gpio/export || echo ok
 	echo in > /sys/class/gpio/gpio16/direction

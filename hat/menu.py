@@ -349,8 +349,8 @@ class calibrate(menu):
 class motor(menu):
     def __init__(self):
         super(motor, self).__init__(_('motor'),
-                                    [ValueEdit(_('speed.min'), _('relative'), 'servo.speed.min'),
-                                     ValueEdit(_('speed.max'), _('relative'), 'servo.speed.max'),
+                                    [ValueEdit(_('min speed'), _('relative'), 'servo.speed.min'),
+                                     ValueEdit(_('max speed'), _('relative'), 'servo.speed.max'),
                                      ValueEdit(_('max current'), _('amps'), 'servo.max_current'),
                                      ValueEdit(_('period'), _('seconds'), 'servo.period')])
         
@@ -389,7 +389,7 @@ class wifi_remote(page):
 class wifi(menu):
     def __init__(self):
         self.wifi = False
-        super(wifi, self).__init__(_('WIFI'),
+        super(wifi, self).__init__('WIFI',
                                 [select_wifi_ap_toggle('AP'),
                                  select_wifi_defaults(_('defaults')),
                                  wifi_remote(_('remote'))])
@@ -459,9 +459,21 @@ class select_language(page):
 
 class language(menu):
     def __init__(self):
-        languages = [(_('English'), 'en'),
-                     (_('French'), 'fr'),
-                     (_('Spanish'), 'es')]
+        languages = [('català', 'ca'),
+                     ('dansk', 'da'),
+                     ('deutsch', 'de'),
+                     ('Eλληνικά'),
+                     ('english', 'en'),
+                     ('español', 'es'),
+                     ('suomalainen', 'fi'),
+                     ('français', 'fr'),
+                     ('italiano', 'it'),
+                     ('nederlands', 'nl'),
+                     ('norsk', 'no'),
+                     ('polskie', 'pl'),
+                     ('pycкий', 'ru'),
+                     ('svenska', 'sv')
+                     ]
         super(language, self).__init__(_('language'), list(map(select_language, languages)))
 
     def process(self):
