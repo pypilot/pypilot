@@ -1,15 +1,23 @@
 #!/bin/bash
 
 function translate() {
-    cp pypilot_hat.pot $language/LC_MESSAGES/pypilot_hat.po
-    ./apertium-po.py $language/LC_MESSAGES/pypilot_hat.po $mode
-    /usr/bin/msgfmt --check -o $language/LC_MESSAGES/pypilot_hat.mo $language/LC_MESSAGES/pypilot_hat.po
+    mkdir -p $1/LC_MESSAGES
+    cp -n pypilot_hat.pot $1/LC_MESSAGES/pypilot_hat.po
+    ./trans-po.py $1/LC_MESSAGES/pypilot_hat.po $1
+    /usr/bin/msgfmt --check -o $1/LC_MESSAGES/pypilot_hat.mo $1/LC_MESSAGES/pypilot_hat.po
 }
 
-language=es
-mode=en-es
-translate
-
-language=fr
-mode=en-es/es-fr
-translate
+translate ca # Catalan
+translate da # Danish
+translate de # German
+translate el # Greek
+# translate eo # Esperanto
+translate es # Spanish
+translate fi # Finnish
+translate fr # French
+translate it # Italian
+translate nl # Dutch
+translate no # Norwegian
+translate pl # Polish
+translate ru # Russian
+translate sv # Swedish

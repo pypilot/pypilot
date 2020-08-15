@@ -335,8 +335,8 @@ class calibrate_info(info):
         self.fittext(rectangle(0, 0, 1, .24), _('Calibrate Info'), True)
 
         if self.page == 0:
-            deviation = [_('N/A'), _('N/A')]
-            deviationstr = _('N/A')
+            deviation = ['N/A', 'N/A']
+            deviationstr = 'N/A'
             dim = '?'
             try:
                 cal = self.last_val('imu.compass.calibration')
@@ -531,7 +531,7 @@ class control(controlbase):
 
         if self.last_val('imu.frequency', 1) is False:
             r = rectangle(0, 0, 1, .92)
-            self.fittext(r, _('ERROR\ncompass or gyro failure!'), True, black)
+            self.fittext(r, _('ERROR') + '\n' + _('compass or gyro failure!'), True, black)
             self.control['heading'] = 'no imu'
             self.control['heading_command'] = 'no imu'
             super(control, self).display(refresh)
