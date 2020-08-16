@@ -500,7 +500,7 @@ class Servo(object):
             self.driver.reset()
 
     def close_driver(self):
-        print('servo lost connection')
+        #print('servo lost connection')
         self.controller.update('none')
         self.sensors.rudder.update(False)
 

@@ -23,7 +23,9 @@ signalk_table = {'wind': {'environment.wind.speedApparent': 'speed',
                  'apb': {'steering.autopilot.target.headingTrue': 'track'},
                  'imu': {'navigation.headingMagnetic': 'heading_lowpass',
                          'navigation.attitude': {'pitch': 'pitch', 'roll': 'roll', 'yaw': 'heading_lowpass'}}}
-    
+
+token_path = os.getenv('HOME') + '/.pypilot/signalk-token'
+
 class signalk(object):
     def __init__(self, sensors=False):
         self.sensors = sensors
@@ -38,8 +40,16 @@ class signalk(object):
         self.initialized = False
         self.signalk_access_url = False
         self.last_access_request_time = 0
-        self.authenticated = False
-        self.token = False
+
+        print('hitehre')
+        try:
+            f = open(token_path)
+            self.token = f.read()
+            print('read token', self.token)
+            f.close()
+        except Exception as e:
+            print('signalk failed to read token', token_path)
+            self.token = False
         self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('nmea pipe', self.multiprocessing)
         if self.multiprocessing:
             import multiprocessing
@@ -69,12 +79,17 @@ class signalk(object):
         class Listener:
             def __init__(self, signalk):
                 self.signalk = signalk
+                self.name_type = False
             
             def remove_service(self, zeroconf, type, name):
-                print('zeroconf service %s removed' % (name,))
+                print('zeroconf service %s removed', name, type)
+                if self.name_type == (name, type):
+                    self.signalk.signalk_host_port = False
+                    print('signalk server lost')
 
             def add_service(self, zeroconf, type, name):
                 print('zeroconf service add', name, type)
+                self.name_type = name, type
                 info = zeroconf.get_service_info(type, name)
                 if not info:
                     return
@@ -93,18 +108,16 @@ class signalk(object):
         listener = Listener(self)
         browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
         #zeroconf.close()
-    
-        #self.signalk_host_port = 'localhost:3000'
         self.initialized = True
+        
 
     def probe_signalk(self):
         print('signalk probe...', self.signalk_host_port)
-
         try:
             import requests
         except Exception as e:
-            print('signalk could not import requests')
-            print('try pip3 install requests')
+            print('signalk could not import requests', e)
+            print("try 'sudo apt install python3-requests' or 'pip3 install requests'")
             time.sleep(50)
             return
 
@@ -114,39 +127,44 @@ class signalk(object):
             self.signalk_ws_url = contents['endpoints']['v1']['signalk-ws'] + '?subscribe=none'
         except Exception as e:
             print('failed to retrieve/parse data from', self.signalk_host_port, e)
+            time.sleep(5)
             return
         print('signalk found', self.signalk_ws_url)
 
     def request_access(self):
-        uid = "1234-45653343454";
         import requests
         if self.signalk_access_url:
             dt = time.monotonic() - self.last_access_request_time            
-            if dt < 15:
+            if dt < 10:
                 return
             self.last_access_request_time = time.monotonic()
             try:
-                #print('signalk see if token is ready')
                 r = requests.get(self.signalk_access_url)
                 contents = pyjson.loads(r.content)
-                #print('got', contents)
+                print('signalk see if token is ready', self.signalk_access_url, contents)
                 if contents['state'] == 'COMPLETED':
                     if 'accessRequest' in contents:
                         access = contents['accessRequest']
                         if access['permission'] == 'APPROVED':
                             self.token = access['token']
-                            if self.ws:
-                                self.ws.send(pyjson.dumps({"clientId": uid, "validate":{"token": self.token}})+'\n')
-                                print('signalk recieved token', self.token)
-                else:
-                    self.signalk_access_url = 'http://' + self.signalk_host_port + contents['href']
+                            print('signalk received token', self.token)
+                            try:
+                                f = open(token_path, 'w')
+                                f.write(self.token)
+                                f.close()
+                            except Exception as e:
+                                print('signalk failed to store token', token_path)
+                    else:
+                        self.signalk_access_url = False
             except Exception as e:
                 print('error requesting access', e)
                 self.signalk_access_url = False
             return
 
         try:
-            r= requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":uid, "description": "pypilot"})
+            uid = random_uid()
+            uid = "1234-45653343454";
+            r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":uid, "description": "pypilot"})
             
             contents = pyjson.loads(r.content)
             print('post', contents)
@@ -155,6 +173,7 @@ class signalk(object):
                 print('signalk request access url', self.signalk_access_url)
         except Exception as e:
             print('signalk error requesting access', e)
+            self.signalk_ws_url = False
         
     def connect_signalk(self):
         try:
@@ -171,14 +190,14 @@ class signalk(object):
         self.subscriptions = [] # track signalk subscriptions
         self.signalk_values = {}
         try:
-            self.ws = create_connection(self.signalk_ws_url)
+            self.ws = create_connection(self.signalk_ws_url, header={'Authorization': 'JWT ' + self.token})
             self.ws.settimeout(0) # nonblocking
+
+            #self.ws.send(pyjson.dumps({"clientId": self.uid, "validate":{"token": self.token}})+'\n')
         except Exception as e:
             print('failed to connect signalk', e)
+            self.token = False
 
-    def send_signalk(self, msg):
-        print('would send signalk server', msg)
-            
     def process(self):
         time.sleep(6) # let other stuff load
         print('signalk process', os.getpid())
@@ -207,13 +226,13 @@ class signalk(object):
 
         t1 = time.monotonic()
         if not self.signalk_ws_url:
-            #zeroconf.close()  # takes a long time
             self.probe_signalk()
             return
 
         t2 = time.monotonic()
         if not self.token:
             self.request_access()
+            return
         t3 = time.monotonic()
 
         if not self.ws:
@@ -236,7 +255,6 @@ class signalk(object):
             if not msg:
                 break
             name, value = msg
-            #print('msg', msg)
             if name == 'timestamp':
                 self.send_signalk()
                 self.last_values = {} # reset last values
@@ -250,7 +268,6 @@ class signalk(object):
                     if name == source_name:
                         self.update_sensor_source(sensor, value)
 
-        self.send_signalk()
         t4 = time.monotonic()
 
         while True:
@@ -298,7 +315,7 @@ class signalk(object):
                             break
                         v[signalk_key] = self.last_values[key]                        
                     else:
-                        updates.append({'paths': signalk_path, 'value': v})
+                        updates.append({'path': signalk_path, 'value': v})
                         self.signalk_msgs[signalk_path] = True                        
                 else:
                     key = sensor+'.'+pypilot_path
