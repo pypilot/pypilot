@@ -82,9 +82,10 @@ class signalk(object):
                 self.name_type = False
             
             def remove_service(self, zeroconf, type, name):
-                print('zeroconf service %s removed', name, type)
+                print('zeroconf service removed', name, type)
                 if self.name_type == (name, type):
                     self.signalk.signalk_host_port = False
+                    self.signalk.disconnect_signalk()
                     print('signalk server lost')
 
             def add_service(self, zeroconf, type, name):
@@ -192,8 +193,6 @@ class signalk(object):
         try:
             self.ws = create_connection(self.signalk_ws_url, header={'Authorization': 'JWT ' + self.token})
             self.ws.settimeout(0) # nonblocking
-
-            #self.ws.send(pyjson.dumps({"clientId": self.uid, "validate":{"token": self.token}})+'\n')
         except Exception as e:
             print('failed to connect signalk', e)
             self.token = False
@@ -334,7 +333,8 @@ class signalk(object):
                 self.disconnect_signalk()
 
     def disconnect_signalk(self):
-        self.ws.close()
+        if self.ws:
+            self.ws.close()
         self.ws = False
         self.client.clear_watches() # don't need to receive pypilot data
 
@@ -371,21 +371,20 @@ class signalk(object):
             watch = self.period.value
         for signalk_path, pypilot_path in signalk_table[sensor].items():
             self.client.watch(pypilot_path, watch)
-        self.subscribe_signalk(sensor, priority >= sk_priority)
+        subscribe = priority >= sk_priority
 
-    def subscribe_signalk(self, sensor, value):
         # prevent duplicating subscriptions
-        if self.subscribed[sensor] == value:
+        if self.subscribed[sensor] == subscribe:
             return
-        self.subscribed[sensor] = value
+        self.subscribed[sensor] = subscribe
 
-        if not value:
+        if not subscribe:
             #signalk can't unsubscribe by path!?!?!
             subscription = {'context': '*', 'unsubscribe': [{'path': '*'}]}
             self.ws.send(pyjson.dumps(subscription)+'\n')
         
         signalk_sensor = signalk_table[sensor]
-        if value:
+        if subscribe:
             subscriptions = []
             for signalk_path in signalk_sensor:
                 if signalk_path in self.signalk_msgs_skip:
