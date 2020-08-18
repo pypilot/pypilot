@@ -7,19 +7,11 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, os, sys
+import time, os, sys, signal
 from pypilot import pyjson
 from pypilot.client import pypilotClient
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-print('t0', time.monotonic())
-import signal
-print('t0a', time.monotonic())
-import lcd
-print('t1', time.monotonic())
-import gpio
-print('t2', time.monotonic())
-import lircd
-print('t11', time.monotonic())
+import lcd, gpio, lircd
 
 class Action(object):
     def  __init__(self, hat, name):
