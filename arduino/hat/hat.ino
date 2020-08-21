@@ -452,11 +452,11 @@ void loop() {
     wdt_reset();
     read_data();
 
-#if 1
+#if 0
     if(UCSR0A & _BV(UDRE0) && !RB_EMPTY(serial_in)) {
-//        cli();
-//        RB_GET(serial_in, UDR0);
-//        sei();
+        cli();
+        RB_GET(serial_in, UDR0);
+        sei();
     }
 #endif
 #if 0

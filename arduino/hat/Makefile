@@ -76,6 +76,9 @@ upload: $(SKETCHNAME).cpp.hex
 	echo 16 > /sys/class/gpio/export || echo ok
 	echo in > /sys/class/gpio/gpio16/direction
 	echo out > /sys/class/gpio/gpio16/direction
+	echo 1 > /sys/class/gpio/gpio16/value
+	sleep .01
+	echo 0 > /sys/class/gpio/gpio16/value
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:w:$(SKETCHNAME).cpp.hex -b $(BAUDRATE)
 	echo in > /sys/class/gpio/gpio16/direction
 
