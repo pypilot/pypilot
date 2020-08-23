@@ -17,7 +17,7 @@ class TimedQueue(object):
     self.length = length
 
   def add(self, data):
-    t = time.time()
+    t = time.monotonic()
     while self.data and self.data[0][1] < t-self.length:
       self.data = self.data[1:]
     self.data.append((data, t))
@@ -34,7 +34,7 @@ class BasicPilot(AutopilotPilot):
     super(BasicPilot, self).__init__('basic', ap)
 
     # create filters
-    self.heading_command_rate = self.Register(SensorValue, 'heading_command_rate')
+    self.heading_command_rate = self.register(SensorValue, 'heading_command_rate')
     self.heading_command_rate.time = 0
     self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
 
@@ -45,17 +45,17 @@ class BasicPilot(AutopilotPilot):
     self.PosGain('I', 0.005, .1)   # integral
     self.PosGain('D',  .09, 1.0)   # derivative (gyro)
     self.PosGain('DD',  .075, 1.0) # rate of derivative
-    self.PosGain('PR',  .005, .05) # position square root
-    self.PosGain('FF',  .6, 3.0)   # feed forward
-    self.PosGain('R',  0.0, 1.0)   # reactive
-    self.reactive_time = self.Register(RangeProperty, 'Rtime', 1, 0, 3)
+    self.PosGain('PR',  .005, .05)  # position root
+    self.PosGain('FF',  .6, 3.0) # feed forward
+    self.PosGain('R',  0.0, 1.0)  # reactive
+    self.reactive_time = self.register(RangeProperty, 'Rtime', 1, 0, 3)
 
-    self.reactive_value = self.Register(SensorValue, 'reactive_value')
+    self.reactive_value = self.register(SensorValue, 'reactive_value')
                                     
     self.last_heading_mode = False
 
   def process(self, reset):
-    t = time.time()
+    t = time.monotonic()
     ap = self.ap
     if reset:
         self.heading_command_rate.set(0)
@@ -70,7 +70,7 @@ class BasicPilot(AutopilotPilot):
     if not ap.enabled.value: 
       compute = False
       for gain in self.gains:
-        if self.gains[gain]['sensor'].watchers:
+        if self.gains[gain]['sensor'].watch:
           compute = True
           break
       if not compute:
@@ -83,14 +83,14 @@ class BasicPilot(AutopilotPilot):
     self.heading_command_rate.time = t;
     lp = .1
     command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
-    self.heading_command_rate.set(command_rate)
+    self.heading_command_rate.update(command_rate)
 
     # compute command
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
     feedforward_value = self.heading_command_rate.value
     reactive_value = self.servocommand_queue.take(t - self.reactive_time.value)
-    self.reactive_value.set(reactive_value)
+    self.reactive_value.update(reactive_value)
     
     if not 'wind' in ap.mode.value: # wind mode needs opposite gain
         feedforward_value = -feedforward_value

@@ -11,7 +11,7 @@ class ArduinoServo
     enum {SYNC=1, OVERTEMP_FAULT=2, OVERCURRENT_FAULT=4, ENGAGED=8, INVALID=16*1, PORT_PIN_FAULT=16*2, STARBOARD_PIN_FAULT=16*4};
 
 public:
-    ArduinoServo(int _fd, int _baud);
+    ArduinoServo(int _fd);
 
     void command(double command);
     void reset();

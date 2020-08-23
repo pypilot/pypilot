@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import pylirc as LIRC
 import time
 LIRC.init('pypilot')

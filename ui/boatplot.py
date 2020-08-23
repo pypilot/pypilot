@@ -1,13 +1,12 @@
- #!/usr/bin/env python
+#!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import math, json, numpy
 try:
     import Image
@@ -78,6 +77,7 @@ class BoatPlot():
         dist = 12
         glTranslatef(0, 0, -dist)
         glScalef(self.Scale, self.Scale, self.Scale)
+
         glRotateQ(self.Q)
 
         if self.obj:
@@ -85,8 +85,6 @@ class BoatPlot():
             #q = quaternion.multiply(fusionQPose, quaternion.angvec2quat(-math.pi/2, [1, 0, 0]))
             q = fusionQPose
             glRotateQ(q)
-            #OAglTranslatef(0, 0, -.7)
-
 
             s = .2
             glScalef(s,s,s)

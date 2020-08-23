@@ -10,18 +10,12 @@
 # automatically set system clock to gps time if available
 
 import os, sys, time
-import gps
-
-if len(sys.argv) > 1:
-    addr = sys.argv[1]
-else:
-    addr = '127.0.0.1'
 
 while True:
     while True:
         try:
-            print 'try', addr
-            gpsd = gps.gps(host=addr, mode=gps.WATCH_ENABLE) #starting the stream of info
+            import gps
+            gpsd = gps.gps(mode=gps.WATCH_ENABLE) #starting the stream of info
             break
         except:
             time.sleep(3)
@@ -36,7 +30,7 @@ while True:
 
         if len(gpsd.utc):
             date, t = gpsd.utc[:-5].split('T')
-            print 'Setting date to gps time', date, t
+            print('Setting date to gps time', date, t)
             sys.stdout.flush()
             os.system('date -u -s "' + date + ' ' + t + '"')
             del gpsd

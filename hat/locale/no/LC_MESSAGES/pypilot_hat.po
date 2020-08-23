@@ -1,0 +1,270 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the pypilot_hat package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: pypilot_hat\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2020-08-15 20:57+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+
+#: ../menu.py:271
+msgid "pilot"
+msgstr "Pilot"
+
+#: ../menu.py:273
+msgid "gain"
+msgstr "gevinst"
+
+#: ../menu.py:303
+msgid "rudder"
+msgstr "ror"
+
+#: ../menu.py:323
+msgid "calibrate"
+msgstr "kalibrerings"
+
+#: ../menu.py:324
+msgid "level"
+msgstr "nivå"
+
+#: ../menu.py:325
+msgid "heading"
+msgstr "overskrift"
+
+#: ../menu.py:326
+msgid "lock"
+msgstr "låse"
+
+#: ../menu.py:355
+msgid "motor"
+msgstr "motor"
+
+#: ../menu.py:356
+msgid "min speed"
+msgstr "min hastighet"
+
+#: ../menu.py:356 ../menu.py:357
+msgid "relative"
+msgstr "slektning"
+
+#: ../menu.py:357
+msgid "max speed"
+msgstr "mak hastighet"
+
+#: ../menu.py:358
+msgid "max current"
+msgstr "mak strøm"
+
+#: ../menu.py:358
+msgid "amps"
+msgstr "forsterkere"
+
+#: ../menu.py:359
+msgid "period"
+msgstr "periode"
+
+#: ../menu.py:359
+msgid "seconds"
+msgstr "sekunder"
+
+#: ../menu.py:398
+msgid "defaults"
+msgstr "mislighold"
+
+#: ../menu.py:399
+msgid "remote"
+msgstr "fjern"
+
+#: ../menu.py:404
+msgid "No Wifi detected"
+msgstr "Ingen Wifi oppdaget"
+
+#: ../menu.py:431
+msgid "control"
+msgstr "styre"
+
+#: ../menu.py:433
+msgid "small step"
+msgstr "lite trinn"
+
+#: ../menu.py:433 ../menu.py:434
+msgid "degrees"
+msgstr "grader"
+
+#: ../menu.py:434
+msgid "big step"
+msgstr "stort skritt"
+
+#: ../menu.py:449
+msgid "display"
+msgstr "vise"
+
+#: ../menu.py:450
+msgid "contrast"
+msgstr "kontrast"
+
+#: ../menu.py:451
+msgid "invert"
+msgstr "invert"
+
+#: ../menu.py:452
+msgid "backlight"
+msgstr "bak..lysning"
+
+#: ../menu.py:453
+msgid "flip"
+msgstr "flip"
+
+#: ../menu.py:481
+msgid "language"
+msgstr "språk"
+
+#: ../menu.py:494
+msgid "settings"
+msgstr "innstillinger"
+
+#: ../menu.py:495
+msgid "mode"
+msgstr "modus"
+
+#: ../menu.py:500
+msgid "Menu"
+msgstr "Meny"
+
+#: ../menu.py:518
+msgid "Loading"
+msgstr "Laster"
+
+#: ../menu.py:527
+msgid "timeout"
+msgstr "pause"
+
+#: ../page.py:274 ../page.py:288
+msgid "info"
+msgstr "info"
+
+#: ../page.py:296
+msgid "Watts"
+msgstr "Watts"
+
+#: ../page.py:296
+msgid "Amp Hours"
+msgstr "Amp-timer"
+
+#: ../page.py:296
+msgid "runtime"
+msgstr "runtime"
+
+#: ../page.py:302
+msgid "voltage"
+msgstr "Spenning"
+
+#: ../page.py:302
+msgid "rate"
+msgstr "vurdere"
+
+#: ../page.py:302
+msgid "uptime"
+msgstr "oppetid"
+
+#: ../page.py:308
+msgid "cont temp"
+msgstr "forts. temp"
+
+#: ../page.py:308
+msgid "motor temp"
+msgstr "motortemp"
+
+#: ../page.py:308
+msgid "faults"
+msgstr "feil"
+
+#: ../page.py:313
+msgid "version"
+msgstr "versjon"
+
+#: ../page.py:313
+msgid "author"
+msgstr "forfatter"
+
+#: ../page.py:335
+msgid "Calibrate Info"
+msgstr "Kalibrer info"
+
+#: ../page.py:346
+msgid "incomplete"
+msgstr "ufullstendig"
+
+#: ../page.py:346
+msgid "excellent"
+msgstr "utmerket"
+
+#: ../page.py:346
+msgid "good"
+msgstr "god"
+
+#: ../page.py:347
+msgid "fair"
+msgstr "rettferdig"
+
+#: ../page.py:347
+msgid "poor"
+msgstr "dårlig"
+
+#: ../page.py:347
+msgid "bad"
+msgstr "dårlig"
+
+#: ../page.py:355
+msgid "compass"
+msgstr "kompass"
+
+#: ../page.py:534
+msgid "ERROR"
+msgstr "FEIL"
+
+#: ../page.py:534
+msgid "compass or gyro failure!"
+msgstr "kompass- eller gyrosvikt!"
+
+#: ../page.py:564
+msgid "GPS not detected"
+msgstr "GPS ikke oppdaget"
+
+#: ../page.py:568
+msgid "WIND not detected"
+msgstr "VIND ikke oppdaget"
+
+#: ../page.py:572
+msgid "WARNING no motor controller"
+msgstr "ADVARSEL ingen motorstyring"
+
+#: ../page.py:584
+msgid "standby"
+msgstr "vent litt"
+
+#: ../page.py:608
+msgid "No Cal"
+msgstr "Ingen kal"
+
+#: ../page.py:611
+msgid "Bad Cal"
+msgstr "Dårlig Cal"
+
+#: ../page.py:670
+msgid "connect to server"
+msgstr "koble til serveren"
+
+#~ msgid "Info"
+#~ msgstr "info"

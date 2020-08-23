@@ -1,6 +1,6 @@
 /*
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 */
 
-  function openTab(evt, tabName) {
+function openTab(evt, tabName) {
     var i, x, tablinks;
     x = document.getElementsByClassName("tab");
     for (i = 0; i < x.length; i++) {
@@ -22,9 +22,15 @@
     document.getElementById(tabName).style.display = "block";
       evt.currentTarget.firstElementChild.className += " w3-red";
       evt.currentTarget.firstElementChild.className += " active";
-      currentTab = tabName;
-  }
-  currentTab="Control";
+    currentTab = tabName;
+
+    setup_watches()
+}
+
+var setup_watches = false;
+var watches = {};
+
+currentTab="Control";
 
 $(document).ready(function() {
     namespace = '';
@@ -41,94 +47,87 @@ $(document).ready(function() {
     var port = location.port;
     port = pypilot_web_port;
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + port + namespace);
-    
-    function get(name) {
-        socket.emit('pypilot', JSON.stringify({'name': name, 'method': 'get'}));
-    }
 
-    function watch(name) {
-        get(name);
-        socket.emit('pypilot', JSON.stringify({'name': name, 'method': 'watch'}));
-    }
+    function show_gains() {
+        var x = document.getElementsByClassName('gain');
+        for (i = 0; i < x.length; i++)
+            x[i].style.display = 'none';
 
-    function poll(name) {
-        socket.emit('pypilot_poll', JSON.stringify({'name': name, 'method': 'get'}));
+        pilot =$('#pilot').val();
+        x = document.getElementsByClassName('pilot'+pilot);
+        for (i = 0; i < x.length; i++)
+            x[i].style.display = 'inline';
     }
-/*    function unwatch(name) {
-        socket.emit('pypilot', {'name': name, 'method': 'watch', 'value': '0'});
-    }*/
     
     // Event handler for new connections.
-
-    var last_poll_Tab;
-    var block_polling = 0;
-
     var servo_command = 0, servo_command_timeout=0;
     var gains = [];
-    socket.on('pypilot_connect', function(msg) {
+    var conf_names = [];
+    socket.on('pypilot_values', function(msg) {
+        watches = {}
         var list_values = JSON.parse(msg)
         $('#connection').text('Connected')
         $('#aperrors0').text("");
         $('#aperrors1').text("");
 
         // control
-        watch('ap.enabled')
-        watch('ap.mode')
+        pypilot_watch('ap.enabled')
+        pypilot_watch('ap.mode')
 
-        watch('ap.heading_command')
+        pypilot_watch('ap.heading_command', .5)
 
         // gain
-        watch('ap.pilot')
+        pypilot_watch('ap.pilot')
         $('#gain_container').text('')
 
-        $('#gain_container').append('<div class="w3-row"><select id="pilot">')
+        $('#gain_container').append('<div class="w3-row">Pilot&emsp;<select id="pilot">')
         if('ap.pilot' in list_values && 'choices' in list_values['ap.pilot']) {
-            var pilots = list_values['ap.pilot']['choices']
+            var pilots = list_values['ap.pilot']['choices'];
             for (var pilot in pilots)
-                $('#pilot').append('<option value="' + pilots[pilot] + '">' + pilots[pilot] + '</option')
+                $('#pilot').append('<option value="' + pilots[pilot] + '">' + pilots[pilot] + '</option');
         }
 
         $('#gain_container').append('</select></div>')
 
         $('#pilot').change(function(event) {
-            pypilot_set('ap.pilot', $('#pilot').val)
+            pypilot_set('ap.pilot', $('#pilot').val());
+            show_gains();
         });
-
         
         gains = [];
         for (var name in list_values)
             if('AutopilotGain' in list_values[name] && name.substr(0, 3) == 'ap.')
-                gains.push(name.substr(3)); // remove ap.
+                gains.push(name);
 
         for (var i = 0; i<gains.length; i++) {
             var w = $(window).width();
-            var name = gains[i];
-            var info = list_values['ap.' + name];
+            var sp = gains[i].split('.');
+            var subname = sp[3];
+            var pilot = sp[2];
+            var info = list_values[gains[i]];
             var min = info['min'];
             var max = info['max'];
-            var iname = 'gains'+i;
-            $('#gain_container').append('<br>'+gains[i]+' <input type="range" id="' + iname + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" style="width:'+w*3/4+'px" name="'+name+'"></input><span id="' + iname + 'label"></span><br>');
+            var iname = 'gain'+pilot+subname
+            $('#gain_container').append('<div class="gain pilot' + pilot + '"><p>'+subname+' <input type="range" id="' + iname + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" style="width:'+w*3/4+'px" name="'+gains[i]+'"></input><span id="' + iname + 'label"></span></div>');
             $('#'+iname).change(function(event) {
-                pypilot_set('ap.'+this.name, this.valueAsNumber);
-                block_polling = 2;
+                pypilot_set(this.name, this.valueAsNumber);
             });
         }
 
         // calibration
-        watch('imu.heading_offset');
-        watch('imu.alignmentQ');
-        watch('imu.alignmentCounter');
-        watch('imu.compass_calibration_locked');
+        pypilot_watch('imu.heading_offset', .5);
+        pypilot_watch('imu.alignmentQ', .5);
+        pypilot_watch('imu.alignmentCounter', .25);
+        pypilot_watch('imu.compass_calibration_locked');
         $('#calibration_locked').change(function(event) {
             check = $('#calibration_locked').prop('checked');
             pypilot_set('imu.compass_calibration_locked', check);
-            block_polling = 2;
         });
 
-        watch('rudder.offset')
-        watch('rudder.scale')
-        watch('rudder.nonlinearity')
-        watch('rudder.range')
+        pypilot_watch('rudder.offset')
+        pypilot_watch('rudder.scale')
+        pypilot_watch('rudder.nonlinearity')
+        pypilot_watch('rudder.range')
 
         // configuration
         $('#configuration_container').text('')
@@ -151,7 +150,6 @@ $(document).ready(function() {
             $('#configuration_container').append('<div class="w3-row"><div class="w3-col s4 m4 l4">' + name + '</div><div class="w3-col s3 m3 l3"><input type="range" id="'+iname+'" min="' + min + '" max="' + max + '" step=".01" value="2" style="width: 240px" name="'+name+'"></input></div><div class="w3-col s2 m2 l2"><span id="'+ iname+'label"></span></div><div class="w3-col s3 m3 l3">' + unit + '</div></div>');
             $('#'+iname).change(function(event) {
                 pypilot_set(this.name, this.valueAsNumber);
-                block_polling = 2;
             });
         }
 
@@ -160,60 +158,24 @@ $(document).ready(function() {
             $('#configuration_container').append('<p><a href=":33333">Configure LCD Keypad and Remotes</a>')
         }
 
-        watch('servo.controller');
-        watch('servo.flags');
+        pypilot_watch('servo.controller');
+        pypilot_watch('servo.flags');
 
-        setTimeout(poll_pypilot, 1000)
-
-        block_polling = 0;
-        last_poll_Tab = -1;
+        setup_watches();
     });
 
     socket.on('pypilot_disconnect', function(msg) {
         $('#connection').text('Disconnected')
     });
 
-    // we poll rather than watch some values to avoid excessive cpu in browser
+    // update manual servo command
+    setTimeout(poll_pypilot, 1000)
     function poll_pypilot() {
         setTimeout(poll_pypilot, 1000)
         if(servo_command_timeout > 0) {
             if(servo_command_timeout-- <= 0)
                 servo_command = 0;
             pypilot_set('servo.command', servo_command);
-        }
-
-        if(block_polling > 0) {
-            block_polling--;
-            return;
-        }
-        
-        //var tab = $('input:radio[name=tabbed]:checked').val();
-        var tab = currentTab;
-        if(tab == last_poll_Tab)
-            return;
-
-        last_poll_Tab = tab;
-        socket.emit('pypilot_poll', 'clear');
-        
-        if(tab == 'Control') {
-            poll('ap.heading');
-        } else if(tab == 'Gain') {
-            for (var i = 0; i<gains.length; i++)
-                poll('ap.' + gains[i]);
-        } else if(tab == 'Calibration') {
-            poll('imu.heading');
-            poll('imu.pitch');
-            poll('imu.roll');
-            poll('rudder.angle');
-        } else if(tab == 'Configuration') {
-            for(i=0; i < conf_names.length; i++)
-                poll(conf_names[i]);
-        } else if(tab == 'Statistics') {
-            poll('servo.amp_hours');
-            poll('servo.voltage');
-            poll('servo.controller_temp');
-            poll('ap.runtime');
-            poll('servo.engaged');
         }
     }
     
@@ -232,7 +194,6 @@ $(document).ready(function() {
     window.setInterval(function() {
         start_time = (new Date).getTime();
         socket.emit('ping');
-//        $('#log').append("ping" + "<br>");
     }, 5000);
     
     // Handler for the "pong" message. When the pong is received, the
@@ -250,18 +211,13 @@ $(document).ready(function() {
     var heading_command = 0;
     var heading_set_time = new Date().getTime();
     var heading_local_command;
-    var last_data = {}
+    var last_rudder_data = {}
     socket.on('pypilot', function(msg) {
-        if(block_polling > 0) {
-            return;
-        }
-
         data = JSON.parse(msg);
-        for(var name in data)
-            last_data[name] = data[name]['value'];
+        //data = msg;
 
         if('ap.heading' in data) {
-            heading = data['ap.heading']['value'];
+            heading = data['ap.heading'];
             if(heading.toString()=="false")
                 $('#aperrors0').text('compass or gyro failure!');
             else
@@ -270,7 +226,7 @@ $(document).ready(function() {
             $('#heading').text(Math.round(10*heading)/10);
         }
         if('ap.enabled' in data) {
-            if(data['ap.enabled']['value']) {
+            if(data['ap.enabled']) {
                 var w = $(window).width();
                 $('#tb_engaged button').css('left', w/12+"px");
                 $('#tb_engaged').addClass('toggle-button-selected');
@@ -290,35 +246,34 @@ $(document).ready(function() {
             }
         }
         if('ap.mode' in data) {
-            value = data['ap.mode']['value'];
+            value = data['ap.mode'];
             $('#mode').val(value);
         }
 
         if('ap.pilot' in data) {
-            value= data['ap.pilot']['value'];
+            value= data['ap.pilot'];
             $('#pilot').val(value);
+            show_gains();
         }
 
         for (var i = 0; i<gains.length; i++)
-            if('ap.' + gains[i] in data) {
-                data = data['ap.' + gains[i]]
-                value = data['value'];
-                var iname = 'gains'+i;
+            if(gains[i] in data) {
+                value = data[gains[i]]
+                var sp = gains[i].split('.');
+                var subname = sp[3];
+                var pilot = sp[2];
+                var iname = 'gain'+pilot+subname
                 if(value != $('#' + iname).valueAsNumber) {
                     $('#' + iname).val(value);
                     $('#' + iname + 'label').text(value);
-                    if('min' in data)
-                        $('#' + iname).attr('min', data['min'])
-                    if('max' in data)
-                        $('#' + iname).attr('max', data['max'])
                 }
             }
         if('ap.heading_command' in data) {
-            heading_command = data['ap.heading_command']['value'];
+            heading_command = data['ap.heading_command'];
             $('#heading_command').text(Math.round(heading_command));
         }
         if('servo.engaged' in data) {
-            if(data['servo.engaged']['value'])
+            if(data['servo.engaged'])
                 $('#servo_engaged').text('Engaged');
             else
                 $('#servo_engaged').text('Disengaged');
@@ -326,36 +281,39 @@ $(document).ready(function() {
 
         // calibration
         if('imu.heading' in data)
-            $('#imu_heading').text(data['imu.heading']['value']);
+            $('#imu_heading').text(data['imu.heading']);
         if('imu.pitch' in data)
-            $('#pitch').text(data['imu.pitch']['value']);
+            $('#pitch').text(data['imu.pitch']);
         if('imu.roll' in data)
-            $('#roll').text(data['imu.roll']['value']);
+            $('#roll').text(data['imu.roll']);
         if('imu.alignmentCounter' in data)
-            $('.myBar').width((100-data['imu.alignmentCounter']['value'])+'%');
+            $('.myBar').width((100-data['imu.alignmentCounter'])+'%');
         if('imu.heading_offset' in data)
-            $('#imu_heading_offset').val(data['imu.heading_offset']['value']);
+            $('#imu_heading_offset').val(data['imu.heading_offset']);
         if('imu.compass_calibration_locked' in data)
-            $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']['value']);
+            $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']);
+        var rudder_dict = {'rudder.offset': 'Offset',
+                           'rudder.scale': 'Scale',
+                           'rudder.nonlinearity': 'Non Linearity'};
         if('rudder.angle' in data) {
-            $('#rudder').text(data['rudder.angle']['value']);
+            $('#rudder').text(data['rudder.angle']);
             $('#rudder').append('<p>')
-            var dict = {'rudder.offset': 'Offset',
-                        'rudder.scale': 'Scale',
-                        'rudder.nonlinearity': 'Non Linearity'};
-            for(var d in dict)
-                if(d in last_data)
-                    $('#rudder').append(' ' + dict[d] + ' ' + Math.round(100*last_data[d])/100);
+            for(var name in rudder_dict)
+                if(name in last_rudder_data)
+                    $('#rudder').append(' ' + rudder_dict[name] + ' ' + Math.round(100*last_rudder_data[name])/100);
         }
 
+        for(var name in rudder_dict)
+            if(name in data)
+                last_rudder_data[name] = data[name];
+
         if('rudder.range' in data)
-            $('#rudder_range').val(data['rudder.range']['value']);
-            
+            $('#rudder_range').val(data['rudder.range']);
 
         // configuration
         for(i=0; i < conf_names.length; i++) {
             if(conf_names[i] in data) {
-                value = data[conf_names[i]]['value'];
+                value = data[conf_names[i]];
                 var iname = 'confname'+i;
                 $('#' + iname).val(value);
                 $('#' + iname + 'label').text(value);
@@ -364,27 +322,27 @@ $(document).ready(function() {
 
         // statistics
         if('servo.amp_hours' in data) {
-            value = data['servo.amp_hours']['value'];
+            value = data['servo.amp_hours'];
             $('#amp_hours').text(Math.round(1e4*value)/1e4);
         }
 
         if('servo.voltage' in data) {
-            value = data['servo.voltage']['value'];
+            value = data['servo.voltage'];
             $('#voltage').text(Math.round(1e3*value)/1e3);
         }
         
         if('servo.controller_temp' in data) {
-            value = data['servo.controller_temp']['value'];
+            value = data['servo.controller_temp'];
             $('#controller_temp').text(value);
         }
 
         if('ap.runtime' in data) {
-            value = data['ap.runtime']['value'];
+            value = data['ap.runtime'];
             $('#runtime').text(value);
         }
 
         if('servo.controller' in data) {
-            value = data['servo.controller']['value'];
+            value = data['servo.controller'];
             if(value == 'none')
                 $('#aperrors1').text('no motor controller!');
             else
@@ -392,11 +350,18 @@ $(document).ready(function() {
         }
 
         if('servo.flags' in data)
-            $('#servoflags').text(data['servo.flags']['value']);
+            $('#servoflags').text(data['servo.flags']);
     });
     
-    pypilot_set = function(name, value) {
-        socket.emit('pypilot', JSON.stringify({'name': name, 'method': 'set', 'value': value}));
+    function pypilot_set(name, value) {
+        socket.emit('pypilot', name + '=' + JSON.stringify(value));
+    }
+
+    function pypilot_watch(name, period=true) {
+        if(period === false && !(name in watches && watches[name]))
+            return; // already not watching, no need to inform server
+        watches[name] = period;
+        socket.emit('pypilot', 'watch={"' + name + '":' + JSON.stringify(period) + '}')
     }
 
     // Control
@@ -440,7 +405,6 @@ $(document).ready(function() {
     // Calibration
     $('#level').click(function(event) {
         pypilot_set('imu.alignmentCounter', 100);
-        pypilot_set('imu.alignmentType', 'level');
         return false;
     });
 
@@ -469,6 +433,8 @@ $(document).ready(function() {
     });
 
     // Configuration
+
+    // hack
     document.addEventListener('click', function(event) {
         var target = event.target;
         if (target.tagName.toLowerCase() == 'a')
@@ -489,6 +455,22 @@ $(document).ready(function() {
     
     openTab("Control");
 
+    function pypilot_watches(names, watch, period) {
+        for(var i=0; i< names.length; i++)
+            pypilot_watch(names[i], watch ? period : false);
+    }
+    
+    // should be called if tab changes
+    setup_watches = function() {
+        var tab = currentTab;
+        pypilot_watches(['ap.heading'], tab == 'Control', 0.5);
+        pypilot_watches(gains, tab == 'Gain', 1);
+        pypilot_watches(['imu.heading', 'imu.pitch', 'imu.roll', 'rudder.angle'], tab == 'Calibration', .5);
+        pypilot_watches(conf_names, tab == 'Configuration', 1);
+        pypilot_watches(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'servo.engaged'], tab == 'Statistics', 1);
+    }
+    setup_watches();
+    
     function openTab(name) {
         var i;
         var x = document.getElementsByClassName("tabname");

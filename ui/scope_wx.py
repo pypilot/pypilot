@@ -9,7 +9,7 @@
 
 import wx, wx.glcanvas, sys, socket, time, os
 from OpenGL.GL import *
-from pypilot.client import pypilotClient, pypilotClientFromArgs, ConnectionLost
+from pypilot.client import pypilotClientFromArgs
 
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -37,19 +37,21 @@ class pypilotScope(pypilotScopeBase):
         self.plot = pypilotPlot()
         self.glContext =  wx.glcanvas.GLContext(self.glArea)
 
-        def on_con(client):
-            self.plot.on_con(client)
-
-        self.client = pypilotClientFromArgs(sys.argv[:2], True, on_con)
-        self.host_port = self.client.host_port
-        self.client.autoreconnect = False
-        self.value_list = self.client.list_values()
-        self.plot.init(self.value_list)
+        self.client = pypilotClientFromArgs(sys.argv)
+        self.client.watch('timestamp')
         self.watches = {}
 
+        self.timer = wx.Timer(self, wx.ID_ANY)
+        self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
+        self.timer.Start(100)
+
+        self.sTime.SetValue(self.plot.disptime)
+        self.plot_reshape = False
+
+    def enumerate_values(self, value_list):
         watches = sys.argv[1:]
-        for name in sorted(self.value_list):
-            if self.value_list[name]['type'] != 'SensorValue':
+        for name in sorted(value_list):
+            if value_list[name]['type'] != 'SensorValue':
                 continue
 
             i = self.clValues.Append(name)
@@ -59,26 +61,11 @@ class pypilotScope(pypilotScopeBase):
                     self.clValues.Check(i, True)
                     self.watches[name] = True
                     watches.remove(name)
-        for arg in watches:
-            print('value not found:', arg)
+                    break
 
-        self.on_con(self.client)
-
-        self.timer = wx.Timer(self, wx.ID_ANY)
-        self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
-        self.timer.Start(50)
-
-        self.sTime.SetValue(self.plot.disptime)
-        self.plot_reshape = False
-
-    def on_con(self, client):
-        self.plot.on_con(client)
-        self.plot.add_blank()
-        for i in range(self.clValues.GetCount()):
-            if self.clValues.IsChecked(i):
-                client.watch(self.clValues.GetString(i))
-                self.watches[self.clValues.GetString(i)] = True
-
+        if watches:
+            print('values not found:', watches)
+                
     def receive_messages(self, event):
         if not self.client:
             try:
@@ -89,20 +76,27 @@ class pypilotScope(pypilotScopeBase):
                 self.timer.Start(1000)
                 return
 
+        if not self.plot.value_list:
+            value_list = self.client.list_values()
+            if value_list:
+                self.enumerate_values(value_list)
+                self.plot.init(value_list)
+            return
+            
         refresh = False
+        self.client.poll()
+
+        if not self.client.connection:
+            self.plot.add_blank()
+            return
+            
         while True:
-            result = False
-            try:
-                result = self.client.receive_single()
-            except ConnectionLost:
-                self.client = False
-                return
-            except:
-                pass
+            result = self.client.receive_single()
             if not result:
                 break
 
-            if self.watches[result[0]] or result[0] == 'timestamp':
+            name, value = result
+            if name == 'timestamp' or self.watches[name]:
                 if self.plot.read_data(result):
                     refresh = True
 

@@ -1,25 +1,29 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
-import time, os, sys
-import json
+import time, os, sys, signal, select
+from pypilot import pyjson
 from pypilot.client import pypilotClient
-
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import lcd, gpio, arduino, lirc, buzzer
+import lcd, gpio, lircd
 
 class Action(object):
     def  __init__(self, hat, name):
         self.hat = hat
         self.name = name
-        self.keys = []
+
+class ActionNone(Action):
+    def __init__(self):
+        super(ActionNone, self).__init__(None, 'none')
+
+    def trigger(self, count):
+        pass
 
 class ActionKeypad(Action):
     def __init__(self, lcd, index, name):
@@ -28,8 +32,8 @@ class ActionKeypad(Action):
         self.index = index
 
     def trigger(self, count):
-        self.lcd.keypadup[self.index] = not count
-        self.lcd.keypad[self.index] = count
+        self.lcd.keypad[self.index].update(count, count)
+        self.lcd.lastframetime = 0 # trigger immediate refresh
         
 class ActionPypilot(Action):
     def  __init__(self, hat, name, pypilot_name, pypilot_value):
@@ -48,7 +52,7 @@ class ActionEngage(ActionPypilot):
     def trigger(self, count):
         super(ActionEngage, self).trigger(count)
         # set heading to current heading
-        if self.hat.client and not count:
+        if self.hat.client and not count and 'ap.heading' in self.hat.last_msg:
             self.hat.client.set('ap.heading_command', self.hat.last_msg['ap.heading'])
             
 class ActionHeading(Action):
@@ -64,7 +68,7 @@ class ActionHeading(Action):
                 self.hat.client.set('ap.heading_command',
                                     self.hat.last_msg['ap.heading_command'] + self.offset)
         else: # manual mode
-            self.servo_timeout = time.time() + abs(self.offset)**.5/2
+            self.servo_timeout = time.monotonic() + abs(self.offset)**.5/2
             self.hat.client.set('servo.command', 1 if self.offset > 0 else -1)
             
 class ActionTack(ActionPypilot):
@@ -73,133 +77,194 @@ class ActionTack(ActionPypilot):
         self.direction = direction
                                 
     def trigger(self):
-        super(ActionEngage, self).trigger()
         if self.hat.client:
             self.hat.client.set('ap.tack.direction', self.direction)
+        super(ActionTack, self).trigger()
 
-def web_process(pipe, keyspipe, actions):
-    while True:
-        try:
-            import web
-            web.web_process(pipe, keyspipe, actions)
-        except Exception as e:
-            print('failed to run web server:', e)
-            #time.sleep(5)
-            exit(0)            
-
-class Web(object):
+class Process():
     def __init__(self, hat):
-        self.process = False
-        self.status = 'Not Connected'
         self.hat = hat
-        import atexit, signal
-        def cleanup(signal_number, frame=None):
-            print('cleanup web process', signal_number)            
-            if self.process:
-                print('pid kill ', self.process.pid)
-                os.kill(self.process.pid, signal.SIGTERM) # get backtrace
-            self.process = False
-            sys.stdout.flush()
-            if signal_number:
-                raise KeyboardInterrupt # to get backtrace on all processes
-
-        atexit.register(lambda : cleanup(None)) # get backtrace
-        for s in range(1, 16):
-            if s != 9 and s != 13:
-                signal.signal(s, cleanup)
-        #signal.signal(signal.SIGCHLD, cleanup)
-
+        self.create()            
+    
     def send(self, value):
         if self.process:
             self.pipe.send(value)
 
+    def create(self, process):
+        import multiprocessing
+        from pypilot.nonblockingpipe import NonBlockingPipe
+        self.pipe, pipe = NonBlockingPipe(str(self), True)
+        self.process = multiprocessing.Process(target=process, args=(pipe, self.hat.config), daemon=True)
+        self.process.start()
+            
+class Web(Process):
+    def __init__(self, hat):
+        self.status = 'Not Connected'
+        super(Web, self).__init__(hat)
+
     def set_status(self, value):
+        if self.status == value:
+            return
         self.status = value
         self.send({'status': value})
 
+    def create(self):
+        def process(pipe, config):
+            while True:
+                time.sleep(30) # delay loading web and wait until modules are loaded
+                try:
+                    import web
+                    web.web_process(pipe, config)
+                except Exception as e:
+                    print('web failed to run process:', e)
+
+        super(Web, self).create(process)
+        self.send({'status': self.status})
+        
     def poll(self):
-        if not self.process:
-            import multiprocessing
-            from pypilot.pipeserver import NonBlockingPipe
-            self.pipe, pipe = NonBlockingPipe('webpipe', True)
-            keyspipe, self.keyspipe = NonBlockingPipe('webkeyspipe', True)
-            self.process = multiprocessing.Process(target=web_process, args=(pipe, keyspipe, self.hat.actions))
-            self.process.start()
-            self.send({'status': self.status})
-
-        if not self.process.is_alive():
-            self.process = False
-            return
-
-        msg = self.keyspipe.recv()
+        msg = self.pipe.recv()
         if msg:
             for name in msg:
-                for action in self.hat.actions:
-                    if name == action.name:
-                        action.keys = msg[name]
-
+                value = msg[name]
+                self.hat.update_config(name, value);
             self.hat.write_config()
 
+class Arduino(Process):
+    def __init__(self, hat):
+        super(Arduino, self).__init__(hat)
+        self.voltage = {'vcc': 5, 'vin': 3.3}
+        self.status = 'Not Connected'
+        self.backlight = self.hat.config['lcd']['backlight']
+
+    def config(self, name, value):
+        self.send((name, value))
+
+    def set_buzzer(self, duration, frequency):
+        self.send(('buzzer', (duration, frequency)))
+
+    def create(self):
+        def process(pipe, config):
+            import arduino
+            print('arduino process on ', os.getpid())
+            while True:
+                arduino.arduino_process(pipe, config)
+                time.sleep(15)
+        super(Arduino, self).create(process)
+
+    def poll(self):
+        ret = []
+        backlight = self.hat.config['lcd']['backlight']
+        if backlight != self.backlight:
+            self.backlight = backlight
+            self.send(('backlight', value))
+        while True:
+            msgs = self.pipe.recv()
+            if not msgs:
+                break
+            for msg in msgs:
+                key, code = msg
+                if key == 'baudrate': # statistics
+                    self.hat.web.send({'baudrate': code})
+                elif key == 'voltage': # statistics
+                    self.hat.web.send({'voltage': '5v = %.3f, 3.3v = %.3f' % (code['vcc'], code['vin'])})
+                    self.voltage = code
+                else:
+                    ret.append(msg)
+        return ret
+            
 class Hat(object):
     def __init__(self):
         # read config
-        try:
-            configfile = '/proc/device-tree/hat/custom_0'
-            f = open(configfile)
-            self.hatconfig = json.loads(f.read())
-
-            f.close()
-        except Exception as e:
-            print('failed to load', configfile, ':', e)
-            print('assuming original 26 pin tinypilot')
-            self.hatconfig = False
-
-        self.config = {'remote': False, 'host': 'pypilot', 'actions': {}, 'lcd': {}}
+        self.config = {'remote': False, 'host': '127.0.0.1', 'actions': {},
+                       'pi.ir': True, 'arduino.ir': False,
+                       'arduino.nmea.in': False, 'arduino.nmea.out': False,
+                       'arduino.nmea.baud': 38400}
         self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf' 
         print('loading config file:', self.configfilename)
         try:
             file = open(self.configfilename)
-            config = json.loads(file.read())
+            config = pyjson.loads(file.read())
             file.close()
             for name in config:
                 self.config[name] = config[name]
         except Exception as e:
             print('config failed:', e)
 
-        self.lastpollheading = time.time()
-        self.servo_timeout = time.time() + 1
-        
-        self.longsleep = 30
-        self.last_msg = {}
+        try:
+            configfile = '/proc/device-tree/hat/custom_0'
+            f = open(configfile)
+            hatconfig = pyjson.loads(f.read())
+            f.close()
+            print('loaded device tree hat config')
+        except Exception as e:
+            print('failed to load', configfile, ':', e)
+            hatconfig = {'lcd':{'driver':'nokia5110',
+                                     'port':'/dev/spidev0.0'},
+                              'lirc':'gpio4'}
+            print('assuming original 26 pin tinypilot with nokia5110 display')
+            if False: #testing without eeprom flashed, or hat changed without reboot
+                hatconfig = {"mpu":{"driver":"mpu9255",
+                                    "port":"/dev/i2c-1"},
+                             "lcd":{"driver":"jlx12864",
+                                    "port":"/dev/spidev0.0"},
+                             "arduino":{"device":"/dev/spidev0.1",
+                                        "resetpin":16,
+                                        "hardware":0.21},
+                             "lirc":"gpio4"}
 
-        self.client = False
+        self.config['hat'] = hatconfig
+
+        self.servo_timeout = time.monotonic() + 1
+        
+        self.last_msg = {}
+        self.last_msg['ap.enabled'] = False
+        self.last_msg['ap.heading_command'] = 0
+
+        if self.config['remote']:
+            host = self.config['host']
+        else:
+            host = 'localhost'
+
+        self.client = pypilotClient(host)
+        self.watchlist = ['ap.enabled', 'ap.heading_command']
+        for name in self.watchlist:
+            self.client.watch(name)
         self.lcd = lcd.LCD(self)
         self.gpio = gpio.gpio()
-        self.arduino = arduino.arduino(self.hatconfig)
-        self.lirc = lirc.lirc()
-        self.buzzer = buzzer.buzzer(self.hatconfig)
+        self.arduino = Arduino(self)
+
+        self.poller = select.poll()
+        self.poller.register(self.arduino.pipe, select.POLLIN)
+
+        self.lirc = lircd.lirc(self.config)
+        self.lirc.registered = False
+        self.keytimes = {}
         
         # keypad for lcd interface
         self.actions = []
-        keypadnames = ['auto', 'menu', 'up', 'down', 'select', 'left', 'right']
+        keypadnames = ['auto', 'menu', 'port1', 'starboard1', 'select', 'port10', 'starboard10', 'tack', 'dodge_port', 'dodge_starboard']
         
-        for i in range(7):
+        for i in range(len(keypadnames)):
             self.actions.append(ActionKeypad(self.lcd, i, keypadnames[i]))
 
         # stateless actions for autopilot control
         self.actions += [ActionEngage(self),
                          ActionPypilot(self, 'disengage', 'ap.enabled', False),
-                         ActionHeading(self, 1),
+                         ActionHeading(self,  1),
                          ActionHeading(self, -1),
-                         ActionHeading(self, 2),
+                         ActionHeading(self,  2),
                          ActionHeading(self, -2),
-                         ActionHeading(self, 10),
+                         ActionHeading(self,  5),
+                         ActionHeading(self, -5),
+                         ActionHeading(self,  10),
                          ActionHeading(self, -10),
                          ActionPypilot(self, 'compassmode', 'ap.mode', 'compass'),
                          ActionPypilot(self, 'gpsmode', 'ap.mode', 'gps'),
                          ActionPypilot(self, 'windmode', 'ap.mode', 'wind'),
+                         ActionPypilot(self, 'center', 'servo.position', 0),
                          ActionTack(self, 'tackport', 'port'),
-                         ActionTack(self, 'tackstarboard', 'starboard')]
+                         ActionTack(self, 'tackstarboard', 'starboard'),
+                         ActionNone()]
 
         for action in self.actions:
             if action.name in self.config['actions']:
@@ -207,126 +272,143 @@ class Hat(object):
 
         self.web = Web(self)
 
-    def write_config(self):
-        actions = {}
-        for action in self.actions:
-            actions[action.name] = action.keys
+        def cleanup(signal_number, frame=None):
+            print('got signal', signal_number, 'cleaning up', os.getpid())
+            childpids = []
+            processes = [self.arduino, self.web]
+            for process in processes:
+                if process.process:
+                    childpids.append(process.process.pid)
+            if signal_number == signal.SIGCHLD:
+                pid = os.waitpid(-1, 0)
+                if not pid[0] in childpids:
+                    print('flask ret', pid, childpids)
+                    # flask makes process at startup that dies
+                    return
+                print('child process', pid, childpids)
+            while childpids:
+                pid = childpids.pop()
+                #print('kill!', pid, childpids, os.getpid())
+                try:
+                    os.kill(pid, signal.SIGTERM) # get backtrace
+                except ProcessLookupError:
+                    pass # ok, process is already terminated
+                sys.stdout.flush()
+            for process in processes:
+                process.process = False
+            if signal_number != 'atexit':
+                raise KeyboardInterrupt # to get backtrace on all processes
+            sys.stdout.flush()
 
-        self.config['actions'] = actions
-                                
+        for s in range(1, 16):
+            if s != 9 and s != 13:
+                signal.signal(s, cleanup)
+        signal.signal(signal.SIGCHLD, cleanup)
+        import atexit
+        atexit.register(lambda : cleanup('atexit'))
+
+    def write_config(self):
         try:
             file = open(self.configfilename, 'w')
-            file.write(json.dumps(self.config) + '\n')
+            file.write(pyjson.dumps(self.config) + '\n')
         except IOError:
             print('failed to save config file:', self.configfilename)
 
-    def connect(self):
-        for name in ['gps.source', 'wind.source']:
-            self.last_msg[name] = 'none'
-        self.last_msg['ap.enabled'] = False
-        self.last_msg['ap.heading_command'] = 0
-        self.last_msg['imu.heading_offset'] = 0
-
-        if self.config['remote']:
-            host = self.config['host']
-        else:
-            host = 'localhost'
+    def update_config(self, name, value):
+        if name in self.config and self.config[name] == value:
+            return
         
-        def on_con(client):
-            self.value_list = client.list_values(10)
+        if name.startswith('arduino.') and self.arduino:
+            self.arduino.config(name, value)
 
-            self.watchlist = ['ap.enabled', 'ap.heading_command'] + self.lcd.watchlist
-            for name in self.watchlist:
-                client.watch(name)
-
-            for request in self.lcd.initial_gets:
-                client.get(request)
-
-        try:
-            self.client = pypilotClient(on_con, host)
-            if self.value_list:
-                print('connected')
-                self.web.set_status('connected')
-            else:
-                self.client.disconnect()
-                print('no value list!')
-                self.client = False
-                self.web.set_status('disconnected')
-        except Exception as e:
-            print('hat exception', e)
-            self.client = False
-            time.sleep(1)
-
+        self.config[name] = value
+            
     def apply_code(self, key, count):
-        if count:
-            self.longsleep = 0
-
-        if count == 1:
-            self.web.send({'key': key})
+        self.web.send({'key': key})
+        actions = self.config['actions']
         for action in self.actions:
-            if key in action.keys:
+            if not action.name in actions:
+                actions[action.name] = []
+            keys = actions[action.name]
+            if key in keys:
                 if not count:
                     self.web.send({'action': action.name})
+                    if key in self.keytimes:
+                        del self.keytimes[key]
+                else:
+                    self.keytimes[key] = time.monotonic()
                 action.trigger(count)
-            
+                return
+        self.web.send({'action': 'none'})
+
+    def check_voltage(self):
+        if not self.arduino:
+            return False
+
+        vin, vcc = self.arduino.voltage['vin'], self.arduino.voltage['vcc']
+        if vin < 3 or vin > 3.6:
+            return '3v3 Voltage Bad' + (': %.2f' % vin)
+        if vcc < 4.5 or vcc > 5.5:
+            return '5v Voltage Bad' + (': %.2f' % vcc)
+        return False
+                
     def poll(self):
-        if not self.client:
-            self.connect()
-
-        while self.client:
-            result = False
+        if self.client.connection:
+            self.web.set_status('connected')
+        else:
+            self.web.set_status('disconnected')
+            
+        t0 = time.monotonic()
+        msgs = self.client.receive()
+        t1 = time.monotonic()
+        for i in [self.gpio, self.arduino, self.lirc]:
             try:
-                result = self.client.receive_single()
+                if not i:
+                    continue
+                events = i.poll()
+                for event in events:
+                    self.apply_code(*event)
             except Exception as e:
-                print('disconnected', e)
-                self.client = False
+                print('WARNING, failed to poll!!', e, i)
+        t2 = time.monotonic()
+        for name, value in msgs.items():
+            self.last_msg[name] = value
 
-            if not result:
+        for i in [self.lcd, self.web]:
+            i.poll()
+        t3 = time.monotonic()
+        for key, t in self.keytimes.items():
+            dt = t3 - t
+            if dt > .6:
+                print('keyup event lost, releasing key from timeout', key, t3, dt)
+                self.apply_code(key, 0)
                 break
 
-            name, data = result
-            if 'value' in data:
-                self.last_msg[name] = data['value']
-
-            for token in ['min', 'max', 'choices', 'AutopilotGain']:
-                if token in data:
-                    # print('name', name, token, ' = ', data[token])
-                    if not name in self.value_list:
-                        self.client.value_list[name] = {}
-                    self.client.value_list[name][token] = data[token]
-
-        for i in [self.lcd, self.buzzer, self.web]:
-            i.poll()
-
-        for i in [self.gpio, self.arduino, self.lirc]:
-            i.poll()
-            while True:
-                if not i.events:
-                    break
-
-                r = i.events[0]
-                i.events = i.events[1:]
-                self.apply_code(*r)
-
-        time.sleep(.1)
-        # poll heading once per second if not enabled
-        t = time.time()
-        dtp = t - self.lastpollheading
-        if self.client and dtp > 1 and not self.last_msg['ap.enabled']:
-            self.client.get('ap.heading')
-            self.lastpollheading = t
+        # receive heading once per second if autopilot is not enabled
+        self.client.watch('ap.heading', False if self.last_msg['ap.enabled'] else 1)
 
         # timeout manual move
         if self.servo_timeout:
-            dtt = t - self.servo_timeout
-            if dtt > 0:
+            if time.monotonic() > self.servo_timeout:
                 if self.client:
                     self.client.set('servo.command', 0) # stop
                 self.servo_timeout = 0
+        t4 = time.monotonic()
+        dt = t3-t0
+        period = max(.2 - dt, .01)
+
+        if not self.lirc.registered:
+            fileno = self.lirc.fileno()
+            if fileno:
+                self.poller.register(fileno, select.POLLIN)
+                self.lirc.registered = True
+        
+        e=self.poller.poll(1000*period)
+        #print('hat times', t1-t0, t2-t1, t3-t2, t4-t3, period, dt)
 
 def main():
     hat = Hat()
-    if hat.lcd.use_glut:
+    if hat.lcd and hat.lcd.use_glut:
         from OpenGL.GLUT import glutMainLoop, glutIdleFunc
         glutIdleFunc(hat.poll)
         glutMainLoop()

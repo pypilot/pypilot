@@ -119,11 +119,12 @@ int main(int argc, char *argv[])
 
     framebuffer->fill(255);
     framebuffer->blit(logom, 0, 0);
+    static_cast<spiscreen*>(framebuffer)->contrast = 60;
     framebuffer->refresh();
 
 #if 0 // for testing
     while(1) {
-        usleep(1000000);
+        usleep(100000);
 /*        framebuffer->fill(0);
         framebuffer->refresh();
         usleep(1000000);

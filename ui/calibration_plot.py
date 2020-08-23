@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2016 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import time, sys
 from pypilot.client import pypilotClient
 import json, math, numpy
@@ -18,7 +17,7 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
-point_count=200
+history_point_count=200
 recent_point_count=20
 
 from shape import *
@@ -41,39 +40,42 @@ def rotate_mouse(dx, dy):
 class CalibrationPlot(object):
     def __init__(self, name):
         self.name = name
-        self.points = []
-        self.recent_points = []
         self.mode = GL_LINE
         self.fusionQPose = [1, 0, 0, 0]
         self.alignmentQ = [1, 0, 0, 0]
-        self.sigmapoints = False
+        self.recentpoints = []
+        self.historypoints = []
+        self.sigmapoints = []
+        self.points = []
         
     def add_point(self, value):
         if not value:
             return
-        self.recent_points.append(value)
-        if len(self.recent_points) > recent_point_count * 2:
+        self.recentpoints.append(value)
+        if len(self.recentpoints) > recent_point_count * 2:
             avg = [0, 0, 0]
-            for point in self.recent_points[:recent_point_count]:
+            for point in self.recentpoints[:recent_point_count]:
                 for i in range(3):
                     avg[i] += point[i]
             for i in range(3):
                 avg[i] /= recent_point_count
-            self.points.append(avg)
-            self.recent_points = self.recent_points[recent_point_count:]
-            if len(self.points) > point_count:
-                self.points = self.points[1:]
+            self.historypoints.append(avg)
+            self.recentpoints = self.recentpoints[recent_point_count:]
+            if len(self.historypoints) > history_point_count:
+                self.historypoints = self.historypoints[1:]
 
     def read_data_plot(self, msg):
-        name, data = msg
+        name, value = msg
         if name == 'imu.fusionQPose':
-            self.fusionQPose = data['value']
+            self.fusionQPose = value
         elif name == 'imu.alignmentQ':
-            self.alignmentQ = data['value']
+            self.alignmentQ = value
         elif name == 'imu.'+self.name:
-            self.add_point(data['value'])
+            self.add_point(value)
         elif name == 'imu.'+self.name+'.calibration.sigmapoints':
-            self.sigmapoints = data['value']
+            self.sigmapoints = value
+        elif name == 'imu.'+self.name+'.calibration.points':
+            self.points = value
                 
     def display_setup(self):
         width, height = self.dim
@@ -103,42 +105,43 @@ class CalibrationPlot(object):
         if not self.fusionQPose:
             return [0, 0, 1]
 
-        down = [0, 0, 1]
-        q = [1, 0, 0, 0]
-        q = quaternion.multiply(self.fusionQPose, quaternion.conjugate(self.alignmentQ))
-        q = quaternion.normalize(q) # correct possible rounding errors
-        down = quaternion.rotvecquat(down, quaternion.conjugate(q))
-            
+        q = quaternion.multiply(self.fusionQPose, self.alignmentQ)
+        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(q))
         glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
         return down
 
     def draw_points(self):
-        glPointSize(4)
+        glPointSize(2)
         glColor3f(1,.3,.3)
         glBegin(GL_POINTS)
-        for i in range(max(len(self.recent_points) - recent_point_count, 0), \
-                        len(self.recent_points)):
-            glVertex3fv(self.recent_points[i])
+        for p in self.recentpoints:
+            glVertex3fv(p)
         glEnd()
             
-        glPointSize(4)
+        glPointSize(2)
         glColor3f(0,1,0)
         glBegin(GL_POINTS)
-        for i in range(len(self.points)):
-            glVertex3fv(self.points[i])
+        for p in self.historypoints:
+            glVertex3fv(p)
         glEnd()
 
+        glColor3f(1, 1, 0)
+        glPointSize(4)
+        glBegin(GL_POINTS)
         if self.sigmapoints:
-            glColor3f(1, 1, 0)
-            glPointSize(6)
-            glBegin(GL_POINTS)
             for p in self.sigmapoints:
                 glVertex3fv(p[:3])
-            glEnd()
-                                
+        glEnd()
+
+        glColor3f(0, 1, 1)
+        glPointSize(4)
+        glBegin(GL_POINTS)
+        if self.points:
+            for p in self.points:
+                glVertex3fv(p[:3])
+        glEnd()
         glPopMatrix()
-        
-        
+
     def special(self, key, x, y):
         step = 5
         if key == GLUT_KEY_UP:
@@ -193,11 +196,11 @@ class AccelCalibrationPlot(CalibrationPlot):
 
     def read_data(self, msg):
         self.read_data_plot(msg)
-        name, data = msg
-        if name == 'imu.accel.calibration' and data['value']:
+        name, value = msg
+        if name == 'imu.accel.calibration' and value:
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
-            self.cal_sphere = data['value'][0]
+            self.cal_sphere = value[0]
             self.fit_sphere = Spherical(self.cal_sphere, fsphere,  32, 16);
 
     def display(self):
@@ -233,15 +236,15 @@ class CompassCalibrationPlot(CalibrationPlot):
 
     def read_data(self, msg):
         self.read_data_plot(msg)
-        name, data = msg
+        name, value = msg
         if name == 'imu.accel':
-            self.accel = data['value']
+            self.accel = value
         elif name == 'imu.heading':
-            self.heading = data['value']
-        elif name == 'imu.compass.calibration' and data['value']:
+            self.heading = value
+        elif name == 'imu.compass.calibration' and value:
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
-            self.mag_cal_sphere = data['value'][0]
+            self.mag_cal_sphere = value[0]
             self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  32, 16);
             self.mag_fit_cone = Conical(self.mag_cal_sphere, 32, 16);
         
@@ -284,16 +287,15 @@ class CompassCalibrationPlot(CalibrationPlot):
         self.draw_points()
 
 if __name__ == '__main__':
-    host = ''
+    host = False
     if len(sys.argv) > 1:
         host = sys.argv[1]
 
-    def on_con(client):
-        watchlist = ['imu.accel', 'imu.compass', 'imu.compass.calibration', 'imu.compass.calibration', 'imu.compass.calibration.sigmapoints', 'imu.fusionQPose', 'imu.alignmentQ']
-        for name in watchlist:
-            client.watch(name)
+    watchlist = ['imu.accel', 'imu.compass', 'imu.compass.calibration', 'imu.compass.calibration', 'imu.compass.calibration.sigmapoints', 'imu.fusionQPose']
+    client = pypilotClient(host)
+    for name in watchlist:
+        client.watch(name)
         
-    client = pypilotClient(on_con, host, autoreconnect=True)
     plot = CompassCalibrationPlot()
 
     def display():
@@ -314,11 +316,9 @@ if __name__ == '__main__':
 
     n = 0
     def idle():
+        client.poll()
         while True:
-            result = False
-            if client:
-                result = client.receive_single()
-
+            result = client.receive_single()
             if not result:
                 time.sleep(.01)
                 return

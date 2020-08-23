@@ -62,22 +62,7 @@ bool LineBuffer::next_nmea()
         return true;
     return false;
 }
-#if 0
-const char *LineBuffer::readline()
-{
-    if(next())
-        return buf[!b];
-    return NULL;
-}
 
-bool LineBuffer::next()
-{
-    if(readline_buf() || (recv() && readline_buf()))
-        return true;
-    return false;
-}
-
-#endif
 static int nmea_cksum(const char *buf, int len)
 {
     int value = 0;
@@ -87,10 +72,11 @@ static int nmea_cksum(const char *buf, int len)
     return value;
 }
 
-static bool check_nmea_cksum(const char *buf, int len)
+static bool check_nmea_cksum(char *buf, int len)
 {
-    if(len < 4 || buf[0] != '$')
+    if(len < 4 || (buf[0] != '$' && buf[1] != '!'))
         return false;
+        
     int cksum = strtol(buf+len-2, 0, 16);
     return cksum == nmea_cksum(buf+1, len-4);
 }
@@ -114,13 +100,10 @@ int LineBuffer::readline_buf()
             continue;
         }
 
-        int bpos = pos;
-        if(pos > 0 && buf[b][pos-1] == '\r')
-            bpos--;
+        int bpos = pos+1;
+        len -= bpos;
+        memcpy(buf[!b], buf[b]+bpos, len);
         buf[b][bpos] = 0;
-        
-        len -= pos + 1;
-        memcpy(buf[!b], buf[b]+pos+1, len);
         pos = 0;
         b = !b;
 

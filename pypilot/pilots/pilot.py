@@ -13,26 +13,22 @@ from pypilot.resolv import resolv
 class AutopilotGain(RangeProperty):
   def __init__(self, *cargs):
       super(AutopilotGain, self).__init__(*cargs, persistent=True)
+      self.info['AutopilotGain'] = True
 
-  def type(self):
-      d = super(AutopilotGain, self).type()
-      d['AutopilotGain'] = True
-      return d
-    
 class AutopilotPilot(object):
   def __init__(self, name, ap):
     super(AutopilotPilot, self).__init__()
     self.name = name
     self.ap = ap
 
-  def Register(self, _type, name, *args, **kwargs):
-    return self.ap.server.Register(_type(*(['ap.pilot.' + self.name + '.' + name] + list(args)), **kwargs))
+  def register(self, _type, name, *args, **kwargs):
+    return self.ap.client.register(_type(*(['ap.pilot.' + self.name + '.' + name] + list(args)), **kwargs))
 
   def Gain(self, name, default, min_val, max_val, compute=None):
     if not compute:
       compute = lambda value : value * self.gains[name]['apgain'].value
-    self.gains[name] = {'apgain': self.Register(AutopilotGain, name, default, min_val, max_val),
-                        'sensor': self.Register(SensorValue, name+'gain'),
+    self.gains[name] = {'apgain': self.register(AutopilotGain, name, default, min_val, max_val),
+                        'sensor': self.register(SensorValue, name+'gain'),
                         'compute': compute}
 
   def PosGain(self, name, default, max_val):

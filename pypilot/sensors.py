@@ -1,27 +1,28 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
-from pypilot.server import *
-from pypilot.values import *
-from pypilot.resolv import resolv
+from client import *
+from values import *
+from resolv import resolv
+
+from gpsd import gpsd
 
 # favor lower priority sources
-source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'tcp-pypilot' : 4, 'none' : 5}
+source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'signalk' : 4, 'none' : 5}
 
 class Sensor(object):
-    def __init__(self, server, name):
-        self.source = server.Register(StringValue(name + '.source', 'none'))
+    def __init__(self, client, name):
+        self.source = client.register(StringValue(name + '.source', 'none'))
         self.lastupdate = 0
         self.device = None
         self.name = name
-        self.server = server
+        self.client = client
             
     def write(self, data, source):
         if source_priority[self.source.value] < source_priority[source]:
@@ -33,14 +34,14 @@ class Sensor(object):
            data['device'] != self.device:
             return False
 
-        #timestamp = data['timestamp'] if 'timestamp' in data else time.time()-self.starttime
+        #timestamp = data['timestamp'] if 'timestamp' in data else time.monotonic()-self.starttime
         self.update(data)
                 
         if self.source.value != source:
             print('found', self.name, 'on', source, data['device'])
             self.source.set(source)
             self.device = data['device']
-        self.lastupdate = time.time()
+        self.lastupdate = time.monotonic()
         
         return True
 
@@ -50,19 +51,20 @@ class Sensor(object):
     def update(self, data):
         raise 'update should be overloaded'
 
-    def Register(self, _type, name, *args, **kwargs):
-        return self.server.Register(_type(*([self.name + '.' + name] + list(args)), **kwargs))
+    def register(self, _type, name, *args, **kwargs):
+        return self.client.register(_type(*([self.name + '.' + name] + list(args)), **kwargs))
 
 class Wind(Sensor):
-    def __init__(self, server):
-        super(Wind, self).__init__(server, 'wind')
+    def __init__(self, client):
+        super(Wind, self).__init__(client, 'wind')
 
-        self.direction = self.Register(SensorValue, 'direction', directional=True)
-        self.speed = self.Register(SensorValue, 'speed')
-        self.offset = self.Register(RangeSetting, 'offset', 0, -180, 180, 'deg')
+        self.direction = self.register(SensorValue, 'direction', directional=True)
+        self.speed = self.register(SensorValue, 'speed')
+        self.offset = self.register(RangeSetting, 'offset', 0, -180, 180, 'deg')
 
     def update(self, data):
-        self.direction.set(resolv(data['direction'] + self.offset.value, 180))
+        if 'direction' in data:
+            self.direction.set(resolv(data['direction'] + self.offset.value, 180))
         if 'speed' in data:
             self.speed.set(data['speed'])
 
@@ -71,19 +73,19 @@ class Wind(Sensor):
         self.speed.set(False)
 
 class APB(Sensor):
-    def __init__(self, server):
-        super(APB, self).__init__(server, 'apb')
-        self.track = self.Register(SensorValue, 'track', directional=True)
-        self.xte = self.Register(SensorValue, 'xte')
+    def __init__(self, client):
+        super(APB, self).__init__(client, 'apb')
+        self.track = self.register(SensorValue, 'track', directional=True)
+        self.xte = self.register(SensorValue, 'xte')
         # 300 is 30 degrees for 1/10th mile
-        self.gain = self.Register(RangeProperty, 'xte.gain', 300, 0, 3000, persistent=True)
-        self.last_time = time.time()
+        self.gain = self.register(RangeProperty, 'xte.gain', 300, 0, 3000, persistent=True)
+        self.last_time = time.monotonic()
 
     def reset(self):
-        self.xte.update(0)
+       self.xte.update(0)
 
     def update(self, data):
-        t = time.time()
+        t = time.monotonic()
         if t - self.last_time < .5: # only accept apb update at 2hz
             return
 
@@ -91,15 +93,10 @@ class APB(Sensor):
         self.track.update(data['track'])
         self.xte.update(data['xte'])
 
-        if not 'ap.enabled' in self.server.values:
-            print('ERROR, parsing apb without autopilot')
+        if not self.client.values['ap.enabled'].value:
             return
 
-        if not self.server.values['ap.enabled'].value:
-            return
-
-        mode = self.server.values['ap.mode']
-       
+        mode = self.client.values['ap.mode'].value
         if mode.value != data['mode']:
             # for GPAPB, ignore message on wrong mode
             if data['isgp'] != 'GP':
@@ -114,29 +111,50 @@ class APB(Sensor):
         if abs(heading_command.value - command) > .1:
             heading_command.set(command)
 
-    
+class gps(Sensor):
+    def __init__(self, client):
+        super(gps, self).__init__(client, 'gps')
+        self.track = self.register(SensorValue, 'track', directional=True)
+        self.speed = self.register(SensorValue, 'speed')
+
+    def update(self, data):
+        self.track.set(data['track'])
+        self.speed.set(data['speed'])
+
+    def reset(self):
+        self.track.set(False)
+        self.speed.set(False)
+
 class Sensors(object):
-    def __init__(self, server):
-        from gpsd import gpsd
+    def __init__(self, client):
         from rudder import Rudder
         from nmea import Nmea
-        
-        self.server = server
-        self.nmea = Nmea(server, self)
-        self.gps = gpsd(server, self)
-        self.wind = Wind(server)
-        self.rudder = Rudder(server)
-        self.apb = APB(server)
+        from signalk import signalk
+
+        self.client = client
+
+        # services that can receive sensor data
+        self.nmea = Nmea(self)
+        self.signalk = signalk(self)
+        self.gpsd = gpsd(self)
+
+        # actual sensors supported
+        self.gps = gps(client)
+        self.wind = Wind(client)
+        self.rudder = Rudder(client)
+        self.apb = APB(client)
 
         self.sensors = {'gps': self.gps, 'wind': self.wind, 'rudder': self.rudder, 'apb': self.apb}
 
     def poll(self):
-        self.gps.poll()
         self.nmea.poll()
+        self.signalk.poll()
+        self.gpsd.poll()
+
         self.rudder.poll()
 
         # timeout sources
-        t = time.time()
+        t = time.monotonic()
         for name in self.sensors:
             sensor = self.sensors[name]
             if sensor.source.value == 'none':
@@ -163,15 +181,3 @@ class Sensors(object):
             sensor = self.sensors[name]
             if sensor.device and sensor.device[2:] == device:
                 self.lostsensor(sensor)
-
-
-if __name__ == '__main__':
-    if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
-      print('warning, failed to make sensor process realtime')
-    server = pypilotServer()
-    sensors = Sensors(server)
-
-    while True:
-        sensors.poll()
-        server.HandleRequests()
-        time.sleep(.1)

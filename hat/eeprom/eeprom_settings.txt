@@ -76,7 +76,7 @@ back_power 0
 #setgpio  13    INPUT     DEFAULT
 #setgpio  14    INPUT     DEFAULT
 #setgpio  15    INPUT     DEFAULT
-#setgpio  16    OUTPUT     DOWN
+setgpio  16    INPUT     UP
 #setgpio  17    INPUT     DEFAULT
 #setgpio  18    INPUT     DEFAULT
 #setgpio  19    INPUT     DEFAULT

@@ -13,11 +13,11 @@ from resolv import *
 class TackSensorLog(object):
   def __init__(self, threshold):
     self.log = []
-    self.time = time.time()
+    self.time = time.monotonic()
     self.threshold = threshold
 
   def update(self, value):
-    t = time.time()
+    t = time.monotonic()
     dt = t - self.time
     # limit update rate
     if dt < .25:
@@ -68,31 +68,31 @@ class Tack(object):
     # waiting - waiting delay seconds before beginning to tack
     # tacking - rudder is moving at tack rate until threshold
     
-    self.state = self.Register(EnumProperty, 'state', 'none', ['none', 'begin', 'waiting', 'tacking'])
-    self.timeout = self.Register(Value, 'timeout', 0)
+    self.state = self.register(EnumProperty, 'state', 'none', ['none', 'begin', 'waiting', 'tacking'])
+    self.timeout = self.register(Value, 'timeout', 0)
 
-    self.delay = self.Register(RangeSetting, 'delay', 0, 0, 60, 'sec')
-    self.angle = self.Register(RangeSetting, 'angle', 100, 10, 180, 'deg')
-    self.rate = self.Register(RangeSetting, 'rate', 20, 1, 100, 'deg/s')
-    self.threshold = self.Register(RangeSetting, 'threshold', 50, 10, 100, '%')
-    self.count = self.Register(ResettableValue, 'count', 0, persistent=True)
-    self.direction = self.Register(EnumProperty, 'direction', 'port', ['port', 'starboard'])
+    self.delay = self.register(RangeSetting, 'delay', 0, 0, 60, 'sec')
+    self.angle = self.register(RangeSetting, 'angle', 100, 10, 180, 'deg')
+    self.rate = self.register(RangeSetting, 'rate', 20, 1, 100, 'deg/s')
+    self.threshold = self.register(RangeSetting, 'threshold', 50, 10, 100, '%')
+    self.count = self.register(ResettableValue, 'count', 0, persistent=True)
+    self.direction = self.register(EnumProperty, 'direction', 'port', ['port', 'starboard'])
     self.current_direction = 'port' # so user can't change while tacking
-    self.time = time.time()
+    self.time = time.monotonic()
 
     self.wind_log = TackSensorLog(12)
     self.heel_log = TackSensorLog(7)
 
-  def Register(self, _type, name, *args, **kwargs):
-    return self.ap.server.Register(_type(*(['ap.tack.' + name] + list(args)), **kwargs))
+  def register(self, _type, name, *args, **kwargs):
+    return self.ap.client.register(_type(*(['ap.tack.' + name] + list(args)), **kwargs))
 
   def process(self):
-    t = time.time()
+    t = time.monotonic()
     ap = self.ap
 
     # disengage cancels any tacking
     if not ap.enabled.value:
-      self.state.set('none')
+      self.state.update('none')
 
     if self.state.value == 'none': # not tacking
       # if we have wind data, use it to determine the tacking direction
@@ -110,7 +110,7 @@ class Tack(object):
     if self.state.value == 'begin':
       self.time = t
       self.current_direction = self.direction.value
-      self.state.set('waiting')
+      self.state.update('waiting')
 
     # waiting to tack, update timeout
     if self.state.value == 'waiting':
@@ -119,7 +119,7 @@ class Tack(object):
         self.timeout.set(remaining)
       else:
         self.timeout.set(0)
-        self.state.set('tacking')
+        self.set.update('tacking')
         if 'wind' in ap.mode.value:
           self.tack_angle = 2*ap.command # opposite wind direction for wind  mode
         else:
@@ -146,6 +146,6 @@ class Tack(object):
       if current > self.threshold.value:
         heading_command -= mul*tack_angle
         ap.command.set(resolv(heading_command, 180))
-        self.state.set('none')
+        self.set.update('none')
 
     return self.state.value == 'tacking'
