@@ -1,3 +1,12 @@
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U lfuse:w:0x7f:m
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U hfuse:w:0xda:m
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U efuse:w:0x4:m
+
+efuse  0xfc  0x04
+hfuse  0xda
+lfuse  0x7f
+
+
 This motor controller monitor receives commands over a serial port.
 
 

@@ -7,25 +7,24 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import math
 from pypilot.values import *
 from sensors import Sensor
 
 class Rudder(Sensor):
-    def __init__(self, server):
-        super(Rudder, self).__init__(server, 'rudder')
+    def __init__(self, client):
+        super(Rudder, self).__init__(client, 'rudder')
 
-        self.angle = self.Register(SensorValue, 'angle')
-        self.speed = self.Register(SensorValue, 'speed')
+        self.angle = self.register(SensorValue, 'angle')
+        self.speed = self.register(SensorValue, 'speed')
         self.last = 0
-        self.last_time = time.time()
-        self.offset = self.Register(Value, 'offset', 0.0, persistent=True)
-        self.scale = self.Register(Value, 'scale', 100.0, persistent=True)
-        self.nonlinearity = self.Register(Value, 'nonlinearity',  0.0, persistent=True)
-        self.calibration_state = self.Register(EnumProperty, 'calibration_state', 'idle', ['idle', 'reset', 'centered', 'starboard range', 'port range', 'auto gain'])
+        self.last_time = time.monotonic()
+        self.offset = self.register(Value, 'offset', 0.0, persistent=True)
+        self.scale = self.register(Value, 'scale', 100.0, persistent=True)
+        self.nonlinearity = self.register(Value, 'nonlinearity',  0.0, persistent=True)
+        self.calibration_state = self.register(EnumProperty, 'calibration_state', 'idle', ['idle', 'reset', 'centered', 'starboard range', 'port range', 'auto gain'])
         self.calibration_raw = {}
-        self.range = self.Register(RangeProperty, 'range',  45, 10, 100, persistent=True)
+        self.range = self.register(RangeProperty, 'range',  45, 10, 100, persistent=True)
         self.lastrange = 0
         self.minmax = -.5, .5
         self.autogain_state = 'idle'
@@ -147,7 +146,7 @@ class Rudder(Sensor):
                 self.autogain_state='idle'
                 self.calibration_state.set('idle')
 
-            t = time.time()
+            t = time.monotonic()
             if self.autogain_state=='idle':
                 self.gain.set(1)
                 self.autogain_state='fwd'
@@ -174,13 +173,12 @@ class Rudder(Sensor):
             if self.autogain_state=='rev':
                 self.command.set(-1)
                 if abs(self.value) >= rng:
-                    dt = time.time() - self.autogain_time
+                    dt = time.monotonic() - self.autogain_time
                     #print('hardover', dt, 'with', rng/dt, 'deg/s')
                     # 5 deg/s is gain of 1
 
                     gain = min(max(5*dt/rng, .5), 2)
                     if self.angle.value < 0:
-#                            print('negative gain detected')
                         gain = -gain
                     self.gain.set(gain)
                     idle()
@@ -216,7 +214,7 @@ class Rudder(Sensor):
         angle = round(angle, 2) # 2 decimal for rudder angle is enough
         self.angle.set(angle)
 
-        t = time.time()
+        t = time.monotonic()
         dt = t - self.last_time
 
         if dt > 1:

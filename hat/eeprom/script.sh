@@ -1,4 +1,7 @@
 #!/bin/bash
+echo 13 > /sys/class/gpio/export || echo ok
+echo in > /sys/class/gpio/gpio13/direction
+echo out > /sys/class/gpio/gpio13/direction
 
 # gpio13 is write protect of eeprom
 echo 13 > /sys/class/gpio/export || echo ok

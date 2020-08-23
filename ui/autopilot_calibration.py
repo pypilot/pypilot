@@ -1,20 +1,19 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import tempfile, time, math, sys, subprocess, json, socket, os
 import wx, wx.glcanvas
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import calibration_plot, boatplot, autopilot_control_ui
-import pypilot.quaternion
+from pypilot import quaternion
 import scope_wx
-from pypilot.client import pypilotClient, ConnectionLost
+from pypilot.client import pypilotClient
 from client_wx import round3
 
 from OpenGL.GL import *
@@ -26,7 +25,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     ID_MESSAGES = 1000
     ID_CALIBRATE_SERVO = 1001
     ID_HEADING_OFFSET = 1002
-    ID_REQUEST_MSG = 1003
 
     def __init__(self):
         super(CalibrationDialog, self).__init__(None)
@@ -56,117 +54,119 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.have_rudder = False
 
-        self.request_msg_timer = wx.Timer(self, self.ID_REQUEST_MSG)
-        self.Bind(wx.EVT_TIMER, self.request_msg, id=self.ID_REQUEST_MSG)
-        self.request_msg_timer.Start(250)
-        
         self.fusionQPose = [1, 0, 0, 0]
+        self.alignmentQ = [1, 0, 0, 0]        
         self.controltimes = {}
 
-        self.settings = {}
+        self.client = pypilotClient(self.host)
 
-    def set_watches(self, client):
-        if not client:
+        # clear out plots
+        self.accel_calibration_plot.points = []
+        self.compass_calibration_plot.points = []
+        self.settings = {}
+        self.set_watches()
+
+    def set_watches(self):
+        if not self.client:
             return
 
         def calwatch(name):
             name = 'imu.' + name
             return [name + '.calibration', name + '.calibration.age',
-                    name, name + '.calibration.sigmapoints',
+                    (name, .2), name + '.calibration.sigmapoints', name + '.calibration.points',
                     name + '.calibration.locked', name + '.calibration.log']
         
         watchlist = [
-            ['imu.fusionQPose', 'imu.alignmentCounter', 'imu.heading',
-             'imu.alignmentQ', 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading_offset'],
+            ['imu.fusionQPose', ('imu.alignmentCounter', .2), ('imu.heading', .5),
+             ('imu.alignmentQ', 1), ('imu.pitch', .5), ('imu.roll', .5), ('imu.heel', .5), ('imu.heading_offset', 1)],
             calwatch('accel'),
-            calwatch('compass') + ['imu.fusionQPose', 'imu.alignmentQ'],
-            ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity',
-             'rudder.range', 'servo.flags']]
-
-        watchlist.append(list(self.settings))
-
-        pageindex = 0
-        for pagelist in watchlist:
-            for name in pagelist:
-                client.watch(name, False)
-
+            calwatch('compass') + ['imu.fusionQPose'],
+            ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity', ('rudder.angle', 1),
+             'rudder.range', 'servo.flags'], list(self.settings)]
+            
         pageindex = self.m_notebook.GetSelection()
-        for name in watchlist[pageindex]:
-            client.watch(name)
+        watches = {}
+        for i in range(len(watchlist)):
+            pagelist = watchlist[i]
+            for name in watchlist[pageindex]:
+                if i == pageindex:
+                    if type(name) == type(()):
+                        name, watch = name # if a pair, it specifies the period
+                    else:
+                        watch = True
+                    watches[name] = watch
+                elif name in self.client.watches:
+                    self.client.watch(name, False)
 
-    def on_con(self, client):
-        # clear out plots
-        self.accel_calibration_plot.points = []
-        self.compass_calibration_plot.points = []
+        for name, watch in watches.items():
+            self.client.watch(name, watch)
 
-        values = client.list_values()
-
-        if not self.settings:
+    def enumerate_settings(self, values):
+        fgSettings = self.m_pSettings.GetSizer()
+        if not fgSettings:
             fgSettings = wx.FlexGridSizer( 0, 3, 0, 0 )
             fgSettings.AddGrowableCol( 1 )
             fgSettings.SetFlexibleDirection( wx.BOTH )
             fgSettings.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
             self.m_pSettings.SetSizer( fgSettings )
-            self.m_pSettings.Layout()
-            fgSettings.Fit( self.m_pSettings )
 
-            lvalues = list(values)
-            lvalues.sort()
-            for name in lvalues:
-                if 'units' in values[name]:
-                    v = values[name]
-                    def proc():
-                        s = wx.SpinCtrlDouble(self.m_pSettings, wx.ID_ANY)
-                        s.SetRange(v['min'], v['max'])
-                        s.SetIncrement(min(1, (v['max'] - v['min']) / 100.0))
-                        s.SetDigits(-math.log(s.GetIncrement()) / math.log(10) + 1)
-                        self.settings[name] = s
-                        fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, name), 0, wx.ALL, 5)
-                        fgSettings.Add(s, 0, wx.ALL | wx.EXPAND, 5)
-                        fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, v['units']), 0, wx.ALL, 5)
+        lvalues = list(values)
+        lvalues.sort()
+        for name in lvalues:
+            if name in self.settings:
+                continue
+            if 'units' in values[name]:
+                v = values[name]
+                def proc():
+                    s = wx.SpinCtrlDouble(self.m_pSettings, wx.ID_ANY)
+                    s.SetRange(v['min'], v['max'])
+                    s.SetIncrement(min(1, (v['max'] - v['min']) / 100.0))
+                    s.SetDigits(-math.log(s.GetIncrement()) / math.log(10) + 1)
+                    self.settings[name] = s
+                    fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, name), 0, wx.ALL, 5)
+                    fgSettings.Add(s, 0, wx.ALL | wx.EXPAND, 5)
+                    fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, v['units']), 0, wx.ALL, 5)
+                    
+                    sname = name
+                    def onspin(event):
+                        self.client.set(sname, s.GetValue())
+                    s.Bind( wx.EVT_SPINCTRLDOUBLE, onspin )
+                proc()
 
-                        sname = name
-                        def onspin(event):
-                            self.client.set(sname, s.GetValue())
-                        s.Bind( wx.EVT_SPINCTRLDOUBLE, onspin )
-                    proc()
-            fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-            fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
-            b = wx.Button( self.m_pSettings, wx.ID_OK )
-            fgSettings.Add ( b, 1, wx.ALIGN_RIGHT, 5)
+        self.m_pSettings.Layout()
+        fgSettings.Fit( self.m_pSettings )
 
-        self.set_watches(client)
-
+        #fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+        #fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+        #b = wx.Button( self.m_pSettings, wx.ID_OK )
+        #fgSettings.Add ( b, 1, wx.ALIGN_RIGHT, 5)
+            
     def receive_messages(self, event):
-        if not self.client:
-            try:
-                self.client = pypilotClient(self.on_con, self.host, autoreconnect=False)
-            except socket.error:
-                self.timer.Start(5000)
-                return
+        self.client.poll()
+
+        values_list = self.client.list_values()
+        if values_list:
+            self.enumerate_settings(values_list)
+
+        msg = self.client.receive_single()
+        while msg:
+            self.receive_message(msg)
+            msg = self.client.receive_single()
+        self.timer.Start(50)
+        return
+            
         try:
             msg = self.client.receive_single()
             while msg:
                 self.receive_message(msg)
                 msg = self.client.receive_single()
             self.timer.Start(50)
-        except ConnectionLost:
-            self.client = False
         except Exception as e:
-            print(e)
-
-    def request_msg(self, event):
-        if not self.client:
-            return
-
-        page_gets = [[], [], [], ['rudder.angle'], []]
-        i = self.m_notebook.GetSelection()
-        for name in page_gets[i]:
-            self.client.get(name)
+            print('exception in calibration:', e)
 
     def UpdateControl(self, control, update):
-        t = time.time()
+        t = time.monotonic()
         if not control in self.controltimes or t - self.controltimes[control] > .5:
             update()
             self.controltimes[control] = t
@@ -178,22 +178,27 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.UpdateControl(dspin, lambda : dspin.SetValue(value))
                 
     def receive_message(self, msg):
-        name, data = msg
-        value = data['value']
+        name, value = msg
 
         if self.m_notebook.GetSelection() == 0:
             if name == 'imu.alignmentQ':
-                self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(pypilot.quaternion.angle(value))))
-            elif name == 'imu.fusionQPose':
+                self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(quaternion.angle(value))))
+                self.alignmentQ = value
+            elif name == 'imu.fusionQPose':                
                 if not value:
                     return # no imu!  show warning?
+
+                #lastaligned = quaternion.normalize(quaternion.multiply(self.fusionQPose, self.alignmentQ))
+                aligned = quaternion.normalize(quaternion.multiply(value, self.alignmentQ))
+                value = aligned
                     
                 if self.cCoords.GetSelection() == 1:
-                    self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, self.fusionQPose)
-                    self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, pypilot.quaternion.conjugate(value))
+                    #self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, lastedaligned)
+                    self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, self.fusionQPose)
+                    self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, quaternion.conjugate(aligned))
                 elif self.cCoords.GetSelection() == 2:
-                    ang = pypilot.quaternion.toeuler(self.fusionQPose)[2] - pypilot.quaternion.toeuler(value)[2]
-                    self.boat_plot.Q = pypilot.quaternion.multiply(self.boat_plot.Q, pypilot.quaternion.angvec2quat(ang, [0, 0, 1]))
+                    ang = quaternion.toeuler(self.fusionQPose)[2] - quaternion.toeuler(aligned)[2]
+                    self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, quaternion.angvec2quat(ang, [0, 0, 1]))
 
                 self.fusionQPose = value
                 self.BoatPlot.Refresh()
@@ -255,17 +260,14 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 self.stServoFlags.SetLabel(value)
 
         elif self.m_notebook.GetSelection() == 4:
-            for n in self.settings:
-                if name == n:
-                    self.UpdatedSpin(self.settings[name], value)
-                    break
-
+            if name in self.settings:
+                self.UpdatedSpin(self.settings[name], value)
 
     def servo_console(self, text):
         self.stServoCalibrationConsole.SetLabel(self.stServoCalibrationConsole.GetLabel() + text + '\n')
     
     def PageChanged( self, event ):
-        self.set_watches(self.client)
+        self.set_watches()
             
     def onKeyPressAccel( self, event ):
         self.onKeyPress(event, self.compass_calibration_plot)
@@ -364,8 +366,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         if event.Dragging():
             dx, dy = pos[0] - self.lastmouse[0], pos[1] - self.lastmouse[1]
-            q = pypilot.quaternion.angvec2quat((dx**2 + dy**2)**.4/180*math.pi, [dy, dx, 0])
-            self.boat_plot.Q = pypilot.quaternion.multiply(q, self.boat_plot.Q)
+            q = quaternion.angvec2quat((dx**2 + dy**2)**.4/180*math.pi, [dy, dx, 0])
+            self.boat_plot.Q = quaternion.multiply(q, self.boat_plot.Q)
             self.BoatPlot.Refresh()
             self.lastmouse = pos
 
@@ -385,7 +387,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         # stupid hack
         self.boat_plot.reshape(self.BoatPlot.GetSize().x, self.BoatPlot.GetSize().y)
-        
+
         self.boat_plot.display(self.fusionQPose)
         self.BoatPlot.SwapBuffers()
 

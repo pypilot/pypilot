@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 orangepi = False
 try:
     import RPi.GPIO as GPIO
@@ -46,6 +45,7 @@ class gpio(object):
         else:
             GPIO.setmode(GPIO.BCM)
 
+
         for pin in self.pins:
             try:
                 GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -65,7 +65,7 @@ class gpio(object):
             except Exception as e:
                 print('WARNING', e)        
 
-    def poll(self):                
+    def poll(self):
         for pin in self.pins:
             value = True
 
@@ -78,14 +78,17 @@ class gpio(object):
                     value = GPIO.input(pin)
 
             self.evalkey(pin, value)
+        events = self.events
+        self.events = []
+        return events
 
     def evalkey(self, pin, value):
         if value:
             if self.keystate[pin]:
                 self.keystate[pin] = 0
             else:
-                return
+                return []
         else:
             self.keystate[pin] += 1
-        self.events.append(['gpio%d'%pin, self.keystate[pin]])
-        
+
+        self.events.append(('gpio%d'%pin, self.keystate[pin]))

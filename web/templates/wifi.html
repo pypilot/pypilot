@@ -13,7 +13,9 @@
       <p>SSID
         <input type="text" name="ssid">
       <p>Key (leave blank for no encryption)
-        <input type="text" name="key" value="{{ wifi_key }}">
+        <input type="text" name="key">
+      <p>Client Mode Address (leave blank for dhcp)
+        <input type="text" name="address">
       <p>
         <input type="submit" value="Submit">
 
@@ -26,14 +28,17 @@
     function wifi_mode() {
       if(document.getElementsByName('mode')[0].value == "Master") {
         ssid = wifi['ssid'];
-        psk = wifi['psk'];
+        key = wifi['key'];
+        address = ''
       } else {
         ssid = wifi['client_ssid'];
-        psk = wifi['client_psk'];
+        key = wifi['client_key'];
+        address = wifi['client_address'];
       }
 
       document.getElementsByName('ssid')[0].value = ssid;
-      document.getElementsByName('psk')[0].value = psk;
+      document.getElementsByName('key')[0].value = key;
+      document.getElementsByName('address')[0].value = address;
     }
 
     document.getElementsByName('mode')[0].value = wifi['mode'];

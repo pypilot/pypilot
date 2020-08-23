@@ -6,7 +6,6 @@
  * version 3 of the License, or (at your option) any later version.
  */
 
-#include <linux/fb.h>
 
 unsigned int color(int r, int g, int b);
 
@@ -15,7 +14,7 @@ class surface
 public:
     surface(surface *s);
     surface(int w, int h, int internal_bypp, const char *data32);
-    surface(const char* filename);
+    surface(const char* filename, int bypp);
     virtual ~surface();
 
     void store_grey(const char *filename);
@@ -42,6 +41,9 @@ protected:
     surface() {}
 };
 
+#ifdef __linux__
+#include <linux/fb.h>
+
 // linux framebuffer surface
 class screen : public surface
 {
@@ -56,8 +58,7 @@ public:
     int fbfd;
     long int screensize;
 };
-
-#ifdef WIRINGPI
+#endif
 
 // nokia5110 spi device
 class spilcd;
@@ -74,5 +75,3 @@ public:
 private:
     spilcd *disp;
 };
-
-#endif

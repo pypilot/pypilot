@@ -15,7 +15,7 @@ class surface
 public:
     surface(surface *s);
     surface(int w, int h, int internal_bypp, const char *data32);
-    surface(const char* filename);
+    surface(const char* filename, int bypp);
     virtual ~surface();
 
     void store_grey(const char *filename);
@@ -56,7 +56,6 @@ public:
     int fbfd = 0;
     long int screensize = 0;
 };
-
 #ifdef WIRINGPI
 class spiscreen : public surface
 {

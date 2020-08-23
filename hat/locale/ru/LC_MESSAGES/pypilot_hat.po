@@ -1,0 +1,270 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the pypilot_hat package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: pypilot_hat\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2020-08-15 20:57+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+
+#: ../menu.py:271
+msgid "pilot"
+msgstr "пилот"
+
+#: ../menu.py:273
+msgid "gain"
+msgstr "усиление"
+
+#: ../menu.py:303
+msgid "rudder"
+msgstr "руль направ"
+
+#: ../menu.py:323
+msgid "calibrate"
+msgstr "калибровать"
+
+#: ../menu.py:324
+msgid "level"
+msgstr "уровень"
+
+#: ../menu.py:325
+msgid "heading"
+msgstr "заголовок"
+
+#: ../menu.py:326
+msgid "lock"
+msgstr "замок"
+
+#: ../menu.py:355
+msgid "motor"
+msgstr "двигатель"
+
+#: ../menu.py:356
+msgid "min speed"
+msgstr "мин скорость"
+
+#: ../menu.py:356 ../menu.py:357
+msgid "relative"
+msgstr "родственник"
+
+#: ../menu.py:357
+msgid "max speed"
+msgstr "мак скорость"
+
+#: ../menu.py:358
+msgid "max current"
+msgstr "мак ток"
+
+#: ../menu.py:358
+msgid "amps"
+msgstr "амперы"
+
+#: ../menu.py:359
+msgid "period"
+msgstr "период"
+
+#: ../menu.py:359
+msgid "seconds"
+msgstr "секунд"
+
+#: ../menu.py:398
+msgid "defaults"
+msgstr "по умолчанию"
+
+#: ../menu.py:399
+msgid "remote"
+msgstr "удаленный"
+
+#: ../menu.py:404
+msgid "No Wifi detected"
+msgstr "Wi-Fi не обнаружен"
+
+#: ../menu.py:431
+msgid "control"
+msgstr "контроль"
+
+#: ../menu.py:433
+msgid "small step"
+msgstr "маленький шаг"
+
+#: ../menu.py:433 ../menu.py:434
+msgid "degrees"
+msgstr "степени"
+
+#: ../menu.py:434
+msgid "big step"
+msgstr "большой шаг"
+
+#: ../menu.py:449
+msgid "display"
+msgstr "дисплей"
+
+#: ../menu.py:450
+msgid "contrast"
+msgstr "контраст"
+
+#: ../menu.py:451
+msgid "invert"
+msgstr "инвертировать"
+
+#: ../menu.py:452
+msgid "backlight"
+msgstr "подсветка"
+
+#: ../menu.py:453
+msgid "flip"
+msgstr "кувырок"
+
+#: ../menu.py:481
+msgid "language"
+msgstr "язык"
+
+#: ../menu.py:494
+msgid "settings"
+msgstr "настройки"
+
+#: ../menu.py:495
+msgid "mode"
+msgstr "Режим"
+
+#: ../menu.py:500
+msgid "Menu"
+msgstr "Меню"
+
+#: ../menu.py:518
+msgid "Loading"
+msgstr "загрузка"
+
+#: ../menu.py:527
+msgid "timeout"
+msgstr "Тайм-аут"
+
+#: ../page.py:274 ../page.py:288
+msgid "info"
+msgstr "Информация"
+
+#: ../page.py:296
+msgid "Watts"
+msgstr "Вт"
+
+#: ../page.py:296
+msgid "Amp Hours"
+msgstr "Ампер-часы"
+
+#: ../page.py:296
+msgid "runtime"
+msgstr "время выполнения"
+
+#: ../page.py:302
+msgid "voltage"
+msgstr "напряжение"
+
+#: ../page.py:302
+msgid "rate"
+msgstr "ставка"
+
+#: ../page.py:302
+msgid "uptime"
+msgstr "Провел"
+
+#: ../page.py:308
+msgid "cont temp"
+msgstr "cont temp"
+
+#: ../page.py:308
+msgid "motor temp"
+msgstr "температура двигателя"
+
+#: ../page.py:308
+msgid "faults"
+msgstr "недостатки"
+
+#: ../page.py:313
+msgid "version"
+msgstr "версия"
+
+#: ../page.py:313
+msgid "author"
+msgstr "автор"
+
+#: ../page.py:335
+msgid "Calibrate Info"
+msgstr "Информация о калибровке"
+
+#: ../page.py:346
+msgid "incomplete"
+msgstr "неполный"
+
+#: ../page.py:346
+msgid "excellent"
+msgstr "превосходно"
+
+#: ../page.py:346
+msgid "good"
+msgstr "хорошо"
+
+#: ../page.py:347
+msgid "fair"
+msgstr "Справедливая"
+
+#: ../page.py:347
+msgid "poor"
+msgstr "бедных"
+
+#: ../page.py:347
+msgid "bad"
+msgstr "плохой"
+
+#: ../page.py:355
+msgid "compass"
+msgstr "компас"
+
+#: ../page.py:534
+msgid "ERROR"
+msgstr "ОШИБКА"
+
+#: ../page.py:534
+msgid "compass or gyro failure!"
+msgstr "отказ компаса или гироскопа!"
+
+#: ../page.py:564
+msgid "GPS not detected"
+msgstr "GPS не обнаружен"
+
+#: ../page.py:568
+msgid "WIND not detected"
+msgstr "ВЕТЕР не обнаружен"
+
+#: ../page.py:572
+msgid "WARNING no motor controller"
+msgstr "ВНИМАНИЕ! Нет контроллера мотора."
+
+#: ../page.py:584
+msgid "standby"
+msgstr "ожидание"
+
+#: ../page.py:608
+msgid "No Cal"
+msgstr "Нет Cal"
+
+#: ../page.py:611
+msgid "Bad Cal"
+msgstr "Bad Cal"
+
+#: ../page.py:670
+msgid "connect to server"
+msgstr "подключиться к серверу"
+
+#~ msgid "Info"
+#~ msgstr "Информация"

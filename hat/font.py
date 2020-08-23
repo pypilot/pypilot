@@ -6,20 +6,25 @@
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
+import time
+try:
+    import micropython
+    import ugfx
+    #fontpath = '/_#!#_spiffs/ugfxfonts/'
+    fontpath = ''
+except:
+    micropython = False
+    import os
+    from ugfx import ugfx
+    fontpath = os.path.abspath(os.getenv('HOME') + '/.pypilot/ugfxfonts/') + '/'
 
-from __future__ import print_function
-import os
-from ugfx import ugfx
+    if not os.path.exists(fontpath):
+        os.makedirs(fontpath)
+    if not os.path.isdir(fontpath):
+        raise 'ugfxfonts should be a directory'
 
 global fonts
 fonts = {}
-
-fontpath = os.path.abspath(os.getenv('HOME') + '/.pypilot/ugfxfonts/')
-
-if not os.path.exists(fontpath):
-    os.makedirs(fontpath)
-if not os.path.isdir(fontpath):
-    raise 'ugfxfonts should be a directory'
 
 def draw(surface, pos, text, size, bw, crop=False):
     if not size in fonts:
@@ -35,6 +40,7 @@ def draw(surface, pos, text, size, bw, crop=False):
     width = 0
     lineheight = 0
     height = 0
+    removes = {}
     for c in text:
         if c == '\n':
             x = origx
@@ -42,26 +48,54 @@ def draw(surface, pos, text, size, bw, crop=False):
             height += lineheight
             lineheight = 0
             continue
-        
-        if not c in font:
-            filename = fontpath + '/%03d%03d' % (size, ord(c))
-            if bw:
-                filename += 'b';
-            if crop:
-                filename += 'c';
 
-            #print('ord', ord(c), filename)
-            font[c] = ugfx.surface(filename.encode('utf-8'))
-            if font[c].bypp != surface.bypp:
-                font[c] = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
-                print('store grey', filename)
-                font[c].store_grey(filename.encode('utf-8'))
+        if c in font:
+            src = font[c]
+        else:
+            while size>1:
+                filename = fontpath + '%03d%03d' % (size, ord(c))
+                if bw:
+                    filename += 'b';
+                if crop:
+                    filename += 'c';
 
+                src = ugfx.surface(filename.encode('utf-8'), surface.bypp)
+            
+                if src.bypp == surface.bypp:
+                    break # loaded
+                
+                if not micropython:
+                    try:
+                        print('create font charater', c, size, src.bypp, surface.bypp)
+                    except:
+                        print('create font charater', size, src.bypp, surface.bypp)
+                        print('unable to print unicode character to console')
+                    src = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
+                    if src:
+                        print('store grey', filename)
+                        src.store_grey(filename.encode('utf-8'))
+                    break
+                size -= 1 # try smaller size
+
+        if not src or src.bypp != surface.bypp:
+            print('dont have', ord(c), size)
+            continue
+                
         if pos:
-            surface.blit(font[c], x, y)
-        x += font[c].width
+            surface.blit(src, x, y)
+
+        x += src.width
         width = max(width, x-origx)
-        lineheight = max(lineheight, font[c].height)
+        lineheight = max(lineheight, src.height)
+        
+        if micropython and pos:
+            removes[c] = True
+        font[c] = src
+
+    for c in removes:
+        font[c].free()
+        del font[c]
+        time.sleep(.01)
 
     return width, height+lineheight
 
@@ -72,12 +106,16 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
         from PIL import ImageFont
         from PIL import ImageChops
 
-    except:
+    except Exception as e:
         # we will get respawn hopefully after python-PIL is loaded
-        print('failed to load PIL to create fonts, aborting...')
-        import time
-        time.sleep(3)
-        exit(1)
+        print('failed to load PIL to create fonts, aborting...', e)
+        return False
+        #import time
+        #time.sleep(3) # wait 3 seconds to avoid respawning too quickly
+
+        
+        #return ugfx.surface(size, size, bypp, bytes([0]*(size*size*bypp)))
+        #exit(1)
 
     ifont = ImageFont.truetype(fontpath, size)
     size = ifont.getsize(c)
@@ -104,5 +142,5 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
     
 if __name__ == '__main__':
     print('ugfx test program')
-    screen = ugfx.display("/dev/fb0")
-    draw(screen, (0, 100), "1234567890", 28);
+    screen = ugfx.screen('/dev/fb0'.encode('utf-8'))
+    draw(screen, (0, 100), "1234567890", 28, False);

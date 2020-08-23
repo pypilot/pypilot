@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from __future__ import print_function
 import wx, sys, subprocess, socket, os, time
 from pypilot.ui import autopilot_control_ui
 from pypilot.client import *
@@ -17,6 +16,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
     def __init__(self):
         super(AutopilotControl, self).__init__(None)
+
         self.sliderlabels = [-120, -40, -10, -5, 0, 5, 10, 40, 120]
         self.fgGains = self.swGains.GetSizer()
 
@@ -35,21 +35,51 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.apenabled = False
         self.tackstate = False
         #self.bCenter.Show(False)
-
         self.timer = wx.Timer(self, self.ID_MESSAGES)
         self.timer.Start(100)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=self.ID_MESSAGES)
+        self.init()
 
 
-    def on_con(self, client):
-        self.fgGains.Clear(True)
-        self.watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
+    def init(self):
+        self.stStatus.SetLabel('No Connection')
+        self.client = pypilotClient(self.host)
+        self.client.connect(True)
+        self.gains = {}
+        self.enumerated = False
+
+        watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
                           'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
                           'ap.heading', 'ap.pilot',
                           'gps.source', 'wind.source',
                           'servo.controller', 'servo.engaged', 'servo.flags',
                           'rudder.angle']
-        value_list = client.list_values()
+        for name in watchlist:
+            self.client.watch(name)
+
+    def servo_command(self, command):
+        if self.lastcommand != command or command != 0:
+            self.lastcommand = command
+            self.client.set('servo.command', command)
+
+    def send_gain(self, name, gain):
+        slidervalue = gain['slider'].GetValue() / 1000.0 * (gain['max'] - gain['min']) + gain['min']
+        self.client.set(name, slidervalue)
+
+    def set_mode_color(self):
+        modecolors = {'compass': wx.GREEN, 'gps': wx.YELLOW,
+                      'wind': wx.BLUE, 'true wind': wx.CYAN}
+        if self.tbAP.GetValue() and self.mode in modecolors:
+            color = modecolors[self.mode]
+        else:
+            color = wx.RED
+        self.tbAP.SetForegroundColour(color)
+
+    def enumerate_controls(self, value_list):
+        self.tbAP.SetValue(False)
+        self.set_mode_color()
+        
+        self.fgGains.Clear(True)
         self.gains = {}
         pilots = {}
         for name in value_list:
@@ -62,8 +92,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 sizer.AddGrowableRow( 2 )
                 sizer.SetFlexibleDirection( wx.VERTICAL )
         
-                self.watch(name)
-                self.watch(name+'gain')
+                self.client.watch(name)
+                self.client.watch(name+'gain')
 
                 lname = name
                 sname = name.split('.')
@@ -91,7 +121,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 def make_ongain(gain):
                     def do_gain(event):
                         gain['need_update'] = True
-                        gain['last_change'] = time.time()
+                        gain['last_change'] = time.monotonic()
                     return do_gain
                 slider.Bind( wx.EVT_SCROLL, make_ongain(gain) )
                 
@@ -103,64 +133,15 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 
         self.GetSizer().Fit(self)
         self.SetSize(wx.Size(570, 420))
-
-        # add continuous value to avoid timeout
-        if not 'ap.heading' in value_list:
-            self.watchlist.append('servo.current')
         
-        for name in self.watchlist:
-            if name in value_list:
-                client.watch(name)
-
-    def watch(self, name):
-        if not name in self.watchlist:
-            self.watchlist.append(name)
-        if self.client:
-            self.client.watch(name)
-
-    def unwatch(self, name):
-        if name in self.watchlist:
-            self.watchlist.remove(name)
-        if self.client:
-            self.client.watch(name, False)
-                
-    def servo_command(self, command):
-        if self.lastcommand != command or command != 0:
-            self.lastcommand = command
-            #if command > .2:
-            #   command = .87
-            #elif command < -.2:
-            #    command = -.87
-            self.client.set('servo.command', command)
-            
-
-    def send_gain(self, name, gain):
-        slidervalue = gain['slider'].GetValue() / 1000.0 * (gain['max'] - gain['min']) + gain['min']
-        self.client.set(name, slidervalue)
-
-    def set_mode_color(self):
-        modecolors = {'compass': wx.GREEN, 'gps': wx.YELLOW,
-                      'wind': wx.BLUE, 'true wind': wx.CYAN}
-        if self.tbAP.GetValue() and self.mode in modecolors:
-            color = modecolors[self.mode]
-        else:
-            color = wx.RED
-        self.tbAP.SetForegroundColour(color)
-
     def receive_messages(self, event):
-        if not self.client:
-            self.stStatus.SetLabel('No Connection')
-            try:
-                self.client = pypilotClient(self.on_con, self.host, autoreconnect=False)
-                self.timer.Start(100)
-                self.lastmsgtime = time.time()
-
-                self.tbAP.SetValue(False)
-                self.set_mode_color()
-            except socket.error:
-                self.timer.Start(5000)
-                return
-            
+        if not self.enumerated and self.client.connection:
+            value_list = self.client.list_values(10)
+            if value_list:
+                self.enumerate_controls(value_list)
+                self.enumerated = True
+            return
+        
         command = self.sCommand.GetValue()
         if command != 0:
             if self.tbAP.GetValue():
@@ -168,13 +149,17 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.client.set('ap.heading_command', self.heading_command)
                 self.sCommand.SetValue(0)
             else:
+                
                 if True:
                     if command > 0:
                         command -= 1
                     elif command < 0:
                         command += 1
-                self.servo_command(-command / 100.0)
+                else:
+                    if abs(command) < 3:
+                        command=0
                 self.sCommand.SetValue(command)
+                self.servo_command(-command / 100.0)
 
         for gain_name in self.gains:
             gain = self.gains[gain_name]
@@ -183,30 +168,13 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 gain['need_update'] = False
                 
             if gain['slider'].GetValue() != gain['sliderval'] and \
-               time.time() - gain['last_change'] > 1:
+               time.monotonic() - gain['last_change'] > 1:
                 gain['slider'].SetValue(gain['sliderval'])
 
-
-        try:
-            msgs = self.client.receive()
-        except ConnectionLost:
-            self.client = False
-            return
-
-        if not msgs:
-            if time.time() - self.lastmsgtime > 2:
-                print('message timeout')
-                self.client = False
-            return
-
-        self.lastmsgtime = time.time()
+        msgs = self.client.receive()
 
         for name in msgs:
-            data = msgs[name]
-            if not 'value' in data:
-                print('no value?!?!', data)
-                continue
-            value = data['value']
+            value = msgs[name]
             self.recv[name] = True
 
             found = False
@@ -296,7 +264,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 print('warning: unhandled message "%s"' % name)
 
     def onAP( self, event ):
-        self.client.set('servo.raw_command', 0)
         if self.tbAP.GetValue():
             self.client.set('ap.heading_command', self.heading)
             self.client.set('ap.enabled', True)

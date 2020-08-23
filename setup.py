@@ -35,7 +35,7 @@ except:
         import OPi.GPIO
         ugfx_libraries=['wiringPi']
     except:
-        print('no wiring library for ugfx')
+        print('no RPi.GPIO library for ugfx')
         ugfx_libraries=[]
         ugfx_defs = []
 
@@ -58,7 +58,7 @@ for walk in os.walk('hat/locale'):
 
 from pypilot import version
 
-packages = ['pypilot', 'pypilot/pilots', 'pypilot/arduino_servo', 'ui', 'pypilot/hat', 'web', 'pypilot/linebuffer', 'hat/ugfx']
+packages = ['pypilot', 'pypilot/pilots', 'pypilot/arduino_servo', 'ui', 'hat', 'web', 'pypilot/linebuffer', 'hat/ugfx']
 try:
     from setuptools import find_packages
     packages = find_packages()

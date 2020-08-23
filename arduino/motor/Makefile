@@ -66,9 +66,28 @@ obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 AVRDUDE = avrdude
 BOOTLOADER = arduino
 BAUDRATE = 57600
+
+#BOOTLOADER = stk500v1
+#BAUDRATE = 19200
+
 upload: $(SKETCHNAME).cpp.hex
 	#	./jump_bootloader
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:w:$(SKETCHNAME).cpp.hex -b $(BAUDRATE)
+
+readfuse:
+	stty -F /dev/ttyUSB0 -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 0 time 0
+	stty -F /dev/ttyUSB0 crtscts
+	$(AVRDUDE) -c avrisp -b19200 -P /dev/ttyUSB0 -u -p m328p -U efuse:r:-:h
+	$(AVRDUDE) -c avrisp -b19200 -P /dev/ttyUSB0 -u -p m328p -U lfuse:r:-:h
+	$(AVRDUDE) -c avrisp -b19200 -P /dev/ttyUSB0 -u -p m328p -U hfuse:r:-:h
+	$(AVRDUDE) -c avrisp -b19200 -P /dev/ttyUSB0 -u -p m328p -U lock:r:-:h
+
+bootloader:
+	stty -F /dev/ttyUSB0 -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 0 time 0
+	stty -F /dev/ttyUSB0 crtscts
+	#sleep 3
+	$(AVRDUDE) -C/usr/share/arduino/hardware/tools/avrdude.conf -v -patmega328p -cstk500v1 -P/dev/ttyUSB0 -b19200 -e -Ulock:w:0xff:m -Uefuse:w:0xfd:m -Uhfuse:w:0xDA:m -Ulfuse:w:0xFF:m 
+	$(AVRDUDE) -C/usr/share/arduino/hardware/tools/avrdude.conf -v -patmega328p -cstk500v1 -P/dev/ttyUSB0 -b19200 -Uflash:w:/usr/share/arduino/hardware/arduino/bootloaders/atmega/ATmegaBOOT_168_atmega328_pro_8MHz.hex:i -Ulock:w:0xcf:m
 
 serial:
 	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5 38400

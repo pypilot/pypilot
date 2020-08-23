@@ -36,15 +36,15 @@ class trace(object):
     def add(self, t, data, mindt):
         # update previous timestamps based on downtime
         if self.points and math.isnan(self.points[0][1]):
-            dt = time.time() - t - self.timeoff
+            dt = time.monotonic() - t - self.timeoff
             self.timeoff = False
             for i in range(len(self.points)):
                 point = self.points[i]
                 self.points[i] = point[0]-dt, point[1]
 
                 
-        if not self.timeoff or self.timeoff < time.time() - t or self.timeoff > time.time() - t + 1:
-            self.timeoff = time.time() - t
+        if not self.timeoff or self.timeoff < time.monotonic() - t or self.timeoff > time.monotonic() - t + 1:
+            self.timeoff = time.monotonic() - t
             
         elif self.points and t-self.points[0][0]<mindt:
             return False
@@ -93,7 +93,7 @@ class trace(object):
         if not self.visible or not self.timeoff:
             return
 
-        t = time.time() - self.timeoff
+        t = time.monotonic() - self.timeoff
         
         glPushMatrix()
 
@@ -144,6 +144,7 @@ class pypilotPlot():
     FONT = GLUT_BITMAP_TIMES_ROMAN_24
 
     def __init__(self):
+        self.value_list = False
         self.freeze = False
         self.drawpoints = False
 
@@ -160,6 +161,7 @@ class pypilotPlot():
 
     def reset(self):
         self.traces = []
+        self.timestamp = False
 
     def add_data(self, name, group, timestamp, value):
         t = False
@@ -184,10 +186,6 @@ class pypilotPlot():
         # time must change by 1 pixel to bother to log and display
         mindt = self.disptime / float(self.width)
         return t.add(timestamp, value, mindt) and t.visible
-
-    def on_con(self, client):
-        client.watch('timestamp')
-        self.add_blank()
         
     def add_blank(self, group=False):
         for t in self.traces:
@@ -195,16 +193,15 @@ class pypilotPlot():
                 t.add_blank()
 
     def read_data(self, msg):
-        name, data = msg
+        name, value = msg
         if name == 'timestamp':
-            self.timestamp = data['value']
+            self.timestamp = value
             return
-        try:
-            timestamp = self.timestamp
-        except:
-            timestamp = time.time()
+        #timestamp = time.monotonic()
+        if not self.timestamp:
+            return
+        timestamp = self.timestamp
 
-        value = data['value']
         if type(value) == type([]):
             ret = False
             for i in range(len(value)):
@@ -293,7 +290,7 @@ class pypilotPlot():
         glLoadIdentity()
         glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0)
 
-        glEnable(GL_LINE_SMOOTH)
+        #glEnable(GL_LINE_SMOOTH)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
@@ -412,20 +409,8 @@ class pypilotPlot():
                 break
 
 def main():
-    def usage():
-        print('usage: ' + sys.argv[0] + ' [host] [VAR1] [VAR2] .. [VARN]')
-        exit(1)
-
-    if len(sys.argv) < 2:
-        usage()
-
     plot = pypilotPlot()
-    def on_con(client):
-        plot.on_con(client)
-
-    client = pypilotClientFromArgs(sys.argv, True, on_con)
-    if not client.have_watches:
-        usage()
+    client = pypilotClientFromArgs(sys.argv)
     
     print('connected')
     def idle():
@@ -444,7 +429,7 @@ def main():
     glutInitWindowPosition(250, 0)
     glutInitWindowSize(1000, 500)
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB)
-    glutCreateWindow ("glplot")
+    glutCreateWindow ('glplot')
 
     def display():
         plot.display()
@@ -458,12 +443,12 @@ def main():
 
     plot.init(client.list_values(10))
 
+    fps = 30
     def timeout(arg):
         glutPostRedisplay()
-        glutTimerFunc(arg, timeout, arg)
+        glutTimerFunc(int(1000/fps), timeout, arg)
 
-    fps = 30
-    glutTimerFunc(0, timeout, 1000/fps)
+    glutTimerFunc(0, timeout, None)
     glutMainLoop()
 
 if __name__ == '__main__':

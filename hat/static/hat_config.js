@@ -1,6 +1,5 @@
 /*
-#
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -29,12 +28,22 @@ $(document).ready(function() {
         $('#status').text(msg);
     });
 
+    socket.on('baudrate', function(msg) {
+        $('#baudrate').text(msg);
+    });
+
+    socket.on('voltage', function(msg) {
+        $('#voltage').text(msg);
+    });
+    
     socket.on('key', function(key) {
-        $('#key').text(key);
+        $('#key0').text(key);
+        $('#key1').text(key);
     });
 
     socket.on('action', function(action) {
-        $('#action').text(action);
+        $('#action0').text(action);
+        $('#action1').text(action);
     });
     
     socket.on('action_keys', function(keys) {
@@ -47,8 +56,37 @@ $(document).ready(function() {
         });
     }
 
+    $('#clear').click(function(event) {
+        socket.emit('keys', 'clear');
+    });
+
+    $('#default').click(function(event) {
+        socket.emit('keys', 'default');
+    });
+
+    function config_ir() {
+        socket.emit('config', {'pi.ir': document.getElementById('pi_ir').checked});
+        socket.emit('config', {'arduino.ir': document.getElementById('arduino_ir').checked});
+    }
+
+    $('#pi_ir').click(config_ir);
+    $('#arduino_ir').click(config_ir);
+    
+    $('#arduino_nmea_in').click(function(event) {
+        socket.emit('config', {'arduino.nmea.in': document.getElementById('arduino_nmea_in').checked});
+    });
+    
+    $('#arduino_nmea_out').click(function(event) {
+        socket.emit('config', {'arduino.nmea.out': document.getElementById('arduino_nmea_out').checked});
+    });
+
+    $('#arduino_nmea_baud').click(function(event) {
+        socket.emit('config', {'arduino.nmea.baud': document.getElementById('arduino_nmea_baud').value});
+    });
+
     // Interval function that tests message latency by sending a "ping"
     var ping_pong_times = [];
+
     var start_time;
     window.setInterval(function() {
         start_time = (new Date).getTime();
