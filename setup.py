@@ -14,13 +14,13 @@ try:
 except ImportError:
     from distutils.core import setup, Extension
 
-linebuffer_module = Extension('_linebuffer',
+linebuffer_module = Extension('pypilot/linebuffer/_linebuffer',
                         sources=['pypilot/linebuffer/linebuffer.cpp', 'pypilot/linebuffer/linebuffer.i'],
                         extra_compile_args=['-Wno-unused-result'],
                         swig_opts=['-c++']
 )
 
-arduino_servo_module = Extension('_arduino_servo',
+arduino_servo_module = Extension('pypilot/arduino_servo/_arduino_servo',
                         sources=['pypilot/arduino_servo/arduino_servo.cpp', 'pypilot/arduino_servo/arduino_servo_eeprom.cpp', 'pypilot/arduino_servo/arduino_servo.i'],
                         extra_compile_args=['-Wno-unused-result'],
                         swig_opts=['-c++']
@@ -39,7 +39,7 @@ except:
         ugfx_libraries=[]
         ugfx_defs = []
 
-ugfx_module = Extension('_ugfx',
+ugfx_module = Extension('pypilot/hat/ugfx/_ugfx',
                         sources=['hat/ugfx/ugfx.cpp',
                                  'hat/ugfx/ugfx.i'],
                         extra_compile_args=['-Wno-unused-result'] + ugfx_defs,

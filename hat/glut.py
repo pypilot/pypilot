@@ -12,7 +12,7 @@ from OpenGL.GLU import *
 from OpenGL.GL import *
 import numpy
 
-from ugfx import ugfx
+from pypilot.hat.ugfx import ugfx
 
 class screen(ugfx.surface):
     def __init__(self, size):

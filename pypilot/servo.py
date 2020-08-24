@@ -555,7 +555,8 @@ class Servo(object):
                     device.close()
                     return
                 #print('driver', device_path, device)
-                from arduino_servo.arduino_servo import ArduinoServo
+                from pypilot.arduino_servo.arduino_servo import ArduinoServo
+
                 self.driver = ArduinoServo(device.fileno())
                 self.send_driver_params()
                 self.device = device

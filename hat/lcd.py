@@ -17,7 +17,7 @@ try:
     import micropython
     from upy_client import pypilotClient
     def gettime():
-        return time.monotonic()
+        return time.time()
     import ugfx
 except:
     from pypilot.client import pypilotClient
@@ -112,7 +112,8 @@ class LCD():
             glutKeyboardUpFunc(self.glutkeyup)
             glutSpecialFunc(self.glutspecialdown)
             glutSpecialUpFunc(self.glutspecialup)
-#        glutIgnoreKeyRepeat(True)
+            self.glutkeytime = False
+            #        glutIgnoreKeyRepeat(True)
         elif driver == 'framebuffer':
             print('using framebuffer')
             screen = ugfx.screen("/dev/fb0")
@@ -192,7 +193,10 @@ class LCD():
     def key(self, k, down):
         if k < 0 or k >= len(self.keypad):
             return
-        self.keypad[k].update(down)
+
+        if down:
+            self.keypad[k].update(True)
+            self.glutkeytime = k, gettime()
 
     def glutkeydown(self, k, x, y):
         self.glutkey(k);
@@ -212,6 +216,7 @@ class LCD():
             key = SELECT
         else:
             key = ord(k) - ord('1')
+
         self.key(key, down)
 
     def glutspecialdown(self, k, x, y):
@@ -311,7 +316,7 @@ class LCD():
             self.need_refresh = True
         
         if dt > frameperiod:
-            ta = time.monotonic()
+            ta = gettime()
             self.display()
             self.update_watches()
             self.lastframetime = max(self.lastframetime+frameperiod, t-frameperiod)
@@ -330,9 +335,19 @@ class LCD():
 
 def main():
     lcd = LCD(False)
+    def idle():
+        lcd.poll()
+        if lcd.glutkeytime:
+            k, t = lcd.glutkeytime
+            dt = gettime() - t
+            if dt > .5:
+                lcd.keypad[k].update(False)
+                lcd.glutkeytime = False
+
+        time.sleep(.1)
     if lcd.use_glut:
         from OpenGL.GLUT import glutMainLoop, glutIdleFunc
-        glutIdleFunc(lcd.poll)
+        glutIdleFunc(idle)
         glutMainLoop()
     else:
         while True:

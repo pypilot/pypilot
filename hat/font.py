@@ -15,7 +15,7 @@ try:
 except:
     micropython = False
     import os
-    from ugfx import ugfx
+    from pypilot.hat.ugfx import ugfx
     fontpath = os.path.abspath(os.getenv('HOME') + '/.pypilot/ugfxfonts/') + '/'
 
     if not os.path.exists(fontpath):
