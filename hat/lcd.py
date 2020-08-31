@@ -44,9 +44,6 @@ class Key():
             self.up = True
             self.count = 0
 
-    def active(self):
-        return self.count or self.up
-    
 class LCD():
     def __init__(self, hat):
         self.hat = hat

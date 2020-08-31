@@ -260,12 +260,12 @@ class TimeValue(StringValue):
 
 class QuaternionValue(ResettableValue):
     def __init__(self, name, initial, **kwargs):
-      super(QuaternionValue, self).__init__(name, initial, **kwargs)
+        super(QuaternionValue, self).__init__(name, initial, **kwargs)
 
     def set(self, value):
-      if value:
-        value = quaternion.normalize(value)
-      super(QuaternionValue, self).set(value)
+        if value:
+            value = quaternion.normalize(value)
+        super(QuaternionValue, self).set(value)
 
 def heading_filter(lp, a, b):
     if not a:
@@ -322,7 +322,7 @@ class BoatIMU(object):
         self.rate = self.register(EnumProperty, 'rate', 10, [10, 20], persistent=True)
 
         self.frequency = self.register(FrequencyValue, 'frequency')
-        self.alignmentQ = self.register(QuaternionValue, 'alignmentQ', [2**.5/2, -2**.5/2, 0, 0], persistent=True)
+        self.alignmentQ = self.register(QuaternionValue, 'alignmentQ', [1, 0, 0, 0], persistent=True)
         self.alignmentQ.last = False
         self.heading_off = self.register(RangeProperty, 'heading_offset', 0, -180, 180, persistent=True)
         self.heading_off.last = 3000 # invalid
@@ -337,9 +337,9 @@ class BoatIMU(object):
         self.lasttimestamp = 0
 
         self.headingrate = self.heel = 0
-        self.heading_lowpass_constant = self.register(RangeProperty, 'heading_lowpass_constant', .2, .1, .5)
-        self.headingrate_lowpass_constant = self.register(RangeProperty, 'headingrate_lowpass_constant', .2, .1, .5)
-        self.headingraterate_lowpass_constant = self.register(RangeProperty, 'headingraterate_lowpass_constant', .2, .1, .5)
+        self.heading_lowpass_constant = self.register(RangeProperty, 'heading_lowpass_constant', .2, .05, .3)
+        self.headingrate_lowpass_constant = self.register(RangeProperty, 'headingrate_lowpass_constant', .2, .05, .3)
+        self.headingraterate_lowpass_constant = self.register(RangeProperty, 'headingraterate_lowpass_constant', .1, .05, .3)
 
         sensornames = ['accel', 'gyro', 'compass', 'accel.residuals', 'pitch', 'roll']
         sensornames += ['pitchrate', 'rollrate', 'headingrate', 'headingraterate', 'heel']
@@ -353,7 +353,7 @@ class BoatIMU(object):
 
         # quaternion needs to report many more decimal places than other sensors
         #sensornames += ['fusionQPose']
-        self.SensorValues['fusionQPose'] = self.register(SensorValue, 'fusionQPose', fmt='%.7f')
+        self.SensorValues['fusionQPose'] = self.register(SensorValue, 'fusionQPose', fmt='%.8f')
     
         self.imu = IMU(client.server)
 

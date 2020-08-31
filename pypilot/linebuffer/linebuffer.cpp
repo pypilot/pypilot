@@ -85,9 +85,17 @@ static bool check_nmea_cksum(char *buf, int len)
 bool LineBuffer::readline_buf_nmea()
 {
     int len;
-    while((len=readline_buf()))
+    while((len=readline_buf())) {
+        while(len) {
+            char s = buf[!b][len-1];
+            if(s != '\r' && s!= '\n')
+                break;
+            len--;
+        }
+        buf[!b][len] = 0;
         if(check_nmea_cksum(buf[!b], len))
             return true;
+    }
     return false;
 }
 
@@ -103,10 +111,10 @@ int LineBuffer::readline_buf()
         int bpos = pos+1;
         len -= bpos;
         memcpy(buf[!b], buf[b]+bpos, len);
+
         buf[b][bpos] = 0;
         pos = 0;
         b = !b;
-
         return bpos;
     }
     return 0;

@@ -116,10 +116,15 @@ class gps(Sensor):
         super(gps, self).__init__(client, 'gps')
         self.track = self.register(SensorValue, 'track', directional=True)
         self.speed = self.register(SensorValue, 'speed')
+        self.latitude = self.register(SensorValue, 'latitude', fmt='%.11f')
+        self.longitude = self.register(SensorValue, 'longitude')
 
     def update(self, data):
         self.track.set(data['track'])
         self.speed.set(data['speed'])
+        if 'latitude' in data and 'longitude' in data:
+            self.latitude.set(data['latitude'])
+            self.longitude.set(data['longitude'])
 
     def reset(self):
         self.track.set(False)

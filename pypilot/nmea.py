@@ -56,16 +56,23 @@ def parse_nmea_gps(line):
 
     try:
         data = line[7:len(line)-3].split(',')
+        if data[1] == 'V':
+            return False
+        
         timestamp = float(data[0])
+        latitude = float(data[2])/100.0
+        if data[3] == 'S':
+            latitude = -latitude
+        longitude = float(data[4])/100.0
+        if data[5] == 'W':
+            longitude = -longitude
         speed = float(data[6])
         heading = float(data[7])
-    except:
+    except Exception as e:
+        print('nmea failed to parse gps', line, e)
         return False
 
-    if data[1] == 'V':
-        return False
-
-    return 'gps', {'timestamp': timestamp, 'track': heading, 'speed': speed}
+    return 'gps', {'timestamp': timestamp, 'track': heading, 'speed': speed, 'latitude': latitude, 'longitude': longitude}
 
 
 '''
@@ -101,8 +108,9 @@ def parse_nmea_wind(line):
         elif speedunit == 'M': # m/s
             speed *= 1.94384
         msg['speed'] = speed
-    except:
-        pass
+    except Exception as e:
+        print('nmea failed to parse wind', line, e)
+        return False
         
     return 'wind', msg
 
@@ -395,6 +403,7 @@ class Nmea(object):
                 self.probeindex = len(self.devices)
             self.probedevicepath = serialprobe.probe('nmea%d' % self.probeindex, [38400, 4800])
             if self.probedevicepath:
+                print('nmea probe', self.probedevicepath)
                 try:
                     self.probedevice = NMEASerialDevice(self.probedevicepath)
                     self.probetime = time.monotonic()
@@ -402,13 +411,13 @@ class Nmea(object):
                     print('failed to open', self.probedevicepath, 'for nmea data')
                     pass
         elif time.monotonic() - self.probetime > 5:
-            #print('nmea serial probe timeout', self.probedevicepath)
+            print('nmea serial probe timeout', self.probedevicepath)
             self.probedevice = None # timeout
         else:
             # see if the probe device gets a valid nmea message
             if self.probedevice:
                 if self.probedevice.readline():
-                    print('new nmea device', self.probedevicepath)
+                    print('nmea new device', self.probedevicepath)
                     serialprobe.success('nmea%d' % self.probeindex, self.probedevicepath)
                     if self.probeindex < len(self.devices):
                         self.devices[self.probeindex] = self.probedevice

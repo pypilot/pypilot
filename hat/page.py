@@ -228,20 +228,23 @@ class page(object):
     def speed_of_keys(self):
         # for up and down keys providing acceration
         keypad = self.lcd.keypad
-        down =  keypad[SMALL_STARBOARD].active()
-        up =    keypad[SMALL_PORT].active()
-        left =  keypad[BIG_PORT].active()
-        right = keypad[BIG_STARBOARD].active()
-        updownup = keypad[BIG_PORT].up or keypad[BIG_STARBOARD].up
-        speed = float(1 if updownup else min(10, .004*max(keypad[BIG_PORT].count, keypad[BIG_STARBOARD].count)**2.5))
-        if keypad[SMALL_PORT].up or keypad[SMALL_STARBOARD].up:
-            speed = 10
-        if down or left:
+        down =  keypad[SMALL_STARBOARD].count
+        up =    keypad[SMALL_PORT].count
+        left =  keypad[BIG_PORT].count
+        right = keypad[BIG_STARBOARD].count
+
+        speed = 0;
+        sign = 0;
+        if up or down:
+            speed = min(.6, .002*max(up, down)**1.6)
+        if left or right:
+            speed = max(.4, min(1, .006*max(left, right)**2.5))
+
+        if down or right:
             sign = -1
-        elif up or right:
+        elif up or left:
             sign = 1
-        else:
-            sign = 0
+
         return sign * speed
 
     def set(self, name, value):
@@ -458,6 +461,7 @@ class control(controlbase):
         super(control, self).__init__(lcd, .25)
         self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
         self.control = {} # used to keep track of what is drawn on screen to avoid redrawing it
+        self.lastspeed = 0
 
     def have_compass(self):
         return True
@@ -552,8 +556,8 @@ class control(controlbase):
                 warning += flag[:-6] + ' '
 
         if warning:
-            if self.hat:
-                self.hat.arduino.set_buzzer(2, 1)
+            if self.lcd.hat:
+                self.lcd.hat.arduino.set_buzzer(2, 1)
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:
@@ -643,21 +647,37 @@ class control(controlbase):
             # in wind mode just tack
             # in other modes look for lspeed of keys was port or starboard
             print('tacking not implemented here yet', TACK)
-                
-        speed = self.speed_of_keys()
-        if not speed:
-            return super(control, self).process()
-        
+                        
         if self.last_val('ap.enabled'):
-            if self.lcd.keypad[SMALL_PORT].up or self.lcd.keypad[SMALL_STARBOARD].up:
-                speed = self.lcd.config['bigstep']
+            sp = self.lcd.keypad[SMALL_PORT].up
+            ss = self.lcd.keypad[SMALL_STARBOARD].up
+            bp = self.lcd.keypad[BIG_PORT].up
+            bs = self.lcd.keypad[BIG_STARBOARD].up
+
+            if sp or ss:
+                change = self.lcd.config['smallstep']
+            elif bp or bs:
+                change = self.lcd.config['bigstep']
             else:
-                speed = self.lcd.config['smallstep']                        
-            cmd = self.last_val('ap.heading_command') + speed
-            self.set('ap.heading_command', cmd)
+                change = 0
+
+            if sp or bp:
+                sign = -1
+            elif ss or bs:
+                sign = 1
+
+            if change:
+                cmd = self.last_val('ap.heading_command') + change*sign
+                self.set('ap.heading_command', cmd)
         else: # manual control
-            sign = -1 if speed < 0 else 1
-            self.set('servo.command', speed*sign*8.0/20)
+            speed = self.speed_of_keys()
+            if not speed:
+                if self.lastspeed:
+                    self.set('servo.command', 0)
+                return super(control, self).process()
+            
+            self.set('servo.command', speed)
+            self.lastspeed = speed
 
 class connecting(controlbase):
     def __init__(self, lcd):

@@ -14,15 +14,19 @@ from client import pypilotClient
 from values import RangeProperty
 from sensors import source_priority
 
+radians = 3.141592653589793/180
+meters_s = 0.5144456333854638
+
 # provide bi-directional translation of these keys
-signalk_table = {'wind': {'environment.wind.speedApparent': 'speed',
-                          'environment.wind.angleApparent': 'angle'},
-                 'gps': {'navigation.courseOverGroundTrue': 'track',
-                         'navigation.speedOverGround': 'speed'},
-                 'rudder': {'steering.rudderAngle': 'angle'},
-                 'apb': {'steering.autopilot.target.headingTrue': 'track'},
-                 'imu': {'navigation.headingMagnetic': 'heading_lowpass',
-                         'navigation.attitude': {'pitch': 'pitch', 'roll': 'roll', 'yaw': 'heading_lowpass'}}}
+signalk_table = {'wind': {('environment.wind.speedApparent', meters_s): 'speed',
+                          ('environment.wind.angleApparent', radians): 'angle'},
+                 'gps': {('navigation.courseOverGroundTrue', radians): 'track',
+                         ('navigation.speedOverGround', meters_s): 'speed',
+                         ('navigation.position', 1): {'latitude': 'latitude', 'longitude': 'longitude'}},
+                 'rudder': {('steering.rudderAngle', radians): 'angle'},
+                 'apb': {('steering.autopilot.target.headingTrue', radians): 'track'},
+                 'imu': {('navigation.headingMagnetic', radians): 'heading_lowpass',
+                         ('navigation.attitude', radians): {'pitch': 'pitch', 'roll': 'roll', 'yaw': 'heading_lowpass'}}}
 
 token_path = os.getenv('HOME') + '/.pypilot/signalk-token'
 
@@ -284,17 +288,19 @@ class signalk(object):
         for sensor, sensor_table in signalk_table.items():
             for source, values in self.signalk_values.items():
                 data = {}
-                for signalk_path, pypilot_path in sensor_table.items():
-                    if signalk_path in values:
-                        data[pypilot_path] = values[signalk_path]
-                    else:
+                for signalk_path_conversion, pypilot_path in sensor_table.items():
+                    signalk_path, signalk_conversion = signalk_path_conversion
+                    if path in values:
+                        data[pypilot_path] = values[signalk_path] / signalk_conversion
+                    elif conversion != 1: # don't require fields with conversion of 1 (lat/lon)
                         break
                 else:
                     for signalk_path in sensor_table:
-                        del values[signalk_path]
+                        if signalk_path in values:
+                            del values[signalk_path]
                     # all needed sensor data is found 
                     data['device'] = source
-                    print('data', data, sensor)
+                    print('signalk data', data, sensor)
                     if self.sensors_pipe:
                         self.sensors_pipe.send([sensor, data])
                     else:
@@ -306,7 +312,8 @@ class signalk(object):
         # see if we can produce any signalk output from the data we have read
         updates = []
         for sensor in signalk_table:
-            for signalk_path, pypilot_path in signalk_table[sensor].items():
+            for signalk_path_conversion, pypilot_path in signalk_table[sensor].items():
+                signalk_path, signalk_conversion = signalk_path_conversion
                 if signalk_path in self.signalk_msgs:
                     continue
                 if type(pypilot_path) == type({}): # single path translates to multiple pypilot
@@ -315,14 +322,15 @@ class signalk(object):
                         key = sensor+'.'+pypilot_key
                         if not key in self.last_values:
                             break
-                        v[signalk_key] = self.last_values[key]                        
+                        v[signalk_key] = self.last_values[key]*signalk_conversion
                     else:
                         updates.append({'path': signalk_path, 'value': v})
-                        self.signalk_msgs[signalk_path] = True                        
+                        self.signalk_msgs[signalk_path] = True            
                 else:
                     key = sensor+'.'+pypilot_path
                     if key in self.last_values:
-                        updates.append({'path': signalk_path, 'value': self.last_values[key]})
+                        v = self.last_values[key]*signalk_conversion                        
+                        updates.append({'path': signalk_path, 'value': v})
                         self.signalk_msgs[signalk_path] = True                        
 
         if updates:
@@ -372,8 +380,12 @@ class signalk(object):
         watch = priority < sk_priority # translate from pypilot -> signalk
         if watch:
             watch = self.period.value
-        for signalk_path, pypilot_path in signalk_table[sensor].items():
-            self.client.watch(pypilot_path, watch)
+        for signalk_path_conversion, pypilot_path in signalk_table[sensor].items():
+            if type(pypilot_path) == type({}):
+                for signalk_key, pypilot_key in pypilot_path.items():
+                    self.client.watch(sensor + '.' + pypilot_key, watch)
+            else:
+                self.client.watch(sensor + '.' + pypilot_path, watch)
         subscribe = priority >= sk_priority
 
         # prevent duplicating subscriptions
@@ -389,7 +401,8 @@ class signalk(object):
         signalk_sensor = signalk_table[sensor]
         if subscribe:
             subscriptions = []
-            for signalk_path in signalk_sensor:
+            for signalk_path_conversion in signalk_sensor:
+                signalk_path, signalk_conversion = signalk_path_conversion
                 if signalk_path in self.signalk_msgs_skip:
                     del self.signalk_msgs_skip[signalk_path]
                 subscriptions.append({'path': signalk_path, 'minPeriod': self.period.value*1000, 'format': 'delta', 'policy': 'instant'})

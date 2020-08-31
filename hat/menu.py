@@ -189,7 +189,7 @@ class RangeEdit(page):
 
         speed = self.speed_of_keys()
         if speed:
-            self.move(.1*speed)
+            self.move(-.5*speed)
         else:
             return super(RangeEdit, self).process()
 
@@ -229,7 +229,7 @@ class ValueEnumSelect(page):
 
     def process(self):
         self.set(self.pypilot_path, self.name)
-        return self.lcd.menu
+        return self.lcd.menu.prev
 
 class ValueEnum(menu):
     def __init__(self, name, pypilot_path, hide_choices=[]):
@@ -268,9 +268,8 @@ def GainEdit(gain):
             
 class gain(menu):
     def __init__(self):
-        self.pilot = ValueEnum(_('pilot'), 'ap.pilot')
         self.last_pilot = False
-        super(gain, self).__init__(_('gain'), [self.pilot])
+        super(gain, self).__init__(_('gain'), [])
 
     def curgains(self):
         ret = []
@@ -278,7 +277,7 @@ class gain(menu):
             if 'AutopilotGain' in value:
                 if 'ap.pilot.' in name:
                     s = name.split('.')
-                    if self.last_val('ap.pilot') == s[2]:
+                    if self.last_pilot == s[2]:
                         ret.append(name)
 
         ret.sort() # sort of get PID in order (reverse alphabet)
@@ -288,9 +287,12 @@ class gain(menu):
     def process(self):
         pilot = self.last_val('ap.pilot')
         if pilot != self.last_pilot:
-            self.items = list(map(GainEdit, self.curgains())) + [self.pilot]
+            self.last_pilot = pilot
+            self.items = list(map(GainEdit, self.curgains()))
             self.find_parents()
             self.lcd.need_refresh = True
+            if self.selection < 0:
+                self.selection = 0
         return super(gain, self).process()
 
 class level(page):
@@ -462,37 +464,40 @@ class select_language(page):
         return self.lcd.menu
 
 class language(menu):
+    languages = [('català', 'ca'),
+                 ('dansk', 'da'),
+                 ('deutsch', 'de'),
+                 ('Eλληνικά', 'el'),
+                 ('english', 'en'),
+                ('español', 'es'),
+                 ('suomalainen', 'fi'),
+                 ('français', 'fr'),
+                 ('italiano', 'it'),
+                 ('nederlands', 'nl'),
+                 ('norsk', 'no'),
+                 ('polskie', 'pl'),
+                 ('pycкий', 'ru'),
+                 ('svenska', 'sv')
+    ]
     def __init__(self):
-        languages = [('català', 'ca'),
-                     ('dansk', 'da'),
-                     ('deutsch', 'de'),
-                     ('Eλληνικά', 'el'),
-                     ('english', 'en'),
-                     ('español', 'es'),
-                     ('suomalainen', 'fi'),
-                     ('français', 'fr'),
-                     ('italiano', 'it'),
-                     ('nederlands', 'nl'),
-                     ('norsk', 'no'),
-                     ('polskie', 'pl'),
-                     ('pycкий', 'ru'),
-                     ('svenska', 'sv')
-                     ]
-        super(language, self).__init__(_('language'), list(map(select_language, languages)))
+        super(language, self).__init__(_('language'), list(map(select_language, self.languages)))
+        self.selection = -1
 
     def process(self):
         if self.selection < 0:
             index, self.selection = 0, 0
-            for lang in languages:
+            for lang in self.languages:
                 if lang[1] == self.lcd.config['language']:
                     self.selection = index
                 index += 1
         return super(language, self).process()
+
         
 class settings(menu):
     def __init__(self):
         super(settings, self).__init__(_('settings'),
                             [ValueEnum(_('mode'), 'ap.mode'),
+                             ValueEnum(_('pilot'), 'ap.pilot'),
                              motor(), control_menu(), display(), language()])
         
 class mainmenu(menu):

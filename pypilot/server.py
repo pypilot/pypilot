@@ -240,8 +240,11 @@ class ServerValues(pypilotValue):
             t, i, watch = heapq.heappop(self.pqwatches) # pop first element
             if not watch.connections:
                 continue # forget this watch
-            for connection in watch.connections:
-                connection.write(watch.value.get_msg())
+            msg = watch.value.get_msg()
+            if msg:
+                for connection in watch.connections:
+                    connection.write(msg)
+
             watch.time += watch.period
             if watch.time < t0:
                 watch.time = t0
