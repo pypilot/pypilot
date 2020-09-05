@@ -290,9 +290,9 @@ class signalk(object):
                 data = {}
                 for signalk_path_conversion, pypilot_path in sensor_table.items():
                     signalk_path, signalk_conversion = signalk_path_conversion
-                    if path in values:
+                    if signalk_path in values:
                         data[pypilot_path] = values[signalk_path] / signalk_conversion
-                    elif conversion != 1: # don't require fields with conversion of 1 (lat/lon)
+                    elif signalk_conversion != 1: # don't require fields with conversion of 1 (lat/lon)
                         break
                 else:
                     for signalk_path in sensor_table:

@@ -285,8 +285,9 @@ def probe(name, bauds, timeout=5):
 # allow reserving gps devices against probing
 def reserve(device):
     devices = enumerate_devices()
-    #print('prevent serial probing', device)
+    print('prevent serial probing', device)
     i = 0
+    global probes
     while 'reserved%d' % i in probes:
         i+=1
     for dev in devices:

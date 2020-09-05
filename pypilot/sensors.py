@@ -25,6 +25,7 @@ class Sensor(object):
         self.client = client
             
     def write(self, data, source):
+        print('sensor write', self.name, data, source)
         if source_priority[self.source.value] < source_priority[source]:
             return False               
 

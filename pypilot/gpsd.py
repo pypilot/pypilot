@@ -40,11 +40,12 @@ class gpsProcess(multiprocessing.Process):
             try:
                 gpsdata = self.gpsd.next()
                 device = None
-                if 'device' in gpsdata:
-                    device = gpsdata['device']
-                    if not device in self.devices:
-                        #pipe.send({'device': device})
-                        self.devices.append(device)
+                if 'devices' in gpsdata:
+                    for dev in gpsdata['devices']:
+                        device = dev['path']
+                        if not device in self.devices:
+                            pipe.send({'device': device})
+                            self.devices.append(device)
 
                 if self.gpsd.fix.mode == 3 and \
                    time.monotonic() - lasttime > .25:
@@ -61,8 +62,8 @@ class gpsProcess(multiprocessing.Process):
             except StopIteration:
                 print('gpsd lost connection')
                 break
-            except Exception as e:
-                print('gpsd unhandled exception', e)
+            except:
+                print('UNHANDLED!!!!!!!!!!!!!!!!!!!! gpsd unhandled exception')
                 break
 
     def gps_process(self, pipe):
