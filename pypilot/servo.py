@@ -539,8 +539,8 @@ class Servo(object):
     def poll(self):
         if not self.driver:
             device_path = serialprobe.probe('servo', [38400], 1)
-            print('servo probe', device_path)
             if device_path:
+                print('servo probe', device_path)
                 try:
                     device = serial.Serial(*device_path)
                 except Exception as e:

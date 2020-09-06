@@ -257,7 +257,7 @@ def probe(name, bauds, timeout=5):
         if type(arg) == type('') and 'Errno ' in  arg:
             arg = int(arg[arg.index('Errno ')+6: arg.index(']')])
         if arg == 16: # device busy, retry later
-            print('busy, try again later', serial_device, probe['device'], name)
+            print('busy, try again later', serial_device, probe['device'], name, err)
         elif arg == 6: # No such device or address, don't try again
             devices.remove(device)
         elif arg == 5: # input output error (unusable)
@@ -285,8 +285,9 @@ def probe(name, bauds, timeout=5):
 # allow reserving gps devices against probing
 def reserve(device):
     devices = enumerate_devices()
-    #print('prevent serial probing', device)
+    print('prevent serial probing', device)
     i = 0
+    global probes
     while 'reserved%d' % i in probes:
         i+=1
     for dev in devices:

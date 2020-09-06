@@ -104,6 +104,7 @@ except Exception as e:
     def __init__(self, connection, address):
         connection.setblocking(0)
         self.socket = connection
+        self.address = address
         self.b = False # in python
         self.in_buffer = ''
         self.no_newline_pos = 0

@@ -40,11 +40,12 @@ class gpsProcess(multiprocessing.Process):
             try:
                 gpsdata = self.gpsd.next()
                 device = None
-                if 'device' in gpsdata:
-                    device = gpsdata['device']
-                    if not device in self.devices:
-                        pipe.send({'device': device})
-                        self.devices.append(device)
+                if 'devices' in gpsdata:
+                    for dev in gpsdata['devices']:
+                        device = dev['path']
+                        if not device in self.devices:
+                            pipe.send({'device': device})
+                            self.devices.append(device)
 
                 if self.gpsd.fix.mode == 3 and \
                    time.monotonic() - lasttime > .25:
@@ -52,12 +53,17 @@ class gpsProcess(multiprocessing.Process):
                     #fix['time'] = self.gpsd.fix.time
                     fix['track'] = self.gpsd.fix.track
                     fix['speed'] = self.gpsd.fix.speed * 1.944 # knots
+                    fix['latitude'] = self.gpsd.fix.latitude
+                    fix['longitude'] = self.gpsd.fix.longitude
                     fix['device'] = device
                     pipe.send(fix, False)
                     lasttime = time.monotonic()
 
             except StopIteration:
-                print('lost connection to gpsd')
+                print('gpsd lost connection')
+                break
+            except:
+                print('UNHANDLED!!!!!!!!!!!!!!!!!!!! gpsd unhandled exception')
                 break
 
     def gps_process(self, pipe):
@@ -90,12 +96,7 @@ class gpsd(object):
                 serialprobe.reserve(device)
                 return
 
-        def fval(name):
-            return fix[name] if name in fix else False
-
-        # use fix timestamp?
-        val = {'track': fval('track'), 'speed': fval('speed'), 'device': fval('device')}
-        self.sensors.write('gps', val, 'gpsd')
+        self.sensors.write('gps', fix, 'gpsd')
 
     def poll(self):
         while True:
@@ -117,4 +118,4 @@ if __name__ == '__main__':
     gpsd = gps.gps(mode=gps.WATCH_ENABLE)
     while True:
         print(gpsd.next())
-        print('fix:', gpsd.fix.mode, gpsd.fix.track, gpsd.fix.speed)
+        print('fix:', gpsd.fix.mode, gpsd.fix.track, gpsd.fix.speed, gpsd.fix.latitude, gpsd.fix.longitude)
