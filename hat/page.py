@@ -534,7 +534,7 @@ class control(controlbase):
                 self.text((x, pos[1]), num[i], size, True)
 
         if self.last_val('imu.frequency', 1) is False:
-            r = rectangle(0, 0, 1, .92)
+            r = rectangle(0, 0, 1, .8)
             self.fittext(r, _('ERROR') + '\n' + _('compass or gyro failure!'), True, black)
             self.control['heading'] = 'no imu'
             self.control['heading_command'] = 'no imu'
@@ -561,7 +561,7 @@ class control(controlbase):
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:
-                self.fittext(rectangle(0, .4, 1, .35), _(warning), True, black)
+                self.fittext(rectangle(0, .4, 1, .4), _(warning), True, black)
                 self.control['heading_command'] = warning
         elif mode == 'gps' and not self.have_gps():
             if self.control['heading_command'] != 'no gps':
@@ -573,12 +573,12 @@ class control(controlbase):
                 self.control['heading_command'] = 'no wind'
         elif self.last_val('servo.controller') == 'none':
             if self.control['heading_command'] != 'no controller':
-                self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
+                self.fittext(rectangle(0, .4, 1, .4), _('WARNING no motor controller'), True, black)
                 self.control['heading_command'] = 'no controller'
         elif self.lcd.hat and self.lcd.hat.check_voltage():
             msg = self.lcd.hat.check_voltage()
             if self.control['heading_command'] != msg:
-                self.fittext(rectangle(0, .4, 1, .35), msg, True, black)
+                self.fittext(rectangle(0, .4, 1, .4), msg, True, black)
                 self.control['heading_command'] = msg
         else:
             # no warning, display the desired course or 'standby'
@@ -590,14 +590,13 @@ class control(controlbase):
             else:
                 if self.control['heading_command'] != self.last_val('ap.heading_command'):
                     ap_heading_command = nr(self.last_val('ap.heading_command'))
-                    draw_big_number((0,.4), ap_heading_command, self.control['heading_command'])
+                    draw_big_number((0, .4), ap_heading_command, self.control['heading_command'])
                     self.control['heading_command'] = ap_heading_command
 
                     self.control['mode'] = False # refresh mode
 
         warning = False
         if mode == 'compass':
-            warning = False
             cal = self.last_val('imu.compass.calibration')
             if cal == 'N/A':
                 ndeviation = 0
@@ -607,14 +606,13 @@ class control(controlbase):
                 r = rectangle(0, .75, 1, .15)
                 self.fittext(r, s, True, white)
                 self.invertrectangle(r)
-                self.control['mode'] = 'warning'
+                self.control['mode'] = 'warning' # redraw mode when warning is gone
             if ndeviation == 0 and False:
                 warncal(_('No Cal'))
                 warning = True
             if ndeviation > 6:
                 warncal(_('Bad Cal'))
                 warning = True
-
         if not warning:
             self.display_mode()
         super(control, self).display(refresh)

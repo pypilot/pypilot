@@ -302,12 +302,12 @@ class signalk(object):
                     elif signalk_conversion != 1: # don't require fields with conversion of 1 (lat/lon)
                         break
                 else:
-                    for signalk_path in sensor_table:
+                    for signalk_path_conversion in sensor_table:
+                        signalk_path, signalk_conversion = signalk_path_conversion
                         if signalk_path in values:
                             del values[signalk_path]
                     # all needed sensor data is found 
                     data['device'] = source
-                    print('signalk data', data, sensor)
                     if self.sensors_pipe:
                         self.sensors_pipe.send([sensor, data])
                     else:
@@ -406,7 +406,7 @@ class signalk(object):
             self.ws.send(pyjson.dumps(subscription)+'\n')
         
         signalk_sensor = signalk_table[sensor]
-        if subscribe:
+        if subscribe: # translate from signalk -> pypilot
             subscriptions = []
             for signalk_path_conversion in signalk_sensor:
                 signalk_path, signalk_conversion = signalk_path_conversion
