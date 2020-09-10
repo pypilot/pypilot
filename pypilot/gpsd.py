@@ -62,8 +62,8 @@ class gpsProcess(multiprocessing.Process):
             except StopIteration:
                 print('gpsd lost connection')
                 break
-            except:
-                print('UNHANDLED!!!!!!!!!!!!!!!!!!!! gpsd unhandled exception')
+            except Exception as e:
+                print('UNHANDLED!!!!!!!!!!!!!!!!!!!! gpsd unhandled exception', e)
                 break
 
     def gps_process(self, pipe):

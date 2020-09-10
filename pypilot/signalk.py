@@ -11,7 +11,7 @@ import time, socket, multiprocessing, os
 from nonblockingpipe import NonBlockingPipe
 import pyjson
 from client import pypilotClient
-from values import RangeProperty
+from values import Property, RangeProperty
 from sensors import source_priority
 
 radians = 3.141592653589793/180
@@ -19,7 +19,7 @@ meters_s = 0.5144456333854638
 
 # provide bi-directional translation of these keys
 signalk_table = {'wind': {('environment.wind.speedApparent', meters_s): 'speed',
-                          ('environment.wind.angleApparent', radians): 'angle'},
+                          ('environment.wind.angleApparent', radians): 'direction'},
                  'gps': {('navigation.courseOverGroundTrue', radians): 'track',
                          ('navigation.speedOverGround', meters_s): 'speed',
                          ('navigation.position', 1): {'latitude': 'latitude', 'longitude': 'longitude'}},
@@ -79,6 +79,7 @@ class signalk(object):
         self.signalk_msgs_skip = {}
 
         self.period = self.client.register(RangeProperty('signalk.period', .5, .1, 2, persistent=True))
+        self.uid = self.client.register(Property('signalk.uid', False, persistent=True))
 
         self.signalk_host_port = False
         self.signalk_ws_url = False
@@ -118,7 +119,6 @@ class signalk(object):
         browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
         #zeroconf.close()
         self.initialized = True
-        
 
     def probe_signalk(self):
         print('signalk probe...', self.signalk_host_port)
@@ -171,8 +171,15 @@ class signalk(object):
             return
 
         try:
-            uid = "1234-45653343454";
-            r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":uid, "description": "pypilot"})
+            def random_number_string(n):
+                if n == 0:
+                    return ''
+                import random
+                return str(int(random.random()*10)) + random_number_string(n-1)
+            
+            if not self.uid.value:
+                self.uid.set('1234-' + random_number_string(11))
+            r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":self.uid.value, "description": "pypilot"})
             
             contents = pyjson.loads(r.content)
             print('post', contents)
@@ -279,7 +286,7 @@ class signalk(object):
         while True:
             try:
                 msg = self.ws.recv()
-                print('sigk', msg)
+                #print('sigk', msg)
             except:
                 break
             self.receive_signalk(msg)
@@ -295,12 +302,12 @@ class signalk(object):
                     elif signalk_conversion != 1: # don't require fields with conversion of 1 (lat/lon)
                         break
                 else:
-                    for signalk_path in sensor_table:
+                    for signalk_path_conversion in sensor_table:
+                        signalk_path, signalk_conversion = signalk_path_conversion
                         if signalk_path in values:
                             del values[signalk_path]
                     # all needed sensor data is found 
                     data['device'] = source
-                    print('signalk data', data, sensor)
                     if self.sensors_pipe:
                         self.sensors_pipe.send([sensor, data])
                     else:
@@ -399,7 +406,7 @@ class signalk(object):
             self.ws.send(pyjson.dumps(subscription)+'\n')
         
         signalk_sensor = signalk_table[sensor]
-        if subscribe:
+        if subscribe: # translate from signalk -> pypilot
             subscriptions = []
             for signalk_path_conversion in signalk_sensor:
                 signalk_path, signalk_conversion = signalk_path_conversion

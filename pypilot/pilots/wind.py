@@ -85,7 +85,7 @@ class WindPilot(AutopilotPilot):
       # for true wind, need gps
       if ap.sensors.gps.source.value == 'none':
         ap.mode_lost('wind')
-      true_wind = resolv(ap.true_wind_wind_offset.value + wind, 180)
+      true_wind = resolv(ap.true_wind_wind_offset.value + wind)
       ap.heading.set(true_wind)
 
     if mode == 'compass':
