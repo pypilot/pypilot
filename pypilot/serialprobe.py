@@ -23,7 +23,7 @@ def read_config(filename, fail):
             f.close()
             return devices
         except Exception as e:
-            print('error reading', pypilot_dir + 'serial_ports')
+            print('error reading', pypilot_dir + filename)
     return fail
 
 blacklist_serial_ports = 'init'
@@ -40,28 +40,45 @@ def read_allowed():
         allowed_serial_ports = read_config('serial_ports', 'any')
     return allowed_serial_ports
 
+
+lastworkingdevices = {}
+def read_last_working_devices():
+    global lastworkingdevices
+    for filename in os.listdir(pypilot_dir):
+        if filename.endswith('device'):
+            name = filename[:-6]
+            if name:
+                try:
+                    file = open(pypilot_dir + filename, 'r')
+                    lastdevice = pyjson.loads(file.readline().rstrip())
+                    file.close()
+                    # ensure lastdevice defines path and baud here
+                    lastworkingdevices[name] = lastdevice[0], [lastdevice[1]]
+                except:
+                    pass
+
 def scan_devices():
-    devices = []
-    #rpi3, orange pi have ttyS, othes have ttyAMA
+    devices = {}
     devicesp = ['ttyAMA']
         
     by_id = '/dev/serial/by-id'
     if os.path.exists(by_id):
-        for device_path in os.listdir(by_id):
-            devices.append(os.path.realpath(os.path.join(by_id, device_path)))
+        paths = os.listdir(by_id)
 
-        # identical devices might exist, so also add by path
         by_path = '/dev/serial/by-path'
         if os.path.exists(by_path):
-            for device_path in os.listdir(by_path):
-                full_path = os.path.join(by_path, device_path)
-                realpath = os.path.realpath(full_path)
-                # make sure we don't already have it "by-id" 
-                for path in devices:
-                    if path == realpath:
-                        break
-                else:
-                    devices.append(full_path)
+            by_path = os.listdir(by_path)
+            if len(by_path) > len(paths):
+                # if more devices by path than id, then use the paths
+                # this allows identical devices and remembers which port
+                # they are plugged into to speed up future probing
+                print('serial probe found more devices by path')
+                paths = by_path
+        
+        for device_path in paths:
+            full_path = os.path.join(by_id, device_path)
+            realpath = os.path.realpath(full_path)
+            devices[full_path] = {'realpath': realpath}
     else: # do not have by-id and by-path support
         devicesp = ['ttyUSB', 'ttyACM'] + devicesp
 
@@ -70,35 +87,41 @@ def scan_devices():
         devicesd = []
         for p in devicesp:
             if dev.startswith(p):
-                realpath = os.path.realpath('/dev/'+dev)
-                if not realpath in devices:
-                    devices.append(realpath)
+                path = '/dev/'+dev
+                realpath = os.path.realpath(path)
+                for device in devices:
+                    if device[1] == realpath:
+                        break
+                else:
+                    devices[path] = {'realpath': realpath}
 
     blacklist_serial_ports = read_blacklist()
-    for device in blacklist_serial_ports:
-        for d in devices:
-            if os.path.realpath(d.strip()) == device:
-                devices.remove(d)
+    for path in blacklist_serial_ports:
+        realpath = os.path.realpath(path)
+        for device in devices:
+            if devices[device]['realpath'] == realpath:
+                del devices[device]
     
     allowed_serial_ports = read_allowed()
     if allowed_serial_ports == 'any':
         return devices
     
-    allowed_devices = []
-    for device in allowed_serial_ports:
-        for d in devices:
-            if device == os.path.realpath(d):
-                allowed_devices.append(d)
+    allowed_devices = {}
+    for path in allowed_serial_ports:
+        for device in devices:
+            realpath = devices[device]['realpath']
+            if os.path.realpath(path) == realpath:
+                allowed_devices[device] = devices[device]
 
     # add any unique serial ports not scanned
     # but listed in serial_ports file to end of list
-    for device in allowed_serial_ports:
-        have = False
-        for d in allowed_devices:
-            if device == os.path.realpath(d):
-                have = True
-        if not have:
-            allowed_devices.append(device)
+    for path in allowed_serial_ports:
+        realpath = os.path.realpath(path)
+        for device in allowed_devices:
+            if devices[device]['realpath'] == realpath:
+                break
+        else:
+            allowed_devices[path]['realpath'] = realpath
     
     return allowed_devices
 
@@ -113,72 +136,72 @@ def enumerate_devices():
     global devices
     global monitor
     global starttime
-    
+
+    t0 = time.monotonic()
     if devices == 'init':
-        starttime = time.monotonic()
-        devices = scan_devices()
+        starttime = t0
+        devices = {}
+        read_last_working_devices()
+        print('serial probe last working', lastworkingdevices)
 
     if monitor:
-        t1 = time.monotonic()
-        if monitor.poll(0):
-            while monitor.poll(0): # flush events
-                pass
-            devices = scan_devices()
+        # only scan devices if they change
+        if not monitor.poll(0):
+            return devices
+        while monitor.poll(0): # flush events
+            pass
     else:
         # delay monitor slightly to ensure startup speed
-        if time.monotonic() > starttime and pyudev == 'init':
-            try:
-                import signal
-                # need to temporary disable sigchld while loading pyudev
-                cursigchld_handler = signal.getsignal(signal.SIGCHLD)
-                signal.signal(signal.SIGCHLD, 0)
-                import pyudev
-                context = pyudev.Context()
-                signal.signal(signal.SIGCHLD, cursigchld_handler)
-                monitor = pyudev.Monitor.from_netlink(context)
-                monitor.filter_by(subsystem='usb')
-            except Exception as e:
-                global pyudevwarning
-                if not pyudevwarning:
-                    print('no pyudev module! will scan usb devices every probe!', e)
-                    pyudevwarning = True
-                # try pyudev/scanning again in 60 seconds if it is delayed loading
-                starttime = time.monotonic() + 20
-                #pyudev = False
-            devices = scan_devices()
+        if t0 < starttime or pyudev != 'init':
+            return devices
+
+        # try to start pyudev
+        import signal
+        # need to temporary disable sigchld while loading pyudev
+        cursigchld_handler = signal.getsignal(signal.SIGCHLD)
+        signal.signal(signal.SIGCHLD, signal.SIG_IGN)
+        try:
+            import pyudev
+            context = pyudev.Context()
+            monitor = pyudev.Monitor.from_netlink(context)
+            monitor.filter_by(subsystem='usb')
+        except Exception as e:
+            global pyudevwarning
+            if not pyudevwarning:
+                print('no pyudev module! will scan usb devices every probe!', e)
+                pyudevwarning = True
+            # try pyudev/scanning again in 20 seconds if it is delayed loading
+            starttime = time.monotonic() + 20
+            pyudev = False
+        signal.signal(signal.SIGCHLD, cursigchld_handler)
+
+    scanned_devices = scan_devices()
+    # remove devices not scanned
+    for device in list(devices):
+        if not device in scanned_devices:
+            del devices[device]
+
+    # add new devices and set the time the device was added
+    for device in scanned_devices:
+        if not device in devices:
+            devices[device] = scanned_devices[device]
+            devices[device]['time'] = t0
+    
     return devices
-
-# reads the file recording the last working
-# serial device and baud rate for that use
-lastworkingdevices = {}
-def lastworkingdevice(name):
-    global lastworkingdevices
-    if name in lastworkingdevices:
-        return lastworkingdevices[name]
-
-    filename = pypilot_dir + name + 'device'
-    try:
-        file = open(filename, 'r')
-        lastdevice = pyjson.loads(file.readline().rstrip())
-        file.close()
-
-        # ensure lastdevice defines path and baud here
-        lastdevice = lastdevice[0], [lastdevice[1]]
-    except:
-        lastdevice = False
-
-    lastworkingdevices[name] = lastdevice
-    return lastdevice
 
 # called to find a new serial device and baud to try to use
 probes = {}
+def relinquish(name):
+    if name in probes:
+        probes[name]['device'] = False
+
 def probe(name, bauds, timeout=5):
     global devices
     global probes
     
     t0 = time.monotonic()
     if not name in probes:
-        probes[name] = {'time': 0, 'device': False, 'probe last': True, 'starttime': t0}
+        probes[name] = {'time': t0, 'device': False, 'probelast': True, 'lastdevice': False}
     probe = probes[name]
 
     # prevent probing too often
@@ -187,71 +210,80 @@ def probe(name, bauds, timeout=5):
         return False
     probe['time'] = t0
 
-    # current device being probed or used, try next baud rate
+    # current device probed, try next baud rate
     if probe['device']:
         probe['bauds'] = probe['bauds'][1:]
         if probe['bauds']:  # there are more bauds to try
             return probe['device'], probe['bauds'][0]
+        probe['device'] = False # relinquish device
 
     # try the last working device every other probe
-    if probe['probe last']:
-        probe['probe last'] = False # next time probe new devices
-        last = lastworkingdevice(name)
-        if last:
-            if 'USB' in last[0] or 'ACM' in last[0]:
-                if not os.path.exists(last[0]):
-                    lastworkingdevices[name] = False
-                    return False
-            probe['device'], probe['bauds'] = last
-            return probe['device'], probe['bauds'][0]
-    probe['probe last'] = True # next time try last working device if this fails
+    enumerate_devices()
 
-    if t0 - probe['starttime'] < timeout:
-        # only probe new devices after booted so that last working devices are all found
-        return False
+    device_list = list(devices)
+    if probe['probelast']:
+        probe['probelast'] = False # next time probe new devices
+        if not name in lastworkingdevices:
+            return False
+        last_device, last_baud = lastworkingdevices[name]
+        for index in range(len(device_list)):
+            device = device_list[index]
+            if device == last_device:
+                break
+        else: # last device not found
+            return False
+    else:
+        probe['probelast'] = True # next time try last working device if this fails
 
-    # find a new device
-    #t1 = time.monotonic()
-    devices = enumerate_devices()
-
-    #print('enumtime', time.monotonic() - t1, devices)
-
-    # find next device index to probe
-    try:
-        index = devices.index(probe['lastdevice']) + 1
-    except:
-        index = 0
+        # find next device index to probe
+        for index in range(len(device_list)):
+            device = device_list[index]
+            if device == probe['lastdevice']:
+                index += 1
+                break
+        else:
+            index = 0
 
     # do not probe another probe's device
-    pi = 0
-    plist = list(probes)
-    while pi < len(plist) and index < len(devices):
-        probe_path = probes[plist[pi]]['device']
-        if probe_path and probe_path == devices[index]:
-            index += 1
-            pi = 0
+    while index < len(device_list):
+        device = device_list[index]
+        for p in probes:
+            probe_device = probes[p]['device']
+            if probe_device == device or probe_device == devices[device]['realpath']:
+                probe['probelast'] = True # next time probe last
+                index += 1
+                break
         else:
-            pi += 1
-
-    # if no more devices, return false to reset, and allow other probes
-    if index >= len(devices):
+            # do not probe another's last working device if it's not very old
+            for last_name in lastworkingdevices:
+                last_device, baud = lastworkingdevices[last_name]
+                if last_name != name and last_device == device:
+                    if t0 - devices[device]['time'] < 10:
+                        probe['probelast'] = True # next time probe last
+                        index += 1
+                        break
+            else:
+                break
+    else:
         probe['lastdevice'] = False
         return False
 
-    device = devices[index]
+                    
     #print('device', device, devices)
     serial_device = device, bauds[0]
 
     try:
-        try:
-            import serial
-            serial.Serial
-        except Exception as e:
-            print('No serial.Serial available')
-            print('pip3 uninstall serial')
-            print('pip3 install pyserial')
-            exit(1)
-        serial.Serial(*serial_device)
+        import serial
+        serial.Serial
+    except Exception as e:
+        print('No serial.Serial available')
+        print('pip3 uninstall serial')
+        print('pip3 install pyserial')
+        exit(1)
+
+    try:
+        dev = serial.Serial(*serial_device)
+        dev.close() # opened without exception, now close it
     except serial.serialutil.SerialException as err:
         arg = err.args[0]
         if type(arg) == type('') and 'Errno ' in  arg:
@@ -277,29 +309,39 @@ def probe(name, bauds, timeout=5):
         serial_device = False
 
     probe['device'] = device
-    probe['lastdevice'] = probe['device']
+    if probe['probelast']:
+        probe['lastdevice'] = device
     probe['bauds'] = bauds
     #print('probe', name, serial_device)
     return serial_device
 
-# allow reserving gps devices against probing
+# reserve gpsd devices against probing
 def reserve(device):
-    devices = enumerate_devices()
-    print('prevent serial probing', device)
+    print('serial probe reserve', device)
     i = 0
     global probes
     while 'reserved%d' % i in probes:
         i+=1
-    for dev in devices:
-        if os.path.realpath(dev) == os.path.realpath(device):
-            probes['reserved%d' % i] = {'device': device}
-            break
+    realpath = os.path.realpath(device)
+    probes['reserved%d' % i] = {'device': realpath}
 
+def unreserve(device):
+    print('serial probe unreserve', device)
+    global probes
+    realpath = os.path.realpath(device)
+    for probe in probes:
+        if probe.startswith('reserved'):
+            if probes[probe]['device'] == realpath:
+                del probes[probe]
+                return
+    print('error: failed to unreserve!!!!!!!', device, realpath)
+    
 # called to record the working serial device
 def success(name, device):
-    global probes
+    global probes, lastworkingdevices
     filename = pypilot_dir + name + 'device'
     print('serialprobe success:', filename, device)
+    lastworkingdevices[name] = device
     try:
         file = open(filename, 'w')
         file.write(pyjson.dumps(device) + '\n')
