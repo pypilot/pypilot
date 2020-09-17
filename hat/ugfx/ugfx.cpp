@@ -161,7 +161,7 @@ surface::surface(const char* filename, int tbypp)
         goto fail;
     if(1)
     {
-        int sz = width * height;
+        unsigned int sz = width * height;
         unsigned int i=0;
         while(i<sz) {
             uint8_t run, value;

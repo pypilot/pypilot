@@ -501,8 +501,8 @@ class control(controlbase):
     def display(self, refresh):
         if not self.control:
             self.fill(black)
-            self.control = {'heading': (0, '   ', False),
-                            'heading_command': (0, '   ', False),
+            self.control = {'heading': False,
+                            'heading_command': False,
                             'mode': False, 'modes': []}
         def nr(x):
             try:
@@ -536,7 +536,11 @@ class control(controlbase):
 
         def draw_heading(pos, value, lastvalue):
             heading, mode, num = value
-            lastheading, lastmode, lastnum = lastvalue
+            try:
+                lastheading, lastmode, lastnum = lastvalue
+            except:
+                lastmode = False #refresh
+
             windmode = 'wind' in mode
 
             if mode != lastmode:
@@ -562,7 +566,6 @@ class control(controlbase):
             return
 
         mode = self.last_val('ap.mode')
-
         ap_heading = self.last_val('ap.heading')
         heading = ap_heading, mode, nr(ap_heading)
         draw_heading(0, heading, self.control['heading'])
@@ -585,15 +588,15 @@ class control(controlbase):
                 self.control['heading_command'] = warning
         elif mode == 'gps' and not self.have_gps():
             if self.control['heading_command'] != 'no gps':
-                self.fittext(rectangle(0, .4, 1, .4), _('GPS not detected'), True, black)
+                self.fittext(rectangle(0, .4, 1, .35), _('GPS not detected'), True, black)
                 self.control['heading_command'] = 'no gps'
         elif (mode == 'wind' or mode == 'true wind') and not self.have_wind():
             if self.control['heading_command'] != 'no wind':
-                self.fittext(rectangle(0, .4, 1, .4), _('WIND not detected'), True, black)
+                self.fittext(rectangle(0, .4, 1, .35), _('WIND not detected'), True, black)
                 self.control['heading_command'] = 'no wind'
         elif self.last_val('servo.controller') == 'none':
             if self.control['heading_command'] != 'no controller':
-                self.fittext(rectangle(0, .4, 1, .4), _('WARNING no motor controller'), True, black)
+                self.fittext(rectangle(0, .4, 1, 35), _('WARNING no motor controller'), True, black)
                 self.control['heading_command'] = 'no controller'
         elif self.lcd.hat and self.lcd.hat.check_voltage():
             msg = self.lcd.hat.check_voltage()

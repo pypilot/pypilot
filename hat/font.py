@@ -109,13 +109,10 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
     except Exception as e:
         # we will get respawn hopefully after python-PIL is loaded
         print('failed to load PIL to create fonts, aborting...', e)
-        return False
-        #import time
-        #time.sleep(3) # wait 3 seconds to avoid respawning too quickly
-
-        
+        #return False
+        time.sleep(3) # wait 3 seconds to avoid respawning too quickly        
         #return ugfx.surface(size, size, bypp, bytes([0]*(size*size*bypp)))
-        #exit(1)
+        exit(1)
 
     ifont = ImageFont.truetype(fontpath, size)
     size = ifont.getsize(c)
