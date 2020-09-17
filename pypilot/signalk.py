@@ -291,7 +291,10 @@ class signalk(object):
                 for signalk_path_conversion, pypilot_path in sensor_table.items():
                     signalk_path, signalk_conversion = signalk_path_conversion
                     if signalk_path in values:
-                        data[pypilot_path] = values[signalk_path] / signalk_conversion
+                        try:
+                            data[pypilot_path] = values[signalk_path] / signalk_conversion
+                        except Exception as e:
+                            print('this is a bug!!!!!!!!!!!!!!!', e, values[signalk_path], signalk_path)
                     elif signalk_conversion != 1: # don't require fields with conversion of 1 (lat/lon)
                         break
                 else:
