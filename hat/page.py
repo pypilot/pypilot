@@ -460,6 +460,7 @@ class control(controlbase):
         self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
         self.control = {} # used to keep track of what is drawn on screen to avoid redrawing it
         self.lastspeed = 0
+        self.lasttime = 0
 
     def have_compass(self):
         return True
@@ -500,7 +501,6 @@ class control(controlbase):
 
     def display(self, refresh):
         if not self.control:
-            self.fill(black)
             self.control = {'heading': False,
                             'heading_command': False,
                             'mode': False, 'modes': []}
@@ -565,9 +565,14 @@ class control(controlbase):
             super(control, self).display(refresh)
             return
 
+        t0 = time.monotonic()
         mode = self.last_val('ap.mode')
         ap_heading = self.last_val('ap.heading')
         heading = ap_heading, mode, nr(ap_heading)
+        if self.control['heading'] and heading[2] == self.control['heading'][2]:
+            if t0 - self.lasttime < .8 and not refresh:
+                return True # optimization to not redraw frame if heading hasn't changed
+        self.lasttime = t0
         draw_heading(0, heading, self.control['heading'])
         self.control['heading'] = heading
 
@@ -596,7 +601,7 @@ class control(controlbase):
                 self.control['heading_command'] = 'no wind'
         elif self.last_val('servo.controller') == 'none':
             if self.control['heading_command'] != 'no controller':
-                self.fittext(rectangle(0, .4, 1, 35), _('WARNING no motor controller'), True, black)
+                self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
                 self.control['heading_command'] = 'no controller'
         elif self.lcd.hat and self.lcd.hat.check_voltage():
             msg = self.lcd.hat.check_voltage()

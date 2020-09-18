@@ -111,6 +111,10 @@ class Web(Process):
     def create(self):
         def process(pipe, config):
             while True:
+                if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
+                    print('warning, failed to make hat web process idle, trying renice')
+                if os.system("renice 20 %d" % os.getpid()):
+                    print('warning, failed to renice hat web process')
                 time.sleep(30) # delay loading web and wait until modules are loaded
                 try:
                     import web
@@ -226,6 +230,7 @@ class Hat(object):
             host = 'localhost'
 
         self.client = pypilotClient(host)
+        self.client.registered = False
         self.watchlist = ['ap.enabled', 'ap.heading_command']
         for name in self.watchlist:
             self.client.watch(name)
@@ -352,24 +357,21 @@ class Hat(object):
             return '5v Voltage Bad' + (': %.2f' % vcc)
         return False
                 
-    def poll(self):
-        if self.client.connection:
-            self.web.set_status('connected')
-        else:
-            self.web.set_status('disconnected')
-            
+    def poll(self):            
         t0 = time.monotonic()
-        msgs = self.client.receive()
-        t1 = time.monotonic()
         for i in [self.gpio, self.arduino, self.lirc]:
             try:
                 if not i:
                     continue
                 events = i.poll()
                 for event in events:
+                    print('apply', event, time.monotonic())
                     self.apply_code(*event)
             except Exception as e:
                 print('WARNING, failed to poll!!', e, i)
+
+        t1 = time.monotonic()
+        msgs = self.client.receive()
         t2 = time.monotonic()
         for name, value in msgs.items():
             self.last_msg[name] = value
@@ -393,6 +395,18 @@ class Hat(object):
                 if self.client:
                     self.client.set('servo.command', 0) # stop
                 self.servo_timeout = 0
+
+        # set web status
+        if self.client.connection:
+            self.web.set_status('connected')
+            if not self.client.registered:
+                #self.poller.register(self.client.connection.fileno(), select.POLLIN)
+                #self.poller.register(self.lcd.client.connection.fileno(), select.POLLIN)
+                self.client.registered = True
+        else:
+            self.client.registered = False
+            self.web.set_status('disconnected')
+
         t4 = time.monotonic()
         dt = t3-t0
         period = max(.2 - dt, .01)
@@ -404,6 +418,7 @@ class Hat(object):
                 self.lirc.registered = True
         
         e=self.poller.poll(1000*period)
+        #print('hattime', time.monotonic(), e)
         #print('hat times', t1-t0, t2-t1, t3-t2, t4-t3, period, dt)
 
 def main():

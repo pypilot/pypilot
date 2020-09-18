@@ -14,19 +14,6 @@
 
 import os, sys, time, socket, errno, select
 
-REWIND=0xab # reset state
-READ_SERIAL = 0xb9 # read next serial byte
-DISCARD_SERIAL = 0xd1 # once data read is verified
-WRITE_DONE = 0xce # backup two bytes since verification failed
-WRITE_SERIAL = 0xd6 # set state writing to serial
-READ_DATA = 0xea # read next data byte
-DISCARD_DATA = 0xa4 # validate read data
-WRITE_DATA = 0xb6 # set state for writing data
-OK = 0xc8 # returned from sucessful operations
-END=0xe3 # returned if reading reaches end
-ZERO = 0x85 # encode a 0 byte
-INVALID=0x96
-
 RF=0x01
 IR=0x02
 GP=0x03
@@ -262,8 +249,9 @@ class arduino(object):
             if cmd == RF:
                 key = 'rf' + key
             elif cmd == IR:
-                if self.config['arduino.ir']:
-                    key = 'ir' + key
+                if not self.config['arduino.ir']:
+                    continue
+                key = 'ir' + key
             elif cmd == GP:
                 key = 'gpio_ext' + key
             elif cmd == VOLTAGE:
@@ -354,7 +342,7 @@ def arduino_process(pipe, config):
     while True:
         t0 = time.monotonic()
         events = a.poll()
-
+        t1 = time.monotonic()
         baud_rate = a.get_baud_rate()
         if baud_rate:
             #print('baud', baud_rate)
@@ -365,10 +353,11 @@ def arduino_process(pipe, config):
 
         if events:
             pipe.send(events)
-            period = .02
+            print('events', events, time.monotonic())
+            period = .05
             periodtime = t0
         elif periodtime - t0 > 5:
-            period = .05
+            period = .2
 
         while True:
             try:
@@ -387,10 +376,11 @@ def arduino_process(pipe, config):
                 a.set_buzzer(*value)
             elif name == 'arduino.nmea.baud':
                 a.set_baud(value)
-        t1 = time.monotonic()
+        t2 = time.monotonic()
         # max period to handle 38400 with 192 byte buffers is (192*10) / 38400 = 0.05
         # for now use 0.025, eventually dynamic depending on baud?
-        dt = period - (t1-t0)
+        dt = period - (t2-t0)
+        #print('arduino times', period, dt, t1-t0, t2-t1)
         if dt > 0:
             time.sleep(dt)      
     
@@ -404,7 +394,6 @@ def main():
               'arduino.ir': True}
 
     a = arduino(config)
-
     dt = 0
     lt = 0
     while True:

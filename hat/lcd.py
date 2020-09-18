@@ -233,7 +233,9 @@ class LCD():
 
     def display(self):
         t0 = gettime()
-        self.page.display(self.need_refresh)
+        if self.page.display(self.need_refresh):
+            return #optimization
+        t1=gettime();
 
         if micropython:
             self.page.watches['imu.gyro'] = True # heartbeat
@@ -244,7 +246,7 @@ class LCD():
 
         # status cursor
         try:
-            if t0-self.blinktime > .5:
+            if t0-self.blinktime > .8:
                 if self.data_update:
                     self.blink = self.blink[1], self.blink[0]
                     self.data_update = False
@@ -274,7 +276,10 @@ class LCD():
         if micropython:
             self.screen.hue = int(float(self.config['backlight'])*255/100)
 
-        self.screen.refresh()    
+        t2=gettime();
+        self.screen.refresh()
+        t3=gettime();
+        #print('display times', t1-t0, t2-t1, t3-t2)
 
     def update_watches(self):
         for name in list(self.client.watches):
@@ -282,7 +287,6 @@ class LCD():
                 self.client.watch(name, False)
         for name, period in self.page.watches.items():
             self.client.watch(name, period)
-
 
     def receive(self):
         msgs = self.client.receive()
@@ -309,13 +313,13 @@ class LCD():
             self.page = next_page
             self.update_watches()
             self.need_refresh = True
+        t2 = gettime()
         
         if dt > frameperiod:
-            ta = time.monotonic()
             self.display()
             self.update_watches()
             self.lastframetime = max(self.lastframetime+frameperiod, t-frameperiod)
-        t2 = gettime()
+        t3 = gettime()
 
         for key in self.keypad:
             if key.down:
@@ -325,8 +329,8 @@ class LCD():
             if key.up:
                 key.up = False
                     
-        t3 = gettime()
-        #print('lcd times', t1-t0, t2-t1, t3-t2)
+        t4 = gettime()
+        #print('lcd times', t1-t0, t2-t1, t3-t2, t4-t3)
 
 def main():
     lcd = LCD(False)
