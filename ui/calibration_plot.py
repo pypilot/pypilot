@@ -97,9 +97,7 @@ class CalibrationPlot(object):
         TranslateAfter( 0, 0, -1 )
 
         glPolygonMode(GL_FRONT_AND_BACK, self.mode)
-
         glLineWidth(1)
-
         glPushMatrix()
 
         if not self.fusionQPose:
@@ -228,7 +226,6 @@ class CompassCalibrationPlot(CalibrationPlot):
         self.mag_cal_sphere = [0, 0, 0, 30]
         
         self.accel = [0, 0, 0]
-
         self.heading = 0
 
         self.apoints = []

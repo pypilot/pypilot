@@ -158,14 +158,14 @@ class WebConfig(Namespace):
         x = 0
         polls_sent = {}
         while True:
-            socketio.sleep(.2)
+            socketio.sleep(.5)
 
-            t = time.monotonic()
-            dtc = t - last_key_time
-            if dtc > 8 and self.last_key:
-                self.last_key = False
-                socketio.emit('key', 'N/A')
-                socketio.emit('action', '')
+            if self.last_key:
+                dtc = time.monotonic() - last_key_time
+                if dtc > 8:
+                    self.last_key = False
+                    socketio.emit('key', 'N/A')
+                    socketio.emit('action', '')
 
             if not self.pipe:
                 continue

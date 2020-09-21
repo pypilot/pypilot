@@ -109,7 +109,7 @@ class IMU(object):
             while True:
                 time.sleep(10) # do nothing
 
-        if os.system('sudo chrt -pf 99 %d 2>&1 > /dev/null' % os.getpid()):
+        if os.system('sudo chrt -pf 2 %d 2>&1 > /dev/null' % os.getpid()):
             print('warning, failed to make imu process realtime')
         else:
             print('made imu process realtime')
@@ -282,37 +282,40 @@ def heading_filter(lp, a, b):
     return result
 
 def CalibrationProcess(cal_pipe, client):
-    time.sleep(30) # let other stuff load
-    import os
+    if os.system('sudo chrt -po 0 %d 2> /dev/null > /dev/null' % os.getpid()):
+        print('warning, failed to make calibration process other')
     if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
         print('warning, failed to make calibration process idle, trying renice')
-    if os.system("renice 20 %d" % os.getpid()):
-        print('warning, failed to renice calibration process')
+        if os.system("renice 20 %d" % os.getpid()):
+            print('warning, failed to renice calibration process')
+
+    time.sleep(4)
+    
     print('calibration process', os.getpid())
     while True:
         try:
             import calibration_fit
-            calibration_fit.CalibrationProcess(cal_pipe, client)
+            print('calibration loaded, starting')
+            calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
         except Exception as e:
             print('failed import calibration fit', e)
-            time.sleep(10) # maybe numpy isn't ready yet
-        
+            time.sleep(30) # maybe numpy or scipy isn't ready yet
 
-class AutomaticCalibrationProcess(multiprocessing.Process):
+class AutomaticCalibrationProcess():
     def __init__(self, server):
         if True:
             # direct connection to send raw sensors to calibration process is more
             # efficient than routing through server (save up to 2% cpu on rpi zero)
-            self.cal_pipe, cal_pipe = NonBlockingPipe('cal pipe', True, sendfailok=True)
+            self.cal_pipe, self.cal_pipe_process = NonBlockingPipe('cal pipe', True, sendfailok=True)
         else:
-            self.cal_pipe, cal_pipe = False, False # use client
-        client = pypilotClient(server)
-        super(AutomaticCalibrationProcess, self).__init__(target=CalibrationProcess, args=(cal_pipe, client), daemon=True)
-        self.start()
+            self.cal_pipe, self.cal_pipe_process = False, False # use client
+        self.client = pypilotClient(server)
+        self.process = multiprocessing.Process(target=CalibrationProcess, args=(self.cal_pipe_process, self.client), daemon=True)
+        self.process.start()
 
     def __del__(self):
         print('terminate calibration process')
-        self.terminate()
+        self.process.terminate()
 
 
 class BoatIMU(object):

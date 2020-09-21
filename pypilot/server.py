@@ -270,12 +270,14 @@ class ServerValues(pypilotValue):
                 value = self.values[name]
                 if value.connection:
                     connection.write('error=value already held: ' + name + '\n')
+                    continue
                 value.connection = connection
                 value.info = info # update info
                 value.watching = False
                 if value.msg:
                     connection.write(value.get_msg()) # send value
                 value.calculate_watch_period()
+                self.msg = 'new'
                 continue
 
             value = pypilotValue(self, name, info, connection)

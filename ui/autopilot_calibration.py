@@ -314,13 +314,13 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         rotation = event.GetWheelRotation() / 60
         if rotation:
-            canvas.Refresh()
-        while rotation > 0:
-            plot.userscale /= .9
-            rotation -= 1
-        while rotation < 0:
-            plot.userscale *= .9
-            rotation += 1
+            canvas.Refresh() # set context
+            while rotation > 0:
+                plot.userscale /= .9
+                rotation -= 1
+            while rotation < 0:
+                plot.userscale *= .9
+                rotation += 1
         
     def onPaintGLAccel( self, event ):
         self.onPaintGL( self.AccelCalibration, self.accel_calibration_plot, self.accel_calibration_glContext )
@@ -365,21 +365,21 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.lastmouse = pos
 
         if event.Dragging():
+            self.BoatPlot.Refresh()
             dx, dy = pos[0] - self.lastmouse[0], pos[1] - self.lastmouse[1]
             q = quaternion.angvec2quat((dx**2 + dy**2)**.4/180*math.pi, [dy, dx, 0])
             self.boat_plot.Q = quaternion.multiply(q, self.boat_plot.Q)
-            self.BoatPlot.Refresh()
             self.lastmouse = pos
 
         rotation = event.GetWheelRotation() / 60
         if rotation:
+            while rotation > 0:
+                self.boat_plot.Scale /= .9
+                rotation -= 1
+            while rotation < 0:
+                self.boat_plot.Scale *= .9
+                rotation += 1
             self.BoatPlot.Refresh()
-        while rotation > 0:
-            self.boat_plot.Scale /= .9
-            rotation -= 1
-        while rotation < 0:
-            self.boat_plot.Scale *= .9
-            rotation += 1
             
     def onPaintGLBoatPlot( self, event ):
         wx.PaintDC( self.BoatPlot )

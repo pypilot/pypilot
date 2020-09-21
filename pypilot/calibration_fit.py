@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import sys, time, math, numpy
+import sys, time, math, numpy, scipy.optimize
 import vector, resolv, quaternion
 import boatimu
 resolv = resolv.resolv
@@ -20,12 +20,12 @@ calibration_fit_period = 30  # run every 30 seconds
 def lmap(*cargs):
     return list(map(*cargs))
 
-def FitLeastSq(beta0, f, zpoints, dimensions=1):
+def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
     try:
         import scipy.optimize
     except Exception as e:
-        print('failed to load scientific library:', e)
-        print('cannot perform calibration update!')
+        debug('failed to load scientific library:', e)
+        debug('cannot perform calibration update!')
         return False
 
     leastsq = scipy.optimize.leastsq(f, beta0, zpoints)
@@ -132,7 +132,7 @@ def FitPointsAccel(debug, points):
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
     if point_max_dev < .1:
-        debug('insufficient data for accel fit', point_dev, point_max_dev, '< 1')
+        debug('insufficient data for accel fit %.1f %.1f < 1' % (point_dev, point_max_dev))
         return False
 
     def f_sphere3(beta, x):
@@ -142,9 +142,9 @@ def FitPointsAccel(debug, points):
         r0 = lmap(lambda y : beta[3] - vector.norm(y), m)
         return r0
 
-    sphere3d_fit = FitLeastSq([0, 0, 0, 1], f_sphere3, zpoints)
+    sphere3d_fit = FitLeastSq([0, 0, 0, 1], f_sphere3, zpoints, debug)
     if not sphere3d_fit or sphere3d_fit[3] < 0:
-        print('FitLeastSq sphere failed!!!! ', len(points))
+        debug('FitLeastSq sphere failed!!!! ', len(points))
         return False
     debug('accel sphere3 fit', sphere3d_fit, ComputeDeviation(points, sphere3d_fit))
     return sphere3d_fit
@@ -161,7 +161,7 @@ def FitPointsCompass(debug, points, current, norm):
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
     if point_max_dev < 9:
-        debug('0d fit, insufficient data', point_dev, point_max_dev, '< 9')
+        debug('0d fit, insufficient data %.1f %.1f < 9' % (point_dev, point_max_dev))
         return False
 
     line, plane = LinearFit(points)
@@ -213,7 +213,7 @@ def FitPointsCompass(debug, points, current, norm):
             return n
         r1 = lmap(lambda y, z : fac*beta[1]*(beta[2]-dip(y, z)), m, g)
         return r0 + r1
-    new_sphere1d_fit = FitLeastSq([0, initial[3], 0], f_new_sphere1, zpoints, 2)
+    new_sphere1d_fit = FitLeastSq([0, initial[3], 0], f_new_sphere1, zpoints, debug, 2)
     if not new_sphere1d_fit or new_sphere1d_fit[1] < 0 or abs(new_sphere1d_fit[2]) > 1:
         debug('FitLeastSq new_sphere1 failed!!!! ', len(points), new_sphere1d_fit)
         new_sphere1d_fit = current
@@ -223,7 +223,7 @@ def FitPointsCompass(debug, points, current, norm):
         #print('new sphere1 fit', new_sphere1d_fit)
 
     if line_max_dev < 2:
-        debug('line fit found, insufficient data', line_dev, line_max_dev)
+        debug('line fit found, insufficient data %.1f %.1f' % (line_dev, line_max_dev))
         return False
     
     # 2d sphere fit across normal vector
@@ -266,7 +266,7 @@ def FitPointsCompass(debug, points, current, norm):
             return n
         r1 = lmap(lambda y, z : fac*beta[2]*(beta[3]-dip(y, z)), m, g)
         return r0 + r1
-    new_sphere2d_fit = FitLeastSq([0, 0, initial[3], 0], f_new_sphere2, zpoints, 2)
+    new_sphere2d_fit = FitLeastSq([0, 0, initial[3], 0], f_new_sphere2, zpoints, debug, 2)
     if not new_sphere2d_fit or new_sphere2d_fit[2] < 0 or abs(new_sphere2d_fit[3]) >= 1:
         debug('FitLeastSq sphere2 failed!!!! ', len(points), new_sphere2d_fit)
         return False
@@ -311,7 +311,7 @@ def FitPointsCompass(debug, points, current, norm):
         r1 = lmap(lambda y, z : fac*beta[3]*(beta[4]-dip(y, z)), m, g)
 
         return r0 + r1
-    new_sphere3d_fit = FitLeastSq(initial[:4] + [0], f_new_sphere3, zpoints, 2)
+    new_sphere3d_fit = FitLeastSq(initial[:4] + [0], f_new_sphere3, zpoints, debug, 2)
     if not new_sphere3d_fit or new_sphere3d_fit[3] < 0 or abs(new_sphere3d_fit[4]) >= 1:
         debug('FitLeastSq sphere3 failed!!!! ', len(points))
         return False

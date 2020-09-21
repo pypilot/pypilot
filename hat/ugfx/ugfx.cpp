@@ -161,7 +161,7 @@ surface::surface(const char* filename, int tbypp)
         goto fail;
     if(1)
     {
-        int sz = width * height;
+        unsigned int sz = width * height;
         unsigned int i=0;
         while(i<sz) {
             uint8_t run, value;
@@ -795,27 +795,30 @@ public:
         if(contrast > 120)
             contrast = 120;
         contrast = 30+contrast/4; // in range
-        unsigned char cmd[] = {0xe2, // Soft Reset
-                           0x2c, // Boost 1
-                            0x2e, // Boost 2
-                            0x2f, // Boost 3
-                               0xa2, // 1/9 bias ratio
-
-                               0x23, // Coarse Contrast, setting range is from 20 to 27
-                               0x81, // Trim Contrast
-                               (uint8_t)contrast, // Trim Contrast value range can be set from 0 to 63
-                               
-                            0xc2, // Line scan sequence : from top to bottom
-                            0xa0, // column scan order : from left to right
-                            0xa6, // not reverse
-                            0xa4, // not all on
-                            0x40, // start of first line
-                            0xaf
-        }; // Open the display
+        unsigned char cmd[] = {
+            0xe2, // Soft Reset
+            0x2c, // Boost 1
+            0x2e, // Boost 2
+            0x2f, // Boost 3
+            0xa2, // 1/9 bias ratio
+            
+            0x23, // Coarse Contrast, setting range is from 20 to 27
+            0x81, // Trim Contrast
+            (uint8_t)contrast, // Trim Contrast value range can be set from 0 to 63                               
+            0xc2, // Line scan sequence : from top to bottom
+            0xa0, // column scan order : from left to right
+            0xa6, // not reverse
+            0xa4, // not all on
+            0x40, // start of first line
+            //0xb0,
+            //0x10,
+            0xaf // Open the display
+        };
 
         digitalWrite (dc, LOW) ;	// Off
         write(spifd, cmd, sizeof cmd);
         digitalWrite (dc, HIGH) ;	// Off
+
 
         unsigned char binary[128*64];//width*height/8];
         for(int col = 0; col<8; col++)
@@ -831,14 +834,15 @@ public:
                 binary[index] = bits;
             }
 
-//        for(int k=0; k<10; k++)
         for(uint8_t i=0;i<8;i++)
         {
-            unsigned char c1 = 0xb0+i;
-            unsigned char cmd[] = {c1, 0x10, 0x00};
-            digitalWrite (dc, LOW) ;	// Off
-            write(spifd, cmd, sizeof cmd);
-            digitalWrite (dc, HIGH) ;	// Off
+            if(i) {
+                unsigned char c1 = 0xb0+i;
+                unsigned char cmd[] = {c1, 0x10};
+                digitalWrite (dc, LOW) ;	// Off
+                write(spifd, cmd, sizeof cmd);
+                digitalWrite (dc, HIGH) ;	// Off
+            }
 #if 0
             unsigned char *address = binary + i*128; //pointer
             for (unsigned int pos=0; pos<128; pos ++) {

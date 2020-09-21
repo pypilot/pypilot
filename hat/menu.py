@@ -455,7 +455,7 @@ class display(menu):
                                        flip(_('flip'))])                                   
 class select_language(page):
     def __init__(self, lang):
-        super(select_language, self).__init__(lang[0]) # frameperiod = 0 ?
+        super(select_language, self).__init__(lang[0])
         self.lang = lang[1]
 
     def process(self):

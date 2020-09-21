@@ -131,26 +131,34 @@ class Autopilot(object):
             print('         cannot stroke the watchdog')
 
         self.server.poll() # setup process before we switch main process to realtime
-        if os.system('sudo chrt -pf 99 %d 2>&1 > /dev/null' % os.getpid()):
+        if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
             print('warning, failed to make autopilot process realtime')
     
         self.lasttime = time.monotonic()
 
         # setup all processes to exit on any signal
-        self.childprocesses = [self.boatimu.imu.process, self.boatimu.auto_cal,
-                               self.sensors.nmea.process, self.sensors.gpsd.process,
-                               self.sensors.signalk.process, self.server.process]
+        self.childprocesses = [self.boatimu.imu, self.boatimu.auto_cal,
+                               self.sensors.nmea, self.sensors.gpsd,
+                               self.sensors.signalk, self.server]
         def cleanup(signal_number, frame=None):
-            print('got signal', signal_number, 'cleaning up')
+            #print('got signal', signal_number, 'cleaning up')
             if signal_number == signal.SIGCHLD:
                 pid = os.waitpid(-1, 0)
-                print('pid', pid)
+                #print('sigchld waitpid', pid)
+
+            if signal_number != 'atexit': # don't get this signal again
+                signal.signal(signal_number, signal.SIG_IGN)
+
             while self.childprocesses:
-                process = self.childprocesses.pop()
+                process = self.childprocesses.pop().process
                 if process:
                     pid = process.pid
-                    print('kill', pid, process)
-                    os.kill(pid, signal.SIGTERM) # get backtrace
+                    #print('kill', pid, process)
+                    try:
+                        os.kill(pid, signal.SIGTERM) # get backtrace
+                    except Exception as e:
+                        pass
+                        #print('kill failed', e)
             sys.stdout.flush()
             if signal_number != 'atexit':
                 raise KeyboardInterrupt # to get backtrace on all processes
@@ -167,12 +175,10 @@ class Autopilot(object):
                 signal.signal(s, printpipewarning)
             elif s != 9:
                 signal.signal(s, cleanup)
-                pass
 
         signal.signal(signal.SIGCHLD, cleanup)
         import atexit
         atexit.register(lambda : cleanup('atexit'))
-
     
     def __del__(self):
         print('closing autopilot')
@@ -354,7 +360,7 @@ class Autopilot(object):
 
         self.servo.poll()
         t5 = time.monotonic()
-        if t5-t4 > period/2:
+        if t5-t4 > period/2 and self.servo.driver:
             print('servo is running too _slowly_', t5-t4)
 
         self.timings.set([t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t5-t0])

@@ -164,7 +164,7 @@ class pypilotClient(object):
         self.connection_in_progress = False
 
     def onconnected(self):
-        print('connected to pypilot server', time.time())
+        #print('connected to pypilot server', time.time())
         self.last_values_list = False
         
         # write config if connection succeeds

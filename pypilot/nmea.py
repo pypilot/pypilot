@@ -50,7 +50,14 @@ def check_nmea_cksum(line):
     except:
         return False
 
+    
 def parse_nmea_gps(line):
+    def degrees_minutes_to_decimal(n):
+        n/=100
+        degrees = int(n)
+        minutes = n - degrees
+        return degrees + minutes*10/6
+
     if line[3:6] != 'RMC':
         return False
 
@@ -58,21 +65,28 @@ def parse_nmea_gps(line):
         data = line[7:len(line)-3].split(',')
         if data[1] == 'V':
             return False
-        
+        gps = {}
+
         timestamp = float(data[0])
-        latitude = float(data[2])/100.0
+
+        lat = degrees_minutes_to_decimal(float(data[2]))
         if data[3] == 'S':
-            latitude = -latitude
-        longitude = float(data[4])/100.0
+            lat = -lat
+
+        lon = degrees_minutes_to_decimal(float(data[4]))
         if data[5] == 'W':
-            longitude = -longitude
-        speed = float(data[6])
-        heading = float(data[7])
+            lon = -lon
+
+        speed = float(data[6]) if data[6] else 0
+        gps = {'timestamp': timestamp, 'speed': speed, 'lat': lat, 'lon': lon}
+        if data[7]:
+            gps['track'] = float(data[7])
+
     except Exception as e:
         print('nmea failed to parse gps', line, e)
         return False
 
-    return 'gps', {'timestamp': timestamp, 'track': heading, 'speed': speed, 'latitude': latitude, 'longitude': longitude}
+    return 'gps', gps
 
 
 '''
@@ -239,6 +253,7 @@ class Nmea(object):
         self.devices = []
         self.devices_lastmsg = {}
         self.probedevice = None
+        self.probeindex = 0
 
         self.start_time = time.monotonic()
 
@@ -275,12 +290,12 @@ class Nmea(object):
             # we output mwv and rsa messages after calibration
             # do not relay apb messages
             if not nmea_name[3:] in ['MWV', 'RSA', 'APB']:
-                # do not output nmea data over tcp faster than 5hz
+                # do not output nmea data over tcp faster than 4hz
                 # for each message time
                 # forward nmea lines from serial to tcp
 
-                dt = t-self.nmea_times[nmea_name] if nmea_name in self.nmea_times else -1
-                if dt > .2:
+                dt = t-self.nmea_times[nmea_name] if nmea_name in self.nmea_times else 1
+                if dt > .25:
                     self.pipe.send(line)
                     self.nmea_times[nmea_name] = t
 
@@ -304,7 +319,7 @@ class Nmea(object):
             if result:
                 name, msg = result
                 if name:
-                    msg['device'] = line[1:3]+device.path[0]
+                    msg['device'] = line[1:3] + device.path[0]
                     serial_msgs[name] = msg
                 break
 
@@ -353,14 +368,14 @@ class Nmea(object):
                 continue
             dt = time.monotonic() - self.devices_lastmsg[device]
             if dt > 2:
-                if dt < 3:
+                if dt < 2.3:
                     print('serial device dt', dt, device.path, 'is another process accessing it?')
             if dt > 15: # no data for 15 seconds
                 print('serial device timed out', dt, device)
                 self.remove_serial_device(device)
         t4 = time.monotonic()
 
-        # send nmea messages to sockets at 2hz
+        # send imu nmea messages to sockets at 2hz
         dt = time.monotonic() - self.last_imu_time
         values = self.client.values.values
         if self.sockets and dt > .5 and \
@@ -371,18 +386,17 @@ class Nmea(object):
             self.last_imu_time = time.monotonic()
 
         # should we output gps?  for now no
-            
-        # limit to 5hz output of wind and rudder
+        # limit to 4hz output of wind and rudder
         t = time.monotonic()
         for name in ['wind', 'rudder'] if self.sockets else []:
-            dt = t - self.nmea_times[name] if name in self.nmea_times else -1
+            dt = t - self.nmea_times[name] if name in self.nmea_times else 1
             source = self.sensors.sensors[name].source.value
             # only output to tcp if we have a better source
-            if dt > .2 and source_priority[source] < source_priority['tcp']:
+            if dt > .25 and source_priority[source] < source_priority['tcp']:
                 if name == 'wind':
                     wind = self.sensors.wind
                     self.send_nmea('APMWV,%.3f,R,%.3f,N,A' % (wind.direction.value, wind.speed.value))
-                else:
+                elif name == 'rudder':
                     self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
                 self.nmea_times[name] = t
             
@@ -398,40 +412,45 @@ class Nmea(object):
         # probe new nmea data devices
         if not self.probedevice:
             try:
-                self.probeindex = self.devices.index(False)
+                index = self.devices.index(False)
             except:
-                self.probeindex = len(self.devices)
-            self.probedevicepath = serialprobe.probe('nmea%d' % self.probeindex, [38400, 4800])
+                index = len(self.devices)
+            if self.probeindex != index and \
+               (self.probeindex >= len(self.devices) or not self.devices[self.probeindex]):
+                serialprobe.relinquish('nmea%d' % self.probeindex)
+            self.probeindex = index
+
+            self.probedevicepath = serialprobe.probe('nmea%d' % self.probeindex, [38400, 4800], 8)
             if self.probedevicepath:
                 print('nmea probe', self.probedevicepath)
                 try:
                     self.probedevice = NMEASerialDevice(self.probedevicepath)
                     self.probetime = time.monotonic()
-                except serial.serialutil.SerialException:
-                    print('failed to open', self.probedevicepath, 'for nmea data')
-                    pass
+                except Exception as e: # serial.serialutil.SerialException:
+                    print('failed to open', self.probedevicepath, 'for nmea data', e)
+
+            return
+
+        # see if the probe device gets a valid nmea message
+        if self.probedevice.readline():
+            #print('nmea new device', self.probedevicepath)
+            serialprobe.success('nmea%d' % self.probeindex, self.probedevicepath)
+            if self.probeindex < len(self.devices):
+                self.devices[self.probeindex] = self.probedevice
+            else:
+                self.devices.append(self.probedevice)
+            fd = self.probedevice.device.fileno()
+            self.device_fd[fd] = self.probedevice
+            self.poller.register(fd, select.POLLIN)
+            self.devices_lastmsg[self.probedevice] = time.monotonic()
+            self.probedevice = None
         elif time.monotonic() - self.probetime > 5:
-            print('nmea serial probe timeout', self.probedevicepath)
+            #print('nmea serial probe timeout', self.probeindex, index, self.probedevicepath)
             self.probedevice = None # timeout
-        else:
-            # see if the probe device gets a valid nmea message
-            if self.probedevice:
-                if self.probedevice.readline():
-                    print('nmea new device', self.probedevicepath)
-                    serialprobe.success('nmea%d' % self.probeindex, self.probedevicepath)
-                    if self.probeindex < len(self.devices):
-                        self.devices[self.probeindex] = self.probedevice
-                    else:
-                        self.devices.append(self.probedevice)
-                    fd = self.probedevice.device.fileno()
-                    self.device_fd[fd] = self.probedevice
-                    self.poller.register(fd, select.POLLIN)
-                    self.devices_lastmsg[self.probedevice] = time.monotonic()
-                    self.probedevice = None
+
 
     def send_nmea(self, msg):
-        line = '$' + msg + ('*%02X' % nmea_cksum(msg))
-        self.pipe.send(line)
+        self.pipe.send(msg)
         
 class nmeaBridge(object):
     def __init__(self, server):
@@ -508,7 +527,7 @@ class nmeaBridge(object):
             result = parser(line)
             if result:
                 name, msg = result
-                msg['device'] = device + line[1:3]
+                msg['device'] = line[1:3] + device
                 self.msgs[name] = msg
                 return
 
@@ -593,6 +612,8 @@ class nmeaBridge(object):
             msg = self.pipe.recv()
             if not msg:
                 return
+            if msg[0] != '$': # perform checksum in this subprocess
+                msg = '$' + msg + ('*%02X' % nmea_cksum(msg))
             # relay nmea message from server to all tcp sockets
             for sock in self.sockets:
                 sock.write(msg + '\r\n')

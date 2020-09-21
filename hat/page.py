@@ -106,11 +106,10 @@ class page(object):
                 maxw = max(maxw, posx)
             maxh = posy + lineheight
                     
-            s = maxw, maxh
-            if s[0] == 0 or s[1] == 0:
-                continue
-            sw = surface.width * float(rect.width) / s[0]
-            sh = surface.height * float(rect.height) / s[1]
+            if maxw == 0 or maxh == 0: # failed to render anything
+                return 0, ''
+            sw = surface.width * float(rect.width) / maxw
+            sh = surface.height * float(rect.height) / maxh
             cursize = int(min(sw*metric_size, sh*metric_size))
             if cursize < size:
                 break
@@ -445,7 +444,7 @@ class controlbase(page):
         if self.wifi == wifi and not refresh:
             return # done displaying
         self.wifi = wifi
-        wifirect = rectangle(.35, .9, .6, .1)
+        wifirect = rectangle(.35, .92, .6, .09)
         if wifi:
             text = 'WIFI'
             if self.lcd.hat and self.lcd.hat.config['remote']:
@@ -460,6 +459,7 @@ class control(controlbase):
         self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
         self.control = {} # used to keep track of what is drawn on screen to avoid redrawing it
         self.lastspeed = 0
+        self.lasttime = 0
 
     def have_compass(self):
         return True
@@ -482,12 +482,12 @@ class control(controlbase):
         self.control['modes'] = modes
 
         #print('mode', self.last_val('ap.mode'))
-        modes = {'compass':   ('C', self.have_compass,   rectangle(  0, .74, .22, .16)),
-                 'gps':       ('G', self.have_gps,       rectangle(.22, .74, .25, .16)),
-                 'wind':      ('W', self.have_wind,      rectangle(.47, .74, .3,  .16)),
-                 'true wind': ('T', self.have_true_wind, rectangle(.77, .74, .23, .16))}
+        modes = {'compass':   ('C', self.have_compass,   rectangle(  0, .74, .22, .15)),
+                 'gps':       ('G', self.have_gps,       rectangle(.22, .74, .25, .15)),
+                 'wind':      ('W', self.have_wind,      rectangle(.47, .74, .3,  .15)),
+                 'true wind': ('T', self.have_true_wind, rectangle(.77, .74, .23, .15))}
 
-        self.lcd.surface.box(*(self.convrect(rectangle(0, .74, 1, .18)) + [black]))
+        self.lcd.surface.box(*(self.convrect(rectangle(0, .74, 1, .16)) + [black]))
         for mode in modes:
             if modes[mode][1]():
                 ret=self.fittext(modes[mode][2], modes[mode][0])
@@ -500,9 +500,8 @@ class control(controlbase):
 
     def display(self, refresh):
         if not self.control:
-            self.fill(black)
-            self.control = {'heading': (0, '   ', False),
-                            'heading_command': (0, '   ', False),
+            self.control = {'heading': False,
+                            'heading_command': False,
                             'mode': False, 'modes': []}
         def nr(x):
             try:
@@ -536,7 +535,11 @@ class control(controlbase):
 
         def draw_heading(pos, value, lastvalue):
             heading, mode, num = value
-            lastheading, lastmode, lastnum = lastvalue
+            try:
+                lastheading, lastmode, lastnum = lastvalue
+            except:
+                lastmode = False #refresh
+
             windmode = 'wind' in mode
 
             if mode != lastmode:
@@ -561,10 +564,14 @@ class control(controlbase):
             super(control, self).display(refresh)
             return
 
+        t0 = time.monotonic()
         mode = self.last_val('ap.mode')
-
         ap_heading = self.last_val('ap.heading')
         heading = ap_heading, mode, nr(ap_heading)
+        if self.control['heading'] and heading[2] == self.control['heading'][2]:
+            if t0 - self.lasttime < .8 and not refresh:
+                return True # optimization to not redraw frame if heading hasn't changed
+        self.lasttime = t0
         draw_heading(0, heading, self.control['heading'])
         self.control['heading'] = heading
 
@@ -585,15 +592,15 @@ class control(controlbase):
                 self.control['heading_command'] = warning
         elif mode == 'gps' and not self.have_gps():
             if self.control['heading_command'] != 'no gps':
-                self.fittext(rectangle(0, .4, 1, .4), _('GPS not detected'), True, black)
+                self.fittext(rectangle(0, .4, 1, .35), _('GPS not detected'), True, black)
                 self.control['heading_command'] = 'no gps'
         elif (mode == 'wind' or mode == 'true wind') and not self.have_wind():
             if self.control['heading_command'] != 'no wind':
-                self.fittext(rectangle(0, .4, 1, .4), _('WIND not detected'), True, black)
+                self.fittext(rectangle(0, .4, 1, .35), _('WIND not detected'), True, black)
                 self.control['heading_command'] = 'no wind'
         elif self.last_val('servo.controller') == 'none':
             if self.control['heading_command'] != 'no controller':
-                self.fittext(rectangle(0, .4, 1, .4), _('WARNING no motor controller'), True, black)
+                self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
                 self.control['heading_command'] = 'no controller'
         elif self.lcd.hat and self.lcd.hat.check_voltage():
             msg = self.lcd.hat.check_voltage()
