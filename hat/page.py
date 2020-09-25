@@ -202,7 +202,7 @@ class page(object):
         surface.box(*(self.convrect(rect) + [color]))
                 
     def last_val(self, name, period=-1, default='N/A'):
-        if period is -1:
+        if period == -1:
             period = self.frameperiod
         self.watches[name] = period
         if name in self.lcd.last_msg:
@@ -694,14 +694,15 @@ class control(controlbase):
                 self.set('ap.heading_command', cmd)
         else: # manual control
             speed = self.speed_of_keys()
-            if not speed:
-                if self.lastspeed:
-                    self.set('servo.command', 0)
-                return super(control, self).process()
-            
-            self.set('servo.command', speed)
+            if speed:
+                self.set('servo.command', speed)
+            elif self.lastspeed:
+                self.set('servo.command', 0)
             self.lastspeed = speed
 
+
+        return super(control, self).process()
+            
 class connecting(controlbase):
     def __init__(self, lcd):
         super(connecting, self).__init__(lcd)

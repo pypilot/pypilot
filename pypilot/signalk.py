@@ -11,7 +11,7 @@ import time, socket, multiprocessing, os
 from nonblockingpipe import NonBlockingPipe
 import pyjson
 from client import pypilotClient
-from values import RangeProperty
+from values import Property, RangeProperty
 from sensors import source_priority
 
 signalk_priority = source_priority['signalk']
@@ -93,6 +93,7 @@ class signalk(object):
                     self.last_values_keys[signalk_path] = {}
 
         self.period = self.client.register(RangeProperty('signalk.period', .5, .1, 2, persistent=True))
+        self.uid = self.client.register(Property('signalk.uid', False, persistent=True))
 
         self.signalk_host_port = False
         self.signalk_ws_url = False
@@ -132,7 +133,6 @@ class signalk(object):
         browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
         #zeroconf.close()
         self.initialized = True
-        
 
     def probe_signalk(self):
         print('signalk probe...', self.signalk_host_port)
@@ -185,8 +185,15 @@ class signalk(object):
             return
 
         try:
-            uid = "1234-45653343454";
-            r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":uid, "description": "pypilot"})
+            def random_number_string(n):
+                if n == 0:
+                    return ''
+                import random
+                return str(int(random.random()*10)) + random_number_string(n-1)
+            
+            if not self.uid.value:
+                self.uid.set('1234-' + random_number_string(11))
+            r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":self.uid.value, "description": "pypilot"})
             
             contents = pyjson.loads(r.content)
             print('signalk post', contents)

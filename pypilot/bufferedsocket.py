@@ -82,7 +82,8 @@ try:
 
                 if self.sendfail_cnt > 100:
                     self.socket.close()
-                return
+                    return
+  
             t0 = time.monotonic()
             count = self.socket.send(self.out_buffer.encode())
             t1 = time.monotonic()
