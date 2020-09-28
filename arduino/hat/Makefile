@@ -42,9 +42,6 @@ IRLib2/IRLib2/IRLibRecvBase.cpp \
 IRLib2/IRLib2/IRLibDecodeBase.cpp \
 IRLib2/IRLibProtocols/IRLibHardware.cpp \
 
-
-
-
 SRCS = $(ARDUINO_SRCS) $(IRLib2_SRCS) RCSwitch.cpp wiring.c
 
 OBJSC = $(SRCS:.cpp=.o)
