@@ -378,34 +378,34 @@ class Nmea(object):
         # send imu nmea messages to sockets at 2hz
         dt = time.monotonic() - self.last_imu_time
         values = self.client.values.values
-        if self.sockets and dt > .5 and \
-           'imu.pitch' in values:
-            self.send_nmea('APXDR,A,%.3f,D,PTCH' % values['imu.pitch'].value)
-            self.send_nmea('APXDR,A,%.3f,D,ROLL' % values['imu.roll'].value)
-            self.send_nmea('APHDM,%.3f,M' % values['imu.heading_lowpass'].value)
-            self.last_imu_time = time.monotonic()
+        if self.sockets:
+            if dt > .5 and 'imu.pitch' in values:
+                self.send_nmea('APXDR,A,%.3f,D,PTCH' % values['imu.pitch'].value)
+                self.send_nmea('APXDR,A,%.3f,D,ROLL' % values['imu.roll'].value)
+                self.send_nmea('APHDM,%.3f,M' % values['imu.heading_lowpass'].value)
+                self.last_imu_time = time.monotonic()
 
-        # should we output gps?  for now no
-        # limit to 4hz output of wind and rudder
-        t = time.monotonic()
-        for name in ['wind', 'rudder'] if self.sockets else []:
-            dt = t - self.nmea_times[name] if name in self.nmea_times else 1
-            source = self.sensors.sensors[name].source.value
-            # only output to tcp if we have a better source
-            if dt > .25 and source_priority[source] < source_priority['tcp']:
-                if name == 'wind':
-                    wind = self.sensors.wind
-                    self.send_nmea('APMWV,%.3f,R,%.3f,N,A' % (wind.direction.value, wind.speed.value))
-                elif name == 'rudder':
-                    self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
-                self.nmea_times[name] = t
+            # should we output gps?  for now no
+            # limit to 4hz output of wind and rudder
+            t = time.monotonic()
+            for name in ['wind', 'rudder']:
+                dt = t - self.nmea_times[name] if name in self.nmea_times else 1
+                source = self.sensors.sensors[name].source.value
+                # only output to tcp if we have a better source
+                if dt > .25 and source_priority[source] < source_priority['tcp']:
+                    if name == 'wind':
+                        wind = self.sensors.wind
+                        self.send_nmea('APMWV,%.3f,R,%.3f,N,A' % (wind.direction.value, wind.speed.value))
+                    elif name == 'rudder':
+                        self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
+                    self.nmea_times[name] = t
             
         t5 = time.monotonic()
         if not self.nmea_bridge.process:
             self.nmea_bridge.poll()
         
         t6 = time.monotonic()
-        if t6 - t0 > .1 and self.start_time - t0 > 1:
+        if t6 - t0 > .1 and self.start_time - t0 > 1: # report times if processing takes more than 0.1 seconds
             print('nmea poll times', self.start_time-t0, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
             
     def probe_serial(self):
