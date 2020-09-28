@@ -23,8 +23,7 @@
 
 #define DATA_PIN 2
 #define DIR_PIN 4
-//#define LED_PIN 8
-#define LED_PIN 13
+#define LED_PIN 8
 
 // start byte $ followed by PACKET_LEN bytes, and a parity byte
 #define PACKET_LEN 6
@@ -180,10 +179,6 @@ void set_buzzer(uint8_t mode, uint8_t timeout)
 }
 
 void setup() {
-        cli();
-        CLKPR = _BV(CLKPCE);
-        CLKPR = _BV(CLKPS0); // divide by 2
-        sei();
     // turn led on booting
     digitalWrite(LED_PIN, HIGH);
     pinMode(LED_PIN, OUTPUT);
@@ -213,10 +208,10 @@ void setup() {
     ADCSRA |= _BV(ADSC);
 
     // turn on SPI in slave mode
-//    SPCR |= _BV(SPE);
+    SPCR |= _BV(SPE);
     // turn on interrupts
-//    SPCR |= _BV(SPIE);
-//    pinMode(MISO, OUTPUT);
+    SPCR |= _BV(SPIE);
+    pinMode(MISO, OUTPUT);
 
     // buzzer
     pinMode(5, OUTPUT);

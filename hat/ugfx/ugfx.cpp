@@ -836,13 +836,11 @@ public:
 
         for(uint8_t i=0;i<8;i++)
         {
-            if(i) {
-                unsigned char c1 = 0xb0+i;
-                unsigned char cmd[] = {c1, 0x10};
-                digitalWrite (dc, LOW) ;	// Off
-                write(spifd, cmd, sizeof cmd);
-                digitalWrite (dc, HIGH) ;	// Off
-            }
+            unsigned char c1 = 0xb0+i;
+            unsigned char cmd[] = {c1, 0x10};
+            digitalWrite (dc, LOW) ;	// Off
+            write(spifd, cmd, sizeof cmd);
+            digitalWrite (dc, HIGH) ;	// Off
 #if 0
             unsigned char *address = binary + i*128; //pointer
             for (unsigned int pos=0; pos<128; pos ++) {

@@ -93,7 +93,7 @@ class signalk(object):
                     self.last_values_keys[signalk_path] = {}
 
         self.period = self.client.register(RangeProperty('signalk.period', .5, .1, 2, persistent=True))
-        self.uid = self.client.register(Property('signalk.uid', False, persistent=True))
+        self.uid = self.client.register(Property('signalk.uid', 'pypilot', persistent=True))
 
         self.signalk_host_port = False
         self.signalk_ws_url = False
@@ -191,8 +191,8 @@ class signalk(object):
                 import random
                 return str(int(random.random()*10)) + random_number_string(n-1)
             
-            if not self.uid.value:
-                self.uid.set('1234-' + random_number_string(11))
+            if self.uid.value == 'pypilot':
+                self.uid.set('pypilot-' + random_number_string(11))
             r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":self.uid.value, "description": "pypilot"})
             
             contents = pyjson.loads(r.content)

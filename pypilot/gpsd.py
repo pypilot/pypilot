@@ -40,7 +40,6 @@ class gpsProcess(multiprocessing.Process):
             sock.send('?WATCH={"enable":true,"json":true};'.encode())
             self.gpsd_socket = LineBufferedNonBlockingSocket(sock, 'gpsd')
             self.gpsconnecttime = time.monotonic()
-            #self.gpsd = gps.gps(mode=gps.WATCH_ENABLE) #starting the stream of info
             self.devices = []
             print('gpsd connected')
         #except socket.error:
@@ -58,37 +57,12 @@ class gpsProcess(multiprocessing.Process):
         self.poller.unregister(self.gpsd_socket.socket)
         self.gpsd_socket.close()
         self.gpsd_socket = False
-        self.devices = False
+        self.devices = []
 
     def read_pipe(self, pipe):
         while True:
-            try:
-                gpsdata = self.gpsd.next()
-                device = None
-                if 'devices' in gpsdata:
-                    for dev in gpsdata['devices']:
-                        device = dev['path']
-                        if not device in self.devices:
-                            pipe.send({'device': device})
-                            self.devices.append(device)
-
-                if self.gpsd.fix.mode == 3 and \
-                   time.monotonic() - lasttime > .25:
-                    fix = {}
-                    #fix['time'] = self.gpsd.fix.time
-                    fix['track'] = self.gpsd.fix.track
-                    fix['speed'] = self.gpsd.fix.speed * 1.944 # knots
-                    fix['latitude'] = self.gpsd.fix.latitude
-                    fix['longitude'] = self.gpsd.fix.longitude
-                    fix['device'] = device
-                    pipe.send(fix, False)
-                    lasttime = time.monotonic()
-
-            except StopIteration:
-                print('gpsd lost connection')
-                break
-            except Exception as e:
-                print('UNHANDLED!!!!!!!!!!!!!!!!!!!! gpsd unhandled exception', e)
+            device = pipe.recv()
+            if not device:
                 break
             if self.gpsd_socket and not self.devices: # only probe if there are no gpsd devices
                 print('gpsd PROBING...', device)                    
@@ -137,17 +111,34 @@ class gpsProcess(multiprocessing.Process):
                         fix[key] = msg[key]
                 fix['speed'] *= 1.944 # knots
                 device = msg['device']
+                if self.baud_boot_device_hint != device:
+                    self.write_baud_boot_hint(device)
                 if not device in self.devices:
                     self.devices.append(device)
                     ret = True
                 pipe.send(fix, False)
         return ret
 
+    def write_baud_boot_hint(self, device):
+        self.baud_boot_device_hint = device
+        try:
+            stty=os.popen('sudo stty -F ' + device)
+            line = stty.readline()
+            stty.close()
+            speed = line.index('speed')
+            baud = line.index('baud')
+            bps = int(line[speed+6:baud-1])
+            f = open(os.getenv('HOME') + '/.pypilot/gpsd_baud_hint', 'w')
+            f.write(str(bps))
+            f.close()
+        except Exception as e:
+            print('gpsd failed to determine serial baud rate of device')
+            
     def gps_process(self, pipe):
         print('gps process', os.getpid())
         self.gpsd_socket = False
         self.poller = select.poll()
-        self.devices = False
+        self.baud_boot_device_hint = ''
         while True:
             self.read_pipe(pipe)
             if not self.gpsd_socket:

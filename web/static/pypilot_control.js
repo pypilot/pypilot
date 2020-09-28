@@ -63,23 +63,23 @@ $(document).ready(function() {
     var gains = [];
     var conf_names = [];
     socket.on('pypilot_values', function(msg) {
-        watches = {}
-        var list_values = JSON.parse(msg)
-        $('#connection').text('Connected')
+        watches = {};
+        var list_values = JSON.parse(msg);
+        $('#connection').text('Connected');
         $('#aperrors0').text("");
         $('#aperrors1').text("");
 
         // control
-        pypilot_watch('ap.enabled')
-        pypilot_watch('ap.mode')
+        pypilot_watch('ap.enabled');
+        pypilot_watch('ap.mode');
 
-        pypilot_watch('ap.heading_command', .5)
+        pypilot_watch('ap.heading_command', .5);
 
         // gain
-        pypilot_watch('ap.pilot')
-        $('#gain_container').text('')
+        pypilot_watch('ap.pilot');
+        $('#gain_container').text('');
 
-        $('#gain_container').append('<div class="w3-row">Pilot&emsp;<select id="pilot">')
+        $('#gain_container').append('<div class="w3-row">Pilot&emsp;<select id="pilot">');
         if('ap.pilot' in list_values && 'choices' in list_values['ap.pilot']) {
             var pilots = list_values['ap.pilot']['choices'];
             for (var pilot in pilots)
@@ -163,7 +163,7 @@ $(document).ready(function() {
         setup_watches();
     });
 
-    socket.on('pypilot_disconnect', function(msg) {
+    socket.on('pypilot_disconnect', function() {
         $('#connection').text('Disconnected')
     });
 
@@ -177,10 +177,6 @@ $(document).ready(function() {
             pypilot_set('servo.command', servo_command);
         }
     }
-    
-    socket.on('disconnect', function() {
-        $('#connection').text('Disconnected')
-    });
     
     // Event handler for server sent data.
     socket.on('log', function(msg) {
