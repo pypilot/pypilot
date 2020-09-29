@@ -52,7 +52,7 @@ prog: $(SKETCHNAME).cpp.hex
 	$(AVRDUDE) -C/usr/share/arduino/hardware/tools/avrdude.conf -v -patmega328p -c $(BOOTLOADER) -P $(DEVICE) -b $(BAUDRATE) -Uflash:w:$(SKETCHNAME).cpp.hex:i -Ulock:w:0xc0:m
 
 setfuses:
-	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -b $(BAUDRATE)  -Uefuse:w:0xFF:m -Uhfuse:w:0xDB:m -Ulfuse:w:0x7F:m
+	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -b $(BAUDRATE)  -Uefuse:w:0xFE:m -Uhfuse:w:0xDB:m -Ulfuse:w:0x7F:m
 
 
 #	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -b $(BAUDRATE) -Ulock:w:0xc3:m
