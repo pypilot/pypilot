@@ -85,7 +85,7 @@ class arduino(object):
 
                 try:
                     GPIO.setmode(GPIO.BCM)
-                    GPIO.setup(self.resetpin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                    GPIO.setup(int(self.resetpin), GPIO.IN, pull_up_down=GPIO.PUD_UP)
                     pass
                 except Exception as e:
                     print('arduino failed to set reset pin high', e)
@@ -128,8 +128,9 @@ class arduino(object):
             self.packetout_data += bytes([d | 0x80])
         self.packetout_data += bytes([p | 0x80])
 
-    def set_backlight(self, value):
-        value = min(max(int(value*5), 0), 120)
+    def set_backlight(self, value):        
+        value = min(max(int(value*3), 0), 120)
+        print('set backling', value)        
         polarity = self.hatconfig['device'] == 'nokia5110'
         backlight = [value, polarity]
         self.send(SET_BACKLIGHT, backlight)
@@ -247,8 +248,6 @@ class arduino(object):
             count = d[4]
 
             if cmd == RF:
-                if key == '33297C00': # pypilot remote keyup code, ignore
-                    continue
                 key = 'rf' + key
             elif cmd == IR:
                 if not self.config['arduino.ir']:
@@ -259,7 +258,7 @@ class arduino(object):
             elif cmd == VOLTAGE:
                 vcc = (d[0] + (d[1]<<7))/1000.0
                 vin = (d[2] + (d[3]<<7))/1000.0
-                events.append(['voltage', {'vcc': vcc, 'vin': vin}])
+                events.append(['voltage', {'vcc': vcc, 'vin': vin}, d[3], d[4]])
                 continue
             else:
                 print('unknown message', cmd, d)
@@ -317,8 +316,8 @@ class arduino(object):
 
         try:
             GPIO.setmode(GPIO.BCM)
-            GPIO.setup(self.resetpin, GPIO.OUT)
-            GPIO.output(self.resetpin, 0)
+            GPIO.setup(int(self.resetpin), GPIO.OUT)
+            GPIO.output(int(self.resetpin), 0)
         except Exception as e:
             print('failed to setup gpio reset pin for arduino', e)
             GPIO = False # prevent further tries
@@ -327,8 +326,8 @@ class arduino(object):
         command = 'avrdude -P ' + self.hatconfig['device'] + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 500000'
         print('cmd', command)
         ret = os.system(command)
-        GPIO.output(self.resetpin, 1)
-        GPIO.setup(self.resetpin, GPIO.IN)
+        GPIO.output(int(self.resetpin), 1)
+        GPIO.setup(int(self.resetpin), GPIO.IN)
         return not ret
 
     def verify(self, filename):
@@ -389,7 +388,7 @@ def arduino_process(pipe, config):
 def main():
     print('initializing arduino')
     config = {'host':'localhost','hat':{'arduino':{'device':'/dev/spidev0.1',
-                                                   'resetpin':'gpio16'}},
+                                                   'resetpin':'16'}},
               'arduino.nmea.baud': 38400,
               'arduino.nmea.in': False,
               'arduino.nmea.out': False,

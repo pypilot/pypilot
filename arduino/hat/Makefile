@@ -24,8 +24,6 @@ ARDUINO_SRCS = \
 $(ARDUINO_PATH)/libraries/Wire/Wire.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_digital.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_analog.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_shift.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_pulse.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/WInterrupts.c \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/new.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/WString.cpp \

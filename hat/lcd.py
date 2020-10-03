@@ -56,7 +56,7 @@ class LCD():
         else:
             self.config = {}
             
-        default = {'contrast': 60, 'invert': False, 'backlight': 50,
+        default = {'contrast': 60, 'invert': False, 'backlight': 20,
                    'flip': False, 'language': 'en', 'bigstep': 10,
                    'smallstep': 1};
 
@@ -74,6 +74,7 @@ class LCD():
             
         for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'tft', 'none']:
             if pdriver in sys.argv:
+                print('overriding driver', driver, ' to command line', pdriver)
                 sys.argv.remove(pdriver)
                 driver = pdriver
                 break
@@ -279,7 +280,7 @@ class LCD():
             self.screen.contrast = int(self.config['contrast'])
 
         if micropython:
-            self.screen.hue = int(float(self.config['backlight'])*255/100)
+            self.screen.hue = int(float(self.config['backlight'])*255/40)
 
         t2=gettime();
         self.screen.refresh()
