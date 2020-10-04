@@ -2,8 +2,14 @@ Installing:
 
 The dependencies can be installed with 'apt install' or sometimes 'pip install"
 
-server dependencies (required): python-gps python-serial libpython-dev python-numpy python-scipy swig
+server dependencies (required): RTIMULIB2 python-gps python-serial libpython-dev python-numpy python-scipy swig
                     (recommended): ujson pyudev
+
+RTIMULIB2 must be the git version from https://github.com/seandepagnier/RTIMULib2
+git clone https://github.com/seandepagnier/RTIMULib2
+cd RTIMULib2/Linux/python/
+sudo python3 setup.py install
+
 hat dependencies: python-pil
 web dependencies: python-flask python-gevent-websocket
 
