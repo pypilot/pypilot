@@ -53,6 +53,7 @@ class LoadLIRC(threading.Thread):
 class lirc(object):
     def __init__(self, config):
         self.lastkey = False
+        self.lastcount = 0
         self.lasttime = time.monotonic()
         self.config = config
         self.LIRC = None
@@ -93,26 +94,29 @@ class lirc(object):
             if not self.config['pi.ir']:
                 continue
                 
-            if self.lastkey and self.lastkey != key:
+            if (self.lastkey and self.lastkey != key) or \
+               self.lastcount >= count:
                 events.append((self.lastkey, 0))
             self.lastkey = key
+            self.lastcount = count
             self.lasttime = t
             events.append((key, count))
 
         # timeout keyup
         if self.lastkey and t - self.lasttime > .25:
             events.append((self.lastkey, 0))
+            self.lastcount = 0
             self.lastkey = False
         return events
 
 def main():
-    lircd = lirc()
+    lircd = lirc({'pi.ir': True})
     while True:
         events = lircd.poll()
         if events:
             print('events', events)
             lircd.events = []
-        time.sleep(.1)
+        time.sleep(.02)
             
 if __name__ == '__main__':
     main()

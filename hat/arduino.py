@@ -130,7 +130,6 @@ class arduino(object):
 
     def set_backlight(self, value):        
         value = min(max(int(value*3), 0), 120)
-        print('set backling', value)        
         polarity = self.hatconfig['device'] == 'nokia5110'
         backlight = [value, polarity]
         self.send(SET_BACKLIGHT, backlight)
@@ -174,7 +173,6 @@ class arduino(object):
         events = []
         serial_data =  []
         self.open_nmea()
-
         # don't exceed 90% of baud rate
         baud = int(self.config['arduino.nmea.baud']) *.9
         while True:
@@ -192,7 +190,6 @@ class arduino(object):
                         print('nmea socket exception', e)
                         self.nmea_socket.close()
                         self.nmea_socket = False
-
             i = 0
             if self.socketdata:
                 count, t0 = self.pollt0
@@ -226,7 +223,6 @@ class arduino(object):
             if self.packetin_data[0] != ord('$'):
                 self.packetin_data = self.packetin_data[1:]
                 continue
-
             cmd = self.packetin_data[1]
             d = self.packetin_data[2:PACKET_LEN+2]
             parity = self.packetin_data[PACKET_LEN+2];
@@ -258,7 +254,7 @@ class arduino(object):
             elif cmd == VOLTAGE:
                 vcc = (d[0] + (d[1]<<7))/1000.0
                 vin = (d[2] + (d[3]<<7))/1000.0
-                events.append(['voltage', {'vcc': vcc, 'vin': vin}, d[3], d[4]])
+                events.append(['voltage', {'vcc': vcc, 'vin': vin}])
                 continue
             else:
                 print('unknown message', cmd, d)
@@ -289,7 +285,6 @@ class arduino(object):
             return
 
         self.nmea_connect_time += 8
-
         self.socketdata = b''
         try:
             self.nmea_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

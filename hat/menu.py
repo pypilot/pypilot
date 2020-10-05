@@ -395,6 +395,7 @@ class select_wifi_defaults(select_wifi):
 class wifi(menu):
     def __init__(self):
         self.wifi_settings = None
+        self.have_wifi = False        
         try:
             wifi_settings = default_network.copy()
             f = open(networking, 'r')
@@ -402,9 +403,10 @@ class wifi(menu):
                 l = f.readline()
                 if not l:
                     break
-                for setting in wifi_settings:
-                    if l.startswith(setting+'='):
-                        wifi_settings[setting] = l[len(setting)+1:].strip()
+                parsed = l.rstrip().split('=', 1)
+                if len(parsed) == 2:
+                    setting, value = parsed
+                    wifi_settings[setting] = value
             f.close()
             items = [select_wifi_ap_toggle('AP/Client', wifi_settings),
                      select_wifi_defaults(_('defaults'), wifi_settings)]
@@ -444,7 +446,10 @@ class wifi(menu):
             self.fittext(rectangle(0, .87, 1, .13), info)
 
     def process(self):
-        if not test_wifi():
+        have_wifi = test_wifi()
+        if have_wifi != self.have_wifi:
+            self.lcd.need_refresh = True
+        if not have_wifi:
             if self.testkeydown(MENU):
                 return self.prev
         return super(wifi, self).process()
