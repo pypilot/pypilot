@@ -24,7 +24,7 @@ def make_pin(pin, i, lcd):
 
     if not noisr:
         try:
-            Pin.irq(handler = cbr, trigger=Pin.IRQ_FALLING | Pin.IRQ_RISING)
+            pin.irq(handler = cbr, trigger=Pin.IRQ_FALLING | Pin.IRQ_RISING)
         except:
             print('no Pin.irq!! keypresses will lag')
             noisr = True

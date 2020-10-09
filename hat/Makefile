@@ -1,4 +1,4 @@
-MPY_CROSS = /home/sean/ttgo/MicroPython_ESP32_psRAM_LoBo/MicroPython_BUILD/components/micropython/mpy-cross/mpy-cross
+MPY_CROSS = /home/sean/MicroPython_ESP32_psRAM_LoBo/MicroPython_BUILD/components/micropython/mpy-cross/mpy-cross
 PORT=/dev/ttyUSB0
 
 %.mpy : %.py

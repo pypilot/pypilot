@@ -73,24 +73,24 @@ while True:
     gpio_esp32.poll(lcd)
     t2 = time.time()
         
-    if time.time() - sleeptime > 20:
+    if time.time() - sleeptime > 10:
         #print('sleep blank screen')
         tft.backlight(False)
         #esp.sleep_type(esp.SLEEP_MODEM) # SLEEP_LIGHT
         sleepmode = 1
 
-    if time.time() - sleeptime > 60:
+    if time.time() - sleeptime > 20:
         if wifi_esp32.station.isconnected():
-            #print('sleep wifi off')
-            #wifi_esp32.station.active(False)
+            print('sleep wifi off')
             pass
-        #machine.freq(80000000)
+        wifi_esp32.station.active(False)
+        machine.freq(80000000)
         sleepmode = 2
 
     #if wifi_esp32.station.isconnected():
     wifi_esp32.poll(lcd.client)
 
-    if time.time() - sleeptime > 300:
+    if time.time() - sleeptime > 30:
         print('sleep power down')
         machine.deepsleep()
 
