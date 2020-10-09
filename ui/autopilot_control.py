@@ -207,7 +207,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 #                self.tbAP.SetValue(False)
 #                self.tbAP.SetForegroundColour(wx.RED)
             elif name == 'ap.enabled':
-                self.tbAP.SetValue(value)
+                self.tbAP.SetValue(int(value))
                 self.set_mode_color()
                 self.apenabled = value
                 self.bCenter.Show(not self.apenabled and self.rudder)
