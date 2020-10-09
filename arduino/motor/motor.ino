@@ -376,8 +376,6 @@ void setup()
     // set up Serial library
     Serial.begin(38400*DIV_CLOCK);
 
-    set_sleep_mode(SLEEP_MODE_IDLE); // wait for serial
-
     digitalWrite(A0, LOW);
     pinMode(A0, OUTPUT);
     voltage_sense = digitalRead(voltage_sense_pin);
@@ -905,7 +903,7 @@ uint16_t TakeVolts(uint8_t p)
         v = v * 14135 / 3584 / 16;
     else if(ratiometric_mode) {
         // 100.0/1024*115000/15000*5.0
-        v = v * 719 / 192 / 16;
+        v = v * 1439 / 384 / 16;
     } else
         // 1815 / 896 = 100.0/1024*10560/560*1.1
         //    v = v * 1815 / 896 / 16;
@@ -1200,23 +1198,6 @@ void loop()
     if(timeout > 32) // detach 62 ms later so esc gets stop
         detach();
 
-    // wait for characters
-    // boot powered down, wake on data
-#if 0 // hardly worth it
-    while(ADCSRA & _BV(ADSC)) { // wait for conversion
-        set_sleep_mode(SLEEP_MODE_IDLE);
-        sleep_enable();
-        sleep_cpu();
-    }
-#endif
-
-#if 0
-    // hack to output this command always (for testing)
-    timeout = 0;
-    command_value = 1900;
-    engage();
-#endif
-    
     // serial input
     while(Serial.available()) {
       uint8_t c = Serial.read();
