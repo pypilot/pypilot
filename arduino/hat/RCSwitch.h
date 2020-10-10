@@ -97,7 +97,7 @@ class RCSwitch {
     void setPulseLength(int nPulseLength);
     void setRepeatTransmit(int nRepeatTransmit);
     #if not defined( RCSwitchDisableReceiving )
-    void setReceiveTolerance(int nPercent);
+    void setReceiveTolerance(uint8_t nPercent256);
     #endif
 
     struct HighLow {
@@ -134,7 +134,7 @@ class RCSwitch {
     Protocol protocol;
 
     #if not defined( RCSwitchDisableReceiving )
-    static int nReceiveTolerance;
+    static uint8_t nReceiveTolerance;
     static unsigned long nReceivedValue;
     static unsigned int nReceivedBitlength;
     static unsigned int nReceivedDelay;
