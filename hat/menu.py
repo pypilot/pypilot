@@ -348,8 +348,8 @@ class calibrate(menu):
             r.height = .25
             self.invertrectangle(r)
             
-        self.fittext(rectangle(0, .86, .5, .14), self.round_last_val('imu.pitch', 1))
-        self.fittext(rectangle(.5, .86, .5, .14), self.round_last_val('imu.heel', 1))
+        self.fittext(rectangle(0, .9, .5, .11), self.round_last_val('imu.pitch', 1))
+        self.fittext(rectangle(.5, .9, .5, .11), self.round_last_val('imu.heel', 1))
 
     
 class motor(menu):
@@ -417,17 +417,17 @@ class wifi(menu):
         super(wifi, self).__init__('WIFI', items)
 
     def display(self, refresh):
-        if not test_wifi():
-            self.fill(black)
-            self.fittext(rectangle(0, 0, 1, 1), _('No Wifi detected'), True)
-            return
-
         if not self.wifi_settings:
             self.fill(black)
             self.fittext(rectangle(0, 0, 1, 1), _('Wifi not managed'), True)
             return
 
         super(wifi, self).display(refresh)
+        self.have_wifi = test_wifi()
+        if not self.have_wifi:
+            info = _('No Connetion')
+            self.fittext(rectangle(0, 0, 1, .20), info)
+            
         if self.wifi_settings['mode'] == 'Master':
             info = 'mode: AP\n'
             ssid = 'ssid'
@@ -449,9 +449,6 @@ class wifi(menu):
         have_wifi = test_wifi()
         if have_wifi != self.have_wifi:
             self.lcd.need_refresh = True
-        if not have_wifi:
-            if self.testkeydown(MENU):
-                return self.prev
         return super(wifi, self).process()
         
 class control_menu(menu):

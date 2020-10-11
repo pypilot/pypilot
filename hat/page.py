@@ -424,12 +424,11 @@ class controlbase(page):
 
     def display(self, refresh):
         if refresh:
-            self.box(rectangle(0, .9, 1, .1), black)
+            self.box(rectangle(0, .92, 1, .1), black)
             self.wifi = False
             
-        battrect = rectangle(0.03, .93, .25, .06)
-        
         if self.lcd.battery_voltage:
+            battrect = rectangle(0.03, .93, .25, .06)
             batt = min(max((self.lcd.battery_voltage-3)/.7, 0), 1)
             if batt != self.batt or refresh:
                 self.batt = batt
@@ -482,12 +481,13 @@ class control(controlbase):
         self.control['modes'] = modes
 
         #print('mode', self.last_val('ap.mode'))
-        modes = {'compass':   ('C', self.have_compass,   rectangle(  0, .74, .22, .15)),
-                 'gps':       ('G', self.have_gps,       rectangle(.22, .74, .25, .15)),
-                 'wind':      ('W', self.have_wind,      rectangle(.47, .74, .3,  .15)),
-                 'true wind': ('T', self.have_true_wind, rectangle(.77, .74, .23, .15))}
+        modes = {'compass':   ('C', self.have_compass,   rectangle(  0, .74, .22, .16)),
+                 'gps':       ('G', self.have_gps,       rectangle(.22, .74, .25, .16)),
+                 'wind':      ('W', self.have_wind,      rectangle(.47, .74, .3,  .16)),
+                 'true wind': ('T', self.have_true_wind, rectangle(.77, .74, .23, .16))}
 
-        self.lcd.surface.box(*(self.convrect(rectangle(0, .74, 1, .16)) + [black]))
+        marg = 0.02
+        self.lcd.surface.box(*(self.convrect(rectangle(0, .74, 1, .16+marg)) + [black]))
         for mode in modes:
             if modes[mode][1]():
                 ret=self.fittext(modes[mode][2], modes[mode][0])
@@ -495,7 +495,6 @@ class control(controlbase):
         for mode in modes:
             if self.last_val('ap.mode') == mode:
                 r = modes[mode][2]
-                marg = .02
                 self.rectangle(rectangle(r.x, r.y+marg, r.width, r.height), .015)
 
     def display(self, refresh):
