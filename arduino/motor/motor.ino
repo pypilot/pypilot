@@ -300,9 +300,14 @@ uint8_t eeprom_read_end = 0;
 uint8_t adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
 volatile uint8_t calculated_clock = 0; // must be volatile to work correctly
 uint16_t clock_time;
+uint8_t timeout;
+uint16_t serial_data_timeout;
 
 void setup()
 {
+    PCICR = 0;
+    PCMSK2 = 0;
+        
     cli(); // disable interrupts
     CLKPR = _BV(CLKPCE);
     CLKPR = _BV(CLKPS1); // divide clock by 4
@@ -460,6 +465,21 @@ void setup()
 #endif
     ADCSRA |= _BV(ADPS0) |  _BV(ADPS1) | _BV(ADPS2); // divide clock by 128
     ADCSRA |= _BV(ADSC); // start conversion
+
+    timeout = 0;
+#if defined(__AVR_ATmega328pb__)
+    if(pwm_style == 3) {
+        TCNT4 = 0;
+        /// fix this TCCR4B = _BV(CS22) | _BV(CS21) | _BV(CS20); // divide 1024
+        // use timer5 as timeout
+    } else
+#endif        
+    {
+        // use timer2 as timeout
+        TCNT2 = 0;
+        TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20); // divide 1024
+    }
+    serial_data_timeout = 250;
 }
 
 uint8_t in_bytes[3];
@@ -468,7 +488,6 @@ uint8_t sync_b = 0, in_sync_count = 0;
 uint8_t out_sync_b = 0, out_sync_pos = 0;
 uint8_t crcbytes[3];
 
-uint8_t timeout;
 uint8_t rudder_sense = 0;
 
 // command is from 0 to 2000 with 1000 being neutral
@@ -499,10 +518,7 @@ void position(uint16_t value)
         // but the current through the motor remains continuous
         if(value > 1100) {
             if(value > 1900) {
-                if(low_current)
-                    ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
-                else
-                    ICR1_u=16000;  //faster frequency for high current board
+                ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
 #if 0
                 OCR1A_u = 120; // 99.8% duty cycle (not used anymore)
                 timer1_state = 1;
@@ -520,10 +536,7 @@ void position(uint16_t value)
 
         } else if(value < 900) {
             if(value < 100) {
-                if(low_current)
-                    ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
-                else
-                    ICR1_u=16000;  //faster frequency for high current board
+                ICR1_u=64000;  //fPWM=62.5hz, 125hz, or 250hz
 #if 0
                 OCR1B_u = 120;  // using old state, 80/64000 = .99875 deadtime
                 timer1_state = 2;
@@ -721,20 +734,6 @@ void engage()
     position(1000);
     digitalWrite(clutch_pin, HIGH); // clutch
     digitalWrite(led_pin, HIGH); // status LED
-
-    timeout = 0;
-#if defined(__AVR_ATmega328pb__)
-    if(pwm_style == 3) {
-        TCNT4 = 0;
-        /// fix this TCCR4B = _BV(CS22) | _BV(CS21) | _BV(CS20); // divide 1024
-        // use timer5 as timeout
-    } else
-#endif        
-    {
-        // use timer2 as timeout
-        TCNT2 = 0;
-        TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20); // divide 1024
-    }
 
     flags |= ENGAGED;
 }
@@ -1159,6 +1158,8 @@ void service_adc() {
     ADCSRA |= _BV(ADSC); // start conversion
 }
 #endif
+ISR(PCINT2_vect) {
+}
 
 void loop()
 {
@@ -1183,6 +1184,7 @@ void loop()
                 update_command(); // update speed changes to slew speed
             timeout_d = 0;
             timeout++;
+            serial_data_timeout++;
         }
 #if defined(__AVR_ATmega328pb__)
         if(pwm_style == 3)
@@ -1198,9 +1200,39 @@ void loop()
     if(timeout > 32) // detach 62 ms later so esc gets stop
         detach();
 
+#if 1
+    if(serial_data_timeout > 250 && timeout>32) { // no serial data for 10 seconds, enter power down
+        TCNT2 = 0;
+        
+        // make watchdog 8 seconds
+        cli();
+        WDTCSR = (1<<WDCE)|(1<<WDE);
+        WDTCSR = (1<<WDIE) | (1<<WDP3) | (1<<WDP0);
+        sei();
+#if 1 // power down not working because of noise?!?
+        PCICR |= _BV(PCIE2); // pin change interrupt
+        PCMSK2 = _BV(PD0); // rx
+        set_sleep_mode(SLEEP_MODE_PWR_DOWN);  // not working
+#else
+        set_sleep_mode(SLEEP_MODE_IDLE); // can wake from serial data
+#endif
+        sleep_enable();
+        sleep_cpu();
+        cli();
+        PCICR = 0;
+        PCMSK2 = 0;
+        wdt_reset();
+        WDTCSR = (1<<WDCE)|(1<<WDE); // watchdog back to 0.25 seconds
+        WDTCSR = (1<<WDIE) | (1<<WDP2);
+        sei();
+        serial_data_timeout -= 5;
+    }
+#endif
+
     // serial input
     while(Serial.available()) {
       uint8_t c = Serial.read();
+      serial_data_timeout = 0;
       service_adc();
       if(sync_b < 3) {
           in_bytes[sync_b] = c;
