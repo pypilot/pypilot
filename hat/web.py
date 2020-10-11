@@ -115,7 +115,7 @@ class WebConfig(Namespace):
             for name in actions:
                 actions[name] = []
 
-            for name, keys in default_action_keys.items():
+            for name, keys in default_actions.items():
                 actions[name] = keys.copy()
 
             self.emit_keys()
@@ -188,6 +188,7 @@ def web_process(pipe, config):
     print('web process', os.getpid())
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
+    print('web config', config)
     socketio.on_namespace(WebConfig('', pipe, config))
     socketio.run(app, debug=False, host='0.0.0.0', port=web_port)
     
