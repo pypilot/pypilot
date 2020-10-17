@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <body>
-    <H2>Compass Calibration Plot</H2>
+    <H2>Calibration Plot</H2>
       <canvas width = "570" height = "570" id = "canvas"></canvas>
       <script type="text/javascript" src="static/jquery.min.js"></script>
       <script type="text/javascript" src="static/socket.io.min.js"></script>
@@ -9,7 +9,23 @@
       <script>
         var pypilot_web_port = {{pypilot_web_port}};
       </script>
+      <br>
+      <input type="radio" id="accel" name="calibration">accel</input>
+      <input type="radio" id="compass" name="calibration" checked="checked">compass</input>
+      <p>
+      <br>Accel Calibration: <span id="accel_calibration"></span>
+      <br>Accel Calibration Age:<span id="accel_calibration_age"></span>
       <br>Compass Calibration: <span id="compass_calibration"></span>
+      <br>Compass Calibration Age:<span id="compass_calibration_age"></span>
+      <p>
+        The raw sensor readings should fall on a sphere when calibrated.  The age will reset when the calibration updates.
+      <p>Key:
+        <text style="color:red;">current</text>
+        <text style="color:#00ff00;">history</text>
+        <text style="color:cyan;">calibration points</text>
+        <text style="color:yellow;">future calibration points</text>
+      <p>
       <br>Connection: <span id="connection"></span>
    </body>
 </html> 
+

@@ -4,7 +4,7 @@ gl = canvas.getContext('experimental-webgl');
 
 /*========== Defining and storing the geometry ==========*/
 
-var sphere_verties = [];
+var sphere_vertices = [];
 
 // verticies and triangles for an iscohedron
 var t = (1 + Math.sqrt(5))/ 2; // golden ratio
@@ -39,8 +39,8 @@ function tesselate(v0, v1, v2, n) {
             var vb = normalize(v0[0]*(1-d1) + v1[0]*d1,
                                v0[1]*(1-d1) + v1[1]*d1,
                                v0[2]*(1-d1) + v1[2]*d1);
-            sphere_verties.push(va[0], va[1], va[2]);
-            sphere_verties.push(vb[0], vb[1], vb[2]);
+            sphere_vertices.push(va[0], va[1], va[2]);
+            sphere_vertices.push(vb[0], vb[1], vb[2]);
         }
     }
     if(n == 0) {
@@ -75,9 +75,9 @@ for(var t=0; t<triangles.length; t++) {
   var flat = Math.PI*(lat/(lats-1)-.5);
   for(var lon=0; lon<lons; lon++) {
   var flon = 2*Math.PI*lon/(lons-1);
-  sphere_verties.push( Math.cos(flat) * Math.cos(flon) );
-  sphere_verties.push( Math.cos(flat) * Math.sin(flon) );
-  sphere_verties.push( Math.sin(flat) );
+  sphere_vertices.push( Math.cos(flat) * Math.cos(flon) );
+  sphere_vertices.push( Math.cos(flat) * Math.sin(flon) );
+  sphere_vertices.push( Math.sin(flat) );
   }
   }
 
@@ -85,25 +85,26 @@ for(var t=0; t<triangles.length; t++) {
   var flon = 2*Math.PI*lon/(lons-1);
   for(var lat=0; lat<=lats*2; lat++) {
   var flat = Math.PI*(lat/(lats-1)+.5);
-  sphere_verties.push( Math.cos(flat) * Math.cos(flon));
-  sphere_verties.push( Math.cos(flat) * Math.sin(flon));
-  sphere_verties.push( Math.sin(flat) );
+  sphere_vertices.push( Math.cos(flat) * Math.cos(flon));
+  sphere_vertices.push( Math.cos(flat) * Math.sin(flon));
+  sphere_vertices.push( Math.sin(flat) );
   }
   }
 */
 // Create and store data into vertex buffer
 var sphere_vertex_buffer = gl.createBuffer ();
 gl.bindBuffer(gl.ARRAY_BUFFER, sphere_vertex_buffer);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphere_verties), gl.STATIC_DRAW);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphere_vertices), gl.STATIC_DRAW);
 
 
-var compass_history = []
-var compass_history_buffer = gl.createBuffer ();
+var point_history = []
+var point_history_buffer = gl.createBuffer ();
+var accel_calibration = [0, 0, 0, 1];
 var compass_calibration = [0, 0, 0, 30, 0];
-var compass_sigmapoints_buffer = gl.createBuffer ();
-var compass_sigmapoints = []
-var compass_points_buffer = gl.createBuffer ();
-var compass_points = []
+var sigmapoints_buffer = gl.createBuffer ();
+var sigmapoints = []
+var points_buffer = gl.createBuffer ();
+var points = []
 
 /*=================== SHADERS =================== */
 
@@ -242,7 +243,6 @@ var animate = function(time) {
         THETA+=dX, PHI+=dY;
     }
 
-
     time_old = time; 
     gl.enable(gl.DEPTH_TEST);
 
@@ -280,30 +280,30 @@ var animate = function(time) {
     
     gl.bindBuffer(gl.ARRAY_BUFFER, sphere_vertex_buffer);
     gl.vertexAttribPointer(_position, 3, gl.FLOAT, false,0,0);
-    gl.drawArrays(gl.LINES, 0, sphere_verties.length/3);
+    gl.drawArrays(gl.LINES, 0, sphere_vertices.length/3);
 
     gl.uniform3f(_color, 1, 1, 0);
     
-    gl.bindBuffer(gl.ARRAY_BUFFER, compass_sigmapoints_buffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, sigmapoints_buffer);
     gl.vertexAttribPointer(_position, 3, gl.FLOAT, false,0,0);
-    gl.drawArrays(gl.POINTS, 0, compass_sigmapoints.length);
+    gl.drawArrays(gl.POINTS, 0, sigmapoints.length);
 
 
     gl.uniform3f(_color, 0, 1, 1);
     
-    gl.bindBuffer(gl.ARRAY_BUFFER, compass_points_buffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, points_buffer);
     gl.vertexAttribPointer(_position, 3, gl.FLOAT, false,0,0);
-    gl.drawArrays(gl.POINTS, 0, compass_points.length);
+    gl.drawArrays(gl.POINTS, 0, points.length);
 
 
-    if(compass_history.length >= 5) {
+    if(point_history.length >= 5) {
         gl.uniform3f(_color, 0, 1, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, compass_history_buffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, point_history_buffer);
         gl.vertexAttribPointer(_position, 3, gl.FLOAT, false,0,0);
-        gl.drawArrays(gl.POINTS, 0, compass_history.length-5);
+        gl.drawArrays(gl.POINTS, 0, point_history.length-5);
 
         gl.uniform3f(_color, 1, 0, 0);
-        gl.drawArrays(gl.POINTS, compass_history.length-5, 5);
+        gl.drawArrays(gl.POINTS, point_history.length-5, 5);
     }
     
     window.requestAnimationFrame(animate);
@@ -311,25 +311,27 @@ var animate = function(time) {
 animate(0);
 
 function convert_points(data, calibration) {
-    points = []
+    p = []
     var x = calibration[0];
     var y = calibration[1];
     var z = calibration[2];
     var s = calibration[3];
     for(var i=0; i<data.length; i++) {
         var c = data[i];
-        points.push((c[0]-x)/s);
-        points.push((c[1]-y)/s);
-        points.push((c[2]-z)/s);
+        p.push((c[0]-x)/s);
+        p.push((c[1]-y)/s);
+        p.push((c[2]-z)/s);
     }
-    return points;
+    return p;
 }
 
+var current_plot = false;
+var plots = ['accel', 'compass'];
 
 $(document).ready(function() {
     namespace = '';
     $('#connection').text("N/A");
-    $('#compass_calibration').text("N/A");
+    $('#calibration').text("N/A");
 
 
     // Connect to the Socket.IO server.
@@ -344,45 +346,91 @@ $(document).ready(function() {
     socket.on('pypilot_values', function(msg) {
         //var list_values = JSON.parse(msg);
         $('#connection').text('Connected');
-
-        pypilot_watch('imu.compass', .25);
-        pypilot_watch('imu.compass.calibration');
-        pypilot_watch('imu.compass.calibration.sigmapoints')
-        pypilot_watch('imu.compass.calibration.points')
+        watches = ['.calibration', '.calibration.age'];
+        for(var watch in watches)
+            for(var plot in plots)
+                pypilot_watch('imu.' + plots[plot] + watches[watch]);
+        current_plot = false;
+        switch_plot();
     });
 
     socket.on('pypilot_disconnect', function() {
         $('#connection').text('Disconnected')
     });
+
+    function switch_plot() {
+        point_history = [];
+
+        watches = ['', '.calibration.sigmapoints', '.calibration.points'];
+        period = .25;
+        if(current_plot)
+            for(var watch in watches)
+                pypilot_watch('imu.' + current_plot + watches[watch], false);
+
+        if(document.getElementById('accel').checked)
+            current_plot = 'accel';
+        else
+            current_plot = 'compass';
+
+        for(var watch in watches)
+            pypilot_watch('imu.' + current_plot + watches[watch], period);
+    }
+    
+    $('#accel').click(switch_plot);
+    $('#compass').click(switch_plot);
     
     socket.on('pypilot', function(msg) {
         data = JSON.parse(msg);
 
-        if('imu.compass.calibration' in data)
-            compass_calibration = data['imu.compass.calibration'][0];
-            $('#compass_calibration').text(data['imu.compass.calibration']);
-
-        if('imu.compass' in data) {
-            compass_history.push(data['imu.compass'])
-            if(compass_history.length > 40)
-                compass_history.shift();
-            var compass_history_points = convert_points(compass_history, compass_calibration);
-            gl.bindBuffer(gl.ARRAY_BUFFER, compass_history_buffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(compass_history_points), gl.STATIC_DRAW);
+        n = 'imu.accel.calibration';
+        if(n in data) {
+            accel_calibration = data[n][0];
+            $('#accel_calibration').text(data[n]);
         }
 
-        if('imu.compass.calibration.sigmapoints' in data) {
-            compass_sigmapoints = data['imu.compass.calibration.sigmapoints'];
-            var compass_sigmapoints_points = convert_points(compass_sigmapoints, compass_calibration);
-            gl.bindBuffer(gl.ARRAY_BUFFER, compass_sigmapoints_buffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(compass_sigmapoints_points), gl.STATIC_DRAW);   
+        n = 'imu.compass.calibration';
+        if(n in data) {
+            compass_calibration = data[n][0];
+            $('#compass_calibration').text(data[n]);
         }
 
-        if('imu.compass.calibration.points' in data) {
-            compass_points = data['imu.compass.calibration.points'];
-            var compass_points_points = convert_points(compass_points, compass_calibration);
-            gl.bindBuffer(gl.ARRAY_BUFFER, compass_points_buffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(compass_points_points), gl.STATIC_DRAW);   
+        n = 'imu.accel.calibration.age';
+        if(n in data)
+            $('#accel_calibration_age').text(data[n]);
+
+        n = 'imu.compass.calibration.age';
+        if(n in data)
+            $('#compass_calibration_age').text(data[n]);
+
+        if(current_plot == 'accel')
+            calibration = accel_calibration;
+        else
+            calibration = compass_calibration;
+
+        n = 'imu.' + current_plot
+        if(n in data) {
+            point_history.push(data[n])
+            if(point_history.length > 40)
+                point_history.shift();
+            var point_history_points = convert_points(point_history, calibration);
+            gl.bindBuffer(gl.ARRAY_BUFFER, point_history_buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(point_history_points), gl.STATIC_DRAW);
+        }
+
+        n = 'imu.' + current_plot + '.calibration.sigmapoints'
+        if(n in data) {
+            sigmapoints = data[n];
+            var sigmapoints_points = convert_points(sigmapoints, calibration);
+            gl.bindBuffer(gl.ARRAY_BUFFER, sigmapoints_buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sigmapoints_points), gl.STATIC_DRAW);   
+        }
+
+        n = 'imu.' + current_plot + '.calibration.points'
+        if(n in data) {
+            points = data[n];
+            var points_points = convert_points(points, calibration);
+            gl.bindBuffer(gl.ARRAY_BUFFER, points_buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points_points), gl.STATIC_DRAW);   
         }
     });    
 });
