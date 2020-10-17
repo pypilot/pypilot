@@ -396,13 +396,14 @@ void read_analog() {
     ADMUX = _BV(REFS0) | channels[channel]; // select channel at 5 volts
     ADCSRA |= _BV(ADSC);
 
-
     uint16_t ambient = adc_avg[1];
 
     //Configure TIMER1 to drive backlight variable pwm
     static uint8_t last_backlight = 0;
     uint8_t backlight = 0;
-    if(ambient < 12000 || backlight_value > 80)
+    if(ambient < 12000 ||
+       (ambient < 15000 && last_backlight) ||
+       backlight_value > 80)
         backlight = backlight_value;
 
     if(backlight != last_backlight) {
