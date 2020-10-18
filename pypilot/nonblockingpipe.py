@@ -103,8 +103,11 @@ class SocketNonBlockingPipeEnd(LineBufferedNonBlockingSocket):
             print('failed to encode data socket!', self.name, e)
             return False
 
+try:
+    from pypilot.linebuffer import linebuffer
+except:
+    import failedimports
 
-from pypilot.linebuffer import linebuffer
 class PipeNonBlockingPipeEnd(object):
     def __init__(self, r, w, name, recvfailok, sendfailok):
         self.name = name

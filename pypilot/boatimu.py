@@ -16,12 +16,15 @@ import os, sys
 import time, math, multiprocessing, select
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-t0=time.monotonic()
-import vector, quaternion
-from client import pypilotClient
-from values import *
 
-from nonblockingpipe import NonBlockingPipe
+try:
+    import vector, quaternion
+    from client import pypilotClient
+    from values import *
+
+    from nonblockingpipe import NonBlockingPipe
+except:
+    import failedimports
 
 try:
     import RTIMU

@@ -103,7 +103,10 @@ class ClientValues(Value):
                 self.wvalues[name] = self.values[name].info
 
 class pypilotClient(object):
-    def __init__(self, host=False):        
+    def __init__(self, host=False):
+        if sys.version_info[0] < 3:
+            import failedimports
+
         self.values = ClientValues(self)
         self.watches = {}
         self.wwatches = {}

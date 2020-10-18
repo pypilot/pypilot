@@ -8,6 +8,11 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import sys
+
+if sys.version_info[0] < 3:
+    print 'pypilot requires python version 3.  python version is', sys.version
+    exit(1)
+
 try:
     from setuptools import setup, Extension
     
