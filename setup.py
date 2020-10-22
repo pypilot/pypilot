@@ -10,7 +10,7 @@
 import sys
 
 if sys.version_info[0] < 3:
-    print 'pypilot requires python version 3.  python version is', sys.version
+    print('pypilot requires python version 3.  python version is', sys.version)
     exit(1)
 
 try:
