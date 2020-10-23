@@ -343,6 +343,12 @@ class Servo(object):
             
     def do_command(self, speed):
         speed *= self.gain.value # apply gain
+        t = time.monotonic()
+        if self.force_engaged:  # use servo period when autopilot is in control
+            dt = t - self.inttime
+        else:
+            self.windup = 0
+        self.inttime = t
 
         # if not moving or faulted stop
         if not speed or self.fault():
@@ -379,10 +385,6 @@ class Servo(object):
 
         # ensure it is in range
         min_speed = min(min_speed, max_speed)
-
-        t = time.monotonic()
-        dt = t - self.inttime
-        self.inttime = t
         
         if self.force_engaged:  # use servo period when autopilot is in control
             # integrate windup
