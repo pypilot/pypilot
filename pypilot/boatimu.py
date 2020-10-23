@@ -125,9 +125,10 @@ class IMU(object):
                     print('setting initial gyro bias', self.gyrobias.value)
                     self.s.GyroBias = tuple(map(math.radians, self.gyrobias.value))
                     self.s.GyroBiasValid = True
-            elif t0-self.lastgyrobiastime > 10:
+            if t0-self.lastgyrobiastime > 30:
                 self.gyrobias.set(list(map(math.degrees, self.s.GyroBias)))
                 self.lastgyrobiastime = t0
+                self.s.GyroBiasValid = True
             
             self.poll()
             dt = time.monotonic() - t0
