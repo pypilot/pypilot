@@ -261,6 +261,9 @@ class Servo(object):
         self.amphours = self.register(ResettableValue, 'amp_hours', 0, persistent=True)
         self.watts = self.register(SensorValue, 'watts')
 
+        self.hardover_time = self.register(RangeProperty, 'hardover_time', 10, .1, 60, persistent=True)
+        self.hardover_calculation_valid = 0
+
         self.speed = self.register(SensorValue, 'speed')
         self.speed.min = self.register(MaxRangeSetting, 'speed.min', 100, 0, 100, '%')
         self.speed.max = self.register(MinRangeSetting, 'speed.max', 100, 0, 100, '%', self.speed.min)
@@ -424,8 +427,10 @@ class Servo(object):
         # estimate position
         if self.sensors.rudder.invalid():
             # crude integration of position from speed without rudder feedback
-            position = self.position.value + speed*rudder_range/5 * dt
-            self.position.set(min(max(position, -rudder_range), rudder_range))
+            position = self.position.value + speed*dt*2*rudder_range/self.hardover_time.value
+            self.position.set(min(max(position, -2*rudder_range), 2*rudder_range))
+            if self.hardover_calculation_valid * speed > 0:
+                self.hardover_calculation_valid = 0
 
         try:
             if speed > 0:
@@ -674,6 +679,14 @@ class Servo(object):
                 if self.sensors.rudder.invalid() and self.lastdir:
                     rudder_range = self.sensors.rudder.range.value
                     new_position = self.lastdir*rudder_range
+                    if self.hardover_calculation_valid * self.lastdir < 0:
+                        # estimate hardover time if possible, this helps with
+                        # clearing the overcurrent conditions at reasonable positions
+                        d = (new_position + self.position.value) / (2*rudder_range)
+                        hardover_time = self.hardover_time.value*abs(d)
+                        hardover_time = min(max(hardover_time, 1), 30)
+                        self.hardover_time.set(hardover_time)
+                    self.hardover_calculation_valid = self.lastdir
                     self.position.set(new_position)
 
             self.reset() # clear fault condition
