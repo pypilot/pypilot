@@ -342,11 +342,9 @@ class Servo(object):
         self.do_command(pid)
             
     def do_command(self, speed):
-        speed *= self.gain.value # apply gain
         t = time.monotonic()
-        if self.force_engaged:  # use servo period when autopilot is in control
-            dt = t - self.inttime
-        else:
+        dt = t - self.inttime
+        if not self.force_engaged:  # reset windup when not engaged
             self.windup = 0
         self.inttime = t
 
@@ -360,6 +358,7 @@ class Servo(object):
             self.raw_command(0)
             return
 
+        speed *= self.gain.value # apply gain
         # prevent moving the wrong direction if flags set
         if self.flags.value & (ServoFlags.PORT_OVERCURRENT_FAULT | ServoFlags.MAX_RUDDER_FAULT) and speed > 0 or \
            self.flags.value & (ServoFlags.STARBOARD_OVERCURRENT_FAULT | ServoFlags.MIN_RUDDER_FAULT) and speed < 0:
@@ -425,7 +424,7 @@ class Servo(object):
         # estimate position
         if self.sensors.rudder.invalid():
             # crude integration of position from speed without rudder feedback
-            position = self.position.value + speed*rudder_range/10 * dt
+            position = self.position.value + speed*rudder_range/5 * dt
             self.position.set(min(max(position, -rudder_range), rudder_range))
 
         try:
@@ -674,7 +673,8 @@ class Servo(object):
                     self.flags.starboard_overcurrent_fault()
                 if self.sensors.rudder.invalid() and self.lastdir:
                     rudder_range = self.sensors.rudder.range.value
-                    self.position.set(self.lastdir*rudder_range)
+                    new_position = self.lastdir*rudder_range
+                    self.position.set(new_position)
 
             self.reset() # clear fault condition
 
