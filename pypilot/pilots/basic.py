@@ -102,7 +102,7 @@ class BasicPilot(AutopilotPilot):
                    'R': -reactive_value}
     PR = math.sqrt(abs(gain_values['P']))
     if gain_values['P'] < 0:
-      PR = -PR
+        PR = -PR
     gain_values['PR'] = PR
 
     command = self.Compute(gain_values)
@@ -112,6 +112,6 @@ class BasicPilot(AutopilotPilot):
     self.servocommand_queue.add(command - rval)
     
     if ap.enabled.value:
-      ap.servo.command.set(command)
+        ap.servo.command.set(command)
 
 pilot = BasicPilot

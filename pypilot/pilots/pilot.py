@@ -40,7 +40,9 @@ class AutopilotPilot(object):
             value = gain_values[gain]
             gains = self.gains[gain]
             gains['sensor'].set(gains['compute'](value))
+            #print('compute', gain, value, gains['sensor'].value)
             command += gains['sensor'].value
+            #print('command', command)
         return command
 
     def compute_heading(self):        
