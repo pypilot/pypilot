@@ -351,7 +351,8 @@ class ServerValues(pypilotValue):
 
         # backup persistent_data if it loaded with success
         file = open(default_persistent_path + '.bak', 'w')
-        file.write(pyjson.dumps(self.persistent_data)+'\n')
+        for name in self.persistent_data:
+            file.write(self.persistent_data[name])
         file.close()
 
     def store(self):
