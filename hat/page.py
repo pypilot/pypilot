@@ -566,6 +566,7 @@ class control(controlbase):
         t0 = time.monotonic()
         mode = self.last_val('ap.mode')
         ap_heading = self.last_val('ap.heading')
+        ap_heading_command = self.last_val('ap.heading_command')
         heading = ap_heading, mode, nr(ap_heading)
         if self.control['heading'] and heading[2] == self.control['heading'][2]:
             if t0 - self.lasttime < .8 and not refresh:
@@ -612,8 +613,7 @@ class control(controlbase):
                 r = rectangle(0, .4, 1, .34)
                 self.fittext(r, _('standby'), False, black)
                 self.control['heading_command'] = 'standby'
-        elif self.control['heading_command'] != self.last_val('ap.heading_command'):
-            ap_heading_command = self.last_val('ap.heading_command')
+        elif self.control['heading_command'] != ap_heading_command:
             heading_command = ap_heading_command, mode, nr(ap_heading_command)
             draw_heading(.4, heading_command, self.control['heading_command'])
             self.control['heading_command'] = heading_command

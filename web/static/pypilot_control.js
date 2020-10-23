@@ -279,8 +279,10 @@ $(document).ready(function() {
                     $('#' + iname + 'label').text(value);
                 }
             }
-        if('ap.heading_command' in data)
-            $('#heading_command').text(heading_str(data['ap.heading_command']));
+        if('ap.heading_command' in data) {
+            heading_command = data['ap.heading_command'];
+            $('#heading_command').text(heading_str(heading_command));
+        }
 
         if('servo.engaged' in data) {
             if(data['servo.engaged'])
@@ -387,9 +389,10 @@ $(document).ready(function() {
     move = function(x) {
         var engaged = $('#tb_engaged').hasClass('toggle-button-selected');
         if(engaged) {
-            if(new Date().getTime() - heading_set_time > 1000)
+            time = new Date().getTime()
+            if(time - heading_set_time > 1000)
                 heading_local_command = heading_command;
-            heading_set_time = new Date().getTime();
+            heading_set_time = time;
             heading_local_command += x;
             pypilot_set('ap.heading_command', heading_local_command);
         } else {
