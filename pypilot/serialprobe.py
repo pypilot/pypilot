@@ -278,7 +278,7 @@ def probe(name, bauds, timeout=5):
             if device == last_device:
                 break
         else: # last device not found
-            debug('serialprobe last not found', device, device_list)
+            debug('serialprobe last not found', device_list)
             return False
     else:
         probe['probelast'] = True # next time try last working device if this fails

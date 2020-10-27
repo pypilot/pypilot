@@ -51,7 +51,7 @@ class pypilotScope(pypilotScopeBase):
     def enumerate_values(self, value_list):
         watches = sys.argv[1:]
         for name in sorted(value_list):
-            if value_list[name]['type'] != 'SensorValue':
+            if value_list[name]['type'] != 'SensorValue' or name == 'timestamp':
                 continue
 
             i = self.clValues.Append(name)

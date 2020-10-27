@@ -193,6 +193,9 @@ class MainFrame(wx.Frame):
         value_list = self.client.list_values()
         if value_list:
             self.layout_widgets(value_list)
+            size = self.GetSize()
+            self.Fit()
+            self.SetSize(size)
                 
         while True:
             result = self.client.receive()
@@ -211,19 +214,16 @@ class MainFrame(wx.Frame):
                     try:
                         t = str(type(self.controls[name]))
                         if t == "<class 'wx._controls.Choice'>" or t == "<class 'wx._core.Choice'>":
-                            if not self.controls[name].SetStringSelection(value):
+                            if not self.controls[name].SetStringSelection(str(value)):
                                 print('warning, invalid choice value specified')
                         elif t == "<class 'wx._controls.Slider'>" or t == "<class 'wx._core.Slider'>":
                             r = self.sliderrange[name]
-                            self.controls[name].SetValue(float(value - r[0])/(r[1]-r[0])*1000)
+                            self.controls[name].SetValue(int(float(value - r[0])/(r[1]-r[0])*1000))
                         else:
                             self.controls[name].SetValue(value)
                     except:
                         self.controls[name].SetValue(str(value))
 
-                size = self.GetSize()
-                self.Fit()
-                self.SetSize(size)
             
 def main():
     app = wx.App()
