@@ -480,7 +480,7 @@ class nmeaBridge(object):
                 self.server.bind(('0.0.0.0', port))
                 break
             except:
-                print('nmea server on port %d: bind failed.', port)
+                print('nmea server on port %d: bind failed.' % port)
             time.sleep(1)
         print('listening on port', port, 'for nmea connections')
 
