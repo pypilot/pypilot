@@ -223,11 +223,12 @@ class pypilotPlot():
 
     # because glutbitmapcharacter doesn't get the glcolor unless the raster position is set
     def synccolor(self):
+        pos = glGetDoublev(GL_CURRENT_RASTER_POSITION)[:2]
         vp = glGetDoublev(GL_VIEWPORT)
+        self.lastrasterpos = pos[0] / vp[2], pos[1] / vp[3];
         glRasterPos2d(*self.lastrasterpos)
 
     def rasterpos(self, pos):
-        #pos = glGetDoublev(GL_CURRENT_RASTER_POSITION)
         glRasterPos2d(*pos)
         self.lastrasterpos = pos
 
@@ -288,7 +289,6 @@ class pypilotPlot():
     
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0)
 
         #glEnable(GL_LINE_SMOOTH)
         glEnable(GL_BLEND)
