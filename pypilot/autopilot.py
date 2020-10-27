@@ -65,7 +65,12 @@ class HeadingProperty(RangeProperty):
     def set(self, value):
         value = resolv(value, 0 if 'wind' in self.mode.value else 180)
         super(HeadingProperty, self).set(value)
-  
+
+class TimeStamp(SensorValue):
+    def __init__(self):
+        super(TimeStamp, self).__init__('timestamp', 0)
+        self.info['type'] = 'TimeStamp' # not a sensor value to be scoped
+        
 class Autopilot(object):
     def __init__(self):
         super(Autopilot, self).__init__()    
@@ -77,7 +82,7 @@ class Autopilot(object):
         self.sensors = Sensors(self.client)
         self.servo = servo.Servo(self.client, self.sensors)
         self.version = self.register(Value, 'version', 'pypilot' + ' ' + strversion)
-        self.timestamp = self.client.register(SensorValue('timestamp', 0))
+        self.timestamp = self.client.register(TimeStamp())
         self.starttime = time.monotonic()
         self.mode = self.register(ModeProperty, 'mode')
 
