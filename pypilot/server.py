@@ -18,7 +18,7 @@ from nonblockingpipe import NonBlockingPipe
 DEFAULT_PORT = 23322
 max_connections = 30
 default_persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
-server_persistent_period = 60 # store data every 60 seconds
+server_persistent_period = 120 # store data every 120 seconds
 use_multiprocessing = True # run server in a separate process
 
 class Watch(object):
