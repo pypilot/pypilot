@@ -287,10 +287,6 @@ class pypilotPlot():
     def init(self, value_list):
         glClearColor (0.0, 0.0, 0.0, 0.0)
     
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-
-        #glEnable(GL_LINE_SMOOTH)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
