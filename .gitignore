@@ -1,2 +1,8 @@
 *.pyc
+
 build
+pypilot.egg-info
+dist
+
+hat/ugfx/ugfx_wrap.cpp
+hat/ugfx/ugfx.py
