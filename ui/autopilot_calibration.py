@@ -365,10 +365,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.lastmouse = pos
 
         if event.Dragging():
-            self.BoatPlot.Refresh()
-            dx, dy = pos[0] - self.lastmouse[0], pos[1] - self.lastmouse[1]
-            q = quaternion.angvec2quat((dx**2 + dy**2)**.4/180*math.pi, [dy, dx, 0])
-            self.boat_plot.Q = quaternion.multiply(q, self.boat_plot.Q)
+            if self.lastmouse:
+                self.BoatPlot.Refresh()
+                dx, dy = pos[0] - self.lastmouse[0], pos[1] - self.lastmouse[1]
+                q = quaternion.angvec2quat((dx**2 + dy**2)**.4/180*math.pi, [dy, dx, 0])
+                self.boat_plot.Q = quaternion.multiply(q, self.boat_plot.Q)
             self.lastmouse = pos
 
         rotation = event.GetWheelRotation() / 60
