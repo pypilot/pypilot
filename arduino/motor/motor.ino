@@ -299,7 +299,6 @@ uint8_t eeprom_read_end = 0;
 
 uint8_t adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
 volatile uint8_t calculated_clock = 0; // must be volatile to work correctly
-uint16_t clock_time;
 uint8_t timeout;
 uint16_t serial_data_timeout;
 
@@ -322,7 +321,7 @@ void setup()
 
     uint32_t start = micros();
     while(!calculated_clock);  // wait for watchdog to fire
-    clock_time = micros() - start;
+    uint16_t clock_time = micros() - start;
     uint8_t div_board = 1; // 1 for 16mhz
     if(clock_time < 2900) // 1800-2600 is 8mhz, 3800-4600 is 16mhz
         div_board = 2; // detected 8mhz crystal, otherwise assume 16mhz
