@@ -66,6 +66,7 @@ static unsigned char framebuffer[6*84];
 PCD8544::PCD8544(unsigned char sclk, unsigned char sdin,
                  unsigned char dc, unsigned char reset,
                  unsigned char sce):
+    flip(false),
     pin_sclk(sclk),
     pin_sdin(sdin),
     pin_dc(dc),
@@ -163,9 +164,12 @@ void PCD8544::setContrast(unsigned char level)
 
 void PCD8544::putpixel(uint8_t x, uint8_t y, uint8_t color)
 {
-    if(x < 0 || x >= 48 || y < 0 || x >= 84)
+    if(x >= 48 || y >= 84)
         return;
-    x = 47 - x;
+    if(flip)
+        x = 47 - x;
+    else
+        y = 83 - y;
     int col = x/8, bit = 1<<(x%8);
     int ind = col*84 + y;
     if(color)
@@ -176,9 +180,36 @@ void PCD8544::putpixel(uint8_t x, uint8_t y, uint8_t color)
 
 void PCD8544::rectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t color)
 {
+    if(x1 > 47)
+        x1 = 47;
+    if(x2 > 47)
+        x2 = 47;
+    if(y1 > 83)
+        y1 = 83;
+    if(y2 > 83)
+        y2 = 83;
+
     for(uint8_t y=y1; y<=y2; y++)
         for(uint8_t x=x1; x<=x2; x++)
             putpixel(x, y, color);
+}
+
+void PCD8544::clear_lines(uint8_t y1, uint8_t y2)
+{
+    if(!flip) {
+        uint8_t t = y1;
+        y1 = 83 - y2;
+        y2 = 83 - t;
+    }
+
+    if(y1 > 83)
+        y1 = 83;
+    if(y2 > 83)
+        y2 = 83;
+
+    uint8_t len = y2-y1+1;
+    for(uint8_t col = 0; col < 6; col++)
+        memset(framebuffer+col*84+y1, 0, len);
 }
 
 void PCD8544::circle(uint8_t x0, uint8_t y0, uint8_t r, uint8_t color)
@@ -299,8 +330,8 @@ size_t PCD8544::write(uint8_t chr)
     }
 
     struct font f;
-    int cfont = curfont % 4;
-    int orient = curfont / 4;
+    int cfont = curfont;
+    int orient = 0;//curfont / 4;
     memcpy_P(&f, fonts + cfont, sizeof f);
     struct font_character c;
     for(int i=0; i<f.n; i++) {
@@ -311,11 +342,11 @@ size_t PCD8544::write(uint8_t chr)
     return 0; // not found
 found:
     {
-        unsigned char glyph[c.w*c.h];
-        memcpy_P(glyph, c.data, c.w*c.h);
+        unsigned char glyph[c.len];
+        memcpy_P(glyph, c.data, c.len);
 
         if(orient) {
-            for(int x=0; x<c.w; x++) {
+/*          for(int x=0; x<c.w; x++) {
                 int yp = ypos + x;
                 if(yp < 0 || yp >= 84)
                     continue;
@@ -329,22 +360,30 @@ found:
                     putpixel(xp, yp, 255);
                 }
             }
-            ypos += c.w + 1;
+            ypos += c.w + 1;*/
         } else {
+            uint8_t glyphp = 0;
+            uint8_t glyphc = glyph[0] & 0x7F;
             for(int y=0; y<c.h; y++) {
                 int yp = ypos + y;
-                if(yp < 0 || yp >= 84)
-                    continue;
                 for(int x=0; x<c.w; x++) {
-                    if(!glyph[y*c.w + x])
+                    uint8_t v = glyph[glyphp]&0x80;
+                    if(--glyphc == 0) {
+                        if(++glyphp == c.len)
+                            goto done;
+                        glyphc = glyph[glyphp] & 0x7F;
+                    }
+                    if(yp < 0 || yp >= 84)
                         continue;
-                    
+                    if(!v)
+                        continue;
                     int xp = xpos + x;
                     if(xp < 0 || xp >= 48)
                         continue;
                     putpixel(xp, yp, 255);
                 }
             }
+        done:
             xpos += c.w + 1;
         }
     }
@@ -382,7 +421,6 @@ void PCD8544::refresh()
 {
     this->SetParameters();
 //    delay(100);
-
     
     setCursor(0, 0);
     digitalWrite(this->pin_dc, PCD8544_DATA);
@@ -392,4 +430,3 @@ void PCD8544::refresh()
     }
     this->lasttype = PCD8544_DATA;
 }
-
