@@ -337,7 +337,7 @@ class signalk(object):
                         if signalk_path in values:
                             del values[signalk_path]
                     # all needed sensor data is found 
-                    data['device'] = source
+                    data['device'] = source + 'signalk'
                     if self.sensors_pipe:
                         self.sensors_pipe.send([sensor, data])
                     else:
