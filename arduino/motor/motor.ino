@@ -707,7 +707,7 @@ void engage()
 
         pinMode(hbridge_a_bottom_pin, OUTPUT);
         pinMode(hbridge_b_bottom_pin, OUTPUT);
-        pinMode(enable_pin, INPUT);
+        pinMode(enable_pin, OUTPUT);
 
         digitalWrite(enable_pin, HIGH);
     } else {
