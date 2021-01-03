@@ -452,7 +452,7 @@ void setup()
 
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
-    if(pwm_style == 2 || ratiometric_mode)
+    if(ratiometric_mode)
         adcref = _BV(REFS0); // 5v
     else
         adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
