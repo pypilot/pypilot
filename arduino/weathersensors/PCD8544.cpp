@@ -26,21 +26,7 @@
 #include "PCD8544.h"
 
 #include <HardwareSerial.h>
-
-void debug(char *fmt, ... ){
-    char buf[128]; // resulting string limited to 128 chars
-    va_list args;
-    va_start (args, fmt );
-    vsnprintf(buf, 128, fmt, args);
-    va_end (args);
-    Serial.print(buf);
-}
-
-#if ARDUINO < 100
-#include <WProgram.h>
-#else
 #include <Arduino.h>
-#endif
 
 #include <SPI.h>
 

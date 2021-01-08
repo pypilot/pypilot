@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2021 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -29,17 +29,25 @@ black       - d2  - pin 2 -                         reed switch B
 #include <stdint.h>
 #include <avr/sleep.h>
 #include <HardwareSerial.h>
-#include "PCD8544.h"
 #include <avr/boot.h>
 
 extern "C" {
   #include <twi.h>
 }
 
-#define LCD          // if nokia5110 lcd on spi port
+#define NONE      0 
+#define NOKIA5110 1
+#define JLX12864G 2
 
-#ifdef LCD
+#define LCD NOKIA5110
+//#define LCD JLX12864G
+
+#if LCD == NOKIA5110
+#include "PCD8544.h"
 static PCD8544 lcd(13, 11, 8, 7, 4);
+#elif LCD == JLX12864G
+#include "JLX12864.h"
+static JLX12864 lcd(13, 11, 8, 7, 4);
 #endif
 
 const int analogInPin = A7;  // Analog input pin that the potentiometer is attached to
@@ -66,7 +74,24 @@ struct eeprom_data_struct {
     uint8_t temperature_units; // 0=C, 1=F
     uint8_t leds_on; // 1=power leds
     uint8_t display_page; // 0=default, 1=baro graph, 2-8=settings
+    uint8_t baro_page; // 5 min, 1 hour, 24 hour
 } eeprom_data;
+
+#if LCD == JLX12864G
+const int history_len = 64;
+#else
+const int history_len = 48;
+#endif
+
+static struct baro_history_t {
+    uint16_t data[history_len];
+    uint16_t last;
+    uint32_t last_updatetime;
+    uint8_t pos;
+} baro_history[3]; // 5 minute, hour, day
+
+const uint32_t baro_times[3] = {60000L*5/history_len, 60000L*60/history_len, 60000L*60*24/history_len};
+
 
 void bmX280_setup()
 {
@@ -289,7 +314,7 @@ void setup()
     uint8_t lowBits      = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
     uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
     uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
-    uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
+    //uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
     if(lowBits != 0xFF || highBits != 0xda ||
        (extendedBits != 0xFD && extendedBits != 0xFC)
        //|| lockBits != 0xCF
@@ -308,15 +333,20 @@ void setup()
     ADCSRA |= _BV(ADIE);
     ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
 
-#ifdef LCD
+#if LCD==NOKIA5118
     // PCD8544-compatible displays may have a different resolution...
     lcd.begin(84, 48);
-    pinMode( analogLightPin, INPUT);
+#elif LCD==JLX12864G
+    lcd.begin();
 #endif
-
+    
+    pinMode( analogLightPin, INPUT);
     // enable pullups on buttons
     pinMode( 5, INPUT_PULLUP);
     pinMode( 6, INPUT_PULLUP);
+
+    for(int i=0; i<3; i++)
+        baro_history[i].last = 60000;
 }
 
 ISR(WDT_vect)
@@ -430,7 +460,7 @@ void read_anemometer()
         adccount[i] = -4;
     }
 
-#ifdef LCD
+#if LCD
     // read from backlight sense
     adcchannel = 0;
     ADMUX = _BV(REFS0) | 6;
@@ -614,28 +644,33 @@ uint32_t pressure, temperature;
 int32_t pressure_comp, temperature_comp;
 int bmp280_count;
 
-const int history_len = 48;
-static uint16_t baro_history[history_len], baro_history_last=22400-60000;
-static uint8_t history_pos;
 static uint32_t baro_val, baro_count;
-static uint32_t last_baro_updatetime;
+void put_baro_history(uint8_t index, int32_t val)
+{
+    baro_history[index].last_updatetime += baro_times[index];
+    val -= 60000;
+    baro_history[index].last = val;
+    baro_history[index].data[baro_history[index].pos++] = val;
+    if(baro_history[index].pos == history_len)
+        baro_history[index].pos = 0;
+}
+
 void update_barometer_history()
 {
     baro_val += pressure_comp;
     baro_count++;
 
-    uint32_t dt32 = millis() - last_baro_updatetime;
-    if(dt32 > 60000)
-    { // once a minute
-        last_baro_updatetime += 60000;
+    uint32_t t = millis();
+    uint32_t dt32 = t - baro_history[0].last_updatetime;
+    if(dt32 > baro_times[0]) {
         int32_t val = baro_val / baro_count;
+        put_baro_history(0, val);
+        for(int i=1; i<3; i++) {
+            dt32 = t - baro_history[i].last_updatetime;
+            if(dt32 > baro_times[i])
+                put_baro_history(i, val);
+        }
         baro_val = baro_count = 0;
-    
-        baro_history_last = val - 60000;
-        baro_history[history_pos++] = baro_history_last;
-        if(history_pos == history_len)
-            history_pos = 0;
-
     }
 }
 
@@ -739,7 +774,7 @@ static uint16_t last_lcd_updatetime, last_lcd_texttime;
 static char status_buf[4][16];
 void draw_anemometer()
 {
-#ifdef LCD
+#if LCD
     if(!lcd_update)
         return;
 
@@ -766,14 +801,35 @@ void draw_anemometer()
         }
 
         snprintf_P(status_buf[1], sizeof status_buf[1], PSTR("%02d"), (int) round(wind_speed));
+#if LCD == JLX12864G
+        lcd.clear();
+        // draw wind speed
+        lcd.setfont(5);
+        lcd.setpos(0, 0);
+        lcd.print(status_buf[1]);
+#else
+        snprintf_P(status_buf[1], sizeof status_buf[1], PSTR("%02d"), (int) round(wind_speed));
         lcd.clear_lines(46, 83); // clear compass
         // draw wind speed
         lcd.setfont(3);
         lcd.setpos(0, 38);
         lcd.print(status_buf[1]);
+#endif
 
         // draw 30 second average wind speed
         snprintf_P(status_buf[1], sizeof status_buf[1], PSTR("%02d"), (int) round(wind_speed_30));
+#if LCD == JLX12864G
+        lcd.setfont(3);
+        lcd.setpos(36, 5);
+        lcd.print(status_buf[1]);
+        lcd.setfont(1);
+        lcd.setpos(0, 32);
+        a = pressure_comp/1e2, r = pressure_comp - a*1e2;
+        a = snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("%d.%02d"), a, r);
+        lcd.print(status_buf[2]);
+
+
+#else
         lcd.setfont(2);
         lcd.setpos(29, 45);
         lcd.print(status_buf[1]);
@@ -787,7 +843,7 @@ void draw_anemometer()
         snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("%02d"), r);
         lcd.setpos(a*7+6, 61);
         lcd.print(status_buf[2]);
-
+#endif
         char unit = 'C';
         int32_t temp = temperature_comp;
         if(eeprom_data.temperature_units) {
@@ -800,45 +856,74 @@ void draw_anemometer()
         snprintf_P(status_buf[3], sizeof status_buf[3], PSTR("%d.%02d%c"), a, abs(r), unit);
         
         lcd.setfont(0);
+#if LCD == JLX12864G
+        lcd.setpos(1, 48);
+        lcd.print(status_buf[3]);
+
+        lcd.refresh(1);
+#else
         lcd.setpos(1, 71);
         lcd.print(status_buf[3]);
+#endif
     }
 
+#if LCD == JLX12864G
+    lcd.clear(); // clear compass
+    const uint8_t xc = 31, yc = 31, r = 31;
+#else
     lcd.clear_lines(0, 45); // clear compass
+    const uint8_t xc = 24, yc = 22, r = 22;
+#endif
     // draw direction dial for wind
-    lcd.circle(24, 22, 22, 255);
+    lcd.circle(xc, yc, r, 255);
     if(wind_dir >= 0) {
         float wind_rad = wind_dir/180.0*M_PI;
-        int r = 22;
         int x = r*sin(wind_rad);
         int y = -r*cos(wind_rad);
         for(int s=1; s<3; s++) {
             int xp = s*cos(wind_rad);
             int yp = s*sin(wind_rad);
-            lcd.line(24+xp, 22+yp, 24+x, 22+y, 255);
-            lcd.line(24-xp, 22-yp, 24+x, 22+y, 255);
+            lcd.line(xc+xp, yc+yp, xc+x, yc+y, 255);
+            lcd.line(xc-xp, yc-yp, xc+x, yc+y, 255);
         }
 
         // print the heading under the dial
+#if LCD == JLX12864G
+        lcd.setfont(2);
+#else
         lcd.setfont(1);
+#endif
         int xp, yp;
         xp = -11.0*sin(wind_rad), yp = 10.0*cos(wind_rad);
         static float nxp = 0, nyp = 0;
         nxp = (xp + 31*nxp)/32;
         nyp = (yp + 31*nyp)/32;
-        xp = 24+nxp-12, yp = 22+nyp-8; 
+        xp = xc+nxp-12, yp = yc+nyp-8; 
         lcd.rectangle(xp-1, yp+3, xp+22, yp+14, 0); // clear heading text area
         lcd.setpos(xp, yp);
         lcd.print(status_buf[0]);
     }
 
+#if LCD == JLX12864G
+    lcd.refresh(0);
+#else
     lcd.refresh();
+#endif
 #endif
 }
 
 void draw_barometer_graph()
 {
-#ifdef LCD
+#if LCD
+    static uint8_t page;
+    uint8_t curpage = digitalRead(5);
+
+    if(page && !curpage) {
+        if(++eeprom_data.baro_page == 3)
+            eeprom_data.baro_page = 0;
+    }
+    page = curpage;
+
     if(!lcd_update)
         return;
 
@@ -853,22 +938,46 @@ void draw_barometer_graph()
     int a, r;
     last_lcd_texttime = time;
 
-    lcd.clear_lines(50, 83); // clear text
+    a = pressure_comp/1e2, r = pressure_comp - a*1e2;
 
+#if LCD == JLX12864G
+    lcd.clear();
+    lcd.setfont(4);
+    lcd.setpos(0, 0);
+    lcd.print(F("barometer"));
+    lcd.setpos(0, 14);
+    switch(eeprom_data.baro_page) {
+    case 0: lcd.print(F("plot 5m")); break;
+    case 1: lcd.print(F("plot 1h")); break;
+    case 2: lcd.print(F("plot 1day")); break;
+    }
+    lcd.setfont(1);
+    lcd.setpos(0, 28);
+    snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("%d.%02d"), a, r);
+    lcd.print(status_buf[2]);
+#else
+    lcd.clear_lines(50, 83); // clear text
     lcd.setfont(4);
     lcd.setpos(0, 50);
     lcd.print(F("baro"));
     lcd.setpos(0, 60);
     lcd.print(F("plot 48m"));
     lcd.setpos(0, 70);
-    a = pressure_comp/1e2, r = pressure_comp - a*1e2;
     a = snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("%d"), a);
     lcd.print(status_buf[2]);
     lcd.rectangle(0, a*7+3, 0, a*7+4, 255); // draw decimal
     snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("%02d"), r);
     lcd.setpos(a*7+6, 70);
     lcd.print(status_buf[2]);
-#if 0        
+#endif
+
+#if LCD == JLX12864G
+    lcd.refresh(1);
+#else
+    lcd.refresh();
+#endif
+
+#if 0
     a = temperature_comp / 100;
     snprintf_P(status_buf[3], sizeof status_buf[3], PSTR("%dC"), a);
         
@@ -877,22 +986,33 @@ void draw_barometer_graph()
     lcd.print(status_buf[3]);
 #endif
 
+#if LCD == JLX12864G
+    const int my = 64;
+    lcd.clear();
+#else
+    const int my = 50;
     lcd.clear_lines(0, 50);
+#endif
+    int index = eeprom_data.baro_page;
     for(int i=0; i<history_len; i++) {
-        int p = (history_pos + i)%history_len;
-        int v = baro_history[p] - baro_history_last;
+        int p = (baro_history[index].pos + i)%history_len;
+        int v = baro_history[index].data[p] - baro_history[index].last;
         v /= 5;
-        v = 25 - v;
-        if(v>=0 && v < 50)
+        v = my/2 - v;
+        if(v>=0 && v < my)
             lcd.putpixel(i, v, 255);
     }
+#if LCD == JLX12864G
+    lcd.refresh(0);
+#else
     lcd.refresh();
+#endif
 #endif
 }
 
 void draw_setting(uint8_t &setting, const char* name, const char* first, const char* second, const char* third=0)
 {
-#ifdef LCD
+#if LCD
     lcd.clear();
     lcd.setfont(4);
     lcd.setpos(0, 0);
@@ -911,15 +1031,32 @@ void draw_setting(uint8_t &setting, const char* name, const char* first, const c
     lcd.setpos(0, 44);
     lcd.print(status_buf[0]);
 
+#if LCD == JLX12864G
+    int y = 42+setting*14;
+    lcd.line(0, y, 60, y, 255);
+    lcd.refresh(0);
+    lcd.clear();
+    lcd.setpos(0, 0);
+#else
+    lcd.setpos(0, 58);
+#endif
     if(third) {
         strcpy_P(status_buf[0], third);
-        lcd.setpos(0, 58);
+#if LCD == JLX12864G
         lcd.print(status_buf[0]);
+        int y = setting*14-14;
+        lcd.line(0, y, 60, y, 255);
+#endif
     }
 
+#if LCD == JLX12864G
+    lcd.refresh(1);
+#else
     int y = 42+setting*14;
     lcd.line(0, y, 44, y, 255);
-
+    lcd.refresh();
+#endif
+    
     uint8_t cursetting_key = digitalRead(5);
     static uint8_t setting_key;
 
@@ -931,8 +1068,6 @@ void draw_setting(uint8_t &setting, const char* name, const char* first, const c
         apply_settings();
     }
     setting_key = cursetting_key;
-
-    lcd.refresh();
 #endif
 }
 
@@ -981,8 +1116,8 @@ void loop()
     if(page && !curpage) {
         if(++eeprom_data.display_page == 8) {
             eeprom_data.display_page = 0;
-            eeprom_write_timeout = millis();
         }
+        eeprom_write_timeout = millis();
     }
     page = curpage;
 

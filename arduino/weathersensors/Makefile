@@ -54,13 +54,13 @@ $(SKETCHNAME).cpp.hex: $(SKETCHNAME).cpp.elf
 $(SKETCHNAME).cpp.eep: $(SKETCHNAME).cpp.elf
 	$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 $< $@
 
-$(SKETCHNAME).cpp.elf: $(OBJSD) obj/$(SKETCHNAME).o objs obj/twi.o obj/PCD8544.o
+$(SKETCHNAME).cpp.elf: $(OBJSD) obj/$(SKETCHNAME).o objs obj/twi.o obj/PCD8544.o obj/JLX12864.o
 	$(CC) -mmcu=$(MCU) $(LDFLAGS) -o $@ $(OBJS)
 
 .PHONY: objs
 objs:
 	echo $(OBJSD) | sed s,$(ARDUINO_PATH),obj$(ARDUINO_PATH),g > objs
-        OBJS = $(shell cat objs) obj/$(SKETCHNAME).o obj/twi.o obj/PCD8544.o
+        OBJS = $(shell cat objs) obj/$(SKETCHNAME).o obj/twi.o obj/PCD8544.o obj/JLX12864.o
 
 obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 	cp $< obj/$<.cpp
@@ -80,6 +80,9 @@ obj/twi.o : twi.c
 	$(CC) $(CXXFLAGS) -c $< -o $@
 
 obj/PCD8544.o : PCD8544.cpp charset.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+obj/JLX12864.o : JLX12864.cpp charset.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 %.o : %.cpp
