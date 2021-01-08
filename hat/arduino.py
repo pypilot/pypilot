@@ -38,7 +38,12 @@ class arduino(object):
         self.pollt0 = [0, time.monotonic()]
 
         self.config = config
-        
+
+        if 'arduino.debug' in config and config['arduino.debug']:
+            self.debug = print
+        else:
+            self.debug = lambda *args : None
+            
         self.hatconfig = False
         if 'hat' in config:
             hatconfig = config['hat']
@@ -148,6 +153,7 @@ class arduino(object):
         else:
             print('invalid baud', baud)
             d = [8]
+        self.debug('nmea set baud', d)
         self.send(SET_BAUD, d)
 
     def set_buzzer(self, mode, duration):
@@ -179,7 +185,6 @@ class arduino(object):
             if self.nmea_socket and len(self.socketdata) < 100 and self.nmea_socket_poller.poll(0):
                 try:
                     b = self.nmea_socket.recv(40)
-                    #print('b', b)
                     if self.config['arduino.nmea.out']:
                         self.socketdata += b
                         self.serial_in_count += len(b)
@@ -187,7 +192,7 @@ class arduino(object):
                     if e.args[0] is errno.EWOULDBLOCK:
                         pass
                     else:
-                        print('nmea socket exception', e)
+                        print('nmea socket exception reading', e)
                         self.nmea_socket.close()
                         self.nmea_socket = False
             i = 0
@@ -262,12 +267,19 @@ class arduino(object):
 
             events.append([key, count])
 
-        if self.nmea_socket and serial_data:# and self.config['nmea']['out']:
-            #print('nmea>', bytes(serial_data))
-            if self.config['arduino.nmea.in']:
-                self.nmea_socket.send(bytes(serial_data))
-                self.serial_out_count += len(serial_data)
-            #print('nmea', self.serial_in_count, self.serial_out_count, self.serial_in_count - self.serial_out_count)
+        if serial_data:
+            self.debug('nmea>', bytes(serial_data))
+            self.debug('nmea data', self.serial_in_count, 'bytes in',
+                       self.serial_out_count, 'bytes_out')
+            if self.nmea_socket and self.config['arduino.nmea.in']:
+                try:
+                    self.nmea_socket.send(bytes(serial_data))
+                except Exception as e:
+                    print('nmea socket exception sending', e)
+                    self.nmea_socket.close()
+                    self.nmea_socket = False
+
+            self.serial_out_count += len(serial_data)
             
         return events
 
@@ -291,11 +303,17 @@ class arduino(object):
             self.nmea_socket.setblocking(0)
             self.nmea_socket.connect((self.config['host'], 20220))
         except OSError as e:
-            print('os error', e)
             if e.args[0] is errno.EINPROGRESS:
                 self.nmea_socket_poller = select.poll()
                 self.nmea_socket_poller.register(self.nmea_socket, select.POLLIN)
-                return True
+                try:
+                    self.nmea_socket.send(bytes('$PYPBS*48\r\n', 'utf-8'))
+                except Exception as e:
+                    print('nmea socket exception sending', e)
+                    self.nmea_socket.close()
+                    self.nmea_socket = False
+            else:
+                print('os error', e)
         except Exception as e:
             print('exception', e)
             self.nmea_socket = False
@@ -384,10 +402,11 @@ def main():
     print('initializing arduino')
     config = {'host':'localhost','hat':{'arduino':{'device':'/dev/spidev0.1',
                                                    'resetpin':'16'}},
-              'arduino.nmea.baud': 38400,
+              'arduino.nmea.baud': 4800,
               'arduino.nmea.in': False,
               'arduino.nmea.out': False,
-              'arduino.ir': True}
+              'arduino.ir': True,
+              'arduino.debug': True}
 
     a = arduino(config)
     dt = 0
