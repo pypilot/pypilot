@@ -36,13 +36,13 @@ extern "C" {
 }
 
 #define NONE      0 
-#define NOKIA5110 1
+#define NOKIA5110L 1
 #define JLX12864G 2
 
-#define LCD NOKIA5110
+#define LCD NOKIA5110L
 //#define LCD JLX12864G
 
-#if LCD == NOKIA5110
+#if LCD == NOKIA5110L
 #include "PCD8544.h"
 static PCD8544 lcd(13, 11, 8, 7, 4);
 #elif LCD == JLX12864G
@@ -333,7 +333,7 @@ void setup()
     ADCSRA |= _BV(ADIE);
     ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
 
-#if LCD==NOKIA5118
+#if LCD==NOKIA5110L
     // PCD8544-compatible displays may have a different resolution...
     lcd.begin(84, 48);
 #elif LCD==JLX12864G
@@ -961,7 +961,11 @@ void draw_barometer_graph()
     lcd.setpos(0, 50);
     lcd.print(F("baro"));
     lcd.setpos(0, 60);
-    lcd.print(F("plot 48m"));
+    switch(eeprom_data.baro_page) {
+    case 0: lcd.print(F("plot 5m")); break;
+    case 1: lcd.print(F("plot 1h")); break;
+    case 2: lcd.print(F("plot 1d")); break;
+    }
     lcd.setpos(0, 70);
     a = snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("%d"), a);
     lcd.print(status_buf[2]);
@@ -1042,8 +1046,8 @@ void draw_setting(uint8_t &setting, const char* name, const char* first, const c
 #endif
     if(third) {
         strcpy_P(status_buf[0], third);
-#if LCD == JLX12864G
         lcd.print(status_buf[0]);
+#if LCD == JLX12864G
         int y = setting*14-14;
         lcd.line(0, y, 60, y, 255);
 #endif
