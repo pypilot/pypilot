@@ -80,7 +80,8 @@ bool IRrecvPCI::getResults(void) {
       noInterrupts ();  //Ensure atomic access of volatile variable
       changeTime=recvGlobal.timer;
       interrupts(); //restore interrupts
-      if( (micros()-changeTime) > recvGlobal.frameTimeout) {
+      uint32_t dt = (micros()-changeTime);
+      if( dt > recvGlobal.frameTimeout ) {// && dt < recvGlobal.frameTimeout*3/2) {
         IRLib_IRrecvComplete(3);
         IRrecvBase::getResults();
         return true;

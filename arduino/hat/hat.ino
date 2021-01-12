@@ -509,7 +509,8 @@ void loop() {
     // read from IR??
     if (ir.getResults()) {
         myDecoder.decode();
-        send_code(IR, (myDecoder.value<<8) | myDecoder.protocolNum);
+        if(myDecoder.protocolNum || myDecoder.bits >= 12)
+            send_code(IR, (myDecoder.value<<8) | myDecoder.protocolNum);
         ir.enableIRIn();      //Restart receiver
     }
     if (rf.available()) {
