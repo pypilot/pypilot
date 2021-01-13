@@ -712,7 +712,7 @@ class connecting(controlbase):
             self.box(rectangle(0, 0, 1, .4), black)
             self.fittext(rectangle(0, 0, 1, .4), _('connect to server'), True)
             self.drawn_text = True
-        self.box(rectangle(0, .4, 1, .5), black)
+        self.box(rectangle(0, .4, 1, .52), black)
         dots = ''
         for i in range(self.connecting_dots):
             dots += '.'

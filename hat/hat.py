@@ -184,7 +184,7 @@ class Hat(object):
         self.config = {'remote': False, 'host': '127.0.0.1', 'actions': {},
                        'pi.ir': True, 'arduino.ir': False,
                        'arduino.nmea.in': False, 'arduino.nmea.out': False,
-                       'arduino.nmea.baud': 38400,
+                       'arduino.nmea.baud': 4800,
                        'lcd': {}}
         self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf' 
         print('loading config file:', self.configfilename)

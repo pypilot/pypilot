@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2021 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -217,13 +217,15 @@ class NMEASocket(LineBufferedNonBlockingSocket):
     def readline(self):
         if self.b: # optimized version in c
             return self.b.readline_nmea()
-        while True:
-            line = self.readline()
+        while True: # python version (not used normally)
+            line = super(NMEASocket, self).readline()
             if not line:
                 return False
+            line = line.rstrip()
             if len(line) > 4 and (line[0] == '$' or line[0] == '!'):
-                cksum = int(buf[-2:])
-                if cksum == nmea_cksum(line[1:-2]):
+                cksum = int(line[-2:], 16)
+                #print("cksum", '%02X'%cksum, '%02X'%nmea_cksum(line[1:-3]))
+                if cksum == nmea_cksum(line[1:-3]):
                     return line
 
 class Nmea(object):
@@ -508,9 +510,22 @@ class nmeaBridge(object):
         for name in watchlist:
             self.client.watch(name, watch)
 
-    def receive_nmea(self, line, device):
+    def receive_nmea(self, line, sock):
+        device = 'socket' + str(sock.uid),        
         parsers = []
 
+        # if we receive a "special" pypilot nmea message from this
+        # socket, then mark it to rebroadcast to other nmea sockets
+        # normally only nmea data received from serial ports is broadcast
+        if not sock.broadcast:
+            if line == '$PYPBS*48':
+                sock.broadcast = True
+                return
+        else:
+            for s in self.sockets:
+                if s != sock:
+                    s.write(line+'\r\n')
+        
         # optimization to only to parse sentences here that would be discarded
         # in the main process anyway because they are already handled by a source
         # with a higher priority than tcp
@@ -539,6 +554,9 @@ class nmeaBridge(object):
             self.pipe.send('sockets')
 
         sock = NMEASocket(connection, address)
+        # normally don't re-transmit nmea data received from sockets
+        # if it is marked to broadcast, then data received will re-transmit
+        sock.broadcast = False
         self.sockets.append(sock)
 
         self.addresses[sock] = address
@@ -629,7 +647,7 @@ class nmeaBridge(object):
                     print('nmea bridge lost server connection')
                     exit(2)
                 if sock == self.pipe:
-                    print('nmea bridge pipe to autopilot')
+                    print('nmea bridge lost pipe to autopilot')
                     exit(2)
                 self.socket_lost(sock, fd)
             elif sock == self.server:
@@ -646,7 +664,7 @@ class nmeaBridge(object):
                         line = sock.readline()
                         if not line:
                             break
-                        self.receive_nmea(line, 'socket' + str(sock.uid))
+                        self.receive_nmea(line, sock)
             else:
                 print('nmea bridge unhandled poll flag', flag)
 
