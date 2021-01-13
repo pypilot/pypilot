@@ -84,7 +84,7 @@ const int history_len = 48;
 #endif
 
 static struct baro_history_t {
-    uint16_t data[history_len];
+    int8_t data[history_len];
     uint16_t last;
     uint32_t last_updatetime;
     uint8_t pos;
@@ -345,8 +345,10 @@ void setup()
     pinMode( 5, INPUT_PULLUP);
     pinMode( 6, INPUT_PULLUP);
 
-    for(int i=0; i<3; i++)
+    for(int i=0; i<3; i++) {
+        baro_history[i].data[history_len-1] = -127;
         baro_history[i].last = 60000;
+    }
 }
 
 ISR(WDT_vect)
@@ -436,7 +438,7 @@ void send_nmea(const char *buf)
   Serial.print(buf2);
 }
 
-int lcd_update;
+uint8_t lcd_update=1;
 float wind_dir, wind_speed, wind_speed_30;
 
 void read_anemometer()
@@ -649,8 +651,14 @@ void put_baro_history(uint8_t index, int32_t val)
 {
     baro_history[index].last_updatetime += baro_times[index];
     val -= 60000;
+    int diff = (val - baro_history[index].last)/5;
+    if(diff > 127)
+        diff = 127;
+    else if(diff < -127)
+        diff = -127;
+    
+    baro_history[index].data[baro_history[index].pos++] = diff;
     baro_history[index].last = val;
-    baro_history[index].data[baro_history[index].pos++] = val;
     if(baro_history[index].pos == history_len)
         baro_history[index].pos = 0;
 }
@@ -770,7 +778,7 @@ void read_light()
     analogWrite(analogBacklightPin, pwm);
 }
 
-static uint16_t last_lcd_updatetime, last_lcd_texttime;
+static uint16_t last_lcd_updatetime = -1000, last_lcd_texttime;
 static char status_buf[4][16];
 void draw_anemometer()
 {
@@ -977,8 +985,6 @@ void draw_barometer_graph()
 
 #if LCD == JLX12864G
     lcd.refresh(1);
-#else
-    lcd.refresh();
 #endif
 
 #if 0
@@ -998,13 +1004,15 @@ void draw_barometer_graph()
     lcd.clear_lines(0, 50);
 #endif
     int index = eeprom_data.baro_page;
+    int v = 0;
     for(int i=0; i<history_len; i++) {
-        int p = (baro_history[index].pos + i)%history_len;
-        int v = baro_history[index].data[p] - baro_history[index].last;
-        v /= 5;
-        v = my/2 - v;
-        if(v>=0 && v < my)
-            lcd.putpixel(i, v, 255);
+        int y = my/2 - v;
+        if(y >= 0 && y < my)
+            lcd.putpixel(history_len-i-1, y, 255);
+        int p = baro_history[index].pos - i - 1;
+        if(p < 0)
+            p += history_len;
+        v -= baro_history[index].data[p];
     }
 #if LCD == JLX12864G
     lcd.refresh(0);
