@@ -499,7 +499,7 @@ void position(uint16_t value)
         OCR1A = 1500/DIV_CLOCK + value * 3 / 2 / DIV_CLOCK;
     //OCR1A = 1350/DIV_CLOCK + value * 27 / 20 / DIV_CLOCK;
     else if(pwm_style == 2) {
-        OCR1A = abs((int)value - 1000) * DIV_CLOCK;
+        OCR1A = abs((int)value - 1000) * 16 / DIV_CLOCK;
         if(value > 1040) {
             a_bottom_off;
             b_bottom_on;
@@ -1093,8 +1093,8 @@ void process_packet()
         }
         break;
     case MAX_CURRENT_CODE: { // current in units of 10mA
-        unsigned int max_max_current = low_current ? 2000 : 4000;
-        if(value > max_max_current) // maximum is 20 or 40 amps
+        unsigned int max_max_current = low_current ? 2000 : 5000;
+        if(value > max_max_current) // maximum is 20 or 50 amps
             value = max_max_current;
         max_current = value;
     } break;
