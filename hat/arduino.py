@@ -269,8 +269,6 @@ class arduino(object):
 
         if serial_data:
             self.debug('nmea>', bytes(serial_data))
-            self.debug('nmea data', self.serial_in_count, 'bytes in',
-                       self.serial_out_count, 'bytes_out')
             if self.nmea_socket and self.config['arduino.nmea.in']:
                 try:
                     self.nmea_socket.send(bytes(serial_data))
@@ -359,7 +357,7 @@ def arduino_process(pipe, config):
         t1 = time.monotonic()
         baud_rate = a.get_baud_rate()
         if baud_rate:
-            #print('baud', baud_rate)
+            a.debug('nmea baud rate', baud_rate)
             if a.nmea_socket:
                 events.append(['baudrate', baud_rate])
             else:
