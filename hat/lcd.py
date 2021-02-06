@@ -17,7 +17,7 @@ try:
     import micropython
     from upy_client import pypilotClient
     def gettime():
-        return time.time()
+        return time.ticks_us()/1e6
     import ugfx
 except:
     from pypilot.client import pypilotClient
@@ -30,12 +30,12 @@ except:
 class Key():
     def __init__(self):
         self.count = 0
-        self.down = self.up = False
+        self.down = self.up = 0
 
     def update(self, down, count=None):
         if down:
             if not self.count:
-                self.down = True
+                self.down += 1
             if count:
                 self.count = count
             else:
@@ -277,7 +277,7 @@ class LCD():
             self.screen.blit(surface, 0, 0, self.config['flip'])
 
         if 'contrast' in self.config:
-            self.screen.contrast = int(self.config['contrast'])
+            self.screen.contrast = int(float(self.config['contrast'])*9/12)+10
 
         if micropython:
             self.screen.hue = int(float(self.config['backlight'])*255/40)
@@ -318,6 +318,8 @@ class LCD():
         if next_page and next_page != self.page:
             self.page = next_page
             self.update_watches()
+            #for key in self.keypad:
+            #    key.down = key.up = 0
             self.need_refresh = True
         t2 = gettime()
         
@@ -327,14 +329,6 @@ class LCD():
             self.lastframetime = max(self.lastframetime+frameperiod, t-frameperiod)
         t3 = gettime()
 
-        for key in self.keypad:
-            if key.down:
-                key.down = False
-                if self.hat:
-                    self.hat.arduino.set_buzzer(1, .1)
-            if key.up:
-                key.up = False
-                    
         t4 = gettime()
         #print('lcd times', t1-t0, t2-t1, t3-t2, t4-t3)
 

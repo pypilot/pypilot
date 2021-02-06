@@ -169,7 +169,7 @@ class RangeEdit(page):
                 delta = max(1, delta)
             else:
                 delta = min(-1, delta)
-            v = self.value + delta*self.step
+            v = int(self.value) + delta*self.step
             v = round(v)
             
         v = min(v, self.range[1])
@@ -492,7 +492,7 @@ class language(menu):
                  ('deutsch', 'de'),
                  ('Eλληνικά', 'el'),
                  ('english', 'en'),
-                ('español', 'es'),
+                 ('español', 'es'),
                  ('suomalainen', 'fi'),
                  ('français', 'fr'),
                  ('italiano', 'it'),
@@ -518,10 +518,14 @@ class language(menu):
         
 class settings(menu):
     def __init__(self):
+        if no_translation == translate:
+            lang = []
+        else:
+            lang = [language()]
         super(settings, self).__init__(_('settings'),
                             [ValueEnum(_('mode'), 'ap.mode'),
                              ValueEnum(_('pilot'), 'ap.pilot'),
-                             motor(), control_menu(), display(), language()])
+                             motor(), control_menu(), display()] + lang)
         
 class mainmenu(menu):
     def __init__(self, lcd):
@@ -551,9 +555,9 @@ class mainmenu(menu):
 
         if self.loadtime:
             dt = time.time() - self.loadtime
-            if dt > 5:
+            if dt > 11:
                 self.fittext(rectangle(0, .4, 1, .2), _('timeout'))
-            elif dt > 6:
+            elif dt > 10:
                 self.loadtime = 0
             elif dt > .6:
                 self.fittext(rectangle(0, .4, 1, .2), '.'*int(dt*2+.5))

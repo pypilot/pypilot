@@ -28,7 +28,6 @@ def make_pin(pin, i, lcd):
         except:
             print('no Pin.irq!! keypresses will lag')
             noisr = True
-
     return pin
 
 def handle_pin(pin, i, lcd):
@@ -42,5 +41,6 @@ def init(lcd):
         keypad_pins.append(make_pin(keypad_pin_numbers[i], i, lcd))
 
 def poll(lcd):
-    for i in range(len(keypad_pins)):
-        handle_pin(keypad_pins[i], i, lcd)
+    if noisr:
+        for i in range(len(keypad_pins)):
+            handle_pin(keypad_pins[i], i, lcd)

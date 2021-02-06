@@ -25,6 +25,7 @@ class pypilotClient(object):
         self.lastlinetime = time.time()
         self.addr = False
         self.need_values = False
+        self.valuesbuffer = ''
 
         self.udp_port = 8317
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -236,9 +237,9 @@ class pypilotClient(object):
             t = time.time()
             dt = t - self.lastlinetime            
             if dt > 1.0:
-                print('dt', dt, t)
+                print('upy_client: dt', dt, t)
             if dt > 2.5:
-                print('timeout on socket', dt, 'reset wifi')
+                print('upy_client: timeout on socket', dt, 'reset wifi')
                 from wifi_esp32 import connect
                 connect()
                 self.disconnect()

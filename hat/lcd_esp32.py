@@ -10,6 +10,12 @@
 import time
 t0= time.time()
 import wifi_esp32
+
+def gettime():
+    return time.ticks_us()/1e6
+
+'''
+
 import display
 
 # initialize tft display
@@ -19,28 +25,30 @@ tft.init(tft.ST7789,bgr=False,rot=tft.PORTRAIT, miso=17,backl_pin=4,backl_on=1, 
 tft.setwin(52,40,240, 320)
 #tft.set_bg(0xff00)
 #tft.clear()
-t1= time.time()
+'''
+
+t1= gettime()
 
 import page
-t2= time.time()
+t2= gettime()
 from lcd import LCD
-t3= time.time()
+t3= gettime()
 import gpio_esp32
-t4= time.time()
+t4= gettime()
 
 lcd = LCD(False)
 period = .1
-sleeptime = time.time()
+sleeptime = gettime()
 
 import machine, micropython
 #machine.freq(80000000)
 
-vbatt = machine.ADC(34)
+vbatt = machine.ADC(machine.Pin(34))
 vbatt.atten(3) # only one that works!!
 
 gpio_esp32.init(lcd)
 
-t5= time.time()
+t5= gettime()
 print ('loaded', t5-t0, ':',t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
 
 sleepmode = 0
@@ -57,29 +65,31 @@ while True:
 
     gpio_esp32.poll(lcd)
     if any(list(map(lambda key : key.count, lcd.keypad))):
-        sleeptime = time.time()
+        sleeptime = gettime()
         if sleepmode:
-            tft.backlight(True)
+            #tft.backlight(True)
+            pass
         if sleepmode > 1:
             machine.freq(240000000)
         sleepmode = 0
     
-    t0 = time.time()
-    try:
+    t0 = gettime()
+#    try:
+    if 1:
         lcd.poll()
-    except Exception as e:
-        print('lcd poll failed', e)
-    t1 = time.time()
+#    except Exception as e:
+#        print('lcd poll failed', e)
+    t1 = gettime()
     gpio_esp32.poll(lcd)
-    t2 = time.time()
+    t2 = gettime()
         
-    if time.time() - sleeptime > 10:
+    if 0 and gettime() - sleeptime > 10:
         #print('sleep blank screen')
-        tft.backlight(False)
+        #tft.backlight(False)
         #esp.sleep_type(esp.SLEEP_MODEM) # SLEEP_LIGHT
         sleepmode = 1
 
-    if time.time() - sleeptime > 20:
+    if 0 and gettime() - sleeptime > 20:
         if wifi_esp32.station.isconnected():
             print('sleep wifi off')
             pass
@@ -90,15 +100,15 @@ while True:
     #if wifi_esp32.station.isconnected():
     wifi_esp32.poll(lcd.client)
 
-    if time.time() - sleeptime > 30:
+    if 0 and gettime() - sleeptime > 30:
         print('sleep power down')
         machine.deepsleep()
 
-    t3 = time.time()
+    t3 = gettime()
     dt = t3-t0
     s = period - dt
     if s <= .01:
         s = .01
-        #print('sleep ', t1-t0, t2-t1, t3-t2, s*100/(t3-t0+s), '%')
+    #print('sleep ', dt, t1-t0, t2-t1, t3-t2, s*100/(t3-t0+s), '%')
 
     time.sleep(s)

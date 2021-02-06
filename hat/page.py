@@ -22,6 +22,7 @@ class rectangle():
         self.x, self.y, self.width, self.height = x, y, width, height
 
 translate = lambda x : x # initially no translation
+no_translation = translate
 
 def _(x):
     return translate(x)    
@@ -218,10 +219,20 @@ class page(object):
             return v
 
     def testkeydown(self, key):
-        return self.lcd.keypad[key].down
+        k = self.lcd.keypad[key]
+        if k.down:
+            if self.lcd.hat:
+                self.lcd.hat.arduino.set_buzzer(1, .1)
+            k.down -= 1
+            return True
+        return False
 
     def testkeyup(self, key):
-        return self.lcd.keypad[key].up
+        k = self.lcd.keypad[key]
+        if k.up:
+            k.up = 0
+            return True
+        return False
 
     def speed_of_keys(self):
         # for up and down keys providing acceration
@@ -262,11 +273,12 @@ class page(object):
             return control(self.lcd)
 
         # these work from any page (even menu) to dodge
-        if self.lcd.keypad[NUDGE_PORT].count:
+        lcd = self.lcd
+        if lcd.keypad[NUDGE_PORT].count:
             lcd.client.set('servo.command', -1)
-        if self.lcd.keypad[NUDGE_STARBOARD].count:
+        if lcd.keypad[NUDGE_STARBOARD].count:
             lcd.client.set('servo.command', 1)           
-        if self.lcd.keypad[NUDGE_PORT].up or self.lcd.keypad[NUDGE_STARBOARD].up:
+        if lcd.keypad[NUDGE_PORT].up or lcd.keypad[NUDGE_STARBOARD].up:
             lcd.client.set('servo.command', 0)           
 
 class info(page):
@@ -403,7 +415,11 @@ try:
     import wifi_esp32
     def test_wifi():
         return wifi_esp32.connected[0]
+    def gettime():
+        return time.ticks_us()/1e6
 except:
+    def gettime():
+        return time.monotonic()
     def test_wifi():
         try:
             wlan0 = open('/sys/class/net/wlan0/operstate')
@@ -563,7 +579,7 @@ class control(controlbase):
             super(control, self).display(refresh)
             return
 
-        t0 = time.monotonic()
+        t0 = gettime()
         mode = self.last_val('ap.mode')
         ap_heading = self.last_val('ap.heading')
         ap_heading_command = self.last_val('ap.heading_command')
@@ -687,8 +703,11 @@ class control(controlbase):
                 sign = -1
             elif ss or bs:
                 sign = 1
+            else:
+                sign = 0
 
             if change:
+                change = float(change)
                 cmd = self.last_val('ap.heading_command') + change*sign
                 self.set('ap.heading_command', cmd)
         else: # manual control
