@@ -48,7 +48,7 @@ class NonBlockingPipeEnd(object):
     def readline(self):
         return self.recv() # pipe has complete lines if used for text
 
-    def write(self, value):
+    def write(self, value, udp=False):
         self.send(value)
     
     def send(self, value, block=False):
@@ -149,7 +149,7 @@ class PipeNonBlockingPipeEnd(object):
     def flush(self):
         pass
 
-    def write(self, data):
+    def write(self, data, udp=False):
         if not self.pollout.poll(0):
             if not self.sendfailok:
                 print('failed write', self.name)
@@ -193,7 +193,7 @@ class NoMPLineBufferedPipeEnd(object):
     def close(self):
         pass
 
-    def write(self, data):
+    def write(self, data, udp=False):
         self.send(data)
     
     def recv(self, timeout=0):
