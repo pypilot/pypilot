@@ -39,6 +39,7 @@ extern "C" {
 #define NOKIA5110L 1
 #define JLX12864G 2
 
+//#define LCD NONE
 #define LCD NOKIA5110L
 //#define LCD JLX12864G
 
@@ -215,7 +216,9 @@ void apply_settings()
     else // apply weak pullup to input wind direction to detect if wire is disconnected
         pinMode(3, INPUT_PULLUP);
 
+#if LCD
     lcd.flip = eeprom_data.display_orientation;
+#endif
     if(eeprom_data.leds_on) {
         pinMode( A3, OUTPUT);
         digitalWrite(A3, HIGH);
@@ -551,7 +554,7 @@ void read_anemometer()
     }
 
     float dir = 0;
-    if(eeprom_data.sensor_type)
+    if(!LCD || eeprom_data.sensor_type)
     {
         // compensate 13 degree deadband in potentiometer over full range
         dir = 360 - (sensorValue + 13) * .34;
