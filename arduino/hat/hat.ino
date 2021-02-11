@@ -225,7 +225,7 @@ void setup()
     pinMode(DIR_PIN, INPUT);
 
     rf.enableReceive(0);  // Receiver on interrupt 0 => that is pin #2
-    ir.enableIRIn();    
+    ir.enableIRIn();
 
     for(int i=0; i<6; i++)
         pinMode(A0+i, INPUT_PULLUP);
