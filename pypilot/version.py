@@ -1,2 +1,2 @@
-strversion = '0.23'
+strversion = '0.24'
 
