@@ -32,7 +32,11 @@ def make_pin(pin, i, lcd):
 
 def handle_pin(pin, i, lcd):
     key = lcd.keypad[i]
-    key.update(not pin())
+    v = not pin()
+    
+    if v:
+        lcd.keypress = True
+    key.update(v)
             
 keypad_pins = []
 def init(lcd):

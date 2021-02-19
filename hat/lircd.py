@@ -47,6 +47,7 @@ class LoadLIRC(threading.Thread):
                     break
             except Exception as e:
                 print('failed to initialize lirc. is .lircrc missing?', e)
+                time.sleep(60)
             time.sleep(2)
         self.version = version
 
