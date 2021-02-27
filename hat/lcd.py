@@ -17,7 +17,7 @@ try:
     import micropython
     from upy_client import pypilotClient
     def gettime():
-        return time.ticks_us()/1e6
+        return time.ticks_ms()/1e3
     import ugfx
 except:
     from pypilot.client import pypilotClient

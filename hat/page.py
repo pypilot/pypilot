@@ -416,7 +416,7 @@ try:
     def test_wifi():
         return wifi_esp32.connected[0]
     def gettime():
-        return time.ticks_us()/1e6
+        return time.ticks_ms()/1e3
 except:
     def gettime():
         return time.monotonic()

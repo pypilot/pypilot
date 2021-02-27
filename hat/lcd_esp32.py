@@ -14,7 +14,7 @@ import time
 import wifi_esp32
 
 def gettime():
-    return time.ticks_us()/1e6
+    return time.ticks_ms()/1e3
 t0= gettime()
 
 '''
@@ -97,6 +97,9 @@ while True:
     t2 = gettime()
 
     sleepdt = gettime() - sleeptime
+    if sleepdt < 0: # work around ticks wrapping
+        sleeptime = 0
+
     if sleepmode == 0:
         if sleepdt > 120: # 60
             print('sleep blank screen')
@@ -117,13 +120,16 @@ while True:
     
     t3 = gettime()
     dt = t3-t0
-    if sleepmode:
-        s = 1 - dt
+    if dt < 0:
+        s = .1;
     else:
-        s = period - dt
-    if s <= .01:
-        s = .01
-    elif s > 1:
-        s = 1
+        if sleepmode:
+            s = 1 - dt
+        else:
+            s = period - dt
+        if s <= .01:
+            s = .01
+        elif s > 1:
+            s = 1
         
     time.sleep(s)
