@@ -1,13 +1,6 @@
-avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U lfuse:w:0x7f:m
-avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U hfuse:w:0xda:m
-avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U efuse:w:0x4:m
-
-efuse  0xfc  0x04
-hfuse  0xda
-lfuse  0x7f
-
-
 This motor controller monitor receives commands over a serial port.
+
+to compile use "make" and "make upload" to program to arduino
 
 
 It monitors voltage, current, temperature and fault pins, and
@@ -21,6 +14,12 @@ brown-out detector (BOD) not always enabled by default.  This is critical
 to ensure flash pages are not corrupted.   Also, often nano clones
 don't set the lock bits correctly.  If the BAD_FUSES flag is reported it
 the fuses should be programmed correctly
+
+to set correct fuses for exampe using a second arduino as isp programmer
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U lfuse:w:0x7f:m
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U hfuse:w:0xda:m
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U efuse:w:0x4:m
+
 
 To enable, with one arduino programmed with arduinoisp
 
