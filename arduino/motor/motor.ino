@@ -452,9 +452,11 @@ void setup()
 
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
-    if(ratiometric_mode)
+    if(ratiometric_mode) {
         adcref = _BV(REFS0); // 5v
-    else
+        voltage_mode = 1; // 24v mode
+        max_voltage = 3200; // increase max voltage to 32v
+    } else
         adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
     ADMUX = adcref | _BV(MUX0);
 #if USE_ADC_ISR
