@@ -898,16 +898,16 @@ uint16_t TakeVolts(uint8_t p)
     // voltage in 10mV increments 1.1ref, 560 and 10k resistors
     uint32_t v = TakeADC(VOLTAGE, p);
 
-    if(voltage_mode)
-        // 14135 / 3584 = 100.0/1024*10280/280*1.1
-        v = v * 14135 / 3584 / 16;
-    else if(ratiometric_mode) {
+    if(ratiometric_mode)
         // 100.0/1024*115000/15000*5.0
         v = v * 1439 / 384 / 16;
-    } else
+    else if(voltage_mode)
+        // 14135 / 3584 = 100.0/1024*10280/280*1.1
+        v = v * 14135 / 3584 / 16;
+    else
         // 1815 / 896 = 100.0/1024*10560/560*1.1
         //    v = v * 1815 / 896 / 16;
-    v = v * 1790 / 896 / 16; // hack closer to actual voltage
+        v = v * 1790 / 896 / 16; // hack closer to actual voltage
 
     return v;
 }
