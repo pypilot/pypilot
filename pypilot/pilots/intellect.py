@@ -202,7 +202,7 @@ class KerasModel(Model):
         output = tf.keras.layers.Dense(output_size, activation='tanh')(hidden2)
         self.model = tf.keras.Model(inputs=input, outputs=output)
         self.model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mse'])
-        self.accuracy = 
+        #self.accuracy = 
 
     def save(self):
         filename = learning.model_filename(self.state)
