@@ -40,8 +40,8 @@ extern "C" {
 #define JLX12864G 2
 
 //#define LCD NONE
-#define LCD NOKIA5110L
-//#define LCD JLX12864G
+//#define LCD NOKIA5110L
+#define LCD JLX12864G
 
 #if LCD == NOKIA5110L
 #include "PCD8544.h"
@@ -49,6 +49,7 @@ static PCD8544 lcd(13, 11, 8, 7, 4);
 #elif LCD == JLX12864G
 #include "JLX12864.h"
 static JLX12864 lcd(13, 11, 8, 7, 4);
+#define LCD_BL_HIGH
 #endif
 
 const int analogInPin = A7;  // Analog input pin that the potentiometer is attached to
@@ -64,6 +65,7 @@ int16_t dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, 
 
 int16_t cal_wind_min_reading, cal_wind_max_reading;
 uint32_t eeprom_write_timeout = 0;
+uint8_t setting_changed;
 
 struct eeprom_data_struct {
     char signature[6];
@@ -248,21 +250,18 @@ void setup()
 
     uint32_t start = micros();
     while(!calculated_clock);  // wait for watchdog to fire
+
+    
     uint16_t clock_time = micros() - start;
     // after timing the clock frequency set the correct divider
-    if(clock_time > 6000) {
-        cli();
-        CLKPR = _BV(CLKPCE);
-        CLKPR = _BV(CLKPS0); // divide by 2
-        sei();
-    } else {
-        cli();
-        CLKPR = _BV(CLKPCE);
-        CLKPR = 0; // divide by 1
-        sei();
-    }        
+    uint8_t div = 1;
+    if(clock_time < 2900)
+        div=2; // xtal is 8mhz
 
-    // now we are at 8mhz with either 8mhz or 16mhz xtal, must compile with C_FPU = 8mhz
+    cli();
+    CLKPR = _BV(CLKPCE);
+    CLKPR = 0; // divide by 1
+    sei();
     
     // set up watchdog again
     cli();
@@ -272,8 +271,12 @@ void setup()
     sei();
 
     Serial.begin(38400);  // start serial for output
+#if 0
     Serial.print(F("STARTUP\n"));
     Serial.print(clock_time);
+    Serial.print(F(" "));
+    Serial.println(div);
+#endif
     // default values
   
     // read eeprom and determine if it is valid
@@ -289,12 +292,12 @@ void setup()
     
     eeprom_data.wind_min_reading = 131;
     eeprom_data.wind_max_reading = 884;
-    eeprom_data.sensor_type = 0;
+    eeprom_data.sensor_type = 1;
     eeprom_data.display_orientation = 0;
     eeprom_data.backlight_setting = 2;
     eeprom_data.direction_type = 0;
     eeprom_data.temperature_units = 0;
-    eeprom_data.leds_on = 1;
+    eeprom_data.leds_on = 0;
     eeprom_data.display_page = 0;
   
     if(memcmp_P(ram_eeprom.signature, signature, sizeof ram_eeprom.signature) == 0)
@@ -317,7 +320,7 @@ void setup()
     uint8_t lowBits      = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
     uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
     uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
-    //uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS);
+    //uint8_t lockBits     = bcdoot_lock_fuse_bits_get(GET_LOCK_BITS);
     if(lowBits != 0xFF || highBits != 0xda ||
        (extendedBits != 0xFD && extendedBits != 0xFC)
        //|| lockBits != 0xCF
@@ -932,6 +935,7 @@ void draw_barometer_graph()
     if(page && !curpage) {
         if(++eeprom_data.baro_page == 3)
             eeprom_data.baro_page = 0;
+        setting_changed = 1;
     }
     page = curpage;
 
@@ -1028,6 +1032,25 @@ void draw_barometer_graph()
 void draw_setting(uint8_t &setting, const char* name, const char* first, const char* second, const char* third=0)
 {
 #if LCD
+    uint8_t cursetting_key = digitalRead(5);
+    static uint8_t setting_key;
+
+    if(setting_key && !cursetting_key) {
+        setting++;
+        int max = third ? 3 : 2;
+        if(setting >= max)
+            setting = 0;
+        apply_settings();
+        setting_changed = 1;
+    }
+    setting_key = cursetting_key;
+
+    uint16_t time = millis();
+    uint16_t dt = time - last_lcd_updatetime;
+    if(!setting_changed && dt < 1000) // don't update faster
+        return;
+    last_lcd_updatetime = time;
+
     lcd.clear();
     lcd.setfont(4);
     lcd.setpos(0, 0);
@@ -1072,17 +1095,6 @@ void draw_setting(uint8_t &setting, const char* name, const char* first, const c
     lcd.refresh();
 #endif
     
-    uint8_t cursetting_key = digitalRead(5);
-    static uint8_t setting_key;
-
-    if(setting_key && !cursetting_key) {
-        setting++;
-        int max = third ? 3 : 2;
-        if(setting >= max)
-            setting = 0;
-        apply_settings();
-    }
-    setting_key = cursetting_key;
 #endif
 }
 
@@ -1127,17 +1139,20 @@ void loop()
 
     static uint8_t page;
     uint8_t curpage = digitalRead(6);
+    uint32_t t = millis();
 
     if(page && !curpage) {
-        if(++eeprom_data.display_page == 8) {
+        if(eeprom_data.display_page && (setting_changed || t-eeprom_write_timeout > 5000))
             eeprom_data.display_page = 0;
-        }
+         else if(++eeprom_data.display_page == 8)
+            eeprom_data.display_page = 0;
+
+        setting_changed = 0;
         eeprom_write_timeout = millis();
     }
     page = curpage;
 
     if(eeprom_write_timeout) {
-        uint32_t t = millis();
         if(t-eeprom_write_timeout > 10000) {
             if(eeprom_data.display_page > 1)
                 eeprom_data.display_page = 0;

@@ -52,7 +52,7 @@ void JLX12864::begin()
 
 #ifdef HWSPI
     SPI.begin();
-    SPI.setClockDivider(SPI_CLOCK_DIV8);
+    SPI.setClockDivider(SPI_CLOCK_DIV16);
 #endif
     // Reset the controller state...
     digitalWrite(pin_sce, HIGH);
@@ -78,7 +78,7 @@ void JLX12864::putpixel(uint8_t x, uint8_t y, uint8_t color)
     if(x >= 64 || y >= 64)
         return;
 
-    if(!flip) {
+    if(flip) {
         x = 63 - x;
         y = 63 - y;
     }
@@ -184,6 +184,7 @@ void JLX12864::SetParameters()
     const int contrast = 90;
     unsigned char cmd[] = {
         0xe2, // Soft Reset
+        0xc2, // Line scan sequence : from top to bottom
         0x2c, // Boost 1
         0x2e, // Boost 2
         0x2f, // Boost 3
@@ -192,13 +193,12 @@ void JLX12864::SetParameters()
         0x23, // Coarse Contrast, setting range is from 20 to 27
         0x81, // Trim Contrast
         (uint8_t)45, // Trim Contrast value range can be set from 0 to 63                               
-        0xc2, // Line scan sequence : from top to bottom
         0xa0, // column scan order : from left to right
         0xa6, // not reverse
         0xa4, // not all on
         0x40, // start of first line
-        //0xb0,
-        //0x10,
+//        0xb0,
+//        0x10,
         0xaf // Open the display
     };
 
@@ -216,6 +216,7 @@ size_t JLX12864::write(uint8_t chr)
     int cfont = curfont;
     memcpy_P(&f, fonts + cfont, sizeof f);
     struct font_character c;
+
     for(int i=0; i<f.n; i++) {
         memcpy_P(&c, f.characters + i, sizeof c);
         if(c.c == chr)
@@ -261,13 +262,12 @@ void JLX12864::clear()
 
 void JLX12864::refresh(uint8_t page)
 {
-    SetParameters();
-//    delay(100);
+   SetParameters();
 
     if(page == flip)
-        page = 0x14;
-    else
         page = 0x10;
+    else
+        page = 0x14;
 
     unsigned char *fb = framebuffer;
     
