@@ -8,10 +8,14 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import sys
+import os, os.path
 
 if sys.version_info[0] < 3:
     print('pypilot requires python version 3.  python version is', sys.version)
     exit(1)
+
+if not os.path.exists('deps'):
+    import dependencies
 
 try:
     from setuptools import setup, Extension
@@ -52,7 +56,6 @@ ugfx_module = Extension('pypilot/hat/ugfx/_ugfx',
                         swig_opts=['-c++'] + ugfx_defs
 )
 
-import os, os.path
 locale_files = []
 for walk in os.walk('hat/locale'):
     path, dirs, files = walk

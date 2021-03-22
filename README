@@ -1,38 +1,11 @@
-Installing:
-
-The dependencies can be installed with 'apt install' or sometimes 'pip install"
-
-server dependencies (required): RTIMULIB2 python-gps python-serial libpython-dev python-numpy python-scipy swig
-                    (recommended): ujson pyudev
-
-RTIMULIB2 must be the git version from https://github.com/seandepagnier/RTIMULib2
-git clone https://github.com/seandepagnier/RTIMULib2
-cd RTIMULib2/Linux/python/
-sudo python3 setup.py install
-
-hat dependencies: python-pil
-web dependencies: python-flask python-gevent-websocket
-
-client dependencies (viewers control applications)
-apt: python-wxgtk3.0 python-opengl
-  or python3-wxgtk4.0 python3-opengl
-pip: pyglet pywavefront
-
-
 You may want to run pypilot as a service, see the scripts/debian directory
 
 Clone the data repository and copy data:
 
 git clone https://github.com/pypilot/pypilot
-git clone --depth 1 https://github.com/pypilot/pypilot_data
-cp -rv pypilot_data/* pypilot
 
 Build and install pypilot:
-
-cd pypilot
-python setup.py build
-sudo python setup.py install
-
+sudo python3 setup.py install
 
 
 most of the scripts can be run individually as standalone
@@ -44,7 +17,7 @@ servers (only one executes at a time)
 These server scripts can be run as tests:
 * execute this script directly
 
-pypilot/autopilot.py -- autopilot
+pypilot -- autopilot
 
 instead of running the complete autopilot these scripts provide a server with specific functionallity.
 
