@@ -422,7 +422,7 @@ $(document).ready(function() {
     });
 
     $('#imu_heading_offset').change(function(event) {
-        pypilot_set('imu.heading_offset', $('#imu_heading_offset').value());
+        pypilot_set('imu.heading_offset', $('#imu_heading_offset').val());
     });
 
     $('#rudder_centered').click(function(event) {
@@ -442,7 +442,7 @@ $(document).ready(function() {
     });
     
     $('#rudder_range').change(function(event) {
-        pypilot_set('rudder.range', $('#rudder_range').value());
+        pypilot_set('rudder.range', $('#rudder_range').val());
     });
 
     // Configuration
