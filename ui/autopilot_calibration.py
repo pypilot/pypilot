@@ -180,7 +180,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def receive_message(self, msg):
         name, value = msg
 
-        if self.m_notebook.GetSelection() == 0:
+        if 1:
+        #if self.m_notebook.GetSelection() == 0:
             if name == 'imu.alignmentQ':
                 self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(quaternion.angle(value))))
                 self.alignmentQ = value
@@ -218,7 +219,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 self.pypilot_heading_offset = value
                 self.heading_offset_timer.Start(1000, True)
 
-        elif self.m_notebook.GetSelection() == 1:
+        #elif self.m_notebook.GetSelection() == 1:
             self.accel_calibration_plot.read_data(msg)
             if name == 'imu.accel':
                 self.AccelCalibration.Refresh()
@@ -231,7 +232,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             elif name == 'imu.accel.calibration.log':
                 self.tAccelCalibrationLog.WriteText(value+'\n')
 
-        elif self.m_notebook.GetSelection() == 2:
+        #elif self.m_notebook.GetSelection() == 2:
             self.compass_calibration_plot.read_data(msg)
             if name == 'imu.compass':
                 self.CompassCalibration.Refresh()
@@ -244,7 +245,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             elif name == 'imu.compass.calibration.log':
                 self.tCompassCalibrationLog.WriteText(value+'\n')
         
-        elif self.m_notebook.GetSelection() == 3:
+        #elif self.m_notebook.GetSelection() == 3:
             if name == 'rudder.angle':
                 self.UpdateLabel(self.stRudderAngle, str(round3(value)))
                 self.have_rudder = type(value) != type(bool)
@@ -259,7 +260,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             elif name == 'servo.flags':
                 self.stServoFlags.SetLabel(value)
 
-        elif self.m_notebook.GetSelection() == 4:
+        #elif self.m_notebook.GetSelection() == 4:
             if name in self.settings:
                 self.UpdatedSpin(self.settings[name], value)
 
@@ -307,9 +308,9 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             self.lastmouse = pos
 
         if event.Dragging():
-            calibration_plot.rotate_mouse(pos[0] - self.lastmouse[0], \
-                                          pos[1] - self.lastmouse[1])
-            canvas.Refresh()
+            if self.lastmouse:
+                calibration_plot.rotate_mouse(pos[0] - self.lastmouse[0],  pos[1] - self.lastmouse[1])
+                canvas.Refresh()
             self.lastmouse = pos
 
         rotation = event.GetWheelRotation() / 60
