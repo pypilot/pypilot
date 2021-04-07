@@ -623,11 +623,12 @@ class Servo(object):
             # integrate power consumption
             dt = (t - self.current.lasttime)
             self.current.lasttime = t
-            if self.current.value:
-                amphours = self.current.value*dt/3600
-                self.amphours.set(self.amphours.value + amphours)
-            lp = .003*dt # 5 minute time constant to average wattage
-            self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
+            if dt > .01 and dt < .5:
+                if self.current.value:
+                    amphours = self.current.value*dt/3600
+                    self.amphours.set(self.amphours.value + amphours)
+                lp = .003*dt # 5 minute time constant to average wattage
+                self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
 
         if result & ServoTelemetry.FLAGS:
             self.max_current.set_max(50 if self.driver.flags & ServoFlags.CURRENT_RANGE else 20)
