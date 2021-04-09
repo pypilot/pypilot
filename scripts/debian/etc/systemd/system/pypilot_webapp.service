@@ -1,6 +1,7 @@
 [Unit]
 Description=pypilot web
 DefaultDependencies=false
+Requires=pypilot.service
 
 [Service]
 Type=simple
