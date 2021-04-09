@@ -117,7 +117,7 @@ class Web(Process):
                     print('warning, failed to renice hat web process')
                 time.sleep(30) # delay loading web and wait until modules are loaded
                 try:
-                    import web
+                    from . import web
                     web.web_process(pipe, config)
                 except Exception as e:
                     print('web failed to run process:', e)
@@ -373,7 +373,7 @@ class Hat(object):
                     continue
                 events = i.poll()
                 for event in events:
-                    #print('apply', event, time.monotonic())
+                    print('apply', event, time.monotonic())
                     self.apply_code(*event)
 #            except Exception as e:
 #                print('WARNING, failed to poll!!', e, i)
