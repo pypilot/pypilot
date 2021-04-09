@@ -60,7 +60,7 @@ class gpio(object):
                 GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
                     
             def cbr(pin):
-                GPIO.input(pin)
+                value = GPIO.input(pin)
                 time.sleep(.02)  # workaround buggy gpio
                 self.evalkey(pin, value)
 
