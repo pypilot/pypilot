@@ -93,7 +93,6 @@ class LCD():
         self.surface = None
 
         if driver == 'none':
-            screen = None
             page = None
             screen = None
             self.use_glut = None
