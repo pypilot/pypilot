@@ -93,6 +93,7 @@ class LCD():
         self.surface = None
 
         if driver == 'none':
+            screen = None
             page = None
         elif driver == 'tft' or (driver == 'default' and use_tft):
             screen = ugfx.surface(136, 240, 1)
