@@ -95,6 +95,9 @@ class LCD():
         if driver == 'none':
             screen = None
             page = None
+            screen = None
+            self.use_glut = None
+            self.bw = None
         elif driver == 'tft' or (driver == 'default' and use_tft):
             screen = ugfx.surface(136, 240, 1)
             self.surface = screen
@@ -307,6 +310,9 @@ class LCD():
                 self.last_msg[name] = value
             
     def poll(self):
+        if self.screen == None:
+            return
+
         t0 = gettime()
         self.receive()
         t1 = gettime()
