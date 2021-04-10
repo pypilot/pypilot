@@ -1,6 +1,7 @@
 [Unit]
 Description=pypilot hat
 DefaultDependencies=false
+Requires=pypilot.service
 
 [Service]
 Type=simple
