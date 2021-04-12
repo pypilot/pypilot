@@ -115,9 +115,11 @@ class Web(Process):
                     print('warning, failed to make hat web process idle, trying renice')
                 if os.system("renice 20 %d" % os.getpid()):
                     print('warning, failed to renice hat web process')
-                time.sleep(30) # delay loading web and wait until modules are loaded
+                if os.getenv('USER') == 'tc':
+                    time.sleep(30) # delay loading web and wait until modules are loaded
                 try:
-                    from . import web
+                    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+                    import web
                     web.web_process(pipe, config)
                 except Exception as e:
                     print('web failed to run process:', e)
@@ -272,8 +274,8 @@ class Hat(object):
                          ActionNone()]
 
         for action in self.actions:
-            if action.name in self.config['actions']:
-                action.keys = self.config['actions'][action.name]
+            if not action.name in self.config['actions']:
+                self.config['actions'][action.name] = []
 
         self.web = Web(self)
 
@@ -298,11 +300,13 @@ class Hat(object):
                     os.kill(pid, signal.SIGTERM) # get backtrace
                 except ProcessLookupError:
                     pass # ok, process is already terminated
+                #os.waitpid(pid, 0)
                 sys.stdout.flush()
             for process in processes:
                 process.process = False
             if signal_number != 'atexit':
                 raise KeyboardInterrupt # to get backtrace on all processes
+
             sys.stdout.flush()
 
         for s in range(1, 16):
