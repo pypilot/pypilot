@@ -118,11 +118,11 @@ class Web(Process):
                 if os.getenv('USER') == 'tc':
                     time.sleep(30) # delay loading web and wait until modules are loaded
                 try:
-                    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-                    import web
+                    from . import web
                     web.web_process(pipe, config)
                 except Exception as e:
                     print('web failed to run process:', e)
+                    time.sleep(3) # prevent failed import from hogging the cpu
 
         super(Web, self).create(process)
         self.send({'status': self.status})
