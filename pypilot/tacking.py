@@ -119,7 +119,7 @@ class Tack(object):
         self.timeout.set(remaining)
       else:
         self.timeout.set(0)
-        self.set.update('tacking')
+        self.state.update('tacking')
         if 'wind' in ap.mode.value:
           self.tack_angle = 2*ap.command # opposite wind direction for wind  mode
         else:
@@ -145,7 +145,7 @@ class Tack(object):
       # to the new value
       if current > self.threshold.value:
         heading_command -= mul*tack_angle
-        ap.command.set(resolv(heading_command, 180))
-        self.set.update('none')
+        ap.heading_command.set(resolv(heading_command, 180))
+        self.state.update('none')
 
     return self.state.value == 'tacking'
