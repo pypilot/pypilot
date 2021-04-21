@@ -235,7 +235,7 @@ class ValueEnumSelect(page):
 
     def process(self):
         self.set(self.pypilot_path, self.name)
-        return self.lcd.menu.prev
+        return control(self.lcd)
 
 class ValueEnum(menu):
     def __init__(self, name, pypilot_path, hide_choices=[]):
