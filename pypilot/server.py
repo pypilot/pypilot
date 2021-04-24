@@ -94,7 +94,7 @@ class pypilotValue(object):
                 
         if watching is not self.watching:
             self.watching = watching
-            if watching is 0:
+            if not watching and watching is not False:
                 watching = True
             if self.connection:
                 self.connection.cwatches[self.name] = watching
@@ -262,7 +262,10 @@ class ServerValues(pypilotValue):
             value.remove_watches(connection)
             
     def set(self, msg, connection):
-        name, data = msg.rstrip().split('=', 1)        
+        if isinstance(connection, LineBufferedNonBlockingSocket):
+            connection.write('error=remote sockets not allowed to register\n')
+            return
+        n, data = msg.rstrip().split('=', 1)        
         values = pyjson.loads(data)
         for name in values:
             info = values[name]
@@ -307,13 +310,6 @@ class ServerValues(pypilotValue):
             return
         self.values[name].set(msg, connection)
 
-    def HandlePipeRequest(self, msg, connection):
-        name, data = msg.split('=', 1)
-        if not name in self.values:
-            connection.write('error=invalid unknown value: ' + name + '\n')
-            return
-        self.values[name].set(msg, connection)
-        
     def load_file(self, f):
         line = f.readline()
         while line:
@@ -516,7 +512,7 @@ class pypilotServer(object):
 
                 self.sockets.append(socket)
                 fd = socket.fileno()
-                socket.cwatches = {'values': True} # server always watches client values
+                socket.cwatches = {} # {'values': True} # server always watches client values
 
                 self.fd_to_connection[fd] = socket
                 self.poller.register(fd, select.POLLIN)
@@ -531,9 +527,8 @@ class pypilotServer(object):
                         continue
                     line = connection.readline() # shortcut since poll indicates data is ready
                     while line:
-                        self.values.HandlePipeRequest(line, connection)                        
+                        self.values.HandleRequest(line, connection)                        
                         line = connection.readline()
-
                     continue
                 if not connection.recvdata():
                     self.RemoveSocket(connection)
@@ -558,7 +553,7 @@ class pypilotServer(object):
                     line = pipe.readline()
                     if not line:
                         break
-                    self.values.HandlePipeRequest(line, pipe)
+                    self.values.HandleRequest(line, pipe)
                         
         # send periodic watches
         self.values.send_watches()
@@ -618,4 +613,4 @@ if __name__ == '__main__':
         if dt > .01:
             clock.set(time.monotonic()-t00)
             t0 += .01
-            test2.set(123)
+            #test2.set(123)
