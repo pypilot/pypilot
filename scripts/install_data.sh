@@ -12,6 +12,6 @@ fi
 CURDIR=`pwd`
 cd /tmp
 git clone --depth 1 https://github.com/pypilot/pypilot_data
-mv -v pypilot_data/* $CURDIR
+cp -vr pypilot_data/* $CURDIR
 rm -rf pypilot_data
 cd $CURDIR

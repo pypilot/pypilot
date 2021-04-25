@@ -117,6 +117,8 @@ class Web(Process):
                     print('warning, failed to renice hat web process')
                 if os.getenv('USER') == 'tc':
                     time.sleep(30) # delay loading web and wait until modules are loaded
+                else:
+                    time.sleep(3) # delay less on other platforms
                 try:
                     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
                     import web
@@ -377,7 +379,7 @@ class Hat(object):
                     continue
                 events = i.poll()
                 for event in events:
-                    print('apply', event, time.monotonic())
+                    #print('apply', event, time.monotonic())
                     self.apply_code(*event)
 #            except Exception as e:
 #                print('WARNING, failed to poll!!', e, i)

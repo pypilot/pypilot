@@ -23,6 +23,8 @@ class py_dep(dep):
     def test(self):
         remap = {'pil': 'PIL',
                  'gevent-websocket': 'geventwebsocket',
+                 'flask-socketio': 'flask_socketio',
+                 'python-socketio': 'socketio',
                  'opengl': 'OpenGL'}
 
         name = remap[self.name] if self.name in remap else self.name
@@ -111,7 +113,7 @@ class subsystem(object):
                 elif dep.test():
                     print('install dependency', dep.name, 'success')
                 else:
-                    print('dependency failed to install properly', dep.name)
+                    print('dependency failed to install', dep.name)
                     self.summary = 'failed to detect after installing ' + dep.name
 
     def result(self):
@@ -141,7 +143,7 @@ ss('hat', 'SPI lcd keypad, and remote control interface',
 
 # web dependencies: python3-flask python3-gevent-websocket
 ss('web', 'web browser control',
-   [py_dep('flask'), py_dep('gevent-websocket')])
+   [py_dep('flask'), py_dep('gevent-websocket'), py_dep('python-socketio'), py_dep('flask-socketio')])
 
 # client dependencies (viewers control applications): python3-wxgtk4.0
 # optional: python3-opengl python3-pyglet pywavefront
