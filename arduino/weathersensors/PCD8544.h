@@ -82,9 +82,11 @@ class PCD8544: public Print {
 
         void putpixel(uint8_t x, uint8_t y, uint8_t color);
         void rectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t color);
+        void clear_lines(uint8_t y1, uint8_t y2);
         void circle(uint8_t x, uint8_t y, uint8_t r, uint8_t color);
         void line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t color);
 
+        bool flip;
     private:
         void SetParameters();
 

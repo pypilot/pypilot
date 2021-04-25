@@ -54,13 +54,13 @@ $(SKETCHNAME).cpp.hex: $(SKETCHNAME).cpp.elf
 $(SKETCHNAME).cpp.eep: $(SKETCHNAME).cpp.elf
 	$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 $< $@
 
-$(SKETCHNAME).cpp.elf: $(OBJSD) obj/$(SKETCHNAME).o objs obj/twi.o obj/PCD8544.o
+$(SKETCHNAME).cpp.elf: $(OBJSD) obj/$(SKETCHNAME).o objs obj/twi.o obj/PCD8544.o obj/JLX12864.o
 	$(CC) -mmcu=$(MCU) $(LDFLAGS) -o $@ $(OBJS)
 
 .PHONY: objs
 objs:
 	echo $(OBJSD) | sed s,$(ARDUINO_PATH),obj$(ARDUINO_PATH),g > objs
-        OBJS = $(shell cat objs) obj/$(SKETCHNAME).o obj/twi.o obj/PCD8544.o
+        OBJS = $(shell cat objs) obj/$(SKETCHNAME).o obj/twi.o obj/PCD8544.o obj/JLX12864.o
 
 obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 	cp $< obj/$<.cpp
@@ -72,6 +72,15 @@ BAUDRATE = 57600
 upload: $(SKETCHNAME).cpp.hex
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:w:$(SKETCHNAME).cpp.hex -b $(BAUDRATE)
 
+bootloader:
+	stty -F /dev/ttyUSB0 -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 0 time 0
+	stty -F /dev/ttyUSB0 crtscts
+	#	sleep 3
+	$(AVRDUDE) -C/usr/share/arduino/hardware/tools/avrdude.conf -v -patmega328p -cstk500v1 -P/dev/ttyUSB0 -b19200 -e
+	$(AVRDUDE) -C/usr/share/arduino/hardware/tools/avrdude.conf -v -patmega328p -cstk500v1 -P/dev/ttyUSB0 -b19200 -e -Ulock:w:0xff:m -Uefuse:w:0xfd:m -Uhfuse:w:0xDA:m -Ulfuse:w:0xFF:m 
+	$(AVRDUDE) -C/usr/share/arduino/hardware/tools/avrdude.conf -v -patmega328p -cstk500v1 -P/dev/ttyUSB0 -b19200 -Uflash:w:/usr/share/arduino/hardware/arduino/bootloaders/atmega/ATmegaBOOT_168_atmega328.hex:i -Ulock:w:0xcf:m
+
+
 serial:
 	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5 38400
 	cat $(DEVICE)
@@ -80,6 +89,9 @@ obj/twi.o : twi.c
 	$(CC) $(CXXFLAGS) -c $< -o $@
 
 obj/PCD8544.o : PCD8544.cpp charset.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+obj/JLX12864.o : JLX12864.cpp charset.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 %.o : %.cpp

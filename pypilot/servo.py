@@ -243,7 +243,7 @@ class Servo(object):
         self.motor_temp = self.register(TimeoutSensorValue, 'motor_temp')
 
         self.engaged = self.register(BooleanValue, 'engaged', False)
-        self.max_current = self.register(RangeSetting, 'max_current', 7, 0, 60, 'amps')
+        self.max_current = self.register(RangeSetting, 'max_current', 7, 0, 50, 'amps')
         self.current.factor = self.register(RangeProperty, 'current.factor', 1, 0.8, 1.2, persistent=True)
         self.current.offset = self.register(RangeProperty, 'current.offset', 0, -1.2, 1.2, persistent=True)
         self.voltage.factor = self.register(RangeProperty, 'voltage.factor', 1, 0.8, 1.2, persistent=True)
@@ -623,14 +623,15 @@ class Servo(object):
             # integrate power consumption
             dt = (t - self.current.lasttime)
             self.current.lasttime = t
-            if self.current.value:
-                amphours = self.current.value*dt/3600
-                self.amphours.set(self.amphours.value + amphours)
-            lp = .003*dt # 5 minute time constant to average wattage
-            self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
+            if dt > .01 and dt < .5:
+                if self.current.value:
+                    amphours = self.current.value*dt/3600
+                    self.amphours.set(self.amphours.value + amphours)
+                lp = .003*dt # 5 minute time constant to average wattage
+                self.watts.set((1-lp)*self.watts.value + lp*self.voltage.value*self.current.value)
 
         if result & ServoTelemetry.FLAGS:
-            self.max_current.set_max(40 if self.driver.flags & ServoFlags.CURRENT_RANGE else 20)
+            self.max_current.set_max(50 if self.driver.flags & ServoFlags.CURRENT_RANGE else 20)
             flags = self.flags.value & ~ServoFlags.DRIVER_MASK | self.driver.flags
 
             # if rudder angle comes from serial or tcp, may need to set these flags

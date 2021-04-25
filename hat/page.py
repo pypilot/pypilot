@@ -22,6 +22,7 @@ class rectangle():
         self.x, self.y, self.width, self.height = x, y, width, height
 
 translate = lambda x : x # initially no translation
+no_translation = translate
 
 def _(x):
     return translate(x)    
@@ -218,18 +219,28 @@ class page(object):
             return v
 
     def testkeydown(self, key):
-        return self.lcd.keypad[key].down
+        k = self.lcd.keypad[key]
+        if k.down:
+            if self.lcd.hat:
+                self.lcd.hat.arduino.set_buzzer(1, .1)
+            k.down -= 1
+            return True
+        return False
 
     def testkeyup(self, key):
-        return self.lcd.keypad[key].up
+        k = self.lcd.keypad[key]
+        if k.up:
+            k.up = False
+            return True
+        return False
 
     def speed_of_keys(self):
         # for up and down keys providing acceration
         keypad = self.lcd.keypad
-        down =  keypad[SMALL_STARBOARD].count
-        up =    keypad[SMALL_PORT].count
-        left =  keypad[BIG_PORT].count
-        right = keypad[BIG_STARBOARD].count
+        down =  keypad[SMALL_STARBOARD].dt()*10
+        up =    keypad[SMALL_PORT].dt()*10
+        left =  keypad[BIG_PORT].dt()*10
+        right = keypad[BIG_STARBOARD].dt()*10
 
         speed = 0;
         sign = 0;
@@ -262,11 +273,12 @@ class page(object):
             return control(self.lcd)
 
         # these work from any page (even menu) to dodge
-        if self.lcd.keypad[NUDGE_PORT].count:
+        lcd = self.lcd
+        if lcd.keypad[NUDGE_PORT].dt():
             lcd.client.set('servo.command', -1)
-        if self.lcd.keypad[NUDGE_STARBOARD].count:
+        elif lcd.keypad[NUDGE_STARBOARD].dt():
             lcd.client.set('servo.command', 1)           
-        if self.lcd.keypad[NUDGE_PORT].up or self.lcd.keypad[NUDGE_STARBOARD].up:
+        elif self.testkeyup(NUDGE_PORT) or self.testkeyup(NUDGE_STARBOARD):
             lcd.client.set('servo.command', 0)           
 
 class info(page):
@@ -319,9 +331,9 @@ class info(page):
             even, odd = odd, even
 
     def process(self):
-        if self.testkeyup(SMALL_PORT) or self.testkeyup(BIG_STARBOARD):
+        if self.testkeydown(SMALL_PORT) or self.testkeydown(BIG_STARBOARD):
             self.page += 1
-        if self.testkeyup(SMALL_STARBOARD) or self.testkeyup(BIG_PORT):
+        if self.testkeydown(SMALL_STARBOARD) or self.testkeydown(BIG_PORT):
             self.page -= 1
         return super(info, self).process()
         
@@ -403,7 +415,11 @@ try:
     import wifi_esp32
     def test_wifi():
         return wifi_esp32.connected[0]
+    def gettime():
+        return time.ticks_ms()/1e3
 except:
+    def gettime():
+        return time.monotonic()
     def test_wifi():
         try:
             wlan0 = open('/sys/class/net/wlan0/operstate')
@@ -459,6 +475,28 @@ class control(controlbase):
         self.control = {} # used to keep track of what is drawn on screen to avoid redrawing it
         self.lastspeed = 0
         self.lasttime = 0
+        self.ap_heading_command_time = gettime()-5
+        self.ap_heading_command = 0
+        self.resetmanualkeystate()
+
+    def get_ap_heading_command(self):
+        if gettime() - self.ap_heading_command_time < 5:
+            return self.ap_heading_command
+        return self.last_val('ap.heading_command')
+
+    def set_ap_heading_command(self, command):
+        while command < 0:
+            command += 360
+        while command >= 360:
+            command -= 360
+        self.set('ap.heading_command', command)
+        self.ap_heading_command = command
+        self.ap_heading_command_time = gettime()
+        
+    def resetmanualkeystate(self, k=0):
+        self.manualkeystate = {'key': k,
+                               'command': self.get_ap_heading_command(),
+                               'change': 0}
 
     def have_compass(self):
         return True
@@ -531,7 +569,7 @@ class control(controlbase):
                 x = float(i)*.33
                 self.box(rectangle(x, pos, .34, .4), black)
                 self.text((x, pos), num[i], size, True)
-
+                
         def draw_heading(pos, value, lastvalue):
             heading, mode, num = value
             try:
@@ -563,12 +601,13 @@ class control(controlbase):
             super(control, self).display(refresh)
             return
 
-        t0 = time.monotonic()
+        t0 = gettime()
         mode = self.last_val('ap.mode')
         ap_heading = self.last_val('ap.heading')
-        ap_heading_command = self.last_val('ap.heading_command')
+        ap_heading_command = self.get_ap_heading_command()
         heading = ap_heading, mode, nr(ap_heading)
-        if self.control['heading'] and heading[2] == self.control['heading'][2]:
+        if self.control['heading'] and heading == self.control['heading'] and \
+           self.control['heading_command'] == ap_heading_command:
             if t0 - self.lasttime < .8 and not refresh:
                 return True # optimization to not redraw frame if heading hasn't changed
         self.lasttime = t0
@@ -647,7 +686,7 @@ class control(controlbase):
 
         if self.testkeydown(AUTO): # AUTO
             if self.last_val('ap.enabled') == False:
-                self.set('ap.heading_command', self.last_val('ap.heading'))
+                self.set_ap_heading_command(self.last_val('ap.heading'))
                 self.set('ap.enabled', True)
             else:
                 self.set('servo.command', 0) # stop
@@ -671,26 +710,41 @@ class control(controlbase):
             print('tacking not implemented here yet', TACK)
                         
         if self.last_val('ap.enabled'):
-            sp = self.lcd.keypad[SMALL_PORT].up
-            ss = self.lcd.keypad[SMALL_STARBOARD].up
-            bp = self.lcd.keypad[BIG_PORT].up
-            bs = self.lcd.keypad[BIG_STARBOARD].up
+            keys = {SMALL_STARBOARD : (0, 1),
+                    SMALL_PORT      : (0, -1),
+                    BIG_PORT        : (1, -1),
+                    BIG_STARBOARD   : (1, 1)}
+            key = None
+            for k in keys:
+                if self.testkeydown(k):
+                    self.resetmanualkeystate(k)
+                    key = k
+                    dt = .1
+                    break
 
-            if sp or ss:
-                change = self.lcd.config['smallstep']
-            elif bp or bs:
-                change = self.lcd.config['bigstep']
+            if not key:
+                key = self.manualkeystate['key']
+                dt = self.lcd.keypad[key].dt()
+
+            if not dt:
+                self.resetmanualkeystate(0)
             else:
-                change = 0
+                speed = keys[key][0]
+                if speed:
+                    change = self.lcd.config['bigstep']
+                else:
+                    change = self.lcd.config['smallstep']
+                if not speed: # if holding down small step buttons do +- 10
+                    if dt > 1:
+                        change = 10*int(dt)
 
-            if sp or bp:
-                sign = -1
-            elif ss or bs:
-                sign = 1
+                if self.manualkeystate['change'] != change:
+                    self.manualkeystate['change'] = change
+                    sign = keys[key][1]
+                    change = float(change)
+                    cmd = self.manualkeystate['command'] + sign*change
+                    self.set_ap_heading_command(cmd)
 
-            if change:
-                cmd = self.last_val('ap.heading_command') + change*sign
-                self.set('ap.heading_command', cmd)
         else: # manual control
             speed = self.speed_of_keys()
             if speed:

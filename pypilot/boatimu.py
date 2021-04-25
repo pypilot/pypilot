@@ -77,6 +77,7 @@ class IMU(object):
         s.KalmanRk, s.KalmanQ = .002, .001
         self.s = s
         self.imu_detect_time = 0
+        self.rtimu = True
         self.init()
         self.lastdata = False
         self.rate = 10
@@ -91,8 +92,10 @@ class IMU(object):
 
         rtimu = RTIMU.RTIMU(self.s)
         if rtimu.IMUName() == 'Null IMU':
-            print('ERROR: No IMU Detected', t0)
+            if self.rtimu:
+                print('ERROR: No IMU Detected', t0)
             self.s.IMUType = 0
+            self.rtimu = False
             return
 
         print('IMU Name: ' + rtimu.IMUName())

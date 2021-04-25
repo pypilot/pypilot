@@ -299,7 +299,6 @@ uint8_t eeprom_read_end = 0;
 
 uint8_t adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
 volatile uint8_t calculated_clock = 0; // must be volatile to work correctly
-uint16_t clock_time;
 uint8_t timeout;
 uint16_t serial_data_timeout;
 
@@ -322,7 +321,7 @@ void setup()
 
     uint32_t start = micros();
     while(!calculated_clock);  // wait for watchdog to fire
-    clock_time = micros() - start;
+    uint16_t clock_time = micros() - start;
     uint8_t div_board = 1; // 1 for 16mhz
     if(clock_time < 2900) // 1800-2600 is 8mhz, 3800-4600 is 16mhz
         div_board = 2; // detected 8mhz crystal, otherwise assume 16mhz
@@ -453,9 +452,11 @@ void setup()
 
     // setup adc
     DIDR0 = 0x3f; // disable all digital io on analog pins
-    if(pwm_style == 2 || ratiometric_mode)
+    if(ratiometric_mode) {
         adcref = _BV(REFS0); // 5v
-    else
+        voltage_mode = 1; // 24v mode
+        max_voltage = 3200; // increase max voltage to 32v
+    } else
         adcref = _BV(REFS0)| _BV(REFS1); // 1.1v
     ADMUX = adcref | _BV(MUX0);
 #if USE_ADC_ISR
@@ -500,7 +501,7 @@ void position(uint16_t value)
         OCR1A = 1500/DIV_CLOCK + value * 3 / 2 / DIV_CLOCK;
     //OCR1A = 1350/DIV_CLOCK + value * 27 / 20 / DIV_CLOCK;
     else if(pwm_style == 2) {
-        OCR1A = abs((int)value - 1000) * DIV_CLOCK;
+        OCR1A = abs((int)value - 1000) * 16 / DIV_CLOCK;
         if(value > 1040) {
             a_bottom_off;
             b_bottom_on;
@@ -708,7 +709,7 @@ void engage()
 
         pinMode(hbridge_a_bottom_pin, OUTPUT);
         pinMode(hbridge_b_bottom_pin, OUTPUT);
-        pinMode(enable_pin, INPUT);
+        pinMode(enable_pin, OUTPUT);
 
         digitalWrite(enable_pin, HIGH);
     } else {
@@ -897,16 +898,16 @@ uint16_t TakeVolts(uint8_t p)
     // voltage in 10mV increments 1.1ref, 560 and 10k resistors
     uint32_t v = TakeADC(VOLTAGE, p);
 
-    if(voltage_mode)
-        // 14135 / 3584 = 100.0/1024*10280/280*1.1
-        v = v * 14135 / 3584 / 16;
-    else if(ratiometric_mode) {
+    if(ratiometric_mode)
         // 100.0/1024*115000/15000*5.0
         v = v * 1439 / 384 / 16;
-    } else
+    else if(voltage_mode)
+        // 14135 / 3584 = 100.0/1024*10280/280*1.1
+        v = v * 14135 / 3584 / 16;
+    else
         // 1815 / 896 = 100.0/1024*10560/560*1.1
         //    v = v * 1815 / 896 / 16;
-    v = v * 1790 / 896 / 16; // hack closer to actual voltage
+        v = v * 1790 / 896 / 16; // hack closer to actual voltage
 
     return v;
 }
@@ -1094,8 +1095,8 @@ void process_packet()
         }
         break;
     case MAX_CURRENT_CODE: { // current in units of 10mA
-        unsigned int max_max_current = low_current ? 2000 : 4000;
-        if(value > max_max_current) // maximum is 20 or 40 amps
+        unsigned int max_max_current = low_current ? 2000 : 5000;
+        if(value > max_max_current) // maximum is 20 or 50 amps
             value = max_max_current;
         max_current = value;
     } break;

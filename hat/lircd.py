@@ -16,6 +16,7 @@ class LoadLIRC(threading.Thread):
     def __init__(self):
         super(LoadLIRC, self).__init__()
         self.version = 0
+        self.daemon = True
 
     def run(self):
         while True:
@@ -47,6 +48,7 @@ class LoadLIRC(threading.Thread):
                     break
             except Exception as e:
                 print('failed to initialize lirc. is .lircrc missing?', e)
+                time.sleep(60)
             time.sleep(2)
         self.version = version
 

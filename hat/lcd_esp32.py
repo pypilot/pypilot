@@ -7,9 +7,18 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.
 
+# TODO:  fix loading slow,  make more responsive,  make power down work
+
+
 import time
-t0= time.time()
 import wifi_esp32
+
+def gettime():
+    return time.ticks_ms()/1e3
+t0= gettime()
+
+'''
+
 import display
 
 # initialize tft display
@@ -19,28 +28,32 @@ tft.init(tft.ST7789,bgr=False,rot=tft.PORTRAIT, miso=17,backl_pin=4,backl_on=1, 
 tft.setwin(52,40,240, 320)
 #tft.set_bg(0xff00)
 #tft.clear()
-t1= time.time()
+'''
+
+t1= gettime()
 
 import page
-t2= time.time()
+t2= gettime()
 from lcd import LCD
-t3= time.time()
+t3= gettime()
 import gpio_esp32
-t4= time.time()
+t4= gettime()
 
 lcd = LCD(False)
-period = .1
-sleeptime = time.time()
+period = .25
+sleeptime = gettime()
 
 import machine, micropython
+
+
 #machine.freq(80000000)
 
-vbatt = machine.ADC(34)
+vbatt = machine.ADC(machine.Pin(34))
 vbatt.atten(3) # only one that works!!
 
 gpio_esp32.init(lcd)
 
-t5= time.time()
+t5= gettime()
 print ('loaded', t5-t0, ':',t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
 
 sleepmode = 0
@@ -56,49 +69,67 @@ while True:
     lcd.battery_voltage = (1-lp)*lcd.battery_voltage + lp*v
 
     gpio_esp32.poll(lcd)
-    if any(list(map(lambda key : key.count, lcd.keypad))):
-        sleeptime = time.time()
+    if lcd.keypress:
+        lcd.keypress = False
+        sleeptime = gettime()
         if sleepmode:
-            tft.backlight(True)
-        if sleepmode > 1:
             machine.freq(240000000)
+            wifi_esp32.enable()
+            for k in lcd.keypad:
+                k.up = False
+                k.count = 0
+                k.down = 0
+            lcd.client.host = lcd.host
+            lcd.client.disconnect()
+            lcd.poll()
+            lcd.screen.backlight = True;
         sleepmode = 0
     
-    t0 = time.time()
-    try:
+    t0 = gettime()
+    if 1:
+    #try:
         lcd.poll()
-    except Exception as e:
-        print('lcd poll failed', e)
-    t1 = time.time()
+        #except Exception as e:
+        #print('lcd poll failed', e)
+            
+    t1 = gettime()
     gpio_esp32.poll(lcd)
-    t2 = time.time()
-        
-    if time.time() - sleeptime > 10:
-        #print('sleep blank screen')
-        tft.backlight(False)
-        #esp.sleep_type(esp.SLEEP_MODEM) # SLEEP_LIGHT
-        sleepmode = 1
+    t2 = gettime()
 
-    if time.time() - sleeptime > 20:
-        if wifi_esp32.station.isconnected():
+    sleepdt = gettime() - sleeptime
+    if sleepdt < 0: # work around ticks wrapping
+        sleeptime = 0
+
+    if sleepmode == 0:
+        if sleepdt > 120: # 60
+            print('sleep blank screen')
+            lcd.screen.backlight = False;
+            #esp.sleep_type(esp.SLEEP_MODEM) # SLEEP_LIGHT
             print('sleep wifi off')
-            pass
-        wifi_esp32.station.active(False)
-        machine.freq(80000000)
-        sleepmode = 2
+            wifi_esp32.disable()
+            lcd.client.host = False
+            machine.freq(80000000)
+            sleepmode = 1
+    elif sleepmode == 1:
+        if sleepdt > 3600:
+            print('sleep power down')
+            machine.deepsleep()
 
     #if wifi_esp32.station.isconnected():
     wifi_esp32.poll(lcd.client)
-
-    if time.time() - sleeptime > 30:
-        print('sleep power down')
-        machine.deepsleep()
-
-    t3 = time.time()
+    
+    t3 = gettime()
     dt = t3-t0
-    s = period - dt
-    if s <= .01:
-        s = .01
-        #print('sleep ', t1-t0, t2-t1, t3-t2, s*100/(t3-t0+s), '%')
-
+    if dt < 0:
+        s = .1;
+    else:
+        if sleepmode:
+            s = 1 - dt
+        else:
+            s = period - dt
+        if s <= .01:
+            s = .01
+        elif s > 1:
+            s = 1
+        
     time.sleep(s)

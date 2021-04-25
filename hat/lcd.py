@@ -17,7 +17,7 @@ try:
     import micropython
     from upy_client import pypilotClient
     def gettime():
-        return time.time()
+        return time.ticks_ms()/1e3
     import ugfx
 except:
     from pypilot.client import pypilotClient
@@ -29,20 +29,25 @@ except:
 
 class Key():
     def __init__(self):
-        self.count = 0
-        self.down = self.up = False
+        self.time = 0
+        self.down = 0
+        self.up = False
 
     def update(self, down, count=None):
         if down:
-            if not self.count:
-                self.down = True
+            if not self.time:
+                self.down += 1
+                self.time = gettime()
             if count:
-                self.count = count
-            else:
-                self.count += 1
-        elif self.count:
+                t0 = gettime() - count*.1
+                self.time = min(t0, self.time)
+        elif self.time:
             self.up = True
-            self.count = 0
+            self.time = 0
+
+    def dt(self):
+        return gettime() - self.time if self.time else 0
+
 
 class LCD():
     def __init__(self, hat):
@@ -57,7 +62,7 @@ class LCD():
             self.config = {}
             
         default = {'contrast': 60, 'invert': False, 'backlight': 20,
-                   'flip': False, 'language': 'en', 'bigstep': 10,
+                   'hue': 27, 'flip': False, 'language': 'en', 'bigstep': 10,
                    'smallstep': 1};
 
         for name in default:
@@ -81,14 +86,17 @@ class LCD():
 
         self.battery_voltage = 0
         use_tft = True if micropython else False
+        self.keypress = False
 
         if not use_tft:
             use_glut = 'DISPLAY' in os.environ
-        self.use_glut = False
         self.surface = None
 
         if driver == 'none':
             page = None
+            screen = None
+            self.use_glut = None
+            self.bw = None
         elif driver == 'tft' or (driver == 'default' and use_tft):
             screen = ugfx.surface(136, 240, 1)
             self.surface = screen
@@ -195,9 +203,8 @@ class LCD():
         if k < 0 or k >= len(self.keypad):
             return
 
-        if down:
-            self.keypad[k].update(True)
-            self.glutkeytime = k, gettime()
+        self.keypad[k].update(down)
+            #self.glutkeytime = k, gettime()
 
     def glutkeydown(self, k, x, y):
         self.glutkey(k);
@@ -239,13 +246,13 @@ class LCD():
 
     def display(self):
         t0 = gettime()
+        if micropython:
+            self.page.watches['ap.heading'] = 1 # heartbeat
+            #self.page.watches['imu.accel'] = True
         if self.page.display(self.need_refresh):
             return #optimization
         t1=gettime();
 
-        if micropython:
-            self.page.watches['imu.gyro'] = True # heartbeat
-            #self.page.watches['imu.accel'] = True
                     
         self.need_refresh = False
         surface = self.surface
@@ -277,10 +284,10 @@ class LCD():
             self.screen.blit(surface, 0, 0, self.config['flip'])
 
         if 'contrast' in self.config:
-            self.screen.contrast = int(self.config['contrast'])
+            self.screen.contrast = int(float(self.config['contrast'])*9/12)+10
 
         if micropython:
-            self.screen.hue = int(float(self.config['backlight'])*255/40)
+            self.screen.hue = int(float(self.config['hue']))
 
         t2=gettime();
         self.screen.refresh()
@@ -302,6 +309,9 @@ class LCD():
                 self.last_msg[name] = value
             
     def poll(self):
+        if self.screen == None:
+            return
+
         t0 = gettime()
         self.receive()
         t1 = gettime()
@@ -318,25 +328,20 @@ class LCD():
         if next_page and next_page != self.page:
             self.page = next_page
             self.update_watches()
+            for key in self.keypad:
+                key.down = 0
+                key.up = False
             self.need_refresh = True
         t2 = gettime()
         
-        if dt > frameperiod:
+        if dt >= frameperiod or dt < 0:
             self.display()
             self.update_watches()
-            self.lastframetime = max(self.lastframetime+frameperiod, t-frameperiod)
+            self.lastframetime = t
         t3 = gettime()
 
-        for key in self.keypad:
-            if key.down:
-                key.down = False
-                if self.hat:
-                    self.hat.arduino.set_buzzer(1, .1)
-            if key.up:
-                key.up = False
-                    
         t4 = gettime()
-        #print('lcd times', t1-t0, t2-t1, t3-t2, t4-t3)
+        #print('lcd times', t1-t0, t2-t1, t3-t2, t4-t3, dt,t)
 
 def main():
     lcd = LCD(False)
