@@ -691,8 +691,11 @@ def CalibrationProcess(cal_pipe, client):
             if dist > .01: # only update when bias changes more than this
                 if dist > .08: # reset compass cal from large change in accel bias
                     compass_points.Reset()
+                    debug('accel')('reset compass from large accel bias')
                 accel_calibration.set(fit)
                 accel_calibration.points.set(accel_points.Points())
+            else:
+                debug('accel')('calibration distance too small ' + dist)
 
         compass_points.RemoveOlder(20*60) # 20 minutes
         fit = FitCompass(debug('compass'), compass_points, compass_calibration.value[0], norm)
