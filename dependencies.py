@@ -117,7 +117,7 @@ class subsystem(object):
                     self.summary = 'failed to detect after installing ' + dep.name
 
     def result(self):
-        return self.name + self.info + ':' + self.summary
+        return self.name + ' ' + self.info + ':' + self.summary
 
 subsystems = []
 def ss(*cargs):
