@@ -560,7 +560,7 @@ void read_anemometer()
     if(!LCD || eeprom_data.sensor_type)
     {
         // compensate 13 degree deadband in potentiometer over full range
-        dir = 360 - (sensorValue + 13) * .34;
+        dir = (sensorValue + 13) * .34;
     } else
     {
         if(sensorValue < eeprom_data.wind_min_reading - 40 || sensorValue > eeprom_data.wind_max_reading + 40)
