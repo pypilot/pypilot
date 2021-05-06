@@ -255,6 +255,8 @@ class Servo(object):
         self.max_slew_slow = self.register(MinRangeSetting, 'max_slew_slow', 28, 0, 100, '', self.max_slew_speed)
 
         self.gain = self.register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
+        self.clutch_pwm = self.register(RangeProperty, 'clutch_pwm', 1, .1, 1, persistent=True)
+        
         self.period = self.register(RangeSetting, 'period', .4, .1, 3, 'sec')
         self.compensate_current = self.register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.register(BooleanProperty, 'compensate_voltage', False, persistent=True)
@@ -540,7 +542,8 @@ class Servo(object):
                            self.voltage.offset.value,
                            self.speed.min.value,
                            self.speed.max.value,
-                           self.gain.value)
+                           self.gain.value,
+                           self.clutch_pwm.value)
 
     def poll(self):
         if not self.driver:
@@ -664,6 +667,7 @@ class Servo(object):
             self.speed.min.set(self.driver.min_speed)
             self.speed.max.set(self.driver.max_speed)
             self.gain.set(self.driver.gain)
+            self.clutch_pwm.set(self.driver.clutch_pwm)
 
         if self.fault():
             if not self.flags.value & ServoFlags.PORT_OVERCURRENT_FAULT and \

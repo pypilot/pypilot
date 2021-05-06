@@ -364,7 +364,8 @@ class motor(menu):
                                     [ValueEdit(_('min speed'), _('relative'), 'servo.speed.min'),
                                      ValueEdit(_('max speed'), _('relative'), 'servo.speed.max'),
                                      ValueEdit(_('max current'), _('amps'), 'servo.max_current'),
-                                     ValueEdit(_('period'), _('seconds'), 'servo.period')])
+                                     ValueEdit(_('period'), _('seconds'), 'servo.period'),
+                                     ValueEdit(_('clutch pwm'), _('percent'), 'servo.clutch_pwm')])
 
 networking = '/home/tc/.pypilot/networking.txt'
 default_network = {'mode': 'Master', 'ssid': 'pypilot', 'key':'', 'client_ssid': 'openplotter', 'client_key': '12345678'}

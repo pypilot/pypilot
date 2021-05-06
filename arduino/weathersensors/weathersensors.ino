@@ -39,9 +39,9 @@ extern "C" {
 #define NOKIA5110L 1
 #define JLX12864G 2
 
-//#define LCD NONE
+#define LCD NONE
 //#define LCD NOKIA5110L
-#define LCD JLX12864G
+//#define LCD JLX12864G
 
 #if LCD == NOKIA5110L
 #include "PCD8544.h"
@@ -784,8 +784,11 @@ void read_light()
     analogWrite(analogBacklightPin, pwm);
 }
 
+#if LCD
 static uint16_t last_lcd_updatetime = -1000, last_lcd_texttime;
 static char status_buf[4][16];
+#endif
+
 void draw_anemometer()
 {
 #if LCD
@@ -1106,10 +1109,9 @@ void loop()
     wdt_reset();
 
     read_pressure_temperature();
+    read_anemometer();
 #ifdef LCD
     read_light();
-#endif
-    read_anemometer();
     switch(eeprom_data.display_page) {
     case 0:
         draw_anemometer();
@@ -1160,4 +1162,5 @@ void loop()
             eeprom_write_timeout = 0;
         }
     }
+#endif
 }

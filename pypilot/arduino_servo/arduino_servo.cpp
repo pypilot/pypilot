@@ -168,9 +168,10 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
             min_speed = eeprom.get_min_speed();
             max_speed = eeprom.get_max_speed();
             gain = eeprom.get_gain();
+            clutch_pwm = eeprom.get_clutch_pwm();
 
             // validate ranges
-            params(60, 0, 1, max_current, max_controller_temp, max_motor_temp, rudder_range, rudder_offset, rudder_scale, rudder_nonlinearity, max_slew_speed, max_slew_slow, current_factor, current_offset, voltage_factor, voltage_offset, min_speed, max_speed, gain);
+            params(60, 0, 1, max_current, max_controller_temp, max_motor_temp, rudder_range, rudder_offset, rudder_scale, rudder_nonlinearity, max_slew_speed, max_slew_slow, current_factor, current_offset, voltage_factor, voltage_offset, min_speed, max_speed, gain, clutch_pwm);
             return EEPROM;
         } else if(!eeprom.initial_read) {
             // if we got an eeprom value, but did not get the initial read,
@@ -258,7 +259,7 @@ bool ArduinoServo::fault()
     return flags & OVERCURRENT_FAULT;
 }
 
-void ArduinoServo::params(double _raw_max_current, double _rudder_min, double _rudder_max, double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _rudder_nonlinearity, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_speed, double _max_speed, double _gain)
+void ArduinoServo::params(double _raw_max_current, double _rudder_min, double _rudder_max, double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _rudder_nonlinearity, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_speed, double _max_speed, double _gain, double _clutch_pwm)
 {
     raw_max_current = fmin(60, fmax(0, _raw_max_current));
     rudder_min = fmin(.5, fmax(-.5, _rudder_min));
@@ -315,8 +316,10 @@ void ArduinoServo::params(double _raw_max_current, double _rudder_min, double _r
         gain = fmin(gain, -.5);
     else
         gain = fmax(gain, .5);
-            
     eeprom.set_gain(gain);
+
+    clutch_pwm = fmin(100, fmax(10, _clutch_pwm));
+    eeprom.set_clutch_pwm(clutch_pwm);
 
     params_set = 1;
 }
@@ -365,6 +368,9 @@ void ArduinoServo::send_params()
         break;
     case 14:
         send_value(RUDDER_MAX_CODE, (int)round((rudder_max+0.5)*65472));
+        break;
+    case 16:
+        send_value(CLUTCH_PWM_CODE, eeprom.local.clutch_pwm);
         break;
     case 18:
         send_value(MAX_SLEW_CODE,

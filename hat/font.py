@@ -12,7 +12,8 @@ try:
     import ugfx
     #fontpath = '/_#!#_spiffs/ugfxfonts/'
     fontpath = ''
-    character = ugfx.surface(64, 84, 1)
+    #character = ugfx.surface(64, 84, 1)
+    character = ugfx.surface(76, 149, 1)
 
 except:
     micropython = False
