@@ -17,7 +17,7 @@
 
 #include "arduino_servo.h"
 
-enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, RUDDER_MIN_CODE=0x2b,  RUDDER_MAX_CODE=0x4d, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53};
+enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, RUDDER_MIN_CODE=0x2b,  RUDDER_MAX_CODE=0x4d, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53, CLUTCH_PWM_CODE=0x36};
 
 enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f, EEPROM_VALUE_CODE=0x9a};
 
@@ -353,6 +353,9 @@ void ArduinoServo::send_params()
     case 6:
         send_value(MAX_MOTOR_TEMP_CODE, eeprom.local.max_motor_temp);
         break;
+    case 10:
+        send_value(CLUTCH_PWM_CODE, eeprom.local.clutch_pwm);
+        break;
     case 12:
 /*
         // don't use 8 bit rudder range, for controllers supporting it
@@ -368,9 +371,6 @@ void ArduinoServo::send_params()
         break;
     case 14:
         send_value(RUDDER_MAX_CODE, (int)round((rudder_max+0.5)*65472));
-        break;
-    case 16:
-        send_value(CLUTCH_PWM_CODE, eeprom.local.clutch_pwm);
         break;
     case 18:
         send_value(MAX_SLEW_CODE,
