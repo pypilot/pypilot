@@ -1,0 +1,175 @@
+# Polish translations for PROJECT.
+# Copyright (C) 2021 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2021-05-08 20:38-0400\n"
+"PO-Revision-Date: 2021-05-08 20:38-0400\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: pl\n"
+"Language-Team: pl <LL@li.org>\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && "
+"(n%100<10 || n%100>=20) ? 1 : 2)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.6.0\n"
+
+#: templates/calibrationplot.html:4
+msgid "Calibration Plot"
+msgstr ""
+
+#: templates/calibrationplot.html:21
+msgid ""
+"The raw sensor readings should fall on a sphere when calibrated.  The age"
+" will reset when the calibration updates."
+msgstr ""
+
+#: templates/calibrationplot.html:28
+msgid "Connection"
+msgstr ""
+
+#: templates/index.html:21
+msgid "Control"
+msgstr ""
+
+#: templates/index.html:24
+msgid "Gain"
+msgstr ""
+
+#: templates/index.html:27
+msgid "Calibration"
+msgstr ""
+
+#: templates/index.html:30
+msgid "Configuration"
+msgstr ""
+
+#: templates/index.html:33
+msgid "Statistics"
+msgstr ""
+
+#: templates/index.html:48
+msgid "Heading"
+msgstr ""
+
+#: templates/index.html:50
+msgid "Command"
+msgstr ""
+
+#: templates/index.html:89
+msgid "Magnetic Heading"
+msgstr ""
+
+#: templates/index.html:90
+msgid "Pitch"
+msgstr ""
+
+#: templates/index.html:91
+msgid "Roll"
+msgstr ""
+
+#: templates/index.html:92
+msgid "Press"
+msgstr ""
+
+#: templates/index.html:92
+msgid "here"
+msgstr ""
+
+#: templates/index.html:93
+msgid "when the boat is level to align the inertial sensors."
+msgstr ""
+
+#: templates/index.html:98
+msgid "Magnetic Heading Offset"
+msgstr ""
+
+#: templates/index.html:100
+msgid "Lock Calibration"
+msgstr ""
+
+#: templates/index.html:102
+msgid "calibration plot"
+msgstr ""
+
+#: templates/index.html:104
+msgid "Rudder"
+msgstr ""
+
+#: templates/index.html:106
+msgid "centered"
+msgstr ""
+
+#: templates/index.html:107
+msgid "port range"
+msgstr ""
+
+#: templates/index.html:108
+msgid "starboard range"
+msgstr ""
+
+#: templates/index.html:109 templates/index.html:131
+msgid "reset"
+msgstr ""
+
+#: templates/index.html:112
+msgid "Rudder Range"
+msgstr ""
+
+#: templates/index.html:113
+msgid "Degrees"
+msgstr ""
+
+#: templates/index.html:119
+msgid "Display"
+msgstr ""
+
+#: templates/index.html:120
+msgid "Clear"
+msgstr ""
+
+#: templates/index.html:121
+msgid "Dark"
+msgstr ""
+
+#: templates/index.html:129
+msgid "Amp Hours"
+msgstr ""
+
+#: templates/index.html:132
+msgid "Voltage"
+msgstr ""
+
+#: templates/index.html:133
+msgid "Controller temperature"
+msgstr ""
+
+#: templates/index.html:134
+msgid "Runtime"
+msgstr ""
+
+#: templates/index.html:135
+msgid "Servo"
+msgstr ""
+
+#: templates/wifi.html:7
+msgid "Wireless Configuration"
+msgstr ""
+
+#: templates/wifi.html:15
+msgid "Key (leave blank for no encryption)"
+msgstr ""
+
+#: templates/wifi.html:17
+msgid "Client Mode Address (leave blank for dhcp)"
+msgstr ""
+
+#: templates/wifi.html:22
+msgid "If there is a problem, edit the file"
+msgstr ""
+

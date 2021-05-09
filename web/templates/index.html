@@ -18,19 +18,19 @@
   <div class="w3-container font-resizable3">
     <div id="headerTab" class="w3-row tabRow">
       <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Control');">
-        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey w3-red font-resizable active">Control</div>
+        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey w3-red font-resizable active">{{_('Control')}}</div>
       </a>
       <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Gain');">
-        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey font-resizable">Gain</div>
+        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey font-resizable">{{_('Gain')}}</div>
       </a>
       <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Calibration');">
-        <div class="w3-col s4 m3 l3 tablink w3-hover-light-grey font-resizable">Calibration</div>
+        <div class="w3-col s4 m3 l3 tablink w3-hover-light-grey font-resizable">{{_('Calibration')}}</div>
       </a>
       <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Configuration');">
-        <div class="w3-col s6 m3 l3 tablink w3-hover-light-grey font-resizable">Configuration</div>
+        <div class="w3-col s6 m3 l3 tablink w3-hover-light-grey font-resizable">{{_('Configuration')}}</div>
       </a>
       <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Statistics');">
-        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey font-resizable">Statistics</div>
+        <div class="w3-col s4 m2 l2 tablink w3-hover-light-grey font-resizable">{{_('Statistics')}}</div>
       </a>
     </div>
 
@@ -45,9 +45,9 @@
         </div>
         <div class="w3-col s9 m9 l9">
           <div id="heading_info" class="w3-row font-resizable data_block">
-            <div class="w3-col s6 m4 l4 data_label">Heading</div>
+            <div class="w3-col s6 m4 l4 data_label">{{_('Heading')}}</div>
             <div class="w3-col s2 m2 l2 data_value" id="heading">---</div>
-            <div class="w3-col s6 m4 l4 data_label">Command</div>
+            <div class="w3-col s6 m4 l4 data_label">{{_('Command')}}</div>
             <div class="w3-col s2 m2 l2 data_value" id="heading_command">---</div>
           </div>
         </div>
@@ -86,39 +86,39 @@
     </div>
     
     <div id="Calibration" class="w3-container tab">
-      Magnetic Heading <span id="imu_heading"></span>
-      Pitch <span id="pitch"></span>
-      Roll <span id="roll"></span>
-      <p>Press <button id="level" class="button">here</button>
-        when the boat is level to align the inertial sensors.
+      {{_('Magnetic Heading')}} <span id="imu_heading"></span>
+      {{_('Pitch')}} <span id="pitch"></span>
+      {{_('Roll')}} <span id="roll"></span>
+      <p>{{_('Press')}} <button id="level" class="button">{{_('here')}}</button>
+        {{_('when the boat is level to align the inertial sensors.')}}
       </p>
       <div class="myProgress">
         <div class="myBar" id="progress"> </div>
       </div>
-      Magnetic Heading Offset
+      {{_('Magnetic Heading Offset')}}
       <input type="spin" id="imu_heading_offset" min=-180 max=180 value=0>Degrees</input>
-      <p><input type="checkbox" id="calibration_locked">Lock Calibration</input>
+      <p><input type="checkbox" id="calibration_locked">{{_('Lock Calibration')}}</input>
       </p>
-      <br><a href="/calibrationplot">calibration plot</a>
+      <br><a href="/calibrationplot">{{_('calibration plot')}}</a>
       <br>
-      <p>Rudder <span id="rudder"></span></p>
+      <p>{{_('Rudder')}} <span id="rudder"></span></p>
       <p>
-        <button id="rudder_centered" class="button">centered</button>
-        <button id="rudder_port_range" class="button">port range</button>
-        <button id="rudder_starboard_range" class="button">starboard range</button>
-        <button id="rudder_reset" class="button">reset</button>
+        <button id="rudder_centered" class="button">{{_('centered')}}</button>
+        <button id="rudder_port_range" class="button">{{_('port range')}}</button>
+        <button id="rudder_starboard_range" class="button">{{_('starboard range')}}</button>
+        <button id="rudder_reset" class="button">{{_('reset')}}</button>
       </p>
       <p>
-        Rudder Range
-        <input type="spin" id="rudder_range" min=10 max=100 value=30>Degrees</input>
+        {{_('Rudder Range')}}
+        <input type="spin" id="rudder_range" min=10 max=100 value=30>{{_('Degrees')}}</input>
       </p>
     </div>
 
     <div id="Configuration" class="w3-container tab">
       <div id='theme_selector' class="configuration_item">
-          <spawn calss="value_name">Display:</spawn>
-          <label for="theme_clear" class="theme_name">Clear&nbsp;</label><input type="radio" name="theme" class="theme_option" id="theme_clear" value="clear">
-          <label for="theme_dark"  class="theme_name">Dark&nbsp; </label><input type="radio" name="theme" class="theme_option" id="theme_dark"  value="dark" >
+          <spawn calss="value_name">{{_('Display')}}:</spawn>
+          <label for="theme_clear" class="theme_name">{{_('Clear')}}&nbsp;</label><input type="radio" name="theme" class="theme_option" id="theme_clear" value="clear">
+          <label for="theme_dark"  class="theme_name">{{_('Dark')}}&nbsp; </label><input type="radio" name="theme" class="theme_option" id="theme_dark"  value="dark" >
       </div>
       <div id="configuration_container">
       
@@ -126,13 +126,13 @@
     </div>
 
     <div id="Statistics" class="w3-container tab">
-      <br>Amp Hours
+      <br>{{_('Amp Hours')}}
       <span id="amp_hours"></span>
-      <button id="reset_amp_hours" class="button">reset</button>
-      <br>Voltage <span id="voltage"></span>
-      <br>Controller temperature <span id="controller_temp"></span> C
-      <br>Runtime <span id="runtime"></span>
-      <br>Servo: <b><span id="servo_engaged"></span></b>
+      <button id="reset_amp_hours" class="button">{{_('reset')}}</button>
+      <br>{{_('Voltage')}} <span id="voltage"></span>
+      <br>{{_('Controller temperature')}} <span id="controller_temp"></span> C
+      <br>{{_('Runtime')}} <span id="runtime"></span>
+      <br>{{_('Servo')}}: <b><span id="servo_engaged"></span></b>
         <div id="log"></div>
     </div>
     <div id="status_container" class="data_block" style="position:fixed;bottom:-10">

@@ -143,7 +143,7 @@ ss('hat', 'SPI lcd keypad, and remote control interface',
 
 # web dependencies: python3-flask python3-gevent-websocket
 ss('web', 'web browser control',
-   [py_dep('flask'), py_dep('gevent-websocket'), py_dep('python-socketio'), py_dep('flask-socketio')])
+   [py_dep('flask'), py_dep('gevent-websocket'), py_dep('python-socketio'), py_dep('flask-socketio'), py_dep('flask-babel')])
 
 # client dependencies (viewers control applications): python3-wxgtk4.0
 # optional: python3-opengl python3-pyglet pywavefront
