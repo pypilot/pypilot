@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-05-08 20:38-0400\n"
+"POT-Creation-Date: 2021-05-09 21:52-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ca\n"
@@ -20,155 +20,157 @@ msgstr ""
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
-msgstr ""
+msgstr "Parcel·la de calibració"
 
 #: templates/calibrationplot.html:21
 msgid ""
 "The raw sensor readings should fall on a sphere when calibrated.  The age"
 " will reset when the calibration updates."
 msgstr ""
+"Les lectures del sensor en brut haurien de caure sobre una esfera quan es"
+" calibrin. L'edat es restablirà quan s'actualitzi el calibratge."
 
 #: templates/calibrationplot.html:28
 msgid "Connection"
-msgstr ""
+msgstr "Connexió"
 
 #: templates/index.html:21
 msgid "Control"
-msgstr ""
+msgstr "Control"
 
 #: templates/index.html:24
 msgid "Gain"
-msgstr ""
+msgstr "Guany"
 
 #: templates/index.html:27
 msgid "Calibration"
-msgstr ""
+msgstr "Calibratge"
 
 #: templates/index.html:30
 msgid "Configuration"
-msgstr ""
+msgstr "Configuració"
 
 #: templates/index.html:33
 msgid "Statistics"
-msgstr ""
+msgstr "Estadístiques"
 
 #: templates/index.html:48
 msgid "Heading"
-msgstr ""
+msgstr "Encapçalament"
 
 #: templates/index.html:50
 msgid "Command"
-msgstr ""
+msgstr "Comandament"
 
 #: templates/index.html:89
 msgid "Magnetic Heading"
-msgstr ""
+msgstr "Encapçalament magnètic"
 
 #: templates/index.html:90
 msgid "Pitch"
-msgstr ""
+msgstr "Brea"
 
 #: templates/index.html:91
 msgid "Roll"
-msgstr ""
+msgstr "Rodar"
 
 #: templates/index.html:92
 msgid "Press"
-msgstr ""
+msgstr "Premeu"
 
 #: templates/index.html:92
 msgid "here"
-msgstr ""
+msgstr "aquí"
 
 #: templates/index.html:93
 msgid "when the boat is level to align the inertial sensors."
-msgstr ""
+msgstr "quan la barca està anivellada per alinear els sensors inercials."
 
 #: templates/index.html:98
 msgid "Magnetic Heading Offset"
-msgstr ""
+msgstr "Offset magnètic de capçalera"
 
 #: templates/index.html:100
 msgid "Lock Calibration"
-msgstr ""
+msgstr "Calibratge de bloqueig"
 
 #: templates/index.html:102
 msgid "calibration plot"
-msgstr ""
+msgstr "gràfic de calibratge"
 
 #: templates/index.html:104
 msgid "Rudder"
-msgstr ""
+msgstr "Timó"
 
 #: templates/index.html:106
 msgid "centered"
-msgstr ""
+msgstr "centrat"
 
 #: templates/index.html:107
 msgid "port range"
-msgstr ""
+msgstr "abast de ports"
 
 #: templates/index.html:108
 msgid "starboard range"
-msgstr ""
+msgstr "gamma estribord"
 
 #: templates/index.html:109 templates/index.html:131
 msgid "reset"
-msgstr ""
+msgstr "restableix"
 
 #: templates/index.html:112
 msgid "Rudder Range"
-msgstr ""
+msgstr "Gamma del timó"
 
 #: templates/index.html:113
 msgid "Degrees"
-msgstr ""
+msgstr "Titulacions"
 
 #: templates/index.html:119
 msgid "Display"
-msgstr ""
+msgstr "Visualització"
 
 #: templates/index.html:120
 msgid "Clear"
-msgstr ""
+msgstr "Clar"
 
 #: templates/index.html:121
 msgid "Dark"
-msgstr ""
+msgstr "Fosc"
 
 #: templates/index.html:129
 msgid "Amp Hours"
-msgstr ""
+msgstr "Amp Hours"
 
 #: templates/index.html:132
 msgid "Voltage"
-msgstr ""
+msgstr "Voltatge"
 
 #: templates/index.html:133
 msgid "Controller temperature"
-msgstr ""
+msgstr "Temperatura del controlador"
 
 #: templates/index.html:134
 msgid "Runtime"
-msgstr ""
+msgstr "Temps d'execució"
 
 #: templates/index.html:135
 msgid "Servo"
-msgstr ""
+msgstr "Servo"
 
 #: templates/wifi.html:7
 msgid "Wireless Configuration"
-msgstr ""
+msgstr "Configuració sense fils"
 
 #: templates/wifi.html:15
 msgid "Key (leave blank for no encryption)"
-msgstr ""
+msgstr "Clau (deixeu-la en blanc si no hi ha xifratge)"
 
 #: templates/wifi.html:17
 msgid "Client Mode Address (leave blank for dhcp)"
-msgstr ""
+msgstr "Adreça del mode client (deixeu-ho en blanc per a dhcp)"
 
 #: templates/wifi.html:22
 msgid "If there is a problem, edit the file"
-msgstr ""
+msgstr "Si hi ha un problema, editeu el fitxer"
 

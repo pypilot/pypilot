@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-05-08 20:38-0400\n"
+"POT-Creation-Date: 2021-05-09 21:52-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: it\n"
@@ -20,155 +20,158 @@ msgstr ""
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
-msgstr ""
+msgstr "Grafico di calibrazione"
 
 #: templates/calibrationplot.html:21
 msgid ""
 "The raw sensor readings should fall on a sphere when calibrated.  The age"
 " will reset when the calibration updates."
 msgstr ""
+"Le letture grezze del sensore dovrebbero cadere su una sfera durante la "
+"calibrazione. L'età verrà ripristinata quando la calibrazione viene "
+"aggiornata."
 
 #: templates/calibrationplot.html:28
 msgid "Connection"
-msgstr ""
+msgstr "Connessione"
 
 #: templates/index.html:21
 msgid "Control"
-msgstr ""
+msgstr "Controllo"
 
 #: templates/index.html:24
 msgid "Gain"
-msgstr ""
+msgstr "Guadagno"
 
 #: templates/index.html:27
 msgid "Calibration"
-msgstr ""
+msgstr "Calibrazione"
 
 #: templates/index.html:30
 msgid "Configuration"
-msgstr ""
+msgstr "Configurazione"
 
 #: templates/index.html:33
 msgid "Statistics"
-msgstr ""
+msgstr "Statistiche"
 
 #: templates/index.html:48
 msgid "Heading"
-msgstr ""
+msgstr "Intestazione"
 
 #: templates/index.html:50
 msgid "Command"
-msgstr ""
+msgstr "Comando"
 
 #: templates/index.html:89
 msgid "Magnetic Heading"
-msgstr ""
+msgstr "Direzione magnetica"
 
 #: templates/index.html:90
 msgid "Pitch"
-msgstr ""
+msgstr "Intonazione"
 
 #: templates/index.html:91
 msgid "Roll"
-msgstr ""
+msgstr "Roll"
 
 #: templates/index.html:92
 msgid "Press"
-msgstr ""
+msgstr "stampa"
 
 #: templates/index.html:92
 msgid "here"
-msgstr ""
+msgstr "Qui"
 
 #: templates/index.html:93
 msgid "when the boat is level to align the inertial sensors."
-msgstr ""
+msgstr "quando l'imbarcazione è a livello per allineare i sensori inerziali."
 
 #: templates/index.html:98
 msgid "Magnetic Heading Offset"
-msgstr ""
+msgstr "Scostamento della direzione magnetica"
 
 #: templates/index.html:100
 msgid "Lock Calibration"
-msgstr ""
+msgstr "Blocca calibrazione"
 
 #: templates/index.html:102
 msgid "calibration plot"
-msgstr ""
+msgstr "grafico di calibrazione"
 
 #: templates/index.html:104
 msgid "Rudder"
-msgstr ""
+msgstr "Timone"
 
 #: templates/index.html:106
 msgid "centered"
-msgstr ""
+msgstr "centrato"
 
 #: templates/index.html:107
 msgid "port range"
-msgstr ""
+msgstr "intervallo di porte"
 
 #: templates/index.html:108
 msgid "starboard range"
-msgstr ""
+msgstr "gamma di dritta"
 
 #: templates/index.html:109 templates/index.html:131
 msgid "reset"
-msgstr ""
+msgstr "Ripristina"
 
 #: templates/index.html:112
 msgid "Rudder Range"
-msgstr ""
+msgstr "Gamma del timone"
 
 #: templates/index.html:113
 msgid "Degrees"
-msgstr ""
+msgstr "Gradi"
 
 #: templates/index.html:119
 msgid "Display"
-msgstr ""
+msgstr "Schermo"
 
 #: templates/index.html:120
 msgid "Clear"
-msgstr ""
+msgstr "Chiaro"
 
 #: templates/index.html:121
 msgid "Dark"
-msgstr ""
+msgstr "Buio"
 
 #: templates/index.html:129
 msgid "Amp Hours"
-msgstr ""
+msgstr "Amp Hours"
 
 #: templates/index.html:132
 msgid "Voltage"
-msgstr ""
+msgstr "Voltaggio"
 
 #: templates/index.html:133
 msgid "Controller temperature"
-msgstr ""
+msgstr "Temperatura del controller"
 
 #: templates/index.html:134
 msgid "Runtime"
-msgstr ""
+msgstr "Runtime"
 
 #: templates/index.html:135
 msgid "Servo"
-msgstr ""
+msgstr "Servo"
 
 #: templates/wifi.html:7
 msgid "Wireless Configuration"
-msgstr ""
+msgstr "Configurazione wireless"
 
 #: templates/wifi.html:15
 msgid "Key (leave blank for no encryption)"
-msgstr ""
+msgstr "Chiave (lasciare vuoto per non crittografare)"
 
 #: templates/wifi.html:17
 msgid "Client Mode Address (leave blank for dhcp)"
-msgstr ""
+msgstr "Indirizzo modalità client (lasciare vuoto per DHCP)"
 
 #: templates/wifi.html:22
 msgid "If there is a problem, edit the file"
-msgstr ""
+msgstr "In caso di problemi, modificare il file"
 

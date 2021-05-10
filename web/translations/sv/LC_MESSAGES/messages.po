@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-05-08 20:38-0400\n"
+"POT-Creation-Date: 2021-05-09 21:52-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: sv\n"
@@ -20,155 +20,157 @@ msgstr ""
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
-msgstr ""
+msgstr "Kalibreringsdiagram"
 
 #: templates/calibrationplot.html:21
 msgid ""
 "The raw sensor readings should fall on a sphere when calibrated.  The age"
 " will reset when the calibration updates."
 msgstr ""
+"De råa sensoravläsningarna ska falla på en sfär när de kalibreras. Åldern"
+" återställs när kalibreringen uppdateras."
 
 #: templates/calibrationplot.html:28
 msgid "Connection"
-msgstr ""
+msgstr "Förbindelse"
 
 #: templates/index.html:21
 msgid "Control"
-msgstr ""
+msgstr "Kontrollera"
 
 #: templates/index.html:24
 msgid "Gain"
-msgstr ""
+msgstr "Få"
 
 #: templates/index.html:27
 msgid "Calibration"
-msgstr ""
+msgstr "Kalibrering"
 
 #: templates/index.html:30
 msgid "Configuration"
-msgstr ""
+msgstr "Konfiguration"
 
 #: templates/index.html:33
 msgid "Statistics"
-msgstr ""
+msgstr "Statistik"
 
 #: templates/index.html:48
 msgid "Heading"
-msgstr ""
+msgstr "Rubrik"
 
 #: templates/index.html:50
 msgid "Command"
-msgstr ""
+msgstr "Kommando"
 
 #: templates/index.html:89
 msgid "Magnetic Heading"
-msgstr ""
+msgstr "Magnetisk rubrik"
 
 #: templates/index.html:90
 msgid "Pitch"
-msgstr ""
+msgstr "Tonhöjd"
 
 #: templates/index.html:91
 msgid "Roll"
-msgstr ""
+msgstr "Rulla"
 
 #: templates/index.html:92
 msgid "Press"
-msgstr ""
+msgstr "Tryck"
 
 #: templates/index.html:92
 msgid "here"
-msgstr ""
+msgstr "här"
 
 #: templates/index.html:93
 msgid "when the boat is level to align the inertial sensors."
-msgstr ""
+msgstr "när båten är i nivå för att justera tröghetssensorerna."
 
 #: templates/index.html:98
 msgid "Magnetic Heading Offset"
-msgstr ""
+msgstr "Magnetisk rubrikförskjutning"
 
 #: templates/index.html:100
 msgid "Lock Calibration"
-msgstr ""
+msgstr "Lås kalibrering"
 
 #: templates/index.html:102
 msgid "calibration plot"
-msgstr ""
+msgstr "kalibreringsdiagram"
 
 #: templates/index.html:104
 msgid "Rudder"
-msgstr ""
+msgstr "Roder"
 
 #: templates/index.html:106
 msgid "centered"
-msgstr ""
+msgstr "centrerad"
 
 #: templates/index.html:107
 msgid "port range"
-msgstr ""
+msgstr "Hamnområdet"
 
 #: templates/index.html:108
 msgid "starboard range"
-msgstr ""
+msgstr "styrbordsutbud"
 
 #: templates/index.html:109 templates/index.html:131
 msgid "reset"
-msgstr ""
+msgstr "återställa"
 
 #: templates/index.html:112
 msgid "Rudder Range"
-msgstr ""
+msgstr "Ruder Range"
 
 #: templates/index.html:113
 msgid "Degrees"
-msgstr ""
+msgstr "Grader"
 
 #: templates/index.html:119
 msgid "Display"
-msgstr ""
+msgstr "Visa"
 
 #: templates/index.html:120
 msgid "Clear"
-msgstr ""
+msgstr "Klar"
 
 #: templates/index.html:121
 msgid "Dark"
-msgstr ""
+msgstr "Mörk"
 
 #: templates/index.html:129
 msgid "Amp Hours"
-msgstr ""
+msgstr "Förstärkartimmar"
 
 #: templates/index.html:132
 msgid "Voltage"
-msgstr ""
+msgstr "Spänning"
 
 #: templates/index.html:133
 msgid "Controller temperature"
-msgstr ""
+msgstr "Regulatorns temperatur"
 
 #: templates/index.html:134
 msgid "Runtime"
-msgstr ""
+msgstr "Körning"
 
 #: templates/index.html:135
 msgid "Servo"
-msgstr ""
+msgstr "Servo"
 
 #: templates/wifi.html:7
 msgid "Wireless Configuration"
-msgstr ""
+msgstr "Trådlös konfiguration"
 
 #: templates/wifi.html:15
 msgid "Key (leave blank for no encryption)"
-msgstr ""
+msgstr "Nyckel (lämna tom för ingen kryptering)"
 
 #: templates/wifi.html:17
 msgid "Client Mode Address (leave blank for dhcp)"
-msgstr ""
+msgstr "Klientlägesadress (lämna tom för dhcp)"
 
 #: templates/wifi.html:22
 msgid "If there is a problem, edit the file"
-msgstr ""
+msgstr "Redigera filen om det finns ett problem"
 

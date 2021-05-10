@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-05-08 20:38-0400\n"
+"POT-Creation-Date: 2021-05-09 21:52-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -20,155 +20,159 @@ msgstr ""
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
-msgstr ""
+msgstr "Οικόπεδο βαθμονόμησης"
 
 #: templates/calibrationplot.html:21
 msgid ""
 "The raw sensor readings should fall on a sphere when calibrated.  The age"
 " will reset when the calibration updates."
 msgstr ""
+"Οι μετρήσεις ακατέργαστου αισθητήρα πρέπει να πέφτουν σε μια σφαίρα όταν "
+"βαθμονομούνται Η ηλικία θα επαναφερθεί όταν ενημερωθεί η βαθμονόμηση."
 
 #: templates/calibrationplot.html:28
 msgid "Connection"
-msgstr ""
+msgstr "Σύνδεση"
 
 #: templates/index.html:21
 msgid "Control"
-msgstr ""
+msgstr "Ελεγχος"
 
 #: templates/index.html:24
 msgid "Gain"
-msgstr ""
+msgstr "Κέρδος"
 
 #: templates/index.html:27
 msgid "Calibration"
-msgstr ""
+msgstr "Βαθμονόμηση"
 
 #: templates/index.html:30
 msgid "Configuration"
-msgstr ""
+msgstr "Διαμόρφωση"
 
 #: templates/index.html:33
 msgid "Statistics"
-msgstr ""
+msgstr "Στατιστική"
 
 #: templates/index.html:48
 msgid "Heading"
-msgstr ""
+msgstr "Επικεφαλίδα"
 
 #: templates/index.html:50
 msgid "Command"
-msgstr ""
+msgstr "Εντολή"
 
 #: templates/index.html:89
 msgid "Magnetic Heading"
-msgstr ""
+msgstr "Μαγνητική επικεφαλίδα"
 
 #: templates/index.html:90
 msgid "Pitch"
-msgstr ""
+msgstr "Πίσσα"
 
 #: templates/index.html:91
 msgid "Roll"
-msgstr ""
+msgstr "Ρολό"
 
 #: templates/index.html:92
 msgid "Press"
-msgstr ""
+msgstr "Τύπος"
 
 #: templates/index.html:92
 msgid "here"
-msgstr ""
+msgstr "εδώ"
 
 #: templates/index.html:93
 msgid "when the boat is level to align the inertial sensors."
 msgstr ""
+"όταν το σκάφος είναι επίπεδο για να ευθυγραμμίσει τους αδρανειακούς "
+"αισθητήρες."
 
 #: templates/index.html:98
 msgid "Magnetic Heading Offset"
-msgstr ""
+msgstr "Μαγνητική μετατόπιση κεφαλίδας"
 
 #: templates/index.html:100
 msgid "Lock Calibration"
-msgstr ""
+msgstr "Κλείδωμα βαθμονόμησης"
 
 #: templates/index.html:102
 msgid "calibration plot"
-msgstr ""
+msgstr "πλοκή βαθμονόμησης"
 
 #: templates/index.html:104
 msgid "Rudder"
-msgstr ""
+msgstr "Πηδάλιο"
 
 #: templates/index.html:106
 msgid "centered"
-msgstr ""
+msgstr "στο κέντρο"
 
 #: templates/index.html:107
 msgid "port range"
-msgstr ""
+msgstr "σειρά λιμένων"
 
 #: templates/index.html:108
 msgid "starboard range"
-msgstr ""
+msgstr "ευρεία γκάμα"
 
 #: templates/index.html:109 templates/index.html:131
 msgid "reset"
-msgstr ""
+msgstr "επαναφορά"
 
 #: templates/index.html:112
 msgid "Rudder Range"
-msgstr ""
+msgstr "Rudder Range"
 
 #: templates/index.html:113
 msgid "Degrees"
-msgstr ""
+msgstr "Βαθμοί"
 
 #: templates/index.html:119
 msgid "Display"
-msgstr ""
+msgstr "Απεικόνιση"
 
 #: templates/index.html:120
 msgid "Clear"
-msgstr ""
+msgstr "Σαφή"
 
 #: templates/index.html:121
 msgid "Dark"
-msgstr ""
+msgstr "Σκοτάδι"
 
 #: templates/index.html:129
 msgid "Amp Hours"
-msgstr ""
+msgstr "Ώρες ενισχυτή"
 
 #: templates/index.html:132
 msgid "Voltage"
-msgstr ""
+msgstr "Τάση"
 
 #: templates/index.html:133
 msgid "Controller temperature"
-msgstr ""
+msgstr "Θερμοκρασία ελεγκτή"
 
 #: templates/index.html:134
 msgid "Runtime"
-msgstr ""
+msgstr "Χρόνος εκτέλεσης"
 
 #: templates/index.html:135
 msgid "Servo"
-msgstr ""
+msgstr "Σέρβο"
 
 #: templates/wifi.html:7
 msgid "Wireless Configuration"
-msgstr ""
+msgstr "Ασύρματη διαμόρφωση"
 
 #: templates/wifi.html:15
 msgid "Key (leave blank for no encryption)"
-msgstr ""
+msgstr "Κλειδί (αφήστε κενό χωρίς κρυπτογράφηση)"
 
 #: templates/wifi.html:17
 msgid "Client Mode Address (leave blank for dhcp)"
-msgstr ""
+msgstr "Διεύθυνση λειτουργίας πελάτη (αφήστε κενό για dhcp)"
 
 #: templates/wifi.html:22
 msgid "If there is a problem, edit the file"
-msgstr ""
+msgstr "Εάν υπάρχει πρόβλημα, επεξεργαστείτε το αρχείο"
 
