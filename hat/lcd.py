@@ -48,10 +48,9 @@ class Key():
     def dt(self):
         t0 = gettime()
         dt = t0 - self.time
-        if dt > 10:
-            self.time = t0-10
-            dt = 21
         if self.time:
+            if dt > 10:
+                self.time = t0-10
             return dt
         return 0
 
@@ -67,7 +66,7 @@ class LCD():
             self.config = {}
             
         default = {'contrast': 60, 'invert': False, 'backlight': 20,
-                   'hue': 27, 'flip': False, 'language': 'en', 'bigstep': 10,
+                   'hue': 214, 'flip': False, 'language': 'en', 'bigstep': 10,
                    'smallstep': 1};
 
         for name in default:
