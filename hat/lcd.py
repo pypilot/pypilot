@@ -46,7 +46,14 @@ class Key():
             self.time = 0
 
     def dt(self):
-        return gettime() - self.time if self.time else 0
+        t0 = gettime()
+        dt = t0 - self.time
+        if dt > 10:
+            self.time = t0-10
+            dt = 21
+        if self.time:
+            return dt
+        return 0
 
 class LCD():
     def __init__(self, hat):
@@ -111,8 +118,8 @@ class LCD():
             print('using glut')
             import glut
             # emulate which screen resolution?
-            screen = glut.screen((240, 320))
-            #screen = glut.screen((136, 240))
+            #screen = glut.screen((240, 320))
+            screen = glut.screen((136, 240))
             #screen = glut.screen((48, 84))
             #screen = glut.screen((96, 168))
             

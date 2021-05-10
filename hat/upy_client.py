@@ -244,8 +244,8 @@ class pypilotClient(object):
         if not some_lines:
             t = gettime()
             dt = t - self.lastlinetime            
-            if dt > 1.0:
-                print('upy_client: dt', dt, t)
+            #if dt > 1.0:
+            #    print('upy_client: dt', dt, t)
             if dt > 2.5:
                 print('upy_client: timeout on socket', dt, 'reset wifi')
                 from wifi_esp32 import connect
