@@ -45,7 +45,6 @@ sleeptime = gettime()
 
 import machine, micropython
 
-
 #machine.freq(80000000)
 
 vbatt = machine.ADC(machine.Pin(34))
@@ -113,6 +112,9 @@ while True:
     elif sleepmode == 1:
         if sleepdt > 3600:
             print('sleep power down')
+            wake = []
+            wake.append(gpio32.keypad_pins[0])
+            esp32.wake_on_ext1(pins = tuple(wake), level= esp32.WAKEUP_ANY_HIGH)
             machine.deepsleep()
 
     #if wifi_esp32.station.isconnected():

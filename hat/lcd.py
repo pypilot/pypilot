@@ -48,11 +48,9 @@ class Key():
     def dt(self):
         return gettime() - self.time if self.time else 0
 
-
 class LCD():
     def __init__(self, hat):
         self.hat = hat
-
         if hat:
             self.config = hat.config['lcd']
         elif micropython:

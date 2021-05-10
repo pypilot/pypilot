@@ -228,10 +228,16 @@ class Hat(object):
         self.last_msg['ap.enabled'] = False
         self.last_msg['ap.heading_command'] = 0
 
+        if len(sys.argv) > 1:
+            self.config['host'] = sys.argv[1]
+            self.config['remote'] = self.config['host'] != 'localhost'
+            self.write_config()
+
         if self.config['remote']:
             host = self.config['host']
         else:
             host = 'localhost'
+
         self.client = pypilotClient(host)
         self.client.registered = False
         self.watchlist = ['ap.enabled', 'ap.heading_command']
