@@ -715,29 +715,31 @@ class control(controlbase):
                     BIG_PORT        : (1, -1),
                     BIG_STARBOARD   : (1, 1)}
             key = None
+            dt = 0
             for k in keys:
                 if self.testkeydown(k):
                     self.resetmanualkeystate(k)
                     key = k
                     dt = .1
                     break
-
-            if not key:
+            else: # determine how long key was pressed if released
                 key = self.manualkeystate['key']
-                dt = self.lcd.keypad[key].dt()
+                if key:
+                    dt = self.lcd.keypad[key].dt()
 
             if not dt:
                 self.resetmanualkeystate(0)
             else:
-                speed = keys[key][0]
+                speed = keys[key][0] # determine if big or small step
                 if speed:
                     change = self.lcd.config['bigstep']
                 else:
                     change = self.lcd.config['smallstep']
-                if not speed: # if holding down small step buttons do +- 10
+                if not speed: # if holding down small step buttons do big step per second
                     if dt > 1:
-                        change = 10*int(dt)
+                        change = self.lcd.config['bigstep']*int(dt)
 
+                # update exact heading change if it is now different
                 if self.manualkeystate['change'] != change:
                     self.manualkeystate['change'] = change
                     sign = keys[key][1]
