@@ -14,7 +14,7 @@ if gc.mem_free() > 1e6:  # larger ttgo display
 else:
     keypad_pin_numbers = [33, 25, 12, 13, 27, 15, 32, -1, 0, 35]
 
-power_down_pin = 26
+power_down_pin_number = 26
 
 noisr = False
 def make_pin(pin, i, lcd):
@@ -45,16 +45,13 @@ def handle_pin(pin, i, lcd):
     key.update(v)
             
 keypad_pins = []
-power_down_pin = False
 
 def powerdown():
-    power_down_pin.mode(Pin.OUT)
-    power_down_pin.low()
+    Pin(power_down_pin_number, Pin.OUT).off()
 
 def init(lcd):
     global keypad_pins
-    global power_down_pin
-    power_down_pin = Pin(power_down_pin, Pin.IN, Pin.PULL_UP)
+    Pin(power_down_pin_number, Pin.IN, Pin.PULL_UP)
     
     for i in range(len(keypad_pin_numbers)):
         pini = keypad_pin_numbers[i]

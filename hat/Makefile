@@ -16,10 +16,7 @@ upload: $(ALL)
 	for f in $(ALL); do echo $$f;  ampy -p $(PORT) put $$f;	done
 	ampy -p $(PORT) put boot.py
 
-fonts:
-	for f in `ls ~/.pypilot/ugfxfonts`; do echo $$f; ampy -p $(PORT) put ~/.pypilot/ugfxfonts/$$f flash/ugfxfonts; done
-
-put-locale:
+upload-locale:
 	for f in `find locale -type d`; do echo $$f; ampy -p /dev/ttyUSB0 mkdir $$f; done
 	for f in `find locale | grep po$$`; do echo put $$f; ampy -p /dev/ttyUSB0 put $$f $$f; done
 

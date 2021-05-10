@@ -13,6 +13,14 @@
 import time
 import wifi_esp32
 
+# running 60-90mA
+#idletimeout = 10      # 15mA
+#sleeptimeout = 10     # 700uA
+#powerofftimeout = 10  # 6.5uA
+idletimeout = 180      # 15mA  (wakes up faster)
+sleeptimeout = 1200     # 700uA
+powerofftimeout = 14400  # 6.5uA (can only wake from auto key)
+
 def gettime():
     return time.ticks_ms()/1e3
 t0= gettime()
@@ -44,9 +52,14 @@ period = .25
 sleeptime = gettime()
 
 import machine, micropython
+rtc = machine.RTC()
+rtc_memory = rtc.memory().decode()
+
+if rtc_memory == 'deepsleep':
+    sleeptime -= idletimeout/2
+    #lcd.screen.backlight = False;
 
 #machine.freq(80000000)
-
 vbatt = machine.ADC(machine.Pin(34))
 vbatt.atten(3) # only one that works!!
 
@@ -70,6 +83,7 @@ while True:
     gpio_esp32.poll(lcd)
     if lcd.keypress:
         lcd.keypress = False
+        rtc_memory = 'keypress'
         sleeptime = gettime()
         if sleepmode:
             machine.freq(240000000)
@@ -100,22 +114,30 @@ while True:
         sleeptime = 0
 
     if sleepmode == 0:
-        if sleepdt > 120: # 60
+        if sleepdt > idletimeout:
             print('sleep blank screen')
             lcd.screen.backlight = False;
-            #esp.sleep_type(esp.SLEEP_MODEM) # SLEEP_LIGHT
+            #esp.slenep_type(esp.SLEEP_MODEM) # SLEEP_LIGHT
             print('sleep wifi off')
             wifi_esp32.disable()
             lcd.client.host = False
-            machine.freq(80000000)
+            machine.freq(20000000)
             sleepmode = 1
     elif sleepmode == 1:
-        if sleepdt > 3600:
-            print('sleep power down')
-            wake = []
-            wake.append(gpio32.keypad_pins[0])
-            esp32.wake_on_ext1(pins = tuple(wake), level= esp32.WAKEUP_ANY_HIGH)
-            machine.deepsleep()
+        if sleepdt > idletimeout + sleeptimeout:
+            if rtc_memory == 'deepsleep':
+                print('sleep power down')
+                rtc.memory('powerdown')
+                gpio_esp32.powerdown()
+                # if we get here, give up
+                rtc_memory = 'powerdown'
+            else:
+                print('sleep deep sleep')
+                wake = gpio_esp32.keypad_pins[:7]
+                import esp32
+                esp32.wake_on_ext1(pins = tuple(wake), level= esp32.WAKEUP_ANY_HIGH)
+                rtc.memory('deepsleep')
+                machine.deepsleep(powerofftimeout * 1000)
 
     #if wifi_esp32.station.isconnected():
     wifi_esp32.poll(lcd.client)
