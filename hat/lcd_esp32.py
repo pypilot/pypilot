@@ -25,21 +25,7 @@ def gettime():
     return time.ticks_ms()/1e3
 t0= gettime()
 
-'''
-
-import display
-
-# initialize tft display
-tft = display.TFT()
-tft.tft_setspeed(4000000)
-tft.init(tft.ST7789,bgr=False,rot=tft.PORTRAIT, miso=17,backl_pin=4,backl_on=1, mosi=19, clk=18, cs=5, dc=16, color_bits=tft.COLOR_BITS16, splash=False)
-tft.setwin(52,40,240, 320)
-#tft.set_bg(0xff00)
-#tft.clear()
-'''
-
 t1= gettime()
-
 import page
 t2= gettime()
 from lcd import LCD
