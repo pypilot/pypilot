@@ -28,7 +28,7 @@ public:
     double max_slew_speed, max_slew_slow;
     double current_factor, current_offset, voltage_factor, voltage_offset;
     double min_speed, max_speed;
-    double gain;
+    double gain, clutch_pwm;
 
     int flags;
 };

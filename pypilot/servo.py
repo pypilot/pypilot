@@ -255,7 +255,7 @@ class Servo(object):
         self.max_slew_slow = self.register(MinRangeSetting, 'max_slew_slow', 28, 0, 100, '', self.max_slew_speed)
 
         self.gain = self.register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
-        self.clutch_pwm = self.register(RangeProperty, 'clutch_pwm', 1, .1, 1, persistent=True)
+        self.clutch_pwm = self.register(RangeProperty, 'clutch_pwm', 100, 10, 100, persistent=True)
         
         self.period = self.register(RangeSetting, 'period', .4, .1, 3, 'sec')
         self.compensate_current = self.register(BooleanProperty, 'compensate_current', False, persistent=True)

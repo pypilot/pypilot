@@ -377,7 +377,7 @@ void setup()
     pinMode(pwm_style_pin, INPUT_PULLUP);
     pinMode(clutch_pin, INPUT_PULLUP);
     pinMode(voltage_sense_pin, INPUT_PULLUP);
-    pinMode(clutch_sense_pwm_pin, INPUT_PULLUP)
+    pinMode(clutch_sense_pwm_pin, INPUT_PULLUP);
 
     serialin = 0;
     // set up Serial library
@@ -389,6 +389,7 @@ void setup()
     if(!voltage_sense)
         pinMode(voltage_sense_pin, INPUT); // if attached, turn off pullup
     pinMode(A0, INPUT);
+
 
     digitalWrite(clutch_pin, LOW);
     pinMode(clutch_pin, OUTPUT); // clutch
@@ -454,7 +455,7 @@ void setup()
         max_current = 4000; // default start at 40 amps
 
     // setup adc
-    DIDR0 = 0x3f; // disable all digital io on analog pins
+    DIDR0 = 0x1f; // disable digital io on analog pins
     if(ratiometric_mode) {
         adcref = _BV(REFS0); // 5v
         voltage_mode = 1; // 24v mode
@@ -742,12 +743,13 @@ void engage()
     position(1000);
     digitalWrite(clutch_pin, HIGH); // clutch
     clutch_start_time = 20;
-    TCCR2A = 0
-    TCCR2B = _BV(CS21) | _BV(CS20); // divide 32 and pwm ~1khz                    ;
+    TCCR2A = 0;
 
+    if(!digitalRead(clutch_sense_pwm_pin) && ratiometric_mode)
+        TCCR2B = _BV(CS20); // divide 1 and pwm ~16khz;
+    else
+        TCCR2B = _BV(CS21); // divide 8 and 2khz or fast pwm 4khz if not ratiometric
     digitalWrite(led_pin, HIGH); // status LED
-
-                 
     flags |= ENGAGED;
 }
 
@@ -1158,15 +1160,14 @@ void process_packet()
         eeprom_update_8(in_bytes[1], in_bytes[2]);
 
     case CLUTCH_PWM_CODE:
-        if(!digitalRead(clutch_sense_pwm_pin)) {
-            uint8_t pwm = in_bytes[1];
-            if(pwm < 30)
-                pwm = 30;
-            else if(pwm > 250)
-                pwm = 255;
-            clutch_pwm = in_bytes[1];
-        }
-    break;
+    {
+        uint8_t pwm = in_bytes[1];
+        if(pwm < 30)
+            pwm = 30;
+        else if(pwm > 250)
+            pwm = 255;
+        clutch_pwm = in_bytes[1];
+    } break;
     }
 }
 
@@ -1207,9 +1208,11 @@ void loop()
                 update_command(); // update speed changes to slew speed
 
             if(clutch_start_time)
-                if(--clutch_start_time == 0 && clutch_pwm < 255) {
+                if(--clutch_start_time == 0 && clutch_pwm < 250) {
                     OCR2A = clutch_pwm;
-                    TCCR2A = _BV(WGM20) | _BV(WGM21) | _BV(COM2A1);
+                    TCCR2A = _BV(WGM20) | _BV(COM2A1); // phase correct pwm
+                    //if(!digitalRead(clutch_sense_pwm_pin) && !ratiometric_mode)
+                    //TCCR2A |= _BV(WGM21); // fast pwm
                 }
             
             timeout_d = 0;
