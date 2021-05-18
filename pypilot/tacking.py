@@ -113,8 +113,6 @@ class Tack(object):
             self.current_direction = self.direction.value
             self.state.update('waiting')
 
-        mul = -1 if self.current_direction == 'port' else 1
-
         # waiting to tack, update timeout
         if self.state.value == 'waiting':
             remaining = self.delay.value - (t - self.time)
@@ -148,7 +146,6 @@ class Tack(object):
             print('command: ', command)
             ap.servo.do_command(command)
 
-            mul = -1 if self.current_direction == 'port' else 1
             heading_command = ap.heading_command.value
             heading_command -= mul * self.tack_angle
             ap.heading_command.set(resolv(heading_command, 180))
