@@ -199,9 +199,11 @@ uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 
 #define b_bottom_off PORTD &= ~_BV(PD3)
 
 #define clutch_pin 11 // use pin 11 to engage clutch
+#define clutch_sense_pwm_pin A5
 
-#define clutch_on PORTB |= _BV(PB3)
-#define clutch_off PORTB &= ~_BV(PB3)
+//#define clutch_on PORTB |= _BV(PB3)
+//#define clutch_off PORTB &= ~_BV(PB3)
+uint8_t clutch_pwm = 255, clutch_start_time;
 
 #define USE_ADC_ISR 0 // set to 1 to use interrupt (recommend 0)
 
@@ -221,7 +223,7 @@ void debug(const char *fmt, ... ){
     Serial.print(buf);
 }
 
-enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, RUDDER_MIN_CODE=0x2b, RUDDER_MAX_CODE=0x4d, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53};
+enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, RUDDER_MIN_CODE=0x2b, RUDDER_MAX_CODE=0x4d, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53, CLUTCH_PWM_CODE=0x36};
 
 enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f, EEPROM_VALUE_CODE=0x9a};
 
@@ -375,6 +377,7 @@ void setup()
     pinMode(pwm_style_pin, INPUT_PULLUP);
     pinMode(clutch_pin, INPUT_PULLUP);
     pinMode(voltage_sense_pin, INPUT_PULLUP);
+    pinMode(clutch_sense_pwm_pin, INPUT_PULLUP);
 
     serialin = 0;
     // set up Serial library
@@ -386,6 +389,7 @@ void setup()
     if(!voltage_sense)
         pinMode(voltage_sense_pin, INPUT); // if attached, turn off pullup
     pinMode(A0, INPUT);
+
 
     digitalWrite(clutch_pin, LOW);
     pinMode(clutch_pin, OUTPUT); // clutch
@@ -451,7 +455,7 @@ void setup()
         max_current = 4000; // default start at 40 amps
 
     // setup adc
-    DIDR0 = 0x3f; // disable all digital io on analog pins
+    DIDR0 = 0x1f; // disable digital io on analog pins
     if(ratiometric_mode) {
         adcref = _BV(REFS0); // 5v
         voltage_mode = 1; // 24v mode
@@ -476,9 +480,10 @@ void setup()
     } else
 #endif        
     {
-        // use timer2 as timeout
-        TCNT2 = 0;
-        TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20); // divide 1024
+        // use timer0 as timeout
+        TCNT0 = 0;
+        TCCR0A = 0;
+        TCCR0B = _BV(CS02) | _BV(CS00); // divide 1024
     }
     serial_data_timeout = 250;
 }
@@ -635,6 +640,9 @@ void disengage()
         flags &= ~ENGAGED;
         timeout = 30; // detach in about 62ms
     }
+    TCCR2A = 0;
+    TCCR2B = 0;
+    clutch_start_time = 0;
     digitalWrite(clutch_pin, LOW); // clutch
 }
 
@@ -734,8 +742,14 @@ void engage()
 
     position(1000);
     digitalWrite(clutch_pin, HIGH); // clutch
-    digitalWrite(led_pin, HIGH); // status LED
+    clutch_start_time = 20;
+    TCCR2A = 0;
 
+    if(!digitalRead(clutch_sense_pwm_pin) && ratiometric_mode)
+        TCCR2B = _BV(CS20); // divide 1 and pwm ~16khz;
+    else
+        TCCR2B = _BV(CS21); // divide 8 and 2khz or fast pwm 4khz if not ratiometric
+    digitalWrite(led_pin, HIGH); // status LED
     flags |= ENGAGED;
 }
 
@@ -1144,7 +1158,16 @@ void process_packet()
     break;
     case EEPROM_WRITE_CODE:
         eeprom_update_8(in_bytes[1], in_bytes[2]);
-    break;
+
+    case CLUTCH_PWM_CODE:
+    {
+        uint8_t pwm = in_bytes[1];
+        if(pwm < 30)
+            pwm = 30;
+        else if(pwm > 250)
+            pwm = 255;
+        clutch_pwm = in_bytes[1];
+    } break;
     }
 }
 
@@ -1164,7 +1187,7 @@ ISR(PCINT2_vect) {
 
 void loop()
 {
-    TIMSK0 &= ~_BV(TOIE0); // disable timer0 interrupt: millis is not used!
+    TIMSK0 = 0; // disable timer0 interrupt: millis is not used!
     wdt_reset(); // strobe watchdog
     service_adc();
  
@@ -1176,13 +1199,22 @@ void loop()
         ticks = TCNT4;
     else
 #endif        
-        ticks = TCNT2;
+        ticks = TCNT0;
     if(ticks > 78) {
         static uint8_t timeout_d;
         // divide timeout for faster clocks, timeout counts at 50hz
         if(++timeout_d >= 4/DIV_CLOCK) {
             if(flags & ENGAGED)
                 update_command(); // update speed changes to slew speed
+
+            if(clutch_start_time)
+                if(--clutch_start_time == 0 && clutch_pwm < 250) {
+                    OCR2A = clutch_pwm;
+                    TCCR2A = _BV(WGM20) | _BV(COM2A1); // phase correct pwm
+                    //if(!digitalRead(clutch_sense_pwm_pin) && !ratiometric_mode)
+                    //TCCR2A |= _BV(WGM21); // fast pwm
+                }
+            
             timeout_d = 0;
             timeout++;
             serial_data_timeout++;
@@ -1192,7 +1224,7 @@ void loop()
             TCNT4 -= 78;
         else
 #endif
-            TCNT2 -= 78;
+            TCNT0 -= 78;
     }
 
     if(timeout == 30)
@@ -1203,7 +1235,7 @@ void loop()
 
 #if 1
     if(serial_data_timeout > 250 && timeout>32) { // no serial data for 10 seconds, enter power down
-        TCNT2 = 0;
+        TCNT0 = 0;
         
         // make watchdog 8 seconds
         cli();

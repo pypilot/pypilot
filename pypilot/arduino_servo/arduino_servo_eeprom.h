@@ -18,6 +18,7 @@ struct arduino_servo_data /*__attribute__(("packed"))*/ {
     uint8_t current_offset, voltage_offset;
     uint8_t min_speed, max_speed;
     uint16_t gain;
+    uint8_t clutch_pwm;
     char signature[6]; // changes if eeprom format changes,
                        // put at end so it's written last
 };
@@ -63,6 +64,9 @@ public:
 
     double get_gain();
     void set_gain(double gain);
+
+    double get_clutch_pwm();
+    void set_clutch_pwm(double pwm);
     
     int need_read(uint8_t *end=0);
     int need_write();

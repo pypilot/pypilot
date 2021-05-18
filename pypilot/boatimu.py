@@ -77,27 +77,32 @@ class IMU(object):
         s.KalmanRk, s.KalmanQ = .002, .001
         self.s = s
         self.imu_detect_time = 0
+        self.rtimu = True
         self.init()
         self.lastdata = False
         self.rate = 10
 
     def init(self):
         t0 = time.monotonic()
+        self.s.IMUType = 0 # always autodetect imu
         # avoid detecting so often filling log file
         if t0 - self.imu_detect_time < 1:
             return
         self.imu_detect_time = t0
 
-        self.s.IMUType = 0 # always autodetect imu
         rtimu = RTIMU.RTIMU(self.s)
         if rtimu.IMUName() == 'Null IMU':
-            print('ERROR: No IMU Detected', t0)
+            if self.rtimu:
+                print('ERROR: No IMU Detected', t0)
+            self.s.IMUType = 0
+            self.rtimu = False
             return
 
         print('IMU Name: ' + rtimu.IMUName())
 
         if not rtimu.IMUInit():
             print('ERROR: IMU Init Failed, no inertial data available', t0)
+            self.s.IMUType = 0
             return
 
         # this is a good time to set any fusion parameters

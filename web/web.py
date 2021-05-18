@@ -42,6 +42,21 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode=async_mode)
 
+try:
+    from flask_babel import Babel, gettext
+    babel = Babel(app)
+
+    LANGUAGES = os.listdir('translations')
+
+    @babel.localeselector
+    def get_locale():
+        return request.accept_languages.best_match(LANGUAGES)
+    
+except Exception as e:
+    print('failed to import flask_babel, translations not possible!!')
+    def _(x): return x
+    babel = None
+
 DEFAULT_PORT = 21311
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))

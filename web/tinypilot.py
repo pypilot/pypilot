@@ -19,6 +19,5 @@ kernel_release = f.readline().rstrip()
 f.close()
 
 tinypilot = 'piCore' in kernel_release
-
 # javascript uses lowercase bool, easier to use int
 tinypilot = 1 if tinypilot else 0

@@ -46,13 +46,17 @@ class Key():
             self.time = 0
 
     def dt(self):
-        return gettime() - self.time if self.time else 0
-
+        t0 = gettime()
+        dt = t0 - self.time
+        if self.time:
+            if dt > 10:
+                self.time = t0-10
+            return dt
+        return 0
 
 class LCD():
     def __init__(self, hat):
         self.hat = hat
-
         if hat:
             self.config = hat.config['lcd']
         elif micropython:
@@ -62,7 +66,7 @@ class LCD():
             self.config = {}
             
         default = {'contrast': 60, 'invert': False, 'backlight': 20,
-                   'hue': 27, 'flip': False, 'language': 'en', 'bigstep': 10,
+                   'hue': 214, 'flip': False, 'language': 'en', 'bigstep': 10,
                    'smallstep': 1};
 
         for name in default:
@@ -92,10 +96,17 @@ class LCD():
             use_glut = 'DISPLAY' in os.environ
         self.surface = None
 
+        self.use_glut = False
         if driver == 'none':
             page = None
+            screen = None
+            self.bw = None
         elif driver == 'tft' or (driver == 'default' and use_tft):
-            screen = ugfx.surface(136, 240, 1)
+            import gc
+            if gc.mem_free() > 1e6:  # larger ttgo display
+                screen = ugfx.surface(240, 320, 1)
+            else:
+                screen = ugfx.surface(136, 240, 1)
             self.surface = screen
         elif driver == 'nokia5110' or (driver == 'default' and not use_glut):
             screen = ugfx.spiscreen(0)
@@ -306,6 +317,9 @@ class LCD():
                 self.last_msg[name] = value
             
     def poll(self):
+        if self.screen == None:
+            return
+
         t0 = gettime()
         self.receive()
         t1 = gettime()

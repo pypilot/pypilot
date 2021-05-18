@@ -16,6 +16,7 @@ class LoadLIRC(threading.Thread):
     def __init__(self):
         super(LoadLIRC, self).__init__()
         self.version = 0
+        self.daemon = True
 
     def run(self):
         while True:

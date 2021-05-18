@@ -50,7 +50,7 @@ arduino_servo_eeprom::arduino_servo_eeprom()
 {
     memset(&local, 0, sizeof local);
     memset(&verified, 0, sizeof verified);
-    memcpy(local.signature, "arsv25", 6); // change this if the format changes
+    memcpy(local.signature, "arsv27", 6); // change this if the format changes
 }
 
 double arduino_servo_eeprom::get_max_current()
@@ -215,6 +215,17 @@ double arduino_servo_eeprom::get_gain()
 void arduino_servo_eeprom::set_gain(double gain)
 {
     local.gain = tobase255s(round(gain*1000.0));
+}
+
+// record pwm in percent
+double arduino_servo_eeprom::get_clutch_pwm()
+{
+    return arduino.clutch_pwm/2.54;
+}
+
+void arduino_servo_eeprom::set_clutch_pwm(double pwm)
+{
+    local.clutch_pwm = pwm*2.54;
 }
 
 int arduino_servo_eeprom::need_read(uint8_t *end)

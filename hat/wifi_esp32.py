@@ -9,6 +9,8 @@
 
 import network    
 station = network.WLAN(network.STA_IF)  # client, not AP
+station.wifi_ps(network.WIFI_PS_MAX_MODEM)  # not sure this saves any power!!
+
 from page import gettime
 import time
 connected = False, gettime()

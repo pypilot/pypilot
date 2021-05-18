@@ -193,9 +193,34 @@ class RangeEdit(page):
                 self.lcd.write_config()
             return self.prev
 
-        speed = self.speed_of_keys()
+        keypad = self.lcd.keypad
+        def spd(k):
+            dt = keypad[k].dt()*2
+            if dt or self.testkeydown(k):
+                return dt + 1
+            return 0
+        
+        ss = spd(SMALL_STARBOARD)
+        sp = spd(SMALL_PORT)
+        bp = spd(BIG_PORT)
+        bs = spd(BIG_STARBOARD)
+
+
+        speed = 0;
+        sign = 0;
+        if sp or ss:
+            speed = max(sp, ss)
+        if bp or bs:
+            speed = max(bp, bs)*3
+
+        if ss or bs:
+            sign = 1
+        elif sp or bp:
+            sign = -1
+
+        speed = sign * speed
         if speed:
-            self.move(-.5*speed)
+            self.move(speed)
         else:
             return super(RangeEdit, self).process()
 
@@ -235,7 +260,7 @@ class ValueEnumSelect(page):
 
     def process(self):
         self.set(self.pypilot_path, self.name)
-        return self.lcd.menu.prev
+        return control(self.lcd)
 
 class ValueEnum(menu):
     def __init__(self, name, pypilot_path, hide_choices=[]):
@@ -364,7 +389,8 @@ class motor(menu):
                                     [ValueEdit(_('min speed'), _('relative'), 'servo.speed.min'),
                                      ValueEdit(_('max speed'), _('relative'), 'servo.speed.max'),
                                      ValueEdit(_('max current'), _('amps'), 'servo.max_current'),
-                                     ValueEdit(_('period'), _('seconds'), 'servo.period')])
+                                     ValueEdit(_('period'), _('seconds'), 'servo.period'),
+                                     ValueEdit(_('clutch pwm'), _('percent'), 'servo.clutch_pwm')])
 
 networking = '/home/tc/.pypilot/networking.txt'
 default_network = {'mode': 'Master', 'ssid': 'pypilot', 'key':'', 'client_ssid': 'openplotter', 'client_key': '12345678'}

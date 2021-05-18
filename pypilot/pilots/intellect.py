@@ -11,6 +11,131 @@ import os, sys, time, math, json
 import lzma
 from pypilot.client import pypilotClient
 
+
+'''
+eye:
+
+64x64x64                     2e29
+cnn 4x4x4x32              2e11 2e11-2e13
+max poll 16x16x16            2e25
+cnn 4x4x4x128             2e13 2e18
+max poll 4x4x4               2e21
+cnn 4x4x4x512             2e14 2e22
+max poll 1x1x1               2e20
+dense 2048                   2e19
+dense 256                    2e12
+dense 16                     
+
+
+cnn 4x4x4x512                2e15
+max poll 4x4x4               2e18
+flatten 4x4x4x1024           2e
+dense 256                    2e18
+dense 64                     2e14
+dense 16                     2e10
+
+
+
+256x256x64                    67108864
+cnn 2x2x4                    16
+max poll 128x128x32x4          67108864
+cnn 2x2x8                    32
+max poll 64x64x16x8            33554432
+cnn 2x2x16                   64
+max pool 32x32x8x16           16777216
+cnn 2x2x32                   128
+max poll 16x16x4x32           8388608
+cnn 2x2x64                   256
+max poll 8x8x2x64             4194304
+cnn 2x2x128                  512
+max poll 4x4x1x128            2097152
+cnn 2x2x256                  1024
+max poll 2x2x256              2097152
+cnn 2x2x512                  2048
+max poll 512                  65536   
+dense    128                 65536
+dense 8                      1024
+
+flatten 1024
+dense 256                     262144
+dense 32                      8192
+dense 8
+
+
+
+
+
+can load and select between different models
+
+uses compute nodes to send distributed learning jobs
+
+
+model predicts future state
+inputs - wind speed imu servo camera, future commands
+outputs - boat heading, power consumed,  errors for all outputs
+
+
+predict error of output
+measure output error: if output error < error, reduce error slightly, otherwise increase error by a larger factor
+predict output error: use smaller loss factor if < error, otherwise use larger loss
+
+optimal trajectory is differential equation
+
+
+
+
+support multiple models
+
+tensorboard for analysis
+
+if logging enabled, hdf5 format to store union of inputs and predictions compressed size per day?
+   store in .pypilot with maximum total data size 4gb?   Make sure do not fill disk completely.
+
+
+new layer type in tensorflow which uses parameters to change weights, otherwise it is same as dense
+   can you embed model in model?   Can model do this rather than layer?
+   seastate (multi dimensional) -  wind speed, wind direction, water speed (or gps speed), accelerometer/gyro frequency/amplitude??
+   light (average intensity) for eye
+
+language to define pypilot models??
+
+models which learn to steer from limited inputs, for example, eye only
+
+models include:
+    tensor flow model architecture, knows if online/offline, some layers may only train offline
+    filename calculation to store/load weights/bias from file, this file should include what data already trained it to avoid re-training
+    function for optimal trajectory, or the function used to predict the output from the model which may be another tensorflow model
+    data showing accuracy
+
+visualizations:
+    hyperspace of explored sea states in the model
+    the realtime/replay plot of intended trajectory, actual trajectory (in playback), and the various predicted trajectories
+    for each prediction variable
+
+predictions may include wattage, wind direction, wind speed etc...
+
+main proccess learning pilot:
+    executes calculation for current model from inputs
+    send all inputs and predictions to ai process
+
+separate ai process includes
+    settings for:
+          ncpus to use (all idle priority)
+          status to indicate if sufficient processing power, if keeping up with all models, only active or not keeping up
+          max log size
+          
+    receive inputs and predictions
+    log data to disk for future offline processing
+    train active/enabled models
+
+separate program
+    to train all models from log data
+    support tensorboard from here
+
+'''
+
+
+
 def model_filename(state):
   filename = os.getenv('HOME')+'/.pypilot/model_'
   for name, value in state.items():
@@ -202,7 +327,7 @@ class KerasModel(Model):
         output = tf.keras.layers.Dense(output_size, activation='tanh')(hidden2)
         self.model = tf.keras.Model(inputs=input, outputs=output)
         self.model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mse'])
-        self.accuracy = 
+        #self.accuracy = 
 
     def save(self):
         filename = learning.model_filename(self.state)

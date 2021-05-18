@@ -20,18 +20,52 @@ AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, 
 class rectangle():
     def __init__(self, x, y, width, height):
         self.x, self.y, self.width, self.height = x, y, width, height
-
+        
 translate = lambda x : x # initially no translation
 no_translation = translate
 
 def _(x):
-    return translate(x)    
+    return translate(x)
 
-def set_language(lang):
+locale_d = ''
+
+try:
+    import micropython
+    import wifi_esp32
+    def test_wifi():
+        return wifi_esp32.connected[0]
+    def gettime():
+        return time.ticks_ms()/1e3
+
     try:
-        import gettext, os
+        import gettext_esp32 as gettext
+    except:
+        print('failed to import gettext')
+except:
+    def gettime():
+        return time.monotonic()
+    def test_wifi():
+        try:
+            wlan0 = open('/sys/class/net/wlan0/operstate')
+            line = wlan0.readline().rstrip()
+            wlan0.close()
+            if line == 'up':
+                return True
+        except:
+            pass
+        return False
+
+    try:
+        import os, gettext
+        locale_d= os.path.abspath(os.path.dirname(__file__)) + '/'
+    except Exception as e:
+        print('failed to import gettext', e)
+        
+def set_language(lang):
+    print('set language', lang)
+    try:
         language = gettext.translation('pypilot_hat',
-                                       os.path.abspath(os.path.dirname(__file__)) + '/locale',
+                                       locale_d + 'locale',
                                        languages=[lang], fallback=True)
         global translate
         translate = language.gettext
@@ -235,23 +269,23 @@ class page(object):
         return False
 
     def speed_of_keys(self):
-        # for up and down keys providing acceration
+        # for keys providing acceration
         keypad = self.lcd.keypad
-        down =  keypad[SMALL_STARBOARD].dt()*10
-        up =    keypad[SMALL_PORT].dt()*10
-        left =  keypad[BIG_PORT].dt()*10
-        right = keypad[BIG_STARBOARD].dt()*10
+        ss = keypad[SMALL_STARBOARD].dt()*10
+        sp = keypad[SMALL_PORT].dt()*10
+        bp = keypad[BIG_PORT].dt()*10
+        bs = keypad[BIG_STARBOARD].dt()*10
 
         speed = 0;
         sign = 0;
-        if up or down:
-            speed = min(.6, .002*max(up, down)**1.6)
-        if left or right:
-            speed = max(.4, min(1, .006*max(left, right)**2.5))
+        if sp or ss:
+            speed = min(.6, .002*max(sp, ss)**1.6)
+        if bp or bs:
+            speed = max(.4, min(1, .006*max(bp, bs)**2.5))
 
-        if down or right:
+        if ss or bs:
             sign = -1
-        elif up or left:
+        elif sp or bp:
             sign = 1
 
         return sign * speed
@@ -409,27 +443,6 @@ class calibrate_info(info):
                     self.surface.putpixel(int(r*p0[0]+x), int(r*p0[1]+y), white)
             except:
                 self.fittext(rectangle(0, .3, 1, .7), 'N/A')
-
-try:
-    import micropython
-    import wifi_esp32
-    def test_wifi():
-        return wifi_esp32.connected[0]
-    def gettime():
-        return time.ticks_ms()/1e3
-except:
-    def gettime():
-        return time.monotonic()
-    def test_wifi():
-        try:
-            wlan0 = open('/sys/class/net/wlan0/operstate')
-            line = wlan0.readline().rstrip()
-            wlan0.close()
-            if line == 'up':
-                return True
-        except:
-            pass
-        return False
 
 class controlbase(page):
     def __init__(self, lcd, frameperiod = .4):
@@ -715,29 +728,31 @@ class control(controlbase):
                     BIG_PORT        : (1, -1),
                     BIG_STARBOARD   : (1, 1)}
             key = None
+            dt = 0
             for k in keys:
                 if self.testkeydown(k):
                     self.resetmanualkeystate(k)
                     key = k
                     dt = .1
                     break
-
-            if not key:
+            else: # determine how long key was pressed if released
                 key = self.manualkeystate['key']
-                dt = self.lcd.keypad[key].dt()
+                if key:
+                    dt = self.lcd.keypad[key].dt()
 
             if not dt:
                 self.resetmanualkeystate(0)
             else:
-                speed = keys[key][0]
+                speed = keys[key][0] # determine if big or small step
                 if speed:
                     change = self.lcd.config['bigstep']
                 else:
                     change = self.lcd.config['smallstep']
-                if not speed: # if holding down small step buttons do +- 10
+                if not speed: # if holding down small step buttons do big step per second
                     if dt > 1:
-                        change = 10*int(dt)
+                        change = self.lcd.config['bigstep']*int(dt)
 
+                # update exact heading change if it is now different
                 if self.manualkeystate['change'] != change:
                     self.manualkeystate['change'] = change
                     sign = keys[key][1]
@@ -752,7 +767,6 @@ class control(controlbase):
             elif self.lastspeed:
                 self.set('servo.command', 0)
             self.lastspeed = speed
-
 
         return super(control, self).process()
             
