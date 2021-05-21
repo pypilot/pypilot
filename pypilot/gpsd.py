@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import multiprocessing, time, socket, select
+from gettext import gettext as _
 from nonblockingpipe import NonBlockingPipe
 from bufferedsocket import LineBufferedNonBlockingSocket
 from values import *
@@ -41,19 +42,19 @@ class gpsProcess(multiprocessing.Process):
             self.gpsd_socket = LineBufferedNonBlockingSocket(sock, 'gpsd')
             self.gpsconnecttime = time.monotonic()
             self.devices = []
-            print('gpsd connected')
+            print(_('gpsd connected'))
         #except socket.error:
         except ConnectionRefusedError:
-            print('gpsd failed to connect')
+            print(_('gpsd failed to connect'))
             self.gpsd_socket = False
             time.sleep(30)
         except Exception as e:
             self.gpsd_socket = False
-            print('exception connecting to gps', e)
+            print(_('exception connecting to gps'), e)
             time.sleep(60)
 
     def disconnect(self):
-        print('gpsd disconnected')
+        print(_('gpsd disconnected'))
         self.poller.unregister(self.gpsd_socket.socket)
         self.gpsd_socket.close()
         self.gpsd_socket = False
@@ -67,16 +68,16 @@ class gpsProcess(multiprocessing.Process):
             if self.gpsd_socket and not self.devices: # only probe if there are no gpsd devices
                 print('gpsd PROBING...', device)                    
                 if not os.system('timeout -s KILL -t 30 gpsctl -f ' + device + ' 2> /dev/null'):
-                    print('gpsd PROBE success', device)
+                    print(_('gpsd PROBE success'), device)
                     # probe was success
                     os.environ['GPSD_SOCKET'] = '/tmp/gpsd.sock'
                     os.environ['GPSD_OPTIONS'] = '-N -G -F /tmp/gpsd.sock' # should not run gpsd..
                     realpath = os.path.realpath(device)
                     os.system('gpsdctl add ' + realpath)
-                    print('gpsd probe success: ' + device)
+                    print(_('gpsd probe success: ') + device)
                     self.devices = [device]
                 else:
-                    print('gpsd probe failed')
+                    print(_('gpsd probe failed'))
             # always reply with devices when asked to probe
             print('GPSD send devices', self.devices)
             pipe.send({'devices': self.devices})
@@ -99,7 +100,7 @@ class gpsProcess(multiprocessing.Process):
                     self.devices.append(device)
                     ret = True
             else:
-                print('gpsd deactivated', device, self.devices)
+                print(_('gpsd deactivated'), device, self.devices)
                 if device in self.devices:
                     self.devices.remove(device)
                     ret = True
@@ -132,7 +133,7 @@ class gpsProcess(multiprocessing.Process):
             f.write(str(bps))
             f.close()
         except Exception as e:
-            print('gpsd failed to determine serial baud rate of device')
+            print(_('gpsd failed to determine serial baud rate of device'))
             
     def gps_process(self, pipe):
         print('gps process', os.getpid())
@@ -149,7 +150,7 @@ class gpsProcess(multiprocessing.Process):
             #print('gpsd poll', events)
             if not events:
                 if self.gpsconnecttime and time.monotonic() - self.gpsconnecttime > 10:
-                    print('gpsd timeout from lack of data')
+                    print(_('gpsd timeout from lack of data'))
                     self.disconnect();
                 continue
 
@@ -164,7 +165,7 @@ class gpsProcess(multiprocessing.Process):
                         if self.parse_gpsd(gps_json_loads(line), pipe):
                             pipe.send({'devices': self.devices})                    
                     except Exception as e:
-                        print('gpsd received invalid message', line, e)
+                        print(_('gpsd received invalid message'), line, e)
             else: # gpsd connection lost
                 self.disconnect()
                 pipe.send({'devices': self.devices})                    
@@ -209,7 +210,7 @@ class gpsd(object):
                 fd, flag = event
                 if flag != select.POLLIN:
                     # hope this is never hit
-                    print('gpsd got flag for pipe:', flag)
+                    print(_('gpsd got flag for pipe:'), flag)
                     continue
                 self.last_read_time = t0
                 self.read()
@@ -218,7 +219,7 @@ class gpsd(object):
         if (not self.devices is False) and (t0 - self.last_read_time > 20 or not self.devices):
             device_path = serialprobe.probe('gpsd', [4800], 4)
             if device_path:
-                print('gpsd serial probe', device_path)
+                print(_('gpsd serial probe'), device_path)
                 self.probe_device, baud = device_path
                 self.process.pipe.send(self.probe_device)
                 

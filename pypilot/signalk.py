@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import time, socket, multiprocessing, os
+from gettext import gettext as _
 from nonblockingpipe import NonBlockingPipe
 import pyjson
 from client import pypilotClient
@@ -63,18 +64,18 @@ class signalk(object):
         try:
             f = open(token_path)
             self.token = f.read()
-            print('read token', self.token)
+            print(_('read signalk token'), self.token)
             f.close()
         except Exception as e:
-            print('signalk failed to read token', token_path)
+            print(_('signalk failed to read token'), token_path)
             self.token = False
 
         try:
             from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
         except Exception as e:
             if not self.missingzeroconfwarned:
-                print('signalk: failed to import zeroconf, autodetection not possible')
-                print('try pip3 install zeroconf or apt install python3-zeroconf')
+                print(_('signalk: failed to import zeroconf, autodetection not possible'))
+                print(_('try pip3 install zeroconf or apt install python3-zeroconf'))
                 self.missingzeroconfwarned = True
             time.sleep(20)
             return
@@ -105,14 +106,14 @@ class signalk(object):
                 self.name_type = False
             
             def remove_service(self, zeroconf, type, name):
-                print('signalk zeroconf service removed', name, type)
+                print(_('signalk zeroconf service removed'), name, type)
                 if self.name_type == (name, type):
                     self.signalk.signalk_host_port = False
                     self.signalk.disconnect_signalk()
-                    print('signalk server lost')
+                    print(_('signalk server lost'))
 
             def add_service(self, zeroconf, type, name):
-                print('signalk zeroconf service add', name, type)
+                print(_('signalk zeroconf service add'), name, type)
                 self.name_type = name, type
                 info = zeroconf.get_service_info(type, name)
                 if not info:
@@ -126,7 +127,7 @@ class signalk(object):
                     except Exception as e:
                         host_port = socket.inet_ntoa(info.address) + ':' + str(info.port)
                     self.signalk.signalk_host_port = host_port
-                    print('signalk server found', host_port)
+                    print(_('signalk server found'), host_port)
 
         zeroconf = Zeroconf()
         listener = Listener(self)
@@ -135,12 +136,12 @@ class signalk(object):
         self.initialized = True
 
     def probe_signalk(self):
-        print('signalk probe...', self.signalk_host_port)
+        print(_('signalk probe...'), self.signalk_host_port)
         try:
             import requests
         except Exception as e:
-            print('signalk could not import requests', e)
-            print("try 'sudo apt install python3-requests' or 'pip3 install requests'")
+            print(_('signalk could not import requests'), e)
+            print(_("try 'sudo apt install python3-requests' or 'pip3 install requests'"))
             time.sleep(50)
             return
 
@@ -149,10 +150,10 @@ class signalk(object):
             contents = pyjson.loads(r.content)
             self.signalk_ws_url = contents['endpoints']['v1']['signalk-ws'] + '?subscribe=none'
         except Exception as e:
-            print('failed to retrieve/parse data from', self.signalk_host_port, e)
+            print(_('failed to retrieve/parse data from'), self.signalk_host_port, e)
             time.sleep(5)
             return
-        print('signalk found', self.signalk_ws_url)
+        print(_('signalk found'), self.signalk_ws_url)
 
     def request_access(self):
         import requests
@@ -164,23 +165,23 @@ class signalk(object):
             try:
                 r = requests.get(self.signalk_access_url)
                 contents = pyjson.loads(r.content)
-                print('signalk see if token is ready', self.signalk_access_url, contents)
+                print(_('signalk see if token is ready'), self.signalk_access_url, contents)
                 if contents['state'] == 'COMPLETED':
                     if 'accessRequest' in contents:
                         access = contents['accessRequest']
                         if access['permission'] == 'APPROVED':
                             self.token = access['token']
-                            print('signalk received token', self.token)
+                            print(_('signalk received token'), self.token)
                             try:
                                 f = open(token_path, 'w')
                                 f.write(self.token)
                                 f.close()
                             except Exception as e:
-                                print('signalk failed to store token', token_path)
+                                print(_('signalk failed to store token'), token_path)
                     else:
                         self.signalk_access_url = False
             except Exception as e:
-                print('signalk error requesting access', e)
+                print(_('signalk error requesting access'), e)
                 self.signalk_access_url = False
             return
 
@@ -199,17 +200,17 @@ class signalk(object):
             print('signalk post', contents)
             if contents['statusCode'] == 202 or contents['statusCode'] == 400:
                 self.signalk_access_url = 'http://' + self.signalk_host_port + contents['href']
-                print('signalk request access url', self.signalk_access_url)
+                print(_('signalk request access url'), self.signalk_access_url)
         except Exception as e:
-            print('signalk error requesting access', e)
+            print(_('signalk error requesting access'), e)
             self.signalk_ws_url = False
         
     def connect_signalk(self):
         try:
             from websocket import create_connection
         except Exception as e:
-            print('signalk cannot create connection:', e)
-            print('try pip3 install websocket-client or apt install python3-websocket')
+            print(_('signalk cannot create connection:'), e)
+            print(_('try pip3 install websocket-client or apt install python3-websocket'))
             self.signalk_host_port = False
             return
 
@@ -222,7 +223,7 @@ class signalk(object):
             self.ws = create_connection(self.signalk_ws_url, header={'Authorization': 'JWT ' + self.token})
             self.ws.settimeout(0) # nonblocking
         except Exception as e:
-            print('signak failed to connect', e)
+            print(_('signak failed to connect'), e)
             self.token = False
 
     def process(self):
@@ -266,7 +267,7 @@ class signalk(object):
             self.connect_signalk()
             if not self.ws:
                 return
-            print('signalk connected to', self.signalk_ws_url)
+            print(_('signalk connected to'), self.signalk_ws_url)
             # setup pypilot watches
             watches = ['imu.heading_lowpass', 'imu.roll', 'imu.pitch', 'timestamp']
             for watch in watches:
@@ -309,7 +310,7 @@ class signalk(object):
             try:
                 self.receive_signalk(msg)
             except Exception as e:
-                print('signalk failed to parse', msg, e)
+                print(_('signalk failed to parse'), msg, e)
 
         t5 = time.monotonic()
         # convert received signalk values into sensor inputs if possible
@@ -327,7 +328,7 @@ class signalk(object):
                             else:
                                 data[pypilot_path] = value / signalk_conversion
                         except Exception as e:
-                            print('Exception converting signalk->pypilot', e, self.signalk_values)
+                            print(_('Exception converting signalk->pypilot'), e, self.signalk_values)
                             break
                     elif signalk_conversion != 1: # don't require fields with conversion of 1
                         break  # missing fields?  skip input this iteration
@@ -341,7 +342,7 @@ class signalk(object):
                     if self.sensors_pipe:
                         self.sensors_pipe.send([sensor, data])
                     else:
-                        print('signalk received', sensor, data)
+                        print(_('signalk received'), sensor, data)
                     break
         #print('sigktimes', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
 
@@ -387,7 +388,7 @@ class signalk(object):
             try:
                 self.ws.send(pyjson.dumps(msg)+'\n')
             except Exception as e:
-                print('signalk failed to send', e)
+                print(_('signalk failed to send'), e)
                 self.disconnect_signalk()
 
     def disconnect_signalk(self):
@@ -400,7 +401,7 @@ class signalk(object):
         try:
             data = pyjson.loads(msg)
         except:
-            print('signalk failed to parse msg:', msg)
+            print(_('signalk failed to parse msg:'), msg)
             return
         
         if 'updates' in data:

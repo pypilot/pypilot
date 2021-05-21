@@ -7,6 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from gettext import gettext as _
+
 from client import *
 from values import *
 from resolv import resolv
@@ -38,7 +40,7 @@ class Sensor(object):
         self.update(data)
                 
         if self.source.value != source:
-            print('found', self.name, 'on', source, data['device'])
+            print(_('found'), self.name, _('on'), source, data['device'])
             self.source.set(source)
             self.device = data['device']
         self.lastupdate = time.monotonic()
@@ -113,7 +115,7 @@ class APB(Sensor):
                 # APB is from GP with no gps mode selected so exit
 
         command = data['track'] + self.gain.value*xte
-        print("apb command", command, data)
+        #print('apb command', command, data)
 
         heading_command = self.client.values.values['ap.heading_command']
         if abs(heading_command.value - command) > .1:
@@ -187,7 +189,7 @@ class Sensors(object):
             
     def write(self, sensor, data, source):
         if not sensor in self.sensors:
-            print('unknown data parsed!', sensor)
+            print(_('unknown data parsed!'), sensor)
             return
         self.sensors[sensor].write(data, source)
         

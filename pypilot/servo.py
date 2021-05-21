@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os, math, sys, time
+from gettext import gettext as _
 import select, serial
 
 import pyjson
@@ -445,7 +446,7 @@ class Servo(object):
 
             command = cal[0] + abs(speed)*cal[1]
         except:
-            print ('servo calibration invalid', self.calibration.value)
+            print (_('servo calibration invalid'), self.calibration.value)
             self.calibration.set({'port': [.2, .8], 'starboard': [.2, .8]})
             return
 
@@ -553,14 +554,14 @@ class Servo(object):
                 try:
                     device = serial.Serial(*device_path)
                 except Exception as e:
-                    print('failed to open servo on:', device_path, e)
+                    print(_('failed to open servo on:'), device_path, e)
                     return
 
                 try:
                     device.timeout=0 #nonblocking
                     fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
                 except Exception as e:
-                    print('failed set nonblocking/exclusive', e)
+                    print(_('failed set nonblocking/exclusive'), e)
                     device.close()
                     return
                 #print('driver', device_path, device)
@@ -591,7 +592,7 @@ class Servo(object):
 
             if self.controller.value == 'none':
                 device_path = [self.device.port, self.device.baudrate]
-                print('arduino servo found on', device_path)
+                print(_('arduino servo found on'), device_path)
                 serialprobe.success('servo', device_path)
                 self.controller.set('arduino')
                 self.driver.command(0)
@@ -712,11 +713,11 @@ class Servo(object):
     def load_calibration(self):
         try:
             filename = Servo.calibration_filename
-            print('loading servo calibration', filename)
+            print(_('loading servo calibration'), filename)
             file = open(filename)
             self.calibration.set(pyjson.loads(file.readline()))
         except:
-            print('WARNING: using default servo calibration!!')
+            print(_('WARNING: using default servo calibration!!'))
             self.calibration.set(False)
 
     def save_calibration(self):
@@ -725,7 +726,7 @@ class Servo(object):
 
 def test(device_path):
     from arduino_servo.arduino_servo import ArduinoServo
-    print('probing arduino servo on', device_path)
+    print(_('probing arduino servo on'), device_path)
     while True:
         try:
             device = serial.Serial(device_path, 38400)
@@ -741,7 +742,7 @@ def test(device_path):
     for x in range(1000):
         r = driver.poll()
         if r:
-            print('arduino servo detected')
+            print(_('arduino servo detected'))
             exit(0)
         time.sleep(.1)
     exit(1)
@@ -750,7 +751,7 @@ def main():
     for i in range(len(sys.argv)):
         if sys.argv[i] == '-t':
             if len(sys.argv) < i + 2:
-                print('device needed for option -t')
+                print(_('device needed for option -t'))
                 exit(1)
             test(sys.argv[i+1])
     

@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import tempfile, time, math, sys, subprocess, json, socket, os
+from gettext import gettext as _
 import wx, wx.glcanvas
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import calibration_plot, boatplot, autopilot_control_ui
@@ -163,7 +164,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 msg = self.client.receive_single()
             self.timer.Start(50)
         except Exception as e:
-            print('exception in calibration:', e)
+            print(_('exception in calibration:'), e)
 
     def UpdateControl(self, control, update):
         t = time.monotonic()

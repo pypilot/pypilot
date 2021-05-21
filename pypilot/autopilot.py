@@ -10,6 +10,7 @@
 # autopilot base handles reading from the imu (boatimu)
 
 import sys, os, math
+from gettext import gettext as _
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 
@@ -103,7 +104,7 @@ class Autopilot(object):
                 pilot = pilot_type(self)
                 self.pilots[pilot.name] = pilot
             except Exception as e:
-                print('failed to load pilot', pilot_type, e)
+                print(_('failed to load pilot'), pilot_type, e)
 
         pilot_names = list(self.pilots)
         print('Loaded Pilots:', pilot_names)
@@ -132,12 +133,12 @@ class Autopilot(object):
         try:
             self.watchdog_device = open(device, 'w')
         except:
-            print('warning: failed to open special file', device, 'for writing')
-            print('         cannot stroke the watchdog')
+            print(_('warning: failed to open special file'), device, _('for writing'))
+            print('         ' + _('cannot stroke the watchdog'))
 
         self.server.poll() # setup process before we switch main process to realtime
         if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
-            print('warning, failed to make autopilot process realtime')
+            print(_('warning: failed to make autopilot process realtime'))
     
         self.lasttime = time.monotonic()
 
@@ -305,13 +306,13 @@ class Autopilot(object):
         t1 = time.monotonic()
         period = 1/self.boatimu.rate.value
         if t1 - t0 > period/2:
-            print('server/client is running too _slowly_', t1-t0)
+            print(_('server/client is running too _slowly_'), t1-t0)
 
         self.sensors.poll()
 
         t2 = time.monotonic()
         if t2-t1 > period/2:
-            print('sensors is running too _slowly_', t2-t1)
+            print(_('sensors is running too _slowly_'), t2-t1)
 
         sp = 0
         for tries in range(14): # try 14 times to read from imu
@@ -361,12 +362,12 @@ class Autopilot(object):
 
         t4 = time.monotonic()
         if t4-t3 > period/2:
-            print('Autopilot routine is running too _slowly_', t4-t3)
+            print(_('autopilot routine is running too _slowly_'), t4-t3)
 
         self.servo.poll()
         t5 = time.monotonic()
         if t5-t4 > period/2 and self.servo.driver:
-            print('servo is running too _slowly_', t5-t4)
+            print(_('servo is running too _slowly_'), t5-t4)
 
         self.timings.set([t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t5-t0])
         self.timestamp.set(t0-self.starttime)

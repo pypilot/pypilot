@@ -6,6 +6,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import sys, os, time
+from gettext import gettext as _
 import pyjson
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
@@ -27,7 +28,7 @@ def read_config(filename, fail):
             f.close()
             return devices
         except Exception as e:
-            print('error reading', pypilot_dir + filename)
+            print(_('error reading'), pypilot_dir + filename)
     return fail
 
 blacklist_serial_ports = 'init'
@@ -83,7 +84,7 @@ def scan_devices():
                 # if more devices by path than id, then use the paths
                 # this allows identical devices and remembers which port
                 # they are plugged into to speed up future probing
-                print('serial probe found more devices by path')
+                print(_('serial probe found more devices by path'))
                 paths = by_path_paths
                 by = by_path
         
@@ -115,7 +116,7 @@ def scan_devices():
 
     for device in list(devices):
         if devices[device]['realpath'] in devgpsdevices:
-            print('serialprobe removing gps device', device)
+            print(_('serialprobe removing gps device'), device)
             del devices[device]
                     
     blacklist_serial_ports = read_blacklist()
@@ -191,7 +192,7 @@ def enumerate_devices():
                 # try pyudev/scanning again in 10 seconds if it is delayed loading
                 enumstate['starttime'] = time.monotonic() + 10
                 if not enumstate['pyudevwarning']:
-                    print('no pyudev module! will scan usb devices often!', e)
+                    print(_('no pyudev module! will scan usb devices often!'), e)
                     enumstate['pyudevwarning'] = True
 
             signal.signal(signal.SIGCHLD, cursigchld_handler)
@@ -353,7 +354,7 @@ def gpsddevices(devices):
 def success(name, device):
     global probes
     filename = pypilot_dir + name + 'device'
-    print('serialprobe success:', filename, device)
+    print(_('serialprobe success:'), filename, device)
     probes[name]['lastworking'] = device
     try:
         file = open(filename, 'w')
@@ -361,7 +362,7 @@ def success(name, device):
         file.close()
 
     except:
-        print('serialprobe failed to record device', name)
+        print(_('serialprobe failed to record device'), name)
 
 if __name__ == '__main__':
     print('testing serial probe')

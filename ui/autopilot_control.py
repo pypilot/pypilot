@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import wx, sys, subprocess, socket, os, time
+from gettext import gettext as _
 from pypilot.ui import autopilot_control_ui
 from pypilot.client import *
 
@@ -261,7 +262,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif 'ap.pilot.' in name:
                 pass
             else:
-                print('warning: unhandled message "%s"' % name)
+                print(_('warning: unhandled message') + (' "%s"' % name))
 
     def onAP( self, event ):
         if self.tbAP.GetValue():

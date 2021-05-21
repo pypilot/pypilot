@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import math
+from gettext import gettext as _
 from pypilot.values import *
 from sensors import Sensor
 
@@ -71,7 +72,7 @@ class Rudder(Sensor):
         elif command == 'starboard range':
             true_angle = -self.range.value
         else:
-            print('unhandled rudder_calibration', command)
+            print(_('unhandled rudder_calibration'), command)
             return
         
         # raw range 0 to 1
@@ -114,11 +115,11 @@ class Rudder(Sensor):
                 offset = rudder0 - scale*raw0
                 nonlinearity = (rudder1 - scale*raw1 - offset)/(raw0-raw1)/(raw2-raw1)
             else:
-                print('bad rudder calibration', self.calibration_raw)
+                print(_('bad rudder calibration'), self.calibration_raw)
             
         if abs(scale) <= .01:
             # bad update, trash an other reading
-            print('bad servo rudder calibration', scale, nonlinearity)
+            print(_('bad servo rudder calibration'), scale, nonlinearity)
             while len(self.calibration_raw) > 1:
                 for c in self.calibration_raw:
                     if c != command:
@@ -190,7 +191,7 @@ class Rudder(Sensor):
                 self.autogain_movetime = t
 
             if t - self.autogain_movetime > 3:
-                print('servo rudder autogain failed')
+                print(_('servo rudder autogain failed'))
                 idle()
         else: # perform calibration
             self.calibration(self.calibration_state.value)

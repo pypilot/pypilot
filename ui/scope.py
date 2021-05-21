@@ -408,7 +408,6 @@ def main():
     plot = pypilotPlot()
     client = pypilotClientFromArgs(sys.argv)
     
-    print('connected')
     def idle():
         while True:
             try:

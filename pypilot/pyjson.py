@@ -11,6 +11,7 @@ try:
     import ujson
     loads, dumps = ujson.loads, ujson.dumps
 except Exception as e:
-    print('WARNING: python ujson library failed, parsing will consume more cpu', e)
+    from gettext import gettext as _
+    print(_('WARNING: python ujson library failed, parsing will consume more cpu'), e)
     import json
     loads, dumps = json.loads, json.dumps

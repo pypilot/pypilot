@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ###########################################################################
-## Python code generated with wxFormBuilder (version 3.9.0 Jan 22 2020)
+## Python code generated with wxFormBuilder (version 3.9.0 Sep 12 2020)
 ## http://www.wxformbuilder.org/
 ##
 ## PLEASE DO *NOT* EDIT THIS FILE!
@@ -11,6 +11,9 @@ import wx
 import wx.xrc
 import wx.glcanvas
 
+import gettext
+_ = gettext.gettext
+
 ###########################################################################
 ## Class AutopilotControlBase
 ###########################################################################
@@ -18,7 +21,7 @@ import wx.glcanvas
 class AutopilotControlBase ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Autopilot Control", pos = wx.DefaultPosition, size = wx.Size( 444,400 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Autopilot Control"), pos = wx.DefaultPosition, size = wx.Size( 444,400 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 
 		self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
 
@@ -33,7 +36,7 @@ class AutopilotControlBase ( wx.Frame ):
 		fgSizer4.SetFlexibleDirection( wx.BOTH )
 		fgSizer4.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.tbAP = wx.ToggleButton( self, wx.ID_ANY, u"AP", wx.DefaultPosition, wx.Size( 80,80 ), 0 )
+		self.tbAP = wx.ToggleButton( self, wx.ID_ANY, _(u"AP"), wx.DefaultPosition, wx.Size( 80,80 ), 0 )
 		self.tbAP.SetFont( wx.Font( 36, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Sans" ) )
 
 		fgSizer4.Add( self.tbAP, 0, wx.ALL, 5 )
@@ -51,24 +54,24 @@ class AutopilotControlBase ( wx.Frame ):
 		fgSizer21.SetFlexibleDirection( wx.BOTH )
 		fgSizer21.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.stController = wx.StaticText( self, wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stController = wx.StaticText( self, wx.ID_ANY, _(u"N/A"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stController.Wrap( -1 )
 
 		fgSizer21.Add( self.stController, 0, wx.ALL, 5 )
 
-		self.stEngaged = wx.StaticText( self, wx.ID_ANY, u"        N/A        ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stEngaged = wx.StaticText( self, wx.ID_ANY, _(u"        N/A        "), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stEngaged.Wrap( -1 )
 
 		fgSizer21.Add( self.stEngaged, 0, wx.ALL, 5 )
 
-		self.stStatus = wx.StaticText( self, wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.Size( 100,-1 ), 0 )
+		self.stStatus = wx.StaticText( self, wx.ID_ANY, _(u"N/A"), wx.DefaultPosition, wx.Size( 100,-1 ), 0 )
 		self.stStatus.Wrap( 36 )
 
 		self.stStatus.SetFont( wx.Font( 8, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Sans" ) )
 
 		fgSizer21.Add( self.stStatus, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL|wx.EXPAND, 5 )
 
-		self.stRudder = wx.StaticText( self, wx.ID_ANY, u"----", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stRudder = wx.StaticText( self, wx.ID_ANY, _(u"----"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stRudder.Wrap( -1 )
 
 		fgSizer21.Add( self.stRudder, 0, wx.ALL, 5 )
@@ -83,14 +86,14 @@ class AutopilotControlBase ( wx.Frame ):
 		fgSizer8.SetFlexibleDirection( wx.BOTH )
 		fgSizer8.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.stHeadingCommand = wx.StaticText( self, wx.ID_ANY, u" N/A ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stHeadingCommand = wx.StaticText( self, wx.ID_ANY, _(u" N/A "), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stHeadingCommand.Wrap( -1 )
 
 		self.stHeadingCommand.SetFont( wx.Font( 36, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Sans" ) )
 
 		fgSizer8.Add( self.stHeadingCommand, 0, wx.ALIGN_RIGHT|wx.ALL|wx.EXPAND, 5 )
 
-		self.stHeading = wx.StaticText( self, wx.ID_ANY, u" N/A ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stHeading = wx.StaticText( self, wx.ID_ANY, _(u" N/A "), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stHeading.Wrap( -1 )
 
 		self.stHeading.SetFont( wx.Font( 36, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Sans" ) )
@@ -115,7 +118,7 @@ class AutopilotControlBase ( wx.Frame ):
 		self.bTack = wx.Button( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 70,-1 ), 0 )
 		fgSizer40.Add( self.bTack, 0, wx.ALL, 5 )
 
-		cTackDirectionChoices = [ u"port", u"starboard" ]
+		cTackDirectionChoices = [ _(u"port"), _(u"starboard") ]
 		self.cTackDirection = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.Size( 70,-1 ), cTackDirectionChoices, 0 )
 		self.cTackDirection.SetSelection( 0 )
 		fgSizer40.Add( self.cTackDirection, 0, wx.ALL, 5 )
@@ -130,7 +133,7 @@ class AutopilotControlBase ( wx.Frame ):
 		fgSizer26.SetFlexibleDirection( wx.BOTH )
 		fgSizer26.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_staticText52 = wx.StaticText( self, wx.ID_ANY, u"Pilot", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText52 = wx.StaticText( self, wx.ID_ANY, _(u"Pilot"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText52.Wrap( -1 )
 
 		fgSizer26.Add( self.m_staticText52, 0, wx.ALL, 5 )
@@ -140,20 +143,20 @@ class AutopilotControlBase ( wx.Frame ):
 		self.cPilot.SetSelection( 0 )
 		fgSizer26.Add( self.cPilot, 0, wx.ALL, 5 )
 
-		self.rbCompass = wx.RadioButton( self, wx.ID_ANY, u"Compass", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.rbCompass = wx.RadioButton( self, wx.ID_ANY, _(u"Compass"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer26.Add( self.rbCompass, 0, wx.ALL, 5 )
 
-		self.rbGPS = wx.RadioButton( self, wx.ID_ANY, u"GPS", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.rbGPS = wx.RadioButton( self, wx.ID_ANY, _(u"GPS"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.rbGPS.Enable( False )
 
 		fgSizer26.Add( self.rbGPS, 0, wx.ALL, 5 )
 
-		self.rbWind = wx.RadioButton( self, wx.ID_ANY, u"Wind", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.rbWind = wx.RadioButton( self, wx.ID_ANY, _(u"Wind"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.rbWind.Enable( False )
 
 		fgSizer26.Add( self.rbWind, 0, wx.ALL, 5 )
 
-		self.rbTrueWind = wx.RadioButton( self, wx.ID_ANY, u"True Wind", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.rbTrueWind = wx.RadioButton( self, wx.ID_ANY, _(u"True Wind"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.rbTrueWind.Enable( False )
 
 		fgSizer26.Add( self.rbTrueWind, 0, wx.ALL, 5 )
@@ -169,7 +172,7 @@ class AutopilotControlBase ( wx.Frame ):
 		self.sCommand = wx.Slider( self, wx.ID_ANY, 0, -250, 250, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_AUTOTICKS|wx.SL_HORIZONTAL )
 		fgSizer39.Add( self.sCommand, 0, wx.ALL|wx.EXPAND, 5 )
 
-		self.bCenter = wx.Button( self, wx.ID_ANY, u"Center", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bCenter = wx.Button( self, wx.ID_ANY, _(u"Center"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer39.Add( self.bCenter, 0, wx.ALL, 5 )
 
 
@@ -193,16 +196,16 @@ class AutopilotControlBase ( wx.Frame ):
 		fgSizer10.SetFlexibleDirection( wx.BOTH )
 		fgSizer10.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.bScope = wx.Button( self, wx.ID_ANY, u"&Scope", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bScope = wx.Button( self, wx.ID_ANY, _(u"&Scope"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer10.Add( self.bScope, 0, wx.ALL, 5 )
 
-		self.bClient = wx.Button( self, wx.ID_ANY, u"&Client", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bClient = wx.Button( self, wx.ID_ANY, _(u"&Client"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer10.Add( self.bClient, 0, wx.ALL, 5 )
 
-		self.bCalibration = wx.Button( self, wx.ID_ANY, u"C&alibration", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bCalibration = wx.Button( self, wx.ID_ANY, _(u"C&alibration"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer10.Add( self.bCalibration, 0, wx.ALL, 5 )
 
-		self.bClose = wx.Button( self, wx.ID_ANY, u"Close", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bClose = wx.Button( self, wx.ID_ANY, _(u"Close"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer10.Add( self.bClose, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
 
 
@@ -293,7 +296,7 @@ class AutopilotControlBase ( wx.Frame ):
 class CalibrationDialogBase ( wx.Dialog ):
 
 	def __init__( self, parent ):
-		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Calibration", pos = wx.DefaultPosition, size = wx.Size( 617,432 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Calibration"), pos = wx.DefaultPosition, size = wx.Size( 617,432 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
 
 		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 
@@ -343,14 +346,14 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer13.SetFlexibleDirection( wx.BOTH )
 		fgSizer13.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.bLevel = wx.Button( self.m_panel5, wx.ID_ANY, u"Boat is level", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bLevel = wx.Button( self.m_panel5, wx.ID_ANY, _(u"Boat is level"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer13.Add( self.bLevel, 0, wx.ALL, 5 )
 
 		self.gAlignment = wx.Gauge( self.m_panel5, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
 		self.gAlignment.SetValue( 0 )
 		fgSizer13.Add( self.gAlignment, 0, wx.ALIGN_RIGHT|wx.ALL|wx.EXPAND, 5 )
 
-		self.bReset = wx.Button( self.m_panel5, wx.ID_ANY, u"Reset", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bReset = wx.Button( self.m_panel5, wx.ID_ANY, _(u"Reset"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer13.Add( self.bReset, 0, wx.ALL, 5 )
 
 
@@ -371,7 +374,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer18.SetFlexibleDirection( wx.BOTH )
 		fgSizer18.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_staticText16 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Alignment", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText16 = wx.StaticText( self.m_panel5, wx.ID_ANY, _(u"Alignment"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText16.Wrap( -1 )
 
 		fgSizer18.Add( self.m_staticText16, 0, wx.ALL, 5 )
@@ -388,17 +391,17 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer14.SetFlexibleDirection( wx.BOTH )
 		fgSizer14.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_staticText22 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Heading", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText22 = wx.StaticText( self.m_panel5, wx.ID_ANY, _(u"Heading"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText22.Wrap( -1 )
 
 		fgSizer14.Add( self.m_staticText22, 0, wx.ALL, 5 )
 
-		self.stHeading = wx.StaticText( self.m_panel5, wx.ID_ANY, u"     N/A     ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stHeading = wx.StaticText( self.m_panel5, wx.ID_ANY, _(u"     N/A     "), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stHeading.Wrap( -1 )
 
 		fgSizer14.Add( self.stHeading, 0, wx.ALL, 5 )
 
-		self.m_staticText25 = wx.StaticText( self.m_panel5, wx.ID_ANY, u"Offset", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText25 = wx.StaticText( self.m_panel5, wx.ID_ANY, _(u"Offset"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText25.Wrap( -1 )
 
 		fgSizer14.Add( self.m_staticText25, 0, wx.ALL, 5 )
@@ -412,9 +415,9 @@ class CalibrationDialogBase ( wx.Dialog ):
 
 		fgSizer361.Add( fgSizer37, 1, wx.EXPAND, 5 )
 
-		sbSizer4 = wx.StaticBoxSizer( wx.StaticBox( self.m_panel5, wx.ID_ANY, u"Coords" ), wx.VERTICAL )
+		sbSizer4 = wx.StaticBoxSizer( wx.StaticBox( self.m_panel5, wx.ID_ANY, _(u"Coords") ), wx.VERTICAL )
 
-		cCoordsChoices = [ u"Sea", u"Boat", u"Compass" ]
+		cCoordsChoices = [ _(u"Sea"), _(u"Boat"), _(u"Compass") ]
 		self.cCoords = wx.Choice( sbSizer4.GetStaticBox(), wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cCoordsChoices, 0 )
 		self.cCoords.SetSelection( 2 )
 		sbSizer4.Add( self.cCoords, 0, wx.ALL, 5 )
@@ -437,39 +440,39 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer181.SetFlexibleDirection( wx.BOTH )
 		fgSizer181.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.bIMUScope = wx.Button( self.m_panel3, wx.ID_ANY, u"Scope", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bIMUScope = wx.Button( self.m_panel3, wx.ID_ANY, _(u"Scope"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer181.Add( self.bIMUScope, 0, wx.ALL, 5 )
 
 		fgSizer19 = wx.FlexGridSizer( 1, 0, 0, 0 )
 		fgSizer19.SetFlexibleDirection( wx.BOTH )
 		fgSizer19.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_staticText19 = wx.StaticText( self.m_panel3, wx.ID_ANY, u"Pitch", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText19 = wx.StaticText( self.m_panel3, wx.ID_ANY, _(u"Pitch"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText19.Wrap( -1 )
 
 		fgSizer19.Add( self.m_staticText19, 0, wx.ALL, 5 )
 
-		self.stPitch = wx.StaticText( self.m_panel3, wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stPitch = wx.StaticText( self.m_panel3, wx.ID_ANY, _(u"N/A"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stPitch.Wrap( -1 )
 
 		fgSizer19.Add( self.stPitch, 0, wx.ALL, 5 )
 
-		self.m_staticText34 = wx.StaticText( self.m_panel3, wx.ID_ANY, u"Roll", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText34 = wx.StaticText( self.m_panel3, wx.ID_ANY, _(u"Roll"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText34.Wrap( -1 )
 
 		fgSizer19.Add( self.m_staticText34, 0, wx.ALL, 5 )
 
-		self.stRoll = wx.StaticText( self.m_panel3, wx.ID_ANY, u"     N/A     ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stRoll = wx.StaticText( self.m_panel3, wx.ID_ANY, _(u"     N/A     "), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stRoll.Wrap( -1 )
 
 		fgSizer19.Add( self.stRoll, 0, wx.ALL, 5 )
 
-		self.m_staticText18 = wx.StaticText( self.m_panel3, wx.ID_ANY, u"Heel", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText18 = wx.StaticText( self.m_panel3, wx.ID_ANY, _(u"Heel"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText18.Wrap( -1 )
 
 		fgSizer19.Add( self.m_staticText18, 0, wx.ALL, 5 )
 
-		self.stHeel = wx.StaticText( self.m_panel3, wx.ID_ANY, u"     N/A     ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stHeel = wx.StaticText( self.m_panel3, wx.ID_ANY, _(u"     N/A     "), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stHeel.Wrap( -1 )
 
 		fgSizer19.Add( self.stHeel, 0, wx.ALL, 5 )
@@ -491,7 +494,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook.AddPage( self.m_panel3, u"alignment", False )
+		self.m_notebook.AddPage( self.m_panel3, _(u"alignment"), False )
 		self.m_panel7 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer81 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer81.AddGrowableCol( 0 )
@@ -523,7 +526,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer101.SetFlexibleDirection( wx.BOTH )
 		fgSizer101.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_staticText101 = wx.StaticText( self.m_panel7, wx.ID_ANY, u"Calibration", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText101 = wx.StaticText( self.m_panel7, wx.ID_ANY, _(u"Calibration"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText101.Wrap( -1 )
 
 		fgSizer101.Add( self.m_staticText101, 0, wx.ALL, 5 )
@@ -533,7 +536,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 
 		fgSizer101.Add( self.stAccelCal, 0, wx.ALL|wx.EXPAND, 5 )
 
-		self.m_staticText141 = wx.StaticText( self.m_panel7, wx.ID_ANY, u"Calibration Age", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText141 = wx.StaticText( self.m_panel7, wx.ID_ANY, _(u"Calibration Age"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText141.Wrap( -1 )
 
 		fgSizer101.Add( self.m_staticText141, 0, wx.ALL, 5 )
@@ -550,10 +553,10 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer271.SetFlexibleDirection( wx.BOTH )
 		fgSizer271.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_button101 = wx.Button( self.m_panel7, wx.ID_ANY, u"Clear", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button101 = wx.Button( self.m_panel7, wx.ID_ANY, _(u"Clear"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer271.Add( self.m_button101, 0, wx.ALL, 5 )
 
-		self.cbAccelCalibrationLocked = wx.CheckBox( self.m_panel7, wx.ID_ANY, u"calibration locked", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.cbAccelCalibrationLocked = wx.CheckBox( self.m_panel7, wx.ID_ANY, _(u"calibration locked"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer271.Add( self.cbAccelCalibrationLocked, 0, wx.ALL, 5 )
 
 		m_sdbSizer11 = wx.StdDialogButtonSizer()
@@ -576,7 +579,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel7.SetSizer( fgSizer81 )
 		self.m_panel7.Layout()
 		fgSizer81.Fit( self.m_panel7 )
-		self.m_notebook.AddPage( self.m_panel7, u"accel", False )
+		self.m_notebook.AddPage( self.m_panel7, _(u"accel"), False )
 		self.m_panel1 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer8 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer8.AddGrowableCol( 0 )
@@ -607,28 +610,28 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer371.SetFlexibleDirection( wx.BOTH )
 		fgSizer371.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_staticText401 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"Sigma Points", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText401 = wx.StaticText( self.m_panel1, wx.ID_ANY, _(u"Sigma Points"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText401.Wrap( -1 )
 
 		self.m_staticText401.SetBackgroundColour( wx.Colour( 255, 255, 0 ) )
 
 		fgSizer371.Add( self.m_staticText401, 0, wx.ALL, 5 )
 
-		self.m_staticText42 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"local history", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText42 = wx.StaticText( self.m_panel1, wx.ID_ANY, _(u"local history"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText42.Wrap( -1 )
 
 		self.m_staticText42.SetBackgroundColour( wx.Colour( 0, 255, 0 ) )
 
 		fgSizer371.Add( self.m_staticText42, 0, wx.ALL, 5 )
 
-		self.m_staticText43 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"current", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText43 = wx.StaticText( self.m_panel1, wx.ID_ANY, _(u"current"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText43.Wrap( -1 )
 
 		self.m_staticText43.SetBackgroundColour( wx.Colour( 255, 85, 85 ) )
 
 		fgSizer371.Add( self.m_staticText43, 0, wx.ALL, 5 )
 
-		self.m_staticText411 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"Calibration Points", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText411 = wx.StaticText( self.m_panel1, wx.ID_ANY, _(u"Calibration Points"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText411.Wrap( -1 )
 
 		self.m_staticText411.SetBackgroundColour( wx.Colour( 0, 255, 255 ) )
@@ -643,7 +646,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer10.SetFlexibleDirection( wx.BOTH )
 		fgSizer10.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_staticText10 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"Calibration", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText10 = wx.StaticText( self.m_panel1, wx.ID_ANY, _(u"Calibration"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText10.Wrap( -1 )
 
 		fgSizer10.Add( self.m_staticText10, 0, wx.ALL, 5 )
@@ -653,7 +656,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 
 		fgSizer10.Add( self.stCompassCal, 0, wx.ALL|wx.EXPAND, 5 )
 
-		self.m_staticText14 = wx.StaticText( self.m_panel1, wx.ID_ANY, u"Calibration Age", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText14 = wx.StaticText( self.m_panel1, wx.ID_ANY, _(u"Calibration Age"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText14.Wrap( -1 )
 
 		fgSizer10.Add( self.m_staticText14, 0, wx.ALL, 5 )
@@ -670,10 +673,10 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer27.SetFlexibleDirection( wx.BOTH )
 		fgSizer27.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_button10 = wx.Button( self.m_panel1, wx.ID_ANY, u"Clear", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button10 = wx.Button( self.m_panel1, wx.ID_ANY, _(u"Clear"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer27.Add( self.m_button10, 0, wx.ALL, 5 )
 
-		self.cbCompassCalibrationLocked = wx.CheckBox( self.m_panel1, wx.ID_ANY, u"calibration locked", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.cbCompassCalibrationLocked = wx.CheckBox( self.m_panel1, wx.ID_ANY, _(u"calibration locked"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.cbCompassCalibrationLocked.SetValue(True)
 		fgSizer27.Add( self.cbCompassCalibrationLocked, 0, wx.ALL, 5 )
 
@@ -697,7 +700,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel1.SetSizer( fgSizer8 )
 		self.m_panel1.Layout()
 		fgSizer8.Fit( self.m_panel1 )
-		self.m_notebook.AddPage( self.m_panel1, u"compass", True )
+		self.m_notebook.AddPage( self.m_panel1, _(u"compass"), True )
 		self.m_panel71 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer35 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer35.SetFlexibleDirection( wx.BOTH )
@@ -707,7 +710,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer36.SetFlexibleDirection( wx.BOTH )
 		fgSizer36.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_staticText41 = wx.StaticText( self.m_panel71, wx.ID_ANY, u"Press each button when the rudder is at the correct position to calibrate.", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText41 = wx.StaticText( self.m_panel71, wx.ID_ANY, _(u"Press each button when the rudder is at the correct position to calibrate."), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText41.Wrap( 550 )
 
 		fgSizer36.Add( self.m_staticText41, 0, wx.ALL, 5 )
@@ -721,12 +724,12 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer32.SetFlexibleDirection( wx.BOTH )
 		fgSizer32.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_staticText38 = wx.StaticText( self.m_panel71, wx.ID_ANY, u"Rudder", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText38 = wx.StaticText( self.m_panel71, wx.ID_ANY, _(u"Rudder"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText38.Wrap( -1 )
 
 		fgSizer32.Add( self.m_staticText38, 0, wx.ALL, 5 )
 
-		self.stRudderAngle = wx.StaticText( self.m_panel71, wx.ID_ANY, u"N/A", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stRudderAngle = wx.StaticText( self.m_panel71, wx.ID_ANY, _(u"N/A"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stRudderAngle.Wrap( -1 )
 
 		fgSizer32.Add( self.stRudderAngle, 0, wx.ALL|wx.EXPAND, 5 )
@@ -736,7 +739,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 
 		fgSizer32.Add( self.stServoFlags, 0, wx.ALL|wx.EXPAND, 5 )
 
-		self.m_button161 = wx.Button( self.m_panel71, wx.ID_ANY, u"Reset Calibration", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button161 = wx.Button( self.m_panel71, wx.ID_ANY, _(u"Reset Calibration"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer32.Add( self.m_button161, 0, wx.ALL, 5 )
 
 
@@ -746,41 +749,41 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer33.SetFlexibleDirection( wx.BOTH )
 		fgSizer33.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.m_button11 = wx.Button( self.m_panel71, wx.ID_ANY, u"Rudder Is Centered", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button11 = wx.Button( self.m_panel71, wx.ID_ANY, _(u"Rudder Is Centered"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer33.Add( self.m_button11, 0, wx.ALL, 5 )
 
-		self.m_staticText341 = wx.StaticText( self.m_panel71, wx.ID_ANY, u"Offset", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText341 = wx.StaticText( self.m_panel71, wx.ID_ANY, _(u"Offset"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText341.Wrap( -1 )
 
 		fgSizer33.Add( self.m_staticText341, 0, wx.ALL, 5 )
 
-		self.stRudderOffset = wx.StaticText( self.m_panel71, wx.ID_ANY, u"------", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stRudderOffset = wx.StaticText( self.m_panel71, wx.ID_ANY, _(u"------"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stRudderOffset.Wrap( -1 )
 
 		fgSizer33.Add( self.stRudderOffset, 0, wx.ALL, 5 )
 
-		self.m_button12 = wx.Button( self.m_panel71, wx.ID_ANY, u"Rudder is Starboard Range", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button12 = wx.Button( self.m_panel71, wx.ID_ANY, _(u"Rudder is Starboard Range"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer33.Add( self.m_button12, 0, wx.ALL, 5 )
 
-		self.m_staticText56 = wx.StaticText( self.m_panel71, wx.ID_ANY, u"Scale", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText56 = wx.StaticText( self.m_panel71, wx.ID_ANY, _(u"Scale"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText56.Wrap( -1 )
 
 		fgSizer33.Add( self.m_staticText56, 0, wx.ALL, 5 )
 
-		self.stRudderScale = wx.StaticText( self.m_panel71, wx.ID_ANY, u"------", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stRudderScale = wx.StaticText( self.m_panel71, wx.ID_ANY, _(u"------"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stRudderScale.Wrap( -1 )
 
 		fgSizer33.Add( self.stRudderScale, 0, wx.ALL, 5 )
 
-		self.m_button121 = wx.Button( self.m_panel71, wx.ID_ANY, u"Rudder is Port Range", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button121 = wx.Button( self.m_panel71, wx.ID_ANY, _(u"Rudder is Port Range"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer33.Add( self.m_button121, 0, wx.ALL, 5 )
 
-		self.m_staticText58 = wx.StaticText( self.m_panel71, wx.ID_ANY, u"Non Linearity", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText58 = wx.StaticText( self.m_panel71, wx.ID_ANY, _(u"Non Linearity"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText58.Wrap( -1 )
 
 		fgSizer33.Add( self.m_staticText58, 0, wx.ALL, 5 )
 
-		self.stRudderNonlinearity = wx.StaticText( self.m_panel71, wx.ID_ANY, u"------", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stRudderNonlinearity = wx.StaticText( self.m_panel71, wx.ID_ANY, _(u"------"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stRudderNonlinearity.Wrap( -1 )
 
 		fgSizer33.Add( self.stRudderNonlinearity, 0, wx.ALL, 5 )
@@ -792,7 +795,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer34.SetFlexibleDirection( wx.BOTH )
 		fgSizer34.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.stRudderRange = wx.StaticText( self.m_panel71, wx.ID_ANY, u" range +-", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stRudderRange = wx.StaticText( self.m_panel71, wx.ID_ANY, _(u" range +-"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stRudderRange.Wrap( -1 )
 
 		fgSizer34.Add( self.stRudderRange, 0, wx.ALL, 5 )
@@ -800,7 +803,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.sRudderRange = wx.SpinCtrl( self.m_panel71, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 10, 90, 30 )
 		fgSizer34.Add( self.sRudderRange, 0, wx.ALL, 5 )
 
-		self.m_staticText40 = wx.StaticText( self.m_panel71, wx.ID_ANY, u"degrees", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText40 = wx.StaticText( self.m_panel71, wx.ID_ANY, _(u"degrees"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText40.Wrap( -1 )
 
 		fgSizer34.Add( self.m_staticText40, 0, wx.ALL, 5 )
@@ -819,9 +822,9 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel71.SetSizer( fgSizer35 )
 		self.m_panel71.Layout()
 		fgSizer35.Fit( self.m_panel71 )
-		self.m_notebook.AddPage( self.m_panel71, u"rudder", False )
+		self.m_notebook.AddPage( self.m_panel71, _(u"rudder"), False )
 		self.m_pSettings = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.m_notebook.AddPage( self.m_pSettings, u"settings", False )
+		self.m_notebook.AddPage( self.m_pSettings, _(u"settings"), False )
 
 		fgSizer7.Add( self.m_notebook, 1, wx.EXPAND |wx.ALL, 5 )
 

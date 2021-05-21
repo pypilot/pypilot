@@ -56,13 +56,16 @@ ugfx_module = Extension('pypilot/hat/ugfx/_ugfx',
                         swig_opts=['-c++'] + ugfx_defs
 )
 
-locale_files = []
-for walk in os.walk('hat/locale'):
-    path, dirs, files = walk
-    path = path[len('hat/'):]
-    for file in files:
-        if file[len(file)-3:] == '.mo':
-            locale_files.append(os.path.join(path, file))
+def find_locales(name='', dir = 'locale'):
+    locale_files = []
+    for walk in os.walk('./' + name + '/' + dir):
+        path, dirs, files = walk
+        path = path[len(name) + 1:]
+        for file in files:
+            if file[len(file)-3:] == '.mo':
+                locale_files.append(os.path.join(path, file))
+
+    return locale_files
 
 from pypilot import version
 
@@ -90,9 +93,10 @@ setup (name = 'pypilot',
        packages=packages,
        package_dir=package_dirs,
        ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module],
-       package_data={'pypilot.hat': ['font.ttf', 'static/*', 'templates/*'] + locale_files,
+       package_data={'pypilot': find_locales(),
+                     'pypilot.hat': ['font.ttf', 'static/*', 'templates/*'] + find_locales('hat'),
                      'pypilot.ui': ['*.png', '*.mtl', '*.obj'],
-                     'pypilot.web': ['static/*', 'templates/*']},
+                     'pypilot.web': ['static/*', 'templates/*'] + find_locales('web', 'translations')},
        entry_points={
            'console_scripts': [
                'pypilot=pypilot.autopilot:main',

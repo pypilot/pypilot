@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import math, json, numpy
+from gettext import gettext as _
 try:
     import Image
 except:
@@ -22,7 +23,7 @@ try:
     import pywavefront
     from pywavefront import visualization
 except Exception as e:
-    print('failed to load pywavefront:', e)
+    print(_('failed to load pywavefront:'), e)
     pywavefront = False
 
 
@@ -52,7 +53,7 @@ class BoatPlot():
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         if width < 10 or height < 10:
-            print('boatplot: invalid display dimensions', width, height)
+            print(_('boatplot: invalid display dimensions'), width, height)
             return
         
         ar = 0.5 * width / height
@@ -106,8 +107,8 @@ class BoatPlot():
             try:
                 self.obj = pywavefront.Wavefront('Vagabond.obj')
             except Exception as e:
-                print('Vagabond.obj failed to load', e)
-                print('Did you add the pypilot_data repository?')
+                print(_('Vagabond.obj failed to load'), e)
+                print(_('Did you add the pypilot_data repository?'))
 
         glEnable(GL_DEPTH_TEST)
         if self.texture_compass:
@@ -157,7 +158,7 @@ class BoatPlot():
             try:
                 img = Image.open('compass.png')
             except:
-                print('compass.png not found, texture compass cannot be used')
+                print(_('compass.png not found, texture compass cannot be used'))
                 self.texture_compass = False
                 return
 

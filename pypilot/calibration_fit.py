@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import sys, time, math, numpy, scipy.optimize
+from gettext import gettext as _
 import vector, resolv, quaternion
 import boatimu
 resolv = resolv.resolv
@@ -35,7 +36,7 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
     try:
         import scipy.odr
     except:
-        print('failed to load scientific library, cannot perform calibration update!')
+        print(_('failed to load scientific library, cannot perform calibration update!'))
         return False
     try:
         Model = scipy.odr.Model(f, implicit=1)

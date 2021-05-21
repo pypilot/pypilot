@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import wx, wx.glcanvas, sys, socket, time, os
+from gettext import gettext as _
 from OpenGL.GL import *
 from pypilot.client import pypilotClientFromArgs
 
@@ -64,7 +65,7 @@ class pypilotScope(pypilotScopeBase):
                     break
 
         if watches:
-            print('values not found:', watches)
+            print(_('values not found:'), watches)
                 
     def receive_messages(self, event):
         if not self.client:

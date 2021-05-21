@@ -13,6 +13,7 @@
 # giving it the ability to auto-calibrate the inertial sensors
 
 import os, sys
+from gettext import gettext as _
 import time, math, multiprocessing, select
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -30,7 +31,7 @@ try:
     import RTIMU
 except ImportError:
     RTIMU = False
-    print('RTIMU library not detected, please install it')
+    print(_('RTIMU library not detected, please install it'))
 
 class IMU(object):
     def __init__(self, server):
@@ -53,7 +54,7 @@ class IMU(object):
         self.lastgyrobiastime = time.monotonic()
 
         SETTINGS_FILE = "RTIMULib"
-        print("Using settings file " + SETTINGS_FILE + ".ini")
+        print(_('Using settings file') + ' ' + SETTINGS_FILE + '.ini')
         s = RTIMU.Settings(SETTINGS_FILE)
         s.FusionType = 1
         s.CompassCalValid = False
@@ -93,7 +94,7 @@ class IMU(object):
         rtimu = RTIMU.RTIMU(self.s)
         if rtimu.IMUName() == 'Null IMU':
             if self.rtimu:
-                print('ERROR: No IMU Detected', t0)
+                print(_('ERROR: No IMU Detected'), t0)
             self.s.IMUType = 0
             self.rtimu = False
             return
@@ -101,7 +102,7 @@ class IMU(object):
         print('IMU Name: ' + rtimu.IMUName())
 
         if not rtimu.IMUInit():
-            print('ERROR: IMU Init Failed, no inertial data available', t0)
+            print(_('ERROR: IMU Init Failed, no inertial data available'), t0)
             self.s.IMUType = 0
             return
 
@@ -123,9 +124,9 @@ class IMU(object):
                 time.sleep(10) # do nothing
 
         if os.system('sudo chrt -pf 2 %d 2>&1 > /dev/null' % os.getpid()):
-            print('warning, failed to make imu process realtime')
+            print(_('warning, failed to make imu process realtime'))
         else:
-            print('made imu process realtime')
+            print(_('made imu process realtime'))
 
         self.setup()
         while True:
@@ -137,7 +138,7 @@ class IMU(object):
 
             if not self.s.GyroBiasValid:
                 if self.gyrobias.value:
-                    print('setting initial gyro bias', self.gyrobias.value)
+                    print(_('setting initial gyro bias'), self.gyrobias.value)
                     self.s.GyroBias = tuple(map(math.radians, self.gyrobias.value))
                     self.s.GyroBiasValid = True
             if t0-self.lastgyrobiastime > 30:
@@ -153,7 +154,7 @@ class IMU(object):
             if t > 0 and t < period:
                 time.sleep(t)
             else:
-                print('imu process failed to keep time', dt, t0, t1, t2, t3)
+                print(_('imu process failed to keep time'), dt, t0, t1, t2, t3)
 
     def read(self):
         t0 = time.monotonic()
@@ -161,7 +162,7 @@ class IMU(object):
             self.init()
             return False
         if not self.rtimu.IMURead():
-            print('failed to read IMU!', t0)
+            print(_('failed to read IMU!'), t0)
             self.init() # reinitialize imu
             return False 
          
@@ -193,7 +194,7 @@ class IMU(object):
                 #rtimu.resetFusion()
             elif name == 'imu.rate':
                 self.rate = value
-                print('imu rate set to rate', value)
+                print(_('imu rate set to rate'), value)
 
         if not self.lastdata:
             return
@@ -207,12 +208,12 @@ class IMU(object):
         for i in range(3): # filter gyro vector
             self.avggyro[i] = (1-d)*self.avggyro[i] + d*gyro[i]
         if vector.norm(self.avggyro) > .8: # 55 degrees/s
-            print('too high standing gyro bias, resetting sensors', gyro, self.avggyro)
+            print(_('too high standing gyro bias, resetting sensors'), gyro, self.avggyro)
             self.init()
 
         # detects the problem even faster:
         if any(map(lambda x : abs(x) > 1000, compass)):
-            print('compass out of range, resetting', compass)
+            print(_('compass out of range, resetting'), compass)
             self.init()
 
 class FrequencyValue(SensorValue):
@@ -304,11 +305,11 @@ def heading_filter(lp, a, b):
 
 def CalibrationProcess(cal_pipe, client):
     if os.system('sudo chrt -po 0 %d 2> /dev/null > /dev/null' % os.getpid()):
-        print('warning, failed to make calibration process other')
+        print(_('warning, failed to make calibration process other'))
     if os.system('sudo chrt -pi 0 %d 2> /dev/null > /dev/null' % os.getpid()):
-        print('warning, failed to make calibration process idle, trying renice')
+        print(_('warning, failed to make calibration process idle, trying renice'))
         if os.system("renice 20 %d" % os.getpid()):
-            print('warning, failed to renice calibration process')
+            print(_('warning, failed to renice calibration process'))
 
     time.sleep(4)
     
@@ -316,10 +317,10 @@ def CalibrationProcess(cal_pipe, client):
     while True:
         try:
             import calibration_fit
-            print('calibration loaded, starting')
+            print(_('calibration loaded, starting'))
             calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
         except Exception as e:
-            print('failed import calibration fit', e)
+            print(_('failed import calibration fit'), e)
             time.sleep(30) # maybe numpy or scipy isn't ready yet
 
 class AutomaticCalibrationProcess():
@@ -335,7 +336,7 @@ class AutomaticCalibrationProcess():
         self.process.start()
 
     def __del__(self):
-        print('terminate calibration process')
+        print(_('terminate calibration process'))
         self.process.terminate()
 
 
@@ -417,7 +418,7 @@ class BoatIMU(object):
         data = self.IMUread()
         if not data:
             if time.monotonic() - self.last_imuread > 1 and self.frequency.value:
-                print('IMURead failed!')
+                print(_('IMURead failed!'))
                 self.frequency.set(False)
                 for name in self.SensorValues:
                     self.SensorValues[name].set(False)
@@ -425,7 +426,7 @@ class BoatIMU(object):
             return False
   
         if vector.norm(data['accel']) == 0:
-            print('accel values invalid', data['accel'])
+            print(_('accel values invalid'), data['accel'])
             return False
   
         self.last_imuread = time.monotonic()

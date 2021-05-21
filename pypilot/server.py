@@ -8,6 +8,12 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import select, socket, time
+
+import gettext
+locale_d= os.path.abspath(os.path.dirname(__file__)) + '/../locale'
+gettext.bindtextdomain('pypilot', locale_d)
+_ = gettext.gettext
+
 import numbers
 import sys, os, heapq
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -88,7 +94,7 @@ class pypilotValue(object):
             watching = server_persistent_period
         for watch in self.awatches:
             if len(watch.connections) == 0:
-                print('ERROR no connections in watch') # should never hit
+                print(_('ERROR no connections in watch')) # should never hit
             if watching is False or watch.period < watching:
                 watching = watch.period
                 
@@ -191,7 +197,7 @@ class ServerUDP(pypilotValue):
             if c == connection:
                 continue
             if c.address[0] == connection.address[0] and c.udp_port == connection.udp_port:
-                print('remove duplicate udp connection')
+                print(_('remove duplicate udp connection'))
                 c.udp_socket.close()
                 c.udp_port = False
 
@@ -331,7 +337,7 @@ class ServerValues(pypilotValue):
         try:
             self.load_file(open(default_persistent_path))
         except Exception as e:
-            print('failed to load', default_persistent_path, e)
+            print(_('failed to load'), default_persistent_path, e)
             # log failing to load persistent data
             persist_fail = os.getenv('HOME') + '/.pypilot/persist_fail'
             file = open(persist_fail, 'a')
@@ -342,7 +348,7 @@ class ServerValues(pypilotValue):
                 self.load_file(open(default_persistent_path + '.bak'))
                 return
             except Exception as e:
-                print('backup data failed as well', e)
+                print(_('backup data failed as well'), e)
             return
 
         # backup persistent_data if it loaded with success
@@ -370,7 +376,7 @@ class ServerValues(pypilotValue):
                 file.write(self.persistent_data[name])
             file.close()
         except Exception as e:
-            print('failed to write', default_persistent_path, e)
+            print(_('failed to write'), default_persistent_path, e)
 
 class pypilotServer(object):
     def __init__(self):
@@ -427,7 +433,7 @@ class pypilotServer(object):
                 self.server_socket.bind(('0.0.0.0', self.port))
                 break
             except:
-                print('pypilot_server: bind failed; already running a server?')
+                print(_('pypilot_server: bind failed; already running a server?'))
                 time.sleep(3)                
 
         # listen for tcp sockets
@@ -489,7 +495,7 @@ class pypilotServer(object):
             self.values.store()
             dt = time.monotonic() - t0
             if dt > .1:
-                print('persistent store took too long!', time.monotonic() - t0)
+                print(_('persistent store took too long!'), time.monotonic() - t0)
                 return
 
         if timeout:
@@ -505,10 +511,10 @@ class pypilotServer(object):
             if connection == self.server_socket:
                 connection, address = connection.accept()
                 if len(self.sockets) == max_connections:
-                    print('pypilot server: max connections reached!!!', len(self.sockets))
+                    print(_('pypilot server: max connections reached!!!'), len(self.sockets))
                     self.RemoveSocket(self.sockets[0]) # dump first socket??
                 socket = LineBufferedNonBlockingSocket(connection, address)
-                print('server add socket', socket.address)
+                print(_('server add socket'), socket.address)
 
                 self.sockets.append(socket)
                 fd = socket.fileno()
@@ -518,7 +524,7 @@ class pypilotServer(object):
                 self.poller.register(fd, select.POLLIN)
             elif flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
                 if not connection in self.sockets:
-                    print('internal pipe closed, server exiting')
+                    print(_('internal pipe closed, server exiting'))
                     exit(0)
                 self.RemoveSocket(connection)
             elif flag & select.POLLIN:
@@ -542,9 +548,9 @@ class pypilotServer(object):
                     except Exception as e:
                         connection.write('error=invalid request: ' + line)
                         try:
-                            print('invalid request from connection', e, line)
+                            print(_('invalid request from connection'), e, line)
                         except Exception as e2:
-                            print('invalid request has malformed string', e, e2)
+                            print(_('invalid request has malformed string'), e, e2)
 
         if not self.multiprocessing:
             # these pipes are not pollable as they are implemented as a simple buffer
@@ -570,7 +576,7 @@ class pypilotServer(object):
         while True:
             for socket in self.sockets:
                 if not socket.socket:
-                    print('server socket closed from flush!!')
+                    print(_('server socket closed from flush!!'))
                     self.RemoveSocket(socket)
                     break
             else:

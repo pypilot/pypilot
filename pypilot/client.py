@@ -8,6 +8,12 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import socket, select, sys, os, time
+
+import gettext
+locale_d= os.path.abspath(os.path.dirname(__file__)) + '/../locale'
+gettext.bindtextdomain('pypilot', locale_d)
+_ = gettext.gettext
+
 import heapq
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pyjson
@@ -88,7 +94,7 @@ class ClientValues(Value):
 
     def register(self, value):
         if value.name in self.values:
-            print('warning, registering existing value:', value.name)
+            print(_('warning, registering existing value:'), value.name)
         self.wvalues[value.name] = value.info
         self.values[value.name] = value
 
@@ -146,7 +152,7 @@ class pypilotClient(object):
             file.close()
                 
         except Exception as e:
-            print('failed to read config file:', self.configfilename, e)
+            print(_('failed to read config file:'), self.configfilename, e)
             config = {}
 
         if host:
@@ -177,9 +183,9 @@ class pypilotClient(object):
             file.close()
             self.write_config = False
         except IOError:
-            print('failed to write config file:', self.configfilename)
+            print(_('failed to write config file:'), self.configfilename)
         except Exception as e:
-            print('Exception writing config file:', self.configfilename, e)
+            print(_('Exception writing config file:'), self.configfilename, e)
 
         self.connection = LineBufferedNonBlockingSocket(self.connection_in_progress, self.config['host'])
         self.connection_in_progress = False
@@ -256,7 +262,7 @@ class pypilotClient(object):
                 continue
 
             except Exception as e:
-                print('invalid message from server:', line, e)
+                print(_('invalid message from server:'), line, e)
                 raise Exception()
 
             if name in self.values.values: # did this client register this value
@@ -272,7 +278,7 @@ class pypilotClient(object):
 
     def connect(self, verbose=True):
         if self.connection:
-            print('warning, client aleady has connection')
+            print(_('warning, pypilot client aleady has connection'))
 
         try:
             host_port = self.config['host'], self.config['port']
@@ -292,7 +298,7 @@ class pypilotClient(object):
             if e.args[0] == 111: # refused
                 pass
             else:
-                print('connect failed to %s:%d' % host_port, e)
+                print(_('connect failed to') + (' %s:%d' % host_port), e)
             #time.sleep(.25)
                 
             return False
@@ -379,7 +385,7 @@ class pypilotClient(object):
 def pypilotClientFromArgs(values, period=True, host=False):
     client = pypilotClient(host)
     if not client.connect(True):
-        print('failed to connect to', host)
+        print(_('failed to connect to'), host)
         exit(1)
 
     # set any value specified with path=value
@@ -436,13 +442,13 @@ def main():
     signal.signal(signal.SIGINT, quit)
 
     if '-h' in sys.argv:
-        print('usage', sys.argv[0], '[-s host] -i -c -h [NAME[=VALUE]]...')
+        print(_('usage'), sys.argv[0], '[-s host] -i -c -h [NAME[=VALUE]]...')
         print('eg:', sys.argv[0], '-i imu.compass')
         print('   ', sys.argv[0], 'servo.max_slew_speed=10')
-        print('-s', 'set the host or ip address')
-        print('-i', 'print info about each value type')
-        print('-c', 'continuous watch')
-        print('-h', 'show this message')
+        print('-s', _('set the host or ip address'))
+        print('-i', _('print info about each value type'))
+        print('-c', _('continuous watch'))
+        print('-h', _('show this message'))
         exit(0)
 
     args = list(sys.argv)[1:]
@@ -469,7 +475,7 @@ def main():
     else:
         watches = list(client.list_values(10))
         if not watches:
-            print('failed to retrieve value list!')
+            print(_('failed to retrieve value list!'))
             exit(1)
         for name in watches:
             client.watch(name, period)
@@ -480,10 +486,10 @@ def main():
         while len(values) < len(watches):
             dt = time.monotonic() - t0
             if dt > 10:
-                print('timeout retrieving', len(watches) - len(values), 'values')
+                print(_('timeout retrieving'), len(watches) - len(values), 'values')
                 for name in watches:
                     if not name in values:
-                        print('missing', name)
+                        print(_('missing'), name)
                 break
                     
             client.poll(.1)

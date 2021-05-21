@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import select, time, os
+from gettext import gettext as _
 import pyjson
 
 class NonBlockingPipeEnd(object):
@@ -37,9 +38,9 @@ class NonBlockingPipeEnd(object):
             if self.pollin.poll(0):
                 return self.pipe.recv()
             if not self.recvfailok:
-                print('error pipe block on recv!', self.name)
+                print(_('error pipe block on recv!'), self.name)
         except:
-            print('failed to recv nonblocking pipe!', self.name)
+            print(_('failed to recv nonblocking pipe!'), self.name)
         return False
 
     def recvdata(self):
@@ -66,7 +67,7 @@ class NonBlockingPipeEnd(object):
 
         self.sendfailcount += 1
         if self.sendfailcount == self.failcountmsg:
-            print('pipe full (%d)' % self.sendfailcount, self.name, 'cannot send')
+            print(_('pipe full') + (' (%d)' % self.sendfailcount), self.name, _('cannot send'))
             self.failcountmsg *= 10
         return False
 
@@ -86,7 +87,7 @@ class SocketNonBlockingPipeEnd(LineBufferedNonBlockingSocket):
             d = pyjson.loads(line.rstrip())
             return d
         except Exception as e:
-            print('failed to decode data socket!', self.name, e)
+            print(_('failed to decode data socket!'), self.name, e)
             print('line', line)
         return False
 
@@ -100,7 +101,7 @@ class SocketNonBlockingPipeEnd(LineBufferedNonBlockingSocket):
                 print('too long', t1-t0, self.name, len(data))
             return True
         except Exception as e:
-            print('failed to encode data socket!', self.name, e)
+            print(_('failed to encode data socket!'), self.name, e)
             return False
 
 try:
@@ -142,7 +143,7 @@ class PipeNonBlockingPipeEnd(object):
             d = pyjson.loads(line.rstrip())
             return d
         except Exception as e:
-            print('failed to decode data socket!', self.name, e)
+            print(_('failed to decode data socket!'), self.name, e)
             print('line', line)
         return False
 
@@ -152,12 +153,12 @@ class PipeNonBlockingPipeEnd(object):
     def write(self, data, udp=False):
         if not self.pollout.poll(0):
             if not self.sendfailok:
-                print('failed write', self.name)
+                print(_('failed write'), self.name)
         t0 = time.time()
         os.write(self.w, data.encode())
         t1 = time.time()
         if t1-t0 > .024:
-            print('too long write pipe', t1-t0, self.name, len(data))
+            print(_('too long write pipe'), t1-t0, self.name, len(data))
 
     def send(self, value, block=False):
         if 0:
@@ -172,12 +173,12 @@ class PipeNonBlockingPipeEnd(object):
             self.flush()
             t2 = time.monotonic()
             if t2-t0 > .024:
-                print('too long send nonblocking pipe', t1-t0, t2-t1, self.name, len(data))
+                print(_('too long send nonblocking pipe'), t1-t0, t2-t1, self.name, len(data))
             return True
         except Exception as e:
             print("failed send ex", t0, time.monotonic(), e)
             if not self.sendfailok:
-                print('failed to encode data pipe!', self.name, e)
+                print(_('failed to encode data pipe!'), self.name, e)
             return False
 
 # non multiprocessed pipe emulates functions in a simple queue

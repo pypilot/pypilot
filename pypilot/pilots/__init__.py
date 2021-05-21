@@ -1,5 +1,6 @@
 # import all scripts in this directory
 
+from gettext import gettext as _
 from __future__ import print_function
 default = []
 
@@ -21,7 +22,7 @@ for module in os.listdir(os.path.dirname(__file__)):
         try:
             mod = importlib.import_module(module[:-3])
         except Exception as e2:
-            print('ERROR loading', module, e1, ' ', e2)
+            print(_('ERROR loading'), module, e1, ' ', e2)
             continue
     try:
         if mod.pilot.disabled:

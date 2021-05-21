@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import wx, sys, math, subprocess, os, socket
+from gettext import gettext as _
 from pypilot.client import pypilotClient
 
 def round3(value):
@@ -44,11 +45,11 @@ class MainFrame(wx.Frame):
         ssizer.Add(self.scrolledWindow, 1, wx.EXPAND | wx.ALL, 5)
 
         bsizer = wx.FlexGridSizer(1, 0, 0, 0)
-        self.bRefresh = wx.Button(self, wx.ID_ANY, 'Refresh')
+        self.bRefresh = wx.Button(self, wx.ID_ANY, _('Refresh'))
         self.bRefresh.Bind( wx.EVT_BUTTON, self.Refresh )
         bsizer.Add(self.bRefresh)
 
-        self.bScope = wx.Button(self, wx.ID_ANY, 'Scope')
+        self.bScope = wx.Button(self, wx.ID_ANY, _('Scope'))
         self.bScope.Bind( wx.EVT_BUTTON,
                           lambda event :
                           subprocess.Popen(['python',
@@ -155,7 +156,7 @@ class MainFrame(wx.Frame):
 
             elif t == 'ResettableValue':
                 def proc():
-                    b = wx.Button(self.scrolledWindow, wx.ID_ANY, 'Reset')
+                    b = wx.Button(self.scrolledWindow, wx.ID_ANY, _('Reset'))_
                     sizer.Add( b, 0, wx.EXPAND)
                     bname = name
                     def onclick(event):
@@ -186,9 +187,9 @@ class MainFrame(wx.Frame):
         if self.client.connection != self.connected:
             self.connected = self.client.connection
             if self.connected:
-                self.SetTitle("pypilot client - Connected")
+                self.SetTitle('pypilot client - ' + _('Connected'))
             else:
-                self.SetTitle("pypilot client - Disconnected")
+                self.SetTitle('pypilot client - ' + _('Disconnected'))
 
         value_list = self.client.list_values()
         if value_list:
@@ -215,7 +216,7 @@ class MainFrame(wx.Frame):
                         t = str(type(self.controls[name]))
                         if t == "<class 'wx._controls.Choice'>" or t == "<class 'wx._core.Choice'>":
                             if not self.controls[name].SetStringSelection(str(value)):
-                                print('warning, invalid choice value specified')
+                                print(_('warning, invalid choice value specified'))
                         elif t == "<class 'wx._controls.Slider'>" or t == "<class 'wx._core.Slider'>":
                             r = self.sliderrange[name]
                             self.controls[name].SetValue(int(float(value - r[0])/(r[1]-r[0])*1000))

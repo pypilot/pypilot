@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os, time, math
+from gettext import gettext as _
 import pyjson
 
 class Value(object):
@@ -127,7 +128,7 @@ class RangeProperty(Property):
         self.min_value = min_value
         self.max_value = max_value
         if initial < min_value or initial > max_value:
-            print('invalid initial value for range property', name, initial)
+            print(_('invalid initial value for range property'), name, initial)
         super(RangeProperty, self).__init__(name, initial, **kwargs)
 
         self.info['type'] = 'RangeProperty'
@@ -176,7 +177,7 @@ class EnumProperty(Property):
                     continue
             super(EnumProperty, self).set(value)
             return
-        print('invalid set', self.name, '=', value)
+        print(_('invalid set'), self.name, '=', value)
 
 class BooleanValue(Value):
     def __init__(self, name, initial, **kwargs):
