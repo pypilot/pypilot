@@ -39,9 +39,9 @@ extern "C" {
 #define NOKIA5110L 1
 #define JLX12864G 2
 
-//#define LCD NONE
+#define LCD NONE
 //#define LCD NOKIA5110L
-#define LCD JLX12864G
+//#define LCD JLX12864G
 
 #if LCD == NOKIA5110L
 #include "PCD8544.h"
@@ -302,7 +302,10 @@ void setup()
   
     if(memcmp_P(ram_eeprom.signature, signature, sizeof ram_eeprom.signature) == 0)
         memcpy(&eeprom_data, &ram_eeprom, sizeof eeprom_data);
-    
+
+    Serial.print(F("Sensor type:"));
+    Serial.println(eeprom_data.sensor_type);
+        
     if(eeprom_data.wind_min_reading > 0 && // ensure somewhat sane range
        eeprom_data.wind_max_reading < 1024 &&
        eeprom_data.wind_min_reading < eeprom_data.wind_max_reading-100) {
