@@ -156,7 +156,7 @@ class MainFrame(wx.Frame):
 
             elif t == 'ResettableValue':
                 def proc():
-                    b = wx.Button(self.scrolledWindow, wx.ID_ANY, _('Reset'))_
+                    b = wx.Button(self.scrolledWindow, wx.ID_ANY, _('Reset'))
                     sizer.Add( b, 0, wx.EXPAND)
                     bname = name
                     def onclick(event):

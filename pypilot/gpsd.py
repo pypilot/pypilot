@@ -74,7 +74,6 @@ class gpsProcess(multiprocessing.Process):
                     os.environ['GPSD_OPTIONS'] = '-N -G -F /tmp/gpsd.sock' # should not run gpsd..
                     realpath = os.path.realpath(device)
                     os.system('gpsdctl add ' + realpath)
-                    print(_('gpsd probe success: ') + device)
                     self.devices = [device]
                 else:
                     print(_('gpsd probe failed'))

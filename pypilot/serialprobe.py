@@ -84,7 +84,7 @@ def scan_devices():
                 # if more devices by path than id, then use the paths
                 # this allows identical devices and remembers which port
                 # they are plugged into to speed up future probing
-                print(_('serial probe found more devices by path'))
+                print('serialprobe ' + _('found more devices by path'))
                 paths = by_path_paths
                 by = by_path
         
@@ -116,7 +116,7 @@ def scan_devices():
 
     for device in list(devices):
         if devices[device]['realpath'] in devgpsdevices:
-            print(_('serialprobe removing gps device'), device)
+            print('serialprobe ' + _('removing gps device'), device)
             del devices[device]
                     
     blacklist_serial_ports = read_blacklist()
@@ -354,7 +354,7 @@ def gpsddevices(devices):
 def success(name, device):
     global probes
     filename = pypilot_dir + name + 'device'
-    print(_('serialprobe success:'), filename, device)
+    print('serialprobe ' + _('success') + ':', filename, device)
     probes[name]['lastworking'] = device
     try:
         file = open(filename, 'w')
@@ -362,7 +362,7 @@ def success(name, device):
         file.close()
 
     except:
-        print(_('serialprobe failed to record device'), name)
+        print('serialprobe ' + _('failed to record device'), name)
 
 if __name__ == '__main__':
     print('testing serial probe')

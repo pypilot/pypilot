@@ -107,7 +107,7 @@ class Autopilot(object):
                 print(_('failed to load pilot'), pilot_type, e)
 
         pilot_names = list(self.pilots)
-        print('Loaded Pilots:', pilot_names)
+        print(_('Available Pilots') + ':', pilot_names)
         self.pilot = self.register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True)
 
         self.heading = self.register(SensorValue, 'heading', directional=True)

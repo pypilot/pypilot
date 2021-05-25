@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import select, socket, time
+import sys, os, heapq
 
 import gettext
 locale_d= os.path.abspath(os.path.dirname(__file__)) + '/../locale'
@@ -15,7 +16,6 @@ gettext.bindtextdomain('pypilot', locale_d)
 _ = gettext.gettext
 
 import numbers
-import sys, os, heapq
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pyjson
 from bufferedsocket import LineBufferedNonBlockingSocket
@@ -511,7 +511,7 @@ class pypilotServer(object):
             if connection == self.server_socket:
                 connection, address = connection.accept()
                 if len(self.sockets) == max_connections:
-                    print(_('pypilot server: max connections reached!!!'), len(self.sockets))
+                    print('pypilot server: ' + _('max connections reached') + '!!!', len(self.sockets))
                     self.RemoveSocket(self.sockets[0]) # dump first socket??
                 socket = LineBufferedNonBlockingSocket(connection, address)
                 print(_('server add socket'), socket.address)
@@ -548,9 +548,9 @@ class pypilotServer(object):
                     except Exception as e:
                         connection.write('error=invalid request: ' + line)
                         try:
-                            print(_('invalid request from connection'), e, line)
+                            print('invalid request from connection', e, line)
                         except Exception as e2:
-                            print(_('invalid request has malformed string'), e, e2)
+                            print('invalid request has malformed string', e, e2)
 
         if not self.multiprocessing:
             # these pipes are not pollable as they are implemented as a simple buffer

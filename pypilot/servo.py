@@ -592,7 +592,7 @@ class Servo(object):
 
             if self.controller.value == 'none':
                 device_path = [self.device.port, self.device.baudrate]
-                print(_('arduino servo found on'), device_path)
+                print('arduino servo ' + _('found'), device_path)
                 serialprobe.success('servo', device_path)
                 self.controller.set('arduino')
                 self.driver.command(0)
@@ -726,7 +726,7 @@ class Servo(object):
 
 def test(device_path):
     from arduino_servo.arduino_servo import ArduinoServo
-    print(_('probing arduino servo on'), device_path)
+    print(_('probing') + ' arduino servo', device_path)
     while True:
         try:
             device = serial.Serial(device_path, 38400)
@@ -751,7 +751,7 @@ def main():
     for i in range(len(sys.argv)):
         if sys.argv[i] == '-t':
             if len(sys.argv) < i + 2:
-                print(_('device needed for option -t'))
+                print(_('device needed for option') + ' -t')
                 exit(1)
             test(sys.argv[i+1])
     

@@ -40,7 +40,7 @@ class Sensor(object):
         self.update(data)
                 
         if self.source.value != source:
-            print(_('found'), self.name, _('on'), source, data['device'])
+            print(_('sensor found'), self.name, source, data['device'])
             self.source.set(source)
             self.device = data['device']
         self.lastupdate = time.monotonic()

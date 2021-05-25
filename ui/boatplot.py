@@ -53,7 +53,7 @@ class BoatPlot():
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         if width < 10 or height < 10:
-            print(_('boatplot: invalid display dimensions'), width, height)
+            print('boatplot: ' + _('invalid display dimensions'), width, height)
             return
         
         ar = 0.5 * width / height
@@ -107,7 +107,7 @@ class BoatPlot():
             try:
                 self.obj = pywavefront.Wavefront('Vagabond.obj')
             except Exception as e:
-                print(_('Vagabond.obj failed to load'), e)
+                print('Vagabond.obj ' + _('failed to load'), e)
                 print(_('Did you add the pypilot_data repository?'))
 
         glEnable(GL_DEPTH_TEST)
@@ -158,7 +158,7 @@ class BoatPlot():
             try:
                 img = Image.open('compass.png')
             except:
-                print(_('compass.png not found, texture compass cannot be used'))
+                print('compass.png ' + _('not found, texture compass cannot be used'))
                 self.texture_compass = False
                 return
 

@@ -72,7 +72,7 @@ class Rudder(Sensor):
         elif command == 'starboard range':
             true_angle = -self.range.value
         else:
-            print(_('unhandled rudder_calibration'), command)
+            print('unhandled rudder_calibration', command)
             return
         
         # raw range 0 to 1

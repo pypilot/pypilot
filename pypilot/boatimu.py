@@ -418,7 +418,7 @@ class BoatIMU(object):
         data = self.IMUread()
         if not data:
             if time.monotonic() - self.last_imuread > 1 and self.frequency.value:
-                print(_('IMURead failed!'))
+                print('IMURead failed!')
                 self.frequency.set(False)
                 for name in self.SensorValues:
                     self.SensorValues[name].set(False)
