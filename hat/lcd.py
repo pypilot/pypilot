@@ -337,6 +337,8 @@ class LCD():
             self.page = next_page
             self.update_watches()
             for key in self.keypad:
+                if key.down and self.hat and self.config['buzzer'] > 1:
+                    self.hat.arduino.set_buzzer(1, .1)
                 key.down = 0
                 key.up = False
             self.need_refresh = True
