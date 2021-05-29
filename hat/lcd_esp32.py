@@ -70,6 +70,7 @@ while True:
     if lcd.keypress:
         lcd.keypress = False
         rtc_memory = 'keypress'
+        rtc.memory('keypress')
         sleeptime = gettime()
         if sleepmode:
             machine.freq(240000000)
@@ -100,10 +101,9 @@ while True:
         sleeptime = 0
 
     if sleepmode == 0:
-        if sleepdt > idletimeout:
+        if sleepdt > idletimeout and lcd.battery_voltage < 4.2:
             print('sleep blank screen')
             lcd.screen.backlight = False;
-            #esp.slenep_type(esp.SLEEP_MODEM) # SLEEP_LIGHT
             print('sleep wifi off')
             wifi_esp32.disable()
             lcd.client.host = False

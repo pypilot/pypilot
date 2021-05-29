@@ -350,8 +350,11 @@ class info(page):
             spacing = .11
             ct = self.round_last_val('servo.controller_temp', 2)
             mt = self.round_last_val('servo.motor_temp', 2)
-            faults = self.round_last_val('servo.faults', 0)
-            items = [_('cont temp'), ct, _('motor temp'), mt, _('faults'), faults]
+            items = [_('cont temp'), ct, _('motor temp'), mt]
+            if self.lcd.battery_voltage:
+                items += [_('battery'), '%.3f' % self.lcd.battery_voltage]
+            else:
+                items += [_('faults'), self.round_last_val('servo.faults', 0)]
         else:
             spacing = .18
             ver = self.last_val('ap.version')
@@ -458,7 +461,7 @@ class controlbase(page):
             
         if self.lcd.battery_voltage:
             battrect = rectangle(0.03, .93, .25, .06)
-            batt = min(max((self.lcd.battery_voltage-3)/.7, 0), 1)
+            batt = min(max(self.lcd.battery_voltage-3.5, 0), 1)
             if batt != self.batt or refresh:
                 self.batt = batt
                 self.lcd.surface.box(*(self.convrect(battrect) + [black]))
