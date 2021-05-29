@@ -504,13 +504,13 @@ class flip(page):
 class display(menu):
     def __init__(self):
         if micropython:
-            bl = ConfigEdit(_('hue'), '', 'hue', 0, 255, 1)
+            bl = [ConfigEdit(_('hue'), '', 'hue', 0, 255, 1)]
         else:
-            bl = ConfigEdit(_('backlight'), '', 'backlight', 0, 40, 1)
+            bl = [ConfigEdit(_('backlight'), '', 'backlight', 0, 40, 1),
+                  ConfigEdit(_('buzzer'), _('volume'), 'buzzer', 0, 3, 2)]
         super(display, self).__init__(_('display'),
                                       [ConfigEdit(_('contrast'), '', 'contrast', 0, 120, 1),
-                                       invert(_('invert')), flip(_('flip')), bl,
-                                       ConfigEdit(_('buzzer'), _('volume'), 'buzzer', 0, 3, 2)])
+                                       invert(_('invert')), flip(_('flip'))] + bl)
 class select_language(page):
     def __init__(self, lang):
         super(select_language, self).__init__(lang[0])
