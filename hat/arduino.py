@@ -348,6 +348,7 @@ class arduino(object):
         return self.flash(filename, 'w')
 
 def arduino_process(pipe, config):
+    start = time.monotonic()
     a = arduino(config)
     period = .05
     periodtime = 0
@@ -363,7 +364,7 @@ def arduino_process(pipe, config):
             else:
                 events.append(['baudrate', 'ERROR: no connection to server for nmea'])
 
-        if events:
+        if events and t0 - start > 2:
             pipe.send(events)
             #print('events', events, time.monotonic())
             period = .05
