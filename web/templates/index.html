@@ -45,6 +45,7 @@
         </div>
         <div class="w3-col s9 m9 l9">
           <div id="heading_info" class="w3-row font-resizable data_block">
+            <div class="w3-col s3 m4 l2 data_label"><button id="tack_button">{{_('Tack')}}</button></div>
             <div class="w3-col s6 m4 l4 data_label">{{_('Heading')}}</div>
             <div class="w3-col s2 m2 l2 data_value" id="heading">---</div>
             <div class="w3-col s6 m4 l4 data_label">{{_('Command')}}</div>
@@ -53,7 +54,7 @@
         </div>
       </div>
       <div class="w3-row">
-        <div id="heading_mode_container" class="w3-col s6 m6 l6">
+        <div id="heading_mode_container" class="w3-col s3 m3 l3">
           <select id="mode">
             <option value="compass">compass</option>
             <option value="gps">gps</option>
@@ -61,6 +62,13 @@
             <option value="true wind">true wind</option>
           </select>
         </div>
+        <div id="tacking_mode_container" class="w3-col s3 m3 l2">
+          <select id="tacking_mode">
+            <option value="port">--> starboard</option>
+            <option value="starboard"><-- port</option>
+          </select>
+        </div>
+
       </div>
       <div id="steer_buttons_container" class="w3-row" >
         <div class="w3-col s6 m6 l6">
