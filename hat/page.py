@@ -77,7 +77,7 @@ class page(object):
         self.name = name
         self.frameperiod = frameperiod
         self.watches = {}
-        self.fittext_cache = {}
+        self.fittext_cache = []
 
     def fill(self, color):
         self.lcd.surface.fill(color)
@@ -169,12 +169,26 @@ class page(object):
             surface.box(*(self.convrect(rect) + [fill]))
         metric_size = 16
         ptext = text
-        if text in self.fittext_cache:
-            size, r, ptext = self.fittext_cache[text]
-            if r.width != rect.width or r.height != rect.height:
-                del self.fittext_cache[text]
+        spaces = ' ' in text
+        # numbers have same width
+        if spaces:
+            ntext = text
+        else:
+            ntext = ''
+            for c in text:
+                if c.isdigit():
+                    ntext += '0'
+                else:
+                    ntext += c
 
-        if not text in self.fittext_cache:
+        for t in self.fittext_cache:
+            if t[0] == ntext:
+                t0, size, r, ptext = t
+                self.fittext_cache.remove(t)
+                if r.width == rect.width and r.height == rect.height:
+                    self.fittext_cache.append(t)
+                    break
+        else:
             if wordwrap:
                 size, ptext = self.fittextsizewordwrap(rect, text, metric_size, bw, surface)
             else:
@@ -190,10 +204,14 @@ class page(object):
                 pass
             #time.sleep(.02)  # this line is required!  needed to process wifi packets durning long sleep
             if wordwrap: # only cache wordwrap fit!!
-                self.fittext_cache[text] = size, rect, ptext
+                #print('fittext cache len', ntext, len(self.fittext_cache), list(map(lambda x : x[0], self.fittext_cache)))
+                self.fittext_cache.append((ntext, size, rect, ptext if spaces else None))
+                if len(self.fittext_cache) > 8:
+                    self.fittext_cache = self.fittext_cache[1:]
 
         pos = int(rect.x*surface.width), int(rect.y*surface.height)
-
+        if not ptext:
+            ptext = text
         size = font.draw(surface, pos, ptext, size, bw)
         return float(size[0])/surface.width, float(size[1])/surface.height
 
@@ -363,7 +381,7 @@ class info(page):
 
         even, odd = 0, .05
         for item in items:
-            self.fittext(rectangle(0, y, 1, spacing+even), item, True)
+            self.fittext(rectangle(0, y, 1, spacing+even), item, False)
             y += spacing + even
             even, odd = odd, even
 
@@ -461,7 +479,7 @@ class controlbase(page):
             
         if self.lcd.battery_voltage:
             battrect = rectangle(0.03, .93, .25, .06)
-            batt = min(max(self.lcd.battery_voltage-3.5, 0), 1)
+            batt = min(max(self.lcd.battery_voltage - 3.2, 0), 1)
             if batt != self.batt or refresh:
                 self.batt = batt
                 self.lcd.surface.box(*(self.convrect(battrect) + [black]))
