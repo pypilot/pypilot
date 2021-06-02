@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2021 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -17,9 +17,9 @@ import wifi_esp32
 #idletimeout = 10      # 15mA
 #sleeptimeout = 10     # 700uA
 #powerofftimeout = 10  # 6.5uA
-idletimeout = 180      # 15mA  (wakes up faster)
-sleeptimeout = 1200     # 700uA
-powerofftimeout = 14400  # 6.5uA (can only wake from auto key)
+idletimeout = 120      # 15mA  (wakes up faster)
+sleeptimeout = 600     # 700uA
+powerofftimeout = 3600  # 6.5uA (can only wake from auto key)
 
 def gettime():
     return time.ticks_ms()/1e3
@@ -86,11 +86,7 @@ while True:
         sleepmode = 0
     
     t0 = gettime()
-    if 1:
-    #try:
-        lcd.poll()
-        #except Exception as e:
-        #print('lcd poll failed', e)
+    lcd.poll()
             
     t1 = gettime()
     gpio_esp32.poll(lcd)
