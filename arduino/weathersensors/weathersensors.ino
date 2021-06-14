@@ -39,9 +39,9 @@ extern "C" {
 #define NOKIA5110L 1
 #define JLX12864G 2
 
-#define LCD NONE
+//#define LCD NONE
 //#define LCD NOKIA5110L
-//#define LCD JLX12864G
+#define LCD JLX12864G
 
 #if LCD == NOKIA5110L
 #include "PCD8544.h"
