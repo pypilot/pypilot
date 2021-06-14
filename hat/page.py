@@ -471,6 +471,8 @@ class controlbase(page):
         self.lcd = lcd
         self.batt = False
         self.wifi = False
+        self.charging_blink = False
+        self.charging_blink_time = 0
 
     def display(self, refresh):
         if refresh:
@@ -485,10 +487,18 @@ class controlbase(page):
                 self.lcd.surface.box(*(self.convrect(battrect) + [black]))
                 self.rectangle(battrect, width=0.015)
                 self.rectangle(rectangle(0.28, .95, .03, .02))
-                if batt:
+                if batt and not self.charging_blink:
                     battrect = rectangle(.06, .95, .19*float(batt), .02)
                     self.box(battrect, white)
-        
+            if self.lcd.battery_voltage > 4.5:
+                t = gettime()
+                if t - self.charging_blink_time > 1:
+                    self.charging_blink_time = t
+                    self.charging_blink = not self.charging_blink
+                    self.batt = 0
+            else:
+                self.charging_blink = False
+                
         wifi = test_wifi()
         if self.wifi == wifi and not refresh:
             return # done displaying

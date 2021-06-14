@@ -9,6 +9,9 @@
 
 from config_esp32 import config
 
+import time
+
+import lcd_esp32
 try:
     import lcd_esp32
 except Exception as e:
@@ -16,6 +19,5 @@ except Exception as e:
     print('reboot')
     import machine
     machine.reset()
-
 
 

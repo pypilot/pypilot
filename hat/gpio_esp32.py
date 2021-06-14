@@ -10,17 +10,20 @@
 from machine import Pin
 import gc
 if gc.mem_free() > 1e6:  # larger ttgo display
-    keypad_pin_numbers = [0, 19, 25, 32, 34, 33, 35, 39, 37, 38]
+    keypad_pin_numbers = [34, 36, 26, 33, 0, 35, 39, -1, 37, 38]
+    keypad_pullup = [37, 38, 39]
+    power_down_pin_number = None
 else:
     keypad_pin_numbers = [33, 25, 12, 13, 27, 15, 32, -1, 0, 35]
+    keypad_pullup = [0, 35]
+    power_down_pin_number = 26
 
-power_down_pin_number = 26
 
 noisr = False
 def make_pin(pin, i, lcd):
     global noisr
-    if pin >= 34 or pin == 0:
-        pin = Pin(pin, Pin.IN)
+    if pin in keypad_pullup:
+        pin = Pin(pin, Pin.IN, Pin.PULL_UP)
     else:
         pin = Pin(pin, Pin.IN, Pin.PULL_DOWN)
 
@@ -38,25 +41,32 @@ def make_pin(pin, i, lcd):
 def handle_pin(pin, i, lcd):
     key = lcd.keypad[i]
     v = pin()
-    if i == 0 or i >= 35:
+    if keypad_pin_numbers[i] in keypad_pullup:
         v = not v
     if not v:
         lcd.keypress = True
+    print('update key', i, v)
     key.update(v)
             
 keypad_pins = []
+keypad_pins_wake = []
 
 def powerdown():
-    Pin(power_down_pin_number, Pin.OUT).off()
+    if power_down_pin_number:
+        Pin(power_down_pin_number, Pin.OUT).off()
 
 def init(lcd):
     global keypad_pins
-    Pin(power_down_pin_number, Pin.IN, Pin.PULL_UP)
+    if power_down_pin_number:
+        Pin(power_down_pin_number, Pin.IN, Pin.PULL_UP)
     
     for i in range(len(keypad_pin_numbers)):
         pini = keypad_pin_numbers[i]
         if pini >= 0:
-            keypad_pins.append(make_pin(pini, i, lcd))
+            pin = make_pin(pini, i, lcd)
+            keypad_pins.append(pin)
+            if not i in keypad_pullup:
+                keypad_pins_wake.append(pin)
 
 def poll(lcd):
     if noisr:

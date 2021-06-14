@@ -10,7 +10,7 @@
 # TODO:  fix loading slow,  make more responsive,  make power down work
 
 
-import time
+import time, gc
 import wifi_esp32
 
 # running 60-90mA
@@ -45,9 +45,12 @@ if rtc_memory == 'deepsleep':
     sleeptime -= idletimeout/2
     #lcd.screen.backlight = False;
 
-#machine.freq(80000000)
-vbatt = machine.ADC(machine.Pin(34))
-vbatt.atten(3) # only one that works!!
+if gc.mem_free() > 1e6:  # larger ttgo display
+    vbatt = None
+else:
+    #machine.freq(80000000)
+    vbatt = machine.ADC(machine.Pin(34))
+    vbatt.atten(3) # only one that works!!
 
 gpio_esp32.init(lcd)
 
@@ -60,11 +63,13 @@ while True:
     gc.collect()
     #micropython.mem_info()
 
-    v = vbatt.read() * 0.0017728937728937728
-    if not lcd.battery_voltage:
-        lcd.battery_voltage = v
-    lp = .02
-    lcd.battery_voltage = (1-lp)*lcd.battery_voltage + lp*v
+    if vbatt:
+        v = vbatt.read() * 0.0017728937728937728
+        if lcd.battery_voltage:
+            lp = .2
+            lcd.battery_voltage = (1-lp)*lcd.battery_voltage + lp*v
+        else:
+            lcd.battery_voltage = v
 
     gpio_esp32.poll(lcd)
     if lcd.keypress:
@@ -97,7 +102,7 @@ while True:
         sleeptime = 0
 
     if sleepmode == 0:
-        if sleepdt > idletimeout and lcd.battery_voltage < 4.2:
+        if vbatt and sleepdt > idletimeout and lcd.battery_voltage < 4.2:
             print('sleep blank screen')
             lcd.screen.backlight = False;
             print('sleep wifi off')
@@ -115,9 +120,8 @@ while True:
                 rtc_memory = 'powerdown'
             else:
                 print('sleep deep sleep')
-                wake = gpio_esp32.keypad_pins[:7]
                 import esp32
-                esp32.wake_on_ext1(pins = tuple(wake), level= esp32.WAKEUP_ANY_HIGH)
+                esp32.wake_on_ext1(pins = tuple(gpio_esp32.keypad_pins_wake), level= esp32.WAKEUP_ANY_HIGH)
                 rtc.memory('deepsleep')
                 machine.deepsleep(powerofftimeout * 1000)
 
