@@ -993,6 +993,8 @@ ISR(WDT_vect)
     _delay_ms(50);
     detach();
 
+    TCCR0B = 0;
+
     asm volatile ("ijmp" ::"z" (0x0000)); // soft reset
 }
 
@@ -1359,6 +1361,7 @@ void loop()
         // 110C indicates software fault
         if(controller_temp > 11000) {
             stop();
+            TCCR0B = 0;
             asm volatile ("ijmp" ::"z" (0x0000)); // attempt soft reset
         }
     }
