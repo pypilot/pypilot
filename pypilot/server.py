@@ -310,6 +310,8 @@ class ServerValues(pypilotValue):
                     c.write(msg)
 
     def HandleRequest(self, msg, connection):
+        if msg == '\n':
+            return # silently ignore empty line used to poll connection if no data
         name, data = msg.split('=', 1)
         if not name in self.values:
             connection.write('error=invalid unknown value: ' + name + '\n')

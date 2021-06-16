@@ -132,7 +132,10 @@ class pypilotClient(object):
             if fd:
                 self.poller.register(fd, select.POLLIN)
                 self.values.onconnected()
+            self.timeout_time = False # no timeout for pipe connection
             return
+
+        self.timeout_time = time.monotonic()
 
         config = {}
         try:
@@ -236,7 +239,15 @@ class pypilotClient(object):
                 return
 
             if not events:
+                # 3 seconds without data in either direction, send linefeed
+                # if the connection is lost, sending some data is needed
+                # useful to cause the connection to reset
+                if self.timeout_time and time.monotonic() - self.timeout_time > 3:
+                    self.update_timeout()
+                    self.send('\n')
                 return # no data ready
+
+            self.update_timeout()
             
             fd, flag = events.pop()
             if not (flag & select.POLLIN) or (self.connection and not self.connection.recvdata()):
@@ -246,7 +257,6 @@ class pypilotClient(object):
 
         # read incoming data line by line
         while True:
-            t0 = time.monotonic()
             line = self.connection.readline()
             if not line:
                 return
@@ -326,8 +336,13 @@ class pypilotClient(object):
         self.received = []
         return ret
 
+    def update_timeout(self):
+        if self.timeout_time:
+            self.timeout_time = time.monotonic()            
+
     def send(self, msg):
         if self.connection:
+            self.update_timeout()
             self.connection.write(msg)
     
     def set(self, name, value):
