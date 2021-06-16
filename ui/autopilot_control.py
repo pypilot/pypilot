@@ -170,7 +170,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 
             if gain['slider'].GetValue() != gain['sliderval'] and \
                time.monotonic() - gain['last_change'] > 1:
-                gain['slider'].SetValue(gain['sliderval'])
+                gain['slider'].SetValue(int(gain['sliderval']))
 
         msgs = self.client.receive()
 
@@ -189,7 +189,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 elif name == gain_name + 'gain':
                     v = abs(value) * 1000.0
                     if v < gain['gauge'].GetRange():
-                        gain['gauge'].SetValue(v)
+                        gain['gauge'].SetValue(int(v))
                         if value > 0:
                             gain['gauge'].SetBackgroundColour(wx.RED)
                         elif value < 0:
