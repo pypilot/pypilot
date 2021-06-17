@@ -63,7 +63,6 @@ class sys_dep(dep):
 
     def install(self):
         ret = os.system('sudo apt install -y ' + self.name)
-        
         if ret:
             return False
         return True
