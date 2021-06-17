@@ -28,6 +28,7 @@ def gps_json_loads(line):
 class gpsProcess(multiprocessing.Process):
     def __init__(self):
         # split pipe ends
+        self.gpsd_failed_connect = False
         self.pipe, pipe = NonBlockingPipe('gps_pipe', True)
         super(gpsProcess, self).__init__(target=self.gps_process, args=(pipe,), daemon=True)
         
@@ -45,7 +46,9 @@ class gpsProcess(multiprocessing.Process):
             print(_('gpsd connected'))
         #except socket.error:
         except ConnectionRefusedError:
-            print(_('gpsd failed to connect'))
+            if not self.gpsd_failed_connect:
+                print(_('gpsd failed to connect'))
+                self.gpsd_failed_connect = True
             self.gpsd_socket = False
             time.sleep(30)
         except Exception as e:

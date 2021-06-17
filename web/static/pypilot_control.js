@@ -413,6 +413,12 @@ $(document).ready(function() {
     $('#star2').click(function(event) { move(2); });
     $('#star10').click(function(event) { move(10); });
 
+    $('#tack_button').click(function(event) {
+        direction = $('#tacking_mode').val();
+        pypilot_set('ap.tack.direction', direction);
+        pypilot_set('ap.tack.state', 'begin');
+        });
+
     // Gain
 
     // Calibration

@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cp -rv debian/etc/systemd /etc
+cp -rvn scripts/debian/etc/systemd /etc
