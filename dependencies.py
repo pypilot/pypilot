@@ -38,7 +38,7 @@ class py_dep(dep):
     def install(self):
         # first try via apt (faster and resumable)
         apt_name = 'python3-' + self.name
-        ret = os.system('sudo apt install ' + apt_name)
+        ret = os.system('sudo apt install -y ' + apt_name)
 
         if ret:
             print('failed to install via apt, trying with pip')
@@ -62,7 +62,8 @@ class sys_dep(dep):
         return False
 
     def install(self):
-        ret = os.system('sudo apt install ' + self.name)
+        ret = os.system('sudo apt install -y ' + self.name)
+        
         if ret:
             return False
         return True
