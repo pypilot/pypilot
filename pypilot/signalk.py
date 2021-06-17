@@ -209,7 +209,7 @@ class signalk(object):
             from websocket import create_connection
         except Exception as e:
             print('signalk cannot create connection:', e)
-            print('try pip3 install websocket-client or apt install python3-websocket')
+            print('try pip3 install websocket-client or apt install python3-websockets')
             self.signalk_host_port = False
             return
 
