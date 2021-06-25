@@ -127,16 +127,16 @@ class pypilotScopeBase ( wx.Frame ):
 		self.glArea.Bind( wx.EVT_MIDDLE_UP, self.onMouseEvents )
 		self.glArea.Bind( wx.EVT_RIGHT_DOWN, self.onMouseEvents )
 		self.glArea.Bind( wx.EVT_RIGHT_UP, self.onMouseEvents )
-		self.glArea.Bind( wx.EVT_AUX1_DOWN, self.onMouseEvents )
-		self.glArea.Bind( wx.EVT_AUX1_UP, self.onMouseEvents )
-		self.glArea.Bind( wx.EVT_AUX2_DOWN, self.onMouseEvents )
-		self.glArea.Bind( wx.EVT_AUX2_UP, self.onMouseEvents )
+
+
+
+
 		self.glArea.Bind( wx.EVT_MOTION, self.onMouseEvents )
 		self.glArea.Bind( wx.EVT_LEFT_DCLICK, self.onMouseEvents )
 		self.glArea.Bind( wx.EVT_MIDDLE_DCLICK, self.onMouseEvents )
 		self.glArea.Bind( wx.EVT_RIGHT_DCLICK, self.onMouseEvents )
-		self.glArea.Bind( wx.EVT_AUX1_DCLICK, self.onMouseEvents )
-		self.glArea.Bind( wx.EVT_AUX2_DCLICK, self.onMouseEvents )
+
+
 		self.glArea.Bind( wx.EVT_LEAVE_WINDOW, self.onMouseEvents )
 		self.glArea.Bind( wx.EVT_ENTER_WINDOW, self.onMouseEvents )
 		self.glArea.Bind( wx.EVT_MOUSEWHEEL, self.onMouseEvents )
