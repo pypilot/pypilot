@@ -993,8 +993,7 @@ ISR(WDT_vect)
     _delay_ms(50);
     detach();
 
-    TCCR0B = 0;
-
+    TCCR0B = 0; // apparently only needed on 16mhz boards
     asm volatile ("ijmp" ::"z" (0x0000)); // soft reset
 }
 
@@ -1239,7 +1238,7 @@ void loop()
     if(serial_data_timeout > 250 && timeout>32) { // no serial data for 10 seconds, enter power down
         TCNT0 = 0;
         
-        // make watchdog 8 seconds
+        // while sleeping continuously reboots every 8 seconds with watchdog to ensure not stuck
         cli();
         WDTCSR = (1<<WDCE)|(1<<WDE);
         WDTCSR = (1<<WDIE) | (1<<WDP3) | (1<<WDP0);
