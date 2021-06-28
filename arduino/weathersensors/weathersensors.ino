@@ -449,6 +449,7 @@ void send_nmea(const char *buf)
 
 uint8_t lcd_update=1;
 float wind_dir, wind_speed, wind_speed_30;
+int lastlight;
 
 void read_anemometer()
 {
@@ -459,12 +460,14 @@ void read_anemometer()
         return; // not enough data
     
     cli();
+    int16_t light = adcval[0];
     uint32_t val[3];
     int16_t count[3];
     for(int i=0; i<3; i++) {
         val[i] = adcval[i+1];
         count[i] = adccount[i+1];
     }
+    
     // reset the adc
     for(int i=0; i<4; i++) {
         adcval[i] = 0;
@@ -480,6 +483,9 @@ void read_anemometer()
 #endif
     sei();
 
+    // filter and map light value
+    lastlight = (light + 31*lastlight + 15) / 32;
+    
     // read the analog in value:
     if(count[0] > 8 && count[2] > 8 && count[1] <= 0) {
 #if 0
@@ -756,30 +762,24 @@ void read_pressure_temperature()
 
 void read_light()
 {
-    static int lastlight, lighton;
+    static int lighton;
     if(eeprom_data.backlight_setting == 0)
         lighton = 0;
     else if(eeprom_data.backlight_setting == 1)
         lighton = 1;
     else
-    {
-        cli();
-        int16_t light = adcval[0];
-        sei();
-        // filter and map light value
-        light = (light + 31*lastlight) / 32;
-        lastlight = light;
+    {        
         if(lighton) {
-            if(light > 900)
+            if(lastlight > 900)
                 lighton = 0;
         } else {
-            if(light < 800)
+            if(lastlight < 800)
                 lighton = 1;
         }
     }
 
 #ifdef LCD_BL_HIGH
-    int pwm = lighton ? 90 : 0; // backlight expects 3v3 but we have 5v!
+    int pwm = lighton ? 60 : 0; // backlight expects 3v3 but we have 5v!
                                 // do not set above 160 or may damage backlight!!
 #else
     int pwm = lighton ? 120 : 255;
