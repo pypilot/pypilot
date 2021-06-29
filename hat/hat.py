@@ -10,7 +10,7 @@
 import time, os, sys, signal, select
 from pypilot import pyjson
 from pypilot.client import pypilotClient
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lcd, gpio, lircd
 
 class Action(object):
@@ -120,7 +120,6 @@ class Web(Process):
                 else:
                     time.sleep(3) # delay less on other platforms
                 try:
-                    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
                     import web
                     web.web_process(pipe, config)
                 except Exception as e:
