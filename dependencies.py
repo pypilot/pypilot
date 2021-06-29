@@ -77,10 +77,10 @@ class rpi_dep(dep):
             f = open('/sys/firmware/devicetree/base/model')
             pi = 'Raspberry Pi' in f.readline()
             f.close()
-            self.test = lambda : True # return true next time
-            return super(rpi_dep, self).test()
+            if pi:
+                return super(rpi_dep, self).test()
         except:
-            return True
+            pass
         return True
 
 class RTIMULIB2_dep(dep):
