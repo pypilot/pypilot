@@ -181,6 +181,7 @@ class Arduino(Process):
                     ret.append(msg)
         return ret
             
+cleanedup = False
 class Hat(object):
     def __init__(self):
         # read config
@@ -287,6 +288,9 @@ class Hat(object):
         self.web = Web(self)
 
         def cleanup(signal_number, frame=None):
+            global cleanedup
+            if cleanedup:
+                exit(0)
             print('got signal', signal_number, 'cleaning up', os.getpid())
             childpids = []
             processes = [self.arduino, self.web]
@@ -312,6 +316,7 @@ class Hat(object):
             for process in processes:
                 process.process = False
             if signal_number != 'atexit':
+                cleanedup = True
                 raise KeyboardInterrupt # to get backtrace on all processes
 
             sys.stdout.flush()

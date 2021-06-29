@@ -293,6 +293,7 @@ class pypilotClient(object):
         try:
             host_port = self.config['host'], self.config['port']
             self.connection_in_progress = False
+            self.poller_in_progress = select.poll()
             self.connection_in_progress = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             
             self.connection_in_progress.settimeout(1) # set to 0 ?
@@ -300,7 +301,6 @@ class pypilotClient(object):
         except OSError as e:
             import errno
             if e.args[0] is errno.EINPROGRESS:
-                self.poller_in_progress = select.poll()
                 self.poller_in_progress.register(self.connection_in_progress.fileno(), select.POLLOUT)
                 return True
 
