@@ -17,10 +17,14 @@ class dep(object):
         self.name = name
 
 class py_dep(dep):
-    def __init__(self, name):
+    def __init__(self, name, pip_only=False):
+        self.pip_only = pip_only
         super(py_dep, self).__init__(name)
 
     def test(self):
+        if self.pip_only:
+            return False
+
         remap = {'pil': 'PIL',
                  'gevent-websocket': 'geventwebsocket',
                  'flask-socketio': 'flask_socketio',
@@ -38,7 +42,12 @@ class py_dep(dep):
     def install(self):
         # first try via apt (faster and resumable)
         apt_name = 'python3-' + self.name
-        ret = os.system('sudo apt install -y ' + apt_name)
+
+        if self.pip_only: # force pip install
+            os.system('sudo apt remove ' + apt_name)
+            ret = True
+        else:
+            ret = os.system('sudo apt install -y ' + apt_name)
 
         if ret:
             print('failed to install via apt, trying with pip')
@@ -143,7 +152,7 @@ ss('hat', 'SPI lcd keypad, and remote control interface',
 
 # web dependencies: python3-flask python3-gevent-websocket
 ss('web', 'web browser control',
-   [py_dep('flask'), py_dep('gevent-websocket'), py_dep('python-socketio'), py_dep('flask-socketio'), py_dep('flask-babel')])
+   [py_dep('flask'), py_dep('gevent-websocket'), py_dep('python-socketio'), py_dep('flask-socketio', pip_only = True), py_dep('flask-babel')])
 
 # client dependencies (viewers control applications): python3-wxgtk4.0
 # optional: python3-opengl python3-pyglet pywavefront
