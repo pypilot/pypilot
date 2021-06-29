@@ -28,6 +28,7 @@ class py_dep(dep):
         remap = {'pil': 'PIL',
                  'gevent-websocket': 'geventwebsocket',
                  'flask-socketio': 'flask_socketio',
+                 'flask-babel': 'flask_babel',
                  'python-socketio': 'socketio',
                  'opengl': 'OpenGL'}
 
@@ -75,7 +76,22 @@ class sys_dep(dep):
         if ret:
             return False
         return True
-    
+
+class rpi_dep(sys_dep):
+    def __init__(self, name):
+        super(rpi_dep, self).__init__(name)
+
+    def test(self):
+        try:
+            f = open('/sys/firmware/devicetree/base/model')
+            pi = 'Raspberry Pi' in f.readline()
+            f.close()
+            if pi:
+                return super(rpi_dep, self).test()
+        except:
+            pass
+        return True
+
 class RTIMULIB2_dep(dep):
     def __init__(self):
         super(RTIMULIB2_dep, self).__init__('RTIMULIB2')
@@ -148,7 +164,7 @@ ss('signalk', 'communicate with signalk-node-server distributed with openploter'
         
 # hat dependencies: python3-pil (or pillow)
 ss('hat', 'SPI lcd keypad, and remote control interface',
-   [py_dep('pil')])
+   [py_dep('pil'), rpi_dep('wiringpi')])
 
 # web dependencies: python3-flask python3-gevent-websocket
 ss('web', 'web browser control',

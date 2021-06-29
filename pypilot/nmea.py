@@ -512,7 +512,7 @@ class nmeaBridge(object):
             self.client.watch(name, watch)
 
     def receive_nmea(self, line, sock):
-        device = 'socket' + str(sock.uid),        
+        device = 'socket' + str(sock.uid)
         parsers = []
 
         # if we receive a "special" pypilot nmea message from this
