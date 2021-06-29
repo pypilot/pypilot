@@ -68,7 +68,7 @@ class sys_dep(dep):
             return False
         return True
 
-class rpi_dep(dep):
+class rpi_dep(sys_dep):
     def __init__(self, name):
         super(rpi_dep, self).__init__(name)
 
