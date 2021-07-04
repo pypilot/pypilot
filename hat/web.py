@@ -188,7 +188,6 @@ def web_process(pipe, config):
     print('web process', os.getpid())
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
-    print('web config', config)
     socketio.on_namespace(WebConfig('', pipe, config))
     socketio.run(app, debug=False, host='0.0.0.0', port=web_port)
     

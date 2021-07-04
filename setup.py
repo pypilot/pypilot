@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2017 Sean D'Epagnier
+#   Copyright (C) 2021 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -14,7 +14,9 @@ if sys.version_info[0] < 3:
     print('pypilot requires python version 3.  python version is', sys.version)
     exit(1)
 
-if not os.path.exists('deps'):
+if os.system('which apt'):
+    print('system does not support apt, you can try running dependencies script and/or manually install needed packages')
+elif not os.path.exists('deps'):
     import dependencies
 
 try:

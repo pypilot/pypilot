@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2021 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -55,9 +55,8 @@ try:
 except Exception as e:
     print('failed to import flask_babel, translations not possible!!')
     def _(x): return x
+    app.jinja_env.globals.update(_=_)
     babel = None
-
-DEFAULT_PORT = 21311
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -103,7 +102,6 @@ def wifi():
 @app.route('/calibrationplot')
 def calibrationplot():
     return render_template('calibrationplot.html', async_mode=socketio.async_mode,pypilot_web_port=pypilot_web_port)
-
 
 @app.route('/')
 def index():
@@ -170,7 +168,7 @@ def main():
             break
         except PermissionError as e:
             print('failed to run socket io on port', port, e)
-            port +=8000 - 80
+            port += 8000 - 80
             print('trying port', port)
 
 if __name__ == '__main__':
