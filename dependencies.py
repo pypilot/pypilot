@@ -51,9 +51,11 @@ class py_dep(dep):
             ret = os.system('sudo apt install -y ' + apt_name)
 
         if ret:
-            print('failed to install via apt, trying with pip')
+            print('failed to install via apt, trying with pip', self.name)
             if self.name == 'pil':
                 name = 'pillow'
+            elif self.name == 'flask-socketio':
+                name = 'flask-socketio==5'
             else:
                 name = self.name
             ret = os.system('python3 -m pip install ' + name)
