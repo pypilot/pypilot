@@ -497,7 +497,7 @@ def FitAccel(debug, accel_cal):
     dev = ComputeDeviation(p, fit)
     return [fit, dev]
 
-def FitCompass(debug, compass_points, compass_calibration, cur_coverage, norm):
+def FitCompass(debug, compass_points, compass_calibration, norm):
     p = compass_points.Points(True)
     if len(p) < 8:
         return
