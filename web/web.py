@@ -128,7 +128,6 @@ class pypilotWeb(Namespace):
                 client = self.clients[sid]
                 values = client.list_values()
                 if values:
-                    #print('values', values)
                     socketio.emit('pypilot_values', pyjson.dumps(values), room=sid)
                 if not client.connection:
                     socketio.emit('pypilot_disconnect', room=sid)

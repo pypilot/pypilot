@@ -72,6 +72,7 @@ $(document).ready(function() {
         // control
         pypilot_watch('ap.enabled');
         pypilot_watch('ap.mode');
+        pypilot_watch('ap.tack.direction');
 
         pypilot_watch('ap.heading_command', .5);
 
@@ -240,6 +241,14 @@ $(document).ready(function() {
             $('#heading').text(heading_str(heading));
         }
 
+        if('ap.tack.direction' in data) {
+            value = data['ap.tack.direction'];
+            if(value == 'port')
+                $('#tack_direction option')[1].selected = true;
+            else
+                $('#tack_direction option')[0].selected = true;
+        }
+
         if('ap.enabled' in data) {
             if(data['ap.enabled']) {
                 var w = $(window).width();
@@ -304,6 +313,7 @@ $(document).ready(function() {
             $('#imu_heading_offset').val(data['imu.heading_offset']);
         if('imu.compass_calibration_locked' in data)
             $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']);
+
         var rudder_dict = {'rudder.offset': 'Offset',
                            'rudder.scale': 'Scale',
                            'rudder.nonlinearity': 'Non Linearity'};
@@ -414,10 +424,17 @@ $(document).ready(function() {
     $('#star10').click(function(event) { move(10); });
 
     $('#tack_button').click(function(event) {
-        direction = $('#tacking_mode').val();
-        pypilot_set('ap.tack.direction', direction);
+        direction = $('#tack_direction').val();
         pypilot_set('ap.tack.state', 'begin');
-        });
+    });
+
+    $('#tack_direction').change(function(event) {
+        value = $('#tack_direction option')[0].selected;
+        if(value)
+            pypilot_set('ap.tack.direction', 'starboard');
+        else
+            pypilot_set('ap.tack.direction', 'port');
+    });
 
     // Gain
 
