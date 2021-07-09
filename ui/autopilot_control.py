@@ -50,11 +50,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.enumerated = False
 
         watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
-                          'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
-                          'ap.heading', 'ap.pilot',
-                          'gps.source', 'wind.source',
-                          'servo.controller', 'servo.engaged', 'servo.flags',
-                          'rudder.angle']
+                     'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
+                     'ap.heading', 'ap.pilot',
+                     'gps.source', 'wind.source',
+                     'servo.controller', 'servo.engaged', 'servo.flags',
+                     'rudder.angle']
         for name in watchlist:
             self.client.watch(name)
 
@@ -294,7 +294,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.client.set('ap.tack.state', self.tackstate)
 
     def onTackDirection(self, event):
-        self.client.set('ap.tack.direction', 'port' if self.cTackDirection.GetSelection() else 'starboard')
+        self.client.set('ap.tack.direction', 'starboard' if self.cTackDirection.GetSelection() else 'port')
 
     def onPaintControlSlider( self, event ):
         return

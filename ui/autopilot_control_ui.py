@@ -220,6 +220,7 @@ class AutopilotControlBase ( wx.Frame ):
 		# Connect Events
 		self.tbAP.Bind( wx.EVT_TOGGLEBUTTON, self.onAP )
 		self.bTack.Bind( wx.EVT_BUTTON, self.onTack )
+		self.cTackDirection.Bind( wx.EVT_CHOICE, self.onTackDirection )
 		self.cPilot.Bind( wx.EVT_CHOICE, self.onPilot )
 		self.rbCompass.Bind( wx.EVT_RADIOBUTTON, self.onMode )
 		self.rbGPS.Bind( wx.EVT_RADIOBUTTON, self.onMode )
@@ -237,6 +238,7 @@ class AutopilotControlBase ( wx.Frame ):
 		# Disconnect Events
 		self.tbAP.Unbind( wx.EVT_TOGGLEBUTTON, None )
 		self.bTack.Unbind( wx.EVT_BUTTON, None )
+		self.cTackDirection.Unbind( wx.EVT_CHOICE, None )
 		self.cPilot.Unbind( wx.EVT_CHOICE, None )
 		self.rbCompass.Unbind( wx.EVT_RADIOBUTTON, None )
 		self.rbGPS.Unbind( wx.EVT_RADIOBUTTON, None )
@@ -256,6 +258,9 @@ class AutopilotControlBase ( wx.Frame ):
 		event.Skip()
 
 	def onTack( self, event ):
+		event.Skip()
+
+	def onTackDirection( self, event ):
 		event.Skip()
 
 	def onPilot( self, event ):
