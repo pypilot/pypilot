@@ -263,10 +263,9 @@ class ValueEnumSelect(page):
         return control(self.lcd)
 
 class ValueEnum(menu):
-    def __init__(self, name, pypilot_path, hide_choices=[]):
+    def __init__(self, name, pypilot_path):
         super(ValueEnum, self).__init__(name, [])
         self.pypilot_path = pypilot_path
-        self.hide_choices = hide_choices
         self.selection = -1
         
     def process(self):
@@ -278,9 +277,6 @@ class ValueEnum(menu):
                     choices = info['choices']
                 else:
                     choices = []
-                for choice in self.hide_choices:
-                    if choice in choices:
-                        choices.remove(choice)
                 self.items = list(map(lambda choice : ValueEnumSelect(self.lcd, choice, self.pypilot_path), choices))
             except Exception as e:
                 print('failed choices', e)
@@ -331,25 +327,38 @@ class level(page):
         self.set('imu.alignmentCounter', 100)
         return self.lcd.menu
 
-class calibrate_rudder_feedback(ValueEnum):
+class calibrate_rudder_state(page):
+    def __init__(self, name):
+        self.value = name
+        super(calibrate_rudder_state, self).__init__(_(name))
+    
+    def process(self):
+        self.set(_('rudder.calibration_state'), self.value)
+        return self.lcd.menu
+    
+class calibrate_rudder_feedback(menu):
     def __init__(self):
-        super(calibrate_rudder_feedback, self).__init__(_('rudder'), 'rudder.calibration_state', ['idle'])
+        items = [calibrate_rudder_state('reset'),
+                 calibrate_rudder_state('centered'),
+                 calibrate_rudder_state('starboard range'),
+                 calibrate_rudder_state('port range'),
+                 ValueEdit(_('range'), _('degrees'), 'rudder.range')]
+        super(calibrate_rudder_feedback, self).__init__(_('rudder'), items)
 
     def process(self):
-        if not self.last_val('rudder.angle'):
+        if self.last_val('rudder.angle') is False:
             if self.testkeydown(MENU):
                 return self.prev
             
         return super(calibrate_rudder_feedback, self).process()
         
     def display(self, refresh):
-        if not self.last_val('rudder.angle'):
+        if self.last_val('rudder.angle') is False:
             self.box(rectangle(0, .18, 1, .82), black)
             self.fittext(rectangle(0, .4, 1, .4), "No Rudder Feedback Detected", True)
             return
         super(calibrate_rudder_feedback, self).display(True)
-            
-        fit = self.fittext(rectangle(0, .9, 1, .1), str(self.last_val('rudder.angle')))
+        self.fittext(rectangle(0, .9, 1, .1), str(self.last_val('rudder.angle')))
 
 class calibrate(menu):
     def __init__(self):
@@ -381,7 +390,6 @@ class calibrate(menu):
             
         self.fittext(rectangle(0, .9, .5, .11), self.round_last_val('imu.pitch', 1))
         self.fittext(rectangle(.5, .9, .5, .11), self.round_last_val('imu.heel', 1))
-
     
 class motor(menu):
     def __init__(self):
