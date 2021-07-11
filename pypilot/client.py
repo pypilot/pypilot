@@ -10,7 +10,7 @@
 import socket, select, sys, os, time
 
 import gettext
-locale_d= os.path.abspath(os.path.dirname(__file__)) + '/locale'
+locale_d = os.path.abspath(os.path.dirname(__file__)) + '/locale'
 gettext.translation('pypilot', locale_d, fallback=True).install()
 
 import heapq
