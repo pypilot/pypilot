@@ -1159,7 +1159,7 @@ void process_packet()
     break;
     case EEPROM_WRITE_CODE:
         eeprom_update_8(in_bytes[1], in_bytes[2]);
-
+        break;
     case CLUTCH_PWM_CODE:
     {
         uint8_t pwm = in_bytes[1];
