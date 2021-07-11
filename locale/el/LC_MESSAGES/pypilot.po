@@ -1,0 +1,1010 @@
+# Translations template for pypilot.
+# Copyright (C) 2021 ORGANIZATION
+# This file is distributed under the same license as the pypilot project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: pypilot 0.24\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2021-05-25 01:14-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Generated-By: Babel 2.6.0\n"
+
+#: pypilot/autopilot.py:107
+msgid "failed to load pilot"
+msgstr "απέτυχε η φόρτωση πιλότου"
+
+#: pypilot/autopilot.py:110
+msgid "Available Pilots"
+msgstr "Διαθέσιμοι πιλότοι"
+
+#: pypilot/autopilot.py:136
+msgid "warning: failed to open special file"
+msgstr "προειδοποίηση: απέτυχε να ανοίξει ειδικό αρχείο"
+
+#: pypilot/autopilot.py:136
+msgid "for writing"
+msgstr "για γραφή"
+
+#: pypilot/autopilot.py:137
+msgid "cannot stroke the watchdog"
+msgstr "δεν μπορεί να χτυπήσει τον φύλακα"
+
+#: pypilot/autopilot.py:141
+msgid "warning: failed to make autopilot process realtime"
+msgstr ""
+"προειδοποίηση: απέτυχε να πραγματοποιήσει τη διαδικασία αυτόματου πιλότου σε"
+" πραγματικό χρόνο"
+
+#: pypilot/autopilot.py:309
+msgid "server/client is running too _slowly_"
+msgstr "ο διακομιστής / πελάτης εκτελείται πολύ _slowly_"
+
+#: pypilot/autopilot.py:315
+msgid "sensors is running too _slowly_"
+msgstr "οι αισθητήρες λειτουργούν πολύ αργά"
+
+#: pypilot/autopilot.py:365
+msgid "autopilot routine is running too _slowly_"
+msgstr "Η ρουτίνα αυτόματου πιλότου εκτελείται πολύ αργά"
+
+#: pypilot/autopilot.py:370
+msgid "servo is running too _slowly_"
+msgstr "Το σερβο λειτουργεί πολύ αργά"
+
+#: pypilot/boatimu.py:34
+msgid "RTIMU library not detected, please install it"
+msgstr "Δεν εντοπίστηκε βιβλιοθήκη RTIMU, εγκαταστήστε την"
+
+#: pypilot/boatimu.py:57
+msgid "Using settings file"
+msgstr "Χρήση του αρχείου ρυθμίσεων"
+
+#: pypilot/boatimu.py:97
+msgid "ERROR: No IMU Detected"
+msgstr "ΣΦΑΛΜΑ: Δεν εντοπίστηκε IMU"
+
+#: pypilot/boatimu.py:105
+msgid "ERROR: IMU Init Failed, no inertial data available"
+msgstr ""
+"ΣΦΑΛΜΑ: Η είσοδος IMU απέτυχε, δεν υπάρχουν διαθέσιμα αδρανειακά δεδομένα"
+
+#: pypilot/boatimu.py:127
+msgid "warning, failed to make imu process realtime"
+msgstr "προειδοποίηση, απέτυχε να κάνει τη διαδικασία imu σε πραγματικό χρόνο"
+
+#: pypilot/boatimu.py:129
+msgid "made imu process realtime"
+msgstr "έκανε imu διαδικασία σε πραγματικό χρόνο"
+
+#: pypilot/boatimu.py:141
+msgid "setting initial gyro bias"
+msgstr "ρύθμιση αρχικής γυροσκοπίας"
+
+#: pypilot/boatimu.py:157
+msgid "imu process failed to keep time"
+msgstr "Η διαδικασία imu απέτυχε να κρατήσει χρόνο"
+
+#: pypilot/boatimu.py:165
+msgid "failed to read IMU!"
+msgstr "απέτυχε να διαβάσει το IMU!"
+
+#: pypilot/boatimu.py:197
+msgid "imu rate set to rate"
+msgstr "ρυθμός imu ορίζεται σε ρυθμό"
+
+#: pypilot/boatimu.py:211
+msgid "too high standing gyro bias, resetting sensors"
+msgstr "Πολύ υψηλή στάση γυροσκοπικών ρυθμίσεων, επαναφορά αισθητήρων"
+
+#: pypilot/boatimu.py:216
+msgid "compass out of range, resetting"
+msgstr "εκτός πυξίδας, επαναφορά"
+
+#: pypilot/boatimu.py:308
+msgid "warning, failed to make calibration process other"
+msgstr "προειδοποίηση, απέτυχε να κάνει τη διαδικασία βαθμονόμησης άλλη"
+
+#: pypilot/boatimu.py:310
+msgid "warning, failed to make calibration process idle, trying renice"
+msgstr ""
+"προειδοποίηση, απέτυχε να κάνει τη διαδικασία βαθμονόμησης σε αδράνεια, "
+"δοκιμάζοντας νεφρική"
+
+#: pypilot/boatimu.py:312
+msgid "warning, failed to renice calibration process"
+msgstr "προειδοποίηση, απέτυχε να επαναλάβει τη διαδικασία βαθμονόμησης"
+
+#: pypilot/boatimu.py:320
+msgid "calibration loaded, starting"
+msgstr "φορτώθηκε βαθμονόμηση, ξεκινώντας"
+
+#: pypilot/boatimu.py:323
+msgid "failed import calibration fit"
+msgstr "αποτυχία προσαρμογής βαθμονόμησης εισαγωγής"
+
+#: pypilot/boatimu.py:339
+msgid "terminate calibration process"
+msgstr "τερματίστε τη διαδικασία βαθμονόμησης"
+
+#: pypilot/boatimu.py:429
+msgid "accel values invalid"
+msgstr "οι τιμές accel δεν είναι έγκυρες"
+
+#: pypilot/bufferedsocket.py:56
+msgid "overflow in pypilot udp socket"
+msgstr "υπερχείλιση στην πρίζα pypilot udp"
+
+#: pypilot/bufferedsocket.py:61
+msgid "overflow in pypilot socket"
+msgstr "υπερχείλιση στην πρίζα pypilot"
+
+#: pypilot/bufferedsocket.py:71
+msgid "failed to send udp packet"
+msgstr "απέτυχε να στείλει πακέτο udp"
+
+#: pypilot/bufferedsocket.py:80
+msgid "pypilot socket failed to send to"
+msgstr "απέτυχε η αποστολή της πρίζας pypilot"
+
+#: pypilot/bufferedsocket.py:93
+msgid "socket send took too long!?!?"
+msgstr "Η αποστολή της υποδοχής πήρε πολύ χρόνο!"
+
+#: pypilot/bufferedsocket.py:95
+msgid "socket send error"
+msgstr "σφάλμα αποστολής υποδοχής"
+
+#: pypilot/bufferedsocket.py:99
+msgid "pypilot socket exception"
+msgstr "εξαίρεση υποδοχή pypilot"
+
+#: pypilot/bufferedsocket.py:103
+msgid "falling back to python nonblocking socket, will consume more cpu"
+msgstr ""
+"επιστρέφοντας στην πρίζα χωρίς αποκλεισμό python, θα καταναλώσει περισσότερη"
+" CPU"
+
+#: pypilot/bufferedsocket.py:129
+msgid "socket send error in server flush"
+msgstr "Σφάλμα αποστολής υποδοχής στο flush διακομιστή"
+
+#: pypilot/bufferedsocket.py:144
+msgid "error receiving data"
+msgstr "σφάλμα κατά τη λήψη δεδομένων"
+
+#: pypilot/calibration_fit.py:39
+msgid "failed to load scientific library, cannot perform calibration update!"
+msgstr ""
+"απέτυχε να φορτώσει επιστημονική βιβλιοθήκη, δεν μπορεί να πραγματοποιήσει "
+"ενημέρωση βαθμονόμησης!"
+
+#: pypilot/client.py:97
+msgid "warning, registering existing value:"
+msgstr "προειδοποίηση, καταχώριση υπάρχουσας τιμής:"
+
+#: pypilot/client.py:155
+msgid "failed to read config file:"
+msgstr "απέτυχε να διαβάσει το αρχείο config:"
+
+#: pypilot/client.py:186
+msgid "failed to write config file:"
+msgstr "απέτυχε να γράψει αρχείο config:"
+
+#: pypilot/client.py:188
+msgid "Exception writing config file:"
+msgstr "Εξαίρεση γραφής αρχείο διαμόρφωσης:"
+
+#: pypilot/client.py:265
+msgid "invalid message from server:"
+msgstr "μη έγκυρο μήνυμα από διακομιστή:"
+
+#: pypilot/client.py:281
+msgid "warning, pypilot client aleady has connection"
+msgstr "προειδοποίηση, ο πελάτης pypilot έχει ήδη σύνδεση"
+
+#: pypilot/client.py:301
+msgid "connect failed to"
+msgstr "η σύνδεση απέτυχε"
+
+#: pypilot/client.py:388
+msgid "failed to connect to"
+msgstr "απέτυχε να συνδεθεί"
+
+#: pypilot/client.py:445
+msgid "usage"
+msgstr "χρήση"
+
+#: pypilot/client.py:448
+msgid "set the host or ip address"
+msgstr "ορίστε τη διεύθυνση κεντρικού υπολογιστή ή IP"
+
+#: pypilot/client.py:449
+msgid "print info about each value type"
+msgstr "εκτύπωση πληροφοριών για κάθε τύπο τιμής"
+
+#: pypilot/client.py:450
+msgid "continuous watch"
+msgstr "συνεχές ρολόι"
+
+#: pypilot/client.py:451
+msgid "show this message"
+msgstr "δείξτε αυτό το μήνυμα"
+
+#: pypilot/client.py:478
+msgid "failed to retrieve value list!"
+msgstr "απέτυχε να ανακτήσει τη λίστα τιμών!"
+
+#: pypilot/client.py:489
+msgid "timeout retrieving"
+msgstr "ανάκτηση χρονικού ορίου"
+
+#: pypilot/client.py:492
+msgid "missing"
+msgstr "λείπει"
+
+#: pypilot/failedimports.py:12
+msgid ""
+"pypilot failed to import required modules.  Did you forget to run sudo "
+"python3 setup.py install?"
+msgstr ""
+"Το pypilot απέτυχε να εισαγάγει τις απαιτούμενες ενότητες. Ξεχάσατε να "
+"εκτελέσετε την εγκατάσταση sudo python3 setup.py;"
+
+#: pypilot/gpsd.py:45
+msgid "gpsd connected"
+msgstr "συνδεδεμένο gpsd"
+
+#: pypilot/gpsd.py:48
+msgid "gpsd failed to connect"
+msgstr "Το gpsd απέτυχε να συνδεθεί"
+
+#: pypilot/gpsd.py:53
+msgid "exception connecting to gps"
+msgstr "εξαίρεση σύνδεση με gps"
+
+#: pypilot/gpsd.py:57
+msgid "gpsd disconnected"
+msgstr "Το gpsd αποσυνδέθηκε"
+
+#: pypilot/gpsd.py:71
+msgid "gpsd PROBE success"
+msgstr "επιτυχία του gpsd PROBE"
+
+#: pypilot/gpsd.py:79
+msgid "gpsd probe failed"
+msgstr "Ο έλεγχος gpsd απέτυχε"
+
+#: pypilot/gpsd.py:102
+msgid "gpsd deactivated"
+msgstr "απενεργοποιήθηκε το gpsd"
+
+#: pypilot/gpsd.py:135
+msgid "gpsd failed to determine serial baud rate of device"
+msgstr "Το gpsd απέτυχε να προσδιορίσει τον σειριακό ρυθμό baud της συσκευής"
+
+#: pypilot/gpsd.py:152
+msgid "gpsd timeout from lack of data"
+msgstr "χρονικό όριο gpsd λόγω έλλειψης δεδομένων"
+
+#: pypilot/gpsd.py:167
+msgid "gpsd received invalid message"
+msgstr "Το gpsd έλαβε μη έγκυρο μήνυμα"
+
+#: pypilot/gpsd.py:212
+msgid "gpsd got flag for pipe:"
+msgstr "gpsd πήρε σημαία για σωλήνα:"
+
+#: pypilot/gpsd.py:221
+msgid "gpsd serial probe"
+msgstr "σειριακός ανιχνευτής gpsd"
+
+#: pypilot/nmea.py:87
+msgid "nmea failed to parse gps"
+msgstr "Το nmea απέτυχε να αναλύσει το gps"
+
+#: pypilot/nmea.py:127
+msgid "nmea failed to parse wind"
+msgstr "nmea απέτυχε να αναλύσει τον άνεμο"
+
+#: pypilot/nmea.py:189
+msgid "exception parsing apb"
+msgstr "εξαίρεση ανάλυση pb"
+
+#: pypilot/nmea.py:277
+msgid "unhandled nmea pipe string"
+msgstr "χορδή σωλήνα nmea"
+
+#: pypilot/nmea.py:327
+msgid "lost serial"
+msgstr "χαμένο σειριακό"
+
+#: pypilot/nmea.py:350
+msgid "nmea got flag for process pipe:"
+msgstr "nmea πήρε σημαία για σωλήνα διεργασίας:"
+
+#: pypilot/nmea.py:371
+msgid "is another process accessing it?"
+msgstr "έχει πρόσβαση σε μια άλλη διαδικασία;"
+
+#: pypilot/nmea.py:373
+msgid "serial device timed out"
+msgstr "λήγει η σειριακή συσκευή"
+
+#: pypilot/nmea.py:429
+msgid "failed to open"
+msgstr "απέτυχε να ανοίξει"
+
+#: pypilot/nmea.py:482
+msgid "nmea server on port"
+msgstr "διακομιστής nmea στη θύρα"
+
+#: pypilot/nmea.py:482
+msgid "bind failed."
+msgstr "η σύνδεση απέτυχε."
+
+#: pypilot/nmea.py:484
+msgid "listening on port"
+msgstr "ακρόαση στη θύρα"
+
+#: pypilot/nmea.py:484
+msgid "for nmea connections"
+msgstr "για συνδέσεις nmea"
+
+#: pypilot/nmea.py:550
+msgid "nmea server has too many connections"
+msgstr "Ο διακομιστής nmea έχει πάρα πολλές συνδέσεις"
+
+#: pypilot/nmea.py:576
+msgid "nmea sock not in sockets!"
+msgstr "nmea κάλτσα όχι στις πρίζες!"
+
+#: pypilot/nmea.py:587
+msgid "nmea failed to unregister socket"
+msgstr "Το nmea απέτυχε να καταργήσει την εγγραφή του socket"
+
+#: pypilot/nmea.py:592
+msgid "nmea failed to remove fd"
+msgstr "Το nmea απέτυχε να αφαιρέσει το fd"
+
+#: pypilot/nmea.py:597
+msgid "nmea failed to remove address"
+msgstr "Το nmea απέτυχε να αφαιρέσει τη διεύθυνση"
+
+#: pypilot/nmea.py:610
+msgid "connected to"
+msgstr "συνδεδεμένος με"
+
+#: pypilot/nmea.py:610
+msgid "in"
+msgstr "σε"
+
+#: pypilot/nmea.py:610
+msgid "seconds"
+msgstr "δευτερόλεπτα"
+
+#: pypilot/nmea.py:614
+msgid "nmea client failed to connect to"
+msgstr "Ο πελάτης nmea απέτυχε να συνδεθεί"
+
+#: pypilot/nmea.py:641
+msgid "poll took too long in nmea process!"
+msgstr "η δημοσκόπηση διήρκεσε πολύ στη διαδικασία nmea!"
+
+#: pypilot/nmea.py:648
+msgid "nmea bridge lost server connection"
+msgstr "nmea bridge έχασε τη σύνδεση διακομιστή"
+
+#: pypilot/nmea.py:651
+msgid "nmea bridge lost pipe to autopilot"
+msgstr "η γέφυρα nmea έχασε το σωλήνα του αυτόματου πιλότου"
+
+#: pypilot/nmea.py:670
+msgid "nmea bridge unhandled poll flag"
+msgstr "nmea γέφυρα σημαία χωρίς έλεγχο"
+
+#: pypilot/nmea.py:707
+msgid "failed to create nmea socket as host:port"
+msgstr "απέτυχε να δημιουργήσει nmea socket ως host: port"
+
+#: pypilot/nmea.py:713
+msgid "nmea process loop too slow:"
+msgstr "ο βρόχος διεργασίας nmea είναι πολύ αργός:"
+
+#: pypilot/nonblockingpipe.py:41
+msgid "error pipe block on recv!"
+msgstr "μπλοκ σωλήνων σφάλματος στη συνέχεια!"
+
+#: pypilot/nonblockingpipe.py:43
+msgid "failed to recv nonblocking pipe!"
+msgstr "απέτυχε να ανακτήσει σωλήνα χωρίς αποκλεισμό!"
+
+#: pypilot/nonblockingpipe.py:70
+msgid "pipe full"
+msgstr "γεμάτο σωλήνα"
+
+#: pypilot/nonblockingpipe.py:70
+msgid "cannot send"
+msgstr "δεν μπορεί να στείλει"
+
+#: pypilot/nonblockingpipe.py:90 pypilot/nonblockingpipe.py:146
+msgid "failed to decode data socket!"
+msgstr "απέτυχε να αποκωδικοποιήσει την υποδοχή δεδομένων!"
+
+#: pypilot/nonblockingpipe.py:104
+msgid "failed to encode data socket!"
+msgstr "απέτυχε να κωδικοποιήσει την υποδοχή δεδομένων!"
+
+#: pypilot/nonblockingpipe.py:156
+msgid "failed write"
+msgstr "αποτυχημένη εγγραφή"
+
+#: pypilot/pyjson.py:15
+msgid "WARNING: python ujson library failed, parsing will consume more cpu"
+msgstr ""
+"ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Η βιβλιοθήκη python ujson απέτυχε, η ανάλυση θα καταναλώσει "
+"περισσότερα cpu"
+
+#: pypilot/rudder.py:118
+msgid "bad rudder calibration"
+msgstr "κακή βαθμονόμηση πηδαλίου"
+
+#: pypilot/rudder.py:122
+msgid "bad servo rudder calibration"
+msgstr "κακή βαθμονόμηση σερβο πηδαλίου"
+
+#: pypilot/rudder.py:194
+msgid "servo rudder autogain failed"
+msgstr "Το autogain servo πηδαλίου απέτυχε"
+
+#: pypilot/sensors.py:43
+msgid "sensor found"
+msgstr "βρέθηκε αισθητήρας"
+
+#: pypilot/sensors.py:192
+msgid "unknown data parsed!"
+msgstr "αναλύθηκαν άγνωστα δεδομένα!"
+
+#: pypilot/serialprobe.py:31
+msgid "error reading"
+msgstr "ανάγνωση σφάλματος"
+
+#: pypilot/serialprobe.py:87
+msgid "found more devices by path"
+msgstr "βρήκαν περισσότερες συσκευές ανά διαδρομή"
+
+#: pypilot/serialprobe.py:119
+msgid "removing gps device"
+msgstr "αφαίρεση συσκευής gps"
+
+#: pypilot/serialprobe.py:195
+msgid "no pyudev module! will scan usb devices often!"
+msgstr "καμία ενότητα pyudev! θα σαρώσει συσκευές USB συχνά!"
+
+#: pypilot/serialprobe.py:357
+msgid "success"
+msgstr "επιτυχία"
+
+#: pypilot/serialprobe.py:365
+msgid "failed to record device"
+msgstr "απέτυχε η εγγραφή συσκευής"
+
+#: pypilot/server.py:97
+msgid "ERROR no connections in watch"
+msgstr "ΣΦΑΛΜΑ χωρίς συνδέσεις στο ρολόι"
+
+#: pypilot/server.py:200
+msgid "remove duplicate udp connection"
+msgstr "αφαιρέστε τη διπλή σύνδεση udp"
+
+#: pypilot/server.py:340 ui/boatplot.py:110
+msgid "failed to load"
+msgstr "απέτυχε να φορτώσει"
+
+#: pypilot/server.py:351
+msgid "backup data failed as well"
+msgstr "Τα εφεδρικά δεδομένα απέτυχαν επίσης"
+
+#: pypilot/server.py:379
+msgid "failed to write"
+msgstr "απέτυχε να γράψει"
+
+#: pypilot/server.py:436
+msgid "pypilot_server: bind failed; already running a server?"
+msgstr "pypilot_server: η σύνδεση απέτυχε. τρέχετε ήδη διακομιστή;"
+
+#: pypilot/server.py:498
+msgid "persistent store took too long!"
+msgstr "το επίμονο κατάστημα χρειάστηκε πολύ καιρό!"
+
+#: pypilot/server.py:514
+msgid "max connections reached"
+msgstr "επιτεύχθηκαν μέγιστες συνδέσεις"
+
+#: pypilot/server.py:517
+msgid "server add socket"
+msgstr "διακομιστής προσθέστε υποδοχή"
+
+#: pypilot/server.py:527
+msgid "internal pipe closed, server exiting"
+msgstr "κλειστός εσωτερικός σωλήνας, έξοδος διακομιστή"
+
+#: pypilot/server.py:579
+msgid "server socket closed from flush!!"
+msgstr "η υποδοχή διακομιστή έκλεισε από την έξαψη !!"
+
+#: pypilot/servo.py:449
+msgid "servo calibration invalid"
+msgstr "Η βαθμονόμηση του σερβο δεν είναι έγκυρη"
+
+#: pypilot/servo.py:557
+msgid "failed to open servo on:"
+msgstr "απέτυχε να ανοίξει το σερβο σε:"
+
+#: pypilot/servo.py:564
+msgid "failed set nonblocking/exclusive"
+msgstr "αποτυχημένο σύνολο αποκλεισμού / αποκλεισμού"
+
+#: pypilot/servo.py:595
+msgid "found"
+msgstr "βρέθηκαν"
+
+#: pypilot/servo.py:716
+msgid "loading servo calibration"
+msgstr "φόρτωση βαθμονόμησης σερβο"
+
+#: pypilot/servo.py:720
+msgid "WARNING: using default servo calibration!!"
+msgstr "ΠΡΟΕΙΔΟΠΟΙΗΣΗ: χρησιμοποιώντας την προεπιλεγμένη βαθμονόμηση servo !!"
+
+#: pypilot/servo.py:729
+msgid "probing"
+msgstr "διερεύνηση"
+
+#: pypilot/servo.py:745
+msgid "arduino servo detected"
+msgstr "Εντοπίστηκε σερβο arduino"
+
+#: pypilot/servo.py:754
+msgid "device needed for option"
+msgstr "απαιτείται συσκευή για επιλογή"
+
+#: pypilot/signalk.py:67
+msgid "read token"
+msgstr "διαβάστε το διακριτικό"
+
+#: pypilot/signalk.py:70
+msgid "failed to read token"
+msgstr "απέτυχε να διαβάσει το διακριτικό"
+
+#: pypilot/signalk.py:77
+msgid "failed to"
+msgstr "απέτυχε να"
+
+#: pypilot/signalk.py:77
+msgid "autodetection not possible"
+msgstr "δεν είναι δυνατή η αυτόματη ανίχνευση"
+
+#: pypilot/signalk.py:78 pypilot/signalk.py:144 pypilot/signalk.py:213
+msgid "try"
+msgstr "δοκιμάστε"
+
+#: pypilot/signalk.py:78 pypilot/signalk.py:144 pypilot/signalk.py:213
+msgid "or"
+msgstr "ή"
+
+#: pypilot/signalk.py:109
+msgid "service removed"
+msgstr "η υπηρεσία καταργήθηκε"
+
+#: pypilot/signalk.py:113
+msgid "signalk server lost"
+msgstr "Ο διακομιστής σηματοδότησης χάθηκε"
+
+#: pypilot/signalk.py:116
+msgid "service add"
+msgstr "προσθήκη υπηρεσίας"
+
+#: pypilot/signalk.py:130
+msgid "server found"
+msgstr "βρέθηκε διακομιστής"
+
+#: pypilot/signalk.py:139
+msgid "probe"
+msgstr "καθετήρας"
+
+#: pypilot/signalk.py:143
+msgid "could not"
+msgstr "δεν μπορούσε"
+
+#: pypilot/signalk.py:153
+msgid "failed to retrieve/parse data from"
+msgstr "απέτυχε η ανάκτηση / ανάλυση δεδομένων από"
+
+#: pypilot/signalk.py:156
+msgid "signalk found"
+msgstr "βρέθηκε σήμα"
+
+#: pypilot/signalk.py:168
+msgid "see if token is ready"
+msgstr "δείτε αν το διακριτικό είναι έτοιμο"
+
+#: pypilot/signalk.py:174
+msgid "received token"
+msgstr "έλαβε διακριτικό"
+
+#: pypilot/signalk.py:180
+msgid "failed to store token"
+msgstr "απέτυχε να αποθηκεύσει το διακριτικό"
+
+#: pypilot/signalk.py:184
+msgid "error requesting access"
+msgstr "σφάλμα κατά την αίτηση πρόσβασης"
+
+#: pypilot/signalk.py:203
+msgid "signalk request access url"
+msgstr "url αίτημα πρόσβασης σήματος"
+
+#: pypilot/signalk.py:205
+msgid "signalk error requesting access"
+msgstr "Σφάλμα σηματοδότησης αιτήματος πρόσβασης"
+
+#: pypilot/signalk.py:212
+msgid "cannot create connection:"
+msgstr "δεν μπορεί να δημιουργήσει σύνδεση:"
+
+#: pypilot/signalk.py:226
+msgid "failed to connect"
+msgstr "απέτυχε να συνδεθεί"
+
+#: pypilot/signalk.py:270
+msgid "signalk connected to"
+msgstr "σύνδεση με το σήμα"
+
+#: pypilot/signalk.py:313
+msgid "signalk failed to parse"
+msgstr "απέτυχε η ανάλυση του σήματος"
+
+#: pypilot/signalk.py:331
+msgid "Exception converting signalk->pypilot"
+msgstr "Εξαίρεση μετατροπής σήματος-> pypilot"
+
+#: pypilot/signalk.py:345
+msgid "received"
+msgstr "έλαβε"
+
+#: pypilot/signalk.py:391
+msgid "signalk failed to send"
+msgstr "απέτυχε η αποστολή του σήματος"
+
+#: pypilot/signalk.py:404
+msgid "signalk failed to parse msg:"
+msgstr "απέτυχε η ανάλυση του σήματος:"
+
+#: pypilot/values.py:131
+msgid "invalid initial value for range property"
+msgstr "μη έγκυρη αρχική τιμή για την ιδιότητα εύρους"
+
+#: pypilot/values.py:180
+msgid "invalid set"
+msgstr "μη έγκυρο σετ"
+
+#: pypilot/pilots/__init__.py:25
+msgid "ERROR loading"
+msgstr "Σφάλμα φόρτωσης"
+
+#: ui/autopilot_calibration.py:167
+msgid "exception in calibration:"
+msgstr "εξαίρεση στη βαθμονόμηση:"
+
+#: ui/autopilot_control.py:265
+msgid "warning: unhandled message"
+msgstr "προειδοποίηση: μήνυμα χωρίς χειρισμό"
+
+#: ui/autopilot_control_ui.py:24
+msgid "Autopilot Control"
+msgstr "Έλεγχος αυτόματου πιλότου"
+
+#: ui/autopilot_control_ui.py:39
+msgid "AP"
+msgstr "Εσείς"
+
+#: ui/autopilot_control_ui.py:57 ui/autopilot_control_ui.py:67
+#: ui/autopilot_control_ui.py:455 ui/autopilot_control_ui.py:732
+msgid "N/A"
+msgstr "ΟΧΙ"
+
+#: ui/autopilot_control_ui.py:62
+msgid "        N/A        "
+msgstr "ΟΧΙ"
+
+#: ui/autopilot_control_ui.py:74
+msgid "----"
+msgstr "----"
+
+#: ui/autopilot_control_ui.py:89 ui/autopilot_control_ui.py:96
+msgid " N/A "
+msgstr "ΟΧΙ"
+
+#: ui/autopilot_control_ui.py:121
+msgid "port"
+msgstr "Λιμάνι"
+
+#: ui/autopilot_control_ui.py:121
+msgid "starboard"
+msgstr "δεξιό μέρος"
+
+#: ui/autopilot_control_ui.py:136
+msgid "Pilot"
+msgstr "Πιλότος"
+
+#: ui/autopilot_control_ui.py:146 ui/autopilot_control_ui.py:420
+msgid "Compass"
+msgstr "Πυξίδα"
+
+#: ui/autopilot_control_ui.py:149
+msgid "GPS"
+msgstr "GPS"
+
+#: ui/autopilot_control_ui.py:154
+msgid "Wind"
+msgstr "Ανεμος"
+
+#: ui/autopilot_control_ui.py:159
+msgid "True Wind"
+msgstr "Πραγματικός άνεμος"
+
+#: ui/autopilot_control_ui.py:175 ui/scope_ui.py:76
+msgid "Center"
+msgstr "Κέντρο"
+
+#: ui/autopilot_control_ui.py:199
+msgid "&Scope"
+msgstr "&Πεδίο εφαρμογής"
+
+#: ui/autopilot_control_ui.py:202
+msgid "&Client"
+msgstr "Π&ελάτης"
+
+#: ui/autopilot_control_ui.py:205
+msgid "C&alibration"
+msgstr "&Βαθμονόμηση"
+
+#: ui/autopilot_control_ui.py:208 ui/scope_ui.py:108
+msgid "Close"
+msgstr "Κλείσε"
+
+#: ui/autopilot_control_ui.py:299 ui/autopilot_control_ui.py:529
+#: ui/autopilot_control_ui.py:649
+msgid "Calibration"
+msgstr "Βαθμονόμηση"
+
+#: ui/autopilot_control_ui.py:349
+msgid "Boat is level"
+msgstr "Το σκάφος είναι επίπεδο"
+
+#: ui/autopilot_control_ui.py:356 ui/client_wx.py:159 ui/scope_ui.py:94
+msgid "Reset"
+msgstr "Επαναφορά"
+
+#: ui/autopilot_control_ui.py:377
+msgid "Alignment"
+msgstr "Ευθυγραμμία"
+
+#: ui/autopilot_control_ui.py:394
+msgid "Heading"
+msgstr "Επικεφαλίδα"
+
+#: ui/autopilot_control_ui.py:399 ui/autopilot_control_ui.py:465
+#: ui/autopilot_control_ui.py:475
+msgid "     N/A     "
+msgstr "ΟΧΙ"
+
+#: ui/autopilot_control_ui.py:404 ui/autopilot_control_ui.py:755
+msgid "Offset"
+msgstr "Αντισταθμίζεται"
+
+#: ui/autopilot_control_ui.py:418
+msgid "Coords"
+msgstr "Κορδόνια"
+
+#: ui/autopilot_control_ui.py:420
+msgid "Sea"
+msgstr "Θάλασσα"
+
+#: ui/autopilot_control_ui.py:420
+msgid "Boat"
+msgstr "Σκάφος"
+
+#: ui/autopilot_control_ui.py:443 ui/client_wx.py:52
+msgid "Scope"
+msgstr "Πεδίο εφαρμογής"
+
+#: ui/autopilot_control_ui.py:450
+msgid "Pitch"
+msgstr "Πίσσα"
+
+#: ui/autopilot_control_ui.py:460
+msgid "Roll"
+msgstr "Ρολό"
+
+#: ui/autopilot_control_ui.py:470
+msgid "Heel"
+msgstr "Φτέρνα"
+
+#: ui/autopilot_control_ui.py:497
+msgid "alignment"
+msgstr "ευθυγραμμία"
+
+#: ui/autopilot_control_ui.py:539 ui/autopilot_control_ui.py:659
+msgid "Calibration Age"
+msgstr "Ηλικία βαθμονόμησης"
+
+#: ui/autopilot_control_ui.py:556 ui/autopilot_control_ui.py:676
+msgid "Clear"
+msgstr "Σαφή"
+
+#: ui/autopilot_control_ui.py:559 ui/autopilot_control_ui.py:679
+msgid "calibration locked"
+msgstr "η βαθμονόμηση κλειδώθηκε"
+
+#: ui/autopilot_control_ui.py:582
+msgid "accel"
+msgstr "Άμπελ"
+
+#: ui/autopilot_control_ui.py:613
+msgid "Sigma Points"
+msgstr "Πόντοι Σίγμα"
+
+#: ui/autopilot_control_ui.py:620
+msgid "local history"
+msgstr "τοπική ιστορία"
+
+#: ui/autopilot_control_ui.py:627
+msgid "current"
+msgstr "ρεύμα"
+
+#: ui/autopilot_control_ui.py:634
+msgid "Calibration Points"
+msgstr "Σημεία βαθμονόμησης"
+
+#: ui/autopilot_control_ui.py:703
+msgid "compass"
+msgstr "πυξίδα"
+
+#: ui/autopilot_control_ui.py:713
+msgid ""
+"Press each button when the rudder is at the correct position to calibrate."
+msgstr ""
+"Πατήστε κάθε κουμπί όταν το πηδάλιο βρίσκεται στη σωστή θέση για "
+"βαθμονόμηση."
+
+#: ui/autopilot_control_ui.py:727
+msgid "Rudder"
+msgstr "Πηδάλιο"
+
+#: ui/autopilot_control_ui.py:742
+msgid "Reset Calibration"
+msgstr "Επαναφορά βαθμονόμησης"
+
+#: ui/autopilot_control_ui.py:752
+msgid "Rudder Is Centered"
+msgstr "Το Rudder είναι στο κέντρο"
+
+#: ui/autopilot_control_ui.py:760 ui/autopilot_control_ui.py:773
+#: ui/autopilot_control_ui.py:786
+msgid "------"
+msgstr "------"
+
+#: ui/autopilot_control_ui.py:765
+msgid "Rudder is Starboard Range"
+msgstr "Το Rudder είναι Starboard Range"
+
+#: ui/autopilot_control_ui.py:768
+msgid "Scale"
+msgstr "Κλίμακα"
+
+#: ui/autopilot_control_ui.py:778
+msgid "Rudder is Port Range"
+msgstr "Το Rudder είναι Port Range"
+
+#: ui/autopilot_control_ui.py:781
+msgid "Non Linearity"
+msgstr "Μη γραμμικότητα"
+
+#: ui/autopilot_control_ui.py:798
+msgid " range +-"
+msgstr "εύρος + -"
+
+#: ui/autopilot_control_ui.py:806
+msgid "degrees"
+msgstr "βαθμούς"
+
+#: ui/autopilot_control_ui.py:825
+msgid "rudder"
+msgstr "πηδάλιο"
+
+#: ui/autopilot_control_ui.py:827
+msgid "settings"
+msgstr "Ρυθμίσεις"
+
+#: ui/boatplot.py:26
+msgid "failed to load pywavefront:"
+msgstr "απέτυχε η φόρτωση του pywavefront:"
+
+#: ui/boatplot.py:56
+msgid "invalid display dimensions"
+msgstr "μη έγκυρες διαστάσεις οθόνης"
+
+#: ui/boatplot.py:111
+msgid "Did you add the pypilot_data repository?"
+msgstr "Προσθέσατε το αποθετήριο pypilot_data;"
+
+#: ui/boatplot.py:161
+msgid "not found, texture compass cannot be used"
+msgstr "δεν βρέθηκε, η πυξίδα υφής δεν μπορεί να χρησιμοποιηθεί"
+
+#: ui/client_wx.py:48
+msgid "Refresh"
+msgstr "Φρεσκάρω"
+
+#: ui/client_wx.py:190
+msgid "Connected"
+msgstr "Συνδεδεμένος"
+
+#: ui/client_wx.py:192
+msgid "Disconnected"
+msgstr "Ασύνδετος"
+
+#: ui/client_wx.py:219
+msgid "warning, invalid choice value specified"
+msgstr "προειδοποίηση, καθορισμένη τιμή μη έγκυρης επιλογής"
+
+#: ui/scope_ui.py:24
+msgid "pypilot Scope"
+msgstr "Πεδίο Pypilot"
+
+#: ui/scope_ui.py:73
+msgid "Zero"
+msgstr "Μηδέν"
+
+#: ui/scope_ui.py:79
+msgid "Scale +"
+msgstr "Κλίμακα +"
+
+#: ui/scope_ui.py:82
+msgid "Scale -"
+msgstr "Κλίμακα -"
+
+#: ui/scope_ui.py:85
+msgid "Offset /\\"
+msgstr "Αντισταθμίζεται /\\"
+
+#: ui/scope_ui.py:88
+msgid "Offset \\/"
+msgstr "Αντισταθμίζεται \\/"
+
+#: ui/scope_ui.py:91
+msgid "Freeze"
+msgstr "Πάγωμα"
+
+#: ui/scope_ui.py:97
+msgid "fftw"
+msgstr "fftw"
+
+#: ui/scope_ui.py:100
+msgid "Time"
+msgstr "χρόνος"
+
+#: ui/scope_wx.py:68
+msgid "values not found:"
+msgstr "οι τιμές δεν βρέθηκαν:"

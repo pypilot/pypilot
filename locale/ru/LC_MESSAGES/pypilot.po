@@ -1,0 +1,1009 @@
+# Translations template for pypilot.
+# Copyright (C) 2021 ORGANIZATION
+# This file is distributed under the same license as the pypilot project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: pypilot 0.24\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2021-05-25 01:14-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Generated-By: Babel 2.6.0\n"
+
+#: pypilot/autopilot.py:107
+msgid "failed to load pilot"
+msgstr "не удалось загрузить пилот"
+
+#: pypilot/autopilot.py:110
+msgid "Available Pilots"
+msgstr "Доступные пилоты"
+
+#: pypilot/autopilot.py:136
+msgid "warning: failed to open special file"
+msgstr "предупреждение: не удалось открыть специальный файл"
+
+#: pypilot/autopilot.py:136
+msgid "for writing"
+msgstr "для записи"
+
+#: pypilot/autopilot.py:137
+msgid "cannot stroke the watchdog"
+msgstr "не могу погладить сторожевого пса"
+
+#: pypilot/autopilot.py:141
+msgid "warning: failed to make autopilot process realtime"
+msgstr ""
+"предупреждение: не удалось сделать процесс автопилота в реальном времени"
+
+#: pypilot/autopilot.py:309
+msgid "server/client is running too _slowly_"
+msgstr "сервер / клиент работает слишком медленно_"
+
+#: pypilot/autopilot.py:315
+msgid "sensors is running too _slowly_"
+msgstr "датчики работают слишком медленно"
+
+#: pypilot/autopilot.py:365
+msgid "autopilot routine is running too _slowly_"
+msgstr "программа автопилота работает слишком медленно"
+
+#: pypilot/autopilot.py:370
+msgid "servo is running too _slowly_"
+msgstr "сервопривод работает слишком медленно"
+
+#: pypilot/boatimu.py:34
+msgid "RTIMU library not detected, please install it"
+msgstr "Библиотека RTIMU не обнаружена, установите ее"
+
+#: pypilot/boatimu.py:57
+msgid "Using settings file"
+msgstr "Использование файла настроек"
+
+#: pypilot/boatimu.py:97
+msgid "ERROR: No IMU Detected"
+msgstr "ОШИБКА: IMU не обнаружен"
+
+#: pypilot/boatimu.py:105
+msgid "ERROR: IMU Init Failed, no inertial data available"
+msgstr "ОШИБКА: сбой инициализации IMU, инерционные данные недоступны"
+
+#: pypilot/boatimu.py:127
+msgid "warning, failed to make imu process realtime"
+msgstr ""
+"предупреждение, не удалось заставить imu обрабатывать в реальном времени"
+
+#: pypilot/boatimu.py:129
+msgid "made imu process realtime"
+msgstr "сделал imu процесс в реальном времени"
+
+#: pypilot/boatimu.py:141
+msgid "setting initial gyro bias"
+msgstr "установка начального смещения гироскопа"
+
+#: pypilot/boatimu.py:157
+msgid "imu process failed to keep time"
+msgstr "IMU процесс не успел вовремя"
+
+#: pypilot/boatimu.py:165
+msgid "failed to read IMU!"
+msgstr "не удалось прочитать ИДУ!"
+
+#: pypilot/boatimu.py:197
+msgid "imu rate set to rate"
+msgstr "imu rate установлен на рейтинг"
+
+#: pypilot/boatimu.py:211
+msgid "too high standing gyro bias, resetting sensors"
+msgstr "слишком высокое смещение гироскопа, сброс датчиков"
+
+#: pypilot/boatimu.py:216
+msgid "compass out of range, resetting"
+msgstr "компас вне диапазона, сброс"
+
+#: pypilot/boatimu.py:308
+msgid "warning, failed to make calibration process other"
+msgstr "предупреждение, не удалось выполнить другой процесс калибровки"
+
+#: pypilot/boatimu.py:310
+msgid "warning, failed to make calibration process idle, trying renice"
+msgstr ""
+"предупреждение, не удалось остановить процесс калибровки, пытаюсь "
+"восстановить"
+
+#: pypilot/boatimu.py:312
+msgid "warning, failed to renice calibration process"
+msgstr "предупреждение, не удалось изменить процесс калибровки"
+
+#: pypilot/boatimu.py:320
+msgid "calibration loaded, starting"
+msgstr "калибровка загружена, запуск"
+
+#: pypilot/boatimu.py:323
+msgid "failed import calibration fit"
+msgstr "неудачная импортная калибровка"
+
+#: pypilot/boatimu.py:339
+msgid "terminate calibration process"
+msgstr "прекратить процесс калибровки"
+
+#: pypilot/boatimu.py:429
+msgid "accel values invalid"
+msgstr "значения ускорения недопустимы"
+
+#: pypilot/bufferedsocket.py:56
+msgid "overflow in pypilot udp socket"
+msgstr "переполнение в сокете pypilot udp"
+
+#: pypilot/bufferedsocket.py:61
+msgid "overflow in pypilot socket"
+msgstr "переполнение в сокете pypilot"
+
+#: pypilot/bufferedsocket.py:71
+msgid "failed to send udp packet"
+msgstr "не удалось отправить пакет UDP"
+
+#: pypilot/bufferedsocket.py:80
+msgid "pypilot socket failed to send to"
+msgstr "сокету pypilot не удалось отправить"
+
+#: pypilot/bufferedsocket.py:93
+msgid "socket send took too long!?!?"
+msgstr "отправка сокета заняла слишком много времени!?!?"
+
+#: pypilot/bufferedsocket.py:95
+msgid "socket send error"
+msgstr "ошибка отправки сокета"
+
+#: pypilot/bufferedsocket.py:99
+msgid "pypilot socket exception"
+msgstr "исключение сокета pypilot"
+
+#: pypilot/bufferedsocket.py:103
+msgid "falling back to python nonblocking socket, will consume more cpu"
+msgstr "возврат к неблокирующему сокету python потребляет больше процессора"
+
+#: pypilot/bufferedsocket.py:129
+msgid "socket send error in server flush"
+msgstr "ошибка отправки сокета при сбросе сервера"
+
+#: pypilot/bufferedsocket.py:144
+msgid "error receiving data"
+msgstr "ошибка при получении данных"
+
+#: pypilot/calibration_fit.py:39
+msgid "failed to load scientific library, cannot perform calibration update!"
+msgstr ""
+"не удалось загрузить научную библиотеку, невозможно выполнить обновление "
+"калибровки!"
+
+#: pypilot/client.py:97
+msgid "warning, registering existing value:"
+msgstr "предупреждение, регистрация существующего значения:"
+
+#: pypilot/client.py:155
+msgid "failed to read config file:"
+msgstr "не удалось прочитать файл конфигурации:"
+
+#: pypilot/client.py:186
+msgid "failed to write config file:"
+msgstr "не удалось записать файл конфигурации:"
+
+#: pypilot/client.py:188
+msgid "Exception writing config file:"
+msgstr "Исключение записи конфигурационного файла:"
+
+#: pypilot/client.py:265
+msgid "invalid message from server:"
+msgstr "неверное сообщение от сервера:"
+
+#: pypilot/client.py:281
+msgid "warning, pypilot client aleady has connection"
+msgstr "предупреждение, у клиента pypilot уже есть соединение"
+
+#: pypilot/client.py:301
+msgid "connect failed to"
+msgstr "не удалось подключиться к"
+
+#: pypilot/client.py:388
+msgid "failed to connect to"
+msgstr "не удалось подключиться к"
+
+#: pypilot/client.py:445
+msgid "usage"
+msgstr "Применение"
+
+#: pypilot/client.py:448
+msgid "set the host or ip address"
+msgstr "установить хост или IP-адрес"
+
+#: pypilot/client.py:449
+msgid "print info about each value type"
+msgstr "распечатать информацию о каждом типе значения"
+
+#: pypilot/client.py:450
+msgid "continuous watch"
+msgstr "непрерывное наблюдение"
+
+#: pypilot/client.py:451
+msgid "show this message"
+msgstr "показать это сообщение"
+
+#: pypilot/client.py:478
+msgid "failed to retrieve value list!"
+msgstr "не удалось получить список значений!"
+
+#: pypilot/client.py:489
+msgid "timeout retrieving"
+msgstr "получение тайм-аута"
+
+#: pypilot/client.py:492
+msgid "missing"
+msgstr "отсутствующий"
+
+#: pypilot/failedimports.py:12
+msgid ""
+"pypilot failed to import required modules.  Did you forget to run sudo "
+"python3 setup.py install?"
+msgstr ""
+"pypilot не удалось импортировать необходимые модули. Вы забыли запустить "
+"sudo python3 setup.py install?"
+
+#: pypilot/gpsd.py:45
+msgid "gpsd connected"
+msgstr "gpsd подключен"
+
+#: pypilot/gpsd.py:48
+msgid "gpsd failed to connect"
+msgstr "gpsd не удалось подключиться"
+
+#: pypilot/gpsd.py:53
+msgid "exception connecting to gps"
+msgstr "исключение при подключении к gps"
+
+#: pypilot/gpsd.py:57
+msgid "gpsd disconnected"
+msgstr "gpsd отключен"
+
+#: pypilot/gpsd.py:71
+msgid "gpsd PROBE success"
+msgstr "gpsd PROBE успех"
+
+#: pypilot/gpsd.py:79
+msgid "gpsd probe failed"
+msgstr "зонд gpsd отказал"
+
+#: pypilot/gpsd.py:102
+msgid "gpsd deactivated"
+msgstr "gpsd деактивирован"
+
+#: pypilot/gpsd.py:135
+msgid "gpsd failed to determine serial baud rate of device"
+msgstr ""
+"gpsd не удалось определить последовательную скорость передачи данных "
+"устройства"
+
+#: pypilot/gpsd.py:152
+msgid "gpsd timeout from lack of data"
+msgstr "gpsd тайм-аут из-за отсутствия данных"
+
+#: pypilot/gpsd.py:167
+msgid "gpsd received invalid message"
+msgstr "gpsd получил недопустимое сообщение"
+
+#: pypilot/gpsd.py:212
+msgid "gpsd got flag for pipe:"
+msgstr "gpsd получил флаг для трубы:"
+
+#: pypilot/gpsd.py:221
+msgid "gpsd serial probe"
+msgstr "gpsd серийный зонд"
+
+#: pypilot/nmea.py:87
+msgid "nmea failed to parse gps"
+msgstr "nmea не удалось разобрать gps"
+
+#: pypilot/nmea.py:127
+msgid "nmea failed to parse wind"
+msgstr "nmea не смог разобрать ветер"
+
+#: pypilot/nmea.py:189
+msgid "exception parsing apb"
+msgstr "парсинг исключений apb"
+
+#: pypilot/nmea.py:277
+msgid "unhandled nmea pipe string"
+msgstr "необработанная колонна труб nmea"
+
+#: pypilot/nmea.py:327
+msgid "lost serial"
+msgstr "потерянный сериал"
+
+#: pypilot/nmea.py:350
+msgid "nmea got flag for process pipe:"
+msgstr "nmea получил флаг для технологической трубы:"
+
+#: pypilot/nmea.py:371
+msgid "is another process accessing it?"
+msgstr "к нему обращается другой процесс?"
+
+#: pypilot/nmea.py:373
+msgid "serial device timed out"
+msgstr "истекло время ожидания последовательного устройства"
+
+#: pypilot/nmea.py:429
+msgid "failed to open"
+msgstr "не удалось открыть"
+
+#: pypilot/nmea.py:482
+msgid "nmea server on port"
+msgstr "сервер nmea на порту"
+
+#: pypilot/nmea.py:482
+msgid "bind failed."
+msgstr "привязка не удалась."
+
+#: pypilot/nmea.py:484
+msgid "listening on port"
+msgstr "прослушивание порта"
+
+#: pypilot/nmea.py:484
+msgid "for nmea connections"
+msgstr "для соединений nmea"
+
+#: pypilot/nmea.py:550
+msgid "nmea server has too many connections"
+msgstr "Сервер nmea имеет слишком много подключений"
+
+#: pypilot/nmea.py:576
+msgid "nmea sock not in sockets!"
+msgstr "nmea sock не в розетки!"
+
+#: pypilot/nmea.py:587
+msgid "nmea failed to unregister socket"
+msgstr "nmea не удалось отменить регистрацию сокета"
+
+#: pypilot/nmea.py:592
+msgid "nmea failed to remove fd"
+msgstr "nmea не удалось удалить fd"
+
+#: pypilot/nmea.py:597
+msgid "nmea failed to remove address"
+msgstr "nmea не удалось удалить адрес"
+
+#: pypilot/nmea.py:610
+msgid "connected to"
+msgstr "подключен к"
+
+#: pypilot/nmea.py:610
+msgid "in"
+msgstr "в"
+
+#: pypilot/nmea.py:610
+msgid "seconds"
+msgstr "секунды"
+
+#: pypilot/nmea.py:614
+msgid "nmea client failed to connect to"
+msgstr "клиенту nmea не удалось подключиться к"
+
+#: pypilot/nmea.py:641
+msgid "poll took too long in nmea process!"
+msgstr "опрос занял слишком много времени в процессе nmea!"
+
+#: pypilot/nmea.py:648
+msgid "nmea bridge lost server connection"
+msgstr "мост nmea потерял соединение с сервером"
+
+#: pypilot/nmea.py:651
+msgid "nmea bridge lost pipe to autopilot"
+msgstr "Мост Nmea потерял трубу из-за автопилота"
+
+#: pypilot/nmea.py:670
+msgid "nmea bridge unhandled poll flag"
+msgstr "флаг необработанного голосования nmea bridge"
+
+#: pypilot/nmea.py:707
+msgid "failed to create nmea socket as host:port"
+msgstr "не удалось создать сокет nmea как хост: порт"
+
+#: pypilot/nmea.py:713
+msgid "nmea process loop too slow:"
+msgstr "Цикл процесса nmea слишком медленный:"
+
+#: pypilot/nonblockingpipe.py:41
+msgid "error pipe block on recv!"
+msgstr "ошибка блока трубы на recv!"
+
+#: pypilot/nonblockingpipe.py:43
+msgid "failed to recv nonblocking pipe!"
+msgstr "не удалось восстановить неблокирующую трубу!"
+
+#: pypilot/nonblockingpipe.py:70
+msgid "pipe full"
+msgstr "труба полная"
+
+#: pypilot/nonblockingpipe.py:70
+msgid "cannot send"
+msgstr "не могу отправить"
+
+#: pypilot/nonblockingpipe.py:90 pypilot/nonblockingpipe.py:146
+msgid "failed to decode data socket!"
+msgstr "не удалось декодировать сокет данных!"
+
+#: pypilot/nonblockingpipe.py:104
+msgid "failed to encode data socket!"
+msgstr "не удалось закодировать сокет данных!"
+
+#: pypilot/nonblockingpipe.py:156
+msgid "failed write"
+msgstr "не удалось написать"
+
+#: pypilot/pyjson.py:15
+msgid "WARNING: python ujson library failed, parsing will consume more cpu"
+msgstr ""
+"ВНИМАНИЕ: ошибка библиотеки python ujson, синтаксический анализ будет "
+"потреблять больше процессора"
+
+#: pypilot/rudder.py:118
+msgid "bad rudder calibration"
+msgstr "плохая калибровка руля направления"
+
+#: pypilot/rudder.py:122
+msgid "bad servo rudder calibration"
+msgstr "плохая калибровка серво руля направления"
+
+#: pypilot/rudder.py:194
+msgid "servo rudder autogain failed"
+msgstr "сервопривод руля направления отказал"
+
+#: pypilot/sensors.py:43
+msgid "sensor found"
+msgstr "датчик найден"
+
+#: pypilot/sensors.py:192
+msgid "unknown data parsed!"
+msgstr "неизвестные данные проанализированы!"
+
+#: pypilot/serialprobe.py:31
+msgid "error reading"
+msgstr "чтение ошибок"
+
+#: pypilot/serialprobe.py:87
+msgid "found more devices by path"
+msgstr "нашел больше устройств по пути"
+
+#: pypilot/serialprobe.py:119
+msgid "removing gps device"
+msgstr "удаление устройства GPS"
+
+#: pypilot/serialprobe.py:195
+msgid "no pyudev module! will scan usb devices often!"
+msgstr "нет модуля пюдев! будет часто сканировать USB-устройства!"
+
+#: pypilot/serialprobe.py:357
+msgid "success"
+msgstr "успех"
+
+#: pypilot/serialprobe.py:365
+msgid "failed to record device"
+msgstr "не удалось записать устройство"
+
+#: pypilot/server.py:97
+msgid "ERROR no connections in watch"
+msgstr "ОШИБКА нет соединений в часах"
+
+#: pypilot/server.py:200
+msgid "remove duplicate udp connection"
+msgstr "удалить повторяющееся соединение udp"
+
+#: pypilot/server.py:340 ui/boatplot.py:110
+msgid "failed to load"
+msgstr "ошибка загрузки"
+
+#: pypilot/server.py:351
+msgid "backup data failed as well"
+msgstr "данные резервного копирования также не удалось"
+
+#: pypilot/server.py:379
+msgid "failed to write"
+msgstr "не удалось написать"
+
+#: pypilot/server.py:436
+msgid "pypilot_server: bind failed; already running a server?"
+msgstr "pypilot_server: сбой привязки; уже запущен сервер?"
+
+#: pypilot/server.py:498
+msgid "persistent store took too long!"
+msgstr "постоянный магазин занял слишком много времени!"
+
+#: pypilot/server.py:514
+msgid "max connections reached"
+msgstr "достигнуто максимальное количество подключений"
+
+#: pypilot/server.py:517
+msgid "server add socket"
+msgstr "сервер добавить сокет"
+
+#: pypilot/server.py:527
+msgid "internal pipe closed, server exiting"
+msgstr "внутренняя труба закрыта, сервер выходит"
+
+#: pypilot/server.py:579
+msgid "server socket closed from flush!!"
+msgstr "серверный сокет закрыт из-за промывки !!"
+
+#: pypilot/servo.py:449
+msgid "servo calibration invalid"
+msgstr "сервокалибровка недействительна"
+
+#: pypilot/servo.py:557
+msgid "failed to open servo on:"
+msgstr "не удалось открыть сервопривод:"
+
+#: pypilot/servo.py:564
+msgid "failed set nonblocking/exclusive"
+msgstr "не удалось установить неблокирующий / эксклюзивный"
+
+#: pypilot/servo.py:595
+msgid "found"
+msgstr "нашел"
+
+#: pypilot/servo.py:716
+msgid "loading servo calibration"
+msgstr "загрузка серво калибровки"
+
+#: pypilot/servo.py:720
+msgid "WARNING: using default servo calibration!!"
+msgstr "ВНИМАНИЕ: использование сервокалибровки по умолчанию !!"
+
+#: pypilot/servo.py:729
+msgid "probing"
+msgstr "зондирование"
+
+#: pypilot/servo.py:745
+msgid "arduino servo detected"
+msgstr "сервопривод Arduino обнаружен"
+
+#: pypilot/servo.py:754
+msgid "device needed for option"
+msgstr "устройство, необходимое для опции"
+
+#: pypilot/signalk.py:67
+msgid "read token"
+msgstr "читать токен"
+
+#: pypilot/signalk.py:70
+msgid "failed to read token"
+msgstr "не удалось прочитать токен"
+
+#: pypilot/signalk.py:77
+msgid "failed to"
+msgstr "не удалось"
+
+#: pypilot/signalk.py:77
+msgid "autodetection not possible"
+msgstr "автоматическое обнаружение невозможно"
+
+#: pypilot/signalk.py:78 pypilot/signalk.py:144 pypilot/signalk.py:213
+msgid "try"
+msgstr "пытаться"
+
+#: pypilot/signalk.py:78 pypilot/signalk.py:144 pypilot/signalk.py:213
+msgid "or"
+msgstr "или же"
+
+#: pypilot/signalk.py:109
+msgid "service removed"
+msgstr "служба удалена"
+
+#: pypilot/signalk.py:113
+msgid "signalk server lost"
+msgstr "сигнальный сервер потерян"
+
+#: pypilot/signalk.py:116
+msgid "service add"
+msgstr "добавление услуги"
+
+#: pypilot/signalk.py:130
+msgid "server found"
+msgstr "найден сервер"
+
+#: pypilot/signalk.py:139
+msgid "probe"
+msgstr "зонд"
+
+#: pypilot/signalk.py:143
+msgid "could not"
+msgstr "не мог"
+
+#: pypilot/signalk.py:153
+msgid "failed to retrieve/parse data from"
+msgstr "не удалось получить / проанализировать данные из"
+
+#: pypilot/signalk.py:156
+msgid "signalk found"
+msgstr "сигнал найден"
+
+#: pypilot/signalk.py:168
+msgid "see if token is ready"
+msgstr "посмотреть, готов ли токен"
+
+#: pypilot/signalk.py:174
+msgid "received token"
+msgstr "получил токен"
+
+#: pypilot/signalk.py:180
+msgid "failed to store token"
+msgstr "не удалось сохранить токен"
+
+#: pypilot/signalk.py:184
+msgid "error requesting access"
+msgstr "ошибка при запросе доступа"
+
+#: pypilot/signalk.py:203
+msgid "signalk request access url"
+msgstr "URL-адрес доступа к запросу на сигнализацию"
+
+#: pypilot/signalk.py:205
+msgid "signalk error requesting access"
+msgstr "ошибка сигнала при запросе доступа"
+
+#: pypilot/signalk.py:212
+msgid "cannot create connection:"
+msgstr "не может создать соединение:"
+
+#: pypilot/signalk.py:226
+msgid "failed to connect"
+msgstr "не удалось подключиться"
+
+#: pypilot/signalk.py:270
+msgid "signalk connected to"
+msgstr "сигнал подключен к"
+
+#: pypilot/signalk.py:313
+msgid "signalk failed to parse"
+msgstr "сигнал не удалось разобрать"
+
+#: pypilot/signalk.py:331
+msgid "Exception converting signalk->pypilot"
+msgstr "Исключение преобразования сигнала-> pypilot"
+
+#: pypilot/signalk.py:345
+msgid "received"
+msgstr "получили"
+
+#: pypilot/signalk.py:391
+msgid "signalk failed to send"
+msgstr "сигнал не удалось отправить"
+
+#: pypilot/signalk.py:404
+msgid "signalk failed to parse msg:"
+msgstr "signalk не удалось проанализировать сообщение:"
+
+#: pypilot/values.py:131
+msgid "invalid initial value for range property"
+msgstr "неверное начальное значение для свойства диапазона"
+
+#: pypilot/values.py:180
+msgid "invalid set"
+msgstr "неверный набор"
+
+#: pypilot/pilots/__init__.py:25
+msgid "ERROR loading"
+msgstr "Ошибка загрузки"
+
+#: ui/autopilot_calibration.py:167
+msgid "exception in calibration:"
+msgstr "исключение при калибровке:"
+
+#: ui/autopilot_control.py:265
+msgid "warning: unhandled message"
+msgstr "предупреждение: необработанное сообщение"
+
+#: ui/autopilot_control_ui.py:24
+msgid "Autopilot Control"
+msgstr "Управление автопилотом"
+
+#: ui/autopilot_control_ui.py:39
+msgid "AP"
+msgstr "Ты"
+
+#: ui/autopilot_control_ui.py:57 ui/autopilot_control_ui.py:67
+#: ui/autopilot_control_ui.py:455 ui/autopilot_control_ui.py:732
+msgid "N/A"
+msgstr "N / A"
+
+#: ui/autopilot_control_ui.py:62
+msgid "        N/A        "
+msgstr "N / A"
+
+#: ui/autopilot_control_ui.py:74
+msgid "----"
+msgstr "----"
+
+#: ui/autopilot_control_ui.py:89 ui/autopilot_control_ui.py:96
+msgid " N/A "
+msgstr "N / A"
+
+#: ui/autopilot_control_ui.py:121
+msgid "port"
+msgstr "порт"
+
+#: ui/autopilot_control_ui.py:121
+msgid "starboard"
+msgstr "правый борт"
+
+#: ui/autopilot_control_ui.py:136
+msgid "Pilot"
+msgstr "Пилот"
+
+#: ui/autopilot_control_ui.py:146 ui/autopilot_control_ui.py:420
+msgid "Compass"
+msgstr "Компас"
+
+#: ui/autopilot_control_ui.py:149
+msgid "GPS"
+msgstr "GPS"
+
+#: ui/autopilot_control_ui.py:154
+msgid "Wind"
+msgstr "Ветер"
+
+#: ui/autopilot_control_ui.py:159
+msgid "True Wind"
+msgstr "Настоящий ветер"
+
+#: ui/autopilot_control_ui.py:175 ui/scope_ui.py:76
+msgid "Center"
+msgstr "Центр"
+
+#: ui/autopilot_control_ui.py:199
+msgid "&Scope"
+msgstr "&Сфера"
+
+#: ui/autopilot_control_ui.py:202
+msgid "&Client"
+msgstr "&Клиент"
+
+#: ui/autopilot_control_ui.py:205
+msgid "C&alibration"
+msgstr "к&алибровка"
+
+#: ui/autopilot_control_ui.py:208 ui/scope_ui.py:108
+msgid "Close"
+msgstr "Закрывать"
+
+#: ui/autopilot_control_ui.py:299 ui/autopilot_control_ui.py:529
+#: ui/autopilot_control_ui.py:649
+msgid "Calibration"
+msgstr "Калибровка"
+
+#: ui/autopilot_control_ui.py:349
+msgid "Boat is level"
+msgstr "Лодка ровная"
+
+#: ui/autopilot_control_ui.py:356 ui/client_wx.py:159 ui/scope_ui.py:94
+msgid "Reset"
+msgstr "Сброс настроек"
+
+#: ui/autopilot_control_ui.py:377
+msgid "Alignment"
+msgstr "Выравнивание"
+
+#: ui/autopilot_control_ui.py:394
+msgid "Heading"
+msgstr "Заголовок"
+
+#: ui/autopilot_control_ui.py:399 ui/autopilot_control_ui.py:465
+#: ui/autopilot_control_ui.py:475
+msgid "     N/A     "
+msgstr "N / A"
+
+#: ui/autopilot_control_ui.py:404 ui/autopilot_control_ui.py:755
+msgid "Offset"
+msgstr "Компенсировать"
+
+#: ui/autopilot_control_ui.py:418
+msgid "Coords"
+msgstr "Координаты"
+
+#: ui/autopilot_control_ui.py:420
+msgid "Sea"
+msgstr "Море"
+
+#: ui/autopilot_control_ui.py:420
+msgid "Boat"
+msgstr "Лодка"
+
+#: ui/autopilot_control_ui.py:443 ui/client_wx.py:52
+msgid "Scope"
+msgstr "Сфера"
+
+#: ui/autopilot_control_ui.py:450
+msgid "Pitch"
+msgstr "Подача"
+
+#: ui/autopilot_control_ui.py:460
+msgid "Roll"
+msgstr "Рулон"
+
+#: ui/autopilot_control_ui.py:470
+msgid "Heel"
+msgstr "Каблук"
+
+#: ui/autopilot_control_ui.py:497
+msgid "alignment"
+msgstr "выравнивание"
+
+#: ui/autopilot_control_ui.py:539 ui/autopilot_control_ui.py:659
+msgid "Calibration Age"
+msgstr "Возраст калибровки"
+
+#: ui/autopilot_control_ui.py:556 ui/autopilot_control_ui.py:676
+msgid "Clear"
+msgstr "ясно"
+
+#: ui/autopilot_control_ui.py:559 ui/autopilot_control_ui.py:679
+msgid "calibration locked"
+msgstr "калибровка заблокирована"
+
+#: ui/autopilot_control_ui.py:582
+msgid "accel"
+msgstr "ускорение"
+
+#: ui/autopilot_control_ui.py:613
+msgid "Sigma Points"
+msgstr "Sigma Points"
+
+#: ui/autopilot_control_ui.py:620
+msgid "local history"
+msgstr "местная история"
+
+#: ui/autopilot_control_ui.py:627
+msgid "current"
+msgstr "Текущий"
+
+#: ui/autopilot_control_ui.py:634
+msgid "Calibration Points"
+msgstr "Точки калибровки"
+
+#: ui/autopilot_control_ui.py:703
+msgid "compass"
+msgstr "компас"
+
+#: ui/autopilot_control_ui.py:713
+msgid ""
+"Press each button when the rudder is at the correct position to calibrate."
+msgstr ""
+"Нажмите каждую кнопку, когда руль направления находится в правильном "
+"положении для калибровки."
+
+#: ui/autopilot_control_ui.py:727
+msgid "Rudder"
+msgstr "Руль"
+
+#: ui/autopilot_control_ui.py:742
+msgid "Reset Calibration"
+msgstr "Сбросить калибровку"
+
+#: ui/autopilot_control_ui.py:752
+msgid "Rudder Is Centered"
+msgstr "Руль по центру"
+
+#: ui/autopilot_control_ui.py:760 ui/autopilot_control_ui.py:773
+#: ui/autopilot_control_ui.py:786
+msgid "------"
+msgstr "------"
+
+#: ui/autopilot_control_ui.py:765
+msgid "Rudder is Starboard Range"
+msgstr "Руль направления правого борта"
+
+#: ui/autopilot_control_ui.py:768
+msgid "Scale"
+msgstr "Шкала"
+
+#: ui/autopilot_control_ui.py:778
+msgid "Rudder is Port Range"
+msgstr "Руль - диапазон порта"
+
+#: ui/autopilot_control_ui.py:781
+msgid "Non Linearity"
+msgstr "Нелинейность"
+
+#: ui/autopilot_control_ui.py:798
+msgid " range +-"
+msgstr "диапазон + -"
+
+#: ui/autopilot_control_ui.py:806
+msgid "degrees"
+msgstr "градусы"
+
+#: ui/autopilot_control_ui.py:825
+msgid "rudder"
+msgstr "руль"
+
+#: ui/autopilot_control_ui.py:827
+msgid "settings"
+msgstr "настройки"
+
+#: ui/boatplot.py:26
+msgid "failed to load pywavefront:"
+msgstr "не удалось загрузить pywavefront:"
+
+#: ui/boatplot.py:56
+msgid "invalid display dimensions"
+msgstr "неверные размеры дисплея"
+
+#: ui/boatplot.py:111
+msgid "Did you add the pypilot_data repository?"
+msgstr "Вы добавили репозиторий pypilot_data?"
+
+#: ui/boatplot.py:161
+msgid "not found, texture compass cannot be used"
+msgstr "не найден, текстурный компас использовать нельзя"
+
+#: ui/client_wx.py:48
+msgid "Refresh"
+msgstr "Обновить"
+
+#: ui/client_wx.py:190
+msgid "Connected"
+msgstr "Связанный"
+
+#: ui/client_wx.py:192
+msgid "Disconnected"
+msgstr "Отключен"
+
+#: ui/client_wx.py:219
+msgid "warning, invalid choice value specified"
+msgstr "предупреждение, указано недопустимое значение выбора"
+
+#: ui/scope_ui.py:24
+msgid "pypilot Scope"
+msgstr "область действия pypilot"
+
+#: ui/scope_ui.py:73
+msgid "Zero"
+msgstr "Нуль"
+
+#: ui/scope_ui.py:79
+msgid "Scale +"
+msgstr "Масштаб +"
+
+#: ui/scope_ui.py:82
+msgid "Scale -"
+msgstr "Шкала -"
+
+#: ui/scope_ui.py:85
+msgid "Offset /\\"
+msgstr "Компенсировать /\\"
+
+#: ui/scope_ui.py:88
+msgid "Offset \\/"
+msgstr "Компенсировать \\/"
+
+#: ui/scope_ui.py:91
+msgid "Freeze"
+msgstr "Заморозить"
+
+#: ui/scope_ui.py:97
+msgid "fftw"
+msgstr "fftw"
+
+#: ui/scope_ui.py:100
+msgid "Time"
+msgstr "Время"
+
+#: ui/scope_wx.py:68
+msgid "values not found:"
+msgstr "значения не найдены:"

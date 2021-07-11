@@ -1,0 +1,1004 @@
+# Translations template for pypilot.
+# Copyright (C) 2021 ORGANIZATION
+# This file is distributed under the same license as the pypilot project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: pypilot 0.24\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2021-05-25 01:14-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Generated-By: Babel 2.6.0\n"
+
+#: pypilot/autopilot.py:107
+msgid "failed to load pilot"
+msgstr "kan piloot niet laden"
+
+#: pypilot/autopilot.py:110
+msgid "Available Pilots"
+msgstr "Beschikbare piloten"
+
+#: pypilot/autopilot.py:136
+msgid "warning: failed to open special file"
+msgstr "waarschuwing: kan speciaal bestand niet openen"
+
+#: pypilot/autopilot.py:136
+msgid "for writing"
+msgstr "om te schrijven"
+
+#: pypilot/autopilot.py:137
+msgid "cannot stroke the watchdog"
+msgstr "kan de waakhond niet aaien"
+
+#: pypilot/autopilot.py:141
+msgid "warning: failed to make autopilot process realtime"
+msgstr "waarschuwing: kon stuurautomaatproces niet realtime maken"
+
+#: pypilot/autopilot.py:309
+msgid "server/client is running too _slowly_"
+msgstr "server/client draait te _langzaam_"
+
+#: pypilot/autopilot.py:315
+msgid "sensors is running too _slowly_"
+msgstr "sensoren lopen te langzaam"
+
+#: pypilot/autopilot.py:365
+msgid "autopilot routine is running too _slowly_"
+msgstr "automatische piloot-routine loopt te langzaam"
+
+#: pypilot/autopilot.py:370
+msgid "servo is running too _slowly_"
+msgstr "servo loopt te langzaam"
+
+#: pypilot/boatimu.py:34
+msgid "RTIMU library not detected, please install it"
+msgstr "RTIMU-bibliotheek niet gedetecteerd, installeer deze a.u.b."
+
+#: pypilot/boatimu.py:57
+msgid "Using settings file"
+msgstr "Instellingenbestand gebruiken"
+
+#: pypilot/boatimu.py:97
+msgid "ERROR: No IMU Detected"
+msgstr "FOUT: geen IMU gedetecteerd"
+
+#: pypilot/boatimu.py:105
+msgid "ERROR: IMU Init Failed, no inertial data available"
+msgstr "FOUT: IMU-initiatie mislukt, geen traagheidsgegevens beschikbaar"
+
+#: pypilot/boatimu.py:127
+msgid "warning, failed to make imu process realtime"
+msgstr "waarschuwing, kon imu-proces niet realtime maken"
+
+#: pypilot/boatimu.py:129
+msgid "made imu process realtime"
+msgstr "gemaakt imu proces realtime"
+
+#: pypilot/boatimu.py:141
+msgid "setting initial gyro bias"
+msgstr "initiële gyro-bias instellen"
+
+#: pypilot/boatimu.py:157
+msgid "imu process failed to keep time"
+msgstr "imu-proces kon de tijd niet bijhouden"
+
+#: pypilot/boatimu.py:165
+msgid "failed to read IMU!"
+msgstr "kan IMU niet lezen!"
+
+#: pypilot/boatimu.py:197
+msgid "imu rate set to rate"
+msgstr "imu tarief ingesteld op tarief"
+
+#: pypilot/boatimu.py:211
+msgid "too high standing gyro bias, resetting sensors"
+msgstr "te hoge staande gyro-bias, sensoren resetten"
+
+#: pypilot/boatimu.py:216
+msgid "compass out of range, resetting"
+msgstr "kompas buiten bereik, resetten"
+
+#: pypilot/boatimu.py:308
+msgid "warning, failed to make calibration process other"
+msgstr "waarschuwing, kan het kalibratieproces niet anders maken"
+
+#: pypilot/boatimu.py:310
+msgid "warning, failed to make calibration process idle, trying renice"
+msgstr ""
+"waarschuwing, kan het kalibratieproces niet inactief maken, probeer renice"
+
+#: pypilot/boatimu.py:312
+msgid "warning, failed to renice calibration process"
+msgstr "waarschuwing, kan het kalibratieproces niet herroepen"
+
+#: pypilot/boatimu.py:320
+msgid "calibration loaded, starting"
+msgstr "kalibratie geladen, starten"
+
+#: pypilot/boatimu.py:323
+msgid "failed import calibration fit"
+msgstr "mislukte import kalibratie fit"
+
+#: pypilot/boatimu.py:339
+msgid "terminate calibration process"
+msgstr "kalibratieproces beëindigen"
+
+#: pypilot/boatimu.py:429
+msgid "accel values invalid"
+msgstr "accel waarden ongeldig"
+
+#: pypilot/bufferedsocket.py:56
+msgid "overflow in pypilot udp socket"
+msgstr "overloop in pypilot udp-socket"
+
+#: pypilot/bufferedsocket.py:61
+msgid "overflow in pypilot socket"
+msgstr "overloop in pypilot-socket"
+
+#: pypilot/bufferedsocket.py:71
+msgid "failed to send udp packet"
+msgstr "kan ud-pakket niet verzenden"
+
+#: pypilot/bufferedsocket.py:80
+msgid "pypilot socket failed to send to"
+msgstr "pypilot-socket kan niet worden verzonden naar"
+
+#: pypilot/bufferedsocket.py:93
+msgid "socket send took too long!?!?"
+msgstr "socket verzenden duurde te lang!?!?"
+
+#: pypilot/bufferedsocket.py:95
+msgid "socket send error"
+msgstr "socket verzend fout"
+
+#: pypilot/bufferedsocket.py:99
+msgid "pypilot socket exception"
+msgstr "pypilot socket-uitzondering"
+
+#: pypilot/bufferedsocket.py:103
+msgid "falling back to python nonblocking socket, will consume more cpu"
+msgstr "terugvallen op python nonblocking socket, zal meer cpu verbruiken"
+
+#: pypilot/bufferedsocket.py:129
+msgid "socket send error in server flush"
+msgstr "socket verzend fout in server flush"
+
+#: pypilot/bufferedsocket.py:144
+msgid "error receiving data"
+msgstr "fout bij het ontvangen van gegevens"
+
+#: pypilot/calibration_fit.py:39
+msgid "failed to load scientific library, cannot perform calibration update!"
+msgstr ""
+"kan wetenschappelijke bibliotheek niet laden, kan kalibratie-update niet "
+"uitvoeren!"
+
+#: pypilot/client.py:97
+msgid "warning, registering existing value:"
+msgstr "waarschuwing, bestaande waarde registreren:"
+
+#: pypilot/client.py:155
+msgid "failed to read config file:"
+msgstr "kon configuratiebestand niet lezen:"
+
+#: pypilot/client.py:186
+msgid "failed to write config file:"
+msgstr "kon configuratiebestand niet schrijven:"
+
+#: pypilot/client.py:188
+msgid "Exception writing config file:"
+msgstr "Uitzondering schrijven configuratiebestand:"
+
+#: pypilot/client.py:265
+msgid "invalid message from server:"
+msgstr "ongeldig bericht van server:"
+
+#: pypilot/client.py:281
+msgid "warning, pypilot client aleady has connection"
+msgstr "waarschuwing, pypilot-client heeft al verbinding"
+
+#: pypilot/client.py:301
+msgid "connect failed to"
+msgstr "verbinding mislukt"
+
+#: pypilot/client.py:388
+msgid "failed to connect to"
+msgstr "kan geen verbinding maken met"
+
+#: pypilot/client.py:445
+msgid "usage"
+msgstr "gebruik"
+
+#: pypilot/client.py:448
+msgid "set the host or ip address"
+msgstr "stel het host- of ip-adres in"
+
+#: pypilot/client.py:449
+msgid "print info about each value type"
+msgstr "info afdrukken over elk waardetype"
+
+#: pypilot/client.py:450
+msgid "continuous watch"
+msgstr "continu kijken"
+
+#: pypilot/client.py:451
+msgid "show this message"
+msgstr "toon dit bericht"
+
+#: pypilot/client.py:478
+msgid "failed to retrieve value list!"
+msgstr "kan de waardelijst niet ophalen!"
+
+#: pypilot/client.py:489
+msgid "timeout retrieving"
+msgstr "time-out ophalen"
+
+#: pypilot/client.py:492
+msgid "missing"
+msgstr "missend"
+
+#: pypilot/failedimports.py:12
+msgid ""
+"pypilot failed to import required modules.  Did you forget to run sudo "
+"python3 setup.py install?"
+msgstr ""
+"pypilot kan de vereiste modules niet importeren. Ben je vergeten sudo "
+"python3 setup.py install uit te voeren?"
+
+#: pypilot/gpsd.py:45
+msgid "gpsd connected"
+msgstr "gpsd aangesloten"
+
+#: pypilot/gpsd.py:48
+msgid "gpsd failed to connect"
+msgstr "gpsd kan geen verbinding maken"
+
+#: pypilot/gpsd.py:53
+msgid "exception connecting to gps"
+msgstr "uitzondering verbinden met gps"
+
+#: pypilot/gpsd.py:57
+msgid "gpsd disconnected"
+msgstr "gpsd losgekoppeld"
+
+#: pypilot/gpsd.py:71
+msgid "gpsd PROBE success"
+msgstr "gpsd PROBE succes"
+
+#: pypilot/gpsd.py:79
+msgid "gpsd probe failed"
+msgstr "gpsd-sonde mislukt"
+
+#: pypilot/gpsd.py:102
+msgid "gpsd deactivated"
+msgstr "gpsd gedeactiveerd"
+
+#: pypilot/gpsd.py:135
+msgid "gpsd failed to determine serial baud rate of device"
+msgstr "gpsd kon de seriële baudsnelheid van het apparaat niet bepalen"
+
+#: pypilot/gpsd.py:152
+msgid "gpsd timeout from lack of data"
+msgstr "gpsd time-out door gebrek aan gegevens"
+
+#: pypilot/gpsd.py:167
+msgid "gpsd received invalid message"
+msgstr "gpsd heeft ongeldig bericht ontvangen"
+
+#: pypilot/gpsd.py:212
+msgid "gpsd got flag for pipe:"
+msgstr "gpsd kreeg vlag voor pijp:"
+
+#: pypilot/gpsd.py:221
+msgid "gpsd serial probe"
+msgstr "gpsd seriële sonde"
+
+#: pypilot/nmea.py:87
+msgid "nmea failed to parse gps"
+msgstr "nmea kon gps niet ontleden"
+
+#: pypilot/nmea.py:127
+msgid "nmea failed to parse wind"
+msgstr "nmea kon wind niet ontleden"
+
+#: pypilot/nmea.py:189
+msgid "exception parsing apb"
+msgstr "uitzondering ontleden apb"
+
+#: pypilot/nmea.py:277
+msgid "unhandled nmea pipe string"
+msgstr "onverwerkte nmea pijp string"
+
+#: pypilot/nmea.py:327
+msgid "lost serial"
+msgstr "verloren serie"
+
+#: pypilot/nmea.py:350
+msgid "nmea got flag for process pipe:"
+msgstr "nmea kreeg vlag voor procespijp:"
+
+#: pypilot/nmea.py:371
+msgid "is another process accessing it?"
+msgstr "heeft een ander proces er toegang toe?"
+
+#: pypilot/nmea.py:373
+msgid "serial device timed out"
+msgstr "seriële apparaat time-out device"
+
+#: pypilot/nmea.py:429
+msgid "failed to open"
+msgstr "niet geslaagd te openen"
+
+#: pypilot/nmea.py:482
+msgid "nmea server on port"
+msgstr "nmea-server op poort"
+
+#: pypilot/nmea.py:482
+msgid "bind failed."
+msgstr "binden mislukt."
+
+#: pypilot/nmea.py:484
+msgid "listening on port"
+msgstr "luisteren op poort"
+
+#: pypilot/nmea.py:484
+msgid "for nmea connections"
+msgstr "voor nmea-verbindingen"
+
+#: pypilot/nmea.py:550
+msgid "nmea server has too many connections"
+msgstr "nmea-server heeft te veel verbindingen"
+
+#: pypilot/nmea.py:576
+msgid "nmea sock not in sockets!"
+msgstr "nmea sok niet in stopcontacten!"
+
+#: pypilot/nmea.py:587
+msgid "nmea failed to unregister socket"
+msgstr "nmea kan socket niet uitschrijven"
+
+#: pypilot/nmea.py:592
+msgid "nmea failed to remove fd"
+msgstr "nmea kan fd . niet verwijderen"
+
+#: pypilot/nmea.py:597
+msgid "nmea failed to remove address"
+msgstr "nmea kan adres niet verwijderen"
+
+#: pypilot/nmea.py:610
+msgid "connected to"
+msgstr "verbonden met"
+
+#: pypilot/nmea.py:610
+msgid "in"
+msgstr "in"
+
+#: pypilot/nmea.py:610
+msgid "seconds"
+msgstr "seconden"
+
+#: pypilot/nmea.py:614
+msgid "nmea client failed to connect to"
+msgstr "nmea-client kan geen verbinding maken met"
+
+#: pypilot/nmea.py:641
+msgid "poll took too long in nmea process!"
+msgstr "poll duurde te lang in nmea-proces!"
+
+#: pypilot/nmea.py:648
+msgid "nmea bridge lost server connection"
+msgstr "nmea bridge verbroken serververbinding"
+
+#: pypilot/nmea.py:651
+msgid "nmea bridge lost pipe to autopilot"
+msgstr "nmea bridge lost pipe naar stuurautomaat"
+
+#: pypilot/nmea.py:670
+msgid "nmea bridge unhandled poll flag"
+msgstr "nmea bridge onverwerkte poll vlag poll"
+
+#: pypilot/nmea.py:707
+msgid "failed to create nmea socket as host:port"
+msgstr "kan nmea socket niet maken als host:poort"
+
+#: pypilot/nmea.py:713
+msgid "nmea process loop too slow:"
+msgstr "nmea proceslus te langzaam:"
+
+#: pypilot/nonblockingpipe.py:41
+msgid "error pipe block on recv!"
+msgstr "fout pijpblok op recv!"
+
+#: pypilot/nonblockingpipe.py:43
+msgid "failed to recv nonblocking pipe!"
+msgstr "kon niet-blokkerende pijp herstellen!"
+
+#: pypilot/nonblockingpipe.py:70
+msgid "pipe full"
+msgstr "pijp vol"
+
+#: pypilot/nonblockingpipe.py:70
+msgid "cannot send"
+msgstr "Kan niet verzenden"
+
+#: pypilot/nonblockingpipe.py:90 pypilot/nonblockingpipe.py:146
+msgid "failed to decode data socket!"
+msgstr "kan datasocket niet decoderen!"
+
+#: pypilot/nonblockingpipe.py:104
+msgid "failed to encode data socket!"
+msgstr "kan datasocket niet coderen!"
+
+#: pypilot/nonblockingpipe.py:156
+msgid "failed write"
+msgstr "mislukt schrijven"
+
+#: pypilot/pyjson.py:15
+msgid "WARNING: python ujson library failed, parsing will consume more cpu"
+msgstr ""
+"WAARSCHUWING: python ujson-bibliotheek is mislukt, parsing verbruikt meer "
+"cpu c"
+
+#: pypilot/rudder.py:118
+msgid "bad rudder calibration"
+msgstr "slechte roerkalibratie"
+
+#: pypilot/rudder.py:122
+msgid "bad servo rudder calibration"
+msgstr "slechte kalibratie van het servoroer"
+
+#: pypilot/rudder.py:194
+msgid "servo rudder autogain failed"
+msgstr "servo roer autogain mislukt"
+
+#: pypilot/sensors.py:43
+msgid "sensor found"
+msgstr "sensor gevonden"
+
+#: pypilot/sensors.py:192
+msgid "unknown data parsed!"
+msgstr "onbekende gegevens geparseerd!"
+
+#: pypilot/serialprobe.py:31
+msgid "error reading"
+msgstr "fout bij het lezen"
+
+#: pypilot/serialprobe.py:87
+msgid "found more devices by path"
+msgstr "meer apparaten gevonden op pad"
+
+#: pypilot/serialprobe.py:119
+msgid "removing gps device"
+msgstr "gps-apparaat verwijderen"
+
+#: pypilot/serialprobe.py:195
+msgid "no pyudev module! will scan usb devices often!"
+msgstr "geen pyudev-module! scant vaak usb-apparaten!"
+
+#: pypilot/serialprobe.py:357
+msgid "success"
+msgstr "succes"
+
+#: pypilot/serialprobe.py:365
+msgid "failed to record device"
+msgstr "kan apparaat niet opnemen"
+
+#: pypilot/server.py:97
+msgid "ERROR no connections in watch"
+msgstr "FOUT geen verbindingen in horloge"
+
+#: pypilot/server.py:200
+msgid "remove duplicate udp connection"
+msgstr "dubbele ud-verbinding verwijderen"
+
+#: pypilot/server.py:340 ui/boatplot.py:110
+msgid "failed to load"
+msgstr "Laden mislukt"
+
+#: pypilot/server.py:351
+msgid "backup data failed as well"
+msgstr "back-upgegevens ook mislukt"
+
+#: pypilot/server.py:379
+msgid "failed to write"
+msgstr "kon niet schrijven"
+
+#: pypilot/server.py:436
+msgid "pypilot_server: bind failed; already running a server?"
+msgstr "pypilot_server: binding mislukt; draait er al een server?"
+
+#: pypilot/server.py:498
+msgid "persistent store took too long!"
+msgstr "aanhoudende winkel duurde te lang!"
+
+#: pypilot/server.py:514
+msgid "max connections reached"
+msgstr "max verbindingen bereikt"
+
+#: pypilot/server.py:517
+msgid "server add socket"
+msgstr "server socket toevoegen"
+
+#: pypilot/server.py:527
+msgid "internal pipe closed, server exiting"
+msgstr "interne pijp gesloten, server wordt afgesloten"
+
+#: pypilot/server.py:579
+msgid "server socket closed from flush!!"
+msgstr "server socket gesloten van flush!!"
+
+#: pypilot/servo.py:449
+msgid "servo calibration invalid"
+msgstr "servo kalibratie ongeldig"
+
+#: pypilot/servo.py:557
+msgid "failed to open servo on:"
+msgstr "kon servo niet openen op:"
+
+#: pypilot/servo.py:564
+msgid "failed set nonblocking/exclusive"
+msgstr "mislukte set niet-blokkerend/exclusief"
+
+#: pypilot/servo.py:595
+msgid "found"
+msgstr "gevonden"
+
+#: pypilot/servo.py:716
+msgid "loading servo calibration"
+msgstr "servo-kalibratie laden"
+
+#: pypilot/servo.py:720
+msgid "WARNING: using default servo calibration!!"
+msgstr "WAARSCHUWING: gebruik standaard servokalibratie!!"
+
+#: pypilot/servo.py:729
+msgid "probing"
+msgstr "indringend"
+
+#: pypilot/servo.py:745
+msgid "arduino servo detected"
+msgstr "arduino servo gedetecteerd"
+
+#: pypilot/servo.py:754
+msgid "device needed for option"
+msgstr "apparaat nodig voor optie:"
+
+#: pypilot/signalk.py:67
+msgid "read token"
+msgstr "lees token"
+
+#: pypilot/signalk.py:70
+msgid "failed to read token"
+msgstr "token niet gelezen"
+
+#: pypilot/signalk.py:77
+msgid "failed to"
+msgstr "slaagde er niet in"
+
+#: pypilot/signalk.py:77
+msgid "autodetection not possible"
+msgstr "automatische detectie niet mogelijk"
+
+#: pypilot/signalk.py:78 pypilot/signalk.py:144 pypilot/signalk.py:213
+msgid "try"
+msgstr "proberen"
+
+#: pypilot/signalk.py:78 pypilot/signalk.py:144 pypilot/signalk.py:213
+msgid "or"
+msgstr "of"
+
+#: pypilot/signalk.py:109
+msgid "service removed"
+msgstr "dienst verwijderd"
+
+#: pypilot/signalk.py:113
+msgid "signalk server lost"
+msgstr "signaalserver verloren server"
+
+#: pypilot/signalk.py:116
+msgid "service add"
+msgstr "service toevoegen"
+
+#: pypilot/signalk.py:130
+msgid "server found"
+msgstr "server gevonden"
+
+#: pypilot/signalk.py:139
+msgid "probe"
+msgstr "sonde"
+
+#: pypilot/signalk.py:143
+msgid "could not"
+msgstr "kon niet"
+
+#: pypilot/signalk.py:153
+msgid "failed to retrieve/parse data from"
+msgstr "kan gegevens niet ophalen/parseren van"
+
+#: pypilot/signalk.py:156
+msgid "signalk found"
+msgstr "signaal gevonden"
+
+#: pypilot/signalk.py:168
+msgid "see if token is ready"
+msgstr "kijk of token klaar is"
+
+#: pypilot/signalk.py:174
+msgid "received token"
+msgstr "ontvangen token"
+
+#: pypilot/signalk.py:180
+msgid "failed to store token"
+msgstr "kan token niet opslaan"
+
+#: pypilot/signalk.py:184
+msgid "error requesting access"
+msgstr "fout bij het aanvragen van toegang"
+
+#: pypilot/signalk.py:203
+msgid "signalk request access url"
+msgstr "signalk verzoek toegang url"
+
+#: pypilot/signalk.py:205
+msgid "signalk error requesting access"
+msgstr "signalk fout bij het aanvragen van toegang"
+
+#: pypilot/signalk.py:212
+msgid "cannot create connection:"
+msgstr "kan geen verbinding maken:"
+
+#: pypilot/signalk.py:226
+msgid "failed to connect"
+msgstr "kon niet verbinden"
+
+#: pypilot/signalk.py:270
+msgid "signalk connected to"
+msgstr "signaal aangesloten op"
+
+#: pypilot/signalk.py:313
+msgid "signalk failed to parse"
+msgstr "signalk kan niet worden geparseerd"
+
+#: pypilot/signalk.py:331
+msgid "Exception converting signalk->pypilot"
+msgstr "Uitzondering converteren signalk->pypilot"
+
+#: pypilot/signalk.py:345
+msgid "received"
+msgstr "ontvangen"
+
+#: pypilot/signalk.py:391
+msgid "signalk failed to send"
+msgstr "signalk kan niet worden verzonden"
+
+#: pypilot/signalk.py:404
+msgid "signalk failed to parse msg:"
+msgstr "signalk kon bericht niet ontleden:"
+
+#: pypilot/values.py:131
+msgid "invalid initial value for range property"
+msgstr "ongeldige beginwaarde voor bereikeigenschap"
+
+#: pypilot/values.py:180
+msgid "invalid set"
+msgstr "ongeldige set"
+
+#: pypilot/pilots/__init__.py:25
+msgid "ERROR loading"
+msgstr "Fout bij het laden"
+
+#: ui/autopilot_calibration.py:167
+msgid "exception in calibration:"
+msgstr "uitzondering in kalibratie:"
+
+#: ui/autopilot_control.py:265
+msgid "warning: unhandled message"
+msgstr "waarschuwing: onverwerkt bericht"
+
+#: ui/autopilot_control_ui.py:24
+msgid "Autopilot Control"
+msgstr "Stuurautomaatbediening"
+
+#: ui/autopilot_control_ui.py:39
+msgid "AP"
+msgstr "U"
+
+#: ui/autopilot_control_ui.py:57 ui/autopilot_control_ui.py:67
+#: ui/autopilot_control_ui.py:455 ui/autopilot_control_ui.py:732
+msgid "N/A"
+msgstr "Nvt"
+
+#: ui/autopilot_control_ui.py:62
+msgid "        N/A        "
+msgstr "Nvt"
+
+#: ui/autopilot_control_ui.py:74
+msgid "----"
+msgstr "----"
+
+#: ui/autopilot_control_ui.py:89 ui/autopilot_control_ui.py:96
+msgid " N/A "
+msgstr "Nvt"
+
+#: ui/autopilot_control_ui.py:121
+msgid "port"
+msgstr "haven"
+
+#: ui/autopilot_control_ui.py:121
+msgid "starboard"
+msgstr "stuurboord"
+
+#: ui/autopilot_control_ui.py:136
+msgid "Pilot"
+msgstr "piloot"
+
+#: ui/autopilot_control_ui.py:146 ui/autopilot_control_ui.py:420
+msgid "Compass"
+msgstr "Kompas"
+
+#: ui/autopilot_control_ui.py:149
+msgid "GPS"
+msgstr "GPS"
+
+#: ui/autopilot_control_ui.py:154
+msgid "Wind"
+msgstr "Wind"
+
+#: ui/autopilot_control_ui.py:159
+msgid "True Wind"
+msgstr "Ware wind"
+
+#: ui/autopilot_control_ui.py:175 ui/scope_ui.py:76
+msgid "Center"
+msgstr "Centrum"
+
+#: ui/autopilot_control_ui.py:199
+msgid "&Scope"
+msgstr "&Reikwijdte"
+
+#: ui/autopilot_control_ui.py:202
+msgid "&Client"
+msgstr "&Cliënt"
+
+#: ui/autopilot_control_ui.py:205
+msgid "C&alibration"
+msgstr "K&alibratie"
+
+#: ui/autopilot_control_ui.py:208 ui/scope_ui.py:108
+msgid "Close"
+msgstr "Dichtbij"
+
+#: ui/autopilot_control_ui.py:299 ui/autopilot_control_ui.py:529
+#: ui/autopilot_control_ui.py:649
+msgid "Calibration"
+msgstr "Kalibratie"
+
+#: ui/autopilot_control_ui.py:349
+msgid "Boat is level"
+msgstr "Boot ligt waterpas"
+
+#: ui/autopilot_control_ui.py:356 ui/client_wx.py:159 ui/scope_ui.py:94
+msgid "Reset"
+msgstr "Resetten"
+
+#: ui/autopilot_control_ui.py:377
+msgid "Alignment"
+msgstr "Uitlijning"
+
+#: ui/autopilot_control_ui.py:394
+msgid "Heading"
+msgstr "rubriek"
+
+#: ui/autopilot_control_ui.py:399 ui/autopilot_control_ui.py:465
+#: ui/autopilot_control_ui.py:475
+msgid "     N/A     "
+msgstr "Nvt"
+
+#: ui/autopilot_control_ui.py:404 ui/autopilot_control_ui.py:755
+msgid "Offset"
+msgstr "offset"
+
+#: ui/autopilot_control_ui.py:418
+msgid "Coords"
+msgstr "Coördinaten"
+
+#: ui/autopilot_control_ui.py:420
+msgid "Sea"
+msgstr "Zee"
+
+#: ui/autopilot_control_ui.py:420
+msgid "Boat"
+msgstr "Boot"
+
+#: ui/autopilot_control_ui.py:443 ui/client_wx.py:52
+msgid "Scope"
+msgstr "Toepassingsgebied"
+
+#: ui/autopilot_control_ui.py:450
+msgid "Pitch"
+msgstr "Standplaats"
+
+#: ui/autopilot_control_ui.py:460
+msgid "Roll"
+msgstr "Rollen"
+
+#: ui/autopilot_control_ui.py:470
+msgid "Heel"
+msgstr "Hiel"
+
+#: ui/autopilot_control_ui.py:497
+msgid "alignment"
+msgstr "uitlijning"
+
+#: ui/autopilot_control_ui.py:539 ui/autopilot_control_ui.py:659
+msgid "Calibration Age"
+msgstr "Kalibratieleeftijd:"
+
+#: ui/autopilot_control_ui.py:556 ui/autopilot_control_ui.py:676
+msgid "Clear"
+msgstr "Doorzichtig"
+
+#: ui/autopilot_control_ui.py:559 ui/autopilot_control_ui.py:679
+msgid "calibration locked"
+msgstr "kalibratie vergrendeld"
+
+#: ui/autopilot_control_ui.py:582
+msgid "accel"
+msgstr "accel"
+
+#: ui/autopilot_control_ui.py:613
+msgid "Sigma Points"
+msgstr "Sigma-punten"
+
+#: ui/autopilot_control_ui.py:620
+msgid "local history"
+msgstr "lokale geschiedenis"
+
+#: ui/autopilot_control_ui.py:627
+msgid "current"
+msgstr "actueel"
+
+#: ui/autopilot_control_ui.py:634
+msgid "Calibration Points"
+msgstr "Kalibratiepunten"
+
+#: ui/autopilot_control_ui.py:703
+msgid "compass"
+msgstr "kompas"
+
+#: ui/autopilot_control_ui.py:713
+msgid ""
+"Press each button when the rudder is at the correct position to calibrate."
+msgstr ""
+"Druk op elke knop wanneer het roer in de juiste positie staat om te "
+"kalibreren."
+
+#: ui/autopilot_control_ui.py:727
+msgid "Rudder"
+msgstr "Roer"
+
+#: ui/autopilot_control_ui.py:742
+msgid "Reset Calibration"
+msgstr "Kalibratie resetten"
+
+#: ui/autopilot_control_ui.py:752
+msgid "Rudder Is Centered"
+msgstr "Roer is gecentreerd"
+
+#: ui/autopilot_control_ui.py:760 ui/autopilot_control_ui.py:773
+#: ui/autopilot_control_ui.py:786
+msgid "------"
+msgstr "------"
+
+#: ui/autopilot_control_ui.py:765
+msgid "Rudder is Starboard Range"
+msgstr "Roer is stuurboord bereik"
+
+#: ui/autopilot_control_ui.py:768
+msgid "Scale"
+msgstr "Schaal"
+
+#: ui/autopilot_control_ui.py:778
+msgid "Rudder is Port Range"
+msgstr "Roer is bakboordbereik"
+
+#: ui/autopilot_control_ui.py:781
+msgid "Non Linearity"
+msgstr "Niet-lineariteit"
+
+#: ui/autopilot_control_ui.py:798
+msgid " range +-"
+msgstr "bereik +-"
+
+#: ui/autopilot_control_ui.py:806
+msgid "degrees"
+msgstr "graden"
+
+#: ui/autopilot_control_ui.py:825
+msgid "rudder"
+msgstr "roer"
+
+#: ui/autopilot_control_ui.py:827
+msgid "settings"
+msgstr "instellingen"
+
+#: ui/boatplot.py:26
+msgid "failed to load pywavefront:"
+msgstr "kan pywavefront niet laden:"
+
+#: ui/boatplot.py:56
+msgid "invalid display dimensions"
+msgstr "ongeldige schermafmetingen"
+
+#: ui/boatplot.py:111
+msgid "Did you add the pypilot_data repository?"
+msgstr "Heb je de pypilot_data-repository toegevoegd?"
+
+#: ui/boatplot.py:161
+msgid "not found, texture compass cannot be used"
+msgstr "niet gevonden, textuurkompas kan niet worden gebruikt"
+
+#: ui/client_wx.py:48
+msgid "Refresh"
+msgstr "Vernieuwen"
+
+#: ui/client_wx.py:190
+msgid "Connected"
+msgstr "Verbonden"
+
+#: ui/client_wx.py:192
+msgid "Disconnected"
+msgstr "Verbinding verbroken"
+
+#: ui/client_wx.py:219
+msgid "warning, invalid choice value specified"
+msgstr "waarschuwing, ongeldige keuzewaarde opgegeven"
+
+#: ui/scope_ui.py:24
+msgid "pypilot Scope"
+msgstr "pypilot-bereik"
+
+#: ui/scope_ui.py:73
+msgid "Zero"
+msgstr "Nul"
+
+#: ui/scope_ui.py:79
+msgid "Scale +"
+msgstr "Schaal +"
+
+#: ui/scope_ui.py:82
+msgid "Scale -"
+msgstr "Schaal -"
+
+#: ui/scope_ui.py:85
+msgid "Offset /\\"
+msgstr "verschuiving /\\"
+
+#: ui/scope_ui.py:88
+msgid "Offset \\/"
+msgstr "Verschuiving /"
+
+#: ui/scope_ui.py:91
+msgid "Freeze"
+msgstr "Bevriezen"
+
+#: ui/scope_ui.py:97
+msgid "fftw"
+msgstr "fftw"
+
+#: ui/scope_ui.py:100
+msgid "Time"
+msgstr "Tijd"
+
+#: ui/scope_wx.py:68
+msgid "values not found:"
+msgstr "waarden niet gevonden:"
