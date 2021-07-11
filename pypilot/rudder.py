@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import math
-from gettext import gettext as _
 from pypilot.values import *
 from sensors import Sensor
 

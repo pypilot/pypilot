@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import wx, sys, math, subprocess, os, socket
-from gettext import gettext as _
 from pypilot.client import pypilotClient
 
 def round3(value):

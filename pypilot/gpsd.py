@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import multiprocessing, time, socket, select
-from gettext import gettext as _
 from nonblockingpipe import NonBlockingPipe
 from bufferedsocket import LineBufferedNonBlockingSocket
 from values import *

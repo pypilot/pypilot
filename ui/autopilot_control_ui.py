@@ -12,7 +12,7 @@ import wx.xrc
 import wx.glcanvas
 
 import gettext
-_ = gettext.gettext
+#_ = gettext.gettext
 
 ###########################################################################
 ## Class AutopilotControlBase

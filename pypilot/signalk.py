@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import time, socket, multiprocessing, os
-from gettext import gettext as _
 from nonblockingpipe import NonBlockingPipe
 import pyjson
 from client import pypilotClient

@@ -13,7 +13,6 @@
 # giving it the ability to auto-calibrate the inertial sensors
 
 import os, sys
-from gettext import gettext as _
 import time, math, multiprocessing, select
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -313,11 +312,10 @@ def CalibrationProcess(cal_pipe, client):
 
     time.sleep(4)
     
-    print('calibration process', os.getpid())
     while True:
         try:
             import calibration_fit
-            print(_('calibration loaded, starting'))
+            print(_('calibration loaded, starting'), os.getpid())
             calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
         except Exception as e:
             print(_('failed import calibration fit'), e)
@@ -336,7 +334,7 @@ class AutomaticCalibrationProcess():
         self.process.start()
 
     def __del__(self):
-        print(_('terminate calibration process'))
+        #print(_('terminate calibration process'))
         self.process.terminate()
 
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# python3 setup.py extract_messages -o locale/pypilot.pot
+# python3 setup.py extract_messages -o pypilot/locale/pypilot.pot
 
 function translate() {
     mkdir -p $1/LC_MESSAGES

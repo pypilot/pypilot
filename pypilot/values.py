@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os, time, math
-from gettext import gettext as _
 import pyjson
 
 class Value(object):

@@ -58,7 +58,7 @@ ugfx_module = Extension('pypilot/hat/ugfx/_ugfx',
                         swig_opts=['-c++'] + ugfx_defs
 )
 
-def find_locales(name='', dir = 'locale'):
+def find_locales(name, dir = 'locale'):
     locale_files = []
     for walk in os.walk('./' + name + '/' + dir):
         path, dirs, files = walk
@@ -77,6 +77,7 @@ try:
 except:
     pass
 
+
 # ensure all packages are under pypilot
 package_dirs = {}
 for package in list(packages):
@@ -85,6 +86,15 @@ for package in list(packages):
         packages.append('pypilot.'+package)
         package_dirs['pypilot.'+package] = package.replace('.', '/')
 
+package_data = {'pypilot': find_locales('pypilot'),
+                'pypilot.hat': ['font.ttf', 'static/*', 'templates/*'] + find_locales('hat'),
+                'pypilot.ui': ['*.png', '*.mtl', '*.obj'],
+                'pypilot.web': ['static/*', 'templates/*'] + find_locales('web', 'translations')}
+        
+#print(package_data)
+#exit(0)
+
+        
 setup (name = 'pypilot',
        version = version.strversion,
        description = 'pypilot sailboat autopilot',
@@ -94,10 +104,7 @@ setup (name = 'pypilot',
        packages=packages,
        package_dir=package_dirs,
        ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module],
-       package_data={'pypilot': find_locales(),
-                     'pypilot.hat': ['font.ttf', 'static/*', 'templates/*'] + find_locales('hat'),
-                     'pypilot.ui': ['*.png', '*.mtl', '*.obj'],
-                     'pypilot.web': ['static/*', 'templates/*'] + find_locales('web', 'translations')},
+       package_data=package_data,
        entry_points={
            'console_scripts': [
                'pypilot=pypilot.autopilot:main',

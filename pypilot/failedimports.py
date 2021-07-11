@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from __future__ import print_function
-from gettext import gettext as _
 
 print(_('pypilot failed to import required modules.  Did you forget to run sudo python3 setup.py install?'))
 

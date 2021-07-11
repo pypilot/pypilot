@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import tempfile, time, math, sys, subprocess, json, socket, os
-from gettext import gettext as _
 import wx, wx.glcanvas
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import calibration_plot, boatplot, autopilot_control_ui
@@ -424,8 +423,6 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.client.set('rudder.range', self.sRudderRange.GetValue())
 
 def main():
-    import gettext
-    gettext.install('pypilot', 'locale')#, unicode=False)
     glutInit(sys.argv)
     app = wx.App()
     

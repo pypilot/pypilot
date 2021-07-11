@@ -23,7 +23,6 @@
 DEFAULT_PORT = 20220
 
 import sys, select, time, socket
-from gettext import gettext as _
 import multiprocessing
 import serial
 from client import pypilotClient

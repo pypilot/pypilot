@@ -6,7 +6,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import sys, os, time
-from gettext import gettext as _
 import pyjson
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'

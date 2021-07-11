@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import math, json, numpy
-from gettext import gettext as _
 try:
     import Image
 except:

@@ -10,11 +10,10 @@
 # autopilot base handles reading from the imu (boatimu)
 
 import sys, os, math
-from gettext import gettext as _
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
-
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from server import pypilotServer
 from client import pypilotClient
 from values import *

@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import time, select, socket, os
-from gettext import gettext as _
 
 try:
   from pypilot.linebuffer import linebuffer

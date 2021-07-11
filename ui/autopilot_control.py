@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import wx, sys, subprocess, socket, os, time
-from gettext import gettext as _
 from pypilot.ui import autopilot_control_ui
 from pypilot.client import *
 

@@ -11,9 +11,8 @@ import select, socket, time
 import sys, os, heapq
 
 import gettext
-locale_d= os.path.abspath(os.path.dirname(__file__)) + '/../locale'
-gettext.bindtextdomain('pypilot', locale_d)
-_ = gettext.gettext
+locale_d= os.path.abspath(os.path.dirname(__file__)) + '/locale'
+gettext.translation('pypilot', locale_d, fallback=True).install()
 
 import numbers
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))

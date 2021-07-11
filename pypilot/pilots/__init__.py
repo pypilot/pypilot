@@ -1,7 +1,6 @@
 # import all scripts in this directory
 
 from __future__ import print_function
-from gettext import gettext as _
 default = []
 
 import sys, os

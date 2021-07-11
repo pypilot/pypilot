@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os, math, sys, time
-from gettext import gettext as _
 import select, serial
 
 import pyjson

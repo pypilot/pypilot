@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import sys, time, math, numpy, scipy.optimize
-from gettext import gettext as _
 import vector, resolv, quaternion
 import boatimu
 resolv = resolv.resolv
