@@ -421,7 +421,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.client.set('rudder.calibration_state', 'port range')
 
     def onRudderRange( self, event ):
-        self.client.set('rudder.range', event.GetValue())
+        self.client.set('rudder.range', self.sRudderRange.GetValue())
 
 def main():
     import gettext
