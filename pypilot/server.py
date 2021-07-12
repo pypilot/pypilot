@@ -22,7 +22,7 @@ from nonblockingpipe import NonBlockingPipe
 
 DEFAULT_PORT = 23322
 max_connections = 30
-default_persistent_path = os.getenv('HOME') + '/.pypilot/pypilot.conf'
+configfilepath = os.getenv('HOME') + '/.pypilot/'
 server_persistent_period = 120 # store data every 120 seconds
 use_multiprocessing = True # run server in a separate process
 
@@ -336,9 +336,15 @@ class ServerValues(pypilotValue):
     def load(self):
         self.persistent_data = {}
         try:
-            self.load_file(open(default_persistent_path))
+            if not os.path.exists(configfilepath):
+                print(_('creating config directory: ') + configfilepath)
+                os.makedirs(configfilepath)
+            if not os.path.isdir(configfilepath):
+                raise Exception(configfilepath + 'should be a directory')
+
+            self.load_file(open(configfilepath + 'pypilot.conf'))
         except Exception as e:
-            print(_('failed to load'), default_persistent_path, e)
+            print(_('failed to load'), 'pypilot.conf', e)
             # log failing to load persistent data
             persist_fail = os.getenv('HOME') + '/.pypilot/persist_fail'
             file = open(persist_fail, 'a')
@@ -346,14 +352,14 @@ class ServerValues(pypilotValue):
             file.close()
 
             try:
-                self.load_file(open(default_persistent_path + '.bak'))
+                self.load_file(open(configfilepath + 'pypilot.conf' + '.bak'))
                 return
             except Exception as e:
                 print(_('backup data failed as well'), e)
             return
 
         # backup persistent_data if it loaded with success
-        file = open(default_persistent_path + '.bak', 'w')
+        file = open(configfilepath + 'pypilot.conf' + '.bak', 'w')
         for name in self.persistent_data:
             file.write(self.persistent_data[name])
         file.close()
@@ -372,12 +378,12 @@ class ServerValues(pypilotValue):
         if not need_store:
             return                
         try:
-            file = open(default_persistent_path, 'w')
+            file = open(configfilepath + 'pypilot.conf', 'w')
             for name in self.persistent_data:
                 file.write(self.persistent_data[name])
             file.close()
         except Exception as e:
-            print(_('failed to write'), default_persistent_path, e)
+            print(_('failed to write'), 'pypilot.conf', e)
 
 class pypilotServer(object):
     def __init__(self):
