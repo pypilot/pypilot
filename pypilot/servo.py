@@ -10,8 +10,8 @@
 import os, math, sys, time
 import select, serial
 
-import pyjson
-from client import pypilotClient
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from values import *
 import autopilot
 import serialprobe
@@ -243,7 +243,7 @@ class Servo(object):
         self.motor_temp = self.register(TimeoutSensorValue, 'motor_temp')
 
         self.engaged = self.register(BooleanValue, 'engaged', False)
-        self.max_current = self.register(RangeSetting, 'max_current', 7, 0, 50, 'amps')
+        self.max_current = self.register(RangeSetting, 'max_current', 4.5, 0, 50, 'amps')
         self.current.factor = self.register(RangeProperty, 'current.factor', 1, 0.8, 1.2, persistent=True)
         self.current.offset = self.register(RangeProperty, 'current.offset', 0, -1.2, 1.2, persistent=True)
         self.voltage.factor = self.register(RangeProperty, 'voltage.factor', 1, 0.8, 1.2, persistent=True)
@@ -710,6 +710,7 @@ class Servo(object):
         return self.driver.fault()
 
     def load_calibration(self):
+        import pyjson
         try:
             filename = Servo.calibration_filename
             print(_('loading servo calibration'), filename)
@@ -757,6 +758,8 @@ def main():
     print('pypilot Servo')
     from server import pypilotServer
     server = pypilotServer()
+
+    from client import pypilotClient
     client = pypilotClient(server)
 
     from sensors import Sensors # for rudder feedback
