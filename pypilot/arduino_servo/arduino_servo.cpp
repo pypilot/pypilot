@@ -188,7 +188,7 @@ int ArduinoServo::process_packet(uint8_t *in_buf)
 int ArduinoServo::poll()
 {
     if (!(flags & SYNC)) {
-        raw_command(1000); // ensure we set the temp limits as well here
+        disengage();
         nosync_count++;
         if(nosync_count >= 400 && !nosync_data) {
             printf("arduino servo fail no data\n");

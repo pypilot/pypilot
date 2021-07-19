@@ -594,7 +594,7 @@ class Servo(object):
                 print('arduino servo ' + _('found'), device_path)
                 serialprobe.success('servo', device_path)
                 self.controller.set('arduino')
-                self.driver.command(0)
+                self.driver.disengage()
 
 
         if result & ServoTelemetry.VOLTAGE:
