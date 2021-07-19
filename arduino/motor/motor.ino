@@ -203,7 +203,7 @@ uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 
 
 //#define clutch_on PORTB |= _BV(PB3)
 //#define clutch_off PORTB &= ~_BV(PB3)
-uint8_t clutch_pwm = 255, clutch_start_time;
+uint8_t clutch_pwm = 192, clutch_start_time;
 
 #define USE_ADC_ISR 0 // set to 1 to use interrupt (recommend 0)
 

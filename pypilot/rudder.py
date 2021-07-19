@@ -216,6 +216,8 @@ class Rudder(Sensor):
         angle = scale*raw + offset + nonlinearity*(self.minmax[0]-raw)*(self.minmax[1]-raw)
         angle = round(angle, 2) # 2 decimal for rudder angle is enough
         self.angle.set(angle)
+        
+        #print(angle, raw, scale, offset, nonlinearity)
 
         t = time.monotonic()
         dt = t - self.last_time
