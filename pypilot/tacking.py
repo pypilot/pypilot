@@ -46,15 +46,29 @@ class TackSensorLog(object):
             avg += d
 
         avg /= len(self.log)
-        if avg <= 0:
-            starboard = False
-        if avg >= 0:
-            port = False
 
         if starboard:
             return 'starboard'
         if port:
             return 'port'
+
+
+class TackDirection(EnumProperty):
+    def __init__(self, name):
+        super(TackDirection, self).__init__(name, 'port', ['port', 'starboard'])
+        self.auto = True
+
+    def set(self, value):
+        super(TackDirection, self).set(value)
+        self.auto = False
+
+    def auto_update(self, value):
+        if self.auto and self.value != value:
+            super(TackDirection, self).set(value)
+
+    def toggle(self):
+        super(TackDirection, self).set('port' if self.value == 'starboard' else 'starboard')
+        self.auto = True # allow automatic tack direction again
 
 
 class Tack(object):
@@ -72,10 +86,11 @@ class Tack(object):
 
         self.delay = self.register(RangeSetting, 'delay', 0, 0, 60, 'sec')
         self.angle = self.register(RangeSetting, 'angle', 100, 10, 180, 'deg')
-        self.rate = self.register(RangeSetting, 'rate', 20, 1, 100, 'deg/s')
+        self.rate = self.register(RangeSetting, 'rate', 15, 1, 100, 'deg/s')
         self.threshold = self.register(RangeSetting, 'threshold', 50, 10, 100, '%')
         self.count = self.register(ResettableValue, 'count', 0, persistent=True)
-        self.direction = self.register(EnumProperty, 'direction', 'port', ['port', 'starboard'])
+
+        self.direction = self.register(TackDirection, 'direction')
         self.current_direction = 'port'  # so user can't change while tacking
         self.time = time.monotonic()
 
@@ -102,9 +117,9 @@ class Tack(object):
             elif t - self.time > 30:
                 r = self.heel_log.update(ap.boatimu.heel)
 
-            #self.direction.update('port')
             if r:
-                self.direction.update(r)
+                self.direction.auto_update(r)
+            return # done
 
         # tacking initiated, enter waiting state
         if self.state.value == 'begin':
@@ -117,37 +132,40 @@ class Tack(object):
             remaining = self.delay.value - (t - self.time)
             if remaining > 0:
                 self.timeout.set(remaining)
-            else:
-                self.timeout.set(0)
-                self.state.update('tacking')
-                if 'wind' in ap.mode.value:
-                    command = abs(ap.heading_command.value)
-                    if self.current_direction == 'port':  # prevent toggling of up-wind side indicator
-                        ap.heading_command.set(resolv(-command, 0))
-                        self.state.update('none')
-                    else:
-                        ap.heading_command.set(resolv(command, 0))
-                        self.state.update('none')
-                else:
-                    self.tack_angle = self.angle.value
+                return
 
+            self.timeout.set(0)
+            self.state.update('tacking')
+            self.tack_angle = self.angle.value
+
+            
         # tacking, moving rudder continuously at tack rate
-        if self.state.value == 'tacking' and 'wind' not in ap.mode.value:
-            mul = -1 if self.current_direction == 'port' else 1
+        if self.state.value == 'tacking':
             # command servo to turn boat at tack rate
+            command = ap.heading_command.value
+            heading = ap.boatimu.SensorValues['heading_lowpass'].value
             headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
             headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
 
-            # for now very simple fixed PD filter on turn rate for tacking
-            P = headingrate - mul * self.rate.value
-            D = headingraterate
-            command = .1 * P + .1 * D
-            print('command: ', command)
-            ap.servo.do_command(command)
+            if 'wind' in ap.mode.value:
+                d = .5 - 2*heading / command
+                tack_heading = -command
+                direction = 1 if command < 0 else -1
+            else:
+                direction = 1 if self.current_direction == 'port' else -1
+                tack_heading = command - direction * self.tack_angle
+                d = direction * (command - resolv(heading, command)) / self.tack_angle
 
-            heading_command = ap.heading_command.value
-            heading_command -= mul * self.tack_angle
-            ap.heading_command.set(resolv(heading_command, 180))
-            self.state.update('none')
+            # see if we passed the tack user defined tack threshold
+            if 100*d > self.threshold.value:
+                self.state.update('none')
+                self.direction.toggle()
+                ap.heading_command.set(tack_heading)
+                return
 
-        return self.state.value == 'tacking'
+            # for now very simple filter based on turn rate for tacking
+            command = (headingrate + headingraterate/2)/self.rate.value + direction
+            
+            command = min(max(command, -1), 1) # do not cause integrator windup
+            ap.servo.command.set(command)
+            return True # ensure current pilot is overridden
