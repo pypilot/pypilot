@@ -361,7 +361,7 @@ class info(page):
         elif self.page == 1:
             spacing = .11
             v = self.round_last_val('servo.voltage', 3)
-            rate = self.round_last_val('imu.frequency', 2)
+            rate = self.round_last_valw('imu.frequency', 2)
             uptime = self.last_val('imu.uptime')[:7]
             items = [_('voltage'), v, _('rate'), rate, _('uptime'), uptime]
         elif self.page == 2:
@@ -522,6 +522,7 @@ class control(controlbase):
         self.ap_heading_command_time = gettime()-5
         self.ap_heading_command = 0
         self.resetmanualkeystate()
+        self.tack_hint = 0, ''
 
     def get_ap_heading_command(self):
         if gettime() - self.ap_heading_command_time < 5:
@@ -696,6 +697,16 @@ class control(controlbase):
                 r = rectangle(0, .4, 1, .34)
                 self.fittext(r, _('standby'), False, black)
                 self.control['heading_command'] = 'standby'
+        elif self.last_val('ap.tack.state') != 'none':
+            r = rectangle(0, .4, 1, .34)
+            d = self.last_val('ap.tack.direction')
+            if self.last_val('ap.tack.state') == 'waiting':
+                msg = _('tack') + ' ' + str(self.last_val('ap.tack.timeout'))
+            else:
+                msg = _('tacking') + ' ' + d[0].upper()
+            if self.control['heading_command'] != msg:
+                self.fittext(r, msg, False, black)
+                self.control['heading_command'] = msg
         elif self.control['heading_command'] != ap_heading_command:
             heading_command = ap_heading_command, mode, nr(ap_heading_command)
             draw_heading(.4, heading_command, self.control['heading_command'])
@@ -749,9 +760,14 @@ class control(controlbase):
             return
 
         if self.testkeydown(TACK):
-            # in wind mode just tack
-            # in other modes look for lspeed of keys was port or starboard
-            print('tacking not implemented here yet', TACK)
+            if self.last_val('ap.tack.state') == 'none':
+                t, direction = self.tack_hint
+                if time.monotonic() - t < 3:
+                    self.set('ap.tack.direction', 'starboard' if direction > 0 else 'port')
+                self.set('ap.tack.state', 'begin')
+            else:
+                self.set('ap.tack.state', 'none')
+            return
                         
         if self.last_val('ap.enabled'):
             keys = {SMALL_STARBOARD : (0, 1),
@@ -789,6 +805,7 @@ class control(controlbase):
                     sign = keys[key][1]
                     change = float(change)
                     cmd = self.manualkeystate['command'] + sign*change
+                    self.tack_hint = time.monotonic(), sign
                     self.set_ap_heading_command(cmd)
 
         else: # manual control
