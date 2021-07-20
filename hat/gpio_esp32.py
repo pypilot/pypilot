@@ -45,7 +45,7 @@ def handle_pin(pin, i, lcd):
         v = not v
     if not v:
         lcd.keypress = True
-    print('update key', i, v)
+        #print('update key', i, v)
     key.update(v)
             
 keypad_pins = []

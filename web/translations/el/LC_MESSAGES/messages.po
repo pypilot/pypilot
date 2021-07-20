@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-05-09 21:52-0400\n"
+"POT-Creation-Date: 2021-07-20 05:26-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -17,6 +17,42 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.6.0\n"
+
+#: static/pypilot_control.js:37
+msgid "Not Connected"
+msgstr "Μη συνδεδεμένο"
+
+#: static/pypilot_control.js:68
+msgid "Connected"
+msgstr "Συνδεδεμένος"
+
+#: static/pypilot_control.js:170
+msgid "Disconnected"
+msgstr "Ασύνδετος"
+
+#: static/pypilot_control.js:240
+msgid "compass or gyro failure!"
+msgstr "αποτυχία πυξίδας ή γυροσκοπίων!"
+
+#: static/pypilot_control.js:253
+msgid "Tack"
+msgstr "Καρφάκι"
+
+#: static/pypilot_control.js:256
+msgid "Cancel"
+msgstr "Ματαίωση"
+
+#: static/pypilot_control.js:315
+msgid "Engaged"
+msgstr "Αρραβωνιασμένος"
+
+#: static/pypilot_control.js:317
+msgid "Disengaged"
+msgstr "Απεμπλοκή"
+
+#: static/pypilot_control.js:386
+msgid "no motor controller!"
+msgstr "χωρίς ελεγκτή κινητήρα!"
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
@@ -34,129 +70,129 @@ msgstr ""
 msgid "Connection"
 msgstr "Σύνδεση"
 
-#: templates/index.html:21
+#: templates/index.html:30
 msgid "Control"
 msgstr "Ελεγχος"
 
-#: templates/index.html:24
+#: templates/index.html:33
 msgid "Gain"
 msgstr "Κέρδος"
 
-#: templates/index.html:27
+#: templates/index.html:36
 msgid "Calibration"
 msgstr "Βαθμονόμηση"
 
-#: templates/index.html:30
+#: templates/index.html:39
 msgid "Configuration"
 msgstr "Διαμόρφωση"
 
-#: templates/index.html:33
+#: templates/index.html:42
 msgid "Statistics"
 msgstr "Στατιστική"
 
-#: templates/index.html:48
+#: templates/index.html:55
 msgid "Heading"
 msgstr "Επικεφαλίδα"
 
-#: templates/index.html:50
+#: templates/index.html:57
 msgid "Command"
 msgstr "Εντολή"
 
-#: templates/index.html:89
+#: templates/index.html:111
 msgid "Magnetic Heading"
 msgstr "Μαγνητική επικεφαλίδα"
 
-#: templates/index.html:90
+#: templates/index.html:112
 msgid "Pitch"
 msgstr "Πίσσα"
 
-#: templates/index.html:91
+#: templates/index.html:113
 msgid "Roll"
 msgstr "Ρολό"
 
-#: templates/index.html:92
+#: templates/index.html:114
 msgid "Press"
 msgstr "Τύπος"
 
-#: templates/index.html:92
+#: templates/index.html:114
 msgid "here"
 msgstr "εδώ"
 
-#: templates/index.html:93
+#: templates/index.html:115
 msgid "when the boat is level to align the inertial sensors."
 msgstr ""
 "όταν το σκάφος είναι επίπεδο για να ευθυγραμμίσει τους αδρανειακούς "
 "αισθητήρες."
 
-#: templates/index.html:98
+#: templates/index.html:120
 msgid "Magnetic Heading Offset"
 msgstr "Μαγνητική μετατόπιση κεφαλίδας"
 
-#: templates/index.html:100
+#: templates/index.html:122
 msgid "Lock Calibration"
 msgstr "Κλείδωμα βαθμονόμησης"
 
-#: templates/index.html:102
+#: templates/index.html:124
 msgid "calibration plot"
 msgstr "πλοκή βαθμονόμησης"
 
-#: templates/index.html:104
+#: templates/index.html:126
 msgid "Rudder"
 msgstr "Πηδάλιο"
 
-#: templates/index.html:106
+#: templates/index.html:128
 msgid "centered"
 msgstr "στο κέντρο"
 
-#: templates/index.html:107
+#: templates/index.html:129
 msgid "port range"
 msgstr "σειρά λιμένων"
 
-#: templates/index.html:108
+#: templates/index.html:130
 msgid "starboard range"
 msgstr "ευρεία γκάμα"
 
-#: templates/index.html:109 templates/index.html:131
+#: templates/index.html:131 templates/index.html:153
 msgid "reset"
 msgstr "επαναφορά"
 
-#: templates/index.html:112
+#: templates/index.html:134
 msgid "Rudder Range"
 msgstr "Rudder Range"
 
-#: templates/index.html:113
+#: templates/index.html:135
 msgid "Degrees"
 msgstr "Βαθμοί"
 
-#: templates/index.html:119
+#: templates/index.html:141
 msgid "Display"
 msgstr "Απεικόνιση"
 
-#: templates/index.html:120
+#: templates/index.html:142
 msgid "Clear"
 msgstr "Σαφή"
 
-#: templates/index.html:121
+#: templates/index.html:143
 msgid "Dark"
 msgstr "Σκοτάδι"
 
-#: templates/index.html:129
+#: templates/index.html:151
 msgid "Amp Hours"
 msgstr "Ώρες ενισχυτή"
 
-#: templates/index.html:132
+#: templates/index.html:154
 msgid "Voltage"
 msgstr "Τάση"
 
-#: templates/index.html:133
+#: templates/index.html:155
 msgid "Controller temperature"
 msgstr "Θερμοκρασία ελεγκτή"
 
-#: templates/index.html:134
+#: templates/index.html:156
 msgid "Runtime"
 msgstr "Χρόνος εκτέλεσης"
 
-#: templates/index.html:135
+#: templates/index.html:157
 msgid "Servo"
 msgstr "Σέρβο"
 

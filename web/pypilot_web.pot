@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-05-09 21:52-0400\n"
+"POT-Creation-Date: 2021-07-20 05:26-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,42 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.6.0\n"
+
+#: static/pypilot_control.js:37
+msgid "Not Connected"
+msgstr ""
+
+#: static/pypilot_control.js:68
+msgid "Connected"
+msgstr ""
+
+#: static/pypilot_control.js:170
+msgid "Disconnected"
+msgstr ""
+
+#: static/pypilot_control.js:240
+msgid "compass or gyro failure!"
+msgstr ""
+
+#: static/pypilot_control.js:253
+msgid "Tack"
+msgstr ""
+
+#: static/pypilot_control.js:256
+msgid "Cancel"
+msgstr ""
+
+#: static/pypilot_control.js:315
+msgid "Engaged"
+msgstr ""
+
+#: static/pypilot_control.js:317
+msgid "Disengaged"
+msgstr ""
+
+#: static/pypilot_control.js:386
+msgid "no motor controller!"
+msgstr ""
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
@@ -31,127 +67,127 @@ msgstr ""
 msgid "Connection"
 msgstr ""
 
-#: templates/index.html:21
+#: templates/index.html:30
 msgid "Control"
 msgstr ""
 
-#: templates/index.html:24
+#: templates/index.html:33
 msgid "Gain"
 msgstr ""
 
-#: templates/index.html:27
+#: templates/index.html:36
 msgid "Calibration"
 msgstr ""
 
-#: templates/index.html:30
+#: templates/index.html:39
 msgid "Configuration"
 msgstr ""
 
-#: templates/index.html:33
+#: templates/index.html:42
 msgid "Statistics"
 msgstr ""
 
-#: templates/index.html:48
+#: templates/index.html:55
 msgid "Heading"
 msgstr ""
 
-#: templates/index.html:50
+#: templates/index.html:57
 msgid "Command"
 msgstr ""
 
-#: templates/index.html:89
+#: templates/index.html:111
 msgid "Magnetic Heading"
 msgstr ""
 
-#: templates/index.html:90
+#: templates/index.html:112
 msgid "Pitch"
 msgstr ""
 
-#: templates/index.html:91
+#: templates/index.html:113
 msgid "Roll"
 msgstr ""
 
-#: templates/index.html:92
+#: templates/index.html:114
 msgid "Press"
 msgstr ""
 
-#: templates/index.html:92
+#: templates/index.html:114
 msgid "here"
 msgstr ""
 
-#: templates/index.html:93
+#: templates/index.html:115
 msgid "when the boat is level to align the inertial sensors."
 msgstr ""
 
-#: templates/index.html:98
+#: templates/index.html:120
 msgid "Magnetic Heading Offset"
 msgstr ""
 
-#: templates/index.html:100
+#: templates/index.html:122
 msgid "Lock Calibration"
 msgstr ""
 
-#: templates/index.html:102
+#: templates/index.html:124
 msgid "calibration plot"
 msgstr ""
 
-#: templates/index.html:104
+#: templates/index.html:126
 msgid "Rudder"
 msgstr ""
 
-#: templates/index.html:106
+#: templates/index.html:128
 msgid "centered"
 msgstr ""
 
-#: templates/index.html:107
+#: templates/index.html:129
 msgid "port range"
 msgstr ""
 
-#: templates/index.html:108
+#: templates/index.html:130
 msgid "starboard range"
 msgstr ""
 
-#: templates/index.html:109 templates/index.html:131
+#: templates/index.html:131 templates/index.html:153
 msgid "reset"
 msgstr ""
 
-#: templates/index.html:112
+#: templates/index.html:134
 msgid "Rudder Range"
 msgstr ""
 
-#: templates/index.html:113
+#: templates/index.html:135
 msgid "Degrees"
 msgstr ""
 
-#: templates/index.html:119
+#: templates/index.html:141
 msgid "Display"
 msgstr ""
 
-#: templates/index.html:120
+#: templates/index.html:142
 msgid "Clear"
 msgstr ""
 
-#: templates/index.html:121
+#: templates/index.html:143
 msgid "Dark"
 msgstr ""
 
-#: templates/index.html:129
+#: templates/index.html:151
 msgid "Amp Hours"
 msgstr ""
 
-#: templates/index.html:132
+#: templates/index.html:154
 msgid "Voltage"
 msgstr ""
 
-#: templates/index.html:133
+#: templates/index.html:155
 msgid "Controller temperature"
 msgstr ""
 
-#: templates/index.html:134
+#: templates/index.html:156
 msgid "Runtime"
 msgstr ""
 
-#: templates/index.html:135
+#: templates/index.html:157
 msgid "Servo"
 msgstr ""
 

@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, sys, os
+import sys, os
 from flask import Flask, render_template, session, request, Markup
 
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
@@ -58,8 +58,6 @@ except Exception as e:
     app.jinja_env.globals.update(_=_)
     babel = None
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 @app.route('/wifi', methods=['GET', 'POST'])
 def wifi():
     networking = '/home/tc/.pypilot/networking.txt'
@@ -103,9 +101,22 @@ def wifi():
 def calibrationplot():
     return render_template('calibrationplot.html', async_mode=socketio.async_mode,pypilot_web_port=pypilot_web_port)
 
+translations = []
+static = False
+with open(os.path.dirname(os.path.abspath(__file__)) + '/pypilot_web.pot') as f:
+    for line in f:
+        if line.startswith('#: static'):
+            static = True
+        elif line.startswith('#:'):
+            static = False
+        elif static and line.startswith('msgid'):
+            s = line[7:-2]
+            if s:
+                translations.append(s)
+
 @app.route('/')
 def index():
-    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot.tinypilot)
+    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot.tinypilot, translations=translations)
 
 class pypilotWeb(Namespace):
     def __init__(self, name):

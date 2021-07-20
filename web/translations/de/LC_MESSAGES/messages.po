@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-05-09 21:52-0400\n"
+"POT-Creation-Date: 2021-07-20 05:26-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -17,6 +17,42 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.6.0\n"
+
+#: static/pypilot_control.js:37
+msgid "Not Connected"
+msgstr "Nicht verbunden"
+
+#: static/pypilot_control.js:68
+msgid "Connected"
+msgstr "In Verbindung gebracht"
+
+#: static/pypilot_control.js:170
+msgid "Disconnected"
+msgstr "Getrennt"
+
+#: static/pypilot_control.js:240
+msgid "compass or gyro failure!"
+msgstr "Kompass- oder Kreiselfehler!"
+
+#: static/pypilot_control.js:253
+msgid "Tack"
+msgstr "Heftzwecke"
+
+#: static/pypilot_control.js:256
+msgid "Cancel"
+msgstr "Stornieren"
+
+#: static/pypilot_control.js:315
+msgid "Engaged"
+msgstr "Beschäftigt, verlobt"
+
+#: static/pypilot_control.js:317
+msgid "Disengaged"
+msgstr "Ausgeschaltet"
+
+#: static/pypilot_control.js:386
+msgid "no motor controller!"
+msgstr "keine Motorsteuerung!"
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
@@ -34,127 +70,127 @@ msgstr ""
 msgid "Connection"
 msgstr "Verbindung"
 
-#: templates/index.html:21
+#: templates/index.html:30
 msgid "Control"
 msgstr "Steuerung"
 
-#: templates/index.html:24
+#: templates/index.html:33
 msgid "Gain"
 msgstr "Dazugewinnen"
 
-#: templates/index.html:27
+#: templates/index.html:36
 msgid "Calibration"
 msgstr "Kalibrierung"
 
-#: templates/index.html:30
+#: templates/index.html:39
 msgid "Configuration"
 msgstr "Aufbau"
 
-#: templates/index.html:33
+#: templates/index.html:42
 msgid "Statistics"
 msgstr "Statistiken"
 
-#: templates/index.html:48
+#: templates/index.html:55
 msgid "Heading"
 msgstr "Überschrift"
 
-#: templates/index.html:50
+#: templates/index.html:57
 msgid "Command"
 msgstr "Befehl"
 
-#: templates/index.html:89
+#: templates/index.html:111
 msgid "Magnetic Heading"
 msgstr "Magnetische Überschrift"
 
-#: templates/index.html:90
+#: templates/index.html:112
 msgid "Pitch"
 msgstr "Tonhöhe"
 
-#: templates/index.html:91
+#: templates/index.html:113
 msgid "Roll"
 msgstr "Rollen"
 
-#: templates/index.html:92
+#: templates/index.html:114
 msgid "Press"
 msgstr "Drücken Sie"
 
-#: templates/index.html:92
+#: templates/index.html:114
 msgid "here"
 msgstr "Hier"
 
-#: templates/index.html:93
+#: templates/index.html:115
 msgid "when the boat is level to align the inertial sensors."
 msgstr "wenn das Boot waagerecht ist, um die Trägheitssensoren auszurichten."
 
-#: templates/index.html:98
+#: templates/index.html:120
 msgid "Magnetic Heading Offset"
 msgstr "Magnetischer Kursversatz"
 
-#: templates/index.html:100
+#: templates/index.html:122
 msgid "Lock Calibration"
 msgstr "Sperren Sie die Kalibrierung"
 
-#: templates/index.html:102
+#: templates/index.html:124
 msgid "calibration plot"
 msgstr "Kalibrierungsdiagramm"
 
-#: templates/index.html:104
+#: templates/index.html:126
 msgid "Rudder"
 msgstr "Ruder"
 
-#: templates/index.html:106
+#: templates/index.html:128
 msgid "centered"
 msgstr "zentriert"
 
-#: templates/index.html:107
+#: templates/index.html:129
 msgid "port range"
 msgstr "Portbereich"
 
-#: templates/index.html:108
+#: templates/index.html:130
 msgid "starboard range"
 msgstr "Steuerbord Reichweite"
 
-#: templates/index.html:109 templates/index.html:131
+#: templates/index.html:131 templates/index.html:153
 msgid "reset"
 msgstr "zurücksetzen"
 
-#: templates/index.html:112
+#: templates/index.html:134
 msgid "Rudder Range"
 msgstr "Ruderbereich"
 
-#: templates/index.html:113
+#: templates/index.html:135
 msgid "Degrees"
 msgstr "Grad"
 
-#: templates/index.html:119
+#: templates/index.html:141
 msgid "Display"
 msgstr "Anzeige"
 
-#: templates/index.html:120
+#: templates/index.html:142
 msgid "Clear"
 msgstr "klar"
 
-#: templates/index.html:121
+#: templates/index.html:143
 msgid "Dark"
 msgstr "Dunkel"
 
-#: templates/index.html:129
+#: templates/index.html:151
 msgid "Amp Hours"
 msgstr "Ampere Stunden"
 
-#: templates/index.html:132
+#: templates/index.html:154
 msgid "Voltage"
 msgstr "Stromspannung"
 
-#: templates/index.html:133
+#: templates/index.html:155
 msgid "Controller temperature"
 msgstr "Reglertemperatur"
 
-#: templates/index.html:134
+#: templates/index.html:156
 msgid "Runtime"
 msgstr "Laufzeit"
 
-#: templates/index.html:135
+#: templates/index.html:157
 msgid "Servo"
 msgstr "Servo"
 

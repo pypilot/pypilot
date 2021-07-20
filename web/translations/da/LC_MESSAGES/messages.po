@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-05-09 21:52-0400\n"
+"POT-Creation-Date: 2021-07-20 05:26-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: da\n"
@@ -17,6 +17,42 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.6.0\n"
+
+#: static/pypilot_control.js:37
+msgid "Not Connected"
+msgstr "Ikke forbundet"
+
+#: static/pypilot_control.js:68
+msgid "Connected"
+msgstr "Forbundet"
+
+#: static/pypilot_control.js:170
+msgid "Disconnected"
+msgstr "Afbrudt"
+
+#: static/pypilot_control.js:240
+msgid "compass or gyro failure!"
+msgstr "kompas eller gyrofejl!"
+
+#: static/pypilot_control.js:253
+msgid "Tack"
+msgstr "Tack"
+
+#: static/pypilot_control.js:256
+msgid "Cancel"
+msgstr "Afbestille"
+
+#: static/pypilot_control.js:315
+msgid "Engaged"
+msgstr "Beskæftiget"
+
+#: static/pypilot_control.js:317
+msgid "Disengaged"
+msgstr "Frakoblet"
+
+#: static/pypilot_control.js:386
+msgid "no motor controller!"
+msgstr "ingen motor controller!"
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
@@ -34,127 +70,127 @@ msgstr ""
 msgid "Connection"
 msgstr "Forbindelse"
 
-#: templates/index.html:21
+#: templates/index.html:30
 msgid "Control"
 msgstr "Styring"
 
-#: templates/index.html:24
+#: templates/index.html:33
 msgid "Gain"
 msgstr "Gevinst"
 
-#: templates/index.html:27
+#: templates/index.html:36
 msgid "Calibration"
 msgstr "Kalibrering"
 
-#: templates/index.html:30
+#: templates/index.html:39
 msgid "Configuration"
 msgstr "Konfiguration"
 
-#: templates/index.html:33
+#: templates/index.html:42
 msgid "Statistics"
 msgstr "Statistikker"
 
-#: templates/index.html:48
+#: templates/index.html:55
 msgid "Heading"
 msgstr "Overskrift"
 
-#: templates/index.html:50
+#: templates/index.html:57
 msgid "Command"
 msgstr "Kommando"
 
-#: templates/index.html:89
+#: templates/index.html:111
 msgid "Magnetic Heading"
 msgstr "Magnetisk overskrift"
 
-#: templates/index.html:90
+#: templates/index.html:112
 msgid "Pitch"
 msgstr "Tonehøjde"
 
-#: templates/index.html:91
+#: templates/index.html:113
 msgid "Roll"
 msgstr "Rulle"
 
-#: templates/index.html:92
+#: templates/index.html:114
 msgid "Press"
 msgstr "Trykke"
 
-#: templates/index.html:92
+#: templates/index.html:114
 msgid "here"
 msgstr "her"
 
-#: templates/index.html:93
+#: templates/index.html:115
 msgid "when the boat is level to align the inertial sensors."
 msgstr "når båden er plan for at justere inertisensorerne."
 
-#: templates/index.html:98
+#: templates/index.html:120
 msgid "Magnetic Heading Offset"
 msgstr "Magnetisk kursforskydning"
 
-#: templates/index.html:100
+#: templates/index.html:122
 msgid "Lock Calibration"
 msgstr "Lås kalibrering"
 
-#: templates/index.html:102
+#: templates/index.html:124
 msgid "calibration plot"
 msgstr "kalibreringsplot"
 
-#: templates/index.html:104
+#: templates/index.html:126
 msgid "Rudder"
 msgstr "Ror"
 
-#: templates/index.html:106
+#: templates/index.html:128
 msgid "centered"
 msgstr "centreret"
 
-#: templates/index.html:107
+#: templates/index.html:129
 msgid "port range"
 msgstr "port rækkevidde"
 
-#: templates/index.html:108
+#: templates/index.html:130
 msgid "starboard range"
 msgstr "styrbord rækkevidde"
 
-#: templates/index.html:109 templates/index.html:131
+#: templates/index.html:131 templates/index.html:153
 msgid "reset"
 msgstr "Nulstil"
 
-#: templates/index.html:112
+#: templates/index.html:134
 msgid "Rudder Range"
 msgstr "Ror rækkevidde"
 
-#: templates/index.html:113
+#: templates/index.html:135
 msgid "Degrees"
 msgstr "Grader"
 
-#: templates/index.html:119
+#: templates/index.html:141
 msgid "Display"
 msgstr "Skærm"
 
-#: templates/index.html:120
+#: templates/index.html:142
 msgid "Clear"
 msgstr "Klar"
 
-#: templates/index.html:121
+#: templates/index.html:143
 msgid "Dark"
 msgstr "Mørk"
 
-#: templates/index.html:129
+#: templates/index.html:151
 msgid "Amp Hours"
 msgstr "Forstærker timer"
 
-#: templates/index.html:132
+#: templates/index.html:154
 msgid "Voltage"
 msgstr "Spænding"
 
-#: templates/index.html:133
+#: templates/index.html:155
 msgid "Controller temperature"
 msgstr "Regulatorens temperatur"
 
-#: templates/index.html:134
+#: templates/index.html:156
 msgid "Runtime"
 msgstr "Kørselstid"
 
-#: templates/index.html:135
+#: templates/index.html:157
 msgid "Servo"
 msgstr "Servo"
 

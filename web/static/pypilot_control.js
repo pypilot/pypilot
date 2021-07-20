@@ -34,7 +34,7 @@ currentTab="Control";
 $(document).ready(function() {
     namespace = '';
     $('#ping-pong').text("N/A");
-    $('#connection').text('Not Connected');
+    $('#connection').text(_('Not Connected'));
     $('#imu_heading').text("N/A");
     $('#pitch').text("N/A");
     $('#roll').text("N/A");
@@ -65,14 +65,14 @@ $(document).ready(function() {
     socket.on('pypilot_values', function(msg) {
         watches = {};
         var list_values = JSON.parse(msg);
-        $('#connection').text('Connected');
+        $('#connection').text(_('Connected'));
         $('#aperrors0').text("");
         $('#aperrors1').text("");
 
         // control
         pypilot_watch('ap.enabled');
         pypilot_watch('ap.mode');
-        pypilot_watch('ap.tack.timeout');
+        pypilot_watch('ap.tack.timeout', .25);
         pypilot_watch('ap.tack.state');
         pypilot_watch('ap.tack.direction');
 
@@ -167,7 +167,7 @@ $(document).ready(function() {
     });
 
     socket.on('pypilot_disconnect', function() {
-        $('#connection').text('Disconnected')
+        $('#connection').text(_('Disconnected'))
     });
 
     // update manual servo command
@@ -237,17 +237,26 @@ $(document).ready(function() {
         if('ap.heading' in data) {
             heading = data['ap.heading'];
             if(heading.toString()=="false")
-                $('#aperrors0').text('compass or gyro failure!');
+                $('#aperrors0').text(_('compass or gyro failure!'));
             else
                 $('#aperrors0').text('');
             $('#heading').text(heading_str(heading));
         }
 
         if('ap.tack.timeout' in data)
-            $('#tack_timeout').text(data['ap.tack.timeout']);
+            $('#tack_timeout').text(Math.round(10*data['ap.tack.timeout'])/10);
 
-        if('ap.tack.state' in data)
-            $('#tack_state').text(data['ap.tack.state']);
+        if('ap.tack.state' in data) {
+            value = data['ap.tack.state'];
+            $('#tack_state').text(value);
+            if(value == 'none') {
+                $('#tack_button').text(_('Tack'))
+                $('#tack_button').attr('state', 'tack')
+            } else {
+                $('#tack_button').text(_('Cancel'))
+                $('#tack_button').attr('state', 'none')
+            }
+        }
         
         if('ap.tack.direction' in data) {
             value = data['ap.tack.direction'];
@@ -303,9 +312,9 @@ $(document).ready(function() {
 
         if('servo.engaged' in data) {
             if(data['servo.engaged'])
-                $('#servo_engaged').text('Engaged');
+                $('#servo_engaged').text(_('Engaged'));
             else
-                $('#servo_engaged').text('Disengaged');
+                $('#servo_engaged').text(_('Disengaged'));
         }
 
         // calibration
@@ -374,7 +383,7 @@ $(document).ready(function() {
         if('servo.controller' in data) {
             value = data['servo.controller'];
             if(value == 'none')
-                $('#aperrors1').text('no motor controller!');
+                $('#aperrors1').text(_('no motor controller!'));
             else
                 $('#aperrors1').text('');
         }
@@ -433,7 +442,10 @@ $(document).ready(function() {
 
     $('#tack_button').click(function(event) {
         direction = $('#tack_direction').val();
-        pypilot_set('ap.tack.state', 'begin');
+        if($('#tack_button').attr('state') == 'tack')
+            pypilot_set('ap.tack.state', 'begin');
+        else
+            pypilot_set('ap.tack.state', 'none');
     });
 
     $('#tack_direction').change(function(event) {
