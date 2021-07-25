@@ -102,6 +102,7 @@ class lirc(object):
             self.lastkey = key
             self.lastcount = count
             self.lasttime = t
+            #print('lirc', key, count, time.monotonic())
             events.append((key, count))
 
         # timeout keyup

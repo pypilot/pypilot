@@ -310,7 +310,9 @@ class page(object):
         return sign * speed
 
     def set(self, name, value):
+        #print('set', name, value, time.monotonic())
         self.lcd.client.set(name, value)
+        self.lcd.client.poll() # reduce lag
 
     def display(self, refresh):
         pass # some pages only perform an action

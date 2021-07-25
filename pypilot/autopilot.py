@@ -89,6 +89,7 @@ class Autopilot(object):
         self.preferred_mode = self.register(Value, 'preferred_mode', 'compass')
         self.lastmode = False    
         self.mode.ap = self
+        self.dt = 0
         
         self.heading_command = self.register(HeadingProperty, 'heading_command', self.mode)
         self.enabled = self.register(BooleanProperty, 'enabled', False)
@@ -298,13 +299,16 @@ class Autopilot(object):
         t0 = time.monotonic()
 
         self.server.poll() # needed if not multiprocessed
-        msgs = self.client.receive()
+        msgs = self.client.receive(self.dt)
         for msg in msgs: # we aren't usually subscribed to anything
             print('autopilot main process received:', msg, msgs[msg])
 
+        if not self.enabled.value:
+            self.servo.poll()
+
         t1 = time.monotonic()
         period = 1/self.boatimu.rate.value
-        if t1 - t0 > period/2:
+        if t1 - t0 > period/2 + self.dt:
             print(_('server/client is running too _slowly_'), t1-t0)
 
         self.sensors.poll()
@@ -363,7 +367,8 @@ class Autopilot(object):
         if t4-t3 > period/2:
             print(_('autopilot routine is running too _slowly_'), t4-t3)
 
-        self.servo.poll()
+        if self.enabled.value:
+            self.servo.poll()
         t5 = time.monotonic()
         if t5-t4 > period/2 and self.servo.driver:
             print(_('servo is running too _slowly_'), t5-t4)
@@ -378,7 +383,10 @@ class Autopilot(object):
             dt = period - (time.monotonic() - t0) + sp
             if dt >= period or dt <= 0:
                 break
+
             time.sleep(dt)
+            # do waiting in client if not enabled to reduce lag
+            self.dt = 0 if self.enabled.value else dt*.8
 
 def main():
     ap = Autopilot()

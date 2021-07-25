@@ -1,40 +1,69 @@
-#!/usr/bin/env python
-#
-#   Copyright (C) 2016 Sean D'Epagnier
-#
-# This Program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public
-# License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+from arduino import arduino
+import sys, time
 
-import os
-import ugfx
-import glut
+from pypilot.servo import Servo
 
-white = ugfx.color(255, 255, 255)
-black = ugfx.color(0, 0, 0)
+from pypilot import server, client
 
-use_glut = 'DISPLAY' in os.environ
+def main():
+    for i in range(len(sys.argv)):
+        if sys.argv[i] == '-t':
+            if len(sys.argv) < i + 2:
+                print(_('device needed for option') + ' -t')
+                exit(1)
+            test(sys.argv[i+1])
+    
+    print('pypilot Servo')
+    from server import pypilotServer
+    server = pypilotServer()
 
-if use_glut:
-    screen = glut.screen()
-else:
-    screen = ugfx.screen("/dev/fb0")
+    from client import pypilotClient
+    client = pypilotClient(server)
 
-c, d = black, white
-x, w = 0, 400
-while w >= 100:
-    screen.box(x, x, x+w, x+w, c)
-    x += 2
-    w -= 4
-    c, d = d, c
+    from sensors import Sensors # for rudder feedback
+    sensors = Sensors(client)
+    servo = Servo(client, sensors)
 
-screen.invert(100, 100, 200, 200)
 
-import font
-font.draw(screen, (0, 0), "Hello!", 80, False)
+    print('initializing arduino')
+    config = {'host':'localhost','hat':{'arduino':{'device':'/dev/spidev0.1',
+                                                   'resetpin':'16'}},
+              'arduino.nmea.baud': 4800,
+              'arduino.nmea.in': False,
+              'arduino.nmea.out': False,
+              'arduino.ir': True,
+              'arduino.debug': True}
 
-print('type', str(type(screen)))
-if use_glut:
-    from OpenGL.GLUT import glutMainLoop
-    glutMainLoop()
+    a = arduino(config)
+    dt = 0
+    
+    period = 0.0
+    start = lastt = time.monotonic()
+    while True:
+
+        events = a.poll()
+        if events:
+            print(events)
+            for key, count in events:
+                if key != 'voltage':
+                    #print('go', time.monotonic())
+                    if count:
+                        servo.command.set(1)
+                    else:
+                        servo.command.set(0)
+
+        
+        servo.poll()
+        sensors.poll()
+        client.poll()
+        server.poll()        
+
+        dt = period - time.monotonic() + lastt
+        if dt > 0 and dt < period:
+            time.sleep(dt)
+            lastt += period
+        else:
+            lastt = time.monotonic()
+
+if __name__ == '__main__':
+    main()

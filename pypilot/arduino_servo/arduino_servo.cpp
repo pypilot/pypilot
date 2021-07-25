@@ -418,8 +418,8 @@ void ArduinoServo::send_params()
 
 void ArduinoServo::raw_command(uint16_t value)
 {
-    send_params();
     send_value(COMMAND_CODE, value);
+    send_params();
 }
 
 void ArduinoServo::reset()

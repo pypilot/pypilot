@@ -70,6 +70,7 @@ class ActionHeading(Action):
         else: # manual mode
             self.servo_timeout = time.monotonic() + abs(self.offset)**.5/2
             self.hat.client.set('servo.command', 1 if self.offset > 0 else -1)
+            self.hat.client.poll() # reduce lag
             
 class ActionTack(ActionPypilot):
     def  __init__(self, hat, name, direction):

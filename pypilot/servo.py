@@ -251,8 +251,8 @@ class Servo(object):
         self.max_controller_temp = self.register(RangeProperty, 'max_controller_temp', 60, 45, 80, persistent=True)
         self.max_motor_temp = self.register(RangeProperty, 'max_motor_temp', 60, 30, 80, persistent=True)
 
-        self.max_slew_speed = self.register(MaxRangeSetting, 'max_slew_speed', 18, 0, 100, '')
-        self.max_slew_slow = self.register(MinRangeSetting, 'max_slew_slow', 28, 0, 100, '', self.max_slew_speed)
+        self.max_slew_speed = self.register(RangeSetting, 'max_slew_speed', 28, 0, 100, '')
+        self.max_slew_slow = self.register(RangeSetting, 'max_slew_slow', 34, 0, 100, '')
 
         self.gain = self.register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
         self.clutch_pwm = self.register(RangeProperty, 'clutch_pwm', 100, 10, 100, persistent=True)
@@ -490,6 +490,7 @@ class Servo(object):
                     mul = 2
                 self.send_driver_params(mul)
 
+                #print('servo write', command, time.monotonic())
                 self.driver.command(command)
 
                 # detect driver timeout if commanded without measuring current
@@ -525,6 +526,12 @@ class Servo(object):
     def send_driver_params(self, mul=1):
         uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value) / self.current.factor.value
         minmax = self.sensors.rudder.minmax
+        slew_slow = self.driver.max_slew_slow
+        if self.force_engaged:
+            slew_speed = self.driver.max_slew_speed
+        else:
+            slew_speed = 100 # manual control give fastest response
+            slew_slow *= 2 # manual control give faster response
         self.driver.params(mul * uncorrected_max_current,
                            minmax[0], minmax[1],
                            self.max_current.value,
@@ -534,8 +541,8 @@ class Servo(object):
                            self.sensors.rudder.offset.value,
                            self.sensors.rudder.scale.value,
                            self.sensors.rudder.nonlinearity.value,
-                           self.max_slew_speed.value,
-                           self.max_slew_slow.value,
+                           slew_speed,
+                           slew_slow,
                            self.current.factor.value,
                            self.current.offset.value,
                            self.voltage.factor.value,

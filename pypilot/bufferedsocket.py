@@ -86,6 +86,7 @@ try:
   
             t0 = time.monotonic()
             count = self.socket.send(self.out_buffer.encode())
+            #print('write', count, self.out_buffer, time.monotonic())
             t1 = time.monotonic()
 
             if t1-t0 > .03:

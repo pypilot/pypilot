@@ -365,12 +365,14 @@ def arduino_process(pipe, config):
                 events.append(['baudrate', 'ERROR: no connection to server for nmea'])
 
         if events and t0 - start > 2:
-            pipe.send(events)
             #print('events', events, time.monotonic())
+            pipe.send(events)
             period = .05
             periodtime = t0
         elif periodtime - t0 > 5:
             period = .2
+
+        period = .01
 
         while True:
             try:
@@ -395,7 +397,7 @@ def arduino_process(pipe, config):
         dt = period - (t2-t0)
         #print('arduino times', period, dt, t1-t0, t2-t1)
         if dt > 0:
-            time.sleep(dt)      
+            time.sleep(dt)
     
 def main():
     print('initializing arduino')
