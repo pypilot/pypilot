@@ -23,7 +23,8 @@ class menu(page):
         self.selection = 0
         self.items = items
         self.prev = False
-        self.last_selection = -1        
+        self.last_selection = -1
+        self.menu_values = {}
 
     def find_parents(self):
         for p in self.items:
@@ -39,9 +40,19 @@ class menu(page):
 
     def display(self, refresh):
         self.lcd.menu = self
-        if not refresh:
-            if self.selection == self.last_selection:
+        if not refresh and self.selection == self.last_selection:
+            # determine if any check/ranges changed and need to refresh
+            # if nothing changed, do not redraw (save cpu)
+            for item in self.items:
+                if isinstance(item, ValueCheck) or isinstance(item, RangeEdit):
+                    path = item.pypilot_path
+                    val = self.last_val(path)
+                    if not refresh:
+                        refresh = not path in self.menu_values or self.menu_values[path] != val
+                    self.menu_values[path] = val
+            if not refresh:
                 return
+
         self.last_selection = self.selection
             
         self.fill(black)
@@ -57,11 +68,11 @@ class menu(page):
             size = self.fittext(rectangle(0, y, 1, .15), item.name)
             if isinstance(item, ValueCheck):
                 val = self.last_val(item.pypilot_path)
-                if val: # draw if value is true
+                if val is True: # draw if value is true
                     self.invertrectangle(rectangle(.8, y+.07, .1, .07))
             elif isinstance(item, RangeEdit) and size[0] < .8:
                 maxsizeslider = max(size[0] + .02, maxsizeslider)
-                sliders.append((item,y))
+                sliders.append((item, y))
             y += .15
             if y >= .9:
                 break
