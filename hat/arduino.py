@@ -312,6 +312,7 @@ class arduino(object):
                     self.nmea_socket = False
             else:
                 print('os error', e)
+                self.nmea_socket = False
         except Exception as e:
             print('exception', e)
             self.nmea_socket = False
