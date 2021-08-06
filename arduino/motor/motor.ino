@@ -898,7 +898,7 @@ uint16_t TakeAmps(uint8_t p)
             else
                 //  .0005 ohm with 200x gain (5v ref)
                 // 625/128 = 100.0/1024/.0005/200*5
-                v = v  * 625 / 128 / 16;
+                v = v  * 525 / 128 / 16;
         }
     }
     if(v == 0)
