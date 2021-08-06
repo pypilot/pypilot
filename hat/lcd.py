@@ -27,6 +27,14 @@ except:
     from pypilot.hat.ugfx import ugfx
     micropython = False
 
+driver = 'default'
+for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'tft', 'none']:
+    if pdriver in sys.argv:
+        print('overriding driver', driver, 'to command line', pdriver)
+        driver = pdriver
+        sys.argv.remove(driver)
+        break
+
 class Key():
     def __init__(self):
         self.time = 0
@@ -73,20 +81,14 @@ class LCD():
             if not name in self.config:
                 self.config[name] = default[name]
 
-        # set the driver to the one from hat eeprom
-        driver = 'default'
+        global driver
+        # set the driver to the one read from hat eeprom, or specified in hat.conf
         if self.hat and 'hat' in self.hat.config:
-            driver = self.hat.config['hat']['lcd']['driver']
+            if driver == 'default':
+                driver = self.hat.config['hat']['lcd']['driver']
             self.host = self.hat.client.config['host']
         else:
             self.host = False
-            
-        for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'tft', 'none']:
-            if pdriver in sys.argv:
-                print('overriding driver', driver, ' to command line', pdriver)
-                sys.argv.remove(pdriver)
-                driver = pdriver
-                break
 
         self.battery_voltage = 0
         use_tft = True if micropython else False
