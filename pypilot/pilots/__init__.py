@@ -13,8 +13,7 @@ for module in os.listdir(os.path.dirname(__file__)):
         continue
     if module == 'pilot.py':
         continue
-    if module == 'wind.py':
-        continue
+
     try:
         mod = importlib.import_module('pilots.'+module[:-3])
     except Exception as e1:
