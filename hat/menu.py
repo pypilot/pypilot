@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2021 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -426,10 +426,24 @@ class select_wifi_defaults(select_wifi):
             
 class wifi(menu):
     def __init__(self):
-        self.wifi_settings = None
-        self.have_wifi = False        
+        self.wifi_settings = False
+        self.have_wifi = False
+        self.mtime = False
+        self.wifi_updatetime = gettime()
+        if self.read_networking():
+            items = [select_wifi_ap_toggle('AP/Client', self.wifi_settings),
+                     select_wifi_defaults(_('defaults'), self.wifi_settings)]
+        else:
+            items = []
+        super(wifi, self).__init__('WIFI', items)
+
+    def read_networking(self):
         try:
-            wifi_settings = default_network.copy()
+            # if another process updated the network file
+            mtime = os.path.getmtime(networking)
+            if mtime == self.mtime:
+                return False
+            self.wifi_settings = default_network.copy()
             f = open(networking, 'r')
             while True:
                 l = f.readline()
@@ -438,15 +452,12 @@ class wifi(menu):
                 parsed = l.rstrip().split('=', 1)
                 if len(parsed) == 2:
                     setting, value = parsed
-                    wifi_settings[setting] = value
+                    self.wifi_settings[setting] = value
             f.close()
-            items = [select_wifi_ap_toggle('AP/Client', wifi_settings),
-                     select_wifi_defaults(_('defaults'), wifi_settings)]
-            self.wifi_settings = wifi_settings
+            return True
         except Exception as e:
             print('failed to read', networking, e)
-            items = []
-        super(wifi, self).__init__('WIFI', items)
+            return False
 
     def display(self, refresh):
         if not self.wifi_settings:
@@ -481,6 +492,13 @@ class wifi(menu):
         have_wifi = test_wifi()
         if have_wifi != self.have_wifi:
             self.lcd.need_refresh = True
+
+        t = gettime()
+        if t - self.wifi_updatetime > 1:
+            self.wifi_updatetime = t
+            if self.read_networking():
+                self.lcd.need_refresh = True
+            
         return super(wifi, self).process()
         
 class control_menu(menu):
