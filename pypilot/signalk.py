@@ -120,7 +120,7 @@ class signalk(object):
                 properties = {}
                 for name, value in info.properties.items():
                     properties[name.decode()] = value.decode()
-                if properties['swname'] == 'signalk-server':
+                if 'swname' in properties and properties['swname'] == 'signalk-server':
                     try:
                         host_port = socket.inet_ntoa(info.addresses[0]) + ':' + str(info.port)
                     except Exception as e:
