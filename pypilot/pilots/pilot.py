@@ -35,6 +35,14 @@ class AutopilotPilot(object):
         self.Gain(name, default, 0, max_val)
     
     def Compute(self, gain_values):
+        # if disabled, only bother to compute if a client cares (optimization)
+        if not self.ap.enabled.value: 
+            for gain in self.gains:
+                if self.gains[gain]['sensor'].watchers:
+                    break
+            else:
+                return 0
+    
         command = 0
         for gain in self.gains:
             value = gain_values[gain]

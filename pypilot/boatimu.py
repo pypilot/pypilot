@@ -37,7 +37,7 @@ class IMU(object):
         self.client = pypilotClient(server)
         self.multiprocessing = server.multiprocessing
         if self.multiprocessing:
-            self.pipe, pipe = NonBlockingPipe('imu_pipe', self.multiprocessing)
+            self.pipe, pipe = NonBlockingPipe('imu pipe', self.multiprocessing)
             self.process = multiprocessing.Process(target=self.process, args=(pipe,), daemon=True)
             self.process.start()
             return
