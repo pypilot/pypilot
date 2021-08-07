@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-07-12 14:38-0400\n"
+"POT-Creation-Date: 2021-08-06 08:40-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,43 +19,43 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:106
+#: pypilot/autopilot.py:107
 msgid "failed to load pilot"
 msgstr "misslyckades med att ladda pilot"
 
-#: pypilot/autopilot.py:109
+#: pypilot/autopilot.py:110
 msgid "Available Pilots"
 msgstr "Tillgängliga piloter"
 
-#: pypilot/autopilot.py:135
+#: pypilot/autopilot.py:136
 msgid "warning: failed to open special file"
 msgstr "varning: det gick inte att öppna specialfilen"
 
-#: pypilot/autopilot.py:135
+#: pypilot/autopilot.py:136
 msgid "for writing"
 msgstr "för skrivande"
 
-#: pypilot/autopilot.py:136
+#: pypilot/autopilot.py:137
 msgid "cannot stroke the watchdog"
 msgstr "kan inte stryka vakthunden"
 
-#: pypilot/autopilot.py:140
+#: pypilot/autopilot.py:141
 msgid "warning: failed to make autopilot process realtime"
 msgstr "varning: misslyckades med att göra autopilotprocessen i realtid"
 
-#: pypilot/autopilot.py:308
+#: pypilot/autopilot.py:312
 msgid "server/client is running too _slowly_"
 msgstr "servern / klienten körs för _slowly_"
 
-#: pypilot/autopilot.py:314
+#: pypilot/autopilot.py:318
 msgid "sensors is running too _slowly_"
 msgstr "sensorerna går för långsamt"
 
-#: pypilot/autopilot.py:364
+#: pypilot/autopilot.py:368
 msgid "autopilot routine is running too _slowly_"
 msgstr "autopilotrutinen går för långsamt"
 
-#: pypilot/autopilot.py:369
+#: pypilot/autopilot.py:377
 msgid "servo is running too _slowly_"
 msgstr "servo går för långsamt"
 
@@ -123,11 +123,11 @@ msgstr "varning, misslyckades med att avbryta kalibreringsprocessen"
 msgid "calibration loaded, starting"
 msgstr "kalibrering laddad, startar"
 
-#: pypilot/boatimu.py:321
+#: pypilot/boatimu.py:322
 msgid "failed import calibration fit"
 msgstr "misslyckad importkalibrering"
 
-#: pypilot/boatimu.py:427
+#: pypilot/boatimu.py:438
 msgid "accel values invalid"
 msgstr "accelvärden är ogiltiga"
 
@@ -147,28 +147,28 @@ msgstr "misslyckades med att skicka udp-paket"
 msgid "pypilot socket failed to send to"
 msgstr "pypilotuttaget kunde inte skickas till"
 
-#: pypilot/bufferedsocket.py:92
+#: pypilot/bufferedsocket.py:93
 msgid "socket send took too long!?!?"
 msgstr "sändningsuttag tog för lång tid!?!?"
 
-#: pypilot/bufferedsocket.py:94
+#: pypilot/bufferedsocket.py:95
 msgid "socket send error"
 msgstr "sändningsfel"
 
-#: pypilot/bufferedsocket.py:98
+#: pypilot/bufferedsocket.py:99
 msgid "pypilot socket exception"
 msgstr "undantag för pypilotuttag"
 
-#: pypilot/bufferedsocket.py:102
+#: pypilot/bufferedsocket.py:103
 msgid "falling back to python nonblocking socket, will consume more cpu"
 msgstr ""
 "faller tillbaka till Python nonblocking-uttag, kommer att konsumera mer CPU"
 
-#: pypilot/bufferedsocket.py:128
+#: pypilot/bufferedsocket.py:129
 msgid "socket send error in server flush"
 msgstr "socket skicka fel i server spolning"
 
-#: pypilot/bufferedsocket.py:143
+#: pypilot/bufferedsocket.py:144
 msgid "error receiving data"
 msgstr "fel vid mottagande av data"
 
@@ -194,51 +194,51 @@ msgstr "misslyckades med att skriva konfigurationsfil:"
 msgid "Exception writing config file:"
 msgstr "Konfigurationsfil för undantagsskrivning:"
 
-#: pypilot/client.py:274
+#: pypilot/client.py:275
 msgid "invalid message from server:"
 msgstr "ogiltigt meddelande från servern:"
 
-#: pypilot/client.py:290
+#: pypilot/client.py:291
 msgid "warning, pypilot client aleady has connection"
 msgstr "varning, pypilotklienten har redan anslutning"
 
-#: pypilot/client.py:310
+#: pypilot/client.py:311
 msgid "connect failed to"
 msgstr "anslutning misslyckades med"
 
-#: pypilot/client.py:402
+#: pypilot/client.py:403
 msgid "failed to connect to"
 msgstr "misslyckades med att ansluta till"
 
-#: pypilot/client.py:459
+#: pypilot/client.py:460
 msgid "usage"
 msgstr "användande"
 
-#: pypilot/client.py:462
+#: pypilot/client.py:463
 msgid "set the host or ip address"
 msgstr "ställa in värden eller ip-adressen"
 
-#: pypilot/client.py:463
+#: pypilot/client.py:464
 msgid "print info about each value type"
 msgstr "skriva ut information om varje värdetyp"
 
-#: pypilot/client.py:464
+#: pypilot/client.py:465
 msgid "continuous watch"
 msgstr "kontinuerlig klocka"
 
-#: pypilot/client.py:465
+#: pypilot/client.py:466
 msgid "show this message"
 msgstr "visa detta meddelande"
 
-#: pypilot/client.py:492
+#: pypilot/client.py:493
 msgid "failed to retrieve value list!"
 msgstr "misslyckades med att hämta värdelistan!"
 
-#: pypilot/client.py:503
+#: pypilot/client.py:504
 msgid "timeout retrieving"
 msgstr "timeout hämtning"
 
-#: pypilot/client.py:506
+#: pypilot/client.py:507
 msgid "missing"
 msgstr "saknas"
 
@@ -370,7 +370,7 @@ msgstr "nmea misslyckades med att ta bort fd"
 msgid "nmea failed to remove address"
 msgstr "nmea kunde inte ta bort adressen"
 
-#: pypilot/nmea.py:609
+#: pypilot/nmea.py:609 pypilot/signalk.py:284
 msgid "connected to"
 msgstr "anslutet till"
 
@@ -540,35 +540,35 @@ msgstr "serveruttag stängt från spolning !!"
 msgid "servo calibration invalid"
 msgstr "servokalibrering ogiltig"
 
-#: pypilot/servo.py:556
+#: pypilot/servo.py:563
 msgid "failed to open servo on:"
 msgstr "misslyckades med att öppna servo på:"
 
-#: pypilot/servo.py:563
+#: pypilot/servo.py:570
 msgid "failed set nonblocking/exclusive"
 msgstr "misslyckades ställa in blockering / exklusiv"
 
-#: pypilot/servo.py:594
+#: pypilot/servo.py:601 pypilot/signalk.py:159
 msgid "found"
 msgstr "hittades"
 
-#: pypilot/servo.py:715
+#: pypilot/servo.py:723
 msgid "loading servo calibration"
 msgstr "laddning av servokalibrering"
 
-#: pypilot/servo.py:719
+#: pypilot/servo.py:727
 msgid "WARNING: using default servo calibration!!"
 msgstr "VARNING: använder standard servokalibrering !!"
 
-#: pypilot/servo.py:728
+#: pypilot/servo.py:736
 msgid "probing"
 msgstr "sondering"
 
-#: pypilot/servo.py:744
+#: pypilot/servo.py:752
 msgid "arduino servo detected"
 msgstr "arduino servo upptäckt"
 
-#: pypilot/servo.py:753
+#: pypilot/servo.py:761
 msgid "device needed for option"
 msgstr "enhet som behövs för alternativet"
 
@@ -588,11 +588,11 @@ msgstr "misslyckades att"
 msgid "autodetection not possible"
 msgstr "autodetektion inte möjlig"
 
-#: pypilot/signalk.py:77 pypilot/signalk.py:143 pypilot/signalk.py:212
+#: pypilot/signalk.py:77 pypilot/signalk.py:146 pypilot/signalk.py:216
 msgid "try"
 msgstr "Prova"
 
-#: pypilot/signalk.py:77 pypilot/signalk.py:143 pypilot/signalk.py:212
+#: pypilot/signalk.py:77 pypilot/signalk.py:146 pypilot/signalk.py:216
 msgid "or"
 msgstr "eller"
 
@@ -601,88 +601,80 @@ msgid "service removed"
 msgstr "tjänsten borttagen"
 
 #: pypilot/signalk.py:112
-msgid "signalk server lost"
-msgstr "signalk-server förlorad"
+msgid "server lost"
+msgstr "server förlorad"
 
-#: pypilot/signalk.py:115
+#: pypilot/signalk.py:118
 msgid "service add"
 msgstr "tjänsten lägg till"
 
-#: pypilot/signalk.py:129
+#: pypilot/signalk.py:132
 msgid "server found"
 msgstr "server hittades"
 
-#: pypilot/signalk.py:138
+#: pypilot/signalk.py:141
 msgid "probe"
 msgstr "sond"
 
-#: pypilot/signalk.py:142
+#: pypilot/signalk.py:145
 msgid "could not"
 msgstr "kunde inte"
 
-#: pypilot/signalk.py:152
+#: pypilot/signalk.py:155
 msgid "failed to retrieve/parse data from"
 msgstr "misslyckades med att hämta / analysera data från"
 
-#: pypilot/signalk.py:155
-msgid "signalk found"
-msgstr "signalk hittades"
-
-#: pypilot/signalk.py:167
+#: pypilot/signalk.py:171
 msgid "see if token is ready"
 msgstr "se om token är redo"
 
-#: pypilot/signalk.py:173
+#: pypilot/signalk.py:177
 msgid "received token"
 msgstr "mottog token"
 
-#: pypilot/signalk.py:179
+#: pypilot/signalk.py:183
 msgid "failed to store token"
 msgstr "misslyckades med att lagra token"
 
-#: pypilot/signalk.py:183
+#: pypilot/signalk.py:187 pypilot/signalk.py:208
 msgid "error requesting access"
 msgstr "fel vid begäran om åtkomst"
 
-#: pypilot/signalk.py:202
-msgid "signalk request access url"
-msgstr "webbadress för signalk begäran om åtkomst"
+#: pypilot/signalk.py:206
+msgid "request access url"
+msgstr "begär åtkomstadress"
 
-#: pypilot/signalk.py:204
-msgid "signalk error requesting access"
-msgstr "signalk-fel som begär åtkomst"
-
-#: pypilot/signalk.py:211
+#: pypilot/signalk.py:215
 msgid "cannot create connection:"
 msgstr "kan inte skapa anslutning:"
 
-#: pypilot/signalk.py:225
+#: pypilot/signalk.py:230
+msgid "bad status, rejecting token"
+msgstr "dålig status, avvisar token"
+
+#: pypilot/signalk.py:234
+msgid "connection refused"
+msgstr "anslutning nekad"
+
+#: pypilot/signalk.py:239
 msgid "failed to connect"
 msgstr "misslyckades med att ansluta"
 
-#: pypilot/signalk.py:269
-msgid "signalk connected to"
-msgstr "skylt kopplad till"
-
-#: pypilot/signalk.py:312
-msgid "signalk failed to parse"
-msgstr "signalk misslyckades med att analysera"
-
-#: pypilot/signalk.py:330
+#: pypilot/signalk.py:354
 msgid "Exception converting signalk->pypilot"
 msgstr "Undantag konverterar signalk-> pypilot"
 
-#: pypilot/signalk.py:344
+#: pypilot/signalk.py:368
 msgid "received"
 msgstr "mottagen"
 
-#: pypilot/signalk.py:390
-msgid "signalk failed to send"
-msgstr "signalk kunde inte skickas"
+#: pypilot/signalk.py:414
+msgid "failed to send updates"
+msgstr "kunde inte skicka uppdateringar"
 
-#: pypilot/signalk.py:403
-msgid "signalk failed to parse msg:"
-msgstr "signalk misslyckades med att analysera msg:"
+#: pypilot/signalk.py:428
+msgid "failed to parse msg:"
+msgstr "misslyckades med att analysera msg:"
 
 #: pypilot/values.py:130
 msgid "invalid initial value for range property"
@@ -692,7 +684,7 @@ msgstr "ogiltigt initialvärde för intervallegenskap"
 msgid "invalid set"
 msgstr "ogiltig uppsättning"
 
-#: pypilot/pilots/__init__.py:24
+#: pypilot/pilots/__init__.py:23
 msgid "ERROR loading"
 msgstr "Problem med att ladda"
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-07-12 14:38-0400\n"
+"POT-Creation-Date: 2021-08-06 08:40-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,44 +19,44 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:106
+#: pypilot/autopilot.py:107
 msgid "failed to load pilot"
 msgstr "epäonnistui lataamaan pilottia"
 
-#: pypilot/autopilot.py:109
+#: pypilot/autopilot.py:110
 msgid "Available Pilots"
 msgstr "Saatavilla olevat lentäjät"
 
-#: pypilot/autopilot.py:135
+#: pypilot/autopilot.py:136
 msgid "warning: failed to open special file"
 msgstr "varoitus: erikoistiedoston avaaminen epäonnistui"
 
-#: pypilot/autopilot.py:135
+#: pypilot/autopilot.py:136
 msgid "for writing"
 msgstr "kirjoittamista varten"
 
-#: pypilot/autopilot.py:136
+#: pypilot/autopilot.py:137
 msgid "cannot stroke the watchdog"
 msgstr "ei voi silittää vahtikoiraa"
 
-#: pypilot/autopilot.py:140
+#: pypilot/autopilot.py:141
 msgid "warning: failed to make autopilot process realtime"
 msgstr ""
 "varoitus: autopilotin prosessin tekeminen reaaliaikaiseksi epäonnistui"
 
-#: pypilot/autopilot.py:308
+#: pypilot/autopilot.py:312
 msgid "server/client is running too _slowly_"
 msgstr "palvelin / asiakas toimii liian _hitaasti_"
 
-#: pypilot/autopilot.py:314
+#: pypilot/autopilot.py:318
 msgid "sensors is running too _slowly_"
 msgstr "anturit käyvät liian hitaasti"
 
-#: pypilot/autopilot.py:364
+#: pypilot/autopilot.py:368
 msgid "autopilot routine is running too _slowly_"
 msgstr "autopilotin rutiini toimii liian hitaasti"
 
-#: pypilot/autopilot.py:369
+#: pypilot/autopilot.py:377
 msgid "servo is running too _slowly_"
 msgstr "servo toimii liian hitaasti"
 
@@ -124,11 +124,11 @@ msgstr "varoitus, kalibrointiprosessin muuttaminen epäonnistui"
 msgid "calibration loaded, starting"
 msgstr "kalibrointi ladattu, alkaa"
 
-#: pypilot/boatimu.py:321
+#: pypilot/boatimu.py:322
 msgid "failed import calibration fit"
 msgstr "epäonnistunut tuontikalibrointisovellus"
 
-#: pypilot/boatimu.py:427
+#: pypilot/boatimu.py:438
 msgid "accel values invalid"
 msgstr "Accel-arvot ovat virheellisiä"
 
@@ -148,29 +148,29 @@ msgstr "udp-paketin lähettäminen epäonnistui"
 msgid "pypilot socket failed to send to"
 msgstr "pypilot-pistorasian lähettäminen epäonnistui"
 
-#: pypilot/bufferedsocket.py:92
+#: pypilot/bufferedsocket.py:93
 msgid "socket send took too long!?!?"
 msgstr "liittimen lähettäminen kesti liian kauan!?!?"
 
-#: pypilot/bufferedsocket.py:94
+#: pypilot/bufferedsocket.py:95
 msgid "socket send error"
 msgstr "pistorasian lähetysvirhe"
 
-#: pypilot/bufferedsocket.py:98
+#: pypilot/bufferedsocket.py:99
 msgid "pypilot socket exception"
 msgstr "pypilot-pistorasian poikkeus"
 
-#: pypilot/bufferedsocket.py:102
+#: pypilot/bufferedsocket.py:103
 msgid "falling back to python nonblocking socket, will consume more cpu"
 msgstr ""
 "palatessasi pythonin estämättömään pistorasiaan, kuluttaa enemmän "
 "prosessoria"
 
-#: pypilot/bufferedsocket.py:128
+#: pypilot/bufferedsocket.py:129
 msgid "socket send error in server flush"
 msgstr "pistorasian lähetysvirhe palvelimen huuhtelussa"
 
-#: pypilot/bufferedsocket.py:143
+#: pypilot/bufferedsocket.py:144
 msgid "error receiving data"
 msgstr "virhe tietojen vastaanottamisessa"
 
@@ -196,51 +196,51 @@ msgstr "määritystiedoston kirjoittaminen epäonnistui:"
 msgid "Exception writing config file:"
 msgstr "Poikkeuksen kirjoittava määritystiedosto:"
 
-#: pypilot/client.py:274
+#: pypilot/client.py:275
 msgid "invalid message from server:"
 msgstr "virheellinen viesti palvelimelta:"
 
-#: pypilot/client.py:290
+#: pypilot/client.py:291
 msgid "warning, pypilot client aleady has connection"
 msgstr "varoitus, pypilot-asiakkaalla on jo yhteys"
 
-#: pypilot/client.py:310
+#: pypilot/client.py:311
 msgid "connect failed to"
 msgstr "yhteyden muodostaminen epäonnistui"
 
-#: pypilot/client.py:402
+#: pypilot/client.py:403
 msgid "failed to connect to"
 msgstr "yhteyden muodostaminen epäonnistui"
 
-#: pypilot/client.py:459
+#: pypilot/client.py:460
 msgid "usage"
 msgstr "käyttö"
 
-#: pypilot/client.py:462
+#: pypilot/client.py:463
 msgid "set the host or ip address"
 msgstr "aseta isäntä- tai ip-osoite"
 
-#: pypilot/client.py:463
+#: pypilot/client.py:464
 msgid "print info about each value type"
 msgstr "tulosta tiedot jokaisesta arvotyypistä"
 
-#: pypilot/client.py:464
+#: pypilot/client.py:465
 msgid "continuous watch"
 msgstr "jatkuva katselu"
 
-#: pypilot/client.py:465
+#: pypilot/client.py:466
 msgid "show this message"
 msgstr "näytä tämä viesti"
 
-#: pypilot/client.py:492
+#: pypilot/client.py:493
 msgid "failed to retrieve value list!"
 msgstr "arvoluettelon noutaminen epäonnistui!"
 
-#: pypilot/client.py:503
+#: pypilot/client.py:504
 msgid "timeout retrieving"
 msgstr "aikakatkaisun haku"
 
-#: pypilot/client.py:506
+#: pypilot/client.py:507
 msgid "missing"
 msgstr "puuttuu"
 
@@ -372,7 +372,7 @@ msgstr "nmea ei onnistunut poistamaan fd: tä"
 msgid "nmea failed to remove address"
 msgstr "nmea ei onnistunut poistamaan osoitetta"
 
-#: pypilot/nmea.py:609
+#: pypilot/nmea.py:609 pypilot/signalk.py:284
 msgid "connected to"
 msgstr "yhdistetty"
 
@@ -542,35 +542,35 @@ msgstr "palvelinpistoke suljettu huuhtelusta!"
 msgid "servo calibration invalid"
 msgstr "servokalibrointi on virheellinen"
 
-#: pypilot/servo.py:556
+#: pypilot/servo.py:563
 msgid "failed to open servo on:"
 msgstr "epäonnistui avaamasta servoa:"
 
-#: pypilot/servo.py:563
+#: pypilot/servo.py:570
 msgid "failed set nonblocking/exclusive"
 msgstr "epäonnistunut asetettu esto / yksinoikeus"
 
-#: pypilot/servo.py:594
+#: pypilot/servo.py:601 pypilot/signalk.py:159
 msgid "found"
 msgstr "löytyi"
 
-#: pypilot/servo.py:715
+#: pypilot/servo.py:723
 msgid "loading servo calibration"
 msgstr "servokalibroinnin lataus"
 
-#: pypilot/servo.py:719
+#: pypilot/servo.py:727
 msgid "WARNING: using default servo calibration!!"
 msgstr "VAROITUS: oletus servokalibrointi !!"
 
-#: pypilot/servo.py:728
+#: pypilot/servo.py:736
 msgid "probing"
 msgstr "koettelemalla"
 
-#: pypilot/servo.py:744
+#: pypilot/servo.py:752
 msgid "arduino servo detected"
 msgstr "arduino-servo havaittu"
 
-#: pypilot/servo.py:753
+#: pypilot/servo.py:761
 msgid "device needed for option"
 msgstr "tarvittava laite"
 
@@ -590,11 +590,11 @@ msgstr "epäonnistui"
 msgid "autodetection not possible"
 msgstr "automaattinen tunnistus ei ole mahdollista"
 
-#: pypilot/signalk.py:77 pypilot/signalk.py:143 pypilot/signalk.py:212
+#: pypilot/signalk.py:77 pypilot/signalk.py:146 pypilot/signalk.py:216
 msgid "try"
 msgstr "yrittää"
 
-#: pypilot/signalk.py:77 pypilot/signalk.py:143 pypilot/signalk.py:212
+#: pypilot/signalk.py:77 pypilot/signalk.py:146 pypilot/signalk.py:216
 msgid "or"
 msgstr "tai"
 
@@ -603,88 +603,80 @@ msgid "service removed"
 msgstr "palvelu poistettu"
 
 #: pypilot/signalk.py:112
-msgid "signalk server lost"
-msgstr "signalk-palvelin menetetty"
+msgid "server lost"
+msgstr "palvelin menetetty"
 
-#: pypilot/signalk.py:115
+#: pypilot/signalk.py:118
 msgid "service add"
 msgstr "palvelu lisää"
 
-#: pypilot/signalk.py:129
+#: pypilot/signalk.py:132
 msgid "server found"
 msgstr "palvelin löydetty"
 
-#: pypilot/signalk.py:138
+#: pypilot/signalk.py:141
 msgid "probe"
 msgstr "koetin"
 
-#: pypilot/signalk.py:142
+#: pypilot/signalk.py:145
 msgid "could not"
 msgstr "ei pystynyt"
 
-#: pypilot/signalk.py:152
+#: pypilot/signalk.py:155
 msgid "failed to retrieve/parse data from"
 msgstr "epäonnistui tietojen noutamisesta / jäsentämisestä"
 
-#: pypilot/signalk.py:155
-msgid "signalk found"
-msgstr "opaste löytyi"
-
-#: pypilot/signalk.py:167
+#: pypilot/signalk.py:171
 msgid "see if token is ready"
 msgstr "katso onko tunniste valmis"
 
-#: pypilot/signalk.py:173
+#: pypilot/signalk.py:177
 msgid "received token"
 msgstr "saanut tunnuksen"
 
-#: pypilot/signalk.py:179
+#: pypilot/signalk.py:183
 msgid "failed to store token"
 msgstr "tunnuksen tallentaminen epäonnistui"
 
-#: pypilot/signalk.py:183
+#: pypilot/signalk.py:187 pypilot/signalk.py:208
 msgid "error requesting access"
 msgstr "virhe pyydettäessä käyttöoikeutta"
 
-#: pypilot/signalk.py:202
-msgid "signalk request access url"
-msgstr "opasteiden käyttöoikeuksien URL-osoite"
+#: pypilot/signalk.py:206
+msgid "request access url"
+msgstr "pyydä käyttöoikeuden URL -osoitetta"
 
-#: pypilot/signalk.py:204
-msgid "signalk error requesting access"
-msgstr "opasteiden käyttöoikeutta pyydettäessä"
-
-#: pypilot/signalk.py:211
+#: pypilot/signalk.py:215
 msgid "cannot create connection:"
 msgstr "ei voi luoda yhteyttä:"
 
-#: pypilot/signalk.py:225
+#: pypilot/signalk.py:230
+msgid "bad status, rejecting token"
+msgstr "huono tila, hylkää merkki"
+
+#: pypilot/signalk.py:234
+msgid "connection refused"
+msgstr "yhteys evätty"
+
+#: pypilot/signalk.py:239
 msgid "failed to connect"
 msgstr "ei voida yhdistää"
 
-#: pypilot/signalk.py:269
-msgid "signalk connected to"
-msgstr "opaste yhdistetty"
-
-#: pypilot/signalk.py:312
-msgid "signalk failed to parse"
-msgstr "opasteiden jäsentäminen epäonnistui"
-
-#: pypilot/signalk.py:330
+#: pypilot/signalk.py:354
 msgid "Exception converting signalk->pypilot"
 msgstr "Poikkeus muuntaa opasteet-> pypilot"
 
-#: pypilot/signalk.py:344
+#: pypilot/signalk.py:368
 msgid "received"
 msgstr "sai"
 
-#: pypilot/signalk.py:390
-msgid "signalk failed to send"
-msgstr "opasteiden lähetys epäonnistui"
+#: pypilot/signalk.py:414
+msgid "failed to send updates"
+msgstr "päivitysten lähettäminen epäonnistui"
 
-#: pypilot/signalk.py:403
-msgid "signalk failed to parse msg:"
-msgstr "signalk ei jäsennä viestiä:"
+#: pypilot/signalk.py:428
+msgid "failed to parse msg:"
+msgstr "viestin jäsennys epäonnistui:"
 
 #: pypilot/values.py:130
 msgid "invalid initial value for range property"
@@ -694,7 +686,7 @@ msgstr "alueen omaisuuden alkuarvo on virheellinen"
 msgid "invalid set"
 msgstr "virheellinen sarja"
 
-#: pypilot/pilots/__init__.py:24
+#: pypilot/pilots/__init__.py:23
 msgid "ERROR loading"
 msgstr "Virhe ladattaessa"
 
