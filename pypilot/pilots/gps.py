@@ -30,7 +30,7 @@ class GPSPilot(AutopilotPilot):
     self.PosGain('P', .003, .02)  # position (heading error)
     self.PosGain('D',  .1, 1.0)   # derivative (gyro)
     self.PosGain('DD',  .05, 1.0)  # position root
-    self.PosGain('FF',  .6, 3.0) # feed forward
+    self.PosGain('FF',  1.2, 4.0) # feed forward
 
     self.wind_gps_offset = HeadingOffset()
     self.true_wind_gps_offset = HeadingOffset()
