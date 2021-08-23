@@ -98,10 +98,17 @@ class arduino(object):
                     
                 port, slave = int(device[11]), int(device[13])
                 print('arduino on spidev%d.%d' % (port, slave))
-                import spidev
-                self.spi = spidev.SpiDev()
-                self.spi.open(port, slave)
-                self.spi.max_speed_hz=100000
+
+                if False:
+                    import spidev
+                    self.spi = spidev.SpiDev()
+                    self.spi.open(port, slave)
+                    self.spi.max_speed_hz=100000
+                else:
+                    from pypilot.hat.spireader import spireader
+                    self.spi = spireader.spireader(10, 10)
+                    if self.spi.open(port, slave, 100000) == -1:
+                        self.close()
 
                 if 'lcd' in self.config:
                     self.set_backlight(self.config['lcd']['backlight'])
@@ -118,7 +125,6 @@ class arduino(object):
         self.spi = False
 
     def xfer(self, x):
-        #time.sleep(.0001)
         return self.spi.xfer([x])[0]
 
     def send(self, id, data):
@@ -172,6 +178,7 @@ class arduino(object):
         return 'TX: %.1f  RX %.1f' % (rate_in, rate_out)
 
     def poll(self):
+        t0 = time.monotonic()
         if not self.spi:
             self.open()
             return []
@@ -181,6 +188,7 @@ class arduino(object):
         self.open_nmea()
         # don't exceed 90% of baud rate
         baud = int(self.config['arduino.nmea.baud']) *.9
+        t1 = time.monotonic()
         while True:
             if self.nmea_socket and len(self.socketdata) < 100 and self.nmea_socket_poller.poll(0):
                 try:
@@ -213,7 +221,7 @@ class arduino(object):
                 #print('send %c %x' %(i,i))
                 self.packetout_data = self.packetout_data[1:]
 
-            o = self.xfer(i)
+            o = self.spi.xfer(i, not i and len(self.packetin_data) < PACKET_LEN+3)
             if not i and not o:
                 break
 
@@ -223,6 +231,7 @@ class arduino(object):
             elif o:
                 serial_data.append(o)
 
+        t2 = time.monotonic()
         # now read packet data
         while len(self.packetin_data) >= PACKET_LEN+3:
             if self.packetin_data[0] != ord('$'):
@@ -267,6 +276,7 @@ class arduino(object):
 
             events.append([key, count])
 
+        t3 = time.monotonic()
         if serial_data:
             self.debug('nmea>', bytes(serial_data))
             if self.nmea_socket and self.config['arduino.nmea.in']:
@@ -278,6 +288,9 @@ class arduino(object):
                     self.nmea_socket = False
 
             self.serial_out_count += len(serial_data)
+        t4 = time.monotonic()
+
+        #print('times', t1-t0, t2-t1, t3-t2, t4-t3)
             
         return events
 
@@ -416,15 +429,13 @@ def main():
     while True:
         t0 = time.monotonic()
         events = a.poll()
+    
         if events:
             print(events, dt, t0-lt)
             lt = t0
         baud_rate = a.get_baud_rate()
         if baud_rate:
             print('baud rate', baud_rate)
-        t1 = time.monotonic()
-        dt = t1 - t0
-        time.sleep(.04)
     
 if __name__ == '__main__':
     main()
