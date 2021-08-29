@@ -11,7 +11,7 @@ import time, os, sys, signal, select
 from pypilot import pyjson
 from pypilot.client import pypilotClient
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import lcd, gpio, lircd
+import gpio, lircd
 
 class Action(object):
     def  __init__(self, hat, name):
@@ -32,8 +32,7 @@ class ActionKeypad(Action):
         self.index = index
 
     def trigger(self, count):
-        self.lcd.keypad[self.index].update(count, count)
-        self.lcd.lastframetime = 0 # trigger immediate refresh
+        self.lcd.keypad(self.index, count)
         
 class ActionPypilot(Action):
     def  __init__(self, hat, name, pypilot_name, pypilot_value):
@@ -147,9 +146,6 @@ class Arduino(Process):
     def config(self, name, value):
         self.send((name, value))
 
-    def set_buzzer(self, duration, frequency):
-        self.send(('buzzer', (duration, frequency)))
-
     def create(self):
         def process(pipe, config):
             import arduino
@@ -177,10 +173,47 @@ class Arduino(Process):
                     self.hat.web.send({'baudrate': code})
                 elif key == 'voltage': # statistics
                     self.hat.web.send({'voltage': '5v = %.3f, 3.3v = %.3f' % (code['vcc'], code['vin'])})
-                    self.voltage = code
+                    self.hat.lcd.send(msg)
                 else:
                     ret.append(msg)
         return ret
+
+class LCD(Process):
+    def __init__(self, hat):
+        super(LCD, self).__init__(hat)
+    
+    def create(self):
+        def process(pipe, config):
+            import lcd
+            print('lcd process on ', os.getpid())
+            self.lcd = lcd.LCD(self.hat.config)
+            self.lcd.pipe = pipe
+
+            if self.lcd.use_glut:
+                from OpenGL.GLUT import glutMainLoop, glutIdleFunc
+                glutIdleFunc(self.lcd.poll)
+                glutMainLoop()
+            else:
+                while True:
+                    self.lcd.poll()
+            
+        super(LCD, self).create(process)
+
+    def keypad(self, index, count):
+        self.send((index, count))
+        
+    def poll(self):
+        ret = []
+        while True:
+            msg = self.pipe.recv()
+            if not msg:
+                break
+            key, code = msg
+            if key == 'write_config':
+                self.hat.write_config()
+            elif key == 'buzzer' or key == 'backlight':
+                if self.hat.arduino:
+                    self.hat.arduino.send(msg)
             
 cleanedup = False
 class Hat(object):
@@ -244,7 +277,7 @@ class Hat(object):
         self.watchlist = ['ap.enabled', 'ap.heading_command']
         for name in self.watchlist:
             self.client.watch(name)
-        self.lcd = lcd.LCD(self)
+        self.lcd = LCD(self)
         self.gpio = gpio.gpio()
         self.arduino = Arduino(self)
 
@@ -370,30 +403,18 @@ class Hat(object):
                 return
         self.web.send({'action': 'none'})
 
-    def check_voltage(self):
-        if not self.arduino:
-            return False
-
-        vin, vcc = self.arduino.voltage['vin'], self.arduino.voltage['vcc']
-        if vin < 3 or vin > 3.6:
-            return '3v3 Voltage Bad' + (': %.2f' % vin)
-        if vcc < 4.5 or vcc > 5.5:
-            return '5v Voltage Bad' + (': %.2f' % vcc)
-        return False
-                
     def poll(self):            
         t0 = time.monotonic()
         for i in [self.gpio, self.arduino, self.lirc]:
-#            try:
-            if 1:
+            try:
                 if not i:
                     continue
                 events = i.poll()
                 for event in events:
                     #print('apply', event, time.monotonic())
                     self.apply_code(*event)
-#            except Exception as e:
-#                print('WARNING, failed to poll!!', e, i)
+            except Exception as e:
+                print('WARNING, failed to poll!!', e, i)
 
         t1 = time.monotonic()
         msgs = self.client.receive()
@@ -428,7 +449,6 @@ class Hat(object):
             self.web.set_status('connected')
             if not self.client.registered:
                 #self.poller.register(self.client.connection.fileno(), select.POLLIN)
-                #self.poller.register(self.lcd.client.connection.fileno(), select.POLLIN)
                 self.client.registered = True
         else:
             self.client.registered = False
@@ -436,27 +456,22 @@ class Hat(object):
 
         t4 = time.monotonic()
         dt = t3-t0
-        period = max(.2 - dt, .01)
+        period = max(1 - dt, .01)
 
         if not self.lirc.registered:
             fileno = self.lirc.fileno()
             if fileno:
                 self.poller.register(fileno, select.POLLIN)
                 self.lirc.registered = True
-        
+
         e=self.poller.poll(1000*period)
         #print('hattime', time.monotonic(), e)
         #print('hat times', t1-t0, t2-t1, t3-t2, t4-t3, period, dt)
 
 def main():
     hat = Hat()
-    if hat.lcd and hat.lcd.use_glut:
-        from OpenGL.GLUT import glutMainLoop, glutIdleFunc
-        glutIdleFunc(hat.poll)
-        glutMainLoop()
-    else:
-        while True:
-            hat.poll()
+    while True:
+        hat.poll()
 
 if __name__ == '__main__':
     main()

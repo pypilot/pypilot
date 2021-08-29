@@ -33,7 +33,10 @@ t3= gettime()
 import gpio_esp32
 t4= gettime()
 
-lcd = LCD(False)
+from config_esp32 import read_config
+config = {'lcd': read_config()}
+
+lcd = LCD()
 period = .25
 sleeptime = gettime()
 

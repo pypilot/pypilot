@@ -273,8 +273,8 @@ class page(object):
     def testkeydown(self, key):
         k = self.lcd.keypad[key]
         if k.down:
-            if self.lcd.hat and self.lcd.config['buzzer'] > 1:
-                self.lcd.hat.arduino.set_buzzer(1, .1)
+            if self.lcd.config['buzzer'] > 1:
+                self.lcd.send('buzzer', (1, .1))
 
             k.down -= 1
             return True
@@ -509,7 +509,7 @@ class controlbase(page):
         wifirect = rectangle(.35, .92, .6, .09)
         if wifi:
             text = 'WIFI'
-            if self.lcd.hat and self.lcd.hat.config['remote']:
+            if self.lcd.host != 'localhost':
                 text += ' R'
             self.fittext(wifirect, text)
         else:
@@ -690,8 +690,8 @@ class control(controlbase):
             if self.control['heading_command'] != 'no controller':
                 self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
                 self.control['heading_command'] = 'no controller'
-        elif self.lcd.hat and self.lcd.hat.check_voltage():
-            msg = self.lcd.hat.check_voltage()
+        elif self.lcd.check_voltage():
+            msg = self.lcd.check_voltage()
             if self.control['heading_command'] != msg:
                 self.fittext(rectangle(0, .4, 1, .34), msg, True, black)
                 self.control['heading_command'] = msg

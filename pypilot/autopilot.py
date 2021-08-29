@@ -115,18 +115,6 @@ class Autopilot(object):
         
         self.last_heading = False
         self.last_heading_off = self.boatimu.heading_off.value
-        
-        self.pilots = {}
-        for pilot_type in pilots.default:
-            try:
-                pilot = pilot_type(self)
-                self.pilots[pilot.name] = pilot
-            except Exception as e:
-                print(_('failed to load pilot'), pilot_type, e)
-
-        pilot_names = list(self.pilots)
-        print(_('Available Pilots') + ':', pilot_names)
-        self.pilot = self.register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True)
 
         self.heading = self.register(SensorValue, 'heading', directional=True)
         self.heading_error = self.register(SensorValue, 'heading_error')
@@ -138,6 +126,18 @@ class Autopilot(object):
         self.heading_command_rate.time = 0
         self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
         
+        self.pilots = {}
+        for pilot_type in pilots.default:
+            #try:
+                pilot = pilot_type(self)
+                self.pilots[pilot.name] = pilot
+            #except Exception as e:
+            #    print(_('failed to load pilot'), pilot_type, e)
+
+        pilot_names = list(self.pilots)
+        print(_('Available Pilots') + ':', pilot_names)
+        self.pilot = self.register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True)
+
         self.tack = tacking.Tack(self)
 
         self.gps_compass_offset = HeadingOffset()
