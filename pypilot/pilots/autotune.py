@@ -19,7 +19,7 @@ class AutotunePilot(AutopilotPilot):
     self.gains = {}
     self.PosGain('P', .003, .025)
     self.PosGain('D', .09, .5)
-    self.PosGain('FF',  1.2, 4.0) # feed forward
+    self.PosGain('FF',  .6, 3.0) # feed forward
 
     self.p_search = .0015, .006, .0004
     self.d_search = .05, .18, .01

@@ -24,7 +24,6 @@ class AbsolutePilot(AutopilotPilot):
     self.PosGain('I', 0, .05)
     self.PosGain('D', .2, 2)
     self.PosGain('DD',  0, 1) # rate of derivative
-    self.PosGain('FF',  1.2, 4)
 
   def process(self):
     ap = self.ap

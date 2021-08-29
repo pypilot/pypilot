@@ -315,15 +315,9 @@ class Autopilot(object):
         dt = t - self.heading_error_int_time
         dt = min(dt, 1) # ensure dt is less than 1
         self.heading_error_int_time = t
-        value = self.heading_error_int.value
-
-        # if heading command is changing, reduce integral
-        if self.heading_command_rate.value:
-            value /= math.exp(self.heading_command_rate.value/200)
-
         # int error +- 1, from 0 to 1500 deg/s
-        self.heading_error_int.set(minmax(value + (self.heading_error.value/1500)*dt, 1))
-
+        self.heading_error_int.set(minmax(self.heading_error_int.value + \
+                                          (self.heading_error.value/1500)*dt, 1))          
     def iteration(self):
         data = False
         t0 = time.monotonic()
@@ -387,28 +381,24 @@ class Autopilot(object):
                 # reset feed-forward gain
                 self.last_heading_mode = False
 
+        # reset feed-forward error if mode changed, or last command is older than 1 second
+        if self.last_heading_mode != self.mode.value or t0 - self.heading_command_rate.time > 1:
+            self.last_heading_command = self.heading_command.value
+
         # filter the heading command to compute feed-forward gain
         heading_command_diff = resolv(self.heading_command.value - self.last_heading_command)
-        if self.last_heading_command != self.heading_command.value:
-            self.last_heading_command = self.heading_command.value
-            self.heading_command_rate.time = t0
-
-        lp = .08
+        self.last_heading_command = self.heading_command.value
+        self.heading_command_rate.time = t0
+        lp = .1
         command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
         if not 'wind' in self.mode.value: # wind modes need opposite gain
             command_rate = -command_rate
-
-        # reset feed-forward error if mode changed, or last command is older than 2 seconds
-        if self.last_heading_mode != self.mode.value or t0 - self.heading_command_rate.time > 2:
-            command_rate = 0
         self.heading_command_rate.update(command_rate)
+            
         self.last_heading_mode = self.mode.value
-
+                
         # perform tacking or pilot specific calculation
-        if self.tack.process():
-            # reset integral gain from tacking
-            self.heading_error_int.update(0)
-        else:
+        if not self.tack.process():
             # if disabled, only compute if a client cares
             compute = True
             if not self.enabled.value:

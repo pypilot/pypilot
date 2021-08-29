@@ -251,8 +251,8 @@ class Servo(object):
         self.max_controller_temp = self.register(RangeProperty, 'max_controller_temp', 60, 45, 80, persistent=True)
         self.max_motor_temp = self.register(RangeProperty, 'max_motor_temp', 60, 30, 80, persistent=True)
 
-        self.max_slew_speed = self.register(RangeSetting, 'max_slew_speed', 32, 0, 100, '')
-        self.max_slew_slow = self.register(RangeSetting, 'max_slew_slow', 40, 0, 100, '')
+        self.max_slew_speed = self.register(RangeSetting, 'max_slew_speed', 28, 0, 100, '')
+        self.max_slew_slow = self.register(RangeSetting, 'max_slew_slow', 34, 0, 100, '')
 
         self.gain = self.register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
         self.clutch_pwm = self.register(RangeProperty, 'clutch_pwm', 100, 10, 100, persistent=True)
@@ -512,7 +512,6 @@ class Servo(object):
         #print('servo lost connection')
         self.controller.update('none')
         self.sensors.rudder.update(False)
-        self.flags.update(0)
 
         # for unknown reasons setting timeout to 0 here (already 0)
         # makes device.close() take only .001 seconds instead of .02 seconds
