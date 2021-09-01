@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, sys, os
+import time, sys, os, fileinput
 from flask import Flask, render_template, session, request, Markup
 
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
@@ -97,6 +97,49 @@ def wifi():
             print('exception!', e)
 
     return render_template('wifi.html', async_mode=socketio.async_mode, wifi=Markup(wifi))
+
+@app.route('/nmea', methods=['GET', 'POST'])
+def nmea():
+    pypilot_conf = '/home/tc/.pypilot/pypilot.conf'
+    nmea = {'ip': '', 'port': ''}
+
+    try:
+        f = open(pypilot_conf, 'r')
+        while True:
+            l = f.readline()
+            if not l:
+                break
+            try:
+                if l.startswith("nmea.client"):
+                    name, value = l.split('=')
+                    value = value[1:-2]
+                    nmea['ip'], nmea['port'] = value.split(':')
+                    break
+            except Exception as e:
+                print('failed to parse line nmea.client in pypilot.conf', l)
+        f.close()
+    except:
+        pass
+
+    if request.method == 'POST':
+        try:
+            port = str(request.form['port'])
+            ip = str(request.form['ip'])
+            for line in fileinput.input(files=(pypilot_conf), inplace=True):
+                if line.startswith("nmea.client"):
+                    if(ip and port):
+                        print('nmea.client="'+ip+':'+port+'"')
+                    else:
+                        print('nmea.client=""')
+                else:
+                    sys.stdout.write(line)
+            os.system('sudo reboot')
+            return render_template('reboot.html')
+
+        except Exception as e:
+            print('exception!', e)
+
+    return render_template('nmea.html', async_mode=socketio.async_mode, nmea=Markup(nmea))
 
 @app.route('/calibrationplot')
 def calibrationplot():

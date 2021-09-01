@@ -1,0 +1,29 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Tinypilot NMEA client setup</title>
+</head>
+<body>
+  <p>Tinypilot NMEA client setup
+    <form action="{{ url_for('nmea') }}" method="post" onsubmit="return confirm('The Autopilot will restart afterwards, are you sure?');">
+      <p>NMEA Clients
+      <p>IP address
+        <input type="text" name="ip">
+      <p>Port number
+        <input type="text" name="port">
+      <p>
+        <input type="submit" value="Submit">
+    </form>
+    <a href="/">Back</a>
+  <script>
+    nmea = {{ nmea }};
+    function nmea_init() {
+      ip = nmea['ip'];
+      port = nmea['port'];
+      document.getElementsByName('port')[0].value = port;
+      document.getElementsByName('ip')[0].value = ip;
+    }
+    nmea_init();
+  </script>
+</body>
+</html>
