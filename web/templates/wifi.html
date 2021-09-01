@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>tinypilot wifi setup</title>
+    <script type="text/javascript" src="static/jquery.min.js"></script>
 </head>
 <body>
   <p>Tinypilot Wireless Configuration
@@ -21,6 +22,31 @@
 
       <p>If there is a problem, edit the file /.pypilot/networking.txt
     </form>
+  <table id="leases">
+		<tr>
+			<th>IP Address</th><th>Mac Address</th><th>Name</th><th>Static IP?</th><th>Lease ends on</th>
+		</tr>
+	</table>
+	<script>
+		$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+		$(function() {
+			$.getJSON($SCRIPT_ROOT + '/leases',
+			function(data) {
+				$('#leases').append(
+					$.map(data.leases, function(ignore, index) {
+						return '<tr>' +
+							'<td>' + data.leases[index].ipAddress + '</td>' +
+							'<td>' + data.leases[index].macAddress + '</td>' +
+							'<td>' + data.leases[index].name + '</td>' +
+							'<td>' + ( (data.leases[index].staticIP) ? 'Yes' : 'No' ) + '</td>' +
+							'<td>' + ( (data.leases[index].staticIP) ? 'Never' : data.leases[index].leasetime ) + '</td>' +
+							'</tr>';
+						}).join());
+			});
+
+			return false;
+		});
+	</script>
     <a href="/">Back</a>
 
   <script>
