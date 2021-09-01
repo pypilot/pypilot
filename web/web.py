@@ -17,6 +17,7 @@ from pypilot.client import pypilotClient
 from pypilot import pyjson
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+DNSMASQ_LEASES_FILE = "/var/lib/misc/dnsmasq.leases"
 import tinypilot
 
 pypilot_web_port=8000
@@ -57,6 +58,18 @@ except Exception as e:
     def _(x): return x
     app.jinja_env.globals.update(_=_)
     babel = None
+
+@app.route("/leases")
+def getLeases():
+    leases = list()
+    with open(DNSMASQ_LEASES_FILE) as f:
+        for line in f:
+            elements = line.split()
+            if len(elements) == 5:
+                entry = LeaseEntry(elements[0], elements[1], elements[2], elements[3])
+                leases.append(entry)
+    leases.sort(key = leaseSort)
+    return jsonify(leases=[lease.serialize() for lease in leases])
 
 @app.route('/wifi', methods=['GET', 'POST'])
 def wifi():
