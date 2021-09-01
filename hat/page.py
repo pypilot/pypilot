@@ -670,8 +670,8 @@ class control(controlbase):
                 warning += flag[:-6] + ' '
 
         if warning:
-            if self.lcd.hat and self.lcd.config['buzzer']:
-                self.lcd.hat.arduino.set_buzzer(2, 1)
+            if self.lcd.config['buzzer'] > 1:
+                self.lcd.send('buzzer', (1, .1))
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:
