@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-08-06 08:40-0400\n"
+"POT-Creation-Date: 2021-09-02 13:33-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,44 +19,40 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:107
-msgid "failed to load pilot"
-msgstr "impossibile caricare il pilota"
-
-#: pypilot/autopilot.py:110
+#: pypilot/autopilot.py:138
 msgid "Available Pilots"
 msgstr "Piloti disponibili"
 
-#: pypilot/autopilot.py:136
+#: pypilot/autopilot.py:160
 msgid "warning: failed to open special file"
 msgstr "avviso: impossibile aprire il file speciale"
 
-#: pypilot/autopilot.py:136
+#: pypilot/autopilot.py:160
 msgid "for writing"
 msgstr "per scrivere"
 
-#: pypilot/autopilot.py:137
+#: pypilot/autopilot.py:161
 msgid "cannot stroke the watchdog"
 msgstr "non posso accarezzare il cane da guardia"
 
-#: pypilot/autopilot.py:141
+#: pypilot/autopilot.py:165
 msgid "warning: failed to make autopilot process realtime"
 msgstr ""
 "avviso: impossibile rendere il processo del pilota automatico in tempo reale"
 
-#: pypilot/autopilot.py:312
+#: pypilot/autopilot.py:336
 msgid "server/client is running too _slowly_"
 msgstr "il server/client è in esecuzione troppo _lentamente_"
 
-#: pypilot/autopilot.py:318
+#: pypilot/autopilot.py:342
 msgid "sensors is running too _slowly_"
 msgstr "i sensori funzionano troppo lentamente"
 
-#: pypilot/autopilot.py:368
+#: pypilot/autopilot.py:418
 msgid "autopilot routine is running too _slowly_"
 msgstr "la routine del pilota automatico è troppo lenta"
 
-#: pypilot/autopilot.py:377
+#: pypilot/autopilot.py:427
 msgid "servo is running too _slowly_"
 msgstr "il servo funziona troppo lentamente"
 
@@ -339,79 +335,79 @@ msgstr "dispositivo seriale scaduto"
 msgid "failed to open"
 msgstr "non è riuscito ad aprire"
 
-#: pypilot/nmea.py:481
+#: pypilot/nmea.py:484
 msgid "nmea server on port"
 msgstr "server nmea sulla porta"
 
-#: pypilot/nmea.py:481
+#: pypilot/nmea.py:484
 msgid "bind failed."
 msgstr "associazione non riuscita."
 
-#: pypilot/nmea.py:483
+#: pypilot/nmea.py:486
 msgid "listening on port"
 msgstr "in ascolto sulla porta"
 
-#: pypilot/nmea.py:483
+#: pypilot/nmea.py:486
 msgid "for nmea connections"
 msgstr "per connessioni nmea"
 
-#: pypilot/nmea.py:549
+#: pypilot/nmea.py:552
 msgid "nmea server has too many connections"
 msgstr "Il server nmea ha troppe connessioni"
 
-#: pypilot/nmea.py:575
+#: pypilot/nmea.py:578
+msgid "nmea client lost connection"
+msgstr "il client nmea ha perso la connessione"
+
+#: pypilot/nmea.py:583
 msgid "nmea sock not in sockets!"
 msgstr "nmea calzino non nelle prese!"
 
-#: pypilot/nmea.py:586
+#: pypilot/nmea.py:594
 msgid "nmea failed to unregister socket"
 msgstr "nmea non è riuscito a annullare la registrazione del socket"
 
-#: pypilot/nmea.py:591
+#: pypilot/nmea.py:599
 msgid "nmea failed to remove fd"
 msgstr "nmea non è riuscito a rimuovere fd"
 
-#: pypilot/nmea.py:596
+#: pypilot/nmea.py:604
 msgid "nmea failed to remove address"
 msgstr "nmea non è riuscito a rimuovere l'indirizzo"
 
-#: pypilot/nmea.py:609 pypilot/signalk.py:284
-msgid "connected to"
-msgstr "collegato al"
+#: pypilot/nmea.py:626
+msgid "invalid value"
+msgstr "valore non valido"
 
-#: pypilot/nmea.py:609
-msgid "in"
-msgstr "nel"
+#: pypilot/nmea.py:636
+msgid "connect error"
+msgstr "errore di connessione"
 
-#: pypilot/nmea.py:609
-msgid "seconds"
-msgstr "secondi"
+#: pypilot/nmea.py:665 pypilot/signalk.py:239
+msgid "failed to connect"
+msgstr "connessione fallita"
 
-#: pypilot/nmea.py:613
-msgid "nmea client failed to connect to"
-msgstr "il client nmea non è riuscito a connettersi a"
+#: pypilot/nmea.py:673
+msgid "nmea client connected"
+msgstr "nmea client connesso"
 
-#: pypilot/nmea.py:640
+#: pypilot/nmea.py:702
 msgid "poll took too long in nmea process!"
 msgstr "il sondaggio ha impiegato troppo tempo nel processo di nmea!"
 
-#: pypilot/nmea.py:647
+#: pypilot/nmea.py:709
 msgid "nmea bridge lost server connection"
 msgstr "nmea bridge ha perso la connessione al server"
 
-#: pypilot/nmea.py:650
+#: pypilot/nmea.py:712
 msgid "nmea bridge lost pipe to autopilot"
 msgstr "nmea bridge ha perso il tubo per il pilota automatico"
 
-#: pypilot/nmea.py:669
+#: pypilot/nmea.py:735
 msgid "nmea bridge unhandled poll flag"
 msgstr "bandiera sondaggio nmea bridge non gestita"
 
-#: pypilot/nmea.py:706
-msgid "failed to create nmea socket as host:port"
-msgstr "impossibile creare il socket nmea come host:port"
-
-#: pypilot/nmea.py:712
+#: pypilot/nmea.py:770
 msgid "nmea process loop too slow:"
 msgstr "ciclo di processo nmea troppo lento:"
 
@@ -457,7 +453,7 @@ msgstr "cattiva calibrazione del timone"
 msgid "bad servo rudder calibration"
 msgstr "cattiva calibrazione del servo del timone"
 
-#: pypilot/rudder.py:193
+#: pypilot/rudder.py:192
 msgid "servo rudder autogain failed"
 msgstr "Guadagno automatico del servo timone fallito"
 
@@ -545,35 +541,35 @@ msgstr "socket del server chiuso da flush!!"
 msgid "servo calibration invalid"
 msgstr "calibrazione servo non valida"
 
-#: pypilot/servo.py:563
+#: pypilot/servo.py:564
 msgid "failed to open servo on:"
 msgstr "impossibile aprire il servo su:"
 
-#: pypilot/servo.py:570
+#: pypilot/servo.py:571
 msgid "failed set nonblocking/exclusive"
 msgstr "set non bloccante/esclusivo non riuscito"
 
-#: pypilot/servo.py:601 pypilot/signalk.py:159
+#: pypilot/servo.py:602 pypilot/signalk.py:159
 msgid "found"
 msgstr "trovato"
 
-#: pypilot/servo.py:723
+#: pypilot/servo.py:724
 msgid "loading servo calibration"
 msgstr "caricamento della calibrazione del servo"
 
-#: pypilot/servo.py:727
+#: pypilot/servo.py:728
 msgid "WARNING: using default servo calibration!!"
 msgstr "ATTENZIONE: utilizzo della calibrazione servo di default!!"
 
-#: pypilot/servo.py:736
+#: pypilot/servo.py:737
 msgid "probing"
 msgstr "sondare"
 
-#: pypilot/servo.py:752
+#: pypilot/servo.py:753
 msgid "arduino servo detected"
 msgstr "Servo arduino rilevato"
 
-#: pypilot/servo.py:761
+#: pypilot/servo.py:762
 msgid "device needed for option"
 msgstr "dispositivo necessario per l'opzione"
 
@@ -661,9 +657,9 @@ msgstr "cattivo stato, rifiuto del token"
 msgid "connection refused"
 msgstr "Connessione rifiutata"
 
-#: pypilot/signalk.py:239
-msgid "failed to connect"
-msgstr "connessione fallita"
+#: pypilot/signalk.py:284
+msgid "connected to"
+msgstr "collegato al"
 
 #: pypilot/signalk.py:354
 msgid "Exception converting signalk->pypilot"
@@ -999,6 +995,21 @@ msgstr "Tempo"
 #: ui/scope_wx.py:67
 msgid "values not found:"
 msgstr "valori non trovati:"
+
+#~ msgid "failed to load pilot"
+#~ msgstr "impossibile caricare il pilota"
+
+#~ msgid "in"
+#~ msgstr "nel"
+
+#~ msgid "seconds"
+#~ msgstr "secondi"
+
+#~ msgid "nmea client failed to connect to"
+#~ msgstr "il client nmea non è riuscito a connettersi a"
+
+#~ msgid "failed to create nmea socket as host:port"
+#~ msgstr "impossibile creare il socket nmea come host:port"
 
 #~ msgid "terminate calibration process"
 #~ msgstr "terminare il processo di calibrazione"

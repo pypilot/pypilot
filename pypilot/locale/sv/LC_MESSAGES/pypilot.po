@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-08-06 08:40-0400\n"
+"POT-Creation-Date: 2021-09-02 13:33-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,43 +19,39 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:107
-msgid "failed to load pilot"
-msgstr "misslyckades med att ladda pilot"
-
-#: pypilot/autopilot.py:110
+#: pypilot/autopilot.py:138
 msgid "Available Pilots"
 msgstr "Tillgängliga piloter"
 
-#: pypilot/autopilot.py:136
+#: pypilot/autopilot.py:160
 msgid "warning: failed to open special file"
 msgstr "varning: det gick inte att öppna specialfilen"
 
-#: pypilot/autopilot.py:136
+#: pypilot/autopilot.py:160
 msgid "for writing"
 msgstr "för skrivande"
 
-#: pypilot/autopilot.py:137
+#: pypilot/autopilot.py:161
 msgid "cannot stroke the watchdog"
 msgstr "kan inte stryka vakthunden"
 
-#: pypilot/autopilot.py:141
+#: pypilot/autopilot.py:165
 msgid "warning: failed to make autopilot process realtime"
 msgstr "varning: misslyckades med att göra autopilotprocessen i realtid"
 
-#: pypilot/autopilot.py:312
+#: pypilot/autopilot.py:336
 msgid "server/client is running too _slowly_"
 msgstr "servern / klienten körs för _slowly_"
 
-#: pypilot/autopilot.py:318
+#: pypilot/autopilot.py:342
 msgid "sensors is running too _slowly_"
 msgstr "sensorerna går för långsamt"
 
-#: pypilot/autopilot.py:368
+#: pypilot/autopilot.py:418
 msgid "autopilot routine is running too _slowly_"
 msgstr "autopilotrutinen går för långsamt"
 
-#: pypilot/autopilot.py:377
+#: pypilot/autopilot.py:427
 msgid "servo is running too _slowly_"
 msgstr "servo går för långsamt"
 
@@ -334,79 +330,79 @@ msgstr "tidsenhet för seriell enhet"
 msgid "failed to open"
 msgstr "gick inte att öppna"
 
-#: pypilot/nmea.py:481
+#: pypilot/nmea.py:484
 msgid "nmea server on port"
 msgstr "nmea-server på port"
 
-#: pypilot/nmea.py:481
+#: pypilot/nmea.py:484
 msgid "bind failed."
 msgstr "bindningen misslyckades."
 
-#: pypilot/nmea.py:483
+#: pypilot/nmea.py:486
 msgid "listening on port"
 msgstr "lyssnar på port"
 
-#: pypilot/nmea.py:483
+#: pypilot/nmea.py:486
 msgid "for nmea connections"
 msgstr "för nmea-anslutningar"
 
-#: pypilot/nmea.py:549
+#: pypilot/nmea.py:552
 msgid "nmea server has too many connections"
 msgstr "nmea-servern har för många anslutningar"
 
-#: pypilot/nmea.py:575
+#: pypilot/nmea.py:578
+msgid "nmea client lost connection"
+msgstr "nmea -klienten förlorade anslutningen"
+
+#: pypilot/nmea.py:583
 msgid "nmea sock not in sockets!"
 msgstr "nmea strumpa inte i uttag!"
 
-#: pypilot/nmea.py:586
+#: pypilot/nmea.py:594
 msgid "nmea failed to unregister socket"
 msgstr "nmea kunde inte avregistrera sockeln"
 
-#: pypilot/nmea.py:591
+#: pypilot/nmea.py:599
 msgid "nmea failed to remove fd"
 msgstr "nmea misslyckades med att ta bort fd"
 
-#: pypilot/nmea.py:596
+#: pypilot/nmea.py:604
 msgid "nmea failed to remove address"
 msgstr "nmea kunde inte ta bort adressen"
 
-#: pypilot/nmea.py:609 pypilot/signalk.py:284
-msgid "connected to"
-msgstr "anslutet till"
+#: pypilot/nmea.py:626
+msgid "invalid value"
+msgstr "ogiltigt värde"
 
-#: pypilot/nmea.py:609
-msgid "in"
-msgstr "i"
+#: pypilot/nmea.py:636
+msgid "connect error"
+msgstr "anslutningsfel"
 
-#: pypilot/nmea.py:609
-msgid "seconds"
-msgstr "sekunder"
+#: pypilot/nmea.py:665 pypilot/signalk.py:239
+msgid "failed to connect"
+msgstr "misslyckades med att ansluta"
 
-#: pypilot/nmea.py:613
-msgid "nmea client failed to connect to"
-msgstr "nmea-klienten kunde inte ansluta till"
+#: pypilot/nmea.py:673
+msgid "nmea client connected"
+msgstr ""
 
-#: pypilot/nmea.py:640
+#: pypilot/nmea.py:702
 msgid "poll took too long in nmea process!"
 msgstr "enkäten tog för lång tid i nmea-processen!"
 
-#: pypilot/nmea.py:647
+#: pypilot/nmea.py:709
 msgid "nmea bridge lost server connection"
 msgstr "nmea bridge förlorad serveranslutning"
 
-#: pypilot/nmea.py:650
+#: pypilot/nmea.py:712
 msgid "nmea bridge lost pipe to autopilot"
 msgstr "nmea bridge förlorade röret till autopiloten"
 
-#: pypilot/nmea.py:669
+#: pypilot/nmea.py:735
 msgid "nmea bridge unhandled poll flag"
 msgstr "nmea bridge obehandlad omröstningsflagga"
 
-#: pypilot/nmea.py:706
-msgid "failed to create nmea socket as host:port"
-msgstr "misslyckades med att skapa nmea-uttag som värd: port"
-
-#: pypilot/nmea.py:712
+#: pypilot/nmea.py:770
 msgid "nmea process loop too slow:"
 msgstr "nmea processlinga för långsam:"
 
@@ -452,7 +448,7 @@ msgstr "dålig roderkalibrering"
 msgid "bad servo rudder calibration"
 msgstr "dålig servoroder kalibrering"
 
-#: pypilot/rudder.py:193
+#: pypilot/rudder.py:192
 msgid "servo rudder autogain failed"
 msgstr "Servo roder autogain misslyckades"
 
@@ -540,35 +536,35 @@ msgstr "serveruttag stängt från spolning !!"
 msgid "servo calibration invalid"
 msgstr "servokalibrering ogiltig"
 
-#: pypilot/servo.py:563
+#: pypilot/servo.py:564
 msgid "failed to open servo on:"
 msgstr "misslyckades med att öppna servo på:"
 
-#: pypilot/servo.py:570
+#: pypilot/servo.py:571
 msgid "failed set nonblocking/exclusive"
 msgstr "misslyckades ställa in blockering / exklusiv"
 
-#: pypilot/servo.py:601 pypilot/signalk.py:159
+#: pypilot/servo.py:602 pypilot/signalk.py:159
 msgid "found"
 msgstr "hittades"
 
-#: pypilot/servo.py:723
+#: pypilot/servo.py:724
 msgid "loading servo calibration"
 msgstr "laddning av servokalibrering"
 
-#: pypilot/servo.py:727
+#: pypilot/servo.py:728
 msgid "WARNING: using default servo calibration!!"
 msgstr "VARNING: använder standard servokalibrering !!"
 
-#: pypilot/servo.py:736
+#: pypilot/servo.py:737
 msgid "probing"
 msgstr "sondering"
 
-#: pypilot/servo.py:752
+#: pypilot/servo.py:753
 msgid "arduino servo detected"
 msgstr "arduino servo upptäckt"
 
-#: pypilot/servo.py:761
+#: pypilot/servo.py:762
 msgid "device needed for option"
 msgstr "enhet som behövs för alternativet"
 
@@ -656,9 +652,9 @@ msgstr "dålig status, avvisar token"
 msgid "connection refused"
 msgstr "anslutning nekad"
 
-#: pypilot/signalk.py:239
-msgid "failed to connect"
-msgstr "misslyckades med att ansluta"
+#: pypilot/signalk.py:284
+msgid "connected to"
+msgstr "anslutet till"
 
 #: pypilot/signalk.py:354
 msgid "Exception converting signalk->pypilot"
@@ -992,6 +988,21 @@ msgstr "Tid"
 #: ui/scope_wx.py:67
 msgid "values not found:"
 msgstr "värden hittades inte:"
+
+#~ msgid "failed to load pilot"
+#~ msgstr "misslyckades med att ladda pilot"
+
+#~ msgid "in"
+#~ msgstr "i"
+
+#~ msgid "seconds"
+#~ msgstr "sekunder"
+
+#~ msgid "nmea client failed to connect to"
+#~ msgstr "nmea-klienten kunde inte ansluta till"
+
+#~ msgid "failed to create nmea socket as host:port"
+#~ msgstr "misslyckades med att skapa nmea-uttag som värd: port"
 
 #~ msgid "terminate calibration process"
 #~ msgstr "avsluta kalibreringsprocessen"

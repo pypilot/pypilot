@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-08-06 08:40-0400\n"
+"POT-Creation-Date: 2021-09-02 13:33-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,45 +19,41 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:107
-msgid "failed to load pilot"
-msgstr "απέτυχε η φόρτωση πιλότου"
-
-#: pypilot/autopilot.py:110
+#: pypilot/autopilot.py:138
 msgid "Available Pilots"
 msgstr "Διαθέσιμοι πιλότοι"
 
-#: pypilot/autopilot.py:136
+#: pypilot/autopilot.py:160
 msgid "warning: failed to open special file"
 msgstr "προειδοποίηση: απέτυχε να ανοίξει ειδικό αρχείο"
 
-#: pypilot/autopilot.py:136
+#: pypilot/autopilot.py:160
 msgid "for writing"
 msgstr "για γραφή"
 
-#: pypilot/autopilot.py:137
+#: pypilot/autopilot.py:161
 msgid "cannot stroke the watchdog"
 msgstr "δεν μπορεί να χτυπήσει τον φύλακα"
 
-#: pypilot/autopilot.py:141
+#: pypilot/autopilot.py:165
 msgid "warning: failed to make autopilot process realtime"
 msgstr ""
 "προειδοποίηση: απέτυχε να πραγματοποιήσει τη διαδικασία αυτόματου πιλότου σε"
 " πραγματικό χρόνο"
 
-#: pypilot/autopilot.py:312
+#: pypilot/autopilot.py:336
 msgid "server/client is running too _slowly_"
 msgstr "ο διακομιστής / πελάτης εκτελείται πολύ _slowly_"
 
-#: pypilot/autopilot.py:318
+#: pypilot/autopilot.py:342
 msgid "sensors is running too _slowly_"
 msgstr "οι αισθητήρες λειτουργούν πολύ αργά"
 
-#: pypilot/autopilot.py:368
+#: pypilot/autopilot.py:418
 msgid "autopilot routine is running too _slowly_"
 msgstr "Η ρουτίνα αυτόματου πιλότου εκτελείται πολύ αργά"
 
-#: pypilot/autopilot.py:377
+#: pypilot/autopilot.py:427
 msgid "servo is running too _slowly_"
 msgstr "Το σερβο λειτουργεί πολύ αργά"
 
@@ -340,79 +336,79 @@ msgstr "λήγει η σειριακή συσκευή"
 msgid "failed to open"
 msgstr "απέτυχε να ανοίξει"
 
-#: pypilot/nmea.py:481
+#: pypilot/nmea.py:484
 msgid "nmea server on port"
 msgstr "διακομιστής nmea στη θύρα"
 
-#: pypilot/nmea.py:481
+#: pypilot/nmea.py:484
 msgid "bind failed."
 msgstr "η σύνδεση απέτυχε."
 
-#: pypilot/nmea.py:483
+#: pypilot/nmea.py:486
 msgid "listening on port"
 msgstr "ακρόαση στη θύρα"
 
-#: pypilot/nmea.py:483
+#: pypilot/nmea.py:486
 msgid "for nmea connections"
 msgstr "για συνδέσεις nmea"
 
-#: pypilot/nmea.py:549
+#: pypilot/nmea.py:552
 msgid "nmea server has too many connections"
 msgstr "Ο διακομιστής nmea έχει πάρα πολλές συνδέσεις"
 
-#: pypilot/nmea.py:575
+#: pypilot/nmea.py:578
+msgid "nmea client lost connection"
+msgstr "Ο πελάτης nmea έχασε τη σύνδεση"
+
+#: pypilot/nmea.py:583
 msgid "nmea sock not in sockets!"
 msgstr "nmea κάλτσα όχι στις πρίζες!"
 
-#: pypilot/nmea.py:586
+#: pypilot/nmea.py:594
 msgid "nmea failed to unregister socket"
 msgstr "Το nmea απέτυχε να καταργήσει την εγγραφή του socket"
 
-#: pypilot/nmea.py:591
+#: pypilot/nmea.py:599
 msgid "nmea failed to remove fd"
 msgstr "Το nmea απέτυχε να αφαιρέσει το fd"
 
-#: pypilot/nmea.py:596
+#: pypilot/nmea.py:604
 msgid "nmea failed to remove address"
 msgstr "Το nmea απέτυχε να αφαιρέσει τη διεύθυνση"
 
-#: pypilot/nmea.py:609 pypilot/signalk.py:284
-msgid "connected to"
-msgstr "συνδεδεμένος με"
+#: pypilot/nmea.py:626
+msgid "invalid value"
+msgstr "μη έγκυρη τιμή"
 
-#: pypilot/nmea.py:609
-msgid "in"
-msgstr "σε"
+#: pypilot/nmea.py:636
+msgid "connect error"
+msgstr "σφάλμα σύνδεσης"
 
-#: pypilot/nmea.py:609
-msgid "seconds"
-msgstr "δευτερόλεπτα"
+#: pypilot/nmea.py:665 pypilot/signalk.py:239
+msgid "failed to connect"
+msgstr "απέτυχε να συνδεθεί"
 
-#: pypilot/nmea.py:613
-msgid "nmea client failed to connect to"
-msgstr "Ο πελάτης nmea απέτυχε να συνδεθεί"
+#: pypilot/nmea.py:673
+msgid "nmea client connected"
+msgstr "συνδεδεμένο πρόγραμμα -πελάτης nmea"
 
-#: pypilot/nmea.py:640
+#: pypilot/nmea.py:702
 msgid "poll took too long in nmea process!"
 msgstr "η δημοσκόπηση διήρκεσε πολύ στη διαδικασία nmea!"
 
-#: pypilot/nmea.py:647
+#: pypilot/nmea.py:709
 msgid "nmea bridge lost server connection"
 msgstr "nmea bridge έχασε τη σύνδεση διακομιστή"
 
-#: pypilot/nmea.py:650
+#: pypilot/nmea.py:712
 msgid "nmea bridge lost pipe to autopilot"
 msgstr "η γέφυρα nmea έχασε το σωλήνα του αυτόματου πιλότου"
 
-#: pypilot/nmea.py:669
+#: pypilot/nmea.py:735
 msgid "nmea bridge unhandled poll flag"
 msgstr "nmea γέφυρα σημαία χωρίς έλεγχο"
 
-#: pypilot/nmea.py:706
-msgid "failed to create nmea socket as host:port"
-msgstr "απέτυχε να δημιουργήσει nmea socket ως host: port"
-
-#: pypilot/nmea.py:712
+#: pypilot/nmea.py:770
 msgid "nmea process loop too slow:"
 msgstr "ο βρόχος διεργασίας nmea είναι πολύ αργός:"
 
@@ -458,7 +454,7 @@ msgstr "κακή βαθμονόμηση πηδαλίου"
 msgid "bad servo rudder calibration"
 msgstr "κακή βαθμονόμηση σερβο πηδαλίου"
 
-#: pypilot/rudder.py:193
+#: pypilot/rudder.py:192
 msgid "servo rudder autogain failed"
 msgstr "Το autogain servo πηδαλίου απέτυχε"
 
@@ -546,35 +542,35 @@ msgstr "η υποδοχή διακομιστή έκλεισε από την έξ
 msgid "servo calibration invalid"
 msgstr "Η βαθμονόμηση του σερβο δεν είναι έγκυρη"
 
-#: pypilot/servo.py:563
+#: pypilot/servo.py:564
 msgid "failed to open servo on:"
 msgstr "απέτυχε να ανοίξει το σερβο σε:"
 
-#: pypilot/servo.py:570
+#: pypilot/servo.py:571
 msgid "failed set nonblocking/exclusive"
 msgstr "αποτυχημένο σύνολο αποκλεισμού / αποκλεισμού"
 
-#: pypilot/servo.py:601 pypilot/signalk.py:159
+#: pypilot/servo.py:602 pypilot/signalk.py:159
 msgid "found"
 msgstr "βρέθηκαν"
 
-#: pypilot/servo.py:723
+#: pypilot/servo.py:724
 msgid "loading servo calibration"
 msgstr "φόρτωση βαθμονόμησης σερβο"
 
-#: pypilot/servo.py:727
+#: pypilot/servo.py:728
 msgid "WARNING: using default servo calibration!!"
 msgstr "ΠΡΟΕΙΔΟΠΟΙΗΣΗ: χρησιμοποιώντας την προεπιλεγμένη βαθμονόμηση servo !!"
 
-#: pypilot/servo.py:736
+#: pypilot/servo.py:737
 msgid "probing"
 msgstr "διερεύνηση"
 
-#: pypilot/servo.py:752
+#: pypilot/servo.py:753
 msgid "arduino servo detected"
 msgstr "Εντοπίστηκε σερβο arduino"
 
-#: pypilot/servo.py:761
+#: pypilot/servo.py:762
 msgid "device needed for option"
 msgstr "απαιτείται συσκευή για επιλογή"
 
@@ -662,9 +658,9 @@ msgstr "κακή κατάσταση, απόρριψη διακριτικού"
 msgid "connection refused"
 msgstr "η σύνδεση αρνήθηκε"
 
-#: pypilot/signalk.py:239
-msgid "failed to connect"
-msgstr "απέτυχε να συνδεθεί"
+#: pypilot/signalk.py:284
+msgid "connected to"
+msgstr "συνδεδεμένος με"
 
 #: pypilot/signalk.py:354
 msgid "Exception converting signalk->pypilot"
@@ -1000,6 +996,21 @@ msgstr "χρόνος"
 #: ui/scope_wx.py:67
 msgid "values not found:"
 msgstr "οι τιμές δεν βρέθηκαν:"
+
+#~ msgid "failed to load pilot"
+#~ msgstr "απέτυχε η φόρτωση πιλότου"
+
+#~ msgid "in"
+#~ msgstr "σε"
+
+#~ msgid "seconds"
+#~ msgstr "δευτερόλεπτα"
+
+#~ msgid "nmea client failed to connect to"
+#~ msgstr "Ο πελάτης nmea απέτυχε να συνδεθεί"
+
+#~ msgid "failed to create nmea socket as host:port"
+#~ msgstr "απέτυχε να δημιουργήσει nmea socket ως host: port"
 
 #~ msgid "terminate calibration process"
 #~ msgstr "τερματίστε τη διαδικασία βαθμονόμησης"

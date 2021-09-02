@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-07-20 06:24-0400\n"
+"POT-Creation-Date: 2021-09-02 13:32-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,31 +25,31 @@ msgstr ""
 msgid "Connected"
 msgstr ""
 
-#: static/pypilot_control.js:170
+#: static/pypilot_control.js:177
 msgid "Disconnected"
 msgstr ""
 
-#: static/pypilot_control.js:240
+#: static/pypilot_control.js:247
 msgid "compass or gyro failure!"
 msgstr ""
 
-#: static/pypilot_control.js:253
+#: static/pypilot_control.js:260
 msgid "Tack"
 msgstr ""
 
-#: static/pypilot_control.js:256
+#: static/pypilot_control.js:263
 msgid "Cancel"
 msgstr ""
 
-#: static/pypilot_control.js:315
+#: static/pypilot_control.js:322
 msgid "Engaged"
 msgstr ""
 
-#: static/pypilot_control.js:317
+#: static/pypilot_control.js:324
 msgid "Disengaged"
 msgstr ""
 
-#: static/pypilot_control.js:386
+#: static/pypilot_control.js:396
 msgid "no motor controller!"
 msgstr ""
 
@@ -87,123 +87,127 @@ msgstr ""
 msgid "Statistics"
 msgstr ""
 
-#: templates/index.html:55
+#: templates/index.html:51
 msgid "Heading"
 msgstr ""
 
-#: templates/index.html:57
+#: templates/index.html:53
 msgid "Command"
 msgstr ""
 
-#: templates/index.html:111
+#: templates/index.html:96
 msgid "Magnetic Heading"
 msgstr ""
 
-#: templates/index.html:112
+#: templates/index.html:97
 msgid "Pitch"
 msgstr ""
 
-#: templates/index.html:113
+#: templates/index.html:98
 msgid "Roll"
 msgstr ""
 
-#: templates/index.html:114
+#: templates/index.html:99
 msgid "Press"
 msgstr ""
 
-#: templates/index.html:114
+#: templates/index.html:99
 msgid "here"
 msgstr ""
 
-#: templates/index.html:115
+#: templates/index.html:100
 msgid "when the boat is level to align the inertial sensors."
 msgstr ""
 
-#: templates/index.html:120
+#: templates/index.html:105
 msgid "Magnetic Heading Offset"
 msgstr ""
 
-#: templates/index.html:122
+#: templates/index.html:107
 msgid "Lock Calibration"
 msgstr ""
 
-#: templates/index.html:124
+#: templates/index.html:109
 msgid "calibration plot"
 msgstr ""
 
-#: templates/index.html:126
+#: templates/index.html:111
 msgid "Rudder"
 msgstr ""
 
-#: templates/index.html:128
+#: templates/index.html:113
 msgid "centered"
 msgstr ""
 
-#: templates/index.html:129
+#: templates/index.html:114
 msgid "port range"
 msgstr ""
 
-#: templates/index.html:130
+#: templates/index.html:115
 msgid "starboard range"
 msgstr ""
 
-#: templates/index.html:131 templates/index.html:153
+#: templates/index.html:116 templates/index.html:139
 msgid "reset"
 msgstr ""
 
-#: templates/index.html:134
+#: templates/index.html:119
 msgid "Rudder Range"
 msgstr ""
 
-#: templates/index.html:135
+#: templates/index.html:120
 msgid "Degrees"
 msgstr ""
 
-#: templates/index.html:141
+#: templates/index.html:126
 msgid "Display"
 msgstr ""
 
-#: templates/index.html:142
+#: templates/index.html:127
 msgid "Clear"
 msgstr ""
 
-#: templates/index.html:143
+#: templates/index.html:128
 msgid "Dark"
 msgstr ""
 
-#: templates/index.html:151
+#: templates/index.html:132
+msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
+msgstr ""
+
+#: templates/index.html:137
 msgid "Amp Hours"
 msgstr ""
 
-#: templates/index.html:154
+#: templates/index.html:140
 msgid "Voltage"
 msgstr ""
 
-#: templates/index.html:155
+#: templates/index.html:141
 msgid "Controller temperature"
 msgstr ""
 
-#: templates/index.html:156
+#: templates/index.html:142
 msgid "Runtime"
 msgstr ""
 
-#: templates/index.html:157
+#: templates/index.html:143
 msgid "Servo"
 msgstr ""
 
-#: templates/wifi.html:7
+#: templates/wifi.html:8
 msgid "Wireless Configuration"
 msgstr ""
 
-#: templates/wifi.html:15
+#: templates/wifi.html:16
 msgid "Key (leave blank for no encryption)"
 msgstr ""
 
-#: templates/wifi.html:17
+#: templates/wifi.html:18
 msgid "Client Mode Address (leave blank for dhcp)"
 msgstr ""
 
-#: templates/wifi.html:22
+#: templates/wifi.html:23
 msgid "If there is a problem, edit the file"
 msgstr ""
 
