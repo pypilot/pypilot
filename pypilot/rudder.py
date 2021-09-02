@@ -142,7 +142,6 @@ class Rudder(Sensor):
             return
 
         if self.calibration_state.value == 'auto gain':
-
             return
             
             def idle():
