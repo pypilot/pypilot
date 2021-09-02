@@ -104,6 +104,13 @@ class RTIMULIB2_dep(dep):
         except Exception as e:
             print('failed to import', self.name)
             return False
+
+        from importlib.metadata import version
+        v = version('RTIMULIb').split('.')
+        n = (int(v[0])*1000 + int(v[1]))*1000 + int(v[2])
+        if n < 8000001:
+            return False
+
         return True
 
     def install(self):
@@ -190,11 +197,14 @@ for s in subsystems:
 print('')
 print('')
 print('summary of pypilot dependencies')
-f = open('deps', 'w')
 for s in subsystems:
     r = s.result()
     print(r)
+print('')
+print('')
+
+f = open('deps', 'w')
+for s in subsystems:
+    r = s.result()
     f.write(r + '\n')
 f.close()
-print('')
-print('')
