@@ -466,10 +466,13 @@ class nmeaBridge(object):
         self.sockets = []
 
         self.nmea_client = self.client.register(Property('nmea.client', '', persistent=True))
+        self.client_socket_warning_address = False
 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setblocking(0)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        self.connecting_client_socket = False
         self.client_socket = False
 
         port = DEFAULT_PORT
@@ -484,7 +487,7 @@ class nmeaBridge(object):
 
         self.server.listen(5)
 
-        self.failed_nmea_client_time = 0
+        self.nmea_client_connect_time = 0
         self.last_values = {'gps.source' : 'none', 'wind.source' : 'none', 'rudder.source': 'none', 'apb.source': 'none'}
         for name in self.last_values:
             self.client.watch(name)
@@ -492,7 +495,6 @@ class nmeaBridge(object):
         cnt = 0
 
         self.poller = select.poll()
-        
         self.poller.register(self.server, select.POLLIN)
         self.fd_to_socket = {self.server.fileno() : self.server}
 
@@ -567,7 +569,12 @@ class nmeaBridge(object):
         return sock
 
     def socket_lost(self, sock, fd):
+        #print('nmea socket lost', fd, sock, self.connecting_client_socket)
+        if sock == self.connecting_client_socket:
+            self.close_connecting_client()
+            return
         if sock == self.client_socket:
+            print('nmea client lost')
             self.client_socket = False
         try:
             self.sockets.remove(sock)
@@ -598,21 +605,65 @@ class nmeaBridge(object):
         sock.close()
 
     def connect_client(self):
-        if not ':' in self.nmea_client.value:
+        t = time.monotonic()
+        if t - self.nmea_client_connect_time < 20:
             return
-        host, port = self.nmea_client.value.split(':')
-        port = int(port)
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            tc0 = time.monotonic()
-            s.connect((host, port))
-            print(_('connected to'), host, port, _('in'), time.monotonic() - tc0, _('seconds'))
-            self.client_socket = self.new_socket_connection(s, self.nmea_client.value)
-            self.client_socket.nmea_client = self.nmea_client.value
-        except Exception as e:
-            print(_('nmea client failed to connect to'), self.nmea_client.value, ':', e)
-            self.client_socket = False
+        
+        self.nmea_client_connect_time = t
+        self.client_socket_nmea_address = self.nmea_client.value
+        
+        if not ':' in self.nmea_client.value:
+            self.warn_connecting_client(_('invalid value'))
+            return
+        
+        hostport = self.nmea_client.value.split(':')
 
+        host = hostport[0]
+        port = hostport[1]
+
+        self.client_socket = False
+        try:
+            port = int(port)
+            if self.connecting_client_socket:
+                self.close_connecting_client()
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.setblocking(0)
+            s.connect((host, port))
+            self.warn_connecting_client('connected without blocking')
+            self.client_connected(s)
+        except OSError as e:
+            import errno
+            if e.args[0] is errno.EINPROGRESS:
+                self.poller.register(s, select.POLLOUT)
+                self.fd_to_socket[s.fileno()] = s
+                self.connecting_client_socket = s
+            else:
+                self.warn_connecting_client('failed to connect', self.nmea_client.value, ':', e)
+                s.close()
+                
+        except Exception as e:
+            s.close()
+            self.warn_connecting_client(_('connect error'))
+
+    def warn_connecting_client(self, msg):
+        if self.client_socket_warning_address != self.client_socket_nmea_address:
+            print('nmea client ' + msg, self.client_socket_nmea_address)
+            self.client_socket_warning_address = self.client_socket_nmea_address
+            
+    def close_connecting_client(self):
+        self.warn_connecting_client(_('nmea client failed to connect'))
+        fd = self.connecting_client_socket.fileno()
+        self.poller.unregister(fd)
+        del self.fd_to_socket[fd]
+        self.connecting_client_socket.close()
+        self.connecting_client_socket = False
+
+    def client_connected(self, connection):
+        print('nmea client connected')
+        self.client_socket_warning_address = False
+        self.client_socket = self.new_socket_connection(connection, self.client_socket_nmea_address)
+        self.connecting_client_socket = False
+        
     def nmea_process(self):
         print('nmea process', os.getpid())
         self.setup()
@@ -638,7 +689,7 @@ class nmeaBridge(object):
         t1 = time.monotonic()
         if t1-t0 > timeout:
             print(_('poll took too long in nmea process!'))
-
+            
         while events:
             fd, flag = events.pop()
             sock = self.fd_to_socket[fd]
@@ -656,6 +707,10 @@ class nmeaBridge(object):
                 self.receive_pipe()
             elif sock == self.client:
                 pass # wake from poll
+            elif sock == self.connecting_client_socket and flag & select.POLLOUT:
+                self.poller.unregister(fd)
+                del self.fd_to_socket[fd]
+                self.client_connected(self.connecting_client_socket)
             elif flag & select.POLLIN:
                 if not sock.recvdata():
                     self.socket_lost(sock, fd)
@@ -697,14 +752,10 @@ class nmeaBridge(object):
 
         # reconnect client tcp socket
         if self.client_socket:
-            if self.client_socket.nmea_client != self.nmea_client.value:
+            if self.client_socket_nmea_address != self.nmea_client.value:
                 self.client_socket.socket.close() # address has changed, close connection
-        elif t5 - self.failed_nmea_client_time > 20:
-            try:
-                self.connect_client()
-            except Exception as e:
-                print(_('failed to create nmea socket as host:port'), self.nmea_client.value, e)
-                self.failed_nmea_client_time = t5
+        else:
+            self.connect_client()
                                 
         t6 = time.monotonic()
 
