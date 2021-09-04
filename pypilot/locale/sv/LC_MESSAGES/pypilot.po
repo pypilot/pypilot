@@ -384,7 +384,7 @@ msgstr "misslyckades med att ansluta"
 
 #: pypilot/nmea.py:673
 msgid "nmea client connected"
-msgstr ""
+msgstr "nmea -klient ansluten"
 
 #: pypilot/nmea.py:702
 msgid "poll took too long in nmea process!"
