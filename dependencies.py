@@ -105,7 +105,7 @@ class RTIMULIB2_dep(dep):
             print('failed to import', self.name)
             return False
 
-        from importlib.metadata import version
+        from importlib_metadata import version
         v = version('RTIMULIb').split('.')
         n = (int(v[0])*1000 + int(v[1]))*1000 + int(v[2])
         if n < 8000001:
