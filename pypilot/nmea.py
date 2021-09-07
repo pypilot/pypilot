@@ -621,6 +621,9 @@ class nmeaBridge(object):
             return
         
         self.nmea_client_connect_time = t
+
+        if not self.nmea_client.value:
+            return
         
         if not ':' in self.nmea_client.value:
             self.warn_connecting_client(_('invalid value'))
