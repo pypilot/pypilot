@@ -391,18 +391,21 @@ class Servo(object):
         min_speed = min(min_speed, max_speed)
         
         if self.force_engaged:  # use servo period when autopilot is in control
+            # rarely: if the rate is slow and period set low windup overflows easily
+            period = max(self.period.value, 2*dt)
+            
             # integrate windup
             self.windup += (speed - self.speed.value) * dt
 
             # if windup overflows, move at least minimum speed
-            if abs(self.windup) > self.period.value*min_speed / 1.5:
+            if abs(self.windup) > period*min_speed / 1.5:
                 if abs(speed) < min_speed:
                     speed = min_speed if self.windup > 0 else -min_speed
             else:
                 speed = 0
 
             # don't let windup overflow
-            max_windup = 1.5*self.period.value
+            max_windup = 1.5*period
             if abs(self.windup) > max_windup:
                 self.flags.setbit(ServoFlags.SATURATED)
                 self.windup = max_windup*sign(self.windup)
@@ -410,17 +413,21 @@ class Servo(object):
                 self.flags.clearbit(ServoFlags.SATURATED)
 
             last_speed = self.speed.value
-            if speed * last_speed <= 0: # switched direction or stopped?
-                if t - self.windup_change < self.period.value:
-                    # less than period, keep previous direction, but use minimum speed
-                    if last_speed > 0:
-                        speed = min_speed
-                    elif last_speed < 0:
-                        speed = -min_speed
+            if speed or last_speed: # reset windup only if moving or moved
+                m = speed * last_speed
+                if m <= 0: # switched direction or started/stopped?
+                    if t - self.windup_change < self.period.value:
+                        # less than period, keep previous direction, but use minimum speed
+                        if last_speed > 0:
+                            speed = min_speed
+                        elif last_speed < 0:
+                            speed = -min_speed
+                        else:
+                            speed = 0
                     else:
-                        speed = 0
-                else:
-                    self.windup_change = t
+                        self.windup_change = t
+                        if m < 0: # switched direction (difficult to actually hit)
+                            speed = 0
         
         # clamp to max speed
         speed = min(max(speed, -max_speed), max_speed)
