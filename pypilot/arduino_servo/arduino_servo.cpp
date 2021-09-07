@@ -357,16 +357,6 @@ void ArduinoServo::send_params()
         send_value(CLUTCH_PWM_CODE, eeprom.local.clutch_pwm);
         break;
     case 12:
-/*
-        // don't use 8 bit rudder range, for controllers supporting it
-        // because they don't support negative rudder feedback scale
-        // where min code is greater than max code, and the voltage is decreasing
-        // the rudder limit stops are handled in python already
-        send_value(RUDDER_RANGE_CODE,
-                   ((int)round(rudder_min*255) & 0xff) << 8 |
-                   ((int)round(rudder_max*255) & 0xff)); 
-*/
-        // instead use 16 bit rudder ranges
         send_value(RUDDER_MIN_CODE, (int)round((rudder_min+0.5)*65472));
         break;
     case 14:
@@ -374,9 +364,8 @@ void ArduinoServo::send_params()
         break;
     case 18:
         send_value(MAX_SLEW_CODE,
-                   eeprom.local.max_slew_slow << 8 |
-                   eeprom.local.max_slew_speed);
-        break;
+                   eeprom.local.max_slew_slow << 8 | eeprom.local.max_slew_speed);
+    break;
 #if 1
     case 20:
     {

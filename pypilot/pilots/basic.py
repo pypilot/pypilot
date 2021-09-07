@@ -23,7 +23,7 @@ class BasicPilot(AutopilotPilot):
     self.PosGain('D',  .09, 1.0)   # derivative (gyro)
     self.PosGain('DD',  .075, 1.0) # rate of derivative
     self.PosGain('PR',  .005, .05)  # position root
-    self.PosGain('FF',  .6, 3.0) # feed forward
+    self.PosGain('FF',  .6, 5.0) # feed forward
     #self.PosGain('R',  0.0, 1.0)  # reactive
     #self.reactive_time = self.register(RangeProperty, 'Rtime', 1, 0, 3)
 

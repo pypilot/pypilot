@@ -526,12 +526,6 @@ class Servo(object):
     def send_driver_params(self, mul=1):
         uncorrected_max_current = max(0, self.max_current.value - self.current.offset.value) / self.current.factor.value
         minmax = self.sensors.rudder.minmax
-        slew_slow = self.max_slew_slow.value
-        if self.force_engaged:
-            slew_speed = self.max_slew_speed.value
-        else:
-            slew_speed = 100 # manual control give fastest response
-            slew_slow *= 2 # manual control give faster response
 
         self.driver.params(mul * uncorrected_max_current,
                            minmax[0], minmax[1],
@@ -542,8 +536,8 @@ class Servo(object):
                            self.sensors.rudder.offset.value,
                            self.sensors.rudder.scale.value,
                            self.sensors.rudder.nonlinearity.value,
-                           slew_speed,
-                           slew_slow,
+                           self.max_slew_speed.value,
+                           self.max_slew_slow.value,
                            self.current.factor.value,
                            self.current.offset.value,
                            self.voltage.factor.value,

@@ -58,4 +58,5 @@ private:
 
     arduino_servo_eeprom eeprom;
     int eeprom_read;
+    uint8_t manual;
 };

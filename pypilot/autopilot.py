@@ -387,12 +387,13 @@ class Autopilot(object):
 
         # filter the heading command to compute feed-forward gain
         heading_command_diff = resolv(self.heading_command.value - self.last_heading_command)
-        self.last_heading_command = self.heading_command.value
+        if not 'wind' in self.mode.value: # wind modes need opposite gain
+            heading_command_diff = -heading_command_diff
+
+        self.last_heading_command = self.heading_command.value        
         self.heading_command_rate.time = t0
         lp = .1
         command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
-        if not 'wind' in self.mode.value: # wind modes need opposite gain
-            command_rate = -command_rate
         self.heading_command_rate.update(command_rate)
             
         self.last_heading_mode = self.mode.value
@@ -431,7 +432,7 @@ class Autopilot(object):
           
         if self.watchdog_device:
             self.watchdog_device.write('c')
-
+            
         while True: # sleep remainder of period
             dt = period - (time.monotonic() - t0) + sp
             if dt >= period or dt <= 0:
