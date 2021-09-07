@@ -6,6 +6,8 @@
  * version 3 of the License, or (at your option) any later version.
  */
 
+// could this work with attiny1614?
+
 #include <RCSwitch.h>
 
 RCSwitch rf = RCSwitch();
@@ -49,6 +51,11 @@ void setup() {
   rf.enableTransmit(9); // d9
   rf.setRepeatTransmit(1);
 
+  // these appear not to affect sleep consumption...
+  DIDR0 = 0x3f; // disable digital io on analog pins
+  PORTC = 0xff;
+  PORTB = _BV(PB3) | _BV(PB4);
+  
   // for led
   DDRB|=_BV(PB0) | _BV(PB2) | _BV(PB5);
 }
