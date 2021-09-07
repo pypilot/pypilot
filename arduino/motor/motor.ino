@@ -293,7 +293,7 @@ void eeprom_update_8(int address, uint8_t value)
 uint16_t max_current = 2000; // 20 Amps
 uint16_t max_controller_temp= 7000; // 70C
 uint16_t max_motor_temp = 7000; // 70C
-uint8_t max_slew_speed = 15, max_slew_slow = 35; // 200 is full power in 1/10th of a second
+uint8_t max_slew_speed = 50, max_slew_slow = 75; // 200 is full power in 1/10th of a second
 uint16_t rudder_min = 0, rudder_max = 65535;
 
 uint8_t eeprom_read_addr = 0;
