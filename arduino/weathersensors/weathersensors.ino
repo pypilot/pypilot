@@ -813,10 +813,10 @@ void draw_anemometer()
         last_lcd_texttime = time;
 
         if(wind_dir>=0) {
-            int dir = wind_dir;
+            float dir = wind_dir;
             if(!eeprom_data.direction_type)
                 if(dir > 180)
-                    dir = abs(dir-360);
+                    dir = fabs(dir-360);
             snprintf_P(status_buf[0], sizeof status_buf[0], PSTR("%02d"), (int) round(dir));
         }
 
