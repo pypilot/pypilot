@@ -160,6 +160,9 @@ def ss(*cargs):
 # autopilot dependencies (required): RTIMULIB2 python3-serial libpython3-dev python3-numpy python3-scipy swig
 #                        (recommended): python3-ujson python3-pyudev python3-zeroconf
 
+ss('dependencies', 'dependency script dependencies',
+   [py_dep('importlib_metadata')])
+
 ss('autopilot', 'core autopilot or imu-only mode',
    [RTIMULIB2_dep(), py_dep('serial'), py_dep('numpy'), py_dep('scipy'), sys_dep('libpython3-dev'), sys_dep('swig')])
 
