@@ -80,17 +80,32 @@ class sys_dep(dep):
             return False
         return True
 
-class rpi_dep(sys_dep):
+class wiringpi_dep(dep):
     def __init__(self, name):
-        super(rpi_dep, self).__init__(name)
+        super(wiringpi_dep, self).__init__(name)
 
+    def install(self):
+        os.system('git clone https://github.com/wiringPi/wiringPi'):
+        if os.system('cd wiringPi; ./build'):
+            return False
+        return True
+        
     def test(self, check=False):
         try:
             f = open('/sys/firmware/devicetree/base/model')
             pi = 'Raspberry Pi' in f.readline()
             f.close()
             if pi:
-                return super(rpi_dep, self).test()
+                print('detected', pi)
+                try:
+                    import subprocess
+                    output = subprocess.check_output(['gpio', '-v'])
+                    version = output.split(b'\n')[0].strip(b'gpio version: ')
+                    return float(version) >= 2.6
+                except Exception as e:
+                    print('failed to run gpio command!', e)
+                    return False
+                return super(wiringpi_dep, self).test()
         except:
             pass
         return True
@@ -180,7 +195,7 @@ ss('signalk', 'communicate with signalk-node-server distributed with openploter'
         
 # hat dependencies: python3-pil (or pillow)
 ss('hat', 'SPI lcd keypad, and remote control interface',
-   [py_dep('pil'), rpi_dep('wiringpi')])
+   [py_dep('pil'), wiringpi_dep('wiringpi')])
 
 # web dependencies: python3-flask python3-gevent-websocket
 ss('web', 'web browser control',
