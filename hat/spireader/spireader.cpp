@@ -23,6 +23,7 @@ int spireader::open(int portn, int slave, int baud)
 {
     port = slave;
     spifd = wiringPiSPISetup(slave, baud);
+    return spifd;
 }
 
 spireader::~spireader()
