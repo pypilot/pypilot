@@ -19,6 +19,7 @@ class LoadLIRC(threading.Thread):
         self.daemon = True
 
     def run(self):
+        warned = False
         while True:
             version = 0
             try:
@@ -29,15 +30,18 @@ class LoadLIRC(threading.Thread):
                 version = 2
                 print('have lirc for remote control', time.monotonic()-t0)
             except Exception as e:
-                print('failed to load lirc', e)
+                if not warned:
+                    print('failed to load lirc', e)
                 try:
                     import pylirc as LIRC
                     self.LIRC = LIRC
                     version = 1
                     print('have old lirc for remote control')
                 except Exception as e:
-                    print('no lirc available', e)
-                    time.sleep(20)
+                    if not warned:
+                        print('no lirc available', e)
+                    time.sleep(30)
+                warned = True
 
             try:
                 if version == 1:

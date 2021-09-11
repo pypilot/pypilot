@@ -141,7 +141,6 @@ class Arduino(Process):
         super(Arduino, self).__init__(hat)
         self.voltage = {'vcc': 5, 'vin': 3.3}
         self.status = 'Not Connected'
-        self.backlight = self.hat.config['lcd']['backlight']
 
     def config(self, name, value):
         self.send((name, value))
@@ -159,10 +158,6 @@ class Arduino(Process):
 
     def poll(self):
         ret = []
-        backlight = self.hat.config['lcd']['backlight']
-        if backlight != self.backlight:
-            self.backlight = backlight
-            self.send(('backlight', backlight))
         while True:
             msgs = self.pipe.recv()
             if not msgs:
@@ -210,6 +205,7 @@ class LCD(Process):
                 break
             key, code = msg
             if key == 'write_config':
+                self.hat.config['lcd'] = code
                 self.hat.write_config()
             elif key == 'buzzer' or key == 'backlight':
                 if self.hat.arduino:
@@ -219,7 +215,7 @@ cleanedup = False
 class Hat(object):
     def __init__(self):
         # read config
-        self.config = {'remote': False, 'host': '127.0.0.1', 'actions': {},
+        self.config = {'remote': False, 'host': 'localhost', 'actions': {},
                        'pi.ir': True, 'arduino.ir': False,
                        'arduino.nmea.in': False, 'arduino.nmea.out': False,
                        'arduino.nmea.baud': 4800,
@@ -275,14 +271,21 @@ class Hat(object):
         self.client = pypilotClient(host)
         self.client.registered = False
         self.watchlist = ['ap.enabled', 'ap.heading_command']
+
         for name in self.watchlist:
             self.client.watch(name)
-        self.lcd = LCD(self)
-        self.gpio = gpio.gpio()
-        self.arduino = Arduino(self)
 
         self.poller = select.poll()
-        self.poller.register(self.arduino.pipe, select.POLLIN)
+            
+        self.lcd = LCD(self)
+        self.lcd.poll()
+        self.gpio = gpio.gpio()
+
+        if 'arduino' in self.config['hat']:
+            self.arduino = Arduino(self)
+            self.poller.register(self.arduino.pipe, select.POLLIN)
+        else:
+            self.arduino = False
 
         self.lirc = lircd.lirc(self.config)
         self.lirc.registered = False
@@ -329,7 +332,7 @@ class Hat(object):
             childpids = []
             processes = [self.arduino, self.web]
             for process in processes:
-                if process.process:
+                if process and process.process:
                     childpids.append(process.process.pid)
             if signal_number == signal.SIGCHLD:
                 pid = os.waitpid(-1, os.WNOHANG)

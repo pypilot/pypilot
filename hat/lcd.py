@@ -206,7 +206,7 @@ class LCD():
             from config_esp32 import write_config
             write_config(self.config)
         else:
-            self.send('write_config')
+            self.send('write_config', self.config)
 
     def get_values(self):
         return self.client.get_values()

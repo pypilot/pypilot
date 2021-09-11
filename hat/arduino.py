@@ -45,10 +45,13 @@ class arduino(object):
             self.debug = lambda *args : None
             
         self.hatconfig = False
+        self.backlight_polarity = False
         if 'hat' in config:
             hatconfig = config['hat']
             if hatconfig and 'arduino' in hatconfig:
                 self.hatconfig = hatconfig['arduino']
+            if hatconfig and 'lcd' in hatconfig and 'driver' in hatconfig['lcd']:
+                self.backlight_polarity = hatconfig['lcd']['driver'] == 'nokia5110'
         if not self.hatconfig:
             print('No hat config, arduino not found')
 
@@ -141,8 +144,7 @@ class arduino(object):
 
     def set_backlight(self, value):        
         value = min(max(int(value*3), 0), 120)
-        polarity = self.hatconfig['device'] == 'nokia5110'
-        backlight = [value, polarity]
+        backlight = [value, self.backlight_polarity]
         self.send(SET_BACKLIGHT, backlight)
 
     def set_baud(self, baud):
