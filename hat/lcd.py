@@ -64,7 +64,10 @@ class Key():
 
 class LCD():
     def __init__(self, config):
-        self.config = config['lcd']
+        if config:
+            self.config = config['lcd']
+        else:
+            self.config = {}
         self.pipe = False
         self.poller = False
         self.voltage = False
@@ -79,7 +82,7 @@ class LCD():
 
         global driver
         # set the driver to the one read from hat eeprom, or specified in hat.conf
-        if 'hat' in config:
+        if config and 'hat' in config:
             if driver == 'default':
                 driver = config['hat']['lcd']['driver']
             self.host = config['host']
