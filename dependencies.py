@@ -12,6 +12,8 @@
 
 import os, sys
 
+success = True
+
 class dep(object):
     def __init__(self, name):
         self.name = name
@@ -21,8 +23,8 @@ class py_dep(dep):
         self.pip_only = pip_only
         super(py_dep, self).__init__(name)
 
-    def test(self):
-        if self.pip_only:
+    def test(self, check=False):
+        if self.pip_only and not check:
             return False
 
         remap = {'pil': 'PIL',
@@ -58,10 +60,10 @@ class py_dep(dep):
                 name = 'flask-socketio==5'
             else:
                 name = self.name
-            ret = os.system('python3 -m pip install ' + name)
+            ret = os.system('sudo python3 -m pip install ' + name)
 
             if ret:
-                print('failed to install dependency')
+                print('failed to install dependency', name)
                 return False
         return True
 
@@ -69,9 +71,8 @@ class sys_dep(dep):
     def __init__(self, name):
         super(sys_dep, self).__init__(name)
 
-    def test(self):
-        self.test = lambda : True # return true next time
-        return False
+    def test(self, check=False):
+        return not check # return true next time
 
     def install(self):
         ret = os.system('sudo apt install -y ' + self.name)
@@ -83,7 +84,7 @@ class rpi_dep(sys_dep):
     def __init__(self, name):
         super(rpi_dep, self).__init__(name)
 
-    def test(self):
+    def test(self, check=False):
         try:
             f = open('/sys/firmware/devicetree/base/model')
             pi = 'Raspberry Pi' in f.readline()
@@ -98,7 +99,7 @@ class RTIMULIB2_dep(dep):
     def __init__(self):
         super(RTIMULIB2_dep, self).__init__('RTIMULIB2')
 
-    def test(self):
+    def test(self, check=False):
         try:
             import RTIMU
         except Exception as e:
@@ -120,7 +121,7 @@ class data_dep(dep):
     def __init__(self):
         super(data_dep, self).__init__('data')
 
-    def test(self):
+    def test(self, check=False):
         return os.path.exists('ui/compass.png')
 
     def install(self):
@@ -140,15 +141,18 @@ class subsystem(object):
             if dep.test():
                 print('done')
             else:
+                global success
                 print(dep.name, 'not found')
                 if not dep.install():
                     print('failed to install', dep.name)
                     self.summary = 'failed to install ' + dep.name
-                elif dep.test():
+                    success = False
+                elif dep.test(True):
                     print('install dependency', dep.name, 'success')
                 else:
                     print('dependency failed to install', dep.name)
                     self.summary = 'failed to detect after installing ' + dep.name
+                    success = False
 
     def result(self):
         return self.name + ' ' + self.info + ':' + self.summary
@@ -206,8 +210,9 @@ for s in subsystems:
 print('')
 print('')
 
-f = open('deps', 'w')
-for s in subsystems:
-    r = s.result()
-    f.write(r + '\n')
-f.close()
+if success:
+    f = open('deps', 'w')
+    for s in subsystems:
+        r = s.result()
+        f.write(r + '\n')
+    f.close()
