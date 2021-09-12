@@ -537,12 +537,20 @@ class flip(page):
         self.lcd.write_config()
         return self.lcd.menu
 
+class BacklightEdit(RangeEdit):
+    def __init__():
+        super(BacklightEdit, self).__init__(_('backlight'), '', 'backlight', False, 0, 40, 1)
+
+    def move(self, delta):
+        super(BacklightEdit, self).move(delta)
+        self.lcd.send('backlight', self.value)
+
 class display(menu):
     def __init__(self):
         if micropython:
             bl = [ConfigEdit(_('hue'), '', 'hue', 0, 255, 1)]
         else:
-            bl = [ConfigEdit(_('backlight'), '', 'backlight', 0, 40, 1),
+            bl = [BacklightEdit(),
                   ConfigEdit(_('buzzer'), _('buzzer'), 'buzzer', 0, 2, .25)]
         super(display, self).__init__(_('display'),
                                       [ConfigEdit(_('contrast'), '', 'contrast', 0, 120, 1),
