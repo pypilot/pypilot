@@ -85,7 +85,7 @@ class wiringpi_dep(dep):
         super(wiringpi_dep, self).__init__(name)
 
     def install(self):
-        os.system('git clone https://github.com/wiringPi/wiringPi'):
+        os.system('git clone https://github.com/wiringPi/wiringPi')
         if os.system('cd wiringPi; ./build'):
             return False
         return True
