@@ -16,8 +16,12 @@ if sys.version_info[0] < 3:
 
 if os.system('which apt'):
     print('system does not support apt, you can try running dependencies script and/or manually install needed packages')
-elif not os.path.exists('deps'):
-    import dependencies
+else:
+    if 'install' in sys.argv:
+        print('installing debian service scripts')
+        os.system('sudo cp -rv scripts/debian/etc/systemd /etc')
+    if not os.path.exists('deps'):
+        import dependencies
 
 try:
     from setuptools import setup, Extension
@@ -104,8 +108,7 @@ package_data = {'pypilot': find_locales('pypilot'),
 
 ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module]
 if spireader_module:
-    ext_modules.append(spireader_module)
-    
+    ext_modules.append(spireader_module)    
 
 setup (name = 'pypilot',
        version = version.strversion,
@@ -115,7 +118,7 @@ setup (name = 'pypilot',
        url='http://pypilot.org/',
        packages=packages,
        package_dir=package_dirs,
-       ext_modules = ext_modules ,
+       ext_modules = ext_modules,
        package_data=package_data,
        entry_points={
            'console_scripts': [
