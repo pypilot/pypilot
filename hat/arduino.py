@@ -113,7 +113,7 @@ class arduino(object):
                     if self.spi.open(port, slave, 100000) == -1:
                         self.close()
 
-                if 'lcd' in self.config:
+                if 'lcd' in self.config and 'backlight' in self.config['lcd']:
                     self.set_backlight(self.config['lcd']['backlight'])
                 self.set_baud(self.config['arduino.nmea.baud'])
 

@@ -245,11 +245,10 @@ class Hat(object):
             print('failed to load', configfile, ':', e)
             
         if not 'hat' in self.config:
-            if os.path.exists('/dev/spidev0.0'):
-                print('assuming original 26 pin tinypilot with nokia5110 display')
-                self.config['hat'] = {'lcd':{'driver':'nokia5110',
-                                             'port':'/dev/spidev0.0'},
-                                      'lirc':'gpio4'}
+            print('assuming original 26 pin tinypilot with nokia5110 display')
+            self.config['hat'] = {'lcd':{'driver':'nokia5110',
+                                         'port':'/dev/spidev0.0'},
+                                  'lirc':'gpio4'}
             self.write_config()
 
         self.servo_timeout = time.monotonic() + 1
@@ -277,9 +276,9 @@ class Hat(object):
 
         self.poller = select.poll()
             
+        self.gpio = gpio.gpio()
         self.lcd = LCD(self)
         self.lcd.poll()
-        self.gpio = gpio.gpio()
 
         if 'arduino' in self.config['hat']:
             self.arduino = Arduino(self)

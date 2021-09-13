@@ -9,10 +9,21 @@
 
 import os, time
 
+raspberrypi = False
 orangepi = False
 try:
+    while True:
+        try:
+            f = open('/dev/gpiomem', 'w')
+            f.close()
+            break
+        except Exception as e:
+            print('waiting for gpiomem...', e)
+        time.sleep(1)
+
     import RPi.GPIO as GPIO
     print('have gpio for raspberry pi')
+    raspberrypi = True
 
 except ImportError:
     try:
@@ -47,7 +58,6 @@ class gpio(object):
         else:
             GPIO.setmode(GPIO.BCM)
 
-
         for pin in self.pins:
             try:
                 GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -64,10 +74,17 @@ class gpio(object):
                 time.sleep(.02)  # workaround buggy gpio
                 self.evalkey(pin, value)
 
-            try:
-                GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=50)
-            except Exception as e:
-                print('WARNING', e)        
+            while True:
+                try:
+                    GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=50)
+                    break
+                except Exception as e:
+                    print('WARNING', e)
+
+                if not raspberrypi:
+                    break
+                print('retrying to setup gpio with edge detect...')
+                time.sleep(1)
 
     def poll(self):
         for pin in self.pins:
