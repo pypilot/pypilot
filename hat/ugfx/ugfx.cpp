@@ -128,7 +128,7 @@ surface::surface(const char* filename, int tbypp)
 #endif
     bypp = tbypp;
 
-    uint16_t width16, height16, bypp16, colors16;
+    uint16_t width16, height16, colors16;
     uint8_t d[8];
 #ifdef INTERNAL_FONTS
     memcpy(d, c->data, 8);
@@ -141,7 +141,7 @@ surface::surface(const char* filename, int tbypp)
 #endif
     width16 = *(uint16_t*)(d+0);
     height16 = *(uint16_t*)(d+2);
-    bypp16 = *(uint16_t*)(d+4);
+    //bypp16 = *(uint16_t*)(d+4);
     colors16 = *(uint16_t*)(d+6);
 
     width = width16;
