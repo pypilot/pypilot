@@ -27,7 +27,17 @@ try:
     from setuptools import setup, Extension
     
 except ImportError:
-    from distutils.core import setup, Extension
+    print('ERROR, requires python setuptools package!')
+    exit(0)
+    #from distutils.core import setup, Extension
+
+# because basically, a bug in swig extensions this is a workaround to ensure the python scripts
+# are generated before they are scanned
+from setuptools.command.install import install
+class build_ext_first(install):
+    def run(self):
+        self.run_command('build_ext')
+        return install.run(self)
 
 linebuffer_module = Extension('pypilot/linebuffer/_linebuffer',
                         sources=['pypilot/linebuffer/linebuffer.cpp', 'pypilot/linebuffer/linebuffer.i'],
@@ -120,6 +130,7 @@ setup (name = 'pypilot',
        package_dir=package_dirs,
        ext_modules = ext_modules,
        package_data=package_data,
+       cmdclass={'install': build_ext_first},
        entry_points={
            'console_scripts': [
                'pypilot=pypilot.autopilot:main',
