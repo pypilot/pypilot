@@ -4,9 +4,9 @@ DefaultDependencies=false
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/sudo pypilot_hat
-StandardOutput=syslog
-StandardError=syslog
+ExecStart=pypilot_hat
+StandardOutput=journal
+StandardError=journal
 User=pi
 Restart=always
 RestartSec=3
