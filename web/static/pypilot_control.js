@@ -159,12 +159,10 @@ $(document).ready(function() {
                 pypilot_set(this.name, this.valueAsNumber);
             });
         }
-        $('#configuration_container').append('</table>')
 
-        if(tinypilot) {
+        if(tinypilot)
             $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>')
-            $('#configuration_container').append('<p><a href=":33333">Configure LCD Keypad and Remotes</a>')
-        }
+
         pypilot_watch('nmea.client')
 
         pypilot_watch('servo.controller');
