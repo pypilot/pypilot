@@ -9,7 +9,8 @@
 
 # autopilot base handles reading from the imu (boatimu)
 
-import sys, os, math
+import sys, os, math, time
+print('autopilot start', time.monotonic())
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -124,7 +125,7 @@ class Autopilot(object):
         # track heading command changes
         self.heading_command_rate = self.register(SensorValue, 'heading_command_rate')
         self.heading_command_rate.time = 0
-        self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
+        #self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
         
         self.pilots = {}
         for pilot_type in pilots.default:
@@ -444,6 +445,7 @@ class Autopilot(object):
 
 def main():
     ap = Autopilot()
+    print('autopilot init complete', time.monotonic())
     while True:
         ap.iteration()
 

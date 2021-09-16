@@ -13,6 +13,7 @@ from pilot import AutopilotPilot
 #from pypilot.resolv import resolv
 from pypilot.values import *
 from pypilot import vector
+disabled = True
 
 matrixfilepath = os.getenv('HOME') + '/.pypilot/' + 'fuzzy.json'
 

@@ -10,6 +10,7 @@
 from pypilot.autopilot import HeadingOffset, resolv, compute_true_wind
 from pilot import AutopilotPilot, AutopilotGain
 from pypilot.values import *
+disabled = True
 
 # the gps pilot requires gps
 # it does not rely on the compass or calibration (unless in compass mode)

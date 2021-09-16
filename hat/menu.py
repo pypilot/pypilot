@@ -121,7 +121,7 @@ class menu(page):
         return super(menu, self).process()
 
 class RangeEdit(page):
-    def __init__(self, name, desc, id, pypilot_path, minval, maxval, step):
+    def __init__(self, name, desc, id, pypilot_path, minval, maxval):
         self.name = name
         if type(desc) == type('') or type(desc) == type(u''):
             self.desc = lambda : desc
@@ -130,7 +130,6 @@ class RangeEdit(page):
         self.id = id
         self.pypilot_path = pypilot_path
         self.range = minval, maxval
-        self.step = step
         self.lastmovetime = 0
         self.value = None
         super(RangeEdit, self).__init__(name)
@@ -154,12 +153,15 @@ class RangeEdit(page):
         if self.value is False:
             return
         v = self.value
-        try:
-            v = str(round(10000*v)/10000)
-            while len(v) < 6:
-                v+='0'
-        except:
-            pass
+        if self.pypilot_path:
+            try:
+                v = str(round(10000*v)/10000)
+                while len(v) < 6:
+                    v+='0'
+            except:
+                pass
+        else: #config items rounded to integer
+            v = str(round(v))
         
         self.fittext(rectangle(0, .6, 1, .18), v)
 
@@ -175,19 +177,16 @@ class RangeEdit(page):
     def move(self, delta):
         if self.value is False:
             return
+
+        step = (self.range[1]-self.range[0])/500.0
         if self.pypilot_path:
             v = self.value
             try:
-                v += delta*self.step
+                v += delta*step
             except:
                 pass # not connected to server and value is N/A
-        else: #config items rounded to integer
-            if delta > 0:
-                delta = max(1, delta)
-            else:
-                delta = min(-1, delta)
-            v = int(self.value) + delta*self.step
-            v = round(v)
+        else:
+            v = delta*step + self.value
             
         v = min(v, self.range[1])
         v = max(v, self.range[0])
@@ -234,12 +233,12 @@ class RangeEdit(page):
         else:
             return super(RangeEdit, self).process()
 
-def ConfigEdit(name, desc, config_name, min, max, step):
-    return RangeEdit(name, desc, config_name, False, min, max, step)
+def ConfigEdit(name, desc, config_name, min, max):
+    return RangeEdit(name, desc, config_name, False, min, max)
         
 class ValueEdit(RangeEdit):
     def __init__(self, name, desc, pypilot_path, value=False):
-        super(ValueEdit, self).__init__(name, desc, False, pypilot_path, 0, 1, .1)
+        super(ValueEdit, self).__init__(name, desc, False, pypilot_path, 0, 1)
         self.range = False
 
     def display(self, refresh):
@@ -250,7 +249,6 @@ class ValueEdit(RangeEdit):
             else:
                 info = {'min': 0, 'max': 0}
             self.range = info['min'], info['max']
-            self.step = (self.range[1]-self.range[0])/100.0
         super(ValueEdit, self).display(refresh)
 
 class ValueCheck(page):
@@ -523,8 +521,8 @@ class control_menu(menu):
     def __init__(self):
         super(control_menu, self).__init__(_('control'),
                                       [wifi(),
-                                       ConfigEdit(_('small step'), _('degrees'), 'smallstep', 1, 5, 1),
-                                       ConfigEdit(_('big step'), _('degrees'), 'bigstep', 5, 20, 5)])
+                                       ConfigEdit(_('small step'), _('degrees'), 'smallstep', 1, 5),
+                                       ConfigEdit(_('big step'), _('degrees'), 'bigstep', 5, 20)])
 class invert(page):
     def process(self):
         self.lcd.config['invert'] = not self.lcd.config['invert']
@@ -538,8 +536,8 @@ class flip(page):
         return self.lcd.menu
 
 class BacklightEdit(RangeEdit):
-    def __init__():
-        super(BacklightEdit, self).__init__(_('backlight'), '', 'backlight', False, 0, 40, 1)
+    def __init__(self):
+        super(BacklightEdit, self).__init__(_('backlight'), '', 'backlight', False, 0, 40)
 
     def move(self, delta):
         super(BacklightEdit, self).move(delta)
@@ -548,12 +546,12 @@ class BacklightEdit(RangeEdit):
 class display(menu):
     def __init__(self):
         if micropython:
-            bl = [ConfigEdit(_('hue'), '', 'hue', 0, 255, 1)]
+            bl = [ConfigEdit(_('hue'), '', 'hue', 0, 255)]
         else:
             bl = [BacklightEdit(),
-                  ConfigEdit(_('buzzer'), _('buzzer'), 'buzzer', 0, 2, .25)]
+                  ConfigEdit(_('buzzer'), _('buzzer'), 'buzzer', 0, 2)]
         super(display, self).__init__(_('display'),
-                                      [ConfigEdit(_('contrast'), '', 'contrast', 0, 120, 1),
+                                      [ConfigEdit(_('contrast'), '', 'contrast', 0, 120),
                                        invert(_('invert')), flip(_('flip'))] + bl)
 class select_language(page):
     def __init__(self, lang):

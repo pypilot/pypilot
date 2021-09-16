@@ -13,7 +13,6 @@ import select, serial
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from values import *
-import autopilot
 import serialprobe
 
 import fcntl
@@ -216,7 +215,8 @@ class MaxRangeSetting(RangeSetting):
         super(MaxRangeSetting, self).set(value)
             
 class Servo(object):
-    calibration_filename = autopilot.pypilot_dir + 'servocalibration'
+    pypilot_dir = os.getenv('HOME') + '/.pypilot/'
+    calibration_filename = pypilot_dir + 'servocalibration'
 
     def __init__(self, client, sensors):
         self.client = client
