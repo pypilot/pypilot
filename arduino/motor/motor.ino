@@ -559,7 +559,7 @@ void position(uint16_t value)
             }
         } else {
             timer1_state = 0;
-            TIMSK1 = 0;//_BV(TOIE1);
+            TIMSK1 = 0;
             a_top_off;
             b_top_off;
             dead_time;
@@ -1212,8 +1212,6 @@ void loop()
                 if(--clutch_start_time == 0 && clutch_pwm < 250) {
                     OCR2A = clutch_pwm;
                     TCCR2A = _BV(WGM20) | _BV(COM2A1); // phase correct pwm
-                    //if(!digitalRead(clutch_sense_pwm_pin) && !ratiometric_mode)
-                    //TCCR2A |= _BV(WGM21); // fast pwm
                 }
             
             timeout_d = 0;
@@ -1234,7 +1232,6 @@ void loop()
     if(timeout > 32) // detach 62 ms later so esc gets stop
         detach();
 
-#if 1
     if(serial_data_timeout > 250 && timeout>32) { // no serial data for 10 seconds, enter power down
         TCNT0 = 0;
         
@@ -1261,7 +1258,6 @@ void loop()
         sei();
         serial_data_timeout -= 5;
     }
-#endif
 
     // serial input
     while(Serial.available()) {
@@ -1284,7 +1280,7 @@ void loop()
           } else {
               // invalid packet
               flags &= ~SYNC;
-              stop(); //disengage();
+              stop();
               in_sync_count = 0;
               in_bytes[0] = in_bytes[1]; // shift input 1 byte
               in_bytes[1] = in_bytes[2];
