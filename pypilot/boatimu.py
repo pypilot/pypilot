@@ -317,10 +317,11 @@ def CalibrationProcess(cal_pipe, client):
             import calibration_fit
             print(_('calibration loaded, starting'), os.getpid())
             cal_pipe.send('ready')
-            calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
+            break
         except Exception as e:
             print(_('failed import calibration fit'), e)
             time.sleep(30) # maybe numpy or scipy isn't ready yet
+    calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
 
 class AutomaticCalibrationProcess():
     def __init__(self, server):
