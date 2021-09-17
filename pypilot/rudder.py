@@ -29,6 +29,7 @@ class Rudder(Sensor):
         self.minmax = -.5, .5
         self.autogain_state = 'idle'
         self.raw = 0
+        self.lastdevice = False
 
     # calculate minimum and maximum raw rudder value in the range -0.5 to 0.5
     def update_minmax(self):        
@@ -196,6 +197,11 @@ class Rudder(Sensor):
             self.calibration_state.set('idle')
 
     def update(self, data):
+        # prevent data echo
+        if data['device'] != self.lastdevice:
+            self.lastdevice = data['device']
+            data = False
+
         if not data:
             self.angle.update(False)
             return
