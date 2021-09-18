@@ -17,9 +17,6 @@ if sys.version_info[0] < 3:
 if os.system('which apt'):
     print('system does not support apt, you can try running dependencies script and/or manually install needed packages')
 else:
-    if 'install' in sys.argv:
-        print('installing debian service scripts')
-        os.system('sudo cp -rv scripts/debian/etc/systemd /etc')
     if not os.path.exists('deps'):
         import dependencies
 
