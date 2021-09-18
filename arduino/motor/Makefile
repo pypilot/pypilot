@@ -6,10 +6,10 @@
 # serial monitor: make serial
 
 SKETCHNAME = motor
-DEVICE = /dev/ttyUSB0
-#DEVICE = /dev/ttyAMA0
+#DEVICE = /dev/ttyUSB0
+DEVICE = /dev/ttyAMA0
 
-MCU = atmega328pb
+MCU = atmega328p
 
 ARDUINO_PATH = /usr/share/arduino
 CC = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-gcc

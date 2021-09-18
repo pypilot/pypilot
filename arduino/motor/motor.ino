@@ -362,7 +362,7 @@ void setup()
     // uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS); // too many clones don't set lock bits and there is no spm
     if((lowBits != 0xFF && lowBits != 0x7F) ||
        (highBits != 0xda && highBits != 0xde) ||
-       (extendedBits != 0xFD && extendedBits != 0xFC)
+       ((extendedBits&0xF6) != 0xF4)
        // || lockBits != 0xCF // too many clones don't set lock bits and there is no spm
         )
         flags |= BAD_FUSES;
