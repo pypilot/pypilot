@@ -1,5 +1,5 @@
 /*
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2021 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -84,6 +84,12 @@ $(document).ready(function() {
         socket.emit('config', {'arduino.nmea.baud': document.getElementById('arduino_nmea_baud').value});
     });
 
+    $('#remote').click(function(event) {
+        if(!document.getElementById('remote').checked)
+            document.getElementById('host').value = 'localhost'
+        socket.emit('config', {'host': document.getElementById('host').value});
+    });
+    
     // Interval function that tests message latency by sending a "ping"
     var ping_pong_times = [];
 
@@ -92,7 +98,7 @@ $(document).ready(function() {
         start_time = (new Date).getTime();
         socket.emit('ping');
         //        $('#log').append("ping" + "<br>");
-        $('#ping-pong').text('pn');
+        $('#ping-pong').text('N/A');
     }, 5000);
     
     // Handler for the "pong" message. When the pong is received, the

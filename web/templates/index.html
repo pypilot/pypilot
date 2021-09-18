@@ -128,10 +128,10 @@
           <label for="theme_dark"  class="theme_name">{{_('Dark')}}&nbsp;</label><input type="radio" name="theme" class="theme_option" id="theme_dark"  value="dark" >
       </div>
       <div id="configuration_container"></div>
-      <p><a href=":33333">Configure LCD Keypad and Remotes</a>
+      <p><a href=":33333">{{_('Configure LCD Keypad and Remotes')}}</a>
       <p>
       {{_('NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110')}}
-      <p><input type="text" id="nmea_client" "></input>
+      <p><input type="text" id="nmea_client"></input>
     </div>
 
     <div id="Statistics" class="w3-container tab">
@@ -145,10 +145,10 @@
         <div id="log"></div>
     </div>
     <div id="status_container" class="data_block" style="position:fixed;bottom:-10">
-      <br>pypilot Server: <b><span id="connection"></span></b>
+      <br>pypilot {{_('Server')}}: <b><span id="connection"></span></b>
       <br>Servo Flags: <b><span id="servoflags"></span></b>
-      <br>Autopilot Errors: <b><span id="aperrors0"></span> <span id="aperrors1"></span></b>
-      <br>Web Server Latency: <b><span id="ping-pong"></span> ms</b>
+      <br>Autopilot {{_('Errors')}}: <b><span id="aperrors0"></span> <span id="aperrors1"></span></b>
+      <br>{{_('Web Server Latency')}}: <b><span id="ping-pong"></span> ms</b>
     </div>
 </body>
 </html>
