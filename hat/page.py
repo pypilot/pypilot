@@ -508,18 +508,18 @@ class controlbase(page):
         pilot = self.last_val('ap.pilot')
         if self.pilot != pilot:
             self.pilot = pilot
-            pilotrect = rectangle(0, .92, .4, .09)
+            pilotrect = rectangle(0, .92, .6, .09)
             self.fittext(pilotrect, pilot[:6])
                 
         wifi = test_wifi()
         if self.wifi == wifi and not refresh:
             return # done displaying
         self.wifi = wifi
-        wifirect = rectangle(.4, .92, .55, .09)
+        wifirect = rectangle(.65, .92, .3, .09)
         if wifi:
-            text = 'WIFI'
+            text = 'W'
             if self.lcd.host != 'localhost':
-                text += ' R'
+                text += 'R'
             self.fittext(wifirect, text)
         else:
             self.lcd.surface.box(*(self.convrect(wifirect) + [black]))
