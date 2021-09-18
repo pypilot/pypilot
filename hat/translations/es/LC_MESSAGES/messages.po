@@ -1,0 +1,99 @@
+# Spanish translations for PROJECT.
+# Copyright (C) 2021 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2021-09-18 06:55-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.6.0\n"
+
+#: web.py:61
+msgid "Actions for LCD interface"
+msgstr "Acciones para la interfaz LCD"
+
+#: web.py:69
+msgid ""
+"These actions do not depend on the state of the display and can be used "
+"by wireless remotes."
+msgstr ""
+"Estas acciones no dependen del estado de la pantalla y pueden ser "
+"utilizadas por controles remotos inalámbricos."
+
+#: web.py:118
+msgid "remote"
+msgstr "remoto"
+
+#: templates/index.html:4
+msgid "pypilot hat configuration"
+msgstr "configuración del sombrero pypilot"
+
+#: templates/index.html:16
+msgid "lcd and remote control setup"
+msgstr "configuración de lcd y control remoto"
+
+#: templates/index.html:17
+msgid "clear"
+msgstr "claro"
+
+#: templates/index.html:17
+msgid "default"
+msgstr "defecto"
+
+#: templates/index.html:18
+msgid ""
+"press button(s) on the keypad or remote then assign a command with the "
+"button."
+msgstr ""
+"presione el (los) botón (s) en el teclado o el control remoto y luego "
+"asigne un comando con el botón."
+
+#: templates/index.html:21
+msgid "infared receiver port"
+msgstr "puerto receptor de infrarrojos"
+
+#: templates/index.html:22
+msgid ""
+"The ir port can be handled direcly from the pi or the arduino.  Using the"
+" arduino can receive from many different remotes without special "
+"calibration recordings."
+msgstr ""
+"El puerto ir se puede manejar directamente desde pi o arduino. El uso del"
+" arduino puede recibir desde muchos controles remotos diferentes sin "
+"grabaciones de calibración especiales."
+
+#: templates/index.html:29
+msgid "remote mode"
+msgstr "modo remoto"
+
+#: templates/index.html:34
+msgid "nmea current baud rate"
+msgstr "nmea velocidad en baudios actual"
+
+#: templates/index.html:35
+msgid "voltages"
+msgstr "voltajes"
+
+#: templates/index.html:36
+msgid "status"
+msgstr "estado"
+
+#: templates/index.html:37
+msgid "connection"
+msgstr "conexión"
+
+#: templates/index.html:38
+msgid "Web Server Latency"
+msgstr "Latencia del servidor web"
+

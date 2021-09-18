@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-02 13:32-0400\n"
+"POT-Creation-Date: 2021-09-18 02:00-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,31 +25,31 @@ msgstr ""
 msgid "Connected"
 msgstr ""
 
-#: static/pypilot_control.js:177
+#: static/pypilot_control.js:175
 msgid "Disconnected"
 msgstr ""
 
-#: static/pypilot_control.js:247
+#: static/pypilot_control.js:245
 msgid "compass or gyro failure!"
 msgstr ""
 
-#: static/pypilot_control.js:260
+#: static/pypilot_control.js:258
 msgid "Tack"
 msgstr ""
 
-#: static/pypilot_control.js:263
+#: static/pypilot_control.js:261
 msgid "Cancel"
 msgstr ""
 
-#: static/pypilot_control.js:322
+#: static/pypilot_control.js:320
 msgid "Engaged"
 msgstr ""
 
-#: static/pypilot_control.js:324
+#: static/pypilot_control.js:322
 msgid "Disengaged"
 msgstr ""
 
-#: static/pypilot_control.js:396
+#: static/pypilot_control.js:394
 msgid "no motor controller!"
 msgstr ""
 
@@ -147,7 +147,7 @@ msgstr ""
 msgid "starboard range"
 msgstr ""
 
-#: templates/index.html:116 templates/index.html:139
+#: templates/index.html:116 templates/index.html:140
 msgid "reset"
 msgstr ""
 
@@ -171,43 +171,43 @@ msgstr ""
 msgid "Dark"
 msgstr ""
 
-#: templates/index.html:132
+#: templates/index.html:131
+msgid "Configure LCD Keypad and Remotes"
+msgstr ""
+
+#: templates/index.html:133
 msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
 msgstr ""
 
-#: templates/index.html:137
+#: templates/index.html:138
 msgid "Amp Hours"
 msgstr ""
 
-#: templates/index.html:140
+#: templates/index.html:141
 msgid "Voltage"
 msgstr ""
 
-#: templates/index.html:141
+#: templates/index.html:142
 msgid "Controller temperature"
 msgstr ""
 
-#: templates/index.html:142
+#: templates/index.html:143
 msgid "Runtime"
 msgstr ""
 
-#: templates/index.html:143
+#: templates/index.html:144
 msgid "Servo"
 msgstr ""
 
-#: templates/wifi.html:8
-msgid "Wireless Configuration"
+#: templates/index.html:148
+msgid "Server"
 msgstr ""
 
-#: templates/wifi.html:16
-msgid "Key (leave blank for no encryption)"
+#: templates/index.html:150
+msgid "Errors"
 msgstr ""
 
-#: templates/wifi.html:18
-msgid "Client Mode Address (leave blank for dhcp)"
-msgstr ""
-
-#: templates/wifi.html:23
-msgid "If there is a problem, edit the file"
+#: templates/index.html:151
+msgid "Web Server Latency"
 msgstr ""
 

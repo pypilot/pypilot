@@ -1,6 +1,8 @@
 pybabel extract -F babel.cfg -o pypilot_hat_web.pot .
 
 function translate() {
+    mkdir -p translations/$1/LC_MESSAGES
+    touch translations/$1/LC_MESSAGES/messages.po
     pybabel update -i pypilot_hat_web.pot -d translations -l $1
     locale/trans-po.py translations/$1/LC_MESSAGES/messages.po $1
 }

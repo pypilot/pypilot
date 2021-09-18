@@ -1,0 +1,98 @@
+# Swedish translations for PROJECT.
+# Copyright (C) 2021 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2021-09-18 06:55-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: sv <LL@li.org>\n"
+"Language: sv\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Generated-By: Babel 2.6.0\n"
+
+#: web.py:61
+msgid "Actions for LCD interface"
+msgstr "Åtgärder för LCD -gränssnitt"
+
+#: web.py:69
+msgid ""
+"These actions do not depend on the state of the display and can be used by "
+"wireless remotes."
+msgstr ""
+"Dessa åtgärder beror inte på skärmens tillstånd och kan användas av trådlösa"
+" fjärrkontroller."
+
+#: web.py:118
+msgid "remote"
+msgstr "avlägsen"
+
+#: templates/index.html:4
+msgid "pypilot hat configuration"
+msgstr "pypilot hattkonfiguration"
+
+#: templates/index.html:16
+msgid "lcd and remote control setup"
+msgstr "inställning av lcd och fjärrkontroll"
+
+#: templates/index.html:17
+msgid "clear"
+msgstr "klar"
+
+#: templates/index.html:17
+msgid "default"
+msgstr "standard"
+
+#: templates/index.html:18
+msgid ""
+"press button(s) on the keypad or remote then assign a command with the "
+"button."
+msgstr ""
+"tryck på knapparna på knappsatsen eller fjärrkontrollen och tilldela sedan "
+"ett kommando med knappen."
+
+#: templates/index.html:21
+msgid "infared receiver port"
+msgstr "infraröd mottagarport"
+
+#: templates/index.html:22
+msgid ""
+"The ir port can be handled direcly from the pi or the arduino.  Using the "
+"arduino can receive from many different remotes without special calibration "
+"recordings."
+msgstr ""
+"IR -porten kan hanteras direkt från pi eller arduino. Att använda arduino "
+"kan ta emot från många olika fjärrkontroller utan speciella "
+"kalibreringsinspelningar."
+
+#: templates/index.html:29
+msgid "remote mode"
+msgstr "fjärrläge"
+
+#: templates/index.html:34
+msgid "nmea current baud rate"
+msgstr "nmea nuvarande överföringshastighet"
+
+#: templates/index.html:35
+msgid "voltages"
+msgstr "spänningar"
+
+#: templates/index.html:36
+msgid "status"
+msgstr "status"
+
+#: templates/index.html:37
+msgid "connection"
+msgstr "förbindelse"
+
+#: templates/index.html:38
+msgid "Web Server Latency"
+msgstr "Webbserver latens"

@@ -1,0 +1,99 @@
+# Italian translations for PROJECT.
+# Copyright (C) 2021 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2021-09-18 06:55-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: it\n"
+"Language-Team: it <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.6.0\n"
+
+#: web.py:61
+msgid "Actions for LCD interface"
+msgstr "Azioni per l'interfaccia LCD"
+
+#: web.py:69
+msgid ""
+"These actions do not depend on the state of the display and can be used "
+"by wireless remotes."
+msgstr ""
+"Queste azioni non dipendono dallo stato del display e possono essere "
+"utilizzate dai telecomandi wireless."
+
+#: web.py:118
+msgid "remote"
+msgstr "a distanza"
+
+#: templates/index.html:4
+msgid "pypilot hat configuration"
+msgstr "configurazione del cappello pypilot"
+
+#: templates/index.html:16
+msgid "lcd and remote control setup"
+msgstr "LCD e configurazione del telecomando"
+
+#: templates/index.html:17
+msgid "clear"
+msgstr "chiaro"
+
+#: templates/index.html:17
+msgid "default"
+msgstr "predefinito"
+
+#: templates/index.html:18
+msgid ""
+"press button(s) on the keypad or remote then assign a command with the "
+"button."
+msgstr ""
+"premere il/i pulsante/i sulla tastiera o sul telecomando, quindi "
+"assegnare un comando con il pulsante."
+
+#: templates/index.html:21
+msgid "infared receiver port"
+msgstr "porta del ricevitore a infrarossi"
+
+#: templates/index.html:22
+msgid ""
+"The ir port can be handled direcly from the pi or the arduino.  Using the"
+" arduino can receive from many different remotes without special "
+"calibration recordings."
+msgstr ""
+"La porta ir può essere gestita direttamente dal pi o dall'arduino. "
+"Utilizzando l'arduino puoi ricevere da molti telecomandi diversi senza "
+"registrazioni di calibrazione speciali."
+
+#: templates/index.html:29
+msgid "remote mode"
+msgstr "modalità remota"
+
+#: templates/index.html:34
+msgid "nmea current baud rate"
+msgstr "nmea baud rate attuale"
+
+#: templates/index.html:35
+msgid "voltages"
+msgstr "tensioni"
+
+#: templates/index.html:36
+msgid "status"
+msgstr "stato"
+
+#: templates/index.html:37
+msgid "connection"
+msgstr "connessione"
+
+#: templates/index.html:38
+msgid "Web Server Latency"
+msgstr "Latenza del server Web"
+

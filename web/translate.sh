@@ -1,6 +1,5 @@
 pybabel extract -F babel.cfg -o pypilot_web.pot .
 
-
 function translate() {
     pybabel update -i pypilot_web.pot -d translations -l $1
     ../hat/locale/trans-po.py translations/$1/LC_MESSAGES/messages.po $1

@@ -7,15 +7,15 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-02 13:32-0400\n"
+"POT-Creation-Date: 2021-09-18 02:00-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: da <LL@li.org>\n"
 "Language: da\n"
+"Language-Team: da <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
 #: static/pypilot_control.js:37
@@ -26,31 +26,31 @@ msgstr "Ikke forbundet"
 msgid "Connected"
 msgstr "Forbundet"
 
-#: static/pypilot_control.js:177
+#: static/pypilot_control.js:175
 msgid "Disconnected"
 msgstr "Afbrudt"
 
-#: static/pypilot_control.js:247
+#: static/pypilot_control.js:245
 msgid "compass or gyro failure!"
 msgstr "kompas eller gyrofejl!"
 
-#: static/pypilot_control.js:260
+#: static/pypilot_control.js:258
 msgid "Tack"
 msgstr "Tack"
 
-#: static/pypilot_control.js:263
+#: static/pypilot_control.js:261
 msgid "Cancel"
 msgstr "Afbestille"
 
-#: static/pypilot_control.js:322
+#: static/pypilot_control.js:320
 msgid "Engaged"
 msgstr "Beskæftiget"
 
-#: static/pypilot_control.js:324
+#: static/pypilot_control.js:322
 msgid "Disengaged"
 msgstr "Frakoblet"
 
-#: static/pypilot_control.js:396
+#: static/pypilot_control.js:394
 msgid "no motor controller!"
 msgstr "ingen motor controller!"
 
@@ -60,11 +60,11 @@ msgstr "Kalibreringsdiagram"
 
 #: templates/calibrationplot.html:21
 msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age "
-"will reset when the calibration updates."
+"The raw sensor readings should fall on a sphere when calibrated.  The age"
+" will reset when the calibration updates."
 msgstr ""
-"De rå sensoraflæsninger skal falde på en kugle, når de kalibreres. Alderen "
-"nulstilles, når kalibreringen opdateres."
+"De rå sensoraflæsninger skal falde på en kugle, når de kalibreres. "
+"Alderen nulstilles, når kalibreringen opdateres."
 
 #: templates/calibrationplot.html:28
 msgid "Connection"
@@ -150,7 +150,7 @@ msgstr "port rækkevidde"
 msgid "starboard range"
 msgstr "styrbord rækkevidde"
 
-#: templates/index.html:116 templates/index.html:139
+#: templates/index.html:116 templates/index.html:140
 msgid "reset"
 msgstr "Nulstil"
 
@@ -174,44 +174,57 @@ msgstr "Klar"
 msgid "Dark"
 msgstr "Mørk"
 
-#: templates/index.html:132
+#: templates/index.html:131
+msgid "Configure LCD Keypad and Remotes"
+msgstr "Konfigurer LCD -tastatur og fjernbetjeninger"
+
+#: templates/index.html:133
 msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
 msgstr ""
 "NMEA -klientvært: port (lad være tomt som standard) f.eks .: "
 "192.168.0.1:10110"
 
-#: templates/index.html:137
+#: templates/index.html:138
 msgid "Amp Hours"
 msgstr "Forstærker timer"
 
-#: templates/index.html:140
+#: templates/index.html:141
 msgid "Voltage"
 msgstr "Spænding"
 
-#: templates/index.html:141
+#: templates/index.html:142
 msgid "Controller temperature"
 msgstr "Regulatorens temperatur"
 
-#: templates/index.html:142
+#: templates/index.html:143
 msgid "Runtime"
 msgstr "Kørselstid"
 
-#: templates/index.html:143
+#: templates/index.html:144
 msgid "Servo"
 msgstr "Servo"
 
-#: templates/wifi.html:8
-msgid "Wireless Configuration"
-msgstr "Trådløs konfiguration"
+#: templates/index.html:148
+msgid "Server"
+msgstr "Server"
 
-#: templates/wifi.html:16
-msgid "Key (leave blank for no encryption)"
-msgstr "Nøgle (lad tomt være uden kryptering)"
+#: templates/index.html:150
+msgid "Errors"
+msgstr "Fejl"
 
-#: templates/wifi.html:18
-msgid "Client Mode Address (leave blank for dhcp)"
-msgstr "Klienttilstandsadresse (efterlad tom for dhcp)"
+#: templates/index.html:151
+msgid "Web Server Latency"
+msgstr "Webservers forsinkelse"
 
-#: templates/wifi.html:23
-msgid "If there is a problem, edit the file"
-msgstr "Hvis der er et problem, skal du redigere filen"
+#~ msgid "Wireless Configuration"
+#~ msgstr "Trådløs konfiguration"
+
+#~ msgid "Key (leave blank for no encryption)"
+#~ msgstr "Nøgle (lad tomt være uden kryptering)"
+
+#~ msgid "Client Mode Address (leave blank for dhcp)"
+#~ msgstr "Klienttilstandsadresse (efterlad tom for dhcp)"
+
+#~ msgid "If there is a problem, edit the file"
+#~ msgstr "Hvis der er et problem, skal du redigere filen"
+
