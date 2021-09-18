@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2022 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -81,7 +81,7 @@ class gpio(object):
             def cbr(pin):
                 value = GPIO.input(pin)
                 time.sleep(.02)  # workaround buggy gpio
-                self.lastkeystate[pin] = value
+                self.lastkeystate[pin] = not value
                 self.evalkeys()
 
             while True:
@@ -102,7 +102,7 @@ class gpio(object):
         
         for p in self.pins:
             value = GPIO.input(p)
-            self.lastkeystate[p] = value
+            self.lastkeystate[p] = not value
 
         self.evalkeys()
                 
