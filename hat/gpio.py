@@ -50,6 +50,10 @@ class gpio(object):
         else:
             self.pins = [17, 23, 27, 22, 18, 5, 6, 26]
 
+        self.lastkeystate = {}
+        for p in self.pins:
+            self.lastkeystate[p] = False
+
         self.keystate = self.keypin = 1
 
         if not GPIO:
@@ -98,7 +102,7 @@ class gpio(object):
         
         for p in self.pins:
             value = GPIO.input(p)
-            self.lastkeystate[pin] = value
+            self.lastkeystate[p] = value
 
         self.evalkeys()
                 
@@ -109,7 +113,7 @@ class gpio(object):
     def evalkeys(self):
         pin = 1
         for p in self.pins:
-            if self.lastkeystate[pin]:
+            if self.lastkeystate[p]:
                 pin *= p # multiple keys
 
         if pin == self.keypin:

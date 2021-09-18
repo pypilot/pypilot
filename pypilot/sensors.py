@@ -162,11 +162,14 @@ class gps(Sensor):
 
         self.leeway_ground = self.register(SensorValue, 'leeway_ground')
         self.compass_error = self.register(SensorValue, 'compass_error')
+        self.nmea_sentence = self.register(Property, 'nmea_sentence', 'APRMC', persistent=True)
 
         self.filtered = GPSFilter(client)
         self.lastpredictt = time.monotonic()
+        self.gps_system_time_offset = 0
 
         self.stale_count = 0
+        self.rate.set(1.0)
 
     def update(self, data):
         self.speed.set(data['speed'])
@@ -209,17 +212,35 @@ class gps(Sensor):
 
     def getddmmyy(self):
         today = datetime.date.today()
-        return '%02d%02d%02d', today.day, today.month, (today.year%100)
+        return '%02d%02d%02d' % (today.day, today.month, today.year % 100)
 
-    def getrmc(self):
-        lat = self.filtered.lat.value
-        lon = self.filtered.lon.value
-        speed = self.filtered.lat.value
-        track = self.filtered.lon.value
-        return 'APRMC,%.3f' % time.time() + ',A,%.4f,' % abs(lat) + \
-            ('N' if lat > 0 else 'S') + ',%.4f,' % abs(lon) + ('E' if lon > 0 else 'W') \
-            + ',%.2f' % speed + ',%.2f,' % track \
-            + ',' + getddmmyy() + ',' + ','
+    def gethhmmss(self):
+        t = datetime.datetime.now()
+        return t.strftime("%H%M%S.%f")[:-4]
+
+    def getddmmmmmm(self, degrees, n, s):
+        minutes = (abs(degrees) - abs(int(degrees))) * 60
+        return '%02d%07.4f,%c' % (abs(degrees), minutes, n if degrees >= 0 else s)
+
+    def getnmea(self):
+        if self.source.value == 'none':
+            lat = self.filtered.lat.value
+            lon = self.filtered.lon.value
+            speed = self.filtered.speed.value
+            track = self.filtered.track.value
+        else:
+            lat = self.lat.value
+            lon = self.lon.value
+            speed = self.speed.value
+            track = self.track.value
+        if self.nmea_sentence.value == 'APRMC' or self.nmea_sentence.value == 'GPRMC':
+            return self.nmea_sentence.value + ',' + self.gethhmmss() + ',A,' \
+                + self.getddmmmmmm(lat, 'N', 'S') + ',' + self.getddmmmmmm(lon, 'E', 'W') \
+                + ',%.2f,' % speed + '%.2f,' % (track if track > 0 else 360 + track) \
+                + self.getddmmyy() + ',,,A'
+        else:
+            print(_('unable to generate'), self.nmea_sentence.value, _('GPS NMEA sentence'))
+            return ''
 
     def reset(self):
         self.track.set(False)

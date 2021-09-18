@@ -65,7 +65,7 @@ def init(lcd):
         if pini >= 0:
             pin = make_pin(pini, i, lcd)
             keypad_pins.append(pin)
-            if not i in keypad_pullup:
+            if not pini in keypad_pullup:
                 keypad_pins_wake.append(pin)
 
 def poll(lcd):

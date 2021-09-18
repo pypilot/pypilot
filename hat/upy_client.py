@@ -288,6 +288,9 @@ class pypilotClient(object):
             print('failed to set', name, value, e)
             self.disconnect()
 
+    def poll(self):
+        pass
+
 def main():
     client = pypilotClient('192.168.14.1')
     #client.watch('imu.heading') # fastest rate

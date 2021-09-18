@@ -91,6 +91,7 @@ class GPSFilter(object):
         self.X = False
         self.P = np.identity(2*c)
         self.history = []
+        self.lastll = False, False
 
     def predict(self, accel_ned_magnetic, t):
         # log new prediction and apply it estimating new state
@@ -156,6 +157,7 @@ class GPSFilter(object):
 
     def update(self, gps):        
         # update magnetic declination from magnetic model once every few hours if available
+        t = time.monotonic()
         if t - self.declination_time > 3600 * 4:
             self.declination_time = t
             if wmm2020:
@@ -170,7 +172,7 @@ class GPSFilter(object):
             speed = gps['speed'] / 1.944 # in meters/second
             track = gps['track']
             
-            Z = xy
+            Z = list(xy)
             if self.use3d:
                 Z.append(gps['alt'] if 'alt' in gps else 0)
 
@@ -185,7 +187,7 @@ class GPSFilter(object):
         # based on the timestamp we need to rewind the filter to the prediction just before it
         t0 = False
         i = 0
-        for i in len(self.history):
+        for i in range(len(self.history)):
             h = self.history[-i-1]
             t0 = h['t']
             if t0 < ts:
@@ -212,11 +214,11 @@ class GPSFilter(object):
             to = min(max(t0, 0), 2)
             self.gps_time_offset.update(to)
 
-        if not self.X: # filter was reset
+        if type(self.X) == bool and not self.X: # filter was reset
             self.X = Z
 
         # apply normal kalman measurement update
-        H = np.ident(2*c)
+        H = np.identity(2*c)
         
         #Y = Z - H*X
         Y = Z - H@self.X
