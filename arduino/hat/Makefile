@@ -10,7 +10,7 @@ SKETCHNAME = hat
 #DEVICE = /dev/ttyAMA0
 DEVICE = /dev/spidev0.1
 
-MCU = atmega168p
+MCU = atmega88p
 
 ARDUINO_PATH = /usr/share/arduino
 CC = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-gcc
