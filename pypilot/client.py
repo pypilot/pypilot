@@ -223,14 +223,18 @@ class pypilotClient(object):
                 #print('info', info, info.parsed_addresses()[0])
                 if not info:
                     return
-                #for name, value in info.properties.items():
-                config = self.client.config
-                #print('info', info.addresses)
-                config['host'] = socket.inet_ntoa(info.addresses[0])
-                config['port'] = info.port
-                print('found pypilot', config['host'], config['port'])
-                self.client.probed = True
-                zeroconf.close()
+                try:
+                    #for name, value in info.properties.items():
+                    config = self.client.config
+                    #print('info', info.addresses)
+                    config['host'] = socket.inet_ntoa(info.addresses[0])
+                    config['port'] = info.port
+                    print('found pypilot', config['host'], config['port'])
+                    self.client.probed = True
+                    zeroconf.close()
+                except Exception as e:
+                    print('zeroconf service exception', e)
+                    
 
         self.can_probe = False
         zeroconf = Zeroconf()
