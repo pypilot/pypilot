@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-02 13:33-0400\n"
+"POT-Creation-Date: 2021-09-18 00:31-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,39 +19,39 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:138
+#: pypilot/autopilot.py:139
 msgid "Available Pilots"
 msgstr "Tilgjengelige piloter"
 
-#: pypilot/autopilot.py:160
+#: pypilot/autopilot.py:161
 msgid "warning: failed to open special file"
 msgstr "advarsel: kunne ikke åpne spesialfil"
 
-#: pypilot/autopilot.py:160
+#: pypilot/autopilot.py:161
 msgid "for writing"
 msgstr "for skriving"
 
-#: pypilot/autopilot.py:161
+#: pypilot/autopilot.py:162
 msgid "cannot stroke the watchdog"
 msgstr "kan ikke stryke vakthunden"
 
-#: pypilot/autopilot.py:165
+#: pypilot/autopilot.py:166
 msgid "warning: failed to make autopilot process realtime"
 msgstr "advarsel: kunne ikke gjøre autopilotprosessen i sanntid"
 
-#: pypilot/autopilot.py:336
+#: pypilot/autopilot.py:337
 msgid "server/client is running too _slowly_"
 msgstr "server / klient kjører også _slowly_"
 
-#: pypilot/autopilot.py:342
+#: pypilot/autopilot.py:343
 msgid "sensors is running too _slowly_"
 msgstr "sensorene går for sakte"
 
-#: pypilot/autopilot.py:418
+#: pypilot/autopilot.py:420
 msgid "autopilot routine is running too _slowly_"
 msgstr "autopilotrutinen går for sakte"
 
-#: pypilot/autopilot.py:427
+#: pypilot/autopilot.py:429
 msgid "servo is running too _slowly_"
 msgstr "servo går for sakte"
 
@@ -125,7 +125,7 @@ msgstr "kalibrering lastet, starter"
 msgid "failed import calibration fit"
 msgstr "mislykket importkalibreringstilpasning"
 
-#: pypilot/boatimu.py:438
+#: pypilot/boatimu.py:439
 msgid "accel values invalid"
 msgstr "accel-verdiene er ugyldige"
 
@@ -372,39 +372,39 @@ msgstr "nmea klarte ikke å fjerne fd"
 msgid "nmea failed to remove address"
 msgstr "nmea kunne ikke fjerne adressen"
 
-#: pypilot/nmea.py:626
+#: pypilot/nmea.py:629
 msgid "invalid value"
 msgstr "ugyldig verdi"
 
-#: pypilot/nmea.py:636
+#: pypilot/nmea.py:639
 msgid "connect error"
 msgstr "tilkoblingsfeil"
 
-#: pypilot/nmea.py:665 pypilot/signalk.py:239
+#: pypilot/nmea.py:668 pypilot/signalk.py:239
 msgid "failed to connect"
 msgstr "tilkobling mislyktes"
 
-#: pypilot/nmea.py:673
+#: pypilot/nmea.py:676
 msgid "nmea client connected"
 msgstr "nmea klient tilkoblet"
 
-#: pypilot/nmea.py:702
+#: pypilot/nmea.py:705
 msgid "poll took too long in nmea process!"
 msgstr "avstemningen tok for lang tid i nmea-prosessen!"
 
-#: pypilot/nmea.py:709
+#: pypilot/nmea.py:712
 msgid "nmea bridge lost server connection"
 msgstr "nmea bridge mistet serverforbindelse"
 
-#: pypilot/nmea.py:712
+#: pypilot/nmea.py:715
 msgid "nmea bridge lost pipe to autopilot"
 msgstr "nmea bridge mistet rør til autopilot"
 
-#: pypilot/nmea.py:735
+#: pypilot/nmea.py:738
 msgid "nmea bridge unhandled poll flag"
 msgstr "nmea bridge uhåndtert avstemningsflagg"
 
-#: pypilot/nmea.py:770
+#: pypilot/nmea.py:773
 msgid "nmea process loop too slow:"
 msgstr "nmea prosessløkke for sakte:"
 
@@ -533,39 +533,39 @@ msgstr "internt rør lukket, serveren avsluttes"
 msgid "server socket closed from flush!!"
 msgstr "serveruttak stengt fra spyling !!"
 
-#: pypilot/servo.py:448
+#: pypilot/servo.py:460
 msgid "servo calibration invalid"
 msgstr "servokalibrering ugyldig"
 
-#: pypilot/servo.py:564
+#: pypilot/servo.py:589
 msgid "failed to open servo on:"
 msgstr "mislyktes i å åpne servo på:"
 
-#: pypilot/servo.py:571
+#: pypilot/servo.py:596
 msgid "failed set nonblocking/exclusive"
 msgstr "mislykket sett ikke-blokkering / eksklusivt"
 
-#: pypilot/servo.py:602 pypilot/signalk.py:159
+#: pypilot/servo.py:627 pypilot/signalk.py:159
 msgid "found"
 msgstr "funnet"
 
-#: pypilot/servo.py:724
+#: pypilot/servo.py:749
 msgid "loading servo calibration"
 msgstr "lasting av servokalibrering"
 
-#: pypilot/servo.py:728
+#: pypilot/servo.py:753
 msgid "WARNING: using default servo calibration!!"
 msgstr "ADVARSEL: bruker standard servokalibrering !!"
 
-#: pypilot/servo.py:737
+#: pypilot/servo.py:762
 msgid "probing"
 msgstr "sondering"
 
-#: pypilot/servo.py:753
+#: pypilot/servo.py:778
 msgid "arduino servo detected"
 msgstr "arduino servo oppdaget"
 
-#: pypilot/servo.py:762
+#: pypilot/servo.py:787
 msgid "device needed for option"
 msgstr "enheten som trengs for alternativet"
 

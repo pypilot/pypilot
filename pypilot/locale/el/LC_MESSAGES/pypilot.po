@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-02 13:33-0400\n"
+"POT-Creation-Date: 2021-09-18 00:31-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,41 +19,41 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:138
+#: pypilot/autopilot.py:139
 msgid "Available Pilots"
 msgstr "Διαθέσιμοι πιλότοι"
 
-#: pypilot/autopilot.py:160
+#: pypilot/autopilot.py:161
 msgid "warning: failed to open special file"
 msgstr "προειδοποίηση: απέτυχε να ανοίξει ειδικό αρχείο"
 
-#: pypilot/autopilot.py:160
+#: pypilot/autopilot.py:161
 msgid "for writing"
 msgstr "για γραφή"
 
-#: pypilot/autopilot.py:161
+#: pypilot/autopilot.py:162
 msgid "cannot stroke the watchdog"
 msgstr "δεν μπορεί να χτυπήσει τον φύλακα"
 
-#: pypilot/autopilot.py:165
+#: pypilot/autopilot.py:166
 msgid "warning: failed to make autopilot process realtime"
 msgstr ""
-"προειδοποίηση: απέτυχε να πραγματοποιήσει τη διαδικασία αυτόματου πιλότου σε"
-" πραγματικό χρόνο"
+"προειδοποίηση: απέτυχε να πραγματοποιήσει τη διαδικασία αυτόματου πιλότου σε "
+"πραγματικό χρόνο"
 
-#: pypilot/autopilot.py:336
+#: pypilot/autopilot.py:337
 msgid "server/client is running too _slowly_"
 msgstr "ο διακομιστής / πελάτης εκτελείται πολύ _slowly_"
 
-#: pypilot/autopilot.py:342
+#: pypilot/autopilot.py:343
 msgid "sensors is running too _slowly_"
 msgstr "οι αισθητήρες λειτουργούν πολύ αργά"
 
-#: pypilot/autopilot.py:418
+#: pypilot/autopilot.py:420
 msgid "autopilot routine is running too _slowly_"
 msgstr "Η ρουτίνα αυτόματου πιλότου εκτελείται πολύ αργά"
 
-#: pypilot/autopilot.py:427
+#: pypilot/autopilot.py:429
 msgid "servo is running too _slowly_"
 msgstr "Το σερβο λειτουργεί πολύ αργά"
 
@@ -128,7 +128,7 @@ msgstr "φορτώθηκε βαθμονόμηση, ξεκινώντας"
 msgid "failed import calibration fit"
 msgstr "αποτυχία προσαρμογής βαθμονόμησης εισαγωγής"
 
-#: pypilot/boatimu.py:438
+#: pypilot/boatimu.py:439
 msgid "accel values invalid"
 msgstr "οι τιμές accel δεν είναι έγκυρες"
 
@@ -163,8 +163,8 @@ msgstr "εξαίρεση υποδοχή pypilot"
 #: pypilot/bufferedsocket.py:103
 msgid "falling back to python nonblocking socket, will consume more cpu"
 msgstr ""
-"επιστρέφοντας στην πρίζα χωρίς αποκλεισμό python, θα καταναλώσει περισσότερη"
-" CPU"
+"επιστρέφοντας στην πρίζα χωρίς αποκλεισμό python, θα καταναλώσει περισσότερη "
+"CPU"
 
 #: pypilot/bufferedsocket.py:129
 msgid "socket send error in server flush"
@@ -376,39 +376,39 @@ msgstr "Το nmea απέτυχε να αφαιρέσει το fd"
 msgid "nmea failed to remove address"
 msgstr "Το nmea απέτυχε να αφαιρέσει τη διεύθυνση"
 
-#: pypilot/nmea.py:626
+#: pypilot/nmea.py:629
 msgid "invalid value"
 msgstr "μη έγκυρη τιμή"
 
-#: pypilot/nmea.py:636
+#: pypilot/nmea.py:639
 msgid "connect error"
 msgstr "σφάλμα σύνδεσης"
 
-#: pypilot/nmea.py:665 pypilot/signalk.py:239
+#: pypilot/nmea.py:668 pypilot/signalk.py:239
 msgid "failed to connect"
 msgstr "απέτυχε να συνδεθεί"
 
-#: pypilot/nmea.py:673
+#: pypilot/nmea.py:676
 msgid "nmea client connected"
 msgstr "συνδεδεμένο πρόγραμμα -πελάτης nmea"
 
-#: pypilot/nmea.py:702
+#: pypilot/nmea.py:705
 msgid "poll took too long in nmea process!"
 msgstr "η δημοσκόπηση διήρκεσε πολύ στη διαδικασία nmea!"
 
-#: pypilot/nmea.py:709
+#: pypilot/nmea.py:712
 msgid "nmea bridge lost server connection"
 msgstr "nmea bridge έχασε τη σύνδεση διακομιστή"
 
-#: pypilot/nmea.py:712
+#: pypilot/nmea.py:715
 msgid "nmea bridge lost pipe to autopilot"
 msgstr "η γέφυρα nmea έχασε το σωλήνα του αυτόματου πιλότου"
 
-#: pypilot/nmea.py:735
+#: pypilot/nmea.py:738
 msgid "nmea bridge unhandled poll flag"
 msgstr "nmea γέφυρα σημαία χωρίς έλεγχο"
 
-#: pypilot/nmea.py:770
+#: pypilot/nmea.py:773
 msgid "nmea process loop too slow:"
 msgstr "ο βρόχος διεργασίας nmea είναι πολύ αργός:"
 
@@ -538,39 +538,39 @@ msgstr "κλειστός εσωτερικός σωλήνας, έξοδος δι�
 msgid "server socket closed from flush!!"
 msgstr "η υποδοχή διακομιστή έκλεισε από την έξαψη !!"
 
-#: pypilot/servo.py:448
+#: pypilot/servo.py:460
 msgid "servo calibration invalid"
 msgstr "Η βαθμονόμηση του σερβο δεν είναι έγκυρη"
 
-#: pypilot/servo.py:564
+#: pypilot/servo.py:589
 msgid "failed to open servo on:"
 msgstr "απέτυχε να ανοίξει το σερβο σε:"
 
-#: pypilot/servo.py:571
+#: pypilot/servo.py:596
 msgid "failed set nonblocking/exclusive"
 msgstr "αποτυχημένο σύνολο αποκλεισμού / αποκλεισμού"
 
-#: pypilot/servo.py:602 pypilot/signalk.py:159
+#: pypilot/servo.py:627 pypilot/signalk.py:159
 msgid "found"
 msgstr "βρέθηκαν"
 
-#: pypilot/servo.py:724
+#: pypilot/servo.py:749
 msgid "loading servo calibration"
 msgstr "φόρτωση βαθμονόμησης σερβο"
 
-#: pypilot/servo.py:728
+#: pypilot/servo.py:753
 msgid "WARNING: using default servo calibration!!"
 msgstr "ΠΡΟΕΙΔΟΠΟΙΗΣΗ: χρησιμοποιώντας την προεπιλεγμένη βαθμονόμηση servo !!"
 
-#: pypilot/servo.py:737
+#: pypilot/servo.py:762
 msgid "probing"
 msgstr "διερεύνηση"
 
-#: pypilot/servo.py:753
+#: pypilot/servo.py:778
 msgid "arduino servo detected"
 msgstr "Εντοπίστηκε σερβο arduino"
 
-#: pypilot/servo.py:762
+#: pypilot/servo.py:787
 msgid "device needed for option"
 msgstr "απαιτείται συσκευή για επιλογή"
 
@@ -873,8 +873,7 @@ msgstr "πυξίδα"
 msgid ""
 "Press each button when the rudder is at the correct position to calibrate."
 msgstr ""
-"Πατήστε κάθε κουμπί όταν το πηδάλιο βρίσκεται στη σωστή θέση για "
-"βαθμονόμηση."
+"Πατήστε κάθε κουμπί όταν το πηδάλιο βρίσκεται στη σωστή θέση για βαθμονόμηση."
 
 #: ui/autopilot_control_ui.py:732
 msgid "Rudder"

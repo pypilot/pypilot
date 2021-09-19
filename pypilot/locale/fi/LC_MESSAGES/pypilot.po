@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-02 13:33-0400\n"
+"POT-Creation-Date: 2021-09-18 00:31-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,40 +19,39 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:138
+#: pypilot/autopilot.py:139
 msgid "Available Pilots"
 msgstr "Saatavilla olevat lentäjät"
 
-#: pypilot/autopilot.py:160
+#: pypilot/autopilot.py:161
 msgid "warning: failed to open special file"
 msgstr "varoitus: erikoistiedoston avaaminen epäonnistui"
 
-#: pypilot/autopilot.py:160
+#: pypilot/autopilot.py:161
 msgid "for writing"
 msgstr "kirjoittamista varten"
 
-#: pypilot/autopilot.py:161
+#: pypilot/autopilot.py:162
 msgid "cannot stroke the watchdog"
 msgstr "ei voi silittää vahtikoiraa"
 
-#: pypilot/autopilot.py:165
+#: pypilot/autopilot.py:166
 msgid "warning: failed to make autopilot process realtime"
-msgstr ""
-"varoitus: autopilotin prosessin tekeminen reaaliaikaiseksi epäonnistui"
+msgstr "varoitus: autopilotin prosessin tekeminen reaaliaikaiseksi epäonnistui"
 
-#: pypilot/autopilot.py:336
+#: pypilot/autopilot.py:337
 msgid "server/client is running too _slowly_"
 msgstr "palvelin / asiakas toimii liian _hitaasti_"
 
-#: pypilot/autopilot.py:342
+#: pypilot/autopilot.py:343
 msgid "sensors is running too _slowly_"
 msgstr "anturit käyvät liian hitaasti"
 
-#: pypilot/autopilot.py:418
+#: pypilot/autopilot.py:420
 msgid "autopilot routine is running too _slowly_"
 msgstr "autopilotin rutiini toimii liian hitaasti"
 
-#: pypilot/autopilot.py:427
+#: pypilot/autopilot.py:429
 msgid "servo is running too _slowly_"
 msgstr "servo toimii liian hitaasti"
 
@@ -124,7 +123,7 @@ msgstr "kalibrointi ladattu, alkaa"
 msgid "failed import calibration fit"
 msgstr "epäonnistunut tuontikalibrointisovellus"
 
-#: pypilot/boatimu.py:438
+#: pypilot/boatimu.py:439
 msgid "accel values invalid"
 msgstr "Accel-arvot ovat virheellisiä"
 
@@ -159,8 +158,7 @@ msgstr "pypilot-pistorasian poikkeus"
 #: pypilot/bufferedsocket.py:103
 msgid "falling back to python nonblocking socket, will consume more cpu"
 msgstr ""
-"palatessasi pythonin estämättömään pistorasiaan, kuluttaa enemmän "
-"prosessoria"
+"palatessasi pythonin estämättömään pistorasiaan, kuluttaa enemmän prosessoria"
 
 #: pypilot/bufferedsocket.py:129
 msgid "socket send error in server flush"
@@ -372,39 +370,39 @@ msgstr "nmea ei onnistunut poistamaan fd: tä"
 msgid "nmea failed to remove address"
 msgstr "nmea ei onnistunut poistamaan osoitetta"
 
-#: pypilot/nmea.py:626
+#: pypilot/nmea.py:629
 msgid "invalid value"
 msgstr "Kelpaamaton arvo"
 
-#: pypilot/nmea.py:636
+#: pypilot/nmea.py:639
 msgid "connect error"
 msgstr "yhteysvirhe"
 
-#: pypilot/nmea.py:665 pypilot/signalk.py:239
+#: pypilot/nmea.py:668 pypilot/signalk.py:239
 msgid "failed to connect"
 msgstr "ei voida yhdistää"
 
-#: pypilot/nmea.py:673
+#: pypilot/nmea.py:676
 msgid "nmea client connected"
 msgstr "nmea -asiakas yhdistetty"
 
-#: pypilot/nmea.py:702
+#: pypilot/nmea.py:705
 msgid "poll took too long in nmea process!"
 msgstr "kysely kesti liian kauan nmea-prosessissa!"
 
-#: pypilot/nmea.py:709
+#: pypilot/nmea.py:712
 msgid "nmea bridge lost server connection"
 msgstr "nmea-silta katosi palvelinyhteyden"
 
-#: pypilot/nmea.py:712
+#: pypilot/nmea.py:715
 msgid "nmea bridge lost pipe to autopilot"
 msgstr "nmea-silta menetti putken autopilotille"
 
-#: pypilot/nmea.py:735
+#: pypilot/nmea.py:738
 msgid "nmea bridge unhandled poll flag"
 msgstr "nmea-silta käsittelemätön kyselylippu"
 
-#: pypilot/nmea.py:770
+#: pypilot/nmea.py:773
 msgid "nmea process loop too slow:"
 msgstr "nmea-prosessisilmukka liian hidas:"
 
@@ -534,39 +532,39 @@ msgstr "sisäinen putki suljettu, palvelin poistuu"
 msgid "server socket closed from flush!!"
 msgstr "palvelinpistoke suljettu huuhtelusta!"
 
-#: pypilot/servo.py:448
+#: pypilot/servo.py:460
 msgid "servo calibration invalid"
 msgstr "servokalibrointi on virheellinen"
 
-#: pypilot/servo.py:564
+#: pypilot/servo.py:589
 msgid "failed to open servo on:"
 msgstr "epäonnistui avaamasta servoa:"
 
-#: pypilot/servo.py:571
+#: pypilot/servo.py:596
 msgid "failed set nonblocking/exclusive"
 msgstr "epäonnistunut asetettu esto / yksinoikeus"
 
-#: pypilot/servo.py:602 pypilot/signalk.py:159
+#: pypilot/servo.py:627 pypilot/signalk.py:159
 msgid "found"
 msgstr "löytyi"
 
-#: pypilot/servo.py:724
+#: pypilot/servo.py:749
 msgid "loading servo calibration"
 msgstr "servokalibroinnin lataus"
 
-#: pypilot/servo.py:728
+#: pypilot/servo.py:753
 msgid "WARNING: using default servo calibration!!"
 msgstr "VAROITUS: oletus servokalibrointi !!"
 
-#: pypilot/servo.py:737
+#: pypilot/servo.py:762
 msgid "probing"
 msgstr "koettelemalla"
 
-#: pypilot/servo.py:753
+#: pypilot/servo.py:778
 msgid "arduino servo detected"
 msgstr "arduino-servo havaittu"
 
-#: pypilot/servo.py:762
+#: pypilot/servo.py:787
 msgid "device needed for option"
 msgstr "tarvittava laite"
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-02 13:33-0400\n"
+"POT-Creation-Date: 2021-09-18 00:31-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,40 +19,40 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:138
+#: pypilot/autopilot.py:139
 msgid "Available Pilots"
 msgstr "Dostępni piloci"
 
-#: pypilot/autopilot.py:160
+#: pypilot/autopilot.py:161
 msgid "warning: failed to open special file"
 msgstr "ostrzeżenie: nie udało się otworzyć specjalnego pliku"
 
-#: pypilot/autopilot.py:160
+#: pypilot/autopilot.py:161
 msgid "for writing"
 msgstr "do pisania"
 
-#: pypilot/autopilot.py:161
+#: pypilot/autopilot.py:162
 msgid "cannot stroke the watchdog"
 msgstr "nie mogę pogłaskać psa stróżującego"
 
-#: pypilot/autopilot.py:165
+#: pypilot/autopilot.py:166
 msgid "warning: failed to make autopilot process realtime"
 msgstr ""
 "ostrzeżenie: nie udało się wykonać procesu autopilota w czasie rzeczywistym"
 
-#: pypilot/autopilot.py:336
+#: pypilot/autopilot.py:337
 msgid "server/client is running too _slowly_"
 msgstr "serwer/klient działa zbyt _wolno_"
 
-#: pypilot/autopilot.py:342
+#: pypilot/autopilot.py:343
 msgid "sensors is running too _slowly_"
 msgstr "czujniki działają zbyt wolno"
 
-#: pypilot/autopilot.py:418
+#: pypilot/autopilot.py:420
 msgid "autopilot routine is running too _slowly_"
 msgstr "Procedura autopilota działa zbyt wolno"
 
-#: pypilot/autopilot.py:427
+#: pypilot/autopilot.py:429
 msgid "servo is running too _slowly_"
 msgstr "serwo działa zbyt wolno"
 
@@ -126,7 +126,7 @@ msgstr "kalibracja załadowana, start"
 msgid "failed import calibration fit"
 msgstr "nieudane dopasowanie kalibracji importu"
 
-#: pypilot/boatimu.py:438
+#: pypilot/boatimu.py:439
 msgid "accel values invalid"
 msgstr "wartości przyspieszenia są nieprawidłowe"
 
@@ -245,8 +245,8 @@ msgid ""
 "pypilot failed to import required modules.  Did you forget to run sudo "
 "python3 setup.py install?"
 msgstr ""
-"pypilot nie mógł zaimportować wymaganych modułów. Zapomniałeś uruchomić sudo"
-" python3 setup.py install?"
+"pypilot nie mógł zaimportować wymaganych modułów. Zapomniałeś uruchomić sudo "
+"python3 setup.py install?"
 
 #: pypilot/gpsd.py:45
 msgid "gpsd connected"
@@ -372,39 +372,39 @@ msgstr "nmea nie usunął fd"
 msgid "nmea failed to remove address"
 msgstr "nmea nie udało się usunąć adresu"
 
-#: pypilot/nmea.py:626
+#: pypilot/nmea.py:629
 msgid "invalid value"
 msgstr "niewłaściwa wartość"
 
-#: pypilot/nmea.py:636
+#: pypilot/nmea.py:639
 msgid "connect error"
 msgstr "błąd połączenia"
 
-#: pypilot/nmea.py:665 pypilot/signalk.py:239
+#: pypilot/nmea.py:668 pypilot/signalk.py:239
 msgid "failed to connect"
 msgstr "nie udało się połączyć"
 
-#: pypilot/nmea.py:673
+#: pypilot/nmea.py:676
 msgid "nmea client connected"
 msgstr "Podłączono klienta nmea"
 
-#: pypilot/nmea.py:702
+#: pypilot/nmea.py:705
 msgid "poll took too long in nmea process!"
 msgstr "ankieta trwała zbyt długo w procesie nmea!"
 
-#: pypilot/nmea.py:709
+#: pypilot/nmea.py:712
 msgid "nmea bridge lost server connection"
 msgstr "nmea most utracił połączenie z serwerem"
 
-#: pypilot/nmea.py:712
+#: pypilot/nmea.py:715
 msgid "nmea bridge lost pipe to autopilot"
 msgstr "most nmea zgubił rurę do autopilota"
 
-#: pypilot/nmea.py:735
+#: pypilot/nmea.py:738
 msgid "nmea bridge unhandled poll flag"
 msgstr "nmea bridge nieobsłużona flaga ankiety"
 
-#: pypilot/nmea.py:770
+#: pypilot/nmea.py:773
 msgid "nmea process loop too slow:"
 msgstr "Zbyt wolna pętla procesu nmea:"
 
@@ -534,39 +534,39 @@ msgstr "rura wewnętrzna zamknięta, serwer wychodzi server"
 msgid "server socket closed from flush!!"
 msgstr "gniazdo serwera zamknięte od spłukiwania!!"
 
-#: pypilot/servo.py:448
+#: pypilot/servo.py:460
 msgid "servo calibration invalid"
 msgstr "kalibracja serwa jest nieprawidłowa"
 
-#: pypilot/servo.py:564
+#: pypilot/servo.py:589
 msgid "failed to open servo on:"
 msgstr "nie udało się otworzyć serwa na:"
 
-#: pypilot/servo.py:571
+#: pypilot/servo.py:596
 msgid "failed set nonblocking/exclusive"
 msgstr "nieudane ustawienie nieblokujące/wyłączne"
 
-#: pypilot/servo.py:602 pypilot/signalk.py:159
+#: pypilot/servo.py:627 pypilot/signalk.py:159
 msgid "found"
 msgstr "znaleziony"
 
-#: pypilot/servo.py:724
+#: pypilot/servo.py:749
 msgid "loading servo calibration"
 msgstr "kalibracja serwomechanizmu ładowania"
 
-#: pypilot/servo.py:728
+#: pypilot/servo.py:753
 msgid "WARNING: using default servo calibration!!"
 msgstr "UWAGA: używanie domyślnej kalibracji serwa!!"
 
-#: pypilot/servo.py:737
+#: pypilot/servo.py:762
 msgid "probing"
 msgstr "sondowanie"
 
-#: pypilot/servo.py:753
+#: pypilot/servo.py:778
 msgid "arduino servo detected"
 msgstr "wykryto serwo arduino"
 
-#: pypilot/servo.py:762
+#: pypilot/servo.py:787
 msgid "device needed for option"
 msgstr "urządzenie potrzebne do opcji"
 
