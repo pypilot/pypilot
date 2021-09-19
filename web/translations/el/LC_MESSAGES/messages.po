@@ -7,15 +7,15 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-18 02:00-0400\n"
+"POT-Creation-Date: 2021-09-19 02:37-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: el\n"
 "Language-Team: el <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Language: el\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
 #: static/pypilot_control.js:37
@@ -60,8 +60,8 @@ msgstr "Οικόπεδο βαθμονόμησης"
 
 #: templates/calibrationplot.html:21
 msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age"
-" will reset when the calibration updates."
+"The raw sensor readings should fall on a sphere when calibrated.  The age "
+"will reset when the calibration updates."
 msgstr ""
 "Οι μετρήσεις ακατέργαστου αισθητήρα πρέπει να πέφτουν σε μια σφαίρα όταν "
 "βαθμονομούνται Η ηλικία θα επαναφερθεί όταν ενημερωθεί η βαθμονόμηση."
@@ -183,8 +183,7 @@ msgstr "Διαμόρφωση πληκτρολογίου LCD και τηλεχε�
 #: templates/index.html:133
 msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
 msgstr ""
-"NMEA Client host: θύρα (αφήστε κενό για προεπιλογή) π.χ.: "
-"192.168.0.1:10110"
+"NMEA Client host: θύρα (αφήστε κενό για προεπιλογή) π.χ.: 192.168.0.1:10110"
 
 #: templates/index.html:138
 msgid "Amp Hours"
@@ -218,6 +217,38 @@ msgstr "Σφάλματα"
 msgid "Web Server Latency"
 msgstr "Καθυστέρηση διακομιστή Web"
 
+#: templates/wifi.html:4
+msgid "setup"
+msgstr "ρύθμιση"
+
+#: templates/wifi.html:8
+msgid "Wireless Configuration"
+msgstr "Ασύρματη διαμόρφωση"
+
+#: templates/wifi.html:16 templates/wifi.html:17
+msgid "Access Point"
+msgstr "Σημείο πρόσβασης"
+
+#: templates/wifi.html:17 templates/wifi.html:22
+msgid "Key (leave blank for no encryption)"
+msgstr "Κλειδί (αφήστε κενό χωρίς κρυπτογράφηση)"
+
+#: templates/wifi.html:21 templates/wifi.html:22
+msgid "Client"
+msgstr "Πελάτης"
+
+#: templates/wifi.html:24
+msgid "Client Mode Address (leave blank for dhcp)"
+msgstr "Διεύθυνση λειτουργίας πελάτη (αφήστε κενό για dhcp)"
+
+#: templates/wifi.html:28
+msgid "If there is a problem, edit the file"
+msgstr "Εάν υπάρχει πρόβλημα, επεξεργαστείτε το αρχείο"
+
+#: templates/wifi.html:33
+msgid "back"
+msgstr "πίσω"
+
 #~ msgid "Wireless Configuration"
 #~ msgstr "Ασύρματη διαμόρφωση"
 
@@ -229,4 +260,3 @@ msgstr "Καθυστέρηση διακομιστή Web"
 
 #~ msgid "If there is a problem, edit the file"
 #~ msgstr "Εάν υπάρχει πρόβλημα, επεξεργαστείτε το αρχείο"
-
