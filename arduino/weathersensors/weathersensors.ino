@@ -65,7 +65,8 @@ int16_t dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, 
 
 int16_t cal_wind_min_reading, cal_wind_max_reading;
 uint32_t eeprom_write_timeout = 0;
-uint8_t setting_changed;
+uint8_t display_page; // 0=default, 1=baro plot, 2=wind plot, 3-9=settings
+uint8_t config_state = 0;
 
 struct eeprom_data_struct {
     char signature[6];
@@ -76,8 +77,10 @@ struct eeprom_data_struct {
     uint8_t direction_type; // 0=-180 to 180, 1=0 to 360
     uint8_t temperature_units; // 0=C, 1=F
     uint8_t leds_on; // 1=power leds
-    uint8_t display_page; // 0=default, 1=baro graph, 2-8=settings
     uint8_t baro_page; // 5 min, 1 hour, 24 hour
+    uint8_t wind_page; // 5 min, 1 hour, 24 hour
+    uint16_t wind_offset;
+    int8_t temperature_offset;
 } eeprom_data;
 
 #if LCD == JLX12864G
@@ -93,12 +96,17 @@ static struct baro_history_t {
     uint8_t pos;
 } baro_history[3]; // 5 minute, hour, day
 
-const uint32_t baro_times[3] = {60000L*5/history_len, 60000L*60/history_len, 60000L*60*24/history_len};
+static struct wind_history_t {
+    uint8_t data[history_len];
+    uint8_t pos;
+    uint32_t last_updatetime;
+} wind_history[3]; // 5 minute, hour, day
 
+const uint32_t plot_times[3] = {60000L*5/history_len, 60000L*60/history_len, 60000L*60*24/history_len};
 
 void bmX280_setup()
 {
-    Serial.println(F("bmX280 setup"));
+    Serial.println(PSTR("bmX280 setup"));
 
     // NOTE:  local version of twi does not enable pullup as
     // bmX_280 device is 3.3v and arduino runs at 5v
@@ -122,7 +130,7 @@ void bmX280_setup()
        d[0] == 0x58)
         have_bmp280 = 1;
     else {
-        Serial.print(F("bmp280 not found: "));
+        Serial.print(PSTR("bmp280 not found: "));
         Serial.println(d[0]);
         // attempt reset command
         //d[0] = 0xe0;
@@ -138,7 +146,7 @@ void bmX280_setup()
 
     uint8_t c = twi_readFrom(0x76, d, 24, 1);
     if(c != 24) {
-        Serial.println(F("bmp280 failed to read calibration"));
+        Serial.println(PSTR("bmp280 failed to read calibration"));
         have_bmp280 = 0;
     }
       
@@ -272,9 +280,9 @@ void setup()
 
     Serial.begin(38400);  // start serial for output
 #if 0
-    Serial.print(F("STARTUP\n"));
+    Serial.print(PSTR("STARTUP\n"));
     Serial.print(clock_time);
-    Serial.print(F(" "));
+    Serial.print(PSTR(" "));
     Serial.println(div);
 #endif
     // default values
@@ -283,7 +291,7 @@ void setup()
     struct eeprom_data_struct ram_eeprom;
     eeprom_read_block(&ram_eeprom, 0, sizeof ram_eeprom);
 
-    char signature[] PROGMEM = "arws12";
+    char signature[] PROGMEM = "arws16";
 
     // defaults
     memcpy_P(eeprom_data.signature, signature, sizeof signature);
@@ -298,14 +306,27 @@ void setup()
     eeprom_data.direction_type = 0;
     eeprom_data.temperature_units = 0;
     eeprom_data.leds_on = 0;
-    eeprom_data.display_page = 0;
+    eeprom_data.baro_page = 0;
+    eeprom_data.wind_page = 0;
+    eeprom_data.wind_offset = 0;
+    eeprom_data.temperature_offset = 0;
+    display_page = 0;
   
     if(memcmp_P(ram_eeprom.signature, signature, sizeof ram_eeprom.signature) == 0)
         memcpy(&eeprom_data, &ram_eeprom, sizeof eeprom_data);
 
     Serial.print(F("Sensor type:"));
-    Serial.println(eeprom_data.sensor_type);
-        
+    if(eeprom_data.sensor_type)
+        Serial.println(F("davis"));
+    else
+        Serial.println(F("pypilot"));
+
+    Serial.print(F("Wind Offset:"));
+    Serial.println(eeprom_data.wind_offset);
+
+    Serial.print(F("Temperature Offset:"));
+    Serial.println(eeprom_data.temperature_offset);
+    
     if(eeprom_data.wind_min_reading > 0 && // ensure somewhat sane range
        eeprom_data.wind_max_reading < 1024 &&
        eeprom_data.wind_min_reading < eeprom_data.wind_max_reading-100) {
@@ -442,14 +463,38 @@ uint8_t checksum(const char *buf)
 
 void send_nmea(const char *buf)
 {
-  char buf2[128];
-  snprintf(buf2, sizeof buf2, ("$%s*%02x\r\n"), buf, checksum(buf));
-  Serial.print(buf2);
+    if(config_state)
+        return;
+    char buf2[128];
+    snprintf(buf2, sizeof buf2, ("$%s*%02x\r\n"), buf, checksum(buf));
+    Serial.print(buf2);
 }
 
 uint8_t lcd_update=1;
 float wind_dir, wind_speed, wind_speed_30;
 int lastlight;
+
+void put_wind_history(uint8_t index, uint8_t val)
+{
+    wind_history[index].last_updatetime += plot_times[index];
+    wind_history[index].data[wind_history[index].pos++] = val;
+    if(wind_history[index].pos == history_len)
+        wind_history[index].pos = 0;
+}
+
+void update_wind_history()
+{
+    uint32_t t = millis();
+    uint32_t dt32 = t - wind_history[0].last_updatetime;
+    if(dt32 > plot_times[0]) {
+        put_wind_history(0, wind_speed*4);
+        for(int i=1; i<3; i++) {
+            dt32 = t - wind_history[i].last_updatetime;
+            if(dt32 > plot_times[i])
+                put_wind_history(i, wind_speed_30*4);
+        }
+    }
+}
 
 void read_anemometer()
 {
@@ -586,6 +631,10 @@ void read_anemometer()
         }
     }
 
+    dir += eeprom_data.wind_offset;
+    if(dir > 360)
+        dir -= 360;
+
     // lowpass wind direction
     if(dir >= 0) {
         if(lpdir - dir > 180)
@@ -595,7 +644,7 @@ void read_anemometer()
 
         if(fabs(lpdir - dir) < 180) // another test which should never fail
             lpdir = lp*dir + (1-lp)*lpdir;
-
+        
         if(lpdir >= 360)
             lpdir -= 360;
         else if(lpdir < 0)
@@ -653,6 +702,7 @@ void read_anemometer()
         wind_dir = lpdir;
         wind_speed = knots;
         wind_speed_30 = wind_speed_30*299.0/300.0 + wind_speed/300.0;
+        update_wind_history();
         lcd_update = 1;
     }
 }
@@ -664,7 +714,7 @@ int bmp280_count;
 static uint32_t baro_val, baro_count;
 void put_baro_history(uint8_t index, int32_t val)
 {
-    baro_history[index].last_updatetime += baro_times[index];
+    baro_history[index].last_updatetime += plot_times[index];
     val -= 60000;
     int diff = (val - baro_history[index].last)/5;
     if(diff > 127)
@@ -685,12 +735,12 @@ void update_barometer_history()
 
     uint32_t t = millis();
     uint32_t dt32 = t - baro_history[0].last_updatetime;
-    if(dt32 > baro_times[0]) {
+    if(dt32 > plot_times[0]) {
         int32_t val = baro_val / baro_count;
         put_baro_history(0, val);
         for(int i=1; i<3; i++) {
             dt32 = t - baro_history[i].last_updatetime;
-            if(dt32 > baro_times[i])
+            if(dt32 > plot_times[i])
                 put_baro_history(i, val);
         }
         baro_val = baro_count = 0;
@@ -750,8 +800,9 @@ void read_pressure_temperature()
         snprintf_P(buf, sizeof buf, PSTR("ARMDA,,,%d.%05ld,B,,,,,,,,,,,,,,,,"), ap, rp);
         send_nmea(buf);
 
-        int a = temperature_comp / 100;
-        int r = temperature_comp - a*100;
+        int32_t temperature = temperature_comp;
+        int a = temperature / 100 + eeprom_data.temperature_offset;
+        int r = temperature - a*100;
         snprintf_P(buf, sizeof buf, PSTR("ARMTA,%d.%02d,C"), a, abs(r));
         send_nmea(buf);
 
@@ -847,8 +898,6 @@ void draw_anemometer()
         a = pressure_comp/1e2, r = pressure_comp - a*1e2;
         a = snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("%d.%02d"), a, r);
         lcd.print(status_buf[2]);
-
-
 #else
         lcd.setfont(2);
         lcd.setpos(29, 45);
@@ -865,7 +914,7 @@ void draw_anemometer()
         lcd.print(status_buf[2]);
 #endif
         char unit = 'C';
-        int32_t temp = temperature_comp;
+        int32_t temp = temperature_comp + eeprom_data.temperature_offset*100;
         if(eeprom_data.temperature_units) {
             unit = 'F';
             temp = temp*9/5+3200;
@@ -935,16 +984,6 @@ void draw_anemometer()
 void draw_barometer_graph()
 {
 #if LCD
-    static uint8_t page;
-    uint8_t curpage = digitalRead(5);
-
-    if(page && !curpage) {
-        if(++eeprom_data.baro_page == 3)
-            eeprom_data.baro_page = 0;
-        setting_changed = 1;
-    }
-    page = curpage;
-
     if(!lcd_update)
         return;
 
@@ -968,8 +1007,8 @@ void draw_barometer_graph()
     lcd.print(F("barometer"));
     lcd.setpos(0, 14);
     switch(eeprom_data.baro_page) {
-    case 0: lcd.print(F("plot 5m")); break;
-    case 1: lcd.print(F("plot 1h")); break;
+    case 0: lcd.print(F("plot 5min")); break;
+    case 1: lcd.print(F("plot 1hr")); break;
     case 2: lcd.print(F("plot 1day")); break;
     }
     lcd.setfont(1);
@@ -1035,25 +1074,135 @@ void draw_barometer_graph()
 #endif
 }
 
-void draw_setting(uint8_t &setting, const char* name, const char* first, const char* second, const char* third=0)
+void draw_wind_graph()
 {
 #if LCD
+    if(!lcd_update)
+        return;
+
+    uint16_t time = millis();
+    uint16_t dt = time - last_lcd_updatetime;
+    if(dt < 1000) // don't update faster
+        return;
+
+    last_lcd_updatetime = time;
+    
+    lcd_update = 0;
+    last_lcd_texttime = time;
+
+#if LCD == JLX12864G
+    lcd.clear();
+    lcd.setfont(4);
+    lcd.setpos(0, 0);
+    lcd.print(F("wind"));
+    lcd.setpos(0, 14);
+    switch(eeprom_data.wind_page) {
+    case 0: lcd.print(F("plot 5min")); break;
+    case 1: lcd.print(F("plot 1hr")); break;
+    case 2: lcd.print(F("plot 1day")); break;
+    }
+    lcd.setfont(2);
+
+    snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("%02d"), (int) wind_speed);
+    lcd.setpos(0, 28);
+    lcd.print(status_buf[2]);
+
+    snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("%01d"), (int)(wind_speed*10 - ((int)wind_speed*10)));
+    lcd.setpos(24, 28);
+    lcd.print(status_buf[2]);
+    lcd.rectangle(20, 42, 21, 43, 255); // draw decimal
+
+    snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("%02d"), (int) round(wind_dir));
+    lcd.setpos(0, 46);
+    lcd.print(status_buf[2]);
+
+    lcd.setfont(4);
+    snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("knts"));
+    lcd.setpos(38, 30);
+    lcd.print(status_buf[2]);
+
+    snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("deg"));
+    lcd.setpos(34, 48);
+    lcd.print(status_buf[2]);
+#else
+    lcd.clear_lines(50, 83); // clear text
+    lcd.setfont(4);
+    lcd.setpos(0, 50);
+    lcd.print(F("wind"));
+    lcd.setpos(0, 60);
+    switch(eeprom_data.baro_page) {
+    case 0: lcd.print(F("plot 5m")); break;
+    case 1: lcd.print(F("plot 1h")); break;
+    case 2: lcd.print(F("plot 1d")); break;
+    }
+    lcd.setpos(0, 70);
+    a = snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("%d"), a);
+    lcd.print(status_buf[2]);
+    lcd.rectangle(0, a*7+3, 0, a*7+4, 255); // draw decimal
+    snprintf_P(status_buf[2], sizeof status_buf[2], PSTR("%02d"), r);
+    lcd.setpos(a*7+6, 70);
+    lcd.print(status_buf[2]);
+#endif
+
+#if LCD == JLX12864G
+    lcd.refresh(1);
+#endif
+
+#if LCD == JLX12864G
+    const int my = 64;
+    lcd.clear();
+#else
+    const int my = 60;
+    lcd.clear_lines(0, 50);
+#endif
+    int index = eeprom_data.wind_page;
+    int shift = 0;
+    for(int i=0; i<history_len; i++) {
+        int v = wind_history[index].data[i];
+        if(v > 2*my) {
+            shift = 2;
+            break;
+        }
+        if(v > my)
+            shift = 1;
+    }
+    
+    for(int i=0; i<history_len; i++) {
+        int p = wind_history[index].pos - i - 1;
+        if(p < 0)
+            p += history_len;
+        uint8_t v = wind_history[index].data[p] >> shift;
+        int y = my - v;
+        if(y >= 0 && y <= my)
+            lcd.putpixel(history_len-i-1, y, 255);
+    }
+#if LCD == JLX12864G
+    lcd.refresh(0);
+#else
+    lcd.refresh();
+#endif
+#endif
+}
+
+void draw_setting(uint8_t &setting, const char* name, const char* first, const char* second, const char* third=0)
+{
+#if LCD    
     uint8_t cursetting_key = digitalRead(5);
     static uint8_t setting_key;
 
+    if(millis()-eeprom_write_timeout > 500)
     if(setting_key && !cursetting_key) {
         setting++;
         int max = third ? 3 : 2;
         if(setting >= max)
             setting = 0;
         apply_settings();
-        setting_changed = 1;
     }
     setting_key = cursetting_key;
 
     uint16_t time = millis();
     uint16_t dt = time - last_lcd_updatetime;
-    if(!setting_changed && dt < 1000) // don't update faster
+    if(dt < 500) // don't update faster
         return;
     last_lcd_updatetime = time;
 
@@ -1104,6 +1253,86 @@ void draw_setting(uint8_t &setting, const char* name, const char* first, const c
 #endif
 }
 
+void read_serial()
+{
+    static char line[32];
+    static uint8_t linepos;
+    
+    while (Serial.available()) {
+        char c = Serial.read();  //gets one byte from serial buffer
+        if(linepos > sizeof line) // discard
+            linepos = 0;
+        line[linepos++] = c;
+        if(c == '\r') {
+            line[linepos-1] = 0;
+            // parse message
+            if(!strcmp_P(line, PSTR("config")) ) {
+                config_state = 1;
+                Serial.println(F("Configure Sensor Type"));
+                Serial.print(F("current: "));
+                if(eeprom_data.sensor_type)
+                    Serial.println(F("davis"));
+                else
+                    Serial.println(F("pypilot"));
+                Serial.println(F("0 - pypilot"));
+                Serial.println(F("1 - davis"));
+                Serial.println(F("hit enter to skip"));
+            } else if(config_state == 1) {
+                if(line[0] == '0')
+                   eeprom_data.sensor_type = 0;
+                else if(line[0] == '1')
+                   eeprom_data.sensor_type = 1;
+
+                Serial.println(F("wind offset (+- 360)"));
+                Serial.print(F("current: "));
+                Serial.println(eeprom_data.wind_offset);
+                config_state = 2;
+            } else if(config_state == 2) {
+                if(line[0]) {
+                    int offset = atoi(line);
+                    if(offset < -360 || offset > 360)
+                        Serial.println(F("invalid"));
+                    else {
+                        if(offset < 0)
+                            offset += 360;
+                        eeprom_data.wind_offset = offset;
+                        Serial.print(F("wind offset updated: "));
+                        Serial.println(eeprom_data.wind_offset);
+                        Serial.println();
+                    }
+                }
+                Serial.println(F("temperature offset (+- 30 C)"));
+                Serial.print(F("current: "));
+                Serial.println(eeprom_data.temperature_offset);
+                config_state = 3;
+            } else if(config_state == 3) {
+                if(line[0]) {
+                    int offset = atoi(line);
+                    if(offset < -30 || offset > 30)
+                        Serial.println(F("invalid"));
+                    else {
+                        eeprom_data.temperature_offset = offset;
+                        Serial.print(F("temperature offset updated: "));
+                        Serial.println(eeprom_data.temperature_offset);
+                        Serial.println();
+                    }
+                }
+                config_state = 0;
+            }
+
+            if(config_state)
+                eeprom_write_timeout = millis();
+                
+            linepos = 0;
+        }
+    }
+
+    if(config_state && millis()-eeprom_write_timeout > 10000) {
+        Serial.println(F("config timeout"));
+        config_state = 0;
+    }
+}
+
 void loop()
 {
     set_sleep_mode(SLEEP_MODE_IDLE);
@@ -1113,9 +1342,69 @@ void loop()
 
     read_pressure_temperature();
     read_anemometer();
+
+    read_serial();
+    
 #ifdef LCD
     read_light();
-    switch(eeprom_data.display_page) {
+
+    static uint8_t keys;
+    uint8_t key0 = digitalRead(5), key1 = digitalRead(6);
+    uint8_t curkeys = key0 + 2*key1;
+    uint32_t t = millis();
+
+    if(keys == 3 && curkeys) // wait for both keys to release if both pressed
+        return;
+
+    if(curkeys == 3) { // enter/exit settings if both keys pressed
+        if(display_page<3) {
+            display_page = 3;
+            eeprom_write_timeout = millis();
+        } else
+            display_page = 0;
+    } else if(display_page == 0) { // switch to keys 1 or 2 from main keys if key pressed
+        if(keys>0 && keys<3 && !curkeys)
+            display_page = keys;
+    } else if(display_page == 1) {
+        if(keys && !curkeys) { // barometer history keys through history lengths
+            if(keys == 2) {
+                if(++eeprom_data.baro_page == 3) {
+                    eeprom_data.baro_page = 0;
+                    eeprom_write_timeout = millis();
+                }
+            } else
+                display_page = 0;
+        }
+    } else if(display_page == 2) { // wind history keys through history lengths
+        if(keys && !curkeys) {
+            if(keys == 1) {
+                if(++eeprom_data.wind_page == 3) {
+                    eeprom_data.wind_page = 0;
+                    eeprom_write_timeout = millis();
+                }
+            } else
+                display_page = 0;
+        }
+    } else {
+        if(t-eeprom_write_timeout > 500)
+        if(keys==2 && !curkeys) { // if a setting is changed, exit settings or we reach all keyss, back to main
+            if(++display_page >= 9)
+                display_page = 0;
+            eeprom_write_timeout = millis();
+        }
+    }
+    keys = curkeys;
+
+    if(eeprom_write_timeout) {
+        if(t-eeprom_write_timeout > 10000) {
+            if(display_page > 2)
+                display_page = 0;
+            eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
+            eeprom_write_timeout = 0;
+        }
+    }
+
+    switch(display_page) {
     case 0:
         draw_anemometer();
         break;
@@ -1123,47 +1412,26 @@ void loop()
         draw_barometer_graph();
         break;
     case 2:
-        draw_setting(eeprom_data.sensor_type, PSTR("sensor"), PSTR("pypilot"), PSTR("davis"));
+        draw_wind_graph();
         break;
     case 3:
-        draw_setting(eeprom_data.display_orientation, PSTR("display"), PSTR("normal"), PSTR("flip"));
-        break;
-    case 4:
-        draw_setting(eeprom_data.backlight_setting, PSTR("backlight"), PSTR("off"), PSTR("on"), PSTR("auto"));
-        break;
-    case 5:
         draw_setting(eeprom_data.direction_type, PSTR("direction"), PSTR("+-180"), PSTR("0-360"));
         break;
-    case 6:
+    case 4:
         draw_setting(eeprom_data.temperature_units, PSTR("temperature"), PSTR("celcius"), PSTR("farenheight"));
         break;
+    case 5:
+        draw_setting(eeprom_data.backlight_setting, PSTR("backlight"), PSTR("off"), PSTR("on"), PSTR("auto"));
+        break;
+    case 6:
+        draw_setting(eeprom_data.sensor_type, PSTR("sensor"), PSTR("pypilot"), PSTR("davis"));
+        break;
     case 7:
+        draw_setting(eeprom_data.display_orientation, PSTR("display"), PSTR("normal"), PSTR("flip"));
+        break;
+    case 8:
         draw_setting(eeprom_data.leds_on, PSTR("leds"), PSTR("off"), PSTR("on"));
         break;
-    }
-
-    static uint8_t page;
-    uint8_t curpage = digitalRead(6);
-    uint32_t t = millis();
-
-    if(page && !curpage) {
-        if(eeprom_data.display_page && (setting_changed || t-eeprom_write_timeout > 5000))
-            eeprom_data.display_page = 0;
-         else if(++eeprom_data.display_page == 8)
-            eeprom_data.display_page = 0;
-
-        setting_changed = 0;
-        eeprom_write_timeout = millis();
-    }
-    page = curpage;
-
-    if(eeprom_write_timeout) {
-        if(t-eeprom_write_timeout > 10000) {
-            if(eeprom_data.display_page > 1)
-                eeprom_data.display_page = 0;
-            eeprom_update_block(&eeprom_data, 0, sizeof eeprom_data);
-            eeprom_write_timeout = 0;
-        }
     }
 #endif
 }
