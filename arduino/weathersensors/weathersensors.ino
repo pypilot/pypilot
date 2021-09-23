@@ -98,85 +98,85 @@ const uint32_t baro_times[3] = {60000L*5/history_len, 60000L*60/history_len, 600
 
 void bmX280_setup()
 {
-  Serial.println(F("bmX280 setup"));
+    Serial.println(F("bmX280 setup"));
 
-  // NOTE:  local version of twi does not enable pullup as
-  // bmX_280 device is 3.3v and arduino runs at 5v
+    // NOTE:  local version of twi does not enable pullup as
+    // bmX_280 device is 3.3v and arduino runs at 5v
 
-  twi_init();
+    twi_init();
 
-  // incase arduino version (although pullups will put
-  // too high voltage for short time anyway....
-  pinMode(SDA, INPUT);
-  pinMode(SCL, INPUT);
-  delay(1);
+    // incase arduino version (although pullups will put
+    // too high voltage for short time anyway....
+    pinMode(SDA, INPUT);
+    pinMode(SCL, INPUT);
+    delay(1);
 
-  have_bmp280 = 0;
-  bmX280_tries--;
+    have_bmp280 = 0;
+    bmX280_tries--;
 
-  uint8_t d[24];
-  d[0] = 0xd0;
+    uint8_t d[24];
+    d[0] = 0xd0;
 
-  if(twi_writeTo(0x76, d, 1, 1, 1) == 0 &&
-     twi_readFrom(0x76, d, 1, 1) == 1 &&
-     d[0] == 0x58)
-      have_bmp280 = 1;
-  else {
-      Serial.print(F("bmp280 not found: "));
-      Serial.println(d[0]);
-      // attempt reset command
-      //d[0] = 0xe0;
-      //d[1] = 0xb6;
-      //twi_writeTo(0x76, d, 2, 1, 1);
-      TWCR &= ~(_BV(TWEN));
-      return;
-  }
+    if(twi_writeTo(0x76, d, 1, 1, 1) == 0 &&
+       twi_readFrom(0x76, d, 1, 1) == 1 &&
+       d[0] == 0x58)
+        have_bmp280 = 1;
+    else {
+        Serial.print(F("bmp280 not found: "));
+        Serial.println(d[0]);
+        // attempt reset command
+        //d[0] = 0xe0;
+        //d[1] = 0xb6;
+        //twi_writeTo(0x76, d, 2, 1, 1);
+        TWCR &= ~(_BV(TWEN));
+        return;
+    }
 
-  d[0] = 0x88;
-  if(twi_writeTo(0x76, d, 1, 1, 1) != 0)
-      have_bmp280 = 0;
+    d[0] = 0x88;
+    if(twi_writeTo(0x76, d, 1, 1, 1) != 0)
+        have_bmp280 = 0;
 
-  uint8_t c = twi_readFrom(0x76, d, 24, 1);
-  if(c != 24) {
-      Serial.println(F("bmp280 failed to read calibration"));
-      have_bmp280 = 0;
-  }
+    uint8_t c = twi_readFrom(0x76, d, 24, 1);
+    if(c != 24) {
+        Serial.println(F("bmp280 failed to read calibration"));
+        have_bmp280 = 0;
+    }
       
-  dig_T1 = d[0] | d[1] << 8;
-  dig_T2 = d[2] | d[3] << 8;
-  dig_T3 = d[4] | d[5] << 8;
-  dig_P1 = d[6] | d[7] << 8;
-  dig_P2 = d[8] | d[9] << 8;
-  dig_P3 = d[10] | d[11] << 8;
-  dig_P4 = d[12] | d[13] << 8;
-  dig_P5 = d[14] | d[15] << 8;
-  dig_P6 = d[16] | d[17] << 8;
-  dig_P7 = d[18] | d[19] << 8;
-  dig_P8 = d[20] | d[21] << 8;
-  dig_P9 = d[22] | d[23] << 8;
+    dig_T1 = d[0] | d[1] << 8;
+    dig_T2 = d[2] | d[3] << 8;
+    dig_T3 = d[4] | d[5] << 8;
+    dig_P1 = d[6] | d[7] << 8;
+    dig_P2 = d[8] | d[9] << 8;
+    dig_P3 = d[10] | d[11] << 8;
+    dig_P4 = d[12] | d[13] << 8;
+    dig_P5 = d[14] | d[15] << 8;
+    dig_P6 = d[16] | d[17] << 8;
+    dig_P7 = d[18] | d[19] << 8;
+    dig_P8 = d[20] | d[21] << 8;
+    dig_P9 = d[22] | d[23] << 8;
 
   
 #if 0
-  Serial.println("bmp280 pressure compensation:");
-  Serial.println(dig_T1);
-  Serial.println(dig_T2);
-  Serial.println(dig_T3);
-  Serial.println(dig_P1);
-  Serial.println(dig_P2);
-  Serial.println(dig_P3);
-  Serial.println(dig_P4);
-  Serial.println(dig_P5);
-  Serial.println(dig_P6);
-  Serial.println(dig_P7);
-  Serial.println(dig_P8);
-  Serial.println(dig_P9);
+    Serial.println("bmp280 pressure compensation:");
+    Serial.println(dig_T1);
+    Serial.println(dig_T2);
+    Serial.println(dig_T3);
+    Serial.println(dig_P1);
+    Serial.println(dig_P2);
+    Serial.println(dig_P3);
+    Serial.println(dig_P4);
+    Serial.println(dig_P5);
+    Serial.println(dig_P6);
+    Serial.println(dig_P7);
+    Serial.println(dig_P8);
+    Serial.println(dig_P9);
 #endif  
 
-  // b00011111  // configure
-  d[0] = 0xf4;
-  d[1] = 0xff;
-  if(twi_writeTo(0x76, d, 2, 1, 1) != 0)
-      have_bmp280 = 0;
+    // b00011111  // configure
+    d[0] = 0xf4;
+    d[1] = 0xff;
+    if(twi_writeTo(0x76, d, 2, 1, 1) != 0)
+        have_bmp280 = 0;
 }
 
 volatile unsigned int rotation_count;
