@@ -576,6 +576,7 @@ class language(menu):
                  ('nederlands', 'nl'),
                  ('norsk', 'no'),
                  ('polskie', 'pl'),
+                 ('português', 'pt'),
                  ('pycкий', 'ru'),
                  ('svenska', 'sv')
     ]

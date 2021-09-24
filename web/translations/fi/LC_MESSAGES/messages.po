@@ -7,15 +7,15 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-19 02:37-0400\n"
+"POT-Creation-Date: 2021-09-24 02:24-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: fi <LL@li.org>\n"
 "Language: fi\n"
+"Language-Team: fi <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
 #: static/pypilot_control.js:37
@@ -60,11 +60,11 @@ msgstr "Kalibrointikaavio"
 
 #: templates/calibrationplot.html:21
 msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age "
-"will reset when the calibration updates."
+"The raw sensor readings should fall on a sphere when calibrated.  The age"
+" will reset when the calibration updates."
 msgstr ""
-"Anturin raakalukemien tulisi pudota palloon kalibroituna. Ikä nollautuu, kun"
-" kalibrointi päivittyy."
+"Anturin raakalukemien tulisi pudota palloon kalibroituna. Ikä nollautuu, "
+"kun kalibrointi päivittyy."
 
 #: templates/calibrationplot.html:28
 msgid "Connection"
@@ -259,3 +259,4 @@ msgstr "takaisin"
 
 #~ msgid "If there is a problem, edit the file"
 #~ msgstr "Jos on ongelmia, muokkaa tiedostoa"
+

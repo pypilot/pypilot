@@ -19,6 +19,7 @@ translate it # Italian
 translate nl # Dutch
 translate no # Norwegian
 translate pl # Polish
+translate pt # Portuguese
 translate ru # Russian
 translate sv # Swedish
 

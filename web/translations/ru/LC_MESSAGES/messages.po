@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-19 02:37-0400\n"
+"POT-Creation-Date: 2021-09-24 02:24-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ru\n"
@@ -218,35 +218,35 @@ msgstr "Задержка веб-сервера"
 
 #: templates/wifi.html:4
 msgid "setup"
-msgstr ""
+msgstr "настраивать"
 
 #: templates/wifi.html:8
 msgid "Wireless Configuration"
-msgstr ""
+msgstr "Конфигурация беспроводной сети"
 
 #: templates/wifi.html:16 templates/wifi.html:17
 msgid "Access Point"
-msgstr ""
+msgstr "Точка доступа"
 
 #: templates/wifi.html:17 templates/wifi.html:22
 msgid "Key (leave blank for no encryption)"
-msgstr ""
+msgstr "Ключ (оставьте поле пустым, чтобы не шифровать)"
 
 #: templates/wifi.html:21 templates/wifi.html:22
 msgid "Client"
-msgstr ""
+msgstr "Клиент"
 
 #: templates/wifi.html:24
 msgid "Client Mode Address (leave blank for dhcp)"
-msgstr ""
+msgstr "Адрес режима клиента (оставьте поле пустым для DHCP)"
 
 #: templates/wifi.html:28
 msgid "If there is a problem, edit the file"
-msgstr ""
+msgstr "Если есть проблема, отредактируйте файл"
 
 #: templates/wifi.html:33
 msgid "back"
-msgstr ""
+msgstr "назад"
 
 #~ msgid "Wireless Configuration"
 #~ msgstr "Конфигурация беспроводной сети"

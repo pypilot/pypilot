@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-19 02:37-0400\n"
+"POT-Creation-Date: 2021-09-24 02:24-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: nl\n"
@@ -216,35 +216,35 @@ msgstr "Latentie webserver"
 
 #: templates/wifi.html:4
 msgid "setup"
-msgstr ""
+msgstr "opstelling"
 
 #: templates/wifi.html:8
 msgid "Wireless Configuration"
-msgstr ""
+msgstr "Draadloze configuratie"
 
 #: templates/wifi.html:16 templates/wifi.html:17
 msgid "Access Point"
-msgstr ""
+msgstr "Toegangspunt"
 
 #: templates/wifi.html:17 templates/wifi.html:22
 msgid "Key (leave blank for no encryption)"
-msgstr ""
+msgstr "Sleutel (leeg laten voor geen codering)"
 
 #: templates/wifi.html:21 templates/wifi.html:22
 msgid "Client"
-msgstr ""
+msgstr "Cliënt"
 
 #: templates/wifi.html:24
 msgid "Client Mode Address (leave blank for dhcp)"
-msgstr ""
+msgstr "Adres clientmodus (leeg laten voor dhcp)"
 
 #: templates/wifi.html:28
 msgid "If there is a problem, edit the file"
-msgstr ""
+msgstr "Als er een probleem is, bewerk het bestand"
 
 #: templates/wifi.html:33
 msgid "back"
-msgstr ""
+msgstr "rug"
 
 #~ msgid "Wireless Configuration"
 #~ msgstr "Draadloze configuratie"
