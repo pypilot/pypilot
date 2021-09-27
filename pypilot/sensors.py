@@ -13,6 +13,8 @@ from resolv import resolv
 
 from gpsd import gpsd
 
+import math
+
 # favor lower priority sources
 source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'signalk' : 4, 'none' : 5}
 
@@ -55,17 +57,42 @@ class Sensor(object):
         return self.client.register(_type(*([self.name + '.' + name] + list(args)), **kwargs))
 
 class Wind(Sensor):
-    def __init__(self, client):
+    def __init__(self, client, boatimu):
         super(Wind, self).__init__(client, 'wind')
+
+        self.boatimu = boatimu
 
         self.direction = self.register(SensorValue, 'direction', directional=True)
         self.speed = self.register(SensorValue, 'speed')
         self.offset = self.register(RangeSetting, 'offset', 0, -180, 180, 'deg')
+        self.compensation_height = self.register(RangeProperty, 'sensors_height', 0, 0, 100, persistent=True)
 
     def update(self, data):
         if 'direction' in data:
+            data['direction'] += self.offset.value
+
+        if self.compensation_height.value and 'direction' in data and 'speed' in data:
+            # use imu boat motion to compensate wind reading
+            # compute apparent wind at sensor height from pitch and roll rates
+            # for this to work, the heading alighment must be correct
+            # for now just use roll an pitch, eventually also accelerations?
+
+            # convert input data into rectangular with y along boat forward direction
+            speed = data['speed']
+            direction = data['direction']
+            dx = speed*math.sin(math.radians(direction))
+            dy = speed*math.cos(math.radians(direction))
+
+            m = math.radians(self.compensation_height.value)
+            dx -= m * self.boatimu.SensorValues['rollrate'] # is this positive or negative?!?
+            dy -= m * self.boatimu.SensorValues['pitchrate']
+
+            data['speed'] = math.hypot(dx, dy)
+            data['direction'] = math.degrees(math.atan2(dx, dy))
+
+        if 'direction' in data:
             # direction is from -180 to 180
-            self.direction.set(resolv(data['direction'] + self.offset.value))
+            self.direction.set(resolv(data['direction']))
         if 'speed' in data:
             self.speed.set(data['speed'])
 
@@ -140,7 +167,7 @@ class gps(Sensor):
         self.speed.set(False)
 
 class Sensors(object):
-    def __init__(self, client):
+    def __init__(self, client, boatimu):
         from rudder import Rudder
         from nmea import Nmea
         from signalk import signalk
@@ -154,7 +181,7 @@ class Sensors(object):
 
         # actual sensors supported
         self.gps = gps(client)
-        self.wind = Wind(client)
+        self.wind = Wind(client, boatimu)
         self.rudder = Rudder(client)
         self.apb = APB(client)
 
