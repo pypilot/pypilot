@@ -80,6 +80,7 @@ struct eeprom_data_struct {
     uint8_t baro_page; // 5 min, 1 hour, 24 hour
     uint8_t wind_page; // 5 min, 1 hour, 24 hour
     uint16_t wind_offset;
+    int16_t barometer_offset;
     int8_t temperature_offset;
 } eeprom_data;
 
@@ -196,13 +197,13 @@ void isr_anemometer_count()
 //    Serial.print("read:  ");
 //      Serial.println(pin);
 
-    static uint16_t lastt, lastofft;
+    static uint16_t lastt; //, lastofft;
     static uint8_t lastpin;
     int t = millis();
 
     if(!pin && lastpin) {
         uint16_t period = t-lastt;
-        uint16_t offperiod = t-lastofft;
+//        uint16_t offperiod = t-lastofft;
 
         if(period > 10)
 #if 0
@@ -216,7 +217,7 @@ void isr_anemometer_count()
         }
     }
     lastpin = pin;
-    lastofft = t;
+//    lastofft = t;
 }
 
 void apply_settings()
@@ -244,6 +245,7 @@ volatile uint8_t calculated_clock = 0; // must be volatile to work correctly
 
 void setup()
 {
+#if 1
     cli();
     CLKPR = _BV(CLKPCE);
     CLKPR = _BV(CLKPS1); // divide clock by 4
@@ -259,12 +261,12 @@ void setup()
     uint32_t start = micros();
     while(!calculated_clock);  // wait for watchdog to fire
 
-    
     uint16_t clock_time = micros() - start;
     // after timing the clock frequency set the correct divider
     uint8_t div = 1;
     if(clock_time < 2900)
         div=2; // xtal is 8mhz
+#endif
 
     cli();
     CLKPR = _BV(CLKPCE);
@@ -291,7 +293,7 @@ void setup()
     struct eeprom_data_struct ram_eeprom;
     eeprom_read_block(&ram_eeprom, 0, sizeof ram_eeprom);
 
-    char signature[] PROGMEM = "arws16";
+    char signature[] PROGMEM = "arws17";
 
     // defaults
     memcpy_P(eeprom_data.signature, signature, sizeof signature);
@@ -309,6 +311,7 @@ void setup()
     eeprom_data.baro_page = 0;
     eeprom_data.wind_page = 0;
     eeprom_data.wind_offset = 0;
+    eeprom_data.barometer_offset = 0;
     eeprom_data.temperature_offset = 0;
     display_page = 0;
   
@@ -324,6 +327,9 @@ void setup()
     Serial.print(F("Wind Offset:"));
     Serial.println(eeprom_data.wind_offset);
 
+    Serial.print(F("Barometer Offset:"));
+    Serial.println(eeprom_data.barometer_offset);
+    
     Serial.print(F("Temperature Offset:"));
     Serial.println(eeprom_data.temperature_offset);
     
@@ -790,8 +796,8 @@ void read_pressure_temperature()
         pressure >>= 12;
         temperature >>= 12;
     
-        temperature_comp = bmp280_compensate_T_int32(temperature);
-        pressure_comp = bmp280_compensate_P_int64(pressure) >> 8;
+        temperature_comp = bmp280_compensate_T_int32(temperature) + 100*eeprom_data.temperature_offset;
+        pressure_comp = (bmp280_compensate_P_int64(pressure) >> 8) + eeprom_data.barometer_offset;
         pressure = temperature = 0;
   
         char buf[128];
@@ -801,7 +807,7 @@ void read_pressure_temperature()
         send_nmea(buf);
 
         int32_t temperature = temperature_comp;
-        int a = temperature / 100 + eeprom_data.temperature_offset;
+        int a = temperature / 100;
         int r = temperature - a*100;
         snprintf_P(buf, sizeof buf, PSTR("ARMTA,%d.%02d,C"), a, abs(r));
         send_nmea(buf);
@@ -914,7 +920,7 @@ void draw_anemometer()
         lcd.print(status_buf[2]);
 #endif
         char unit = 'C';
-        int32_t temp = temperature_comp + eeprom_data.temperature_offset*100;
+        int32_t temp = temperature_comp;
         if(eeprom_data.temperature_units) {
             unit = 'F';
             temp = temp*9/5+3200;
@@ -1267,7 +1273,6 @@ void read_serial()
             line[linepos-1] = 0;
             // parse message
             if(!strcmp_P(line, PSTR("config")) ) {
-                config_state = 1;
                 Serial.println(F("Configure Sensor Type"));
                 Serial.print(F("current: "));
                 if(eeprom_data.sensor_type)
@@ -1277,6 +1282,7 @@ void read_serial()
                 Serial.println(F("0 - pypilot"));
                 Serial.println(F("1 - davis"));
                 Serial.println(F("hit enter to skip"));
+                config_state++;
             } else if(config_state == 1) {
                 if(line[0] == '0')
                    eeprom_data.sensor_type = 0;
@@ -1286,7 +1292,7 @@ void read_serial()
                 Serial.println(F("wind offset (+- 360)"));
                 Serial.print(F("current: "));
                 Serial.println(eeprom_data.wind_offset);
-                config_state = 2;
+                config_state++;
             } else if(config_state == 2) {
                 if(line[0]) {
                     int offset = atoi(line);
@@ -1301,12 +1307,31 @@ void read_serial()
                         Serial.println();
                     }
                 }
+
+                Serial.println(F("barometer offset (1/100th millibars)"));
+                Serial.print(F("current: "));
+                Serial.println(eeprom_data.barometer_offset);
+                config_state++;
+            } else if(config_state == 3) {
+                if(line[0]) {
+                    int offset = atoi(line);
+                    if(offset < -10000 || offset > 10000)
+                        Serial.println(F("invalid"));
+                    else {
+                        eeprom_data.barometer_offset = offset;
+                        Serial.print(F("barometer offset updated: "));
+                        Serial.println(eeprom_data.barometer_offset);
+                        Serial.println();
+                    }
+                }
+
                 Serial.println(F("temperature offset (+- 30 C)"));
                 Serial.print(F("current: "));
                 Serial.println(eeprom_data.temperature_offset);
-                config_state = 3;
-            } else if(config_state == 3) {
+                config_state++;
+            } else if(config_state == 4) {
                 if(line[0]) {
+                    Serial.println(F("ok..."));
                     int offset = atoi(line);
                     if(offset < -30 || offset > 30)
                         Serial.println(F("invalid"));
