@@ -98,7 +98,7 @@ class Autopilot(object):
         self.server = pypilotServer()
         self.client = pypilotClient(self.server)
         self.boatimu = BoatIMU(self.client)
-        self.sensors = Sensors(self.client)
+        self.sensors = Sensors(self.client, self.boatimu)
         self.servo = servo.Servo(self.client, self.sensors)
         self.version = self.register(Value, 'version', 'pypilot' + ' ' + strversion)
         self.timestamp = self.client.register(TimeStamp())
