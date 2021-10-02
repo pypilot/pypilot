@@ -667,7 +667,7 @@ void read_anemometer()
 
     cli();
     uint16_t period = lastperiod;
-    uint16_t count = rotation_count;
+    uint16_t rcount = rotation_count;
     rotation_count = 0;
     lastperiod = 0;
     sei();
@@ -675,9 +675,9 @@ void read_anemometer()
     static uint16_t nowindcount;
     static float knots = 0, lastnewknots = 0;
     const int nowindtimeout = 30;
-    if(count) {
+    if(rcount) {
         if(nowindcount!=nowindtimeout) {
-            float newknots = .868976 * 2.25 * 1000 * count / period;
+            float newknots = .868976 * 2.25 * 1000 * rcount / period;
 #if 0
             Serial.print(lastnewknots);
             Serial.print(F("   "));
