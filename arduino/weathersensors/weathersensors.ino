@@ -472,7 +472,7 @@ void send_nmea(const char *buf)
     if(config_state)
         return;
     char buf2[128];
-    snprintf(buf2, sizeof buf2, ("$%s*%02x\r\n"), buf, checksum(buf));
+    snprintf_P(buf2, sizeof buf2, PSTR("$%s*%02x\r\n"), buf, checksum(buf));
     Serial.print(buf2);
 }
 
@@ -660,57 +660,58 @@ void read_anemometer()
     uint16_t time = millis();
     static uint16_t last_time;
     uint16_t dt = time - last_time;
-    if(dt >= 100) { // output every 100ms
-        last_time += 100;
+    if(dt < 100) // output every 100ms
+        return;
+    
+    last_time += 100;
 
-        cli();
-        uint16_t period = lastperiod;
-        uint16_t count = rotation_count;
-        rotation_count = 0;
-        lastperiod = 0;
-        sei();
+    cli();
+    uint16_t period = lastperiod;
+    uint16_t count = rotation_count;
+    rotation_count = 0;
+    lastperiod = 0;
+    sei();
         
-        static uint16_t nowindcount;
-        static float knots = 0, lastnewknots = 0;
-        const int nowindtimeout = 30;
-        if(count) {
-            if(nowindcount!=nowindtimeout) {
-                float newknots = .868976 * 2.25 * 1000 * count / period;
+    static uint16_t nowindcount;
+    static float knots = 0, lastnewknots = 0;
+    const int nowindtimeout = 30;
+    if(count) {
+        if(nowindcount!=nowindtimeout) {
+            float newknots = .868976 * 2.25 * 1000 * count / period;
 #if 0
-                Serial.print(lastnewknots);
-                Serial.print(F("   "));
-                Serial.print(newknots);
-                Serial.print("   ");
-                Serial.println(lastnewknots/newknots-1);
+            Serial.print(lastnewknots);
+            Serial.print(F("   "));
+            Serial.print(newknots);
+            Serial.print("   ");
+            Serial.println(lastnewknots/newknots-1);
 #endif
-                // if changing too fast, maybe bad reading
-                if(lastnewknots == 0 || fabs(lastnewknots - newknots) < 5 || fabs(lastnewknots/newknots-1) <= .5)
-                    knots = newknots;
+            // if changing too fast, maybe bad reading
+            if(lastnewknots == 0 || fabs(lastnewknots - newknots) < 5 || fabs(lastnewknots/newknots-1) <= .5)
+                knots = newknots;
 
-                lastnewknots = newknots;
-            }
-
-            nowindcount = 0;
-        } else {
-            if(nowindcount<nowindtimeout)
-                nowindcount++;
-            else
-                knots = lastnewknots = 0;
+            lastnewknots = newknots;
         }
 
-        char buf[128];
-        if(dir >= 0)
-            snprintf_P(buf, sizeof buf, PSTR("ARMWV,%d.%02d,R,%d.%02d,N,A"), (int)lpdir, (uint16_t)(lpdir*100.0)%100U, (int)knots, (int)(knots*100)%100);
-        else // invalid wind direction (no magnet?)
-            snprintf_P(buf, sizeof buf, PSTR("ARMWV,,R,%d.%02d,N,A"), (int)knots, (int)(knots*100)%100);
-        send_nmea(buf);
-        
-        wind_dir = lpdir;
-        wind_speed = knots;
-        wind_speed_30 = wind_speed_30*299.0/300.0 + wind_speed/300.0;
-        update_wind_history();
-        lcd_update = 1;
+        nowindcount = 0;
+    } else {
+        if(nowindcount<nowindtimeout)
+            nowindcount++;
+        else
+            knots = lastnewknots = 0;
     }
+
+    char buf[128];
+    if(dir >= 0)
+        snprintf_P(buf, sizeof buf, PSTR("ARMWV,%d.%02d,R,%d.%02d,N,A"), (int)lpdir, (uint16_t)(lpdir*100.0)%100U, (int)knots, (int)(knots*100)%100);
+    else // invalid wind direction (no magnet?)
+        snprintf_P(buf, sizeof buf, PSTR("ARMWV,,R,%d.%02d,N,A"), (int)knots, (int)(knots*100)%100);
+    send_nmea(buf);
+        
+    wind_dir = lpdir;
+    wind_speed = knots;
+    wind_speed_30 = wind_speed_30*299.0/300.0 + wind_speed/300.0;
+    update_wind_history();
+    lcd_update = 1;
 }
 
 uint32_t pressure, temperature;
@@ -796,7 +797,7 @@ void read_pressure_temperature()
         pressure >>= 12;
         temperature >>= 12;
     
-        temperature_comp = bmp280_compensate_T_int32(temperature) + 100*eeprom_data.temperature_offset;
+        temperature_comp = bmp280_compensate_T_int32(temperature) + 10*eeprom_data.temperature_offset;
         pressure_comp = (bmp280_compensate_P_int64(pressure) >> 8) + eeprom_data.barometer_offset;
         pressure = temperature = 0;
   
@@ -885,14 +886,12 @@ void draw_anemometer()
         lcd.setpos(0, 0);
         lcd.print(status_buf[1]);
 #else
-        snprintf_P(status_buf[1], sizeof status_buf[1], PSTR("%02d"), (int) round(wind_speed));
         lcd.clear_lines(46, 83); // clear compass
         // draw wind speed
         lcd.setfont(3);
         lcd.setpos(0, 38);
         lcd.print(status_buf[1]);
 #endif
-
         // draw 30 second average wind speed
         snprintf_P(status_buf[1], sizeof status_buf[1], PSTR("%02d"), (int) round(wind_speed_30));
 #if LCD == JLX12864G
@@ -1325,15 +1324,14 @@ void read_serial()
                     }
                 }
 
-                Serial.println(F("temperature offset (+- 30 C)"));
+                Serial.println(F("temperature offset (tenths of degrees) (+- 120)"));
                 Serial.print(F("current: "));
                 Serial.println(eeprom_data.temperature_offset);
                 config_state++;
             } else if(config_state == 4) {
                 if(line[0]) {
-                    Serial.println(F("ok..."));
                     int offset = atoi(line);
-                    if(offset < -30 || offset > 30)
+                    if(offset < -120 || offset > 120)
                         Serial.println(F("invalid"));
                     else {
                         eeprom_data.temperature_offset = offset;
@@ -1443,7 +1441,7 @@ void loop()
         draw_setting(eeprom_data.direction_type, PSTR("direction"), PSTR("+-180"), PSTR("0-360"));
         break;
     case 4:
-        draw_setting(eeprom_data.temperature_units, PSTR("temperature"), PSTR("celcius"), PSTR("farenheight"));
+        draw_setting(eeprom_data.temperature_units, PSTR("temperature"), PSTR("celcius"), PSTR("fahrenheit"));
         break;
     case 5:
         draw_setting(eeprom_data.backlight_setting, PSTR("backlight"), PSTR("off"), PSTR("on"), PSTR("auto"));
