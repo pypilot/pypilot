@@ -24,7 +24,7 @@ msgstr "Nicht verbunden"
 
 #: static/pypilot_control.js:68
 msgid "Connected"
-msgstr "In Verbindung gebracht"
+msgstr "Verbunden"
 
 #: static/pypilot_control.js:175
 msgid "Disconnected"
@@ -36,15 +36,15 @@ msgstr "Kompass- oder Kreiselfehler!"
 
 #: static/pypilot_control.js:258
 msgid "Tack"
-msgstr "Heftzwecke"
+msgstr "Wende"
 
 #: static/pypilot_control.js:261
 msgid "Cancel"
-msgstr "Stornieren"
+msgstr "Abbrechen"
 
 #: static/pypilot_control.js:320
 msgid "Engaged"
-msgstr "Beschäftigt, verlobt"
+msgstr "Eingeschaltet"
 
 #: static/pypilot_control.js:322
 msgid "Disengaged"
@@ -52,7 +52,7 @@ msgstr "Ausgeschaltet"
 
 #: static/pypilot_control.js:394
 msgid "no motor controller!"
-msgstr "keine Motorsteuerung!"
+msgstr "kein Motorregler!"
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
@@ -63,7 +63,7 @@ msgid ""
 "The raw sensor readings should fall on a sphere when calibrated.  The age"
 " will reset when the calibration updates."
 msgstr ""
-"Die rohen Sensorwerte sollten bei der Kalibrierung auf eine Kugel fallen."
+"Die rohen Sensorwerte sollten bei der Kalibrierung auf einer Kugel liegen."
 " Das Alter wird zurückgesetzt, wenn die Kalibrierung aktualisiert wird."
 
 #: templates/calibrationplot.html:28
@@ -76,7 +76,7 @@ msgstr "Steuerung"
 
 #: templates/index.html:33
 msgid "Gain"
-msgstr "Dazugewinnen"
+msgstr "Verstärkung"
 
 #: templates/index.html:36
 msgid "Calibration"
@@ -84,7 +84,7 @@ msgstr "Kalibrierung"
 
 #: templates/index.html:39
 msgid "Configuration"
-msgstr "Aufbau"
+msgstr "Einstellungen"
 
 #: templates/index.html:42
 msgid "Statistics"
@@ -92,7 +92,7 @@ msgstr "Statistiken"
 
 #: templates/index.html:51
 msgid "Heading"
-msgstr "Überschrift"
+msgstr "Kurs"
 
 #: templates/index.html:53
 msgid "Command"
@@ -100,11 +100,11 @@ msgstr "Befehl"
 
 #: templates/index.html:96
 msgid "Magnetic Heading"
-msgstr "Magnetische Überschrift"
+msgstr "Magnetische Kurs"
 
 #: templates/index.html:97
 msgid "Pitch"
-msgstr "Tonhöhe"
+msgstr "Nicken"
 
 #: templates/index.html:98
 msgid "Roll"
@@ -116,7 +116,7 @@ msgstr "Drücken Sie"
 
 #: templates/index.html:99
 msgid "here"
-msgstr "Hier"
+msgstr "hier"
 
 #: templates/index.html:100
 msgid "when the boat is level to align the inertial sensors."
@@ -144,11 +144,11 @@ msgstr "zentriert"
 
 #: templates/index.html:114
 msgid "port range"
-msgstr "Portbereich"
+msgstr "Backbord Ausschlagbereich"
 
 #: templates/index.html:115
 msgid "starboard range"
-msgstr "Steuerbord Reichweite"
+msgstr "Steuerbord Ausschlagbereich"
 
 #: templates/index.html:116 templates/index.html:140
 msgid "reset"
@@ -156,7 +156,7 @@ msgstr "zurücksetzen"
 
 #: templates/index.html:119
 msgid "Rudder Range"
-msgstr "Ruderbereich"
+msgstr "Ruderausschlagbereich"
 
 #: templates/index.html:120
 msgid "Degrees"
@@ -168,7 +168,7 @@ msgstr "Anzeige"
 
 #: templates/index.html:127
 msgid "Clear"
-msgstr "klar"
+msgstr "Hell"
 
 #: templates/index.html:128
 msgid "Dark"
@@ -188,7 +188,7 @@ msgstr "Ampere Stunden"
 
 #: templates/index.html:141
 msgid "Voltage"
-msgstr "Stromspannung"
+msgstr "Spannung"
 
 #: templates/index.html:142
 msgid "Controller temperature"
@@ -216,11 +216,11 @@ msgstr "Webserver-Latenz"
 
 #: templates/wifi.html:4
 msgid "setup"
-msgstr "erstellen"
+msgstr "einstellen"
 
 #: templates/wifi.html:8
 msgid "Wireless Configuration"
-msgstr "Drahtlose Konfiguration"
+msgstr "WLAN Konfiguration"
 
 #: templates/wifi.html:16 templates/wifi.html:17
 msgid "Access Point"
@@ -232,7 +232,7 @@ msgstr "Schlüssel (für keine Verschlüsselung leer lassen)"
 
 #: templates/wifi.html:21 templates/wifi.html:22
 msgid "Client"
-msgstr "Klient"
+msgstr "Client"
 
 #: templates/wifi.html:24
 msgid "Client Mode Address (leave blank for dhcp)"
@@ -247,7 +247,7 @@ msgid "back"
 msgstr "zurück"
 
 #~ msgid "Wireless Configuration"
-#~ msgstr "Drahtlose Konfiguration"
+#~ msgstr "WLAN Konfiguration"
 
 #~ msgid "Key (leave blank for no encryption)"
 #~ msgstr "Schlüssel (leer lassen für keine Verschlüsselung)"
@@ -256,5 +256,5 @@ msgstr "zurück"
 #~ msgstr "Client-Modus-Adresse (für DHCP leer lassen)"
 
 #~ msgid "If there is a problem, edit the file"
-#~ msgstr "Wenn es ein Problem gibt, bearbeiten Sie die Datei"
+#~ msgstr "Wenn ein Problem auftritt, bearbeiten Sie die Datei"
 
