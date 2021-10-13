@@ -56,7 +56,7 @@ const int analogInPin = A7;  // Analog input pin that the potentiometer is attac
 const int analogLightPin = A6;
 const int analogBacklightPin = 9;
 
-int16_t cross_count = 1000; // calibrate range during first 1000 crossings of 0
+int16_t cross_count = 0; // set to calibrate
 
 uint8_t have_bmp280 = 0;
 uint8_t bmX280_tries = 10;  // try 10 times to configure
@@ -73,7 +73,8 @@ struct eeprom_data_struct {
     int16_t wind_min_reading, wind_max_reading;
     uint8_t sensor_type; // 0=mlx90316, 1=davis
     uint8_t display_orientation; // 0=normal, 1=flip
-    uint8_t backlight_setting; // 0=off, 1=on, 2=auto
+    uint8_t backlight_mode; // 0=off, 1=on, 2=auto
+    uint8_t backlight_setting; // 0=dim, 1=average, 2=bright
     uint8_t direction_type; // 0=-180 to 180, 1=0 to 360
     uint8_t temperature_units; // 0=C, 1=F
     uint8_t leds_on; // 1=power leds
@@ -293,18 +294,19 @@ void setup()
     struct eeprom_data_struct ram_eeprom;
     eeprom_read_block(&ram_eeprom, 0, sizeof ram_eeprom);
 
-    char signature[] PROGMEM = "arws17";
+    char signature[] PROGMEM = "arws18";
 
     // defaults
     memcpy_P(eeprom_data.signature, signature, sizeof signature);
 
     cal_wind_min_reading = cal_wind_max_reading = 512;
     
-    eeprom_data.wind_min_reading = 131;
-    eeprom_data.wind_max_reading = 884;
+    eeprom_data.wind_min_reading = 150;
+    eeprom_data.wind_max_reading = 850;
     eeprom_data.sensor_type = 1;
     eeprom_data.display_orientation = 0;
-    eeprom_data.backlight_setting = 2;
+    eeprom_data.backlight_mode = 2;
+    eeprom_data.backlight_setting = 1;
     eeprom_data.direction_type = 0;
     eeprom_data.temperature_units = 0;
     eeprom_data.leds_on = 0;
@@ -472,7 +474,13 @@ void send_nmea(const char *buf)
     if(config_state)
         return;
     char buf2[128];
-    snprintf_P(buf2, sizeof buf2, PSTR("$%s*%02x\r\n"), buf, checksum(buf));
+    const char *fmt;
+    if(eeprom_data.sensor_type == 0)
+        fmt = PSTR("$PY%s*%02x\r\n");
+    else
+        fmt = PSTR("$AR%s*%02x\r\n");
+
+    snprintf_P(buf2, sizeof buf2, fmt, buf, checksum(buf));
     Serial.print(buf2);
 }
 
@@ -499,6 +507,61 @@ void update_wind_history()
             if(dt32 > plot_times[i])
                 put_wind_history(i, wind_speed_30*4);
         }
+    }
+}
+
+void calibrate_wind_direction(uint32_t val[3], int16_t count[3])
+{
+    if(count[0] > 8 && count[2] > 8 && count[1] <= 0)
+        if(cross_count >= 0)
+            cross_count--;
+
+    if(count[1] < 0) {
+        if(count[0] > 8) {
+            int16_t minv = val[0] / count[0];
+            cal_wind_min_reading = min(cal_wind_min_reading, minv);
+        }
+        if(count[2] > 8) {
+            int16_t maxv = val[2] / count[2];
+            if(maxv < 1000)
+                cal_wind_max_reading = max(cal_wind_max_reading, maxv);
+        }
+        Serial.print(F("Calibrating  "));
+        Serial.print(cal_wind_min_reading);
+        Serial.print(F("/"));
+        Serial.print(eeprom_data.wind_min_reading);
+        Serial.print(F(" "));
+        Serial.print(cal_wind_max_reading);
+        Serial.print(F("/"));
+        Serial.print(eeprom_data.wind_max_reading);
+        Serial.print(F(" "));
+        Serial.println(cross_count);
+    }
+    
+    if(cross_count == 0) { // write at zero
+        // don't write update unless there is a significant change
+        uint8_t update = 0;
+        if(cal_wind_min_reading < eeprom_data.wind_min_reading ||
+           cal_wind_min_reading - 5 > eeprom_data.wind_min_reading) {
+            eeprom_data.wind_min_reading = cal_wind_min_reading;
+            update = 1;
+        }
+
+        if(cal_wind_max_reading > eeprom_data.wind_max_reading ||
+           cal_wind_max_reading + 5 < eeprom_data.wind_max_reading) {
+            eeprom_data.wind_max_reading = cal_wind_max_reading;
+            update = 1;
+        }
+
+        if(update) {
+            Serial.print(F("Calibration Update: "));
+            Serial.print(cal_wind_min_reading);
+            Serial.print(F(" "));
+            Serial.println(cal_wind_max_reading);
+            eeprom_write_timeout = millis() + 10000;
+        }
+        cal_wind_min_reading = 512;
+        cal_wind_max_reading = 512;
     }
 }
 
@@ -536,79 +599,21 @@ void read_anemometer()
 
     // filter and map light value
     lastlight = (light + 31*lastlight + 15) / 32;
-    
-    // read the analog in value:
-    if(count[0] > 8 && count[2] > 8 && count[1] <= 0) {
-#if 0
-        Serial.print(F("CROSS!!!!   "));
-        Serial.print(float(val[0]) / count[0]);
-        Serial.print(F("  "));
-        Serial.print(float(val[2]) / count[2]);
-        Serial.print(F("  "));
-        Serial.print(count[0]);
-        Serial.print(F("  "));
-        Serial.println(count[2]);
-#endif
-        if(cross_count > 0) {
-            int16_t a = val[0]/count[0];
-            int16_t b = val[2]/count[2];
-            
-            cal_wind_min_reading = min(cal_wind_min_reading, a);
-            cal_wind_max_reading = max(cal_wind_max_reading, b);
-#if 0
-            Serial.print(F("Calibrating  "));
-            Serial.print(cal_wind_min_reading);
-            Serial.print(F(" "));
-            Serial.print(eeprom_data.wind_max_reading);
-            Serial.print(F(" "));
-            Serial.print(cal_wind_max_reading);
-            Serial.print(F(" "));
-            Serial.print(eeprom_data.wind_max_reading);
-            Serial.print(F(" "));
-            Serial.println(cross_count);
-#endif
-            cross_count--;
-        }
-    
-        if(cross_count == 0) { // write at zero
-            Serial.println(F("Calibration Finished"));
-            cross_count--;
 
-            // don't write update unless there is a significant change
-            if(abs(cal_wind_max_reading - eeprom_data.wind_max_reading) > 10 ||
-               abs(cal_wind_min_reading - eeprom_data.wind_min_reading) > 10) {
-                eeprom_write_timeout = millis() + 10000;
-                cross_count = 1000;
-                cal_wind_min_reading = 512;
-                cal_wind_max_reading = 512;
+    if(cross_count)
+        calibrate_wind_direction(val, count);
+    
+    int16_t sensorValue;
+    if((count[0] > 0) + (count[1] > 0) + (count[2] > 0) != 1) {
+        // crossed zero
+        sensorValue = eeprom_data.wind_min_reading;
+    } else {
+        for(int i=0; i<3; i++)
+            if(count[i] > 0) {
+                sensorValue = val[i] / count[i]; // average data                
+                break;
             }
-        }
     }
-
-    if(count[0] > 0 && count[2] > 0) {
-        // discard this since we crossed zero and read
-        // possibly invalid data
-        return;
-    }
-
-    uint32_t tval = 0;
-    int16_t tcount = 0;
-    for(int i=0; i<3; i++)
-        if(count[i] > 64) {
-            tval += val[i];
-            tcount += count[i];
-        }
-
-    if(tcount < 64) {
-        //Serial.println(count[0]);
-        //Serial.println(count[1]);
-        //Serial.println(count[2]);
-        //Serial.println(tcount);
-        //Serial.println("Not enough data!!");
-        return; // not enough data
-    }
-
-    int16_t sensorValue = tval / tcount; // average data
 
     // make sure the value is sane
     if(sensorValue < 0 || sensorValue > 1023) {
@@ -702,9 +707,9 @@ void read_anemometer()
 
     char buf[128];
     if(dir >= 0)
-        snprintf_P(buf, sizeof buf, PSTR("ARMWV,%d.%02d,R,%d.%02d,N,A"), (int)lpdir, (uint16_t)(lpdir*100.0)%100U, (int)knots, (int)(knots*100)%100);
+        snprintf_P(buf, sizeof buf, PSTR("MWV,%d.%02d,R,%d.%02d,N,A"), (int)lpdir, (uint16_t)(lpdir*100.0)%100U, (int)knots, (int)(knots*100)%100);
     else // invalid wind direction (no magnet?)
-        snprintf_P(buf, sizeof buf, PSTR("ARMWV,,R,%d.%02d,N,A"), (int)knots, (int)(knots*100)%100);
+        snprintf_P(buf, sizeof buf, PSTR("MWV,,R,%d.%02d,N,A"), (int)knots, (int)(knots*100)%100);
     send_nmea(buf);
         
     wind_dir = lpdir;
@@ -804,13 +809,13 @@ void read_pressure_temperature()
         char buf[128];
         int ap = pressure_comp/100000;
         uint32_t rp = pressure_comp - ap*100000UL;
-        snprintf_P(buf, sizeof buf, PSTR("ARMDA,,,%d.%05ld,B,,,,,,,,,,,,,,,,"), ap, rp);
+        snprintf_P(buf, sizeof buf, PSTR("MDA,,,%d.%05ld,B,,,,,,,,,,,,,,,,"), ap, rp);
         send_nmea(buf);
 
         int32_t temperature = temperature_comp;
         int a = temperature / 100;
         int r = temperature - a*100;
-        snprintf_P(buf, sizeof buf, PSTR("ARMTA,%d.%02d,C"), a, abs(r));
+        snprintf_P(buf, sizeof buf, PSTR("MTA,%d.%02d,C"), a, abs(r));
         send_nmea(buf);
 
         lcd_update = 1;
@@ -821,9 +826,9 @@ void read_pressure_temperature()
 void read_light()
 {
     static int lighton;
-    if(eeprom_data.backlight_setting == 0)
+    if(eeprom_data.backlight_mode == 0)
         lighton = 0;
-    else if(eeprom_data.backlight_setting == 1)
+    else if(eeprom_data.backlight_mode == 1)
         lighton = 1;
     else
     {        
@@ -836,11 +841,18 @@ void read_light()
         }
     }
 
-#ifdef LCD_BL_HIGH
-    int pwm = lighton ? 60 : 0; // backlight expects 3v3 but we have 5v!
-                                // do not set above 160 or may damage backlight!!
-#else
-    int pwm = lighton ? 120 : 255;
+    int pwm;
+    // do not set above 160 or may damage backlight!!
+    if(!lighton)
+        pwm = 0;
+    else if(eeprom_data.backlight_setting == 0)
+        pwm = 8;
+    else if(eeprom_data.backlight_setting == 1)
+        pwm = 20;
+    else
+        pwm = 50;
+#ifndef LCD_BL_HIGH
+    pwm = 255 - pwm;
 #endif
     analogWrite(analogBacklightPin, pwm);
 }
@@ -1197,6 +1209,7 @@ void draw_setting(uint8_t &setting, const char* name, const char* first, const c
 
     if(millis()-eeprom_write_timeout > 500)
     if(setting_key && !cursetting_key) {
+        eeprom_write_timeout = millis();
         setting++;
         int max = third ? 3 : 2;
         if(setting >= max)
@@ -1242,7 +1255,7 @@ void draw_setting(uint8_t &setting, const char* name, const char* first, const c
         strcpy_P(status_buf[0], third);
         lcd.print(status_buf[0]);
 #if LCD == JLX12864G
-        int y = setting*14-14;
+        int y = setting*14-15;
         lcd.line(0, y, 60, y, 255);
 #endif
     }
@@ -1271,6 +1284,9 @@ void read_serial()
         if(c == '\r') {
             line[linepos-1] = 0;
             // parse message
+            if(!strcmp_P(line, PSTR("calibrate")) )
+                cross_count = 100;
+
             if(!strcmp_P(line, PSTR("config")) ) {
                 Serial.println(F("Configure Sensor Type"));
                 Serial.print(F("current: "));
@@ -1411,7 +1427,7 @@ void loop()
     } else {
         if(t-eeprom_write_timeout > 500)
         if(keys==2 && !curkeys) { // if a setting is changed, exit settings or we reach all keyss, back to main
-            if(++display_page >= 9)
+            if(++display_page >= 10)
                 display_page = 0;
             eeprom_write_timeout = millis();
         }
@@ -1444,15 +1460,18 @@ void loop()
         draw_setting(eeprom_data.temperature_units, PSTR("temperature"), PSTR("celcius"), PSTR("fahrenheit"));
         break;
     case 5:
-        draw_setting(eeprom_data.backlight_setting, PSTR("backlight"), PSTR("off"), PSTR("on"), PSTR("auto"));
+        draw_setting(eeprom_data.backlight_mode, PSTR("backlight"), PSTR("off"), PSTR("on"), PSTR("auto"));
         break;
     case 6:
-        draw_setting(eeprom_data.sensor_type, PSTR("sensor"), PSTR("pypilot"), PSTR("davis"));
+        draw_setting(eeprom_data.backlight_setting, PSTR("backlight"), PSTR("dim"), PSTR("normal"), PSTR("bright"));
         break;
     case 7:
-        draw_setting(eeprom_data.display_orientation, PSTR("display"), PSTR("normal"), PSTR("flip"));
+        draw_setting(eeprom_data.sensor_type, PSTR("sensor"), PSTR("pypilot"), PSTR("davis"));
         break;
     case 8:
+        draw_setting(eeprom_data.display_orientation, PSTR("display"), PSTR("normal"), PSTR("flip"));
+        break;
+    case 9:
         draw_setting(eeprom_data.leds_on, PSTR("leds"), PSTR("off"), PSTR("on"));
         break;
     }
