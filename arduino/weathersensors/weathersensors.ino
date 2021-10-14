@@ -301,8 +301,8 @@ void setup()
 
     cal_wind_min_reading = cal_wind_max_reading = 512;
     
-    eeprom_data.wind_min_reading = 150;
-    eeprom_data.wind_max_reading = 850;
+    eeprom_data.wind_min_reading = 118;
+    eeprom_data.wind_max_reading = 901;
     eeprom_data.sensor_type = 1;
     eeprom_data.display_orientation = 0;
     eeprom_data.backlight_mode = 2;
@@ -344,8 +344,8 @@ void setup()
         Serial.println(eeprom_data.wind_max_reading);
     } else {
         Serial.print(F("Warning: calibration invalid, resetting it"));
-        eeprom_data.wind_min_reading = 300;
-        eeprom_data.wind_max_reading = 650;
+        eeprom_data.wind_min_reading = 118;
+        eeprom_data.wind_max_reading = 901;
     }
   
     // read fuses, and report this as flag if they are wrong
@@ -542,13 +542,13 @@ void calibrate_wind_direction(uint32_t val[3], int16_t count[3])
         // don't write update unless there is a significant change
         uint8_t update = 0;
         if(cal_wind_min_reading < eeprom_data.wind_min_reading ||
-           cal_wind_min_reading - 5 > eeprom_data.wind_min_reading) {
+           cal_wind_min_reading - 2 > eeprom_data.wind_min_reading) {
             eeprom_data.wind_min_reading = cal_wind_min_reading;
             update = 1;
         }
 
         if(cal_wind_max_reading > eeprom_data.wind_max_reading ||
-           cal_wind_max_reading + 5 < eeprom_data.wind_max_reading) {
+           cal_wind_max_reading + 2 < eeprom_data.wind_max_reading) {
             eeprom_data.wind_max_reading = cal_wind_max_reading;
             update = 1;
         }
@@ -559,7 +559,9 @@ void calibrate_wind_direction(uint32_t val[3], int16_t count[3])
             Serial.print(F(" "));
             Serial.println(cal_wind_max_reading);
             eeprom_write_timeout = millis() + 10000;
-        }
+        } else
+            Serial.print(F("Calibration same, no update"));
+
         cal_wind_min_reading = 512;
         cal_wind_max_reading = 512;
     }
@@ -603,7 +605,7 @@ void read_anemometer()
     if(cross_count)
         calibrate_wind_direction(val, count);
     
-    int16_t sensorValue;
+    int16_t sensorValue = -1;
     if((count[0] > 0) + (count[1] > 0) + (count[2] > 0) != 1) {
         // crossed zero
         sensorValue = eeprom_data.wind_min_reading;
@@ -1284,7 +1286,7 @@ void read_serial()
         if(c == '\r') {
             line[linepos-1] = 0;
             // parse message
-            if(!strcmp_P(line, PSTR("calibrate")) )
+            if(!strcmp_P(line, PSTR("calibrate")))
                 cross_count = 100;
 
             if(!strcmp_P(line, PSTR("config")) ) {

@@ -1,0 +1,25 @@
+The weather sensors read wind speed and direction and output nmea data via the serial (usb port)
+Normally wind speed and direction, pressure and air temperature data is output in nmea0183 at 38400 baud
+
+
+Also read from i2c barometric pressure sensor
+
+There is an optional display and 2 buttons (capacitive touch generally)
+
+This allows for some settings pressing 2 keys.
+
+Also via serial interface it is possible to calibrate and configure.
+
+Two types of sensors are supported
+1 - pypilot
+   this uses mlx9013 chip which requires calibration to know the analog range (minimum and maximum analog values)
+   to calibrate you can type 'calibrate' on a serial console.   This initiates calibration, and after 100 crossing (from minimum to maximum is discontinuous)
+   the values are recorded saved and applied
+
+2 - davis
+   this works with the davis anemometer which is inferior as it uses a potentiometer with 13 degree deadband
+   this is fixed and calibration not needed but the readings are random over this 13 degree interval
+
+It is also possible to configure pressure via a serial console by typing 'config'  the configuration is interactive.
+
+
