@@ -200,7 +200,7 @@ void isr_anemometer_count()
 
     static uint16_t lastt; //, lastofft;
     static uint8_t lastpin;
-    int t = millis();
+    uint16_t t = millis();
 
     if(!pin && lastpin) {
         uint16_t period = t-lastt;
@@ -473,14 +473,18 @@ void send_nmea(const char *buf)
 {
     if(config_state)
         return;
-    char buf2[128];
+    char buf2[64];
     const char *fmt;
-    if(eeprom_data.sensor_type == 0)
+    uint8_t ck;
+    if(eeprom_data.sensor_type == 0) {
         fmt = PSTR("$PY%s*%02x\r\n");
-    else
+        ck = 0x09; // 'P' ^ 'Y'
+    } else {
         fmt = PSTR("$AR%s*%02x\r\n");
+        ck = 0x13; // 'A' ^ 'R'
+    }
 
-    snprintf_P(buf2, sizeof buf2, fmt, buf, checksum(buf));
+    snprintf_P(buf2, sizeof buf2, fmt, buf, ck^checksum(buf));
     Serial.print(buf2);
 }
 
