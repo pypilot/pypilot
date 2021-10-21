@@ -772,7 +772,9 @@ def main():
     client = pypilotClient(server)
 
     from sensors import Sensors # for rudder feedback
-    sensors = Sensors(client)
+    from boatimu import BoatIMU
+    boatimu = BoatIMU(client)
+    sensors = Sensors(client, boatimu)
     servo = Servo(client, sensors)
 
     period = .1
