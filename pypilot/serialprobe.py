@@ -144,7 +144,7 @@ def scan_devices():
             if devices[device]['realpath'] == realpath:
                 break
         else:
-            allowed_devices[path]['realpath'] = realpath
+            allowed_devices[path] = {'realpath': realpath}
     
     return allowed_devices
 
