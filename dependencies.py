@@ -122,9 +122,10 @@ class RTIMULIB2_dep(dep):
             return False
 
         from importlib_metadata import version
-        v = version('RTIMULIb').split('.')
+        v = version('RTIMULib').split('.')
         n = (int(v[0])*1000 + int(v[1]))*1000 + int(v[2])
-        if n < 8000001:
+        if n < 8001000:
+            print('RTIMULib version out of date')
             return False
 
         return True
