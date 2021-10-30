@@ -161,6 +161,8 @@ void set_buzzer(uint8_t mode, uint8_t timeout)
     uint8_t freq;
     switch(mode) {
     case 0: // buzzer off
+        pinMode(5, INPUT_PULLUP);
+        pinMode(6, INPUT_PULLUP);
         TIMSK2 = 0;
         return;
     case 1: // steady
@@ -170,6 +172,8 @@ void set_buzzer(uint8_t mode, uint8_t timeout)
         freq = 60;
         break;
     }
+    pinMode(5, OUTPUT);
+    pinMode(6, OUTPUT);
     buzzer_mode = mode;
     OCR2A = freq;
     OCR2B = freq/2;
@@ -216,8 +220,8 @@ void setup()
     pinMode(MISO, OUTPUT);
 
     // buzzer
-    pinMode(5, OUTPUT);
-    pinMode(6, OUTPUT);
+    pinMode(5, INPUT_PULLUP);
+    pinMode(6, INPUT_PULLUP);
     pinMode(7, INPUT_PULLUP);
 
     pinMode(DATA_PIN, INPUT);
@@ -483,6 +487,8 @@ void loop() {
             buzzer_timeout = 0;
             buzzer_mode = 0;
             TIMSK2 = 0;
+            pinMode(5, INPUT_PULLUP);
+            pinMode(6, INPUT_PULLUP);
         } else {
             if(buzzer_mode == 2) {
                 uint8_t pos = ((buzzer_timeout - t0) / 50)%16;
