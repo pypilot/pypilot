@@ -29,11 +29,11 @@ msgstr "avertissement : échec de l'ouverture du fichier spécial"
 
 #: pypilot/autopilot.py:161
 msgid "for writing"
-msgstr "pour écrire"
+msgstr "en écriture"
 
 #: pypilot/autopilot.py:162
 msgid "cannot stroke the watchdog"
-msgstr "ne peut pas caresser le chien de garde"
+msgstr "erreur de surveillance watchdog"
 
 #: pypilot/autopilot.py:166
 msgid "warning: failed to make autopilot process realtime"
@@ -50,7 +50,7 @@ msgstr "les capteurs fonctionnent trop lentement"
 
 #: pypilot/autopilot.py:420
 msgid "autopilot routine is running too _slowly_"
-msgstr "la routine du pilote automatique s'exécute trop lentement"
+msgstr "la séquence du pilote automatique s'exécute trop lentement"
 
 #: pypilot/autopilot.py:429
 msgid "servo is running too _slowly_"
@@ -80,7 +80,7 @@ msgstr "avertissement, échec du processus d'imu en temps réel"
 
 #: pypilot/boatimu.py:128
 msgid "made imu process realtime"
-msgstr "fait processus imu en temps réel"
+msgstr "a rendu le processus imu en temps réel"
 
 #: pypilot/boatimu.py:140
 msgid "setting initial gyro bias"
@@ -92,7 +92,7 @@ msgstr "le processus imu n'a pas réussi à garder l'heure"
 
 #: pypilot/boatimu.py:164
 msgid "failed to read IMU!"
-msgstr "omis de lire IMU !"
+msgstr "impossible de lire l'IMU !"
 
 #: pypilot/boatimu.py:196
 msgid "imu rate set to rate"
@@ -125,7 +125,7 @@ msgstr "étalonnage chargé, démarrage"
 
 #: pypilot/boatimu.py:322
 msgid "failed import calibration fit"
-msgstr "échec de l'ajustement d'étalonnage d'importation"
+msgstr "échec d'importation de l'ajustement d'étalonnage"
 
 #: pypilot/boatimu.py:439
 msgid "accel values invalid"
@@ -133,41 +133,41 @@ msgstr "valeurs d'accélération invalides"
 
 #: pypilot/bufferedsocket.py:55
 msgid "overflow in pypilot udp socket"
-msgstr "débordement dans la prise pypilot udp"
+msgstr "trop-plein dans le socket udp du pypilot"
 
 #: pypilot/bufferedsocket.py:60
 msgid "overflow in pypilot socket"
-msgstr "débordement dans la prise pypilot"
+msgstr "trop-plein dans le socket du pypilot"
 
-#: pypilot/bufferedsocket.py:70
+#: pypilot/bufferedsocket.py:71
 msgid "failed to send udp packet"
 msgstr "échec de l'envoi du paquet udp"
 
-#: pypilot/bufferedsocket.py:79
+#: pypilot/bufferedsocket.py:84
 msgid "pypilot socket failed to send to"
 msgstr "échec de l'envoi du socket pypilot à"
 
-#: pypilot/bufferedsocket.py:93
+#: pypilot/bufferedsocket.py:98
 msgid "socket send took too long!?!?"
 msgstr "l'envoi du socket a pris trop de temps !?!?"
 
-#: pypilot/bufferedsocket.py:95
+#: pypilot/bufferedsocket.py:100
 msgid "socket send error"
 msgstr "erreur d'envoi de socket"
 
-#: pypilot/bufferedsocket.py:99
+#: pypilot/bufferedsocket.py:104
 msgid "pypilot socket exception"
 msgstr "exception de socket pypilot"
 
-#: pypilot/bufferedsocket.py:103
+#: pypilot/bufferedsocket.py:108
 msgid "falling back to python nonblocking socket, will consume more cpu"
 msgstr "revenir au socket non bloquant python, consommera plus de processeur"
 
-#: pypilot/bufferedsocket.py:129
+#: pypilot/bufferedsocket.py:134
 msgid "socket send error in server flush"
-msgstr "erreur d'envoi de socket dans le vidage du serveur"
+msgstr "erreur d'envoi de socket dans le cache du serveur"
 
-#: pypilot/bufferedsocket.py:144
+#: pypilot/bufferedsocket.py:149
 msgid "error receiving data"
 msgstr "erreur de réception des données"
 
@@ -203,7 +203,7 @@ msgstr "avertissement, le client pypilot a déjà une connexion"
 
 #: pypilot/client.py:311
 msgid "connect failed to"
-msgstr "échec de la connexion"
+msgstr "échec de la connexion à"
 
 #: pypilot/client.py:403
 msgid "failed to connect to"
@@ -219,7 +219,7 @@ msgstr "définir l'hôte ou l'adresse IP"
 
 #: pypilot/client.py:464
 msgid "print info about each value type"
-msgstr "imprimer des informations sur chaque type de valeur"
+msgstr "afficher des informations sur chaque type de valeur"
 
 #: pypilot/client.py:465
 msgid "continuous watch"
@@ -235,11 +235,11 @@ msgstr "n'a pas réussi à récupérer la liste de valeurs !"
 
 #: pypilot/client.py:504
 msgid "timeout retrieving"
-msgstr "délai d'attente récupération"
+msgstr "délai d'attente pour la récupération"
 
 #: pypilot/client.py:507
 msgid "missing"
-msgstr "disparu"
+msgstr "manquant"
 
 #: pypilot/failedimports.py:12
 msgid ""
@@ -263,11 +263,11 @@ msgstr "exception connexion au gps"
 
 #: pypilot/gpsd.py:59
 msgid "gpsd disconnected"
-msgstr "GPS déconnecté"
+msgstr "gpsd déconnecté"
 
 #: pypilot/gpsd.py:73
 msgid "gpsd PROBE success"
-msgstr "succès de la sonde gpsd"
+msgstr "succès de gpsd PROBE"
 
 #: pypilot/gpsd.py:81
 msgid "gpsd probe failed"
@@ -279,11 +279,11 @@ msgstr "gpsd désactivé"
 
 #: pypilot/gpsd.py:137
 msgid "gpsd failed to determine serial baud rate of device"
-msgstr "gpsd n'a pas réussi à déterminer le débit en bauds série de l'appareil"
+msgstr "gpsd n'a pas réussi à déterminer le débit en bauds de l'appareil"
 
 #: pypilot/gpsd.py:154
 msgid "gpsd timeout from lack of data"
-msgstr "délai d'attente gpsd par manque de données"
+msgstr "délai d'attente gpsd dépassé par manque de données"
 
 #: pypilot/gpsd.py:169
 msgid "gpsd received invalid message"
@@ -291,7 +291,7 @@ msgstr "gpsd a reçu un message invalide"
 
 #: pypilot/gpsd.py:214
 msgid "gpsd got flag for pipe:"
-msgstr "gpsd a obtenu un indicateur pour le tuyau :"
+msgstr "gpsd a obtenu un indicateur pour le canal :"
 
 #: pypilot/gpsd.py:223
 msgid "gpsd serial probe"
@@ -311,7 +311,7 @@ msgstr "analyse des exceptions apb"
 
 #: pypilot/nmea.py:276
 msgid "unhandled nmea pipe string"
-msgstr "chaîne de tuyaux nmea non manipulée"
+msgstr "chaîne de caractères nmea non gérée"
 
 #: pypilot/nmea.py:326
 msgid "lost serial"
@@ -319,7 +319,7 @@ msgstr "série perdue"
 
 #: pypilot/nmea.py:349
 msgid "nmea got flag for process pipe:"
-msgstr "nmea a obtenu un indicateur pour le tube de processus :"
+msgstr "nmea a obtenu un indicateur pour le canal de processus :"
 
 #: pypilot/nmea.py:370
 msgid "is another process accessing it?"
@@ -359,7 +359,7 @@ msgstr "Le client nmea a perdu la connexion"
 
 #: pypilot/nmea.py:583
 msgid "nmea sock not in sockets!"
-msgstr "chaussette nmea pas dans les prises !"
+msgstr "le sock nmea pas dans sockets !"
 
 #: pypilot/nmea.py:594
 msgid "nmea failed to unregister socket"
@@ -399,7 +399,7 @@ msgstr "le pont nmea a perdu la connexion au serveur"
 
 #: pypilot/nmea.py:715
 msgid "nmea bridge lost pipe to autopilot"
-msgstr "pont nmea tuyau perdu au pilote automatique"
+msgstr "le pont nmea a perdu le canal vers le pilote automatique"
 
 #: pypilot/nmea.py:738
 msgid "nmea bridge unhandled poll flag"
@@ -411,19 +411,19 @@ msgstr "boucle de processus nmea trop lente :"
 
 #: pypilot/nonblockingpipe.py:40
 msgid "error pipe block on recv!"
-msgstr "erreur bloc de tuyau sur recv!"
+msgstr "erreur canal bloqué sur recv!"
 
 #: pypilot/nonblockingpipe.py:42
 msgid "failed to recv nonblocking pipe!"
-msgstr "n'a pas réussi à récupérer le tuyau non bloquant !"
+msgstr "rcev canal non bloqué échoué !"
 
 #: pypilot/nonblockingpipe.py:69
 msgid "pipe full"
-msgstr "tuyau plein"
+msgstr "canal plein"
 
 #: pypilot/nonblockingpipe.py:69
 msgid "cannot send"
-msgstr "ne peut pas être envoyé"
+msgstr "ne peut pas envoyer"
 
 #: pypilot/nonblockingpipe.py:89 pypilot/nonblockingpipe.py:145
 msgid "failed to decode data socket!"
@@ -449,11 +449,11 @@ msgstr "mauvais calibrage du gouvernail"
 
 #: pypilot/rudder.py:121
 msgid "bad servo rudder calibration"
-msgstr "mauvais étalonnage du gouvernail servo"
+msgstr "mauvais étalonnage du servo gouvernail"
 
 #: pypilot/rudder.py:192
 msgid "servo rudder autogain failed"
-msgstr "Échec du gain automatique du gouvernail du servo"
+msgstr "Échec du gain automatique du servo gouvernail"
 
 #: pypilot/sensors.py:41
 msgid "sensor found"
@@ -473,7 +473,7 @@ msgstr "trouvé plus de périphériques par chemin"
 
 #: pypilot/serialprobe.py:118
 msgid "removing gps device"
-msgstr "retrait d'un appareil gps"
+msgstr "retrait du gps"
 
 #: pypilot/serialprobe.py:194
 msgid "no pyudev module! will scan usb devices often!"
@@ -489,7 +489,7 @@ msgstr "échec de l'enregistrement de l'appareil"
 
 #: pypilot/server.py:96
 msgid "ERROR no connections in watch"
-msgstr "ERREUR aucune connexion dans la montre"
+msgstr "ERREUR aucune connexion en vue"
 
 #: pypilot/server.py:199
 msgid "remove duplicate udp connection"
@@ -513,7 +513,7 @@ msgstr "n'a pas réussi à écrire"
 
 #: pypilot/server.py:443
 msgid "pypilot_server: bind failed; already running a server?"
-msgstr "pypilot_server : échec de la liaison ; exécutant déjà un serveur?"
+msgstr "pypilot_server : échec de la liaison ; serveur déjà en route ?"
 
 #: pypilot/server.py:505
 msgid "persistent store took too long!"
@@ -525,45 +525,45 @@ msgstr "max de connexions atteint"
 
 #: pypilot/server.py:524
 msgid "server add socket"
-msgstr "serveur ajouter un socket"
+msgstr "le serveur a ajouter le socket"
 
 #: pypilot/server.py:534
 msgid "internal pipe closed, server exiting"
-msgstr "tuyau interne fermé, serveur sortant"
+msgstr "canal interne fermé, serveur sortant"
 
 #: pypilot/server.py:586
 msgid "server socket closed from flush!!"
-msgstr "socket serveur fermé du flush !!"
+msgstr "socket serveur fermé depuis le cache !!"
 
-#: pypilot/servo.py:460
+#: pypilot/servo.py:455
 msgid "servo calibration invalid"
 msgstr "étalonnage servo invalide"
 
-#: pypilot/servo.py:589
+#: pypilot/servo.py:565
 msgid "failed to open servo on:"
 msgstr "échec de l'ouverture du servo sur :"
 
-#: pypilot/servo.py:596
+#: pypilot/servo.py:572
 msgid "failed set nonblocking/exclusive"
 msgstr "échec de l'ensemble non bloquant/exclusif"
 
-#: pypilot/servo.py:627 pypilot/signalk.py:159
+#: pypilot/servo.py:603 pypilot/signalk.py:163
 msgid "found"
 msgstr "trouvé"
 
-#: pypilot/servo.py:749
+#: pypilot/servo.py:725
 msgid "loading servo calibration"
 msgstr "chargement de l'étalonnage du servo"
 
-#: pypilot/servo.py:753
+#: pypilot/servo.py:729
 msgid "WARNING: using default servo calibration!!"
 msgstr "ATTENTION : utilisation de l'étalonnage par défaut du servo !!"
 
-#: pypilot/servo.py:762
+#: pypilot/servo.py:738
 msgid "probing"
 msgstr "sondage"
 
-#: pypilot/servo.py:778
+#: pypilot/servo.py:754
 msgid "arduino servo detected"
 msgstr "servo arduino détecté"
 
@@ -573,11 +573,11 @@ msgstr "appareil nécessaire pour l'option"
 
 #: pypilot/signalk.py:66
 msgid "read token"
-msgstr "lire le jeton"
+msgstr "lire le token"
 
 #: pypilot/signalk.py:69
 msgid "failed to read token"
-msgstr "échec de lecture du jeton"
+msgstr "échec de lecture du token"
 
 #: pypilot/signalk.py:76
 msgid "failed to"
@@ -607,77 +607,77 @@ msgstr "serveur perdu"
 msgid "service add"
 msgstr "service ajouter"
 
-#: pypilot/signalk.py:132
+#: pypilot/signalk.py:136
 msgid "server found"
 msgstr "serveur trouvé"
 
-#: pypilot/signalk.py:141
+#: pypilot/signalk.py:145
 msgid "probe"
 msgstr "sonde"
 
-#: pypilot/signalk.py:145
+#: pypilot/signalk.py:149
 msgid "could not"
 msgstr "ne pouvait pas"
 
-#: pypilot/signalk.py:155
+#: pypilot/signalk.py:159
 msgid "failed to retrieve/parse data from"
 msgstr "n'a pas réussi à récupérer/analyser les données de"
 
-#: pypilot/signalk.py:171
+#: pypilot/signalk.py:181
 msgid "see if token is ready"
-msgstr "voir si le jeton est prêt"
+msgstr "voir si le token est prêt"
 
 #: pypilot/signalk.py:177
 msgid "received token"
-msgstr "jeton reçu"
+msgstr "token reçu"
 
-#: pypilot/signalk.py:183
+#: pypilot/signalk.py:187
 msgid "failed to store token"
-msgstr "échec du stockage du jeton"
+msgstr "échec du stockage du token"
 
-#: pypilot/signalk.py:187 pypilot/signalk.py:208
+#: pypilot/signalk.py:191 pypilot/signalk.py:212
 msgid "error requesting access"
 msgstr "erreur lors de la demande d'accès"
 
-#: pypilot/signalk.py:206
+#: pypilot/signalk.py:210
 msgid "request access url"
-msgstr "demander l'URL d'accès"
+msgstr "demander d'accès à l'url"
 
-#: pypilot/signalk.py:215
+#: pypilot/signalk.py:219
 msgid "cannot create connection:"
 msgstr "impossible de créer la connexion :"
 
-#: pypilot/signalk.py:230
-msgid "bad status, rejecting token"
-msgstr "mauvais état, jeton de rejet"
-
 #: pypilot/signalk.py:234
+msgid "bad status, rejecting token"
+msgstr "mauvais status, token rejeté"
+
+#: pypilot/signalk.py:238
 msgid "connection refused"
 msgstr "Connexion rejetée"
 
-#: pypilot/signalk.py:284
+#: pypilot/signalk.py:288
 msgid "connected to"
 msgstr "connecté à"
 
-#: pypilot/signalk.py:354
+#: pypilot/signalk.py:358
 msgid "Exception converting signalk->pypilot"
 msgstr "Exception conversion signalk->pypilot"
 
-#: pypilot/signalk.py:368
+#: pypilot/signalk.py:372
 msgid "received"
 msgstr "reçu"
 
-#: pypilot/signalk.py:414
+#: pypilot/signalk.py:418
 msgid "failed to send updates"
 msgstr "échec de l'envoi des mises à jour"
 
-#: pypilot/signalk.py:428
+#: pypilot/signalk.py:432
 msgid "failed to parse msg:"
 msgstr "échec de l'analyse du message :"
 
 #: pypilot/values.py:130
 msgid "invalid initial value for range property"
-msgstr "valeur initiale non valide pour la propriété de plage"
+msgstr "valeur initiale non valide pour la plage de propriété"
 
 #: pypilot/values.py:179
 msgid "invalid set"
@@ -701,16 +701,16 @@ msgstr "Contrôle du pilote automatique"
 
 #: ui/autopilot_control_ui.py:39
 msgid "AP"
-msgstr "Toi"
+msgstr "AP"
 
 #: ui/autopilot_control_ui.py:57 ui/autopilot_control_ui.py:67
 #: ui/autopilot_control_ui.py:460 ui/autopilot_control_ui.py:737
 msgid "N/A"
-msgstr "N / A"
+msgstr "N/A"
 
 #: ui/autopilot_control_ui.py:62
 msgid "        N/A        "
-msgstr "N / A"
+msgstr "N/A"
 
 #: ui/autopilot_control_ui.py:74
 msgid "----"
@@ -718,11 +718,11 @@ msgstr "----"
 
 #: ui/autopilot_control_ui.py:89 ui/autopilot_control_ui.py:96
 msgid " N/A "
-msgstr "N / A"
+msgstr "N/A"
 
 #: ui/autopilot_control_ui.py:121
 msgid "port"
-msgstr "Port"
+msgstr "ort"
 
 #: ui/autopilot_control_ui.py:121
 msgid "starboard"
@@ -792,7 +792,7 @@ msgstr "Titre"
 #: ui/autopilot_control_ui.py:404 ui/autopilot_control_ui.py:470
 #: ui/autopilot_control_ui.py:480
 msgid "     N/A     "
-msgstr "N / A"
+msgstr "N/A"
 
 #: ui/autopilot_control_ui.py:409 ui/autopilot_control_ui.py:760
 msgid "Offset"
@@ -816,15 +816,15 @@ msgstr "Portée"
 
 #: ui/autopilot_control_ui.py:455
 msgid "Pitch"
-msgstr "Terrain"
+msgstr "Assiette"
 
 #: ui/autopilot_control_ui.py:465
 msgid "Roll"
-msgstr "Rouleau"
+msgstr "Roulis"
 
 #: ui/autopilot_control_ui.py:475
 msgid "Heel"
-msgstr "Talon"
+msgstr "Gîte"
 
 #: ui/autopilot_control_ui.py:502
 msgid "alignment"
@@ -832,11 +832,11 @@ msgstr "alignement"
 
 #: ui/autopilot_control_ui.py:544 ui/autopilot_control_ui.py:664
 msgid "Calibration Age"
-msgstr "Âge d'étalonnage"
+msgstr "Âge de l'étalonnage"
 
 #: ui/autopilot_control_ui.py:561 ui/autopilot_control_ui.py:681
 msgid "Clear"
-msgstr "Dégager"
+msgstr "Effacer"
 
 #: ui/autopilot_control_ui.py:564 ui/autopilot_control_ui.py:684
 msgid "calibration locked"
@@ -844,7 +844,7 @@ msgstr "étalonnage verrouillé"
 
 #: ui/autopilot_control_ui.py:587
 msgid "accel"
-msgstr "accélérer"
+msgstr "accélération"
 
 #: ui/autopilot_control_ui.py:618
 msgid "Sigma Points"
@@ -852,7 +852,7 @@ msgstr "Points Sigma"
 
 #: ui/autopilot_control_ui.py:625
 msgid "local history"
-msgstr "Histoire locale"
+msgstr "Historique locale"
 
 #: ui/autopilot_control_ui.py:632
 msgid "current"
@@ -892,15 +892,15 @@ msgstr "------"
 
 #: ui/autopilot_control_ui.py:770
 msgid "Rudder is Starboard Range"
-msgstr "Le gouvernail est la gamme tribord"
+msgstr "Le gouvernail est dans la plage tribord"
 
 #: ui/autopilot_control_ui.py:773
 msgid "Scale"
-msgstr "Escalader"
+msgstr "Echelle"
 
 #: ui/autopilot_control_ui.py:783
 msgid "Rudder is Port Range"
-msgstr "Le gouvernail est la plage de port"
+msgstr "Le gouvernail est dans la plage babord"
 
 #: ui/autopilot_control_ui.py:786
 msgid "Non Linearity"
@@ -920,7 +920,7 @@ msgstr "gouvernail"
 
 #: ui/autopilot_control_ui.py:832
 msgid "settings"
-msgstr "Les paramètres"
+msgstr "paramètres"
 
 #: ui/boatplot.py:25
 msgid "failed to load pywavefront:"
@@ -928,15 +928,15 @@ msgstr "échec du chargement de pywavefront :"
 
 #: ui/boatplot.py:55
 msgid "invalid display dimensions"
-msgstr "dimensions d'affichage non valides"
+msgstr "dimensions d'affichage invalides"
 
 #: ui/boatplot.py:110
 msgid "Did you add the pypilot_data repository?"
-msgstr "Avez-vous ajouté le référentiel pypilot_data ?"
+msgstr "Avez-vous ajouté le dossier pypilot_data ?"
 
 #: ui/boatplot.py:160
 msgid "not found, texture compass cannot be used"
-msgstr "introuvable, la boussole de texture ne peut pas être utilisée"
+msgstr "introuvable, la texture de boussole ne peut pas être utilisée"
 
 #: ui/client_wx.py:47
 msgid "Refresh"
@@ -944,19 +944,19 @@ msgstr "Rafraîchir"
 
 #: ui/client_wx.py:189
 msgid "Connected"
-msgstr "Lié"
+msgstr "Connecté"
 
 #: ui/client_wx.py:191
 msgid "Disconnected"
-msgstr "Débranché"
+msgstr "Déconnecté"
 
 #: ui/client_wx.py:218
 msgid "warning, invalid choice value specified"
-msgstr "avertissement, valeur de choix invalide spécifiée"
+msgstr "avertissement, valeur invalide spécifiée"
 
 #: ui/scope_ui.py:24
 msgid "pypilot Scope"
-msgstr "Portée pypilot"
+msgstr "Champ pypilot"
 
 #: ui/scope_ui.py:73
 msgid "Zero"
@@ -964,11 +964,11 @@ msgstr "Zéro"
 
 #: ui/scope_ui.py:79
 msgid "Scale +"
-msgstr "Échelle +"
+msgstr "Echelle +"
 
 #: ui/scope_ui.py:82
 msgid "Scale -"
-msgstr "Escalader -"
+msgstr "Echelle -"
 
 #: ui/scope_ui.py:85
 msgid "Offset /\\"
