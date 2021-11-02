@@ -98,6 +98,7 @@ class LCD():
         self.surface = None
 
         self.use_glut = False
+        print('lcd driver', driver, use_tft, use_glut)
         if driver == 'none':
             page = None
             screen = None

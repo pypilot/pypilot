@@ -142,7 +142,6 @@ class WebConfig(Namespace):
         if not self.last_key:
             return
         
-        action_keys = {}
         # remove this key from any actions
         for name, keys in actions.items():
             while self.last_key in keys:

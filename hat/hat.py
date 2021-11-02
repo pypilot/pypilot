@@ -218,16 +218,17 @@ class LCD(Process):
                 if self.hat.arduino:
                     self.hat.arduino.send(msg)
             
-cleanedup = False
 class Hat(object):
     def __init__(self):
-        # read config
+        # default config
         self.config = {'host': 'localhost', 'actions': {},
                        'pi.ir': True, 'arduino.ir': False,
                        'arduino.nmea.in': False, 'arduino.nmea.out': False,
                        'arduino.nmea.baud': 4800,
                        'lcd': {}}
-        self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf' 
+        self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf'
+
+        # read config
         print('loading config file:', self.configfilename)
         try:
             file = open(self.configfilename)
@@ -238,6 +239,7 @@ class Hat(object):
         except Exception as e:
             print('config failed:', e)
 
+        # read hardware config
         try:
             configfile = '/proc/device-tree/hat/custom_0'
             f = open(configfile)
@@ -253,7 +255,7 @@ class Hat(object):
             
         if not 'hat' in self.config:
             print('assuming original 26 pin tinypilot with nokia5110 display')
-            self.config['hat'] = {'lcd':{'driver':'nokia5110',
+            self.config['hat'] = {'lcd':{'driver':'default',
                                          'port':'/dev/spidev0.0'},
                                   'lirc':'gpio4'}
             self.write_config()
@@ -315,10 +317,18 @@ class Hat(object):
                          ActionPypilot(self, 'compassmode', 'ap.mode', 'compass'),
                          ActionPypilot(self, 'gpsmode', 'ap.mode', 'gps'),
                          ActionPypilot(self, 'windmode', 'ap.mode', 'wind'),
+                         ActionPypilot(self, 'truewindmode', 'ap.mode', 'truewind'),
                          ActionPypilot(self, 'center', 'servo.position', 0),
                          ActionTack(self, 'tackport', 'port'),
-                         ActionTack(self, 'tackstarboard', 'starboard'),
-                         ActionNone()]
+                         ActionTack(self, 'tackstarboard', 'starboard')]
+
+        # actions determined by the server (different pilots) not yet populated here
+        for name in self.config['actions']:
+            if name.startswith('pilot_'):
+                self.actions.append(ActionPypilot(self, name, 'ap.pilot', name.replace('pilot_', '', 1)))
+
+        # useful to unassign a key
+        self.actions.append(ActionNone())
 
         for action in self.actions:
             if not action.name in self.config['actions']:
@@ -327,12 +337,9 @@ class Hat(object):
         self.web = Web(self)
 
         def cleanup(signal_number, frame=None):
-            global cleanedup
-            if cleanedup:
-                exit(0)
             print('got signal', signal_number, 'cleaning up', os.getpid())
             childpids = []
-            processes = [self.arduino, self.web]
+            processes = [self.arduino, self.web, self.lcd]
             for process in processes:
                 if process and process.process:
                     childpids.append(process.process.pid)
@@ -353,19 +360,16 @@ class Hat(object):
                 #os.waitpid(pid, 0)
                 sys.stdout.flush()
             for process in processes:
-                process.process = False
-            if signal_number != 'atexit':
-                cleanedup = True
-                raise KeyboardInterrupt # to get backtrace on all processes
+                if process:
+                    process.process = False
 
+            raise KeyboardInterrupt # to get backtrace on all processes
             sys.stdout.flush()
 
         for s in range(1, 16):
             if s != 9 and s != 13:
                 signal.signal(s, cleanup)
         signal.signal(signal.SIGCHLD, cleanup)
-        import atexit
-        atexit.register(lambda : cleanup('atexit'))
 
     def write_config(self):
         try:
@@ -407,7 +411,32 @@ class Hat(object):
                     self.keytimes[key] = time.monotonic(), count
                 action.trigger(count)
                 return
+
         self.web.send({'action': 'none'})
+
+    def update_values(self):
+        values = self.client.list_values()
+        if values:
+            if 'ap.pilot' in values:
+                pilots = values['ap.pilot']['choices']
+                update = False
+                for pilot in pilots:
+                    name = 'pilot_'+pilot
+                    if not name in self.config['actions']:
+                        print('adding pilot', pilot)
+                        self.config['actions'][name] = []
+                        update = True
+                for name in list(self.config['actions']):
+                    if name.startswith('pilot_'):
+                        pilot = name.replace('pilot_', '', 1)
+                        if not pilot in pilots:
+                            print('removing pilot', pilot)
+                            del self.config['actions'][name]
+                            update = True
+                if update:
+                    self.write_config()
+                    print('shutting down since pilots updated')
+                    exit(0) #respawn
 
     def poll(self):            
         t0 = time.monotonic()
@@ -456,6 +485,9 @@ class Hat(object):
             if not self.client.registered:
                 #self.poller.register(self.client.connection.fileno(), select.POLLIN)
                 self.client.registered = True
+
+            self.update_values()                    
+
         else:
             self.client.registered = False
             self.web.set_status('disconnected')

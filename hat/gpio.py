@@ -11,21 +11,27 @@ import os, time
 
 raspberrypi = False
 orangepi = False
+
 try:
-    while True:
-        try:
-            f = open('/dev/gpiomem', 'w')
-            f.close()
-            break
-        except Exception as e:
-            print('waiting for gpiomem...', e)
-        time.sleep(1)
+    with open('/sys/firmware/devicetree/base/model', 'r') as m:
+        if 'raspberry pi' in m.read().lower():
+            while True:
+                try:
+                    f = open('/dev/gpiomem', 'w')
+                    f.close()
+                    break
+                except Exception as e:
+                    print('waiting for gpiomem...', e)
+                time.sleep(1)
+            import RPi.GPIO as GPIO
+            print('have gpio for raspberry pi')
+            raspberrypi = True
+except Exception:
+    pass
 
-    import RPi.GPIO as GPIO
-    print('have gpio for raspberry pi')
-    raspberrypi = True
 
-except ImportError:
+
+if not raspberrypi:
     try:
         import OPi.GPIO as GPIO
         orangepi = True
