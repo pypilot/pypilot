@@ -159,7 +159,7 @@ class PipeNonBlockingPipeEnd(object):
         if t1-t0 > .024:
             print('too long write pipe', t1-t0, self.name, len(data))
 
-    def send(self, value, block=False):
+    def send(self, value, block=False, maxdt=.025):
         if 0:
             if not self.pollout.poll(0):
                 if not self.sendfailok:
@@ -170,9 +170,8 @@ class PipeNonBlockingPipeEnd(object):
             data = data.encode()
             t1 = time.monotonic()
             os.write(self.w, data)
-            self.flush()
             t2 = time.monotonic()
-            if t2-t0 > .024:
+            if t2-t0 > maxdt:
                 print('too long send nonblocking pipe', t1-t0, t2-t1, self.name, len(data))
             return True
         except Exception as e:
