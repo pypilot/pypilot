@@ -312,7 +312,8 @@ class Autopilot(object):
         self.heading_error_int_time = t
         # int error +- 1, from 0 to 1500 deg/s
         self.heading_error_int.set(minmax(self.heading_error_int.value + \
-                                          (self.heading_error.value/1500)*dt, 1))          
+                                          (self.heading_error.value/1500)*dt, 1))
+
     def iteration(self):
         data = False
         t0 = time.monotonic()
@@ -352,7 +353,7 @@ class Autopilot(object):
             #print('autopilot failed to read imu at time:', time.monotonic(), period)
 
         t3 = time.monotonic()
-        if t3-t2 > period*2/3 and data:
+        if t3-t2 > period*2/3 and data and t2-self.starttime > 15:
             print('read imu running too _slowly_', t3-t2, period)
 
         self.fix_compass_calibration_change(data, t0)
@@ -434,7 +435,7 @@ class Autopilot(object):
             self.watchdog_device.write('c')
 
         t6 = time.monotonic()
-        if t6-t0 > period:
+        if t6-t0 > period and t0-self.starttime > 5:
             print(_('autopilot iteration running too slow'), t6-t0)
 
         while True: # sleep remainder of period
