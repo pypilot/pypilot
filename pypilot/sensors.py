@@ -16,6 +16,8 @@ from resolv import resolv
 from gpsd import gpsd
 from gps_filter import GPSFilter
 
+import quaternion
+
 # favor lower priority sources
 source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'signalk' : 4, 'none' : 5}
 
@@ -153,15 +155,15 @@ class gps(Sensor):
         super(gps, self).__init__(client, 'gps')
         self.track = self.register(SensorValue, 'track', directional=True)
         self.speed = self.register(SensorValue, 'speed')
-        self.climb = self.register(SensorValue, 'climb')
         self.lat = self.register(SensorValue, 'lat', fmt='%.11f')
         self.lon = self.register(SensorValue, 'lon', fmt='%.11f')
-        self.alt = self.register(SensorValue, 'alt', fmt='%.11f')
+        self.alt = self.register(SensorValue, 'alt')
+        self.climb = self.register(SensorValue, 'climb')
 
         self.leeway_ground = self.register(SensorValue, 'leeway_ground')
         self.compass_error = self.register(SensorValue, 'compass_error')
 
-        self.filter = GPSFilter()
+        self.filtered = GPSFilter(client)
         self.lastpredictt = time.monotonic()
 
         self.stale_count = 0
@@ -186,46 +188,37 @@ class gps(Sensor):
             self.stale_count += 1
             if self.stale_count > 5:
                 self.gps_system_time_offset = ts - t
-                self.filter.reset()
+                self.filtered.reset()
         else:
             self.stale_count = 0
             if ts > t: # newer than now..
                 self.gps_system_time_offset = ts - t
-                self.filter.reset()
+                self.filtered.reset()
                 
-        self.filter.update(data)
+        self.filtered.update(data)
 
-    def predict(self):
-        if not self.smoothing.value or self.source.value == 'none':
+    def predict(self, ap):
+        if not self.source.value == 'none':
             return
 
-        accel = self.ap.boatimu.SensorValues['accel'].value
-        fusionQPose = self.ap.boatimu.SensorValues['fusionQPose'].value
+        accel = ap.boatimu.SensorValues['accel'].value
+        fusionQPose = ap.boatimu.SensorValues['fusionQPose'].value
 
-        self.filter.predict(quaternion.rotvecquat(accel, fusionQPose), time.monotonic())
-
-        lat, lon = self.filter.latlon()
-        self.lat.set(lat)
-        self.lon.set(lon)
-
-        speed, track = self.filter.speedtrack()
-        self.speed.set(speed)
-        self.track.set(track)
-
-        alt, climb = self.filter.altclimb()
-        self.alt.update(alt)
-        self.climb.update(climb)
+        self.filtered.predict(quaternion.rotvecquat(accel, fusionQPose), time.monotonic())
 
     def getddmmyy(self):
         today = datetime.date.today()
         return '%02d%02d%02d', today.day, today.month, (today.year%100)
 
     def getrmc(self):
-        lat = self.lat.value
-        lon = self.lon.value
-        return 'APRMC,%.3f' % time.time() + ',A,%.4f,' % abs(lat) + lat > 0 ? 'N' : 'S' \
-            + ',%.4f,' % abs(lon) + lon > 0 ? 'E' : 'W' + ',%.2f' % self.speed.value \
-            + ',%.2f,' % self.track.value + ',' + getddmmyy() + ',' + ','
+        lat = self.filtered.lat.value
+        lon = self.filtered.lon.value
+        speed = self.filtered.lat.value
+        track = self.filtered.lon.value
+        return 'APRMC,%.3f' % time.time() + ',A,%.4f,' % abs(lat) + \
+            ('N' if lat > 0 else 'S') + ',%.4f,' % abs(lon) + ('E' if lon > 0 else 'W') \
+            + ',%.2f' % speed + ',%.2f,' % track \
+            + ',' + getddmmyy() + ',' + ','
 
     def reset(self):
         self.track.set(False)
@@ -259,27 +252,27 @@ class Water(Sensor):
         if 'speed' in data:
             self.speed.set(data['speed'])
 
-    def compute(self):
+    def compute(self, ap):
         if self.source.value == 'none':
             self.leeway.source.update('none')
             return
 
         t = time.monotonic()
         if t-self.last_leeway_measurement > 3:
-            heel = self.ap.boatimu.heel
+            heel = ap.boatimu.heel
             K = 5 # need to calibrate from gps when user indicates there are no currents
             self.leeway.set(K*heel/self.speed.value**2)
             self.leeway.source.update('computed')
 
         # estimate currents over ground
-        gps = self.ap.sensors.gps
+        gps = ap.sensors.gps
         if gps.source.value != 'none':
             speed = gps.filtered.speed
             rtrack = math.radians(gps.filtered.track)
             vg_north = speed*math.cos(rtrack)
             vg_east = speed*math.sin(rtrack)
 
-            heading = self.ap.boatimu.SensorValues['heading_lowpass'].value
+            heading = ap.boatimu.SensorValues['heading_lowpass'].value
             declination = gps.filtered.declination.value
             compass_error = gps.filtered.compass_error.value
 
@@ -297,12 +290,12 @@ class Water(Sensor):
             self.current_direction.set(resolv(math.degrees(math.atan2(c_north, c_east)), 180))
 
         # estimate relative true wind over water
-        wind = self.ap.sensors.wind
+        wind = ap.sensors.wind
         if wind.source.value != 'none':
             awa = wind.direction.value
             aws = wind.speed.value
 
-            heading = self.ap.boatimu.SensorValues['heading_lowpass'].value
+            heading = ap.boatimu.SensorValues['heading_lowpass'].value
             declination = gps.filtered.declination.value
             compass_error = gps.filtered.compass_error.value
 
@@ -339,7 +332,7 @@ class Sensors(object):
         self.apb = APB(client)
         self.water = Water(client)
 
-        self.sensors = {'gps': self.gps, 'wind': self.wind, 'rudder': self.rudder, 'apb': self.apb}
+        self.sensors = {'gps': self.gps, 'wind': self.wind, 'rudder': self.rudder, 'apb': self.apb, 'water': self.water}
 
     def poll(self):
         self.nmea.poll()

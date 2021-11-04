@@ -456,7 +456,8 @@ class BoatIMU(object):
         #gyro_q = quaternion.rotvecquat(gyro_q, quaternion.angvec2quat(-math.radians(data['heading']), [0, 0, 1]))
         ur, vr, data['headingrate'] = map(math.degrees, gyro_q)
         rh = math.radians(data['heading'])
-        srh = math.sin(rh), crh = math.cos(rh)
+        srh = math.sin(rh)
+        crh = math.cos(rh)
         data['rollrate'] = ur*crh + vr*srh
         data['pitchrate'] = vr*crh - ur*srh
   
