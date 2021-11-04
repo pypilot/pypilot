@@ -175,20 +175,24 @@ class TimedProperty(Property):
     def __init__(self, name):
         super(TimedProperty, self).__init__(name, 0)
         self.time = 0
+        self.set_time = 0
         self.use_period = True
 
     # record time whenever externally set (manual override or control)
     def set(self, value):
         self.time = time.monotonic()
+        self.set_time = self.time
         self.use_period = False # manual control is not delayed by period
         return super(TimedProperty, self).set(value)
 
     # internal command set, normal autopilot uses a period
     # to avoid short movements, but this can be overriden by some pilots
-    def command(self, value, use_period=True):
-        if time.monotonic() - self.time < 1:
+    def command(self, value):
+        t = time.monotonic()
+        if t - self.set_time < .8:
             return # ignore pilot command if recent manual override
-        self.use_period = use_period
+        self.time = t
+        self.use_period = True
         return super(TimedProperty, self).set(value)
 
 class TimeoutSensorValue(SensorValue):
@@ -322,15 +326,14 @@ class Servo(object):
 
         if dp < dc and not self.sensors.rudder.invalid():
             self.disengaged = False
-            if abs(self.position.value - self.command.value) < 1:
+            if abs(self.position.value - self.position_command.value) < 1:
                 self.command.command(0)
             else:
                 self.do_position_command(self.position_command.value)
                 return
         elif self.command.value and not self.fault():
-            timeout = 1 # command will expire after 1 second
-            if time.monotonic() - self.command.time > timeout:
-                self.command.set(0)
+            if dc > 1:
+                self.command.command(0)
             self.disengaged = False
         self.do_command(self.command.value)
         
@@ -479,7 +482,7 @@ class Servo(object):
 
         if command <= 0:
             if command < 0:
-                self.state.update('reverse')
+                self.state.update('port')
                 self.lastdir = -1
             else:
                 self.speed.set(0)
@@ -488,7 +491,7 @@ class Servo(object):
                 else:
                     self.state.update('idle')
         else:
-            self.state.update('forward')
+            self.state.update('starboard')
             self.lastdir = 1
         
     def do_raw_command(self, command):
