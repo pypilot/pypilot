@@ -37,7 +37,7 @@ def read_config():
         failed = True
     if failed:
         config = {'essid': 'pypilot', 'psk': '', 'address': ''}
-        write_config(config);
+        write_config(config)
     for k in ['smallstep', 'hue', 'bigstep', 'backlight', 'contrast', 'buzzer']:
         if k in config:
             config[k] = int(float(config[k]))

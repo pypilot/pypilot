@@ -798,7 +798,7 @@ public:
         unsigned char cmd[] = {
             0xe2, // Soft Reset
             0xc2, // Line scan sequence : from top to bottom
-            0x2c, // Boost 1
+//            0x2c, // Boost 1
             0x2e, // Boost 2
             0x2f, // Boost 3
             0xa2, // 1/9 bias ratio

@@ -135,7 +135,7 @@ $(document).ready(function() {
 
         if(register)
             $('#mode').change(function(event) {
-                pypilot_set('mode', $('#mode').val());
+                pypilot_set('ap.mode', $('#mode').val());
             });
 
         // gain
@@ -212,18 +212,28 @@ $(document).ready(function() {
         pypilot_watch('imu.heading_offset', .5);
         pypilot_watch('imu.alignmentQ', .5);
         pypilot_watch('imu.alignmentCounter', .25);
-        pypilot_watch('imu.compass_calibration_locked');
+        pypilot_watch('imu.compass.calibration.locked');
+        pypilot_watch('imu.accel.calibration.locked');
 
         if(register)
-        $('#calibration_locked').change(function(event) {
-            check = $('#calibration_locked').prop('checked');
-            pypilot_set('imu.compass_calibration_locked', check);
+        $('#accel_calibration_locked').change(function(event) {
+            check = $('#accel_calibration_locked').prop('checked');
+            pypilot_set('imu.accel.calibration.locked', check);
         });
 
-        pypilot_watch('rudder.offset')
-        pypilot_watch('rudder.scale')
-        pypilot_watch('rudder.nonlinearity')
-        pypilot_watch('rudder.range')
+        pypilot_watch('imu.compass.calibration.locked');
+
+        if(register)
+        $('#compass_calibration_locked').change(function(event) {
+            check = $('#compass_calibration_locked').prop('checked');
+            pypilot_set('imu.compass.calibration.locked', check);
+        });
+
+
+        pypilot_watch('rudder.offset');
+        pypilot_watch('rudder.scale');
+        pypilot_watch('rudder.nonlinearity');
+        pypilot_watch('rudder.range');
 
         // configuration
         $('#configuration_container').text('')
@@ -261,8 +271,12 @@ $(document).ready(function() {
         $('#configuration_container').append(phtml);
         $('#configuration_container').append('</div>');
 
-        if(tinypilot)
-            $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>')
+        if(tinypilot) {
+            $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>');
+            $('#configuration_container').append('<p><a href="/logs">Logs Wifi</a>');
+        }
+
+        $('#configuration_container').append('<p><a href=":33333">Configure LCD Keypad and Remotes</a>');
 
         pypilot_watch('nmea.client');
 
@@ -333,7 +347,7 @@ $(document).ready(function() {
 
     function heading_str(heading) {
         if(heading.toString()=="false")
-            return "N/A"
+            return "N/A";
 
         // round to 1 decimal place
         heading = Math.round(10*heading)/10
@@ -342,7 +356,7 @@ $(document).ready(function() {
             if(heading > 0)
                heading += '-';
         }
-        return heading
+        return heading;
     }
 
     socket.on('pypilot', function(msg) {
@@ -396,7 +410,7 @@ $(document).ready(function() {
                 $('#star2').text('2');
                 $('#star10').text('10');
             } else {
-                $('#tb_engaged button').css('left', "0px")
+                $('#tb_engaged button').css('left', "0px");
                 $('#tb_engaged').removeClass('toggle-button-selected');
 
                 $('#port10').text('<<');
@@ -427,7 +441,7 @@ $(document).ready(function() {
 
         for (var i = 0; i<gains.length; i++)
             if(gains[i] in data) {
-                value = data[gains[i]]
+                value = data[gains[i]];
                 var sp = gains[i].split('.');
                 var subname = sp[3];
                 var pilot = sp[2];
@@ -468,8 +482,10 @@ $(document).ready(function() {
             $('#align_compassprogress').width((100-10*data['gps.alignmentCounter'])+'%');
         if('imu.heading_offset' in data)
             $('#imu_heading_offset').val(data['imu.heading_offset']);
-        if('imu.compass_calibration_locked' in data)
-            $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']);
+        if('imu.accel.calibration.locked' in data)
+            $('#accel_calibration_locked').prop('checked', data['imu.accel.calibration.locked']);
+        if('imu.compass.calibration.locked' in data)
+            $('#compass_calibration_locked').prop('checked', data['imu.compass.calibration.locked']);
 
         var rudder_dict = {'rudder.offset': 'Offset',
                            'rudder.scale': 'Scale',
@@ -565,17 +581,17 @@ $(document).ready(function() {
     // Control
     $('.toggle-button').click(function(event) {
         if($(this).hasClass('toggle-button-selected')) {
-            pypilot_set('ap.enabled', false)
+            pypilot_set('ap.enabled', false);
         } else {
-            pypilot_set('ap.heading_command', heading)
-            pypilot_set('ap.enabled', true)
+            pypilot_set('ap.heading_command', heading);
+            pypilot_set('ap.enabled', true);
         }
     });
     
     move = function(x) {
         var engaged = $('#tb_engaged').hasClass('toggle-button-selected');
         if(engaged) {
-            time = new Date().getTime()
+            time = new Date().getTime();
             if(time - heading_set_time > 1000)
                 heading_local_command = heading_command;
             heading_set_time = time;

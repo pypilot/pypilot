@@ -272,19 +272,20 @@ class Autopilot(object):
                 # to prevent actual course change
                 last_heading = resolv(self.last_heading, data['heading'])
                 self.compass_change += data['heading'] - headingrate*dt - last_heading
+                #print('chage', data['heading'] , headingrate*dt , last_heading, self.compass_change)
             self.last_heading = data['heading']
 
         # if heading offset alignment changed, keep same course
         if self.last_heading_off != self.boatimu.heading_off.value:
-            self.last_heading_off = resolv(self.last_heading_off, self.boatimu.heading_off.value)
-            self.compass_change += self.boatimu.heading_off.value - self.last_heading_off
+            last_heading_off = resolv(self.last_heading_off, self.boatimu.heading_off.value)
+            self.compass_change += self.boatimu.heading_off.value - last_heading_off
             self.last_heading_off = self.boatimu.heading_off.value
             
         if self.compass_change:
             self.gps_compass_offset.value -= self.compass_change
             self.wind_compass_offset.value += self.compass_change
             self.true_wind_compass_offset.value += self.compass_change
-            if self.mode.value == 'compass':
+            if self.mode.value == 'compass' and self.enabled.value:
                 heading_command = self.heading_command.value + self.compass_change
                 self.heading_command.set(resolv(heading_command, 180))
           
@@ -336,7 +337,8 @@ class Autopilot(object):
 
         if not self.enabled.value: # in standby, command servo here for lower latency
             if self.lastenabled: # if autopilot is disabled clear command
-                self.servo.command.set(0)
+                self.servo.command.command(0)
+
             self.servo.poll()
 
         t1 = time.monotonic()
@@ -465,8 +467,8 @@ class Autopilot(object):
         self.timings.set([t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t5-t0])
         self.timestamp.set(t0-self.starttime)
           
-        if self.watchdog_device:
-            self.watchdog_device.write('c')
+        #if self.watchdog_device:
+        #    self.watchdog_device.write('c')
 
         t6 = time.monotonic()
         if t6-t0 > period and t0-self.starttime > 5:
@@ -482,8 +484,10 @@ class Autopilot(object):
             self.dt = 0 if self.enabled.value else dt*.8
 
 def main():
+    if os.geteuid() == 0:
+        print(_('WARNING: running autopilot as root!!'))
     ap = Autopilot()
-    print('autopilot init complete', time.monotonic())
+    print('pypilot' + _('init complete'), time.monotonic())
     while True:
         ap.iteration()
 

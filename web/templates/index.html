@@ -109,8 +109,9 @@
         <div id="align_compassprogress" class="bar"> </div>
       </div>
       {{_('Magnetic Heading Offset')}}
-      <input type="spin" id="imu_heading_offset" min=-180 max=180 value=0 style="font-size: 1em">Degrees</input>
-      <p><input type="checkbox" id="calibration_locked">{{_('Lock Calibration')}}</input>
+      <input type="spin" id="imu_heading_offset" min=-180 max=180 value=0>Degrees</input>
+      <p><input type="checkbox" id="accel_calibration_locked">{{_('Lock Accelerometerb Calibration')}}</input>
+      <p><input type="checkbox" id="compass_calibration_locked">{{_('Lock Compass Calibration')}}</input>
       </p>
       <br><a href="/calibrationplot">{{_('calibration plot')}}</a>
       <br>
@@ -148,6 +149,7 @@
       <br>{{_('Controller temperature')}} <span id="controller_temp"></span> C
       <span id="motor_temp"></span>
       <br>{{_('Runtime')}} <span id="runtime"></span>
+      <br>{{_('Version')}} <span id="version"></span>
       <br>{{_('Servo')}}: <b><span id="servo_engaged"></span></b>
       <br>{{_('Version')}}: <span id="version"></span>
       <br>

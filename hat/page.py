@@ -273,7 +273,7 @@ class page(object):
     def testkeydown(self, key):
         k = self.lcd.keypad[key]
         if k.down:
-            self.lcd.buzz(1, .1, 1)
+            self.lcd.buzz_key()
             k.down -= 1
             return True
         return False
@@ -464,6 +464,7 @@ class controlbase(page):
         self.batt = False
         self.wifi = False
         self.pilot = False
+        self.profile = False
 
         self.charging_blink = False
         self.charging_blink_time = 0
@@ -537,7 +538,7 @@ class control(controlbase):
     def get_ap_heading_command(self):
         if gettime() - self.ap_heading_command_time < 5:
             return self.ap_heading_command
-        return self.last_val('ap.heading_command')
+        return self.last_val('ap.heading_command', default='   ')
 
     def set_ap_heading_command(self, command):
         if 'wind' in self.control['mode']:
@@ -559,7 +560,7 @@ class control(controlbase):
 
     def display_mode(self):
         mode = self.last_val('ap.mode')
-        modes = self.last_val('ap.modes')
+        modes = self.last_val('ap.modes', default=[])
         if not mode in modes:
             return
         index = modes.index(mode)
@@ -662,7 +663,8 @@ class control(controlbase):
                 elif heading < 0:
                     self.box(rectangle(0, pos+.3, .3, .025), white)
 
-        if self.last_val('imu.frequency', 1) is False:
+        frequency = self.last_val('imu.frequency', 1, None)
+        if frequency is False:
             r = rectangle(0, 0, 1, .8)
             self.fittext(r, _('ERROR') + '\n' + _('compass or gyro failure!'), True, black)
             self.control['heading'] = 'no imu'
@@ -673,7 +675,7 @@ class control(controlbase):
         t0 = gettime()
         mode = self.last_val('ap.mode')
         modes = self.last_val('ap.modes')
-        ap_heading = self.last_val('ap.heading')
+        ap_heading = self.last_val('ap.heading', default='   ')
         ap_heading_command = self.get_ap_heading_command()
         heading = ap_heading, mode, nr(ap_heading)
         if self.control['heading'] and heading == self.control['heading'] and \
@@ -693,10 +695,11 @@ class control(controlbase):
                 warning += flag[:-6].replace('_', ' ') + ' '
                 if 'OVER' in flag or 'BADVOLTAGE' in flag: # beep overtemp/overcurrent
                     buzz = True
+                pulse = 2
 
         if warning:
             if buzz:
-                self.lcd.buzz(2, .1, 0)
+                self.lcd.buzz(pulse, .1)
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:
@@ -708,7 +711,7 @@ class control(controlbase):
             if self.control['heading_command'] != no_mode:
                 self.fittext(rectangle(0, .4, 1, .35), mode.upper() + ' ' + _('not detected'), True, black)
                 self.control['heading_command'] = no_mode
-        elif self.last_val('imu.warning'):
+        elif self.last_val('imu.warning', default=None):
             if self.control['heading_command'] != 'imu warning':
                 self.fittext(rectangle(0, .4, 1, .35), self.last_val('imu.warning'), True, black)
                 self.control['heading_command'] = 'imu warning'
@@ -721,13 +724,14 @@ class control(controlbase):
             if self.control['heading_command'] != msg:
                 self.fittext(rectangle(0, .4, 1, .35), msg, True, black)
                 self.control['heading_command'] = msg
-        elif self.last_val('ap.enabled') != True:
+        elif self.last_val('ap.enabled') != True and \
+             self.last_val('servo.controller', default=None):
             # no warning, display the desired course or 'standby'
             if self.control['heading_command'] != 'standby':
                 r = rectangle(0, .4, 1, .35)
                 self.fittext(r, _('standby'), False, black)
                 self.control['heading_command'] = 'standby'
-        elif self.last_val('ap.tack.state') != 'none':
+        elif self.last_val('ap.tack.state', default='none') != 'none':
             r = rectangle(0, .4, 1, .35)
             d = self.last_val('ap.tack.direction')
             if self.last_val('ap.tack.state') == 'waiting':
@@ -740,7 +744,7 @@ class control(controlbase):
         elif self.control['heading_command'] != ap_heading_command:
             heading_command = ap_heading_command, mode, nr(ap_heading_command)
             draw_heading(.4, heading_command, self.control['heading_command'])
-            self.control['heading_command'] = heading_command
+            self.control['heading_command'] = ap_heading_command
             self.control['mode'] = False # refresh mode
 
         #warning = False

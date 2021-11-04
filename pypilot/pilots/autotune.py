@@ -43,7 +43,7 @@ class AutotunePilot(AutopilotPilot):
     command = self.Compute(gain_values)
 
     if ap.enabled.value:
-        ap.servo.command.set(command)
+        ap.servo.command.command(command)
     else:
         self.search_count = 0
 

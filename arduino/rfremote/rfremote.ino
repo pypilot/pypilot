@@ -66,7 +66,8 @@ static uint32_t code, timeout;
 void loop() {
     // test keys
     uint32_t t0 = millis();
-    if(PIND != 0xff) {
+    uint8_t pind = PIND;
+    if(pind != 0xff) {
         LED2_ON;
         BOOST_ON;
         static uint8_t wd;
@@ -74,10 +75,22 @@ void loop() {
             wd = !wd;
             flag = 0;
         }
+
+        // put count of how many keys are down to reduce bit errors
+        uint16_t c = 0;
+        uint8_t n = pind;
+        for (; n; ++c)
+            n &= n - 1;
+
+        // construct output using PC0-PC3 to give unique codes for different remote types
+        uint8_t pinc = (PINC & 0x0f) ^ 0xc;
+
+        // alternating code to better capture multiple fast key presses
+        uint16_t out = (c<<12) | (pinc<<8) | pind;
         if(wd)
-            code = 0xa91c00UL | PIND;
+            code = 0xa90000UL | out;
         else
-            code = 0xa90c00UL | PIND;
+            code = 0xa60000UL | out;
         timeout = t0;
     }
 
@@ -104,6 +117,5 @@ void loop() {
         sleep_bod_disable();
         sleep_cpu();
         delay(1);
-
     }
 }

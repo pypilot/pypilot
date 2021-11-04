@@ -58,6 +58,6 @@ class BasicPilot(AutopilotPilot):
 #    self.servocommand_queue.add(command - rval)
     
     if ap.enabled.value:
-        ap.servo.command.set(command)
+        ap.servo.command.command(command)
 
 pilot = BasicPilot

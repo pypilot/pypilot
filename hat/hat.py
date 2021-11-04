@@ -351,18 +351,19 @@ class Hat(object):
         for name in self.watchlist:
             self.client.watch(name)
 
-        self.lcd.poll()
-
         if 'arduino' in self.config['hat']:
             self.arduino = Arduino(self)
             self.poller.register(self.arduino.pipe, select.POLLIN)
         else:
             self.arduino = False
 
+        self.lcd.poll()
         self.lirc = lircd.lirc(self.config)
         self.lirc.registered = False
         self.keytimes = {}
         self.keytimeouts = {}
+
+        self.keycounts = {}
 
         self.inputs = [self.gpio, self.arduino, self.lirc]
 
@@ -406,7 +407,6 @@ class Hat(object):
         for name in self.config['actions']:
             if name.startswith('pilot_'):
                 self.actions.append(ActionPypilot(self, name, 'ap.pilot', name.replace('pilot_', '', 1)))
-
 
         # useful to unassign a key
         self.actions.append(ActionNone())
@@ -494,6 +494,7 @@ class Hat(object):
             if count == 0:
                 return # already applied count 0
         self.web.send({'key': key})
+
         actions = self.config['actions']
         for action in self.actions:
             if not action.name in actions:
@@ -535,18 +536,30 @@ class Hat(object):
                     print('shutting down since pilots updated')
                     exit(0) #respawn
 
+    def key(self):
+        key = ''
+        count = 0
+        for k, c in self.keycounts.items():
+            if key:
+                key += '_' + k
+                count = max(count, c)
+            else:
+                key, count = k, c
+        return key, count
+                    
     def poll(self):            
         t0 = time.monotonic()
-        keycounts = {}
         for i in self.inputs:
             try:
                 if not i:
                     continue
                 events = i.poll()
                 for event in events:
-                    #print('apply', event, time.monotonic())
                     key, count = event
-                    keycounts[key] = count
+                    self.keycounts[key] = count
+                    if not count:
+                        self.apply_code(*self.key())
+                        del self.keycounts[key]
 
             except Exception as e:
                 self.inputs.remove(i)
@@ -554,22 +567,9 @@ class Hat(object):
                 del i
                 return
 
-        key = ''
-        count = 0
-        for k, c in keycounts.items():
-            if c:
-                if key:
-                    key += '_' + k
-                    count = min(count, c)
-                else:
-                    key = k
-                    count = c
-        if count:
+        key, count = self.key()
+        if key:
             self.apply_code(key, count)
-
-        for k, c in keycounts.items():
-            if c == 0:
-                self.apply_code(k, 0)
 
         t1 = time.monotonic()
         msgs = self.client.receive()

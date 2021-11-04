@@ -126,7 +126,8 @@ while True:
                 import esp32
                 esp32.wake_on_ext1(pins = tuple(gpio_esp32.keypad_pins_wake), level= esp32.WAKEUP_ANY_HIGH)
                 rtc.memory('deepsleep')
-                machine.deepsleep(powerofftimeout * 1000)
+                #machine.deepsleep(powerofftimeout * 1000)
+                gpio_esp32.powerdown()
 
     #if wifi_esp32.station.isconnected():
     wifi_esp32.poll(lcd.client)

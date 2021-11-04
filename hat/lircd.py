@@ -77,7 +77,10 @@ class lirc(object):
             else:
                 return []
                 
-        if self.LIRC.isAlive() or not self.LIRC.version:
+        if self.LIRC.version == 0:
+            return []
+
+        if self.LIRC.version == 1 and not self.LIRC.isAlive():
             return []
 
         t = time.monotonic()

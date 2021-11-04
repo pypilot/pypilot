@@ -137,7 +137,7 @@ class VMGPilot(AutopilotPilot):
 
         if not ap.enabled.value:
             return
-        ap.servo.command.set(command)
+        ap.servo.command.command(command)
         
         # log into table
         accel = ap.boatimu.SensorValues['accel'].value

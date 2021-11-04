@@ -3,11 +3,13 @@
 # python3 setup.py extract_messages -o pypilot/locale/pypilot.pot
 
 function translate() {
-    mkdir -p $1/LC_MESSAGES
-    cp -n pypilot.pot $1/LC_MESSAGES/pypilot.po
-    msgmerge -N -U $1/LC_MESSAGES/pypilot.po pypilot.pot
-    ./trans-po.py $1/LC_MESSAGES/pypilot.po $1
-    /usr/bin/msgfmt --check -o $1/LC_MESSAGES/pypilot.mo $1/LC_MESSAGES/pypilot.po
+    if [ ! -f "$1/LC_MESSAGES/pypilot.mo" ]; then
+        mkdir -p $1/LC_MESSAGES
+        cp -n pypilot.pot $1/LC_MESSAGES/pypilot.po
+        msgmerge -N -U $1/LC_MESSAGES/pypilot.po pypilot.pot
+        ./trans-po.py $1/LC_MESSAGES/pypilot.po $1
+        /usr/bin/msgfmt --check -o $1/LC_MESSAGES/pypilot.mo $1/LC_MESSAGES/pypilot.po
+    fi
 }
 
 translate ca # Catalan

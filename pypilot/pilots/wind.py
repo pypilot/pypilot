@@ -102,7 +102,7 @@ class WindPilot(AutopilotPilot):
     windgust = ap.sensors.wind.speed - self.last_wind_speed
     self.last_wind_speed = ap.sensors.wind.speed
     if ap.sensors.wind.direction < 0:
-      windgust = -windgust
+        windgust = -windgust
     gain_values = {'P': self.heading_error.value,
                    'I': self.heading_error_int.value,
                    'D': headingrate,      
@@ -112,6 +112,6 @@ class WindPilot(AutopilotPilot):
     command = self.Compute(gain_values)
 
     if ap.enabled.value:
-      ap.servo.command.set(command)
+        ap.servo.command.command(command)
 
 pilot = WindPilot

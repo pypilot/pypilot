@@ -174,7 +174,7 @@ class FuzzyPilot(AutopilotPilot):
         # compute fuzzy command from matrix and command servo
         command = fuzzy_compute(0, self.dimensions, self.matrix)
         t2 = time.monotonic()
-        ap.servo.command.set(command)
+        ap.servo.command.command(command)
         t3 = time.monotonic()
 
         # feedback to update fuzzy matrix

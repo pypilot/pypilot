@@ -122,8 +122,15 @@ class menu(page):
 
         return super(menu, self).process()
 
+def sign(x):
+    if x < 0:
+        return -1
+    if x > 0:
+        return 1
+    return 0
+    
 class RangeEdit(page):
-    def __init__(self, name, desc, id, pypilot_path, minval, maxval):
+    def __init__(self, name, desc, id, pypilot_path, minval, maxval, isinteger=False):
         self.name = name
         if type(desc) == type('') or type(desc) == type(u''):
             self.desc = lambda : desc
@@ -134,6 +141,7 @@ class RangeEdit(page):
         self.range = minval, maxval
         self.lastmovetime = 0
         self.value = None
+        self.isinteger = isinteger
         super(RangeEdit, self).__init__(name)
      
     def display(self, refresh):
@@ -180,15 +188,19 @@ class RangeEdit(page):
         if self.value is False:
             return
 
-        step = (self.range[1]-self.range[0])/500.0
+        if self.isinteger:
+            step = sign(delta)
+        else:
+            step = delta*(self.range[1]-self.range[0])/500.0
+
         if self.pypilot_path:
             v = self.value
             try:
-                v += delta*step
+                v += step
             except:
                 pass # not connected to server and value is N/A
         else:
-            v = delta*step + self.value
+            v = step + self.value
             
         v = min(v, self.range[1])
         v = max(v, self.range[0])
@@ -211,32 +223,41 @@ class RangeEdit(page):
             if dt or self.testkeydown(k):
                 return dt + 1
             return 0
+
+        if self.isinteger:
+            speed = 0
+            if self.testkeydown(SMALL_STARBOARD) or self.testkeydown(BIG_STARBOARD):
+                speed = 1
+            if self.testkeydown(SMALL_PORT) or self.testkeydown(BIG_PORT):
+                speed = -1
+        else:
+            ss = spd(SMALL_STARBOARD)
+            sp = spd(SMALL_PORT)
+            bp = spd(BIG_PORT)
+            bs = spd(BIG_STARBOARD)
+
+            speed = 0;
+            sign = 0;
+            if sp or ss:
+                speed = max(sp, ss)
+            if bp or bs:
+                speed = max(bp, bs)*3
+
+            if ss or bs:
+                sign = 1
+            elif sp or bp:
+                sign = -1
+
+            speed = sign * speed
+
         
-        ss = spd(SMALL_STARBOARD)
-        sp = spd(SMALL_PORT)
-        bp = spd(BIG_PORT)
-        bs = spd(BIG_STARBOARD)
-
-        speed = 0;
-        sign = 0;
-        if sp or ss:
-            speed = max(sp, ss)
-        if bp or bs:
-            speed = max(bp, bs)*3
-
-        if ss or bs:
-            sign = 1
-        elif sp or bp:
-            sign = -1
-
-        speed = sign * speed
         if speed:
             self.move(speed)
         else:
             return super(RangeEdit, self).process()
 
-def ConfigEdit(name, desc, config_name, min, max):
-    return RangeEdit(name, desc, config_name, False, min, max)
+def ConfigEdit(name, desc, config_name, *args):
+    return RangeEdit(name, desc, config_name, False, *args)
         
 class ValueEdit(RangeEdit):
     def __init__(self, name, desc, pypilot_path, value=False):
@@ -556,17 +577,12 @@ class BacklightEdit(RangeEdit):
         super(BacklightEdit, self).move(delta)
         self.lcd.send('backlight', self.value)
 
-class buzzer_menu(menu):
-    super(display, self).__init__(_('buzzer'),
-                                  [ConfigEdit(_('setting'), '', 'buzzer', 0, 2),
-                                   ConfigEdit(_('buzzer'), '', 'buzzer_volume', 1, 2)])
-        
 class display(menu):
     def __init__(self):
         if micropython:
             bl = [ConfigEdit(_('hue'), '', 'hue', 0, 255)]
         else:
-            bl = [BacklightEdit(), buzzer_menu]
+            bl = [BacklightEdit(), ConfigEdit(_('buzzer'), 'pitch', 'buzzer_pitch', 0, 9, True)]
         super(display, self).__init__(_('display'),
                                       [ConfigEdit(_('contrast'), '', 'contrast', 0, 120),
                                        invert(_('invert')), flip(_('flip'))] + bl)

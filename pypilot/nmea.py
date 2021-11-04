@@ -799,7 +799,7 @@ class nmeaBridge(object):
             msg = self.pipe.recv()
             if not msg:
                 return
-            if msg[0] != '$': # perform checksum in this subprocess
+            if msg[0] != '$' and msg[0] != '!': # perform checksum in this subprocess
                 msg = '$' + msg + ('*%02X' % nmea_cksum(msg))
             # relay nmea message from server to all tcp sockets
             for sock in self.sockets:
