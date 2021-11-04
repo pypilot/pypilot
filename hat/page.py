@@ -15,7 +15,7 @@ black = 0x00
 #white = ugfx.color(255, 255, 255)
 #black = ugfx.color(0, 0, 0)
 
-AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, NUDGE_PORT, NUDGE_STARBOARD, NUM_KEYS = range(11)
+AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, NUM_KEYS = range(8)
 
 class rectangle():
     def __init__(self, x, y, width, height):
@@ -327,15 +327,6 @@ class page(object):
                 return self.prev
             return control(self.lcd)
 
-        # these work from any page (even menu) to dodge
-        lcd = self.lcd
-        if lcd.keypad[NUDGE_PORT].dt():
-            lcd.client.set('servo.command', -1)
-        elif lcd.keypad[NUDGE_STARBOARD].dt():
-            lcd.client.set('servo.command', 1)           
-        elif self.testkeyup(NUDGE_PORT) or self.testkeyup(NUDGE_STARBOARD):
-            lcd.client.set('servo.command', 0)           
-
 class info(page):
     def __init__(self, num_pages=4):
         super(info, self).__init__(_('info'))
@@ -506,7 +497,7 @@ class controlbase(page):
             else:
                 self.charging_blink = False
 
-        profile = self.last_val('profile')
+        profile = str(self.last_val('profile'))
         if self.profile != profile:
             self.profile = profile
             profilerect = rectangle(0, .92, .32, .09)
@@ -776,6 +767,7 @@ class control(controlbase):
                 self.set('servo.command', 0) # stop
                 self.set('ap.enabled', False)
 
+
         if self.testkeydown(SELECT):
             # change mode
             modes = self.last_val('ap.modes')
@@ -791,21 +783,14 @@ class control(controlbase):
             self.set('ap.mode', next_mode)
             return
 
-        if self.testkeydown(TACK):
-            if self.last_val('ap.tack.state') == 'none':
-                t, direction = self.tack_hint
-                if time.monotonic() - t < 3:
-                    self.set('ap.tack.direction', 'starboard' if direction > 0 else 'port')
-                self.set('ap.tack.state', 'begin')
-            else:
-                self.set('ap.tack.state', 'none')
-            return
-                        
         if self.last_val('ap.enabled'):
             keys = {SMALL_STARBOARD : (0, 1),
                     SMALL_PORT      : (0, -1),
                     BIG_PORT        : (1, -1),
                     BIG_STARBOARD   : (1, 1)}
+            if self.last_val('ap.tack.state') != 'none':
+                
+                return
             key = None
             dt = 0
             for k in keys:

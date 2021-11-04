@@ -9,7 +9,7 @@
 
 $(document).ready(function() {
     namespace = '';
-    $('#code').text("N/A");
+    $('#code').text('N/A');
     // Connect to the Socket.IO server.
     var port = location.port;
     port = web_port;
@@ -48,6 +48,18 @@ $(document).ready(function() {
     
     socket.on('action_keys', function(keys) {
         $('#action'+keys['name']+'keys').text(keys['keys'])
+    });
+
+    socket.on('profiles', function(profiles) {
+        for(var i =0; ; i++) {
+            id = $('#action_profile'+String(i))
+            if(id.length == 0)
+                break;
+            if(i< profiles.length)
+                id.text('profile ' + profiles[i]);
+            else
+                id.text('profile ' + String(i));
+        }
     });
 
     for (var i = 0; i < action_names.length; i++) {
