@@ -271,12 +271,13 @@ $(document).ready(function() {
         $('#configuration_container').append(phtml);
         $('#configuration_container').append('</div>');
 
-        if(tinypilot) {
+        if(tinypilot)
             $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>');
-            $('#configuration_container').append('<p><a href="/logs">Logs Wifi</a>');
-        }
 
-        $('#configuration_container').append('<p><a href=":33333">Configure LCD Keypad and Remotes</a>');
+        url = window.location.href.split('://')
+        url = url.length > 1 ? url[1] : url[0];
+        
+        $('#configuration_container').append('<p><a href="http://' + url.split(':')[0].split('/')[0] + ':33333">Configure LCD Keypad and Remotes</a>');
 
         pypilot_watch('nmea.client');
 
