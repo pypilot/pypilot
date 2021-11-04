@@ -19,7 +19,8 @@ from gps_filter import *
 import quaternion
 
 # favor lower priority sources
-source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'signalk' : 4, 'none' : 5}
+source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3,
+                   'signalk' : 4, 'gps+wind' : 5, 'water+wind' : 6, 'none' : 7}
 
 class Sensor(object):
     def __init__(self, client, name):
@@ -60,9 +61,9 @@ class Sensor(object):
     def register(self, _type, name, *args, **kwargs):
         return self.client.register(_type(*([self.name + '.' + name] + list(args)), **kwargs))
 
-class Wind(Sensor):
-    def __init__(self, client, boatimu):
-        super(Wind, self).__init__(client, 'wind')
+class BaseWind(Sensor):
+    def __init__(self, client, name, boatimu):
+        super(BaseWind, self).__init__(client, name)
 
         self.boatimu = boatimu
 
@@ -70,6 +71,9 @@ class Wind(Sensor):
         self.speed = self.register(SensorValue, 'speed')
         self.offset = self.register(RangeSetting, 'offset', 0, -180, 180, 'deg')
         self.compensation_height = self.register(RangeProperty, 'sensors_height', 0, 0, 100, persistent=True)
+        self.wspeed = 0
+        self.wdirection = 0
+        self.wfactor = 0
 
     def update(self, data):
         if 'direction' in data:
@@ -99,10 +103,48 @@ class Wind(Sensor):
             self.direction.set(resolv(data['direction']))
         if 'speed' in data:
             self.speed.set(data['speed'])
+        self.weight()
 
     def reset(self):
         self.direction.set(False)
         self.speed.set(False)
+
+    def weight(self):
+        d = .005
+        wspeed = self.speed.value
+        self.wspeed = (1-d)*self.wspeed + d*wspeed
+        # weight wind direction more with higher wind speed
+        d = .05*math.log(wspeed/5.0 + 1.2)
+        wdirection = resolv(self.direction.value, self.wdirection)
+        wdirection = (1-d)*self.wdirection + d*wdirection
+        self.wdirection = resolv(wdirection)
+        self.wfactor = d
+
+class Wind(BaseWind):
+    def __init__(self, client, boatimu):
+        super(Wind, self).__init__(client, 'wind', boatimu)
+
+class TrueWind(BaseWind):
+    def __init__(self, client, boatimu):
+        super(TrueWind, self).__init__(client, 'truewind', boatimu)
+
+    def compute_true_wind(water_speed, wind_speed, wind_direction):
+        rd = math.radians(wind_direction)
+        windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd) - water_speed
+        return math.hypot(*windv)
+
+    @staticmethod
+    def compute_true_wind_speed(water_speed, wind_speed, wind_direction):
+        rd = math.radians(wind_direction)
+        windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd) - water_speed
+        return math.hypot(*windv)
+
+    def update_from_apparent(self, boat_speed, wind_speed, wind_direction):
+        if self.source.value == 'water+wind' or self.source.value == 'gps+wind':
+            self.direction.set(TrueWind.compute_true_wind(boat_speed, wind_speed, wind_direction))
+            self.wdirection = self.direction.value
+            self.wfactor = .05
+            self.lastupdate = time.monotonic()
 
 class APB(Sensor):
     def __init__(self, client):
@@ -220,11 +262,15 @@ class Water(Sensor):
             self.leeway.source.update('none')
             return
 
+        return # disable until further testing
+
         t = time.monotonic()
         if t-self.last_leeway_measurement > 3:
             heel = ap.boatimu.heel
             K = 5 # need to calibrate from gps when user indicates there are no currents
-            self.leeway.set(K*heel/self.speed.value**2)
+            spd2 = self.speed.value**2
+            if spd2 > 2:
+                self.leeway.set(K*heel/spd2)
             self.leeway.source.update('computed')
 
         # estimate currents over ground
@@ -291,11 +337,13 @@ class Sensors(object):
         # actual sensors supported
         self.gps = gps(client)
         self.wind = Wind(client, boatimu)
+        self.truewind = TrueWind(client, boatimu)
         self.rudder = Rudder(client)
         self.apb = APB(client)
         self.water = Water(client)
 
-        self.sensors = {'gps': self.gps, 'wind': self.wind, 'rudder': self.rudder, 'apb': self.apb, 'water': self.water}
+        self.sensors = {'gps': self.gps, 'wind': self.wind, 'truewind': self.truewind,
+                        'rudder': self.rudder, 'apb': self.apb, 'water': self.water}
 
     def poll(self):
         self.nmea.poll()

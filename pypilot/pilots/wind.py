@@ -37,7 +37,6 @@ class WindPilot(AutopilotPilot):
   def compute_heading(self):
     ap = self.ap
     # compute the difference from wind to other headings
-    wind = self.ap.wind_direction.value
     compass = self.ap.boatimu.SensorValues['heading_lowpass'].value
 
     sensors = self.ap.sensors

@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from pilot import AutopilotPilot
-#disabled = True # IMPORTANT:  remove this line enable the simple pilot
+disabled = True # IMPORTANT:  remove this line enable the simple pilot
 
 class SimplePilot(AutopilotPilot):
   def __init__(self, ap):

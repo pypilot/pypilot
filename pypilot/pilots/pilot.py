@@ -65,16 +65,14 @@ class AutopilotPilot(object):
     def best_mode(self, mode):
         sensors = self.ap.sensors
         nowind = sensors.wind.source.value == 'none'
+        notruewind = sensors.truewind.source.value == 'none'
         nogps = sensors.gps.source.value == 'none'
         nowater = sensors.water.source.value == 'none'
 
-        if mode == 'true wind': # for true wind, need wind and gps or water speed
-            if nowind:
-                return 'gps'
-            if nogps and nowater:
-                return 'wind'
+        if mode == 'true wind' and notruewind:
+            mode = 'wind'
         if mode == 'wind' and nowind:
             return 'compass'
-        elif mode == 'gps' and nogps:
+        if mode == 'gps' and nogps:
             return 'compass'
         return mode

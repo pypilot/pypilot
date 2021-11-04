@@ -19,9 +19,6 @@
 #define CMD  LOW
 #define DATA HIGH
 
-#define HWSPI // hardware spi is 12x faster
-
-
 // with only 2k ram, we cannot have a full framebuffer, so split
 // into two pages for top and bottom half of display each 64x64
 static unsigned char framebuffer[8*64];
@@ -34,7 +31,8 @@ JLX12864::JLX12864(unsigned char sclk, unsigned char sdin,
     pin_sdin(sdin),
     pin_dc(dc),
     pin_reset(reset),
-    pin_sce(sce)
+    pin_sce(sce),
+    spi_settings(1000000, MSBFIRST, SPI_MODE0)
 {}
 
 
@@ -43,24 +41,16 @@ void JLX12864::begin()
     width = width;
     height = height;
 
-    // All pins are outputs (these displays cannot be read)...
-    pinMode(pin_sclk, OUTPUT);
-    pinMode(pin_sdin, OUTPUT);
     pinMode(pin_dc, OUTPUT);
     if(pin_sce != 99)
         pinMode(pin_sce, OUTPUT);
 
-#ifdef HWSPI
-#if defined(__AVR_ATmega32__)
-    DDRB|=(1<<4)|(1<<5)|(1<<7);
-    SPCR=(1<<SPE)|(1<<MSTR)|(1<<SPR0);
-#else
     SPI.begin();
     SPI.setClockDivider(SPI_CLOCK_DIV16);
-#endif
-#endif
+
     // Reset the controller state...
-    digitalWrite(pin_sce, HIGH);
+    if(pin_sce != 99)
+        digitalWrite(pin_sce, HIGH);
 
     pinMode(pin_reset, INPUT_PULLUP);
     delay(50);
@@ -207,11 +197,11 @@ void JLX12864::SetParameters()
         0xaf // Open the display
     };
 
+    SPI.beginTransaction(spi_settings);
     for(uint8_t i=0; i<(sizeof cmd) / (sizeof *cmd); i++) {
-        SPDR = cmd[i];
-        while (!(SPSR & _BV(SPIF)));
+        SPI.transfer(cmd[i]);
     }
-        ;//SPI.transfer(cmd[i]);
+    SPI.endTransaction();
 }
 
 size_t JLX12864::write(uint8_t chr)
@@ -271,7 +261,6 @@ void JLX12864::clear()
 void JLX12864::refresh(uint8_t page)
 {
     SetParameters();
-
     if(page == flip)
         page = 0x10;
     else
@@ -279,20 +268,17 @@ void JLX12864::refresh(uint8_t page)
 
     unsigned char *fb = framebuffer;
     
+    SPI.beginTransaction(spi_settings);
     for(uint8_t c=0;c<8;c++)
     {
         digitalWrite(pin_dc, CMD);
-        //SPI.transfer(0xb0 + c);
-        SPDR = 0xb0+c;
-        while (!(SPSR & _BV(SPIF)));
-        //SPI.transfer(page);
-        SPDR = page;
-        while (!(SPSR & _BV(SPIF)));
+        SPI.transfer(0xb0 + c);
+        SPI.transfer(page);
 
         digitalWrite(pin_dc, DATA);
         for(unsigned int i=0; i<64; i++) {
-            SPDR = *fb++;
-            while (!(SPSR & _BV(SPIF)));
+            SPI.transfer(*fb++);
         }
     }
+    SPI.endTransaction();
 }

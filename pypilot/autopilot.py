@@ -28,19 +28,6 @@ import pilots
 def minmax(value, r):
     return min(max(value, -r), r)
 
-def compute_true_wind(water_speed, wind_speed, wind_direction):
-    rd = math.radians(wind_direction)
-    windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd) - water_speed
-    truewind = math.degrees(math.atan2(*windv))
-    #print( 'truewind', truewind, math.hypot(*windv))
-    return truewind
-
-def compute_true_wind_speed(water_speed, wind_speed, wind_direction):
-    rd = math.radians(wind_direction)
-    windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd) - water_speed
-    return math.hypot(*windv)
-
-
 class ModeProperty(EnumProperty):
     def __init__(self, name):
         self.ap = False
@@ -153,10 +140,6 @@ class Autopilot(object):
 
         self.wind_compass_offset = HeadingOffset()
         self.true_wind_compass_offset = HeadingOffset()
-        self.true_wind_source = self.register(Value, 'true_wind_source', 'none')
-
-        self.wind_direction = self.register(SensorValue, 'wind_direction', directional=True)
-        self.wind_speed = 0
 
         self.runtime = self.register(TimeValue, 'runtime') #, persistent=True)
         self.timings = self.register(SensorValue, 'timings', False)
@@ -251,32 +234,26 @@ class Autopilot(object):
                 self.gps_compass_offset.update(gps_track - compass, d)
 
         if self.sensors.wind.source.value != 'none':
-            d = .005
-            wind_speed = self.sensors.wind.speed.value
-            self.wind_speed = (1-d)*self.wind_speed + d*wind_speed
-            # weight wind direction more with higher wind speed
-            d = .05*math.log(wind_speed/5.0 + 1.2)
-            wind_direction = resolv(self.sensors.wind.direction.value, self.wind_direction.value)
-            wind_direction = (1-d)*self.wind_direction.value + d*wind_direction
-            self.wind_direction.set(resolv(wind_direction))
-            self.wind_compass_offset.update(wind_direction + compass, d)
+            offset = resolv(self.sensors.wind.wdirection + compass, self.wind_compass_offset.value)
+            self.wind_compass_offset.update(offset, self.sensors.wind.wfactor)
 
+            boat_speed = None
             if self.sensors.water.source.value != 'none':
                 boat_speed = self.sensors.water.speed.value
-                self.true_wind_source.update('water')
+                if self.sensors.truewind.source.value == 'none':
+                    self.sensors.truewind.source.update('water+wind')
             elif self.sensors.gps.source.value != 'none':
                 boat_speed = self.gps_speed
-                self.true_wind_source.update('gps')
-            else:
-                self.true_wind_source.update('none')
+                if self.sensors.truewind.source.value == 'none':
+                    self.sensors.truewind.source.update('gps+wind')
+            if boat_speed != None:
+                self.sensors.truewind.update_from_apparent(boat_speed, self.sensors.wind.wspeed,
+                                                           self.sensors.wind.wdirection)
 
-            if self.true_wind_source.value != 'none':
-                true_wind = compute_true_wind(boat_speed, self.wind_speed,
-                                              self.wind_direction.value)
-                offset = resolv(true_wind + compass, self.true_wind_compass_offset.value)
-                d = .05
-                self.true_wind_compass_offset.update(offset, d)
-    
+        if self.sensors.truewind.source.value != 'none':
+            offset = resolv(self.sensors.truewind.wdirection + compass, self.true_wind_compass_offset.value)
+            self.true_wind_compass_offset.update(offset, self.sensors.truewind.wfactor)
+
     def fix_compass_calibration_change(self, data, t0):
         headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
         dt = min(t0 - self.lasttime, .25) # maximum dt of .25 seconds
@@ -346,6 +323,8 @@ class Autopilot(object):
             print('autopilot main process received:', msg, msgs[msg])
 
         if not self.enabled.value: # in standby, command servo here for lower latency
+            if self.lastenabled: # if autopilot is disabled clear command
+                self.servo.command.set(0)
             self.servo.poll()
 
         t1 = time.monotonic()

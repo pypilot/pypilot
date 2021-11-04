@@ -320,29 +320,16 @@ class ServerValues(pypilotValue):
                 if value.msg:
                     connection.write(value.get_msg()) # send value                
                 value.calculate_watch_period()
-                self.msg = 'new'
+            else:
+                value = pypilotValue(self, name, info, connection)
+                self.values[name] = value
 
-                if info.get('persistent'):
-                    # when a persistant value is missing from pypilot.conf,
-                    #  and it is watched before registered.....
-                    if not name in self.persistent_values:  # test not required
-                        self.persistent_values[name] = value
-                continue
-
-            value = pypilotValue(self, name, info, connection)
-            if 'persistent' in info and info['persistent']:
+            if info.get('persistent'):
                 # when a persistant value is missing from pypilot.conf
                 value.calculate_watch_period()
-                #info['persistent'] = 'new' ???
-                if name in self.persistent_data:
-                    print('pypilot server   <normally not reachable code 733>')
-                    v = self.persistent_data[name]
-                    if isinstance(v, numbers.Number):
-                        v = float(v) # convert any numeric to floating point
-                    value.set(v, connection) # set persistent value
-                self.persistent_values[name] = value
+                if not name in self.persistent_data:
+                    self.persistent_values[name] = value
 
-            self.values[name] = value
             self.msg = 'new'
 
         msg = False # inform watching clients of updated values

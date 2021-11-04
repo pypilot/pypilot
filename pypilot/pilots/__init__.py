@@ -1,6 +1,5 @@
 # import all scripts in this directory
 
-from __future__ import print_function
 default = []
 
 import sys, os

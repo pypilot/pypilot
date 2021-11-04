@@ -4,7 +4,7 @@ DefaultDependencies=false
 
 [Service]
 Type=simple
-ExecStart=pypilot_web 8080
+ExecStart=pypilot_web 8000
 StandardOutput=journal
 StandardError=journal
 Restart=always
