@@ -233,16 +233,17 @@ class ServerProfiles(pypilotValue):
         n, profiles = msg.rstrip().split('=', 1)
         try:
             profiles = pyjson.loads(profiles)
-            sprofiles = ['0']
+            sprofiles = []
             for profile in profiles:
-                if profile != '0':
-                    sprofiles.append(str(profile))
+                sprofiles.append(str(profile))
+            if not sprofiles:
+                profiles.append('0')
             self.profiles = sprofiles
             profile = self.server_values.values['profile']
 
-            # if current profile is removed switch to 0
+            # if current profile is removed switch to first profile
             if not profile.profile in self.profiles:
-                profile.set('profile=0\n', False)
+                profile.set('profile="' + profiles[0] + '"\n', False)
                 
         except Exception as e:
             print('pypilot server failed to set new visible profiles', e, msg)
