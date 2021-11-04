@@ -30,7 +30,7 @@ except:
 driver = 'default'
 for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'tft', 'none']:
     if pdriver in sys.argv:
-        print('overriding driver', driver, 'to command line', pdriver)
+        print('overriding lcd driver "' + driver + '" to command line "' + pdriver + '"')
         driver = pdriver
         sys.argv.remove(driver)
         break

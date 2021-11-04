@@ -15,6 +15,8 @@ from pypilot.client import pypilotClient
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gpio
 import lircd
+import lcd
+
 print('hat import done', time.monotonic())
 
 class Action(object):
@@ -62,6 +64,7 @@ class ActionMode(ActionEngage):
     def  __init__(self, hat, mode):
         super(ActionMode, self).__init__(hat)
         self.mode = mode
+        self.name = mode + ' mode'
 
     def trigger(self, count):
         if self.hat.client and not count:
@@ -371,9 +374,7 @@ class Hat(object):
             self.actions.append(ActionKeypad(self.lcd, i, keypadnames[i]))
 
         # stateless actions for autopilot control
-        self.actions += [ActionEngage(self),
-                         ActionPypilot(self, 'standby', 'ap.enabled', False),
-                         ActionHeading(self,  1),
+        self.actions += [ActionHeading(self,  1),
                          ActionHeading(self, -1),
                          ActionHeading(self,  2),
                          ActionHeading(self, -2),
@@ -381,19 +382,21 @@ class Hat(object):
                          ActionHeading(self, -5),
                          ActionHeading(self,  10),
                          ActionHeading(self, -10),
-                         ActionMode(self, 'compass'),
-                         ActionMode(self, 'gps'),
-                         ActionMode(self, 'wind'),
-                         ActionMode(self, 'truewind'),                                    
                          ActionPypilot(self, 'center', 'servo.position', 0),
                          ActionTack(self, 'tack_port', 'port'),
                          ActionTack(self, 'tack_starboard', 'starboard'),
                          ActionDodge(self, 'dodge_port', -1),
-                         ActionDodge(self, 'dodge_starboard', 1)
+                         ActionDodge(self, 'dodge_starboard', 1),
+                         ActionPypilot(self, 'standby', 'ap.enabled', False),
+                         ActionEngage(self)
         ]
 
+        if 'modes' in self.config:
+            for mode in self.config['modes']:
+                self.actions.append(ActionMode(self, mode))
+
         # profiles
-        for i in range(5):
+        for i in range(8):
             self.actions.append(ActionProfile(self, i))
 
         self.actions += [ActionProfileRelative(self, 'profile+', 1),
@@ -460,6 +463,12 @@ class Hat(object):
         for name in list(actions):
             if not actions[name] and name[:6] != 'pilot_':
                 del actions[name]
+
+        if self.client and not 'modes' in self.config:
+            values = self.client.get_values()
+            if 'ap.mode' in values:
+                self.config['modes'] = values['ap.mode']['choices']
+            
         try:
             f = open(self.configfilename, 'w')
             f.write(pyjson.dumps(self.config) + '\n')
