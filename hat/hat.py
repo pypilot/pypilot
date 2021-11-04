@@ -87,6 +87,19 @@ class ActionTack(ActionPypilot):
             self.hat.client.set('ap.tack.direction', self.direction)
         super(ActionTack, self).trigger()
 
+class ActionProfileRelative(ActionPypilot):
+    def __init__(self, hat, name, offset):
+        super(ActionProfileRelative, self).__init__(hat, name, 'profile', 0)
+        self.offset = offset
+
+    def trigger(self, count):
+        try:
+            self.value = (self.hat.last_msg['profile'] + self.offset) % 5
+        except:
+            self.value = 0
+        super(ActionProfileRelative, self).set(count)
+        
+
 class Process():
     def __init__(self, hat):
         self.hat = hat
@@ -268,6 +281,7 @@ class Hat(object):
         self.last_msg['ap.enabled'] = False
         self.last_msg['ap.heading_command'] = 0
         self.last_msg['ap.mode'] = ''
+        self.last_msg['profile'] = 0
 
         if len(sys.argv) > 1:
             self.config['host'] = sys.argv[1]
@@ -286,7 +300,7 @@ class Hat(object):
         time.sleep(1)
         self.client = pypilotClient(host)
         self.client.registered = False
-        self.watchlist = ['ap.enabled', 'ap.heading_command', 'ap.mode']
+        self.watchlist = ['ap.enabled', 'ap.heading_command', 'ap.mode', 'profile']
 
         for name in self.watchlist:
             self.client.watch(name)
@@ -330,12 +344,21 @@ class Hat(object):
                          ActionPypilot(self, 'truewindmode', 'ap.mode', 'truewind'),
                          ActionPypilot(self, 'center', 'servo.position', 0),
                          ActionTack(self, 'tackport', 'port'),
-                         ActionTack(self, 'tackstarboard', 'starboard')]
+                         ActionTack(self, 'tackstarboard', 'starboard')
+        ]
+
+        # profiles
+        for i in range(5):
+            self.actions.append(ActionPypilot(self, 'profile', 'profile', i))
+
+        self.actions += [ActionProfileRelative(self, 'profile+', 1),
+                         ActionProfileRelative(self, 'profile-', -1)]
 
         # actions determined by the server (different pilots) not yet populated here
         for name in self.config['actions']:
             if name.startswith('pilot_'):
                 self.actions.append(ActionPypilot(self, name, 'ap.pilot', name.replace('pilot_', '', 1)))
+
 
         # useful to unassign a key
         self.actions.append(ActionNone())

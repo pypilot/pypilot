@@ -144,7 +144,7 @@ class Autopilot(object):
 
         pilot_names = list(self.pilots)
         print(_('Available Pilots') + ':', pilot_names)
-        self.pilot = self.register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True)
+        self.pilot = self.register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True, profiled=True)
 
         self.tack = tacking.Tack(self)
 

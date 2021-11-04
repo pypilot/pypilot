@@ -79,17 +79,27 @@ $(document).ready(function() {
         pypilot_watch('ap.heading_command', .5);
 
         // gain
+        pypilot_watch('profile');
         pypilot_watch('ap.pilot');
         $('#gain_container').text('');
+        $('#gain_container').append('<div class="w3-row">Profile&emsp;<select id="profile">');
+        for (let profile = 0; profile < 5; profile++) {
+            $('#profile').append('<option value="' + profile + '">' + profile + '</option>');
 
-        $('#gain_container').append('<div class="w3-row">Pilot&emsp;<select id="pilot">');
+        $('#gain_container').append('</select>')
+
+        $('#gain_container').append('Pilot&emsp;<select id="pilot">');
         if('ap.pilot' in list_values && 'choices' in list_values['ap.pilot']) {
             var pilots = list_values['ap.pilot']['choices'];
             for (var pilot in pilots)
-                $('#pilot').append('<option value="' + pilots[pilot] + '">' + pilots[pilot] + '</option');
+                $('#pilot').append('<option value="' + pilots[pilot] + '">' + pilots[pilot] + '</option>');
         }
 
         $('#gain_container').append('</select></div>')
+
+        $('#profile').change(function(event) {
+            pypilot_set('profile', $('#profile').val());
+        });
 
         $('#pilot').change(function(event) {
             pypilot_set('ap.pilot', $('#pilot').val());

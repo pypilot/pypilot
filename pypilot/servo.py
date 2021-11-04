@@ -260,7 +260,7 @@ class Servo(object):
         self.use_brake = self.register(BooleanProperty, 'use_brake', False, persistent=True)
         self.brake_on = False
         
-        self.period = self.register(RangeSetting, 'period', .4, .1, 3, 'sec')
+        self.period = self.register(RangeSetting, 'period', .4, .1, 3, 'sec', profiled=True)
         self.compensate_current = self.register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.register(BooleanProperty, 'compensate_voltage', False, persistent=True)
         self.amphours = self.register(ResettableValue, 'amp_hours', 0, persistent=True)
@@ -270,12 +270,13 @@ class Servo(object):
         self.hardover_calculation_valid = 0
 
         self.speed = self.register(SensorValue, 'speed')
-        self.speed.min = self.register(MaxRangeSetting, 'speed.min', 100, 0, 100, '%')
-        self.speed.max = self.register(MinRangeSetting, 'speed.max', 100, 0, 100, '%', self.speed.min)
+        self.speed.min = self.register(MaxRangeSetting, 'speed.min', 100, 0, 100, '%', profiled=True)
+        self.speed.max = self.register(MinRangeSetting, 'speed.max', 100, 0, 100, '%', self.speed.min, profiled=True)
 
         self.position = self.register(SensorValue, 'position')
         self.position.elp = 0
         self.position.set(0)
+
         self.position.p = self.register(RangeProperty, 'position.p', .15, .01, 1, persistent=True)
         self.position.i = self.register(RangeProperty, 'position.i', 0, 0, .1, persistent=True)
         self.position.d = self.register(RangeProperty, 'position.d', .02, 0, .1, persistent=True)

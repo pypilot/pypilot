@@ -154,9 +154,9 @@ class RangeProperty(Property):
 
 # a range property that is persistent and specifies the units
 class RangeSetting(RangeProperty):
-    def __init__(self, name, initial, min_value, max_value, units):
+    def __init__(self, name, initial, min_value, max_value, units, **kwargs):
         self.units = units
-        super(RangeSetting, self).__init__(name, initial, min_value, max_value, persistent=True)
+        super(RangeSetting, self).__init__(name, initial, min_value, max_value, persistent=True, **kwargs)
 
         self.info['type'] = 'RangeSetting'
         self.info['units'] = self.units
