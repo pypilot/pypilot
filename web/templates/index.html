@@ -44,14 +44,14 @@
     </div>
     <br>
     <div id="Control" class="w3-container tab">
-      <div id="heading_info" class="w3-row heading_info">
-          <div class="toggle-button button-resizable1" id="tb_engaged" >
-            <button id="engaged" class="font-resizable2 button-resizable2">AP</button>
-          </div>
-            <div class="data_label" style="flex-grow: 1;">{{_('Heading')}}</div>
-            <div class="data_value" style="font-size: 2em; flex-grow: 2;" id="heading">---</div>
-            <div class="data_label" style="flex-grow: 1;">{{_('Command')}}</div>
-            <div class="data_value" style="font-size: 2em; flex-grow: 2;" id="heading_command">---</div>
+      <div class="w3-row" style="display:flex">
+
+        <div class="w3-col" style="font-size: 2em;width:20%;">{{_('Heading')}}</div>
+        <div class="w3-col" style="font-size: 3em;width:30%;" id="heading">---</div>
+
+        <div class="w3-col" style="font-size: 2em;width:20%;">{{_('Command')}}</div>
+        <div class="w3-col" style="font-size: 3em;width:30%;" id="heading_command">---</div
+>
       </div>
       <div id="steer_buttons_container" class="w3-row" >
           <button id="port10" class="button font-resizable1 button-resizable">
@@ -77,14 +77,11 @@
           <option value="true wind">true wind</option>
         </select>
         <div style="flex-grow: 1"></div>
-        <button id="tack_button" class="button button-resizable1 font-resizable2"></button>
+        <div class="toggle-button button-resizable1" id="tb_engaged" style="margin:auto">
+          <button id="engaged" class="font-resizable2 button-resizable2">AP</button>
+        </div>
         <div style="flex-grow: 1"></div>
-        <div id="tack_timeout" style="flex-grow: 1"></div>
-        <div id="tack_state" style="flex-grow: 3"></div>
-        <select id="tack_direction">
-          <option value="port">--&gt; starboard</option>
-          <option value="starboard">&lt;-- port</option>
-        </select>
+        <button id="tack_button" class="button button-resizable1 font-resizable2"></button>
       </div>
     </div>
     
@@ -140,10 +137,19 @@
       <button id="reset_amp_hours" class="button">{{_('reset')}}</button>
       <br>{{_('Voltage')}} <span id="voltage"></span>
       <br>{{_('Controller temperature')}} <span id="controller_temp"></span> C
+      <span id="motor_temp"></span>
       <br>{{_('Runtime')}} <span id="runtime"></span>
       <br>{{_('Servo')}}: <b><span id="servo_engaged"></span></b>
         <div id="log"></div>
     </div>
+    <div id="Tack" class="w3-container tab">
+      <button id="tack_port" class="button button-resizable1 font-resizable2">{{_('Tack')}} {{_('Port')}}</button>
+      <button id="tack_cancel" class="button button-resizable1 font-resizable2">{{_('Cancel')}}</button>
+      <button id="tack_starboard" class="button button-resizable1 font-resizable2">{{_('Tack')}} {{_('Starboard')}}</button>
+        <div id="tack_timeout" style="flex-grow: 1"></div>
+        <div id="tack_state" style="flex-grow: 3"></div>
+    </div>
+    
     <div id="status_container" class="data_block" style="position:fixed;bottom:-10">
       <br>pypilot {{_('Server')}}: <b><span id="connection"></span></b>
       <br>Servo Flags: <b><span id="servoflags"></span></b>

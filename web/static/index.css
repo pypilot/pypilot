@@ -133,8 +133,3 @@ body{
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
-
-body .heading_info {
-    display: flex;
-    align-items: center;
-}

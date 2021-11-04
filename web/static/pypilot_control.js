@@ -14,7 +14,7 @@ function openTab(evt, tabName) {
          x[i].style.display = "none";
     }
     tablinks = document.getElementsByClassName("tablink");
-    for (i = 0; i < x.length; i++) {
+    for (i = 0; i < tablinks.length; i++) {
         tablinks[i].className = tablinks[i].className.replace(" w3-red", "");
         tablinks[i].className = tablinks[i].className.replace(" active", "");
     }
@@ -85,6 +85,7 @@ $(document).ready(function() {
         $('#gain_container').append('<div class="w3-row">Profile&emsp;<select id="profile">');
         for (let profile = 0; profile < 5; profile++) {
             $('#profile').append('<option value="' + profile + '">' + profile + '</option>');
+        }
 
         $('#gain_container').append('</select>')
 
@@ -274,14 +275,6 @@ $(document).ready(function() {
             }
         }
         
-        if('ap.tack.direction' in data) {
-            value = data['ap.tack.direction'];
-            if(value == 'port')
-                $('#tack_direction option')[1].selected = true;
-            else
-                $('#tack_direction option')[0].selected = true;
-        }
-
         if('ap.enabled' in data) {
             if(data['ap.enabled']) {
                 var w = $(window).width();
@@ -394,6 +387,11 @@ $(document).ready(function() {
             $('#controller_temp').text(value);
         }
 
+        if('servo.motor_temp' in data) {
+            value = data['servo.motor_temp'];
+            $('#motor_temp').text('<br>'+_('Motor temperature')+' '+value.toString()+' C');
+        }
+
         if('ap.runtime' in data) {
             value = data['ap.runtime'];
             $('#runtime').text(value);
@@ -458,22 +456,8 @@ $(document).ready(function() {
     $('#port2').click(function(event) { move(-2); });
     $('#star2').click(function(event) { move(2); });
     $('#star10').click(function(event) { move(10); });
-
-    $('#tack_button').click(function(event) {
-        direction = $('#tack_direction').val();
-        if($('#tack_button').attr('state') == 'tack')
-            pypilot_set('ap.tack.state', 'begin');
-        else
-            pypilot_set('ap.tack.state', 'none');
-    });
-
-    $('#tack_direction').change(function(event) {
-        value = $('#tack_direction option')[0].selected;
-        if(value)
-            pypilot_set('ap.tack.direction', 'starboard');
-        else
-            pypilot_set('ap.tack.direction', 'port');
-    });
+    $('#tack_button').click(function(event) { openTab(event, 'Tack'); });
+    $('#tack_cancel').click(function(event) { openTab(event, 'Control'); });
 
     // Gain
 
