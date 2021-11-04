@@ -36,6 +36,7 @@ class ModeProperty(EnumProperty):
     def set(self, value):
         # update the preferred mode when the mode changes from user
         if self.ap:
+            self.ap.preferred_heading_command = self.ap.heading_command.value
             self.ap.preferred_mode.update(value)
         self.set_internal(value)
 
@@ -102,6 +103,7 @@ class Autopilot(object):
         self.gps_and_nav_modes = self.register(BooleanProperty, 'gps_and_nav_modes', True, persistent=True)
 
         self.preferred_mode = self.register(Value, 'preferred_mode', 'compass')
+        self.preferred_heading_command = 0
         self.lastmode = False    
         self.mode.ap = self
         self.dt = 0
@@ -292,11 +294,17 @@ class Autopilot(object):
 
         # keep same heading if mode changes
         if self.mode.value != self.lastmode:
-            error = self.heading_error.value
-            if windmode:
-                error = -error # wind error is reversed
-            self.heading_command.set(heading - error)
+            if self.mode.value == self.preferred_mode.value:
+                self.heading_command.set(self.preferred_heading_command.value)
+            else:
+                error = self.heading_error.value
+                if windmode:
+                    error = -error # wind error is reversed
+                self.heading_command.set(heading - error)
             self.lastmode = self.mode.value
+
+        if self.mode.value == self.preferred_mode.value:
+            self.preferred_heading_command = self.heading_command.value
       
         # compute heading error
         heading_command = self.heading_command.value
