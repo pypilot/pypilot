@@ -70,12 +70,7 @@
       <br>
       <br>
       <div class="w3-row" style="display: flex; align-items: center;">
-        <select id="mode">
-          <option value="compass">compass</option>
-          <option value="gps">gps</option>
-          <option value="wind">wind</option>
-          <option value="true wind">true wind</option>
-        </select>
+        <button id="mode_button" class="button button-resizable1 font-resizable2">{{_('Mode')}}</button>
         <div style="flex-grow: 1"></div>
         <div class="toggle-button button-resizable1" id="tb_engaged" style="margin:auto">
           <button id="engaged" class="font-resizable2 button-resizable2">AP</button>
@@ -84,8 +79,16 @@
         <button id="tack_button" class="button button-resizable1 font-resizable2"></button>
       </div>
     </div>
-    
     <div id="Gain" class="w3-container tab">
+      <br>
+      <br>
+      <div class="w3-row">
+        Profile&emsp;
+        <select id="profile"></select>
+        &emsp;&emsp;
+          <button class="button button-resizable2 font-resizable2" id="add_profile">{{_('Add')}}</button>
+          <button class="button button-resizable2 font-resizable2" id="remove_profile">{{_('Remove')}}</button>
+      </div>
       <div id="gain_container"></div>
     </div>
     
@@ -140,14 +143,23 @@
       <span id="motor_temp"></span>
       <br>{{_('Runtime')}} <span id="runtime"></span>
       <br>{{_('Servo')}}: <b><span id="servo_engaged"></span></b>
-        <div id="log"></div>
+      <br><button id="logs" class="button font-resizable3 button-resizable2" onclick="window.location.href='logs';">{{_('Logs')}}</button>
     </div>
     <div id="Tack" class="w3-container tab">
-      <button id="tack_port" class="button button-resizable1 font-resizable2">{{_('Tack')}} {{_('Port')}}</button>
-      <button id="tack_cancel" class="button button-resizable1 font-resizable2">{{_('Cancel')}}</button>
-      <button id="tack_starboard" class="button button-resizable1 font-resizable2">{{_('Tack')}} {{_('Starboard')}}</button>
-        <div id="tack_timeout" style="flex-grow: 1"></div>
-        <div id="tack_state" style="flex-grow: 3"></div>
+      <br>
+      <br>
+      <div class="w3-row">
+          <button id="tack_port" class="button font-resizable2 button-resizable3">{{_('Tack')}} {{_('Port')}}</button>
+          <button id="tack_cancel" class="button font-resizable2 button-resizable3" style="margin: 0; position: absolute;left: 50%; transform: translate(-50%, 0%);">{{_('Cancel')}}</button>
+          <button id="tack_starboard" class="button font-resizable2 button-resizable3" style="float:right">{{_('Tack')}} {{_('Starboard')}}</button>
+      </div>
+      Timeout <div id="tack_timeout" style="flex-grow: 1"></div>
+      State <div id="tack_state" style="flex-grow: 3"></div>
+    </div>
+
+    <div id="Mode" class="w3-container tab">
+      <br><br>
+      <div id="mode_container">no modes known</div>
     </div>
     
     <div id="status_container" class="data_block" style="position:fixed;bottom:-10">

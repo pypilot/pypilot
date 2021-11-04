@@ -1,5 +1,5 @@
 /*
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2023 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -18,11 +18,14 @@ function openTab(evt, tabName) {
         tablinks[i].className = tablinks[i].className.replace(" w3-red", "");
         tablinks[i].className = tablinks[i].className.replace(" active", "");
     }
-    document.getElementById(tabName).style.display = "block";
-      evt.currentTarget.firstElementChild.className += " w3-red";
-      evt.currentTarget.firstElementChild.className += " active";
-    currentTab = tabName;
 
+    document.getElementById(tabName).style.display = "block";
+    if(evt.currentTarget.firstElementChild) {
+        evt.currentTarget.firstElementChild.className += " w3-red";
+        evt.currentTarget.firstElementChild.className += " active";
+    }
+    
+    currentTab = tabName;
     setup_watches()
 }
 
@@ -62,6 +65,7 @@ $(document).ready(function() {
     var servo_command = 0, servo_command_timeout=0;
     var gains = [];
     var conf_names = [];
+    var profile="0", profiles = [profile];
     socket.on('pypilot_values', function(msg) {
         watches = {};
         var list_values = JSON.parse(msg);
@@ -72,6 +76,7 @@ $(document).ready(function() {
         // control
         pypilot_watch('ap.enabled');
         pypilot_watch('ap.mode');
+        pypilot_watch('ap.modes');
         pypilot_watch('ap.tack.timeout', .25);
         pypilot_watch('ap.tack.state');
         pypilot_watch('ap.tack.direction');
@@ -80,16 +85,11 @@ $(document).ready(function() {
 
         // gain
         pypilot_watch('profile');
+        pypilot_watch('profiles');
         pypilot_watch('ap.pilot');
         $('#gain_container').text('');
-        $('#gain_container').append('<div class="w3-row">Profile&emsp;<select id="profile">');
-        for (let profile = 0; profile < 5; profile++) {
-            $('#profile').append('<option value="' + profile + '">' + profile + '</option>');
-        }
 
-        $('#gain_container').append('</select>')
-
-        $('#gain_container').append('Pilot&emsp;<select id="pilot">');
+        $('#gain_container').append('<div class="w3-row">Pilot&emsp;<select id="pilot">');
         if('ap.pilot' in list_values && 'choices' in list_values['ap.pilot']) {
             var pilots = list_values['ap.pilot']['choices'];
             for (var pilot in pilots)
@@ -102,6 +102,31 @@ $(document).ready(function() {
             pypilot_set('profile', $('#profile').val());
         });
 
+        $('#add_profile').click(function(event) {
+            profile = prompt(_("Enter profile name."));
+            if(profile != null) {
+                if(profiles.includes(profile))
+                    alert("Already have profile " + profile);
+                else {
+                    profiles.push(profile);
+                    //pypilot_set('profiles', profiles);
+                    pypilot_set('profile', profile);
+                }
+            }
+        });
+
+        $('#remove_profile').click(function(event) {
+            if(profiles.length > 1 && profile != "0") {
+                if(!confirm(_("Remove current profile?")))
+                    return;
+                new_profiles = []
+                for(var p of profiles)
+                    if(p != profile)
+                        new_profiles.push(p);
+                pypilot_set('profiles', new_profiles);
+            }
+        });
+        
         $('#pilot').change(function(event) {
             pypilot_set('ap.pilot', $('#pilot').val());
             show_gains();
@@ -226,7 +251,8 @@ $(document).ready(function() {
     var heading_command = 0;
     var heading_set_time = new Date().getTime();
     var heading_local_command;
-    var last_rudder_data = {}
+    var last_rudder_data = {};
+    var current_mode = "NA", current_modes=[];
 
     function heading_str(heading) {
         if(heading.toString()=="false")
@@ -235,8 +261,7 @@ $(document).ready(function() {
         // round to 1 decimal place
         heading = Math.round(10*heading)/10
 
-        mode = $('#mode').val()
-        if(mode == 'wind' || mode == 'true wind') {
+        if(current_mode == 'wind' || current_mode == 'true wind') {
             if(heading > 0)
                heading += '-';
         }
@@ -247,8 +272,35 @@ $(document).ready(function() {
         data = JSON.parse(msg);
 
         if('ap.mode' in data) {
-            value = data['ap.mode'];
-            $('#mode').val(value);
+            if($('#mode_'+current_mode).length)
+                $('#mode_'+current_mode).removeClass('toggle-button-selected');
+            current_mode = data['ap.mode'];
+            if($('#mode_'+current_mode).length)
+                $('#mode_'+current_mode).addClass('toggle-button-selected');
+        }
+
+        if('ap.modes' in data) {
+            value = data['ap.modes'];
+            $('#mode_container').text('');
+            update = false;
+            for (let mode of value) {
+                $('#mode_container').append('<div class="w3-row">');
+                $('#mode_container').append('<button id="mode_' + mode + '" class="button button-resizable3 font-resizable2 button-centered">' + mode + '</button>');
+                if(!(mode in current_modes)) {
+                    current_modes.push(mode);
+                    $('#mode_'+mode).click(function(event) {
+                        pypilot_set('ap.mode', mode);
+                        openTab(event, 'Control');
+                    });
+                }
+                $('#mode_container').append('</div>');                
+                update=true;
+            }
+            if(update) {
+                if($('#mode_'+current_mode).length)
+                    $('#mode_'+current_mode).addClass('toggle-button-selected');
+                window_resize();
+            }
         }
 
         if('ap.heading' in data) {
@@ -300,6 +352,19 @@ $(document).ready(function() {
             value= data['ap.pilot'];
             $('#pilot').val(value);
             show_gains();
+        }
+
+        if('profile' in data) {
+            profile = data['profile'].toString();
+            $('#profile').val(profile);
+        }
+
+        if('profiles' in data) {
+            profiles = data['profiles'];
+            $('#profile').empty();
+            for (p of profiles)
+                $('#profile').append('<option value="' + p + '">' + p + '</option>');
+            $('#profile').val(profile);
         }
 
         for (var i = 0; i<gains.length; i++)
@@ -447,17 +512,13 @@ $(document).ready(function() {
             }
         }
     }
-
-    $('#mode').change(function(event) {
-        pypilot_set('ap.mode', $('#mode').val());
-    });
     
     $('#port10').click(function(event) { move(-10); });
     $('#port2').click(function(event) { move(-2); });
     $('#star2').click(function(event) { move(2); });
     $('#star10').click(function(event) { move(10); });
+    $('#mode_button').click(function(event) { openTab(event, 'Mode'); });
     $('#tack_button').click(function(event) { openTab(event, 'Tack'); });
-    $('#tack_cancel').click(function(event) { openTab(event, 'Control'); });
 
     // Gain
 
@@ -492,10 +553,17 @@ $(document).ready(function() {
     });
 
     // Configuration
-
     $('#nmea_client').change(function(event) {
         pypilot_set('nmea.client', $('#nmea_client').val());
     });
+
+
+    // Mode page
+
+    // Tack
+    $('#tack_cancel').click(function(event) { openTab(event, 'Control'); });    
+    $('#tack_port').click(function(event) { openTab(event, 'Control'); });    
+    $('#tack_starboard').click(function(event) { openTab(event, 'Control'); });    
     
     // hack
     document.addEventListener('click', function(event) {
@@ -567,6 +635,10 @@ $(document).ready(function() {
         $(".button-resizable2").each(function(i, obj) {
             $(this).css('width', w/8+"px")
             $(this).css('height', w/18+"px")
+        });
+        $(".button-resizable3").each(function(i, obj) {
+            $(this).css('width', w/4+"px")
+            $(this).css('height', w/8+"px")
         });
         $(".toggle-button-selected button").each(function(i, obj) {
             $(this).css('left', w/12+"px")

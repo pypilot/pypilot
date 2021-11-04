@@ -38,6 +38,13 @@
 
 .center { text-align:center; }
 
+.button-centered {
+    margin: 0;
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, 0%);
+}
+
 #headerTab {
 	position: fixed;
 	z-index: 800;
