@@ -74,7 +74,7 @@ class ActionMode(ActionEngage):
             
 class ActionHeading(Action):
     def __init__(self, hat, offset):
-        super(ActionHeading, self).__init__(hat, str(offset))
+        super(ActionHeading, self).__init__(hat, ('-' if offset < 0 else '+') + str(abs(offset)))
         self.offset = offset
 
     def trigger(self, count):
@@ -369,8 +369,8 @@ class Hat(object):
 
         # keypad for lcd interface
         self.actions = []
-        keypadnames = ['auto', 'menu', 'port1', 'starboard1', 'select', 'port10', 'starboard10']
-        
+
+        keypadnames = ['-10_', '-1_', '+1_', '+10_', 'auto_', 'menu_', 'mode_']
         for i in range(len(keypadnames)):
             self.actions.append(ActionKeypad(self.lcd, i, keypadnames[i]))
 

@@ -15,7 +15,7 @@ black = 0x00
 #white = ugfx.color(255, 255, 255)
 #black = ugfx.color(0, 0, 0)
 
-AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, NUM_KEYS = range(8)
+BIG_PORT, SMALL_PORT, SMALL_STARBOARD, BIG_STARBOARD, AUTO, MENU, MODE, NUM_KEYS = range(8)
 
 class rectangle():
     def __init__(self, x, y, width, height):
@@ -320,7 +320,7 @@ class page(object):
             return control(self.lcd)
         if self.testkeydown(MENU):
             return self.lcd.getmenu()
-        if self.testkeydown(SELECT):
+        if self.testkeydown(MODE):
             if self.prev:
                 return self.prev
             return control(self.lcd)
@@ -784,7 +784,7 @@ class control(controlbase):
                 self.set('ap.enabled', False)
 
 
-        if self.testkeydown(SELECT):
+        if self.testkeydown(MODE):
             # change mode
             modes = self.last_val('ap.modes')
             mode = self.last_val('ap.mode')

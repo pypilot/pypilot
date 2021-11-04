@@ -247,7 +247,7 @@ class LCD():
         elif k == '\n':
             key = MENU
         elif k == '\t':
-            key = SELECT
+            key = MODE
         else:
             key = ord(k) - ord('1')
 
