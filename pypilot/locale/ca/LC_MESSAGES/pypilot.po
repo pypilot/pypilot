@@ -7,8 +7,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-18 00:31-0400\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-04-06 17:25-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,226 +19,19 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:139
-msgid "Available Pilots"
-msgstr "Pilots disponibles"
+#: ../rudder.py:118
+msgid "bad rudder calibration"
+msgstr "mal calibrat del timó"
 
-#: pypilot/autopilot.py:161
-msgid "warning: failed to open special file"
-msgstr "avís: no s'ha pogut obrir el fitxer especial"
+#: ../rudder.py:122
+msgid "bad servo rudder calibration"
+msgstr "mal calibrat del servo timó"
 
-#: pypilot/autopilot.py:161
-msgid "for writing"
-msgstr "per escriure"
+#: ../rudder.py:193
+msgid "servo rudder autogain failed"
+msgstr "ha fallat l’autogain del servo timó"
 
-#: pypilot/autopilot.py:162
-msgid "cannot stroke the watchdog"
-msgstr "no pot acariciar el gos de vigilància"
-
-#: pypilot/autopilot.py:166
-msgid "warning: failed to make autopilot process realtime"
-msgstr "avís: no s'ha pogut fer el procés del pilot automàtic en temps real"
-
-#: pypilot/autopilot.py:337
-msgid "server/client is running too _slowly_"
-msgstr "el servidor / client s’executa massa lentament"
-
-#: pypilot/autopilot.py:343
-msgid "sensors is running too _slowly_"
-msgstr "els sensors funcionen massa lentament"
-
-#: pypilot/autopilot.py:420
-msgid "autopilot routine is running too _slowly_"
-msgstr "la rutina del pilot automàtic s’executa massa lentament"
-
-#: pypilot/autopilot.py:429
-msgid "servo is running too _slowly_"
-msgstr "el servo funciona massa lentament"
-
-#: pypilot/boatimu.py:33
-msgid "RTIMU library not detected, please install it"
-msgstr "La biblioteca RTIMU no s'ha detectat. Instal·leu-la"
-
-#: pypilot/boatimu.py:56
-msgid "Using settings file"
-msgstr "Utilitzant el fitxer de configuració"
-
-#: pypilot/boatimu.py:96
-msgid "ERROR: No IMU Detected"
-msgstr "ERROR: no s'ha detectat cap IMU"
-
-#: pypilot/boatimu.py:104
-msgid "ERROR: IMU Init Failed, no inertial data available"
-msgstr "ERROR: Error d’inici d’IMU, no hi ha dades inercials disponibles"
-
-#: pypilot/boatimu.py:126
-msgid "warning, failed to make imu process realtime"
-msgstr "advertiment, no s'ha pogut fer el procés imu en temps real"
-
-#: pypilot/boatimu.py:128
-msgid "made imu process realtime"
-msgstr "procés imu realitzat en temps real"
-
-#: pypilot/boatimu.py:140
-msgid "setting initial gyro bias"
-msgstr "s'estableix el biaix giroscòpic inicial"
-
-#: pypilot/boatimu.py:156
-msgid "imu process failed to keep time"
-msgstr "El procés imu no ha pogut mantenir el temps"
-
-#: pypilot/boatimu.py:164
-msgid "failed to read IMU!"
-msgstr "no s'ha pogut llegir l'IMU."
-
-#: pypilot/boatimu.py:196
-msgid "imu rate set to rate"
-msgstr "tarifa imu establerta a taxa"
-
-#: pypilot/boatimu.py:210
-msgid "too high standing gyro bias, resetting sensors"
-msgstr "biaix giroscòpic d’alt standing, restabliment dels sensors"
-
-#: pypilot/boatimu.py:215
-msgid "compass out of range, resetting"
-msgstr "brúixola fora del rang, restabliment"
-
-#: pypilot/boatimu.py:307
-msgid "warning, failed to make calibration process other"
-msgstr "avís, no s'ha pogut fer que el procés de calibratge sigui altre"
-
-#: pypilot/boatimu.py:309
-msgid "warning, failed to make calibration process idle, trying renice"
-msgstr ""
-"avís, no s'ha pogut deixar el procés de calibratge inactiu, provant Renice"
-
-#: pypilot/boatimu.py:311
-msgid "warning, failed to renice calibration process"
-msgstr "advertiment, no s'ha pogut renunciar al procés de calibratge"
-
-#: pypilot/boatimu.py:318
-msgid "calibration loaded, starting"
-msgstr "calibratge carregat, arrencada"
-
-#: pypilot/boatimu.py:322
-msgid "failed import calibration fit"
-msgstr "no s'ha pogut ajustar el calibratge de la importació"
-
-#: pypilot/boatimu.py:439
-msgid "accel values invalid"
-msgstr "els valors d'accel no són vàlids"
-
-#: pypilot/bufferedsocket.py:55
-msgid "overflow in pypilot udp socket"
-msgstr "desbordament al sòcol pypilot udp"
-
-#: pypilot/bufferedsocket.py:60
-msgid "overflow in pypilot socket"
-msgstr "desbordament al sòcol de pilots"
-
-#: pypilot/bufferedsocket.py:70
-msgid "failed to send udp packet"
-msgstr "no s'ha pogut enviar el paquet udp"
-
-#: pypilot/bufferedsocket.py:79
-msgid "pypilot socket failed to send to"
-msgstr "el socket pypilot no s'ha pogut enviar a"
-
-#: pypilot/bufferedsocket.py:93
-msgid "socket send took too long!?!?"
-msgstr "l'enviament de sòcol ha trigat massa!?!?"
-
-#: pypilot/bufferedsocket.py:95
-msgid "socket send error"
-msgstr "error d'enviament de sòcol"
-
-#: pypilot/bufferedsocket.py:99
-msgid "pypilot socket exception"
-msgstr "excepció de sòcol pypilot"
-
-#: pypilot/bufferedsocket.py:103
-msgid "falling back to python nonblocking socket, will consume more cpu"
-msgstr "en tornar al sòcol no bloquejant Python, es consumirà més CPU"
-
-#: pypilot/bufferedsocket.py:129
-msgid "socket send error in server flush"
-msgstr "error d’enviament de sòcol a l’escomesa del servidor"
-
-#: pypilot/bufferedsocket.py:144
-msgid "error receiving data"
-msgstr "error en rebre dades"
-
-#: pypilot/calibration_fit.py:38
-msgid "failed to load scientific library, cannot perform calibration update!"
-msgstr ""
-"no s'ha pogut carregar la biblioteca científica, no es pot actualitzar el "
-"calibratge."
-
-#: pypilot/client.py:96
-msgid "warning, registering existing value:"
-msgstr "advertiment, registrant el valor existent:"
-
-#: pypilot/client.py:157
-msgid "failed to read config file:"
-msgstr "no s'ha pogut llegir el fitxer de configuració:"
-
-#: pypilot/client.py:188
-msgid "failed to write config file:"
-msgstr "no s'ha pogut escriure el fitxer de configuració:"
-
-#: pypilot/client.py:190
-msgid "Exception writing config file:"
-msgstr "Excepció de l'escriptura del fitxer de configuració:"
-
-#: pypilot/client.py:275
-msgid "invalid message from server:"
-msgstr "missatge no vàlid del servidor:"
-
-#: pypilot/client.py:291
-msgid "warning, pypilot client aleady has connection"
-msgstr "avís, el client pypilot ja té connexió"
-
-#: pypilot/client.py:311
-msgid "connect failed to"
-msgstr "no s'ha pogut connectar"
-
-#: pypilot/client.py:403
-msgid "failed to connect to"
-msgstr "no s'ha pogut connectar a"
-
-#: pypilot/client.py:460
-msgid "usage"
-msgstr "ús"
-
-#: pypilot/client.py:463
-msgid "set the host or ip address"
-msgstr "definiu l'adreça d'amfitrió o IP"
-
-#: pypilot/client.py:464
-msgid "print info about each value type"
-msgstr "imprimeix informació sobre cada tipus de valor"
-
-#: pypilot/client.py:465
-msgid "continuous watch"
-msgstr "rellotge continu"
-
-#: pypilot/client.py:466
-msgid "show this message"
-msgstr "mostra aquest missatge"
-
-#: pypilot/client.py:493
-msgid "failed to retrieve value list!"
-msgstr "no s'ha pogut recuperar la llista de valors."
-
-#: pypilot/client.py:504
-msgid "timeout retrieving"
-msgstr "recuperació del temps d'espera"
-
-#: pypilot/client.py:507
-msgid "missing"
-msgstr "desaparegut"
-
-#: pypilot/failedimports.py:12
+#: ../failedimports.py:12
 msgid ""
 "pypilot failed to import required modules.  Did you forget to run sudo "
 "python3 setup.py install?"
@@ -246,755 +39,920 @@ msgstr ""
 "pypilot no ha pogut importar els mòduls necessaris. Heu oblidat d’executar "
 "sudo python3 setup.py install?"
 
-#: pypilot/gpsd.py:45
-msgid "gpsd connected"
-msgstr "GPS connectat"
-
-#: pypilot/gpsd.py:49
-msgid "gpsd failed to connect"
-msgstr "gpsd no s'ha pogut connectar"
-
-#: pypilot/gpsd.py:55
-msgid "exception connecting to gps"
-msgstr "excepció que es connecta a GPS"
-
-#: pypilot/gpsd.py:59
-msgid "gpsd disconnected"
-msgstr "GPS desconnectat"
-
-#: pypilot/gpsd.py:73
-msgid "gpsd PROBE success"
-msgstr "gpsd PROBE èxit"
-
-#: pypilot/gpsd.py:81
-msgid "gpsd probe failed"
-msgstr "ha fallat la sonda gpsd"
-
-#: pypilot/gpsd.py:104
-msgid "gpsd deactivated"
-msgstr "gpsd desactivat"
-
-#: pypilot/gpsd.py:137
-msgid "gpsd failed to determine serial baud rate of device"
-msgstr ""
-"gpsd no ha pogut determinar la velocitat de transmissió en sèrie del "
-"dispositiu"
-
-#: pypilot/gpsd.py:154
-msgid "gpsd timeout from lack of data"
-msgstr "temps d'espera gpsd per manca de dades"
-
-#: pypilot/gpsd.py:169
-msgid "gpsd received invalid message"
-msgstr "gpsd ha rebut un missatge no vàlid"
-
-#: pypilot/gpsd.py:214
-msgid "gpsd got flag for pipe:"
-msgstr "gpsd té bandera per a canonada:"
-
-#: pypilot/gpsd.py:223
-msgid "gpsd serial probe"
-msgstr "sonda sèrie GPS"
-
-#: pypilot/nmea.py:86
-msgid "nmea failed to parse gps"
-msgstr "nmea no ha pogut analitzar gps"
-
-#: pypilot/nmea.py:126
-msgid "nmea failed to parse wind"
-msgstr "nmea no ha pogut analitzar el vent"
-
-#: pypilot/nmea.py:188
-msgid "exception parsing apb"
-msgstr "excepció analitzant apb"
-
-#: pypilot/nmea.py:276
-msgid "unhandled nmea pipe string"
-msgstr "cadena de canonades nmea sense manipular"
-
-#: pypilot/nmea.py:326
-msgid "lost serial"
-msgstr "sèrie perduda"
-
-#: pypilot/nmea.py:349
-msgid "nmea got flag for process pipe:"
-msgstr "nmea té bandera per a la canonada de procés:"
-
-#: pypilot/nmea.py:370
-msgid "is another process accessing it?"
-msgstr "hi accedeix un altre procés?"
-
-#: pypilot/nmea.py:372
-msgid "serial device timed out"
-msgstr "es va esgotar el temps d'espera del dispositiu sèrie"
-
-#: pypilot/nmea.py:428
-msgid "failed to open"
-msgstr "no s'ha pogut obrir"
-
-#: pypilot/nmea.py:484
-msgid "nmea server on port"
-msgstr "servidor nmea al port"
-
-#: pypilot/nmea.py:484
-msgid "bind failed."
-msgstr "la connexió ha fallat."
-
-#: pypilot/nmea.py:486
-msgid "listening on port"
-msgstr "escoltant al port"
-
-#: pypilot/nmea.py:486
-msgid "for nmea connections"
-msgstr "per a connexions nmea"
-
-#: pypilot/nmea.py:552
-msgid "nmea server has too many connections"
-msgstr "El servidor nmea té massa connexions"
-
-#: pypilot/nmea.py:578
-msgid "nmea client lost connection"
-msgstr "El client nmea ha perdut la connexió"
-
-#: pypilot/nmea.py:583
-msgid "nmea sock not in sockets!"
-msgstr "nmea mitjó no en endolls!"
-
-#: pypilot/nmea.py:594
-msgid "nmea failed to unregister socket"
-msgstr "nmea no ha pogut anul·lar el registre del sòcol"
-
-#: pypilot/nmea.py:599
-msgid "nmea failed to remove fd"
-msgstr "nmea no ha pogut eliminar fd"
-
-#: pypilot/nmea.py:604
-msgid "nmea failed to remove address"
-msgstr "nmea no ha pogut eliminar l'adreça"
-
-#: pypilot/nmea.py:629
-msgid "invalid value"
-msgstr "valor no vàlid"
-
-#: pypilot/nmea.py:639
-msgid "connect error"
-msgstr "error de connexió"
-
-#: pypilot/nmea.py:668 pypilot/signalk.py:239
-msgid "failed to connect"
-msgstr "no s'ha pogut connectar"
-
-#: pypilot/nmea.py:676
-msgid "nmea client connected"
-msgstr "nmea client connectat"
-
-#: pypilot/nmea.py:705
-msgid "poll took too long in nmea process!"
-msgstr "l'enquesta va trigar massa en el procés nmea."
-
-#: pypilot/nmea.py:712
-msgid "nmea bridge lost server connection"
-msgstr "nmea bridge ha perdut la connexió del servidor"
-
-#: pypilot/nmea.py:715
-msgid "nmea bridge lost pipe to autopilot"
-msgstr "nmea bridge va perdre la canonada al pilot automàtic"
-
-#: pypilot/nmea.py:738
-msgid "nmea bridge unhandled poll flag"
-msgstr "nmea bridge bandera d'enquesta no manipulada"
-
-#: pypilot/nmea.py:773
-msgid "nmea process loop too slow:"
-msgstr "bucle de procés nmea massa lent:"
-
-#: pypilot/nonblockingpipe.py:40
-msgid "error pipe block on recv!"
-msgstr "bloc de canonades d'error a recv!"
-
-#: pypilot/nonblockingpipe.py:42
-msgid "failed to recv nonblocking pipe!"
-msgstr "no s'ha pogut recuperar la canonada sense bloqueig."
-
-#: pypilot/nonblockingpipe.py:69
-msgid "pipe full"
-msgstr "canonada plena"
-
-#: pypilot/nonblockingpipe.py:69
-msgid "cannot send"
-msgstr "no es pot enviar"
-
-#: pypilot/nonblockingpipe.py:89 pypilot/nonblockingpipe.py:145
-msgid "failed to decode data socket!"
-msgstr "no s'ha pogut descodificar el sòcol de dades."
-
-#: pypilot/nonblockingpipe.py:103
-msgid "failed to encode data socket!"
-msgstr "no s'ha pogut codificar el sòcol de dades."
-
-#: pypilot/nonblockingpipe.py:155
-msgid "failed write"
-msgstr "no s'ha pogut escriure"
-
-#: pypilot/pyjson.py:14
+#: ../pyjson.py:14
 msgid "WARNING: python ujson library failed, parsing will consume more cpu"
 msgstr ""
 "ADVERTÈNCIA: la biblioteca Python ujson ha fallat, l'anàlisi consumirà més "
 "CPU"
 
-#: pypilot/rudder.py:117
-msgid "bad rudder calibration"
-msgstr "mal calibrat del timó"
+#: ../servo.py:453
+msgid "servo calibration invalid"
+msgstr "el calibratge del servo no és vàlid"
 
-#: pypilot/rudder.py:121
-msgid "bad servo rudder calibration"
-msgstr "mal calibrat del servo timó"
+#: ../servo.py:588
+msgid "failed to open servo on:"
+msgstr "no s'ha pogut obrir el servo a:"
 
-#: pypilot/rudder.py:192
-msgid "servo rudder autogain failed"
-msgstr "ha fallat l’autogain del servo timó"
+#: ../servo.py:595
+msgid "failed set nonblocking/exclusive"
+msgstr "no s'ha pogut bloquejar / exclusiu"
 
-#: pypilot/sensors.py:41
-msgid "sensor found"
-msgstr "sensor trobat"
+#: ../servo.py:626 ../signalk.py:189
+msgid "found"
+msgstr "trobat"
 
-#: pypilot/sensors.py:190
-msgid "unknown data parsed!"
-msgstr "dades desconegudes analitzades."
+#: ../servo.py:743
+msgid "loading servo calibration"
+msgstr "servo calibratge de càrrega"
 
-#: pypilot/serialprobe.py:30
-msgid "error reading"
-msgstr "error de lectura"
+#: ../servo.py:747
+msgid "WARNING: using default servo calibration!!"
+msgstr "AVÍS: utilitzant el calibratge servo predeterminat !!"
 
-#: pypilot/serialprobe.py:86
-msgid "found more devices by path"
-msgstr "s'han trobat més dispositius per ruta"
+#: ../servo.py:756
+msgid "probing"
+msgstr "sondatge"
 
-#: pypilot/serialprobe.py:118
-msgid "removing gps device"
-msgstr "eliminació del dispositiu GPS"
+#: ../servo.py:772
+msgid "arduino servo detected"
+msgstr "servo arduino detectat"
 
-#: pypilot/serialprobe.py:194
-msgid "no pyudev module! will scan usb devices often!"
-msgstr "cap mòdul pyudev! escanejarà dispositius USB sovint!"
+#: ../servo.py:781
+msgid "device needed for option"
+msgstr "dispositiu necessari per a l'opció"
 
-#: pypilot/serialprobe.py:356
-msgid "success"
-msgstr "èxit"
+#: ../nmea.py:109
+msgid "nmea failed to parse gps"
+msgstr "nmea no ha pogut analitzar gps"
 
-#: pypilot/serialprobe.py:364
-msgid "failed to record device"
-msgstr "no s'ha pogut gravar el dispositiu"
+#: ../nmea.py:149
+msgid "nmea failed to parse wind"
+msgstr "nmea no ha pogut analitzar el vent"
 
-#: pypilot/server.py:96
+#: ../nmea.py:211
+msgid "exception parsing apb"
+msgstr "excepció analitzant apb"
+
+#: ../nmea.py:253 ../nmea.py:263
+msgid "exception parsing vhw"
+msgstr "anàlisi d'excepcions vhw"
+
+#: ../nmea.py:352
+msgid "unhandled nmea pipe string"
+msgstr "cadena de canonades nmea sense manipular"
+
+#: ../nmea.py:405
+msgid "lost serial"
+msgstr "sèrie perduda"
+
+#: ../nmea.py:428
+msgid "nmea got flag for process pipe:"
+msgstr "nmea té bandera per a la canonada de procés:"
+
+#: ../nmea.py:450
+msgid "is another process accessing it?"
+msgstr "hi accedeix un altre procés?"
+
+#: ../nmea.py:452
+msgid "serial device timed out"
+msgstr "es va esgotar el temps d'espera del dispositiu sèrie"
+
+#: ../nmea.py:521
+msgid "failed to open"
+msgstr "no s'ha pogut obrir"
+
+#: ../nmea.py:587
+msgid "nmea server on port"
+msgstr "servidor nmea al port"
+
+#: ../nmea.py:587
+msgid "bind failed."
+msgstr "la connexió ha fallat."
+
+#: ../nmea.py:589
+msgid "listening on port"
+msgstr "escoltant al port"
+
+#: ../nmea.py:589
+msgid "for nmea connections"
+msgstr "per a connexions nmea"
+
+#: ../nmea.py:660
+msgid "nmea server has too many connections"
+msgstr "El servidor nmea té massa connexions"
+
+#: ../nmea.py:686
+msgid "nmea client lost connection"
+msgstr "El client nmea ha perdut la connexió"
+
+#: ../nmea.py:691
+msgid "nmea sock not in sockets!"
+msgstr "nmea mitjó no en endolls!"
+
+#: ../nmea.py:702
+msgid "nmea failed to unregister socket"
+msgstr "nmea no ha pogut anul·lar el registre del sòcol"
+
+#: ../nmea.py:707
+msgid "nmea failed to remove fd"
+msgstr "nmea no ha pogut eliminar fd"
+
+#: ../nmea.py:712
+msgid "nmea failed to remove address"
+msgstr "nmea no ha pogut eliminar l'adreça"
+
+#: ../nmea.py:737
+msgid "invalid value"
+msgstr "valor no vàlid"
+
+#: ../nmea.py:747
+msgid "connect error"
+msgstr "error de connexió"
+
+#: ../nmea.py:776 ../signalk.py:269
+msgid "failed to connect"
+msgstr "no s'ha pogut connectar"
+
+#: ../nmea.py:784
+msgid "nmea client connected"
+msgstr "nmea client connectat"
+
+#: ../nmea.py:813
+msgid "poll took too long in nmea process!"
+msgstr "l'enquesta va trigar massa en el procés nmea."
+
+#: ../nmea.py:820
+msgid "nmea bridge lost server connection"
+msgstr "nmea bridge ha perdut la connexió del servidor"
+
+#: ../nmea.py:823
+msgid "nmea bridge lost pipe to autopilot"
+msgstr "nmea bridge va perdre la canonada al pilot automàtic"
+
+#: ../nmea.py:847
+msgid "nmea bridge unhandled poll flag"
+msgstr "nmea bridge bandera d'enquesta no manipulada"
+
+#: ../nmea.py:907
+msgid "nmea process loop too slow:"
+msgstr "bucle de procés nmea massa lent:"
+
+#: ../nonblockingpipe.py:40
+msgid "error pipe block on recv!"
+msgstr "bloc de canonades d'error a recv!"
+
+#: ../nonblockingpipe.py:42
+msgid "failed to recv nonblocking pipe!"
+msgstr "no s'ha pogut recuperar la canonada sense bloqueig."
+
+#: ../nonblockingpipe.py:69
+msgid "pipe full"
+msgstr "canonada plena"
+
+#: ../nonblockingpipe.py:69
+msgid "cannot send"
+msgstr "no es pot enviar"
+
+#: ../nonblockingpipe.py:89 ../nonblockingpipe.py:145
+msgid "failed to decode data socket!"
+msgstr "no s'ha pogut descodificar el sòcol de dades."
+
+#: ../nonblockingpipe.py:103
+msgid "failed to encode data socket!"
+msgstr "no s'ha pogut codificar el sòcol de dades."
+
+#: ../nonblockingpipe.py:155
+msgid "failed write"
+msgstr "no s'ha pogut escriure"
+
+#: ../server.py:106
 msgid "ERROR no connections in watch"
 msgstr "ERROR no hi ha connexions al rellotge"
 
-#: pypilot/server.py:199
+#: ../server.py:209
 msgid "remove duplicate udp connection"
 msgstr "elimina la connexió udp duplicada"
 
-#: pypilot/server.py:340
+#: ../server.py:486
+msgid "failed to monitor "
+msgstr "no s'ha pogut controlar"
+
+#: ../server.py:490
 msgid "creating config directory: "
 msgstr "creant directori de configuració:"
 
-#: pypilot/server.py:347 ui/boatplot.py:109
+#: ../server.py:497
 msgid "failed to load"
 msgstr "no s'ha pogut carregar"
 
-#: pypilot/server.py:358
+#: ../server.py:508
 msgid "backup data failed as well"
 msgstr "les dades de còpia de seguretat també han fallat"
 
-#: pypilot/server.py:386
+#: ../server.py:570
 msgid "failed to write"
 msgstr "no s'ha pogut escriure"
 
-#: pypilot/server.py:443
+#: ../server.py:625
 msgid "pypilot_server: bind failed; already running a server?"
 msgstr ""
 "pypilot_server: ha fallat la vinculació; ja esteu executant un servidor?"
 
-#: pypilot/server.py:505
+#: ../server.py:688
 msgid "persistent store took too long!"
 msgstr "la botiga persistent va trigar massa."
 
-#: pypilot/server.py:521
+#: ../server.py:706
 msgid "max connections reached"
 msgstr "assolides les connexions màximes"
 
-#: pypilot/server.py:524
+#: ../server.py:709
 msgid "server add socket"
 msgstr "servidor afegeix sòcol"
 
-#: pypilot/server.py:534
+#: ../server.py:719
 msgid "internal pipe closed, server exiting"
 msgstr "canonada interna tancada, sortida del servidor"
 
-#: pypilot/server.py:586
+#: ../server.py:771
 msgid "server socket closed from flush!!"
 msgstr "el sòcol del servidor està tancat de flush !!"
 
-#: pypilot/servo.py:460
-msgid "servo calibration invalid"
-msgstr "el calibratge del servo no és vàlid"
-
-#: pypilot/servo.py:589
-msgid "failed to open servo on:"
-msgstr "no s'ha pogut obrir el servo a:"
-
-#: pypilot/servo.py:596
-msgid "failed set nonblocking/exclusive"
-msgstr "no s'ha pogut bloquejar / exclusiu"
-
-#: pypilot/servo.py:627 pypilot/signalk.py:159
-msgid "found"
-msgstr "trobat"
-
-#: pypilot/servo.py:749
-msgid "loading servo calibration"
-msgstr "servo calibratge de càrrega"
-
-#: pypilot/servo.py:753
-msgid "WARNING: using default servo calibration!!"
-msgstr "AVÍS: utilitzant el calibratge servo predeterminat !!"
-
-#: pypilot/servo.py:762
-msgid "probing"
-msgstr "sondatge"
-
-#: pypilot/servo.py:778
-msgid "arduino servo detected"
-msgstr "servo arduino detectat"
-
-#: pypilot/servo.py:787
-msgid "device needed for option"
-msgstr "dispositiu necessari per a l'opció"
-
-#: pypilot/signalk.py:66
-msgid "read token"
-msgstr "llegir el testimoni"
-
-#: pypilot/signalk.py:69
-msgid "failed to read token"
-msgstr "no s'ha pogut llegir el testimoni"
-
-#: pypilot/signalk.py:76
-msgid "failed to"
-msgstr "fallat en"
-
-#: pypilot/signalk.py:76
-msgid "autodetection not possible"
-msgstr "no és possible la detecció automàtica"
-
-#: pypilot/signalk.py:77 pypilot/signalk.py:146 pypilot/signalk.py:216
-msgid "try"
-msgstr "provar"
-
-#: pypilot/signalk.py:77 pypilot/signalk.py:146 pypilot/signalk.py:216
-msgid "or"
-msgstr "o bé"
-
-#: pypilot/signalk.py:108
+#: ../signalk.py:52
 msgid "service removed"
 msgstr "servei eliminat"
 
-#: pypilot/signalk.py:112
+#: ../signalk.py:55
 msgid "server lost"
 msgstr "servidor perdut"
 
-#: pypilot/signalk.py:118
+#: ../signalk.py:61
 msgid "service add"
 msgstr "afegir servei"
 
-#: pypilot/signalk.py:132
-msgid "server found"
-msgstr "servidor trobat"
+#: ../signalk.py:86 ../client.py:210
+msgid "failed to"
+msgstr "fallat en"
 
-#: pypilot/signalk.py:141
+#: ../signalk.py:86
+msgid "autodetection not possible"
+msgstr "no és possible la detecció automàtica"
+
+#: ../signalk.py:87 ../signalk.py:176 ../signalk.py:246 ../client.py:211
+msgid "try"
+msgstr "provar"
+
+#: ../signalk.py:87 ../signalk.py:176 ../signalk.py:246 ../client.py:211
+msgid "or"
+msgstr "o bé"
+
+#: ../signalk.py:138
+msgid "read token"
+msgstr "llegir el testimoni"
+
+#: ../signalk.py:141
+msgid "failed to read token"
+msgstr "no s'ha pogut llegir el testimoni"
+
+#: ../signalk.py:171
 msgid "probe"
 msgstr "sonda"
 
-#: pypilot/signalk.py:145
+#: ../signalk.py:175
 msgid "could not"
 msgstr "no podia"
 
-#: pypilot/signalk.py:155
+#: ../signalk.py:185
 msgid "failed to retrieve/parse data from"
 msgstr "no s'ha pogut recuperar / analitzar les dades de"
 
-#: pypilot/signalk.py:171
+#: ../signalk.py:201
 msgid "see if token is ready"
 msgstr "veure si el testimoni està a punt"
 
-#: pypilot/signalk.py:177
+#: ../signalk.py:207
 msgid "received token"
 msgstr "testimoni rebut"
 
-#: pypilot/signalk.py:183
+#: ../signalk.py:213
 msgid "failed to store token"
 msgstr "no s'ha pogut emmagatzemar el testimoni"
 
-#: pypilot/signalk.py:187 pypilot/signalk.py:208
+#: ../signalk.py:217 ../signalk.py:238
 msgid "error requesting access"
 msgstr "error en sol·licitar accés"
 
-#: pypilot/signalk.py:206
+#: ../signalk.py:236
 msgid "request access url"
 msgstr "sol·licita URL d'accés"
 
-#: pypilot/signalk.py:215
+#: ../signalk.py:245
 msgid "cannot create connection:"
 msgstr "no es pot crear la connexió:"
 
-#: pypilot/signalk.py:230
+#: ../signalk.py:260
 msgid "bad status, rejecting token"
 msgstr "mal estat, rebutjant el testimoni"
 
-#: pypilot/signalk.py:234
+#: ../signalk.py:264
 msgid "connection refused"
 msgstr "connexió rebutjada"
 
-#: pypilot/signalk.py:284
+#: ../signalk.py:313
+msgid "server found"
+msgstr "servidor trobat"
+
+#: ../signalk.py:334
 msgid "connected to"
 msgstr "connectat a"
 
-#: pypilot/signalk.py:354
+#: ../signalk.py:416
 msgid "Exception converting signalk->pypilot"
 msgstr "Excepció convertint signalk-> pypilot"
 
-#: pypilot/signalk.py:368
+#: ../signalk.py:430
 msgid "received"
 msgstr "rebut"
 
-#: pypilot/signalk.py:414
+#: ../signalk.py:493
 msgid "failed to send updates"
 msgstr "no s'ha pogut enviar actualitzacions"
 
-#: pypilot/signalk.py:428
+#: ../signalk.py:507
 msgid "failed to parse msg:"
 msgstr "no s'ha pogut analitzar msg:"
 
-#: pypilot/values.py:130
-msgid "invalid initial value for range property"
-msgstr "valor inicial no vàlid per a la propietat de l'interval"
+#: ../sensors.py:49
+msgid "sensor found"
+msgstr "sensor trobat"
 
-#: pypilot/values.py:179
-msgid "invalid set"
-msgstr "conjunt no vàlid"
+#: ../sensors.py:413
+msgid "unknown data parsed!"
+msgstr "dades desconegudes analitzades."
 
-#: pypilot/pilots/__init__.py:23
+#: ../calibration_fit.py:38
+msgid "failed to load scientific library, cannot perform calibration update!"
+msgstr ""
+"no s'ha pogut carregar la biblioteca científica, no es pot actualitzar el "
+"calibratge."
+
+#: ../calibration_fit.py:701
+msgid "Bad Accelerometer Calibration"
+msgstr "Calibració incorrecta de l'acceleròmetre"
+
+#: ../calibration_fit.py:735
+msgid "magnetic distortions"
+msgstr "distorsions magnètiques"
+
+#: ../pilots/__init__.py:22
 msgid "ERROR loading"
 msgstr "ERROR de càrrega"
 
-#: ui/autopilot_calibration.py:166
-msgid "exception in calibration:"
-msgstr "excepció en el calibratge:"
+#: ../autopilot.py:135
+msgid "failed to load pilot"
+msgstr "no s'ha pogut carregar el pilot"
 
-#: ui/autopilot_control.py:264
-msgid "warning: unhandled message"
-msgstr "advertència: missatge no gestionat"
+#: ../autopilot.py:138
+msgid "Available Pilots"
+msgstr "Pilots disponibles"
 
-#: ui/autopilot_control_ui.py:24
-msgid "Autopilot Control"
-msgstr "Control del pilot automàtic"
+#: ../autopilot.py:157
+msgid "warning: failed to open special file"
+msgstr "avís: no s'ha pogut obrir el fitxer especial"
 
-#: ui/autopilot_control_ui.py:39
-msgid "AP"
-msgstr "Vostè"
+#: ../autopilot.py:157
+msgid "for writing"
+msgstr "per escriure"
 
-#: ui/autopilot_control_ui.py:57 ui/autopilot_control_ui.py:67
-#: ui/autopilot_control_ui.py:460 ui/autopilot_control_ui.py:737
-msgid "N/A"
-msgstr "N / A"
+#: ../autopilot.py:158
+msgid "cannot stroke the watchdog"
+msgstr "no pot acariciar el gos de vigilància"
 
-#: ui/autopilot_control_ui.py:62
-msgid "        N/A        "
-msgstr "N / A"
+#: ../autopilot.py:162
+msgid "warning: failed to make autopilot process realtime"
+msgstr "avís: no s'ha pogut fer el procés del pilot automàtic en temps real"
 
-#: ui/autopilot_control_ui.py:74
-msgid "----"
-msgstr "----"
+#: ../autopilot.py:347
+msgid "server/client is running too _slowly_"
+msgstr "el servidor / client s’executa massa lentament"
 
-#: ui/autopilot_control_ui.py:89 ui/autopilot_control_ui.py:96
-msgid " N/A "
-msgstr "N / A"
+#: ../autopilot.py:353
+msgid "sensors is running too _slowly_"
+msgstr "els sensors funcionen massa lentament"
 
-#: ui/autopilot_control_ui.py:121
-msgid "port"
-msgstr "port"
+#: ../autopilot.py:453
+msgid "autopilot routine is running too _slowly_"
+msgstr "la rutina del pilot automàtic s’executa massa lentament"
 
-#: ui/autopilot_control_ui.py:121
-msgid "starboard"
-msgstr "estribord"
+#: ../autopilot.py:465
+msgid "servo is running too _slowly_"
+msgstr "el servo funciona massa lentament"
 
-#: ui/autopilot_control_ui.py:136
-msgid "Pilot"
-msgstr "Pilot"
+#: ../autopilot.py:475
+msgid "autopilot iteration running too slow"
+msgstr "la iteració del pilot automàtic funciona massa lenta"
 
-#: ui/autopilot_control_ui.py:146 ui/autopilot_control_ui.py:425
-msgid "Compass"
-msgstr "Brúixola"
+#: ../autopilot.py:488
+msgid "WARNING: running autopilot as root!!"
+msgstr "ADVERTIMENT: executant el pilot automàtic com a root!!"
 
-#: ui/autopilot_control_ui.py:149
-msgid "GPS"
-msgstr "GPS"
+#: ../autopilot.py:490
+msgid "init complete"
+msgstr "init completa"
 
-#: ui/autopilot_control_ui.py:154
-msgid "Wind"
-msgstr "Vent"
+#: ../boatimu.py:33
+msgid "RTIMU library not detected, please install it"
+msgstr "La biblioteca RTIMU no s'ha detectat. Instal·leu-la"
 
-#: ui/autopilot_control_ui.py:159
-msgid "True Wind"
-msgstr "Vent vertader"
+#: ../boatimu.py:57
+msgid "Using settings file"
+msgstr "Utilitzant el fitxer de configuració"
 
-#: ui/autopilot_control_ui.py:175 ui/scope_ui.py:76
-msgid "Center"
-msgstr "Centre"
+#: ../boatimu.py:97
+msgid "ERROR: No IMU Detected"
+msgstr "ERROR: no s'ha detectat cap IMU"
 
-#: ui/autopilot_control_ui.py:199
-msgid "&Scope"
-msgstr "&Abast"
+#: ../boatimu.py:105
+msgid "ERROR: IMU Init Failed, no inertial data available"
+msgstr "ERROR: Error d’inici d’IMU, no hi ha dades inercials disponibles"
 
-#: ui/autopilot_control_ui.py:202
-msgid "&Client"
-msgstr "&Client"
+#: ../boatimu.py:131
+msgid "warning, failed to make imu process realtime"
+msgstr "advertiment, no s'ha pogut fer el procés imu en temps real"
 
-#: ui/autopilot_control_ui.py:205
-msgid "C&alibration"
-msgstr "Ca&libratge"
+#: ../boatimu.py:133
+msgid "made imu process realtime"
+msgstr "procés imu realitzat en temps real"
 
-#: ui/autopilot_control_ui.py:208 ui/scope_ui.py:108
-msgid "Close"
-msgstr "Tanca"
+#: ../boatimu.py:145
+msgid "setting initial gyro bias"
+msgstr "s'estableix el biaix giroscòpic inicial"
 
-#: ui/autopilot_control_ui.py:304 ui/autopilot_control_ui.py:534
-#: ui/autopilot_control_ui.py:654
-msgid "Calibration"
-msgstr "Calibratge"
+#: ../boatimu.py:161
+msgid "imu process failed to keep time"
+msgstr "El procés imu no ha pogut mantenir el temps"
 
-#: ui/autopilot_control_ui.py:354
-msgid "Boat is level"
-msgstr "El vaixell està a nivell"
+#: ../boatimu.py:169
+msgid "failed to read IMU!"
+msgstr "no s'ha pogut llegir l'IMU."
 
-#: ui/autopilot_control_ui.py:361 ui/client_wx.py:158 ui/scope_ui.py:94
-msgid "Reset"
-msgstr "Restableix"
+#: ../boatimu.py:202
+msgid "imu rate set to rate"
+msgstr "tarifa imu establerta a taxa"
 
-#: ui/autopilot_control_ui.py:382
-msgid "Alignment"
-msgstr "Alineació"
+#: ../boatimu.py:230
+msgid "too high standing gyro bias, resetting sensors"
+msgstr "biaix giroscòpic d’alt standing, restabliment dels sensors"
 
-#: ui/autopilot_control_ui.py:399
-msgid "Heading"
-msgstr "Encapçalament"
+#: ../boatimu.py:235
+msgid "compass out of range, resetting"
+msgstr "brúixola fora del rang, restabliment"
 
-#: ui/autopilot_control_ui.py:404 ui/autopilot_control_ui.py:470
-#: ui/autopilot_control_ui.py:480
-msgid "     N/A     "
-msgstr "N / A"
+#: ../boatimu.py:327
+msgid "warning, failed to make calibration process other"
+msgstr "avís, no s'ha pogut fer que el procés de calibratge sigui altre"
 
-#: ui/autopilot_control_ui.py:409 ui/autopilot_control_ui.py:760
-msgid "Offset"
-msgstr "Desplaçament"
-
-#: ui/autopilot_control_ui.py:423
-msgid "Coords"
-msgstr "coords"
-
-#: ui/autopilot_control_ui.py:425
-msgid "Sea"
-msgstr "Mar"
-
-#: ui/autopilot_control_ui.py:425
-msgid "Boat"
-msgstr "Vaixell"
-
-#: ui/autopilot_control_ui.py:448 ui/client_wx.py:51
-msgid "Scope"
-msgstr "Abast"
-
-#: ui/autopilot_control_ui.py:455
-msgid "Pitch"
-msgstr "Brea"
-
-#: ui/autopilot_control_ui.py:465
-msgid "Roll"
-msgstr "Rodar"
-
-#: ui/autopilot_control_ui.py:475
-msgid "Heel"
-msgstr "Taló"
-
-#: ui/autopilot_control_ui.py:502
-msgid "alignment"
-msgstr "alineació"
-
-#: ui/autopilot_control_ui.py:544 ui/autopilot_control_ui.py:664
-msgid "Calibration Age"
-msgstr "Edat de calibració"
-
-#: ui/autopilot_control_ui.py:561 ui/autopilot_control_ui.py:681
-msgid "Clear"
-msgstr "Clar"
-
-#: ui/autopilot_control_ui.py:564 ui/autopilot_control_ui.py:684
-msgid "calibration locked"
-msgstr "calibratge bloquejat"
-
-#: ui/autopilot_control_ui.py:587
-msgid "accel"
-msgstr "accel"
-
-#: ui/autopilot_control_ui.py:618
-msgid "Sigma Points"
-msgstr "Punts Sigma"
-
-#: ui/autopilot_control_ui.py:625
-msgid "local history"
-msgstr "història local"
-
-#: ui/autopilot_control_ui.py:632
-msgid "current"
-msgstr "actual"
-
-#: ui/autopilot_control_ui.py:639
-msgid "Calibration Points"
-msgstr "Punts de calibració"
-
-#: ui/autopilot_control_ui.py:708
-msgid "compass"
-msgstr "brúixola"
-
-#: ui/autopilot_control_ui.py:718
-msgid ""
-"Press each button when the rudder is at the correct position to calibrate."
+#: ../boatimu.py:329
+msgid "warning, failed to make calibration process idle, trying renice"
 msgstr ""
-"Premeu cada botó quan el timó estigui a la posició correcta per calibrar."
+"avís, no s'ha pogut deixar el procés de calibratge inactiu, provant Renice"
 
-#: ui/autopilot_control_ui.py:732
-msgid "Rudder"
-msgstr "Timó"
+#: ../boatimu.py:331
+msgid "warning, failed to renice calibration process"
+msgstr "advertiment, no s'ha pogut renunciar al procés de calibratge"
 
-#: ui/autopilot_control_ui.py:747
-msgid "Reset Calibration"
-msgstr "Restableix la calibració"
+#: ../boatimu.py:338
+msgid "calibration loaded, starting"
+msgstr "calibratge carregat, arrencada"
 
-#: ui/autopilot_control_ui.py:757
-msgid "Rudder Is Centered"
-msgstr "El timó està centrat"
+#: ../boatimu.py:342
+msgid "failed import calibration fit"
+msgstr "no s'ha pogut ajustar el calibratge de la importació"
 
-#: ui/autopilot_control_ui.py:765 ui/autopilot_control_ui.py:778
-#: ui/autopilot_control_ui.py:791
-msgid "------"
-msgstr "------"
+#: ../boatimu.py:460
+msgid "accel values invalid"
+msgstr "els valors d'accel no són vàlids"
 
-#: ui/autopilot_control_ui.py:770
-msgid "Rudder is Starboard Range"
-msgstr "El timó és la gamma d’estribord"
+#: ../bufferedsocket.py:55
+msgid "overflow in pypilot udp socket"
+msgstr "desbordament al sòcol pypilot udp"
 
-#: ui/autopilot_control_ui.py:773
-msgid "Scale"
-msgstr "Escala"
+#: ../bufferedsocket.py:60
+msgid "overflow in pypilot socket"
+msgstr "desbordament al sòcol de pilots"
 
-#: ui/autopilot_control_ui.py:783
-msgid "Rudder is Port Range"
-msgstr "El timó és Port Range"
+#: ../bufferedsocket.py:75
+msgid "failed to send udp packet"
+msgstr "no s'ha pogut enviar el paquet udp"
 
-#: ui/autopilot_control_ui.py:786
-msgid "Non Linearity"
-msgstr "No linealitat"
+#: ../bufferedsocket.py:84
+msgid "pypilot socket failed to send to"
+msgstr "el socket pypilot no s'ha pogut enviar a"
 
-#: ui/autopilot_control_ui.py:803
-msgid " range +-"
-msgstr "rang + -"
+#: ../bufferedsocket.py:98
+msgid "socket send took too long!?!?"
+msgstr "l'enviament de sòcol ha trigat massa!?!?"
 
-#: ui/autopilot_control_ui.py:811
-msgid "degrees"
-msgstr "graus"
+#: ../bufferedsocket.py:100
+msgid "socket send error"
+msgstr "error d'enviament de sòcol"
 
-#: ui/autopilot_control_ui.py:830
-msgid "rudder"
-msgstr "timó"
+#: ../bufferedsocket.py:104
+msgid "pypilot socket exception"
+msgstr "excepció de sòcol pypilot"
 
-#: ui/autopilot_control_ui.py:832
-msgid "settings"
-msgstr "configuració"
+#: ../bufferedsocket.py:108
+msgid "falling back to python nonblocking socket, will consume more cpu"
+msgstr "en tornar al sòcol no bloquejant Python, es consumirà més CPU"
 
-#: ui/boatplot.py:25
-msgid "failed to load pywavefront:"
-msgstr "no s'ha pogut carregar pywavefront:"
+#: ../bufferedsocket.py:134
+msgid "socket send error in server flush"
+msgstr "error d’enviament de sòcol a l’escomesa del servidor"
 
-#: ui/boatplot.py:55
-msgid "invalid display dimensions"
-msgstr "dimensions de visualització no vàlides"
+#: ../bufferedsocket.py:149
+msgid "error receiving data"
+msgstr "error en rebre dades"
 
-#: ui/boatplot.py:110
-msgid "Did you add the pypilot_data repository?"
-msgstr "Heu afegit el dipòsit pypilot_data?"
+#: ../serialprobe.py:30
+msgid "error reading"
+msgstr "error de lectura"
 
-#: ui/boatplot.py:160
-msgid "not found, texture compass cannot be used"
-msgstr "no es troba, la brúixola de textura no es pot utilitzar"
+#: ../serialprobe.py:86
+msgid "found more devices by path"
+msgstr "s'han trobat més dispositius per ruta"
 
-#: ui/client_wx.py:47
-msgid "Refresh"
-msgstr "Actualització"
+#: ../serialprobe.py:118
+msgid "removing gps device"
+msgstr "eliminació del dispositiu GPS"
 
-#: ui/client_wx.py:189
-msgid "Connected"
-msgstr "Connectat"
+#: ../serialprobe.py:197
+msgid "no pyudev module! will scan usb devices often!"
+msgstr "cap mòdul pyudev! escanejarà dispositius USB sovint!"
 
-#: ui/client_wx.py:191
-msgid "Disconnected"
-msgstr "Desconnectat"
+#: ../serialprobe.py:359
+msgid "success"
+msgstr "èxit"
 
-#: ui/client_wx.py:218
-msgid "warning, invalid choice value specified"
-msgstr "advertiment, s'ha especificat un valor d'elecció no vàlid"
+#: ../serialprobe.py:367
+msgid "failed to record device"
+msgstr "no s'ha pogut gravar el dispositiu"
 
-#: ui/scope_ui.py:24
-msgid "pypilot Scope"
-msgstr "piràmot Abast"
+#: ../client.py:93
+msgid "warning, registering existing value:"
+msgstr "advertiment, registrant el valor existent:"
 
-#: ui/scope_ui.py:73
-msgid "Zero"
-msgstr "Zero"
+#: ../client.py:154
+msgid "failed to read config file:"
+msgstr "no s'ha pogut llegir el fitxer de configuració:"
 
-#: ui/scope_ui.py:79
-msgid "Scale +"
-msgstr "Escala +"
+#: ../client.py:188
+msgid "failed to write config file:"
+msgstr "no s'ha pogut escriure el fitxer de configuració:"
 
-#: ui/scope_ui.py:82
-msgid "Scale -"
-msgstr "Escala -"
+#: ../client.py:190
+msgid "Exception writing config file:"
+msgstr "Excepció de l'escriptura del fitxer de configuració:"
 
-#: ui/scope_ui.py:85
-msgid "Offset /\\"
-msgstr "Desplaçament / \\"
+#: ../client.py:210
+msgid "autodetecting pypilot server not possible"
+msgstr "la detecció automàtica del servidor pypilot no és possible"
 
-#: ui/scope_ui.py:88
-msgid "Offset \\/"
-msgstr "Desplaçament \\ /"
+#: ../client.py:319
+msgid "invalid message from server:"
+msgstr "missatge no vàlid del servidor:"
 
-#: ui/scope_ui.py:91
-msgid "Freeze"
-msgstr "Congelar"
+#: ../client.py:343
+msgid "warning, pypilot client aleady has connection"
+msgstr "avís, el client pypilot ja té connexió"
 
-#: ui/scope_ui.py:97
-msgid "fftw"
-msgstr "fftw"
+#: ../client.py:363
+msgid "connect failed to"
+msgstr "no s'ha pogut connectar"
 
-#: ui/scope_ui.py:100
-msgid "Time"
-msgstr "Temps"
+#: ../client.py:460 ../client.py:463
+msgid "failed to connect to"
+msgstr "no s'ha pogut connectar a"
 
-#: ui/scope_wx.py:67
-msgid "values not found:"
-msgstr "valors no trobats:"
+#: ../client.py:466
+msgid "no pypilot server found"
+msgstr "no s'ha trobat cap servidor pypilot"
 
-#~ msgid "failed to load pilot"
-#~ msgstr "no s'ha pogut carregar el pilot"
+#: ../client.py:522
+msgid "usage"
+msgstr "ús"
+
+#: ../client.py:525
+msgid "set the host or ip address"
+msgstr "definiu l'adreça d'amfitrió o IP"
+
+#: ../client.py:526
+msgid "print info about each value type"
+msgstr "imprimeix informació sobre cada tipus de valor"
+
+#: ../client.py:527
+msgid "continuous watch"
+msgstr "rellotge continu"
+
+#: ../client.py:528
+msgid "show this message"
+msgstr "mostra aquest missatge"
+
+#: ../client.py:555
+msgid "failed to retrieve value list!"
+msgstr "no s'ha pogut recuperar la llista de valors."
+
+#: ../client.py:566
+msgid "timeout retrieving"
+msgstr "recuperació del temps d'espera"
+
+#: ../client.py:569
+msgid "missing"
+msgstr "desaparegut"
+
+#: ../values.py:135
+msgid "invalid initial value for range property"
+msgstr "valor inicial no vàlid per a la propietat de l'interval"
+
+#: ../values.py:184
+msgid "invalid set"
+msgstr "conjunt no vàlid"
+
+#: ../gpsd.py:46
+msgid "gpsd connected"
+msgstr "GPS connectat"
+
+#: ../gpsd.py:50
+msgid "gpsd failed to connect"
+msgstr "gpsd no s'ha pogut connectar"
+
+#: ../gpsd.py:56
+msgid "exception connecting to gps"
+msgstr "excepció que es connecta a GPS"
+
+#: ../gpsd.py:60
+msgid "gpsd disconnected"
+msgstr "GPS desconnectat"
+
+#: ../gpsd.py:74
+msgid "gpsd PROBE success"
+msgstr "gpsd PROBE èxit"
+
+#: ../gpsd.py:82
+msgid "gpsd probe failed"
+msgstr "ha fallat la sonda gpsd"
+
+#: ../gpsd.py:105
+msgid "gpsd deactivated"
+msgstr "gpsd desactivat"
+
+#: ../gpsd.py:147
+msgid "gpsd failed to determine serial baud rate of device"
+msgstr ""
+"gpsd no ha pogut determinar la velocitat de transmissió en sèrie del "
+"dispositiu"
+
+#: ../gpsd.py:164
+msgid "gpsd timeout from lack of data"
+msgstr "temps d'espera gpsd per manca de dades"
+
+#: ../gpsd.py:179
+msgid "gpsd received invalid message"
+msgstr "gpsd ha rebut un missatge no vàlid"
+
+#: ../gpsd.py:224
+msgid "gpsd got flag for pipe:"
+msgstr "gpsd té bandera per a canonada:"
+
+#: ../gpsd.py:233
+msgid "gpsd serial probe"
+msgstr "sonda sèrie GPS"
+
+#~ msgid "exception in calibration:"
+#~ msgstr "excepció en el calibratge:"
+
+#~ msgid "warning: unhandled message"
+#~ msgstr "advertència: missatge no gestionat"
+
+#~ msgid "Autopilot Control"
+#~ msgstr "Control del pilot automàtic"
+
+#~ msgid "AP"
+#~ msgstr "Vostè"
+
+#~ msgid "N/A"
+#~ msgstr "N / A"
+
+#~ msgid "        N/A        "
+#~ msgstr "N / A"
+
+#~ msgid "----"
+#~ msgstr "----"
+
+#~ msgid " N/A "
+#~ msgstr "N / A"
+
+#~ msgid "port"
+#~ msgstr "port"
+
+#~ msgid "starboard"
+#~ msgstr "estribord"
+
+#~ msgid "Pilot"
+#~ msgstr "Pilot"
+
+#~ msgid "Compass"
+#~ msgstr "Brúixola"
+
+#~ msgid "GPS"
+#~ msgstr "GPS"
+
+#~ msgid "Wind"
+#~ msgstr "Vent"
+
+#~ msgid "True Wind"
+#~ msgstr "Vent vertader"
+
+#~ msgid "Center"
+#~ msgstr "Centre"
+
+#~ msgid "&Scope"
+#~ msgstr "&Abast"
+
+#~ msgid "&Client"
+#~ msgstr "&Client"
+
+#~ msgid "C&alibration"
+#~ msgstr "Ca&libratge"
+
+#~ msgid "Close"
+#~ msgstr "Tanca"
+
+#~ msgid "Calibration"
+#~ msgstr "Calibratge"
+
+#~ msgid "Boat is level"
+#~ msgstr "El vaixell està a nivell"
+
+#~ msgid "Reset"
+#~ msgstr "Restableix"
+
+#~ msgid "Alignment"
+#~ msgstr "Alineació"
+
+#~ msgid "Heading"
+#~ msgstr "Encapçalament"
+
+#~ msgid "     N/A     "
+#~ msgstr "N / A"
+
+#~ msgid "Offset"
+#~ msgstr "Desplaçament"
+
+#~ msgid "Coords"
+#~ msgstr "coords"
+
+#~ msgid "Sea"
+#~ msgstr "Mar"
+
+#~ msgid "Boat"
+#~ msgstr "Vaixell"
+
+#~ msgid "Scope"
+#~ msgstr "Abast"
+
+#~ msgid "Pitch"
+#~ msgstr "Brea"
+
+#~ msgid "Roll"
+#~ msgstr "Rodar"
+
+#~ msgid "Heel"
+#~ msgstr "Taló"
+
+#~ msgid "alignment"
+#~ msgstr "alineació"
+
+#~ msgid "Calibration Age"
+#~ msgstr "Edat de calibració"
+
+#~ msgid "Clear"
+#~ msgstr "Clar"
+
+#~ msgid "calibration locked"
+#~ msgstr "calibratge bloquejat"
+
+#~ msgid "accel"
+#~ msgstr "accel"
+
+#~ msgid "Sigma Points"
+#~ msgstr "Punts Sigma"
+
+#~ msgid "local history"
+#~ msgstr "història local"
+
+#~ msgid "current"
+#~ msgstr "actual"
+
+#~ msgid "Calibration Points"
+#~ msgstr "Punts de calibració"
+
+#~ msgid "compass"
+#~ msgstr "brúixola"
+
+#~ msgid ""
+#~ "Press each button when the rudder is at the correct position to calibrate."
+#~ msgstr ""
+#~ "Premeu cada botó quan el timó estigui a la posició correcta per calibrar."
+
+#~ msgid "Rudder"
+#~ msgstr "Timó"
+
+#~ msgid "Reset Calibration"
+#~ msgstr "Restableix la calibració"
+
+#~ msgid "Rudder Is Centered"
+#~ msgstr "El timó està centrat"
+
+#~ msgid "------"
+#~ msgstr "------"
+
+#~ msgid "Rudder is Starboard Range"
+#~ msgstr "El timó és la gamma d’estribord"
+
+#~ msgid "Scale"
+#~ msgstr "Escala"
+
+#~ msgid "Rudder is Port Range"
+#~ msgstr "El timó és Port Range"
+
+#~ msgid "Non Linearity"
+#~ msgstr "No linealitat"
+
+#~ msgid " range +-"
+#~ msgstr "rang + -"
+
+#~ msgid "degrees"
+#~ msgstr "graus"
+
+#~ msgid "rudder"
+#~ msgstr "timó"
+
+#~ msgid "settings"
+#~ msgstr "configuració"
+
+#~ msgid "failed to load pywavefront:"
+#~ msgstr "no s'ha pogut carregar pywavefront:"
+
+#~ msgid "invalid display dimensions"
+#~ msgstr "dimensions de visualització no vàlides"
+
+#~ msgid "Did you add the pypilot_data repository?"
+#~ msgstr "Heu afegit el dipòsit pypilot_data?"
+
+#~ msgid "not found, texture compass cannot be used"
+#~ msgstr "no es troba, la brúixola de textura no es pot utilitzar"
+
+#~ msgid "Refresh"
+#~ msgstr "Actualització"
+
+#~ msgid "Connected"
+#~ msgstr "Connectat"
+
+#~ msgid "Disconnected"
+#~ msgstr "Desconnectat"
+
+#~ msgid "warning, invalid choice value specified"
+#~ msgstr "advertiment, s'ha especificat un valor d'elecció no vàlid"
+
+#~ msgid "pypilot Scope"
+#~ msgstr "piràmot Abast"
+
+#~ msgid "Zero"
+#~ msgstr "Zero"
+
+#~ msgid "Scale +"
+#~ msgstr "Escala +"
+
+#~ msgid "Scale -"
+#~ msgstr "Escala -"
+
+#~ msgid "Offset /\\"
+#~ msgstr "Desplaçament / \\"
+
+#~ msgid "Offset \\/"
+#~ msgstr "Desplaçament \\ /"
+
+#~ msgid "Freeze"
+#~ msgstr "Congelar"
+
+#~ msgid "fftw"
+#~ msgstr "fftw"
+
+#~ msgid "Time"
+#~ msgstr "Temps"
+
+#~ msgid "values not found:"
+#~ msgstr "valors no trobats:"
 
 #~ msgid "in"
 #~ msgstr "dins"

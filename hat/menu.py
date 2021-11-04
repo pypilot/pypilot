@@ -375,7 +375,7 @@ class calibrate_rudder_state(page):
         super(calibrate_rudder_state, self).__init__(_(name))
     
     def process(self):
-        self.set(_('rudder.calibration_state'), self.value)
+        self.set('rudder.calibration_state', self.value)
         return self.lcd.menu
     
 class calibrate_rudder_feedback(menu):

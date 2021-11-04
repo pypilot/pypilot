@@ -45,21 +45,22 @@ class ZeroConfProcess(multiprocessing.Process):
     def __init__(self, signalk):
         self.name_type = False
         self.pipe = NonBlockingPipe('zeroconf', True)
+        self.missingzeroconfwarned = False
         super(ZeroConfProcess, self).__init__(target=self.process, daemon=True)
         self.start()
             
-    def remove_service(self, zeroconf, type, name):
+    def remove_service(self, zc, type, name):
         print('signalk zeroconf ' + _('service removed'), name, type)
         if self.name_type == (name, type):
             self.pipe[1].send('disconnect')
             print('signalk zeroconf ' + _('server lost'))
 
-    def update_service(self, zeroconf, type, name):
-        self.add_service(zeroconf, type, name)
+    def update_service(self, zc, type, name):
+        self.add_service(zc, type, name)
 
-    def add_service(self, zeroconf, type, name):
+    def add_service(self, zc, type, name):
         print('signalk zeroconf ' + _('service add'), name, type)
-        info = zeroconf.get_service_info(type, name)
+        info = zc.get_service_info(type, name)
         if not info:
             return
         properties = {}
@@ -80,7 +81,7 @@ class ZeroConfProcess(multiprocessing.Process):
 
     def process(self):
         try:
-            from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
+            import zeroconf
         except Exception as e:
             if not self.missingzeroconfwarned:
                 print('signalk: ' + _('failed to') + ' import zeroconf, ' + _('autodetection not possible'))
@@ -89,11 +90,18 @@ class ZeroConfProcess(multiprocessing.Process):
             time.sleep(20)
             return
 
-        zeroconf = Zeroconf()
-        self.browser = ServiceBrowser(zeroconf, "_http._tcp.local.", self)
-        #zeroconf.close()
+        current_ip_address = []
+        zc = None
         while True:
-            time.sleep(1000)
+            new_ip_address = zeroconf.get_all_addresses()
+            if current_ip_address != new_ip_address:
+                debug("IP address changed from ", current_ip_address, "to", new_ip_address)
+                current_ip_address = new_ip_address
+                if zc != None:
+                    zc.close()
+                zc = zeroconf.Zeroconf()
+                self.browser = zeroconf.ServiceBrowser(zc, "_http._tcp.local.", self)
+            time.sleep(5)
 
     def poll(self):  # from signalk process
         last = False
@@ -116,7 +124,6 @@ class signalk(object):
             self.client = pypilotClient(server)
 
         self.initialized = False
-        self.missingzeroconfwarned = False
         self.signalk_access_url = False
         self.last_access_request_time = 0
 

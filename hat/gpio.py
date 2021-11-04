@@ -89,12 +89,12 @@ class gpio(object):
                     GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=50)
                     break
                 except Exception as e:
-                    print('WARNING', e)
+                    print('WARNING', e, 'on pin ', pin)
 
                 if not raspberrypi:
                     break
-                print('retrying to setup gpio with edge detect...')
-                time.sleep(1)
+                print('retrying to setup gpio with edge detect.')
+                time.sleep(3)
 
     def poll(self):
         if not GPIO:

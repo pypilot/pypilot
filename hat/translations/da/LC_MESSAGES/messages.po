@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: da <LL@li.org>\n"
@@ -16,11 +16,11 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
-msgstr "konfiguration af pypilot hat"
+msgstr "konfiguration af pypilothat"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
@@ -39,12 +39,12 @@ msgid ""
 "press button(s) on the keypad or remote then assign a command with the "
 "button."
 msgstr ""
-"tryk på knapperne på tastaturet eller fjernbetjeningen, og tildel derefter "
+"tryk på knappen(e) på tastaturet eller fjernbetjeningen, og tildel derefter "
 "en kommando med knappen."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
-msgstr "Handlinger for LCD -interface"
+msgstr "Handlinger til LCD-grænseflade"
 
 #: templates/index.html:21 templates/index.html:25
 msgid "key"
@@ -59,12 +59,12 @@ msgid ""
 "These actions do not depend on the state of the display and can be used by "
 "wireless remotes."
 msgstr ""
-"Disse handlinger afhænger ikke af displayets tilstand og kan bruges af "
+"Disse handlinger afhænger ikke af skærmens tilstand og kan bruges af "
 "trådløse fjernbetjeninger."
 
 #: templates/index.html:28
 msgid "infared receiver port"
-msgstr "infrarød modtager port"
+msgstr "infrarød modtagerport"
 
 #: templates/index.html:29
 msgid ""
@@ -72,13 +72,13 @@ msgid ""
 "arduino can receive from many different remotes without special calibration "
 "recordings."
 msgstr ""
-"Ir -porten kan håndteres direkte fra pi eller arduino. Brug af arduino kan "
-"modtage fra mange forskellige fjernbetjeninger uden særlige "
+"IR-porten kan håndteres direkte fra pi eller arduino. Brug af arduino kan "
+"modtage fra mange forskellige fjernbetjeninger uden specielle "
 "kalibreringsoptagelser."
 
 #: templates/index.html:36
 msgid "remote mode"
-msgstr "fjernbetjening"
+msgstr "fjernbetjeningstilstand"
 
 #: templates/index.html:37
 msgid "remote"
@@ -86,7 +86,7 @@ msgstr "fjern"
 
 #: templates/index.html:41
 msgid "nmea current baud rate"
-msgstr "nmea nuværende baudhastighed"
+msgstr "nmea nuværende baudrate"
 
 #: templates/index.html:42
 msgid "voltages"
@@ -102,4 +102,72 @@ msgstr "forbindelse"
 
 #: templates/index.html:45
 msgid "Web Server Latency"
-msgstr "Webservers forsinkelse"
+msgstr "Webserverforsinkelse"
+
+#~ msgid "pypilot hat configuration"
+#~ msgstr "konfiguration af pypilot hat"
+
+#~ msgid "lcd and remote control setup"
+#~ msgstr "lcd og fjernbetjening opsætning"
+
+#~ msgid "clear"
+#~ msgstr "klar"
+
+#~ msgid "default"
+#~ msgstr "Standard"
+
+#~ msgid ""
+#~ "press button(s) on the keypad or remote then assign a command with the "
+#~ "button."
+#~ msgstr ""
+#~ "tryk på knapperne på tastaturet eller fjernbetjeningen, og tildel derefter "
+#~ "en kommando med knappen."
+
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Handlinger for LCD -interface"
+
+#~ msgid "key"
+#~ msgstr "nøgle"
+
+#~ msgid "action"
+#~ msgstr "handling"
+
+#~ msgid ""
+#~ "These actions do not depend on the state of the display and can be used by "
+#~ "wireless remotes."
+#~ msgstr ""
+#~ "Disse handlinger afhænger ikke af displayets tilstand og kan bruges af "
+#~ "trådløse fjernbetjeninger."
+
+#~ msgid "infared receiver port"
+#~ msgstr "infrarød modtager port"
+
+#~ msgid ""
+#~ "The ir port can be handled direcly from the pi or the arduino.  Using the "
+#~ "arduino can receive from many different remotes without special calibration "
+#~ "recordings."
+#~ msgstr ""
+#~ "Ir -porten kan håndteres direkte fra pi eller arduino. Brug af arduino kan "
+#~ "modtage fra mange forskellige fjernbetjeninger uden særlige "
+#~ "kalibreringsoptagelser."
+
+#~ msgid "remote mode"
+#~ msgstr "fjernbetjening"
+
+#~ msgid "remote"
+#~ msgstr "fjern"
+
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea nuværende baudhastighed"
+
+#~ msgid "voltages"
+#~ msgstr "spændinger"
+
+#~ msgid "status"
+#~ msgstr "status"
+
+#~ msgid "connection"
+#~ msgstr "forbindelse"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Webservers forsinkelse"

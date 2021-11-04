@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: de <LL@li.org>\n"
@@ -16,11 +16,11 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
-msgstr "pypilot-Hutkonfiguration"
+msgstr "Pypilot-Hat-Konfiguration"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
@@ -32,34 +32,34 @@ msgstr "klar"
 
 #: templates/index.html:17
 msgid "default"
-msgstr "Ursprünglich"
+msgstr "Standard"
 
 #: templates/index.html:18
 msgid ""
 "press button(s) on the keypad or remote then assign a command with the "
 "button."
 msgstr ""
-"Taste(n) auf der Tastatur oder Fernbedienung drücken und dann einen Befehl "
-"mit der Taste zuweisen."
+"Drücken Sie die Taste(n) auf dem Tastenfeld oder der Fernbedienung und "
+"weisen Sie dann der Taste einen Befehl zu."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
-msgstr "Aktionen für LCD-Schnittstelle"
+msgstr "Aktionen für die LCD-Schnittstelle"
 
 #: templates/index.html:21 templates/index.html:25
 msgid "key"
-msgstr "Schlüssel"
+msgstr "Taste"
 
 #: templates/index.html:22 templates/index.html:26
 msgid "action"
-msgstr "Handlung"
+msgstr "Aktion"
 
 #: templates/index.html:23
 msgid ""
 "These actions do not depend on the state of the display and can be used by "
 "wireless remotes."
 msgstr ""
-"Diese Aktionen hängen nicht vom Status des Displays ab und können von "
+"Diese Aktionen hängen nicht vom Zustand des Displays ab und können von "
 "drahtlosen Fernbedienungen verwendet werden."
 
 #: templates/index.html:28
@@ -72,9 +72,9 @@ msgid ""
 "arduino can receive from many different remotes without special calibration "
 "recordings."
 msgstr ""
-"Der ir-Port kann direkt vom pi oder arduino gehandhabt werden. Mit dem "
-"Arduino können Sie von vielen verschiedenen Fernbedienungen ohne spezielle "
-"Kalibrierungsaufnahmen empfangen."
+"Der IR-Port kann direkt vom Pi oder dem Arduino aus gehandhabt werden. Mit "
+"dem Arduino kann man ohne spezielle Kalibrierung Aufnahmen von vielen "
+"verschiedenen Fernbedienungen empfangen."
 
 #: templates/index.html:36
 msgid "remote mode"
@@ -103,3 +103,71 @@ msgstr "Verbindung"
 #: templates/index.html:45
 msgid "Web Server Latency"
 msgstr "Webserver-Latenz"
+
+#~ msgid "pypilot hat configuration"
+#~ msgstr "pypilot-Hutkonfiguration"
+
+#~ msgid "lcd and remote control setup"
+#~ msgstr "lcd und fernbedienung einrichten"
+
+#~ msgid "clear"
+#~ msgstr "klar"
+
+#~ msgid "default"
+#~ msgstr "Ursprünglich"
+
+#~ msgid ""
+#~ "press button(s) on the keypad or remote then assign a command with the "
+#~ "button."
+#~ msgstr ""
+#~ "Taste(n) auf der Tastatur oder Fernbedienung drücken und dann einen Befehl "
+#~ "mit der Taste zuweisen."
+
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Aktionen für LCD-Schnittstelle"
+
+#~ msgid "key"
+#~ msgstr "Schlüssel"
+
+#~ msgid "action"
+#~ msgstr "Handlung"
+
+#~ msgid ""
+#~ "These actions do not depend on the state of the display and can be used by "
+#~ "wireless remotes."
+#~ msgstr ""
+#~ "Diese Aktionen hängen nicht vom Status des Displays ab und können von "
+#~ "drahtlosen Fernbedienungen verwendet werden."
+
+#~ msgid "infared receiver port"
+#~ msgstr "Infrarot-Empfängeranschluss"
+
+#~ msgid ""
+#~ "The ir port can be handled direcly from the pi or the arduino.  Using the "
+#~ "arduino can receive from many different remotes without special calibration "
+#~ "recordings."
+#~ msgstr ""
+#~ "Der ir-Port kann direkt vom pi oder arduino gehandhabt werden. Mit dem "
+#~ "Arduino können Sie von vielen verschiedenen Fernbedienungen ohne spezielle "
+#~ "Kalibrierungsaufnahmen empfangen."
+
+#~ msgid "remote mode"
+#~ msgstr "Remote-Modus"
+
+#~ msgid "remote"
+#~ msgstr "Fernbedienung"
+
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea aktuelle Baudrate"
+
+#~ msgid "voltages"
+#~ msgstr "Spannungen"
+
+#~ msgid "status"
+#~ msgstr "Status"
+
+#~ msgid "connection"
+#~ msgstr "Verbindung"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Webserver-Latenz"

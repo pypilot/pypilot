@@ -7,66 +7,87 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-25 21:11-0400\n"
+"POT-Creation-Date: 2023-04-07 14:58-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: fi\n"
 "Language-Team: fi <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Language: fi\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.6.0\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Generated-By: Babel 2.12.1\n"
 
-#: static/pypilot_control.js:37
+#: web.py:84
+msgid "failed to read log file"
+msgstr "lokitiedoston lukeminen epäonnistui"
+
+#: static/pypilot_control.js:40
 msgid "Not Connected"
 msgstr "Ei yhteyttä"
 
-#: static/pypilot_control.js:68
+#: static/pypilot_control.js:122
 msgid "Connected"
 msgstr "Yhdistetty"
 
-#: static/pypilot_control.js:175
+#: static/pypilot_control.js:153
+msgid "Enter profile name."
+msgstr "Anna profiilin nimi."
+
+#: static/pypilot_control.js:166
+msgid "Remove current profile?"
+msgstr "Poistetaanko nykyinen profiili?"
+
+#: static/pypilot_control.js:267
+msgid "The following settings are captured by the current profile"
+msgstr "Nykyinen profiili tallentaa seuraavat asetukset"
+
+#: static/pypilot_control.js:303
 msgid "Disconnected"
 msgstr "Yhteys katkaistu"
 
-#: static/pypilot_control.js:245
+#: static/pypilot_control.js:382
 msgid "compass or gyro failure!"
-msgstr "kompassin tai gyro-vika!"
+msgstr "kompassi tai gyro vika!"
 
-#: static/pypilot_control.js:258
+#: static/pypilot_control.js:395 templates/index.html:161
+#: templates/index.html:163
 msgid "Tack"
 msgstr "Tack"
 
-#: static/pypilot_control.js:261
+#: static/pypilot_control.js:398 templates/index.html:162
 msgid "Cancel"
 msgstr "Peruuttaa"
 
-#: static/pypilot_control.js:320
+#: static/pypilot_control.js:468
 msgid "Engaged"
 msgstr "Kihloissa"
 
-#: static/pypilot_control.js:322
+#: static/pypilot_control.js:470
 msgid "Disengaged"
 msgstr "Irrotettu"
 
-#: static/pypilot_control.js:394
+#: static/pypilot_control.js:546
+msgid "Motor temperature"
+msgstr "Moottorin lämpötila"
+
+#: static/pypilot_control.js:562
 msgid "no motor controller!"
-msgstr "ei moottorin ohjainta!"
+msgstr "ei moottorinohjainta!"
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
 msgstr "Kalibrointikaavio"
 
-#: templates/calibrationplot.html:21
+#: templates/calibrationplot.html:25
 msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age"
-" will reset when the calibration updates."
+"The raw sensor readings should fall on a sphere when calibrated.  The age "
+"will reset when the calibration updates."
 msgstr ""
-"Anturin raakalukemien tulisi pudota palloon kalibroituna. Ikä nollautuu, "
-"kun kalibrointi päivittyy."
+"Raaka-anturin lukemien tulee laskea pallon päälle kalibroitaessa. Ikä "
+"nollautuu, kun kalibrointi päivittyy."
 
-#: templates/calibrationplot.html:28
+#: templates/calibrationplot.html:32
 msgid "Connection"
 msgstr "Yhteys"
 
@@ -90,13 +111,21 @@ msgstr "Kokoonpano"
 msgid "Statistics"
 msgstr "Tilastot"
 
-#: templates/index.html:51
+#: templates/index.html:49
 msgid "Heading"
 msgstr "Otsikko"
 
-#: templates/index.html:53
+#: templates/index.html:52
 msgid "Command"
 msgstr "Komento"
+
+#: templates/index.html:89
+msgid "Add"
+msgstr "Lisätä"
+
+#: templates/index.html:90
+msgid "Remove"
+msgstr "Poista"
 
 #: templates/index.html:96
 msgid "Magnetic Heading"
@@ -110,109 +139,133 @@ msgstr "Piki"
 msgid "Roll"
 msgstr "Rullaa"
 
-#: templates/index.html:99
+#: templates/index.html:99 templates/index.html:105
 msgid "Press"
 msgstr "Lehdistö"
 
-#: templates/index.html:99
+#: templates/index.html:99 templates/index.html:105
 msgid "here"
 msgstr "tässä"
 
 #: templates/index.html:100
 msgid "when the boat is level to align the inertial sensors."
-msgstr "kun vene on vaakasuorassa kohdistamaan inertiasensorit."
+msgstr "kun vene on vaakasuorassa inertia-anturien kohdistamiseksi."
 
-#: templates/index.html:105
-msgid "Magnetic Heading Offset"
-msgstr "Magneettinen suuntasiirtymä"
-
-#: templates/index.html:107
-msgid "Lock Calibration"
-msgstr "Lukitse kalibrointi"
-
-#: templates/index.html:109
-msgid "calibration plot"
-msgstr "kalibrointikaavio"
+#: templates/index.html:106
+msgid ""
+"when the boat is traveling straight with no leeway, no currents, and gps to "
+"align the compass, or manually enter the compass offset"
+msgstr ""
+"kun vene kulkee suoraan ilman liikkumavaraa, virtauksia ja GPS:ää kompassin "
+"kohdistamiseksi tai kompassin siirtymän syöttämiseksi manuaalisesti"
 
 #: templates/index.html:111
-msgid "Rudder"
-msgstr "Peräsin"
+msgid "Magnetic Heading Offset"
+msgstr "Magneettinen suuntapoikkeama"
 
 #: templates/index.html:113
+msgid "Lock Accelerometer Calibration"
+msgstr "Lukitse kiihtyvyysmittarin kalibrointi"
+
+#: templates/index.html:114
+msgid "Lock Compass Calibration"
+msgstr "Lukituskompassin kalibrointi"
+
+#: templates/index.html:116
+msgid "calibration plot"
+msgstr "kalibrointikäyrä"
+
+#: templates/index.html:118
+msgid "Rudder Sensor"
+msgstr "Peräsimen anturi"
+
+#: templates/index.html:120
 msgid "centered"
 msgstr "keskitetty"
 
-#: templates/index.html:114
+#: templates/index.html:121
 msgid "port range"
 msgstr "porttialue"
 
-#: templates/index.html:115
+#: templates/index.html:122
 msgid "starboard range"
-msgstr "oikealla puolella"
+msgstr "oikeanpuoleinen kantama"
 
-#: templates/index.html:116 templates/index.html:140
+#: templates/index.html:123 templates/index.html:146
 msgid "reset"
 msgstr "nollaa"
 
-#: templates/index.html:119
-msgid "Rudder Range"
-msgstr "Peräsimen alue"
-
-#: templates/index.html:120
-msgid "Degrees"
-msgstr "Tutkinnot"
-
 #: templates/index.html:126
+msgid "Rudder Range"
+msgstr "Rudder Range"
+
+#: templates/index.html:127
+msgid "Degrees"
+msgstr "astetta"
+
+#: templates/index.html:133
 msgid "Display"
 msgstr "Näyttö"
 
-#: templates/index.html:127
+#: templates/index.html:134
 msgid "Clear"
 msgstr "Asia selvä"
 
-#: templates/index.html:128
+#: templates/index.html:135
 msgid "Dark"
 msgstr "Tumma"
 
-#: templates/index.html:131
-msgid "Configure LCD Keypad and Remotes"
-msgstr "Määritä LCD -näppäimistö ja kaukosäätimet"
-
-#: templates/index.html:133
-msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
+#: templates/index.html:139
+msgid "NMEA Client host:port (leave blank for none) eg: 192.168.0.1:10110"
 msgstr ""
-"NMEA -asiakaskone: portti (jätä tyhjäksi oletusarvoksi), esim. "
+"NMEA-asiakaspalvelin:portti (jätä tyhjäksi, jos ei mitään) esim.: "
 "192.168.0.1:10110"
 
-#: templates/index.html:138
+#: templates/index.html:144
 msgid "Amp Hours"
-msgstr "Vahvistintunnit"
+msgstr "Vahvistimen tunnit"
 
-#: templates/index.html:141
+#: templates/index.html:147
 msgid "Voltage"
 msgstr "Jännite"
 
-#: templates/index.html:142
+#: templates/index.html:148
 msgid "Controller temperature"
 msgstr "Säätimen lämpötila"
 
-#: templates/index.html:143
+#: templates/index.html:150
 msgid "Runtime"
-msgstr "Ajonaika"
+msgstr "Suoritusaika"
 
-#: templates/index.html:144
+#: templates/index.html:151 templates/index.html:153
+msgid "Version"
+msgstr "Versio"
+
+#: templates/index.html:152
 msgid "Servo"
 msgstr "Servo"
 
-#: templates/index.html:148
+#: templates/index.html:155 templates/logs.html:9
+msgid "Logs"
+msgstr "Lokit"
+
+#: templates/index.html:161
+msgid "Port"
+msgstr "Portti"
+
+#: templates/index.html:163
+msgid "Starboard"
+msgstr "Starboard"
+
+#: templates/index.html:170
 msgid "Server"
 msgstr "Palvelin"
 
-#: templates/index.html:150
+#: templates/index.html:172
 msgid "Errors"
 msgstr "Virheet"
 
-#: templates/index.html:151
+#: templates/index.html:173
 msgid "Web Server Latency"
 msgstr "Verkkopalvelimen viive"
 
@@ -222,7 +275,7 @@ msgstr "perustaa"
 
 #: templates/wifi.html:8
 msgid "Wireless Configuration"
-msgstr "Langaton määritys"
+msgstr "Langaton kokoonpano"
 
 #: templates/wifi.html:16 templates/wifi.html:17
 msgid "Access Point"
@@ -230,7 +283,7 @@ msgstr "Tukiasema"
 
 #: templates/wifi.html:17 templates/wifi.html:22
 msgid "Key (leave blank for no encryption)"
-msgstr "Avain (jätä tyhjäksi ilman salausta)"
+msgstr "Avain (jätä tyhjäksi, jos et salaa)"
 
 #: templates/wifi.html:21 templates/wifi.html:22
 msgid "Client"
@@ -238,7 +291,7 @@ msgstr "Asiakas"
 
 #: templates/wifi.html:24
 msgid "Client Mode Address (leave blank for dhcp)"
-msgstr "Asiakastilan osoite (jätä tyhjäksi dhcp: lle)"
+msgstr "Asiakastilan osoite (jätä tyhjäksi dhcp:lle)"
 
 #: templates/wifi.html:28
 msgid "If there is a problem, edit the file"
@@ -249,7 +302,7 @@ msgid "back"
 msgstr "takaisin"
 
 #~ msgid "Wireless Configuration"
-#~ msgstr "Langattoman verkon asetukset"
+#~ msgstr "Langaton määritys"
 
 #~ msgid "Key (leave blank for no encryption)"
 #~ msgstr "Avain (jätä tyhjäksi ilman salausta)"
@@ -258,5 +311,166 @@ msgstr "takaisin"
 #~ msgstr "Asiakastilan osoite (jätä tyhjäksi dhcp: lle)"
 
 #~ msgid "If there is a problem, edit the file"
-#~ msgstr "Jos on ongelmia, muokkaa tiedostoa"
+#~ msgstr "Jos on ongelma, muokkaa tiedostoa"
 
+#~ msgid "Not Connected"
+#~ msgstr "Ei yhteyttä"
+
+#~ msgid "Connected"
+#~ msgstr "Yhdistetty"
+
+#~ msgid "Disconnected"
+#~ msgstr "Yhteys katkaistu"
+
+#~ msgid "compass or gyro failure!"
+#~ msgstr "kompassin tai gyro-vika!"
+
+#~ msgid "Tack"
+#~ msgstr "Tack"
+
+#~ msgid "Cancel"
+#~ msgstr "Peruuttaa"
+
+#~ msgid "Engaged"
+#~ msgstr "Kihloissa"
+
+#~ msgid "Disengaged"
+#~ msgstr "Irrotettu"
+
+#~ msgid "no motor controller!"
+#~ msgstr "ei moottorin ohjainta!"
+
+#~ msgid "Calibration Plot"
+#~ msgstr "Kalibrointikaavio"
+
+#~ msgid ""
+#~ "The raw sensor readings should fall on a sphere when calibrated.  The age "
+#~ "will reset when the calibration updates."
+#~ msgstr ""
+#~ "Anturin raakalukemien tulisi pudota palloon kalibroituna. Ikä nollautuu, kun"
+#~ " kalibrointi päivittyy."
+
+#~ msgid "Connection"
+#~ msgstr "Yhteys"
+
+#~ msgid "Control"
+#~ msgstr "Ohjaus"
+
+#~ msgid "Gain"
+#~ msgstr "Saada"
+
+#~ msgid "Calibration"
+#~ msgstr "Kalibrointi"
+
+#~ msgid "Configuration"
+#~ msgstr "Kokoonpano"
+
+#~ msgid "Statistics"
+#~ msgstr "Tilastot"
+
+#~ msgid "Heading"
+#~ msgstr "Otsikko"
+
+#~ msgid "Command"
+#~ msgstr "Komento"
+
+#~ msgid "Magnetic Heading"
+#~ msgstr "Magneettinen otsikko"
+
+#~ msgid "Pitch"
+#~ msgstr "Piki"
+
+#~ msgid "Roll"
+#~ msgstr "Rullaa"
+
+#~ msgid "Press"
+#~ msgstr "Lehdistö"
+
+#~ msgid "here"
+#~ msgstr "tässä"
+
+#~ msgid "when the boat is level to align the inertial sensors."
+#~ msgstr "kun vene on vaakasuorassa kohdistamaan inertiasensorit."
+
+#~ msgid "Magnetic Heading Offset"
+#~ msgstr "Magneettinen suuntasiirtymä"
+
+#~ msgid "Lock Calibration"
+#~ msgstr "Lukitse kalibrointi"
+
+#~ msgid "calibration plot"
+#~ msgstr "kalibrointikaavio"
+
+#~ msgid "Rudder"
+#~ msgstr "Peräsin"
+
+#~ msgid "centered"
+#~ msgstr "keskitetty"
+
+#~ msgid "port range"
+#~ msgstr "porttialue"
+
+#~ msgid "starboard range"
+#~ msgstr "oikealla puolella"
+
+#~ msgid "reset"
+#~ msgstr "nollaa"
+
+#~ msgid "Rudder Range"
+#~ msgstr "Peräsimen alue"
+
+#~ msgid "Degrees"
+#~ msgstr "Tutkinnot"
+
+#~ msgid "Display"
+#~ msgstr "Näyttö"
+
+#~ msgid "Clear"
+#~ msgstr "Asia selvä"
+
+#~ msgid "Dark"
+#~ msgstr "Tumma"
+
+#~ msgid "Configure LCD Keypad and Remotes"
+#~ msgstr "Määritä LCD -näppäimistö ja kaukosäätimet"
+
+#~ msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
+#~ msgstr ""
+#~ "NMEA -asiakaskone: portti (jätä tyhjäksi oletusarvoksi), esim. "
+#~ "192.168.0.1:10110"
+
+#~ msgid "Amp Hours"
+#~ msgstr "Vahvistintunnit"
+
+#~ msgid "Voltage"
+#~ msgstr "Jännite"
+
+#~ msgid "Controller temperature"
+#~ msgstr "Säätimen lämpötila"
+
+#~ msgid "Runtime"
+#~ msgstr "Ajonaika"
+
+#~ msgid "Servo"
+#~ msgstr "Servo"
+
+#~ msgid "Server"
+#~ msgstr "Palvelin"
+
+#~ msgid "Errors"
+#~ msgstr "Virheet"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Verkkopalvelimen viive"
+
+#~ msgid "setup"
+#~ msgstr "perustaa"
+
+#~ msgid "Access Point"
+#~ msgstr "Tukiasema"
+
+#~ msgid "Client"
+#~ msgstr "Asiakas"
+
+#~ msgid "back"
+#~ msgstr "takaisin"

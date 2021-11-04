@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: sv <LL@li.org>\n"
@@ -16,15 +16,15 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
-msgstr "pypilot hattkonfiguration"
+msgstr "konfiguration för pypilothatt"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
-msgstr "inställning av lcd och fjärrkontroll"
+msgstr "lcd och fjärrkontrollinstallation"
 
 #: templates/index.html:17
 msgid "clear"
@@ -39,16 +39,16 @@ msgid ""
 "press button(s) on the keypad or remote then assign a command with the "
 "button."
 msgstr ""
-"tryck på knapparna på knappsatsen eller fjärrkontrollen och tilldela sedan "
+"tryck på knapp(ar) på knappsatsen eller fjärrkontrollen och tilldela sedan "
 "ett kommando med knappen."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
-msgstr "Åtgärder för LCD -gränssnitt"
+msgstr "Åtgärder för LCD-gränssnitt"
 
 #: templates/index.html:21 templates/index.html:25
 msgid "key"
-msgstr "nyckel-"
+msgstr "nyckel"
 
 #: templates/index.html:22 templates/index.html:26
 msgid "action"
@@ -72,8 +72,8 @@ msgid ""
 "arduino can receive from many different remotes without special calibration "
 "recordings."
 msgstr ""
-"IR -porten kan hanteras direkt från pi eller arduino. Att använda arduino "
-"kan ta emot från många olika fjärrkontroller utan speciella "
+"IR-porten kan hanteras direkt från pi eller arduino. Att använda arduino kan"
+" ta emot från många olika fjärrkontroller utan speciella "
 "kalibreringsinspelningar."
 
 #: templates/index.html:36
@@ -86,7 +86,7 @@ msgstr "avlägsen"
 
 #: templates/index.html:41
 msgid "nmea current baud rate"
-msgstr "nmea nuvarande överföringshastighet"
+msgstr "nmea aktuell baudhastighet"
 
 #: templates/index.html:42
 msgid "voltages"
@@ -102,4 +102,72 @@ msgstr "förbindelse"
 
 #: templates/index.html:45
 msgid "Web Server Latency"
-msgstr "Webbserver latens"
+msgstr "Webbserverfördröjning"
+
+#~ msgid "pypilot hat configuration"
+#~ msgstr "pypilot hattkonfiguration"
+
+#~ msgid "lcd and remote control setup"
+#~ msgstr "inställning av lcd och fjärrkontroll"
+
+#~ msgid "clear"
+#~ msgstr "klar"
+
+#~ msgid "default"
+#~ msgstr "standard"
+
+#~ msgid ""
+#~ "press button(s) on the keypad or remote then assign a command with the "
+#~ "button."
+#~ msgstr ""
+#~ "tryck på knapparna på knappsatsen eller fjärrkontrollen och tilldela sedan "
+#~ "ett kommando med knappen."
+
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Åtgärder för LCD -gränssnitt"
+
+#~ msgid "key"
+#~ msgstr "nyckel-"
+
+#~ msgid "action"
+#~ msgstr "handling"
+
+#~ msgid ""
+#~ "These actions do not depend on the state of the display and can be used by "
+#~ "wireless remotes."
+#~ msgstr ""
+#~ "Dessa åtgärder beror inte på skärmens tillstånd och kan användas av trådlösa"
+#~ " fjärrkontroller."
+
+#~ msgid "infared receiver port"
+#~ msgstr "infraröd mottagarport"
+
+#~ msgid ""
+#~ "The ir port can be handled direcly from the pi or the arduino.  Using the "
+#~ "arduino can receive from many different remotes without special calibration "
+#~ "recordings."
+#~ msgstr ""
+#~ "IR -porten kan hanteras direkt från pi eller arduino. Att använda arduino "
+#~ "kan ta emot från många olika fjärrkontroller utan speciella "
+#~ "kalibreringsinspelningar."
+
+#~ msgid "remote mode"
+#~ msgstr "fjärrläge"
+
+#~ msgid "remote"
+#~ msgstr "avlägsen"
+
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea nuvarande överföringshastighet"
+
+#~ msgid "voltages"
+#~ msgstr "spänningar"
+
+#~ msgid "status"
+#~ msgstr "status"
+
+#~ msgid "connection"
+#~ msgstr "förbindelse"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Webbserver latens"

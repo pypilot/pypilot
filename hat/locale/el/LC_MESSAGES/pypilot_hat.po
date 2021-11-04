@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot_hat\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-05-05 23:30-0400\n"
+"POT-Creation-Date: 2023-04-06 17:30-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,269 +18,295 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 
-#: ../menu.py:278
+#: ../menu.py:340
+msgid "profile"
+msgstr "Προφίλ"
+
+#: ../menu.py:341
 msgid "gain"
 msgstr "κέρδος"
 
-#: ../menu.py:311
-msgid "rudder"
-msgstr "πηδάλιο"
+#: ../menu.py:387
+msgid "range"
+msgstr "εύρος"
 
-#: ../menu.py:331
-msgid "calibrate"
-msgstr "διάμετρο"
-
-#: ../menu.py:332
-msgid "level"
-msgstr "επίπεδο"
-
-#: ../menu.py:333
-msgid "heading"
-msgstr "επικεφαλίδα"
-
-#: ../menu.py:334
-msgid "lock"
-msgstr "κλειδαριά"
-
-#: ../menu.py:363
-msgid "motor"
-msgstr "μοτέρ"
-
-#: ../menu.py:364
-msgid "min speed"
-msgstr "ελάχιστη ταχ"
-
-#: ../menu.py:364 ../menu.py:365
-msgid "relative"
-msgstr "συγγενής"
-
-#: ../menu.py:365
-msgid "max speed"
-msgstr "μέγιστη ταχ"
-
-#: ../menu.py:366
-msgid "max current"
-msgstr "μέγιστο ρεύμα"
-
-#: ../menu.py:366
-msgid "amps"
-msgstr "ενισχυτές"
-
-#: ../menu.py:367
-msgid "period"
-msgstr "περίοδος"
-
-#: ../menu.py:367
-msgid "seconds"
-msgstr "δευτερόλεπτα"
-
-#: ../menu.py:368
-msgid "clutch pwm"
-msgstr "συμπλέκτης pwm"
-
-#: ../menu.py:368
-msgid "percent"
-msgstr "τοις εκατό"
-
-#: ../menu.py:419
-msgid "defaults"
-msgstr "προεπιλογές"
-
-#: ../menu.py:429
-msgid "Wifi not managed"
-msgstr "Το WiFi δεν διαχειρίζεται"
-
-#: ../menu.py:435
-msgid "No Connetion"
-msgstr "Χωρίς σύνδεση"
-
-#: ../menu.py:463
-msgid "control"
-msgstr "έλεγχος"
-
-#: ../menu.py:465
-msgid "small step"
-msgstr "μικρό βήμα"
-
-#: ../menu.py:465 ../menu.py:466
+#: ../menu.py:387 ../menu.py:558 ../menu.py:559
 msgid "degrees"
 msgstr "βαθμούς"
 
-#: ../menu.py:466
+#: ../menu.py:388
+msgid "rudder"
+msgstr "πηδάλιο"
+
+#: ../menu.py:407
+msgid "calibrate"
+msgstr "διάμετρο"
+
+#: ../menu.py:408
+msgid "level"
+msgstr "επίπεδο"
+
+#: ../menu.py:409
+msgid "heading"
+msgstr "επικεφαλίδα"
+
+#: ../menu.py:410
+msgid "lock"
+msgstr "κλειδαριά"
+
+#: ../menu.py:438
+msgid "motor"
+msgstr "μοτέρ"
+
+#: ../menu.py:439
+msgid "min speed"
+msgstr "ελάχιστη ταχ"
+
+#: ../menu.py:439 ../menu.py:440
+msgid "relative"
+msgstr "συγγενής"
+
+#: ../menu.py:440
+msgid "max speed"
+msgstr "μέγιστη ταχ"
+
+#: ../menu.py:441
+msgid "max current"
+msgstr "μέγιστο ρεύμα"
+
+#: ../menu.py:441
+msgid "amps"
+msgstr "ενισχυτές"
+
+#: ../menu.py:442
+msgid "period"
+msgstr "περίοδος"
+
+#: ../menu.py:442
+msgid "seconds"
+msgstr "δευτερόλεπτα"
+
+#: ../menu.py:443
+msgid "clutch pwm"
+msgstr "συμπλέκτης pwm"
+
+#: ../menu.py:443
+msgid "percent"
+msgstr "τοις εκατό"
+
+#: ../menu.py:485
+msgid "defaults"
+msgstr "προεπιλογές"
+
+#: ../menu.py:515
+msgid "Wifi not managed"
+msgstr "Το WiFi δεν διαχειρίζεται"
+
+#: ../menu.py:521
+msgid "No Connetion"
+msgstr "Χωρίς σύνδεση"
+
+#: ../menu.py:556
+msgid "control"
+msgstr "έλεγχος"
+
+#: ../menu.py:558
+msgid "small step"
+msgstr "μικρό βήμα"
+
+#: ../menu.py:559
 msgid "big step"
 msgstr "μεγάλο βήμα"
 
-#: ../menu.py:482
-msgid "hue"
-msgstr "απόχρωση"
-
-#: ../menu.py:484
+#: ../menu.py:574
 msgid "backlight"
 msgstr "οπίσθιο φωτισμό"
 
-#: ../menu.py:485
+#: ../menu.py:583
+msgid "hue"
+msgstr "απόχρωση"
+
+#: ../menu.py:585
+msgid "buzzer"
+msgstr "βομβητής"
+
+#: ../menu.py:586
 msgid "display"
 msgstr "απεικόνιση"
 
-#: ../menu.py:486
+#: ../menu.py:587
 msgid "contrast"
 msgstr "αντίθεση"
 
-#: ../menu.py:487
+#: ../menu.py:588
 msgid "invert"
 msgstr "αντιστρέφω"
 
-#: ../menu.py:487
+#: ../menu.py:588
 msgid "flip"
 msgstr "αναρρίπτω"
 
-#: ../menu.py:515
+#: ../menu.py:617
 msgid "language"
 msgstr "Γλώσσα"
 
-#: ../menu.py:534
+#: ../menu.py:636
 msgid "settings"
 msgstr "Ρυθμίσεις"
 
-#: ../menu.py:535
+#: ../menu.py:637
 msgid "mode"
 msgstr "τρόπος"
 
-#: ../menu.py:536
+#: ../menu.py:638
 msgid "pilot"
 msgstr "πιλότος"
 
-#: ../menu.py:541
+#: ../menu.py:643
 msgid "Menu"
 msgstr "Μενού"
 
-#: ../menu.py:559
+#: ../menu.py:661
 msgid "Loading"
 msgstr "Φόρτωση"
 
-#: ../menu.py:568
+#: ../menu.py:670
 msgid "timeout"
 msgstr "τέλος χρόνου"
 
-#: ../page.py:286
+#: ../page.py:330
 msgid "info"
 msgstr "πληροφορίες"
 
-#: ../page.py:300
+#: ../page.py:344
 msgid "Info"
 msgstr "Πληροφορίες"
 
-#: ../page.py:308
+#: ../page.py:352
 msgid "Watts"
 msgstr "Βατ"
 
-#: ../page.py:308
+#: ../page.py:352
 msgid "Amp Hours"
 msgstr "Ώρες ενισχυτή"
 
-#: ../page.py:308
+#: ../page.py:352
 msgid "runtime"
 msgstr "χρόνος εκτέλεσης"
 
-#: ../page.py:314
+#: ../page.py:358
 msgid "voltage"
 msgstr "Τάση"
 
-#: ../page.py:314
+#: ../page.py:358
 msgid "rate"
 msgstr "τιμή"
 
-#: ../page.py:314
+#: ../page.py:358
 msgid "uptime"
 msgstr "χρόνος λειτουργίας"
 
-#: ../page.py:320
+#: ../page.py:363
 msgid "cont temp"
 msgstr "συνέχεια"
 
-#: ../page.py:320
+#: ../page.py:363
 msgid "motor temp"
 msgstr "θερμοκρασία κινητήρα"
 
-#: ../page.py:320
+#: ../page.py:365
+msgid "battery"
+msgstr "μπαταρία"
+
+#: ../page.py:367
 msgid "faults"
 msgstr "λάθη"
 
-#: ../page.py:325
+#: ../page.py:372
 msgid "version"
 msgstr "εκδοχή"
 
-#: ../page.py:325
+#: ../page.py:372
 msgid "author"
 msgstr "συγγραφέας"
 
-#: ../page.py:347
+#: ../page.py:394
 msgid "Calibrate Info"
 msgstr "Βαθμονόμηση"
 
-#: ../page.py:358
+#: ../page.py:405
 msgid "incomplete"
 msgstr "ατελής"
 
-#: ../page.py:358
+#: ../page.py:405
 msgid "excellent"
 msgstr "έξοχος"
 
-#: ../page.py:358
+#: ../page.py:405
 msgid "good"
 msgstr "Καλός"
 
-#: ../page.py:359
+#: ../page.py:406
 msgid "fair"
 msgstr "έκθεση"
 
-#: ../page.py:359
+#: ../page.py:406
 msgid "poor"
 msgstr "Φτωχός"
 
-#: ../page.py:359
+#: ../page.py:406
 msgid "bad"
 msgstr "κακό"
 
-#: ../page.py:367
+#: ../page.py:414
 msgid "compass"
 msgstr "πυξίδα"
 
-#: ../page.py:598
+#: ../page.py:669
 msgid "ERROR"
 msgstr "ΛΑΘΟΣ"
 
-#: ../page.py:598
+#: ../page.py:669
 msgid "compass or gyro failure!"
 msgstr "αποτυχία πυξίδας ή γυροσκοπίων!"
 
-#: ../page.py:634
-msgid "GPS not detected"
-msgstr "Το GPS δεν εντοπίστηκε"
+#: ../page.py:712
+msgid "not detected"
+msgstr "δεν εντοπίστηκε"
 
-#: ../page.py:638
-msgid "WIND not detected"
-msgstr "Δεν εντοπίστηκε WIND"
-
-#: ../page.py:642
+#: ../page.py:720
 msgid "WARNING no motor controller"
 msgstr "ΠΡΟΕΙΔΟΠΟ χωρίς ελεγκτή"
 
-#: ../page.py:653
+#: ../page.py:732
 msgid "standby"
 msgstr "περίμενε"
 
-#: ../page.py:674
+#: ../page.py:738
+msgid "tack"
+msgstr "καρφάκι"
+
+#: ../page.py:740
+msgid "tacking"
+msgstr "tacking"
+
+#: ../page.py:763
 msgid "No Cal"
 msgstr "Όχι Cal"
 
-#: ../page.py:677
+#: ../page.py:766
 msgid "Bad Cal"
 msgstr "Bad Cal"
 
-#: ../page.py:767
+#: ../page.py:865
 msgid "connect to server"
 msgstr "σύνδεση με διακομιστή"
+
+#~ msgid "GPS not detected"
+#~ msgstr "Το GPS δεν εντοπίστηκε"
+
+#~ msgid "WIND not detected"
+#~ msgstr "Δεν εντοπίστηκε WIND"
 
 #~ msgid "remote"
 #~ msgstr "μακρινός"
