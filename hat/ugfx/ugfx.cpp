@@ -457,6 +457,7 @@ void surface::box(int x1, int y1, int x2, int y2, uint32_t c)
 
     switch(bypp) {
     case 1:
+    if(x2 >= x1)
     {
         uint16_t t = c&0xff;
         for(int y = y1; y <= y2; y++)

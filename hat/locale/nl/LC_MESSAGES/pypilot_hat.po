@@ -264,7 +264,7 @@ msgstr "WIND niet gedetecteerd"
 
 #: ../page.py:642
 msgid "WARNING no motor controller"
-msgstr "WAARSCHUWING geen motorcontroller"
+msgstr "WAARSCH geen motorcontroller"
 
 #: ../page.py:653
 msgid "standby"
