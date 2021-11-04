@@ -488,8 +488,9 @@ class Nmea(object):
             self.nmea_bridge.poll()
         
         t6 = time.monotonic()
-        if t6 - t0 > .05 and t0-self.start_time > 1: # report times if processing takes more than 0.05 seconds
-            print('nmea poll times', t6-self.start_time, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t6-t0)
+        if t6 - t0 > .05 and t0-self.start_time > 10: # report times if processing takes more than 0.05 seconds
+            times = map(lambda t : round_value(t, '%.3f'), [t6-self.start_time, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t6-t0])
+            print('nmea poll times', *times)
             
     def probe_serial(self):
         # probe new nmea data devices

@@ -509,22 +509,25 @@ class controlbase(page):
         profile = self.last_val('profile')
         if self.profile != profile:
             self.profile = profile
-            profilerect = rectangle(0, .92, .2, .09)
-            self.fittext(profilerect, 'P'+profile[:1])
-                
+            profilerect = rectangle(0, .92, .32, .09)
+            self.lcd.surface.box(*(self.convrect(profilerect) + [black]))
+            self.fittext(profilerect, 'P'+profile[:2])
+
+        '''
         pilot = self.last_val('ap.pilot')
         if self.pilot != pilot:
             self.pilot = pilot
             pilotrect = rectangle(.2, .92, .5, .09)
             self.fittext(pilotrect, pilot[:6])
+        '''
                 
         wifi = test_wifi()
         if self.wifi == wifi and not refresh:
             return # done displaying
         self.wifi = wifi
-        wifirect = rectangle(.65, .92, .3, .09)
+        wifirect = rectangle(.4, .92, .35, .1)
         if wifi:
-            text = 'W'
+            text = 'WIFI'
             if self.lcd.host != 'localhost':
                 text += 'R'
             self.fittext(wifirect, text)

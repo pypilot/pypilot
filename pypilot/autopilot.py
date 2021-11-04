@@ -368,7 +368,7 @@ class Autopilot(object):
         s = self.sensors
         sensors = {'gps': s.gps, 'apb': s.apb, 'wind': s.wind, 'truewind': s.truewind}
         for sensor in sensors:
-            sensors[sensor] = sensors[sensor].source.value == 'none'
+            sensors[sensor] = sensors[sensor].source.value != 'none'
         sensors['gps_and_nav_modes'] = self.gps_and_nav_modes.value
         if sensors != self.modes.sensors: # available modes changed?
             self.modes.sensors = sensors

@@ -221,20 +221,33 @@ class ServerProfiles(pypilotValue):
             self.msg = 'profiles=' + pyjson.dumps(self.profiles) + '\n'
         return self.msg
 
+    def add(self, profile):
+        if profile in self.profiles:
+            return
+        self.msg = 'new'
+        self.profiles.append(profile)
+        super(ServerProfiles, self).set(self.get_msg(), False) # inform any clients watching this value        
+
     def set(self, msg, connection):
         self.msg = 'new'
         n, profiles = msg.rstrip().split('=', 1)
         try:
-            profiles = pyjson.loads(profiles.rstrip())
-            sprofiles = []
+            profiles = pyjson.loads(profiles)
+            sprofiles = ['0']
             for profile in profiles:
-                sprofiles.append(str(self.profiles))
+                if profile != '0':
+                    sprofiles.append(str(profile))
+            self.profiles = sprofiles
+            profile = self.server_values.values['profile']
+
+            # if current profile is removed switch to 0
+            if not profile.profile in self.profiles:
+                profile.set('profile=0\n', False)
                 
         except Exception as e:
-            print('pypilot server failed to set new visible profiles')
+            print('pypilot server failed to set new visible profiles', e, msg)
             return
 
-        self.profiles = sprofiles
         super(ServerProfiles, self).set(msg, False) # inform any clients watching this value
 
         
@@ -246,7 +259,7 @@ class ServerProfile(pypilotValue):
 
     def get_msg(self):
         if not self.msg or self.msg == 'new':
-            self.msg = 'profile="' + str(self.profile) + '"\n'
+            self.msg = 'profile=' + pyjson.dumps(str(self.profile)) + '\n'
         return self.msg
 
     def set(self, msg, connection):
@@ -256,15 +269,14 @@ class ServerProfile(pypilotValue):
 
         try:
             strprofile = str(pyjson.loads(profile))
-        except:
+            strprofile.replace('"', '')
+        except Exception as e:
+            print('server bad profile', e, msg)
             strprofile = '0'
         if strprofile != profile:
-            msg = n + '=' + strprofile
+            msg = n + '="' + strprofile + '"\n'
 
-        profiles = self.server_values.values['profiles']
-        if not strprofile in profiles.profiles:
-            profiles.msg = 'new'
-            profiles.profiles.append(strprofile)
+        self.server_values.values['profiles'].add(strprofile)
 
         persistent_values = self.server_values.persistent_values
         persistent_data = self.server_values.persistent_data
@@ -272,9 +284,9 @@ class ServerProfile(pypilotValue):
         if not self.profile in persistent_data:
             persistent_data[self.profile] = {}
         prev = persistent_data[self.profile]
-        if not profile in persistent_data:
-            persistent_data[profile] = {}
-        data = persistent_data[profile]
+        if not strprofile in persistent_data:
+            persistent_data[strprofile] = {}
+        data = persistent_data[strprofile]
         for name, value in persistent_values.items():
             if not value.info.get('profiled'):
                 continue
@@ -291,7 +303,7 @@ class ServerProfile(pypilotValue):
             elif data[name] != value.msg:
                 value.set(data[name], False)  # only inform clients of the updated value from profile change if it really did change
         self.msg = 'new' # invalidate
-        self.profile = profile
+        self.profile = strprofile
         super(ServerProfile, self).set(msg, False) # inform any clients watching this value
                 
 class ServerValues(pypilotValue):
@@ -421,14 +433,16 @@ class ServerValues(pypilotValue):
         self.persistent_data = {None : {}, '0' : {}}
         #print("load file",filename)
         f = open(filename)
+        linei=0
         while True:
+            linei+=1
             line = f.readline()
             if not line:
                 break
             try:
                 name, data = line.rstrip().split('=', 1)
-            except:
-                print('failed to split config line on =', line)
+            except Exception as e:
+                print('failed to split ' + filename + ' line ', linei)
                 continue
             if name[0] == '[' and data[-1] == ']': # new section
                 if name[1:] != 'profile':
@@ -439,7 +453,7 @@ class ServerValues(pypilotValue):
                     print('loading pypilot.conf, unrecognized profile', data)
                     continue
                 
-                profile = data[1:-2]
+                profile = data[1:-2].replace('"', '')
                 if not profile in self.persistent_data:
                     self.persistent_data[profile] = {}
                 continue
@@ -520,7 +534,7 @@ class ServerValues(pypilotValue):
         for profile, data in self.persistent_data.items():
             if profile is None:
                 continue
-            profile.strip('"')
+            profile.replace('"', '')
             file.write('[profile="' + profile + '"]\n')
             for name, value in data.items():
                 file.write(value)
