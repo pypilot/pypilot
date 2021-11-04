@@ -45,7 +45,6 @@ class ZeroConfProcess(multiprocessing.Process):
     def __init__(self, signalk):
         self.name_type = False
         self.pipe = NonBlockingPipe('zeroconf', True)
-        self.missingzeroconfwarned = False
         super(ZeroConfProcess, self).__init__(target=self.process, daemon=True)
         self.start()
             
@@ -80,15 +79,19 @@ class ZeroConfProcess(multiprocessing.Process):
 
 
     def process(self):
-        try:
-            import zeroconf
-        except Exception as e:
-            if not self.missingzeroconfwarned:
-                print('signalk: ' + _('failed to') + ' import zeroconf, ' + _('autodetection not possible'))
-                print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
-                self.missingzeroconfwarned = True
-            time.sleep(20)
-            return
+        warned = False        
+        while True:
+            try:
+                import zeroconf
+                if warned:
+                    print('signalk:' + _('succeeded') + ' import zeroconf')
+                break
+            except Exception as e:
+                if not self.missingzeroconfwarned:
+                    print('signalk: ' + _('failed to') + ' import zeroconf, ' + _('autodetection not possible'))
+                    print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
+                    warned = True
+                time.sleep(20)
 
         current_ip_address = []
         zc = None
