@@ -273,13 +273,23 @@ class ValueEnumSelect(page):
         return control(self.lcd)
 
 class ValueEnum(menu):
-    def __init__(self, name, pypilot_path):
+    def __init__(self, name, pypilot_path, pypilot_items_path=None):
         super(ValueEnum, self).__init__(name, [])
         self.pypilot_path = pypilot_path
+        self.pypilot_items_path = pypilot_items_path
+        self.items_val = None
         self.selection = -1
         
     def process(self):
-        if not self.items:
+        if self.pypilot_items_path:
+            items_val = self.last_val(self.pypilot_items_path)
+            if items_val!=self.items_val:
+                self.items_val = items_val
+                try:
+                    self.items = list(map(lambda choice : ValueEnumSelect(self.lcd, choice, self.pypilot_path), items_val))
+                except Exception as e:
+                    print('failed choices', e)
+        elif not self.items:
             try:
                 values = self.lcd.client.get_values()
                 if values:
@@ -306,6 +316,7 @@ def GainEdit(gain):
 class gain(menu):
     def __init__(self):
         self.last_pilot = False
+        self.profile = [ValueEnum(_('profile'), 'profile', 'profiles')]
         super(gain, self).__init__(_('gain'), [])
 
     def curgains(self):
@@ -325,7 +336,7 @@ class gain(menu):
         pilot = self.last_val('ap.pilot')
         if pilot != self.last_pilot:
             self.last_pilot = pilot
-            self.items = list(map(GainEdit, self.curgains()))
+            self.items = self.profile + list(map(GainEdit, self.curgains()))
             self.find_parents()
             self.lcd.need_refresh = True
             if self.selection < 0:
@@ -603,7 +614,7 @@ class settings(menu):
         else:
             lang = [language()]
         super(settings, self).__init__(_('settings'),
-                            [ValueEnum(_('mode'), 'ap.mode'),
+                            [ValueEnum(_('mode'), 'ap.mode', 'ap.modes'),
                              ValueEnum(_('pilot'), 'ap.pilot'),
                              motor(), control_menu(), display()] + lang)
         

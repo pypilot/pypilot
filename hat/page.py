@@ -534,7 +534,6 @@ class controlbase(page):
 class control(controlbase):
     def __init__(self, lcd):
         super(control, self).__init__(lcd, .25)
-        self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
         self.control = {} # used to keep track of what is drawn on screen to avoid redrawing it
         self.lastspeed = 0
         self.lasttime = 0
@@ -566,42 +565,42 @@ class control(controlbase):
                                'command': self.get_ap_heading_command(),
                                'change': 0}
 
-    def have_compass(self):
-        return True
-
-    def have_gps(self):
-        return self.last_val('gps.source') != 'none'
-
-    def have_wind(self):
-        return self.last_val('wind.source') != 'none'
-
-    def have_true_wind(self):
-        return self.last_val('truewind.source') != 'none'
-
     def display_mode(self):
         mode = self.last_val('ap.mode')
-        modes = [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
+        modes = self.last_val('ap.modes')
+        if not mode in modes:
+            return
         if self.control['mode'] == mode and self.control['modes'] == modes:
             return # no need to refresh
         self.control['mode'] = mode
         self.control['modes'] = modes
-
+        index = modes.index(mode)
+        if index < 2:
+            rindex = index
+            mindex = 0
+        elif index == len(modes)-1:
+            rindex = 3
+            mindex = len(modes)-4
+        else:
+            rindex = 2
+            mindex = index - 2
+        
         #print('mode', self.last_val('ap.mode'))
-        modes = {'compass':   ('C', self.have_compass,   rectangle(  0, .74, .22, .16)),
-                 'gps':       ('G', self.have_gps,       rectangle(.22, .74, .25, .16)),
-                 'wind':      ('W', self.have_wind,      rectangle(.47, .74, .3,  .16)),
-                 'true wind': ('T', self.have_true_wind, rectangle(.77, .74, .23, .16))}
+        modes_r = [rectangle(  0, .74, .22, .16), rectangle(.22, .74, .25, .16),
+                   rectangle(.47, .74, .3,  .16), rectangle(.77, .74, .23, .16)]
 
         marg = 0.02
         self.lcd.surface.box(*(self.convrect(rectangle(0, .74, 1, .16+marg)) + [black]))
-        for mode in modes:
-            if modes[mode][1]():
-                ret=self.fittext(modes[mode][2], modes[mode][0])
 
-        for mode in modes:
-            if self.last_val('ap.mode') == mode:
-                r = modes[mode][2]
-                self.rectangle(rectangle(r.x, r.y+marg, r.width, r.height), .015)
+        marg = 0.02
+        for i in range(4):
+            ind = mindex+i
+            if ind < len(modes):
+                ret=self.fittext(modes_r[i], modes[ind][0].upper())
+
+        # draw rectangle around mode
+        r = modes_r[rindex]
+        self.rectangle(rectangle(r.x, r.y+marg, r.width, r.height), .015)
 
     def display(self, refresh):
         if not self.control:
@@ -671,6 +670,7 @@ class control(controlbase):
 
         t0 = gettime()
         mode = self.last_val('ap.mode')
+        modes = self.last_val('ap.modes')
         ap_heading = self.last_val('ap.heading')
         ap_heading_command = self.get_ap_heading_command()
         heading = ap_heading, mode, nr(ap_heading)
@@ -689,7 +689,7 @@ class control(controlbase):
         for flag in flags:
             if flag.endswith('_FAULT'):
                 warning += flag[:-6].replace('_', ' ') + ' '
-                if 'OVER' in flag: # beep overtemp/overcurrent
+                if 'OVER' in flag or 'BADVOLTAGE' in flag: # beep overtemp/overcurrent
                     buzz = True
 
         if warning:
@@ -701,18 +701,11 @@ class control(controlbase):
                 self.fittext(rectangle(0, .4, 1, .4), _(warning), True, black)
                 self.control['heading_command'] = warning
                 self.control['mode'] = warning
-        elif mode == 'gps' and not self.have_gps():
-            if self.control['heading_command'] != 'no gps':
-                self.fittext(rectangle(0, .4, 1, .35), _('GPS not detected'), True, black)
-                self.control['heading_command'] = 'no gps'
-        elif mode == 'wind' and not self.have_wind():
-            if self.control['heading_command'] != 'no wind':
-                self.fittext(rectangle(0, .4, 1, .35), _('WIND not detected'), True, black)
-                self.control['heading_command'] = 'no wind'
-        elif mode == 'true wind' and not self.have_true_wind():
-            if self.control['heading_command'] != 'no wind':
-                self.fittext(rectangle(0, .4, 1, .35), _('WIND not detected'), True, black)
-                self.control['heading_command'] = 'no wind'
+        elif mode not in modes:
+            no_mode = 'no ' + mode
+            if self.control['heading_command'] != no_mode:
+                self.fittext(rectangle(0, .4, 1, .35), mode.upper() + ' ' + _('not detected'), True, black)
+                self.control['heading_command'] = no_mode
         elif self.last_val('servo.controller') == 'none':
             if self.control['heading_command'] != 'no controller':
                 self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
@@ -781,15 +774,18 @@ class control(controlbase):
                 self.set('ap.enabled', False)
 
         if self.testkeydown(SELECT):
-            have_mode = {'compass': self.have_compass, 'gps': self.have_gps,
-                          'wind': self.have_wind, 'true wind': self.have_true_wind}
             # change mode
-            for t in range(len(self.modes_list)):
-                self.modes_list = self.modes_list[1:] + [self.modes_list[0]]
-                next_mode = self.modes_list[0]
-                if next_mode != self.last_val('ap.mode') and have_mode[next_mode]():
-                    self.set('ap.mode', next_mode)
-                    break
+            modes = self.last_val('ap.modes')
+            mode = self.last_val('ap.mode')
+            if mode in modes:
+                ind = modes.index(mode) + 1
+                if ind == len(modes):
+                    ind = 0
+                next_mode = modes[ind]
+            else:
+                next_mode = modes[0]
+
+            self.set('ap.mode', next_mode)
             return
 
         if self.testkeydown(TACK):

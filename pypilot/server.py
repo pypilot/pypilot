@@ -142,8 +142,8 @@ class pypilotValue(object):
             period = 0 # True is same as a period of 0, for continuous watch
 
         # unwatch by removing
-        watching = self.unwatch(connection, False)
-        if not watching and (self.msg and period >= self.watching) or self.name == 'profile':
+        watching = self.unwatch(connection, False) # or for server values (self.connection is False)
+        if not watching and self.msg and (period >= self.watching or self.connection is False):
             connection.write(self.get_msg()) # initial retrieval
 
         for watch in self.awatches:
@@ -210,6 +210,34 @@ class ServerUDP(pypilotValue):
                 c.udp_socket.close()
                 c.udp_port = False
 
+class ServerProfiles(pypilotValue):
+    def __init__(self, values):
+        super(ServerProfiles, self).__init__(values, 'profiles', info = {'type': 'Value', 'persistent': True, 'writable': True})
+        self.msg = 'new'
+        self.profiles = ['0']
+
+    def get_msg(self):
+        if not self.msg or self.msg == 'new':
+            self.msg = 'profiles=' + pyjson.dumps(self.profiles) + '\n'
+        return self.msg
+
+    def set(self, msg, connection):
+        self.msg = 'new'
+        n, profiles = msg.rstrip().split('=', 1)
+        try:
+            profiles = pyjson.loads(profiles.rstrip())
+            sprofiles = []
+            for profile in profiles:
+                sprofiles.append(str(self.profiles))
+                
+        except Exception as e:
+            print('pypilot server failed to set new visible profiles')
+            return
+
+        self.profiles = sprofiles
+        super(ServerProfiles, self).set(msg, False) # inform any clients watching this value
+
+        
 class ServerProfile(pypilotValue):
     def __init__(self, values):
         super(ServerProfile, self).__init__(values, 'profile', info = {'type': 'Value', 'persistent': True, 'writable': True})
@@ -227,11 +255,16 @@ class ServerProfile(pypilotValue):
             return
 
         try:
-            strprofile = str(profile)
+            strprofile = str(pyjson.loads(profile))
         except:
             strprofile = '0'
         if strprofile != profile:
             msg = n + '=' + strprofile
+
+        profiles = self.server_values.values['profiles']
+        if not strprofile in profiles.profiles:
+            profiles.msg = 'new'
+            profiles.profiles.append(strprofile)
 
         persistent_values = self.server_values.persistent_values
         persistent_data = self.server_values.persistent_data
@@ -264,12 +297,15 @@ class ServerProfile(pypilotValue):
 class ServerValues(pypilotValue):
     def __init__(self, server):
         super(ServerValues, self).__init__(self, 'values')
-        self.profile = ServerProfile(self)
-        self.values = {'values': self, 'watch': ServerWatch(self), 'udp_port': ServerUDP(self, server), 'profile': self.profile}
+        profile = ServerProfile(self)
+        profiles = ServerProfiles(self)
+        
+        self.persistent_values = {'profile': profile, 'profiles': profiles}
+        self.values = {'values': self, 'watch': ServerWatch(self), 'udp_port': ServerUDP(self, server)}
+        self.values.update(self.persistent_values)
         self.pipevalues = {}
         self.msg = 'new'
         self.persistent_timeout = time.monotonic() + server_persistent_period
-        self.persistent_values = {'profile' : self.profile}
         self.load()
         self.need_store = False
         self.pqwatches = [] # priority queue of watches
@@ -432,6 +468,7 @@ class ServerValues(pypilotValue):
         except Exception as e:
             self.inotify = None
             print(_('failed to monitor '), configfilepath, e)
+        self.load_file(configfilepath + configfilename)
         try:
             if not os.path.exists(configfilepath):
                 print(_('creating config directory: ') + configfilepath)
@@ -483,6 +520,7 @@ class ServerValues(pypilotValue):
         for profile, data in self.persistent_data.items():
             if profile is None:
                 continue
+            profile.strip('"')
             file.write('[profile="' + profile + '"]\n')
             for name, value in data.items():
                 file.write(value)
@@ -495,7 +533,7 @@ class ServerValues(pypilotValue):
             if not value.info.get('persistent'):
                 continue
             if value.info.get('profiled'):
-                profile = self.profile.profile
+                profile = self.values['profile'].profile
                 if not profile in self.persistent_data:
                     self.persistent_data[profile] = {}
             else:

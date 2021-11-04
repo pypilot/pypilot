@@ -31,7 +31,7 @@ def minmax(value, r):
 class ModeProperty(EnumProperty):
     def __init__(self, name):
         self.ap = False
-        super(ModeProperty, self).__init__(name, 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
+        super(ModeProperty, self).__init__(name, 'compass', ['compass', 'gps', 'nav', 'wind', 'true wind'], persistent=True)
 
     def set(self, value):
         # update the preferred mode when the mode changes from user
@@ -97,6 +97,9 @@ class Autopilot(object):
         self.timestamp = self.client.register(TimeStamp())
         self.starttime = time.monotonic()
         self.mode = self.register(ModeProperty, 'mode')
+        self.modes = self.register(JSONValue, 'modes', [])
+        self.modes.sensors = {}
+        self.gps_and_nav_modes = self.register(BooleanProperty, 'gps_and_nav_modes', True, persistent=True)
 
         self.preferred_mode = self.register(Value, 'preferred_mode', 'compass')
         self.lastmode = False    
@@ -361,6 +364,29 @@ class Autopilot(object):
 
         pilot = self.pilots[self.pilot.value] # select pilot
 
+        # compute available modes
+        s = self.sensors
+        sensors = {'gps': s.gps, 'apb': s.apb, 'wind': s.wind, 'truewind': s.truewind}
+        for sensor in sensors:
+            sensors[sensor] = sensors[sensor].source.value == 'none'
+        sensors['gps_and_nav_modes'] = self.gps_and_nav_modes.value
+        if sensors != self.modes.sensors: # available modes changed?
+            self.modes.sensors = sensors
+            modes = ['compass']
+            if sensors['gps']:
+                if self.gps_and_nav_modes.value:
+                    modes.append('gps')
+                elif not sensors['abp']:
+                    modes.append('gps')
+                if sensors['apb']:
+                    modes.append('nav')
+            if sensors['wind']:
+                modes.append('wind')
+            if sensors['truewind']:
+                modes.append('true wind')
+            self.modes.update(modes)
+                    
+                        
         self.adjust_mode(pilot)
         pilot.compute_heading()
         self.compute_heading_error(t0)

@@ -42,7 +42,8 @@ class Sensor(object):
            data['device'] != self.device:
             return False
 
-        self.update(data)
+        if not self.update(data):
+            return False
                 
         if self.source.value != source:
             print(_('sensor found'), self.name, source, data['device'], time.asctime(time.localtime(time.time())))
@@ -104,6 +105,7 @@ class BaseWind(Sensor):
         if 'speed' in data:
             self.speed.set(data['speed'])
         self.weight()
+        return True
 
     def reset(self):
         self.direction.set(False)
@@ -161,7 +163,7 @@ class APB(Sensor):
     def update(self, data):
         t = time.monotonic()
         if t - self.last_time < .5: # only accept apb update at 2hz
-            return
+            return False
 
         self.last_time = t
         self.track.update(data['track'])
@@ -171,26 +173,22 @@ class APB(Sensor):
         else:
             xte = 0
 
-        # ignore message if autopilot is not enabled
-        if not self.client.values.values['ap.enabled'].value:
-            return
-
         data_mode = data['mode'] if 'mode' in data else 'gps'
-        mode = self.client.values.values['ap.mode']
-        if mode.value != data_mode:
-            # for GPAPB, ignore message on wrong mode
-            if 'senderid' in data and data['senderid'] != 'GP':
-                mode.set(data_mode)
-            else:
-                return 
-                # APB is from GP with no gps mode selected so exit
+        if data_mode != 'gps':
+            return False
 
+        mode = self.client.values.values['ap.mode']
+        # do not apply heading change message if not enabled in nav mod
+        if mode.value != 'nav' or not self.client.values.values['ap.enabled'].value:
+            return True
+        
         command = data['track'] + self.gain.value*xte
         #print('apb command', command, data)
 
         heading_command = self.client.values.values['ap.heading_command']
         if abs(heading_command.value - command) > .1:
             heading_command.set(command)
+        return True
 
 class gps(Sensor):
     def __init__(self, client):
@@ -216,6 +214,8 @@ class gps(Sensor):
             self.track.set(data['track'])
         self.fix.set(data)
         self.filtered.update(data, time.monotonic())
+
+        return True
 
     def predict(self, ap):
         if self.source.value == 'none':
@@ -250,12 +250,15 @@ class Water(Sensor):
 
     def update(self, data):
         t = time.monotonic()
+        if not 'speed' in data:
+            return False
+
+        self.speed.set(data['speed'])
         if 'leeway' in data:
             self.leeway.set(data['leeway'])
             self.leeway_source.update('sensor')
             self.last_leeway_measurement = t
-        if 'speed' in data:
-            self.speed.set(data['speed'])
+        return True
 
     def compute(self, ap):
         if self.source.value == 'none':
