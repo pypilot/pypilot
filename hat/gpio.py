@@ -50,8 +50,7 @@ class gpio(object):
         else:
             self.pins = [17, 23, 27, 22, 18, 5, 6, 26]
 
-        for pin in self.pins:
-            self.keystate[pin] = 0
+        self.keystate = self.keypin = 1
 
         if not GPIO:
             return
@@ -78,7 +77,8 @@ class gpio(object):
             def cbr(pin):
                 value = GPIO.input(pin)
                 time.sleep(.02)  # workaround buggy gpio
-                self.evalkey(pin, value)
+                self.lastkeystate[pin] = value
+                self.evalkeys()
 
             while True:
                 try:
@@ -93,32 +93,36 @@ class gpio(object):
                 time.sleep(1)
 
     def poll(self):
-        for pin in self.pins:
-            value = True
+        if not GPIO:
+            return []
+        
+        for p in self.pins:
+            value = GPIO.input(p)
+            self.lastkeystate[pin] = value
 
-            if False:
-                f = open('/sys/class/gpio/gpio%d/value' % pin)
-                a = f.readline()
-                value = bool(int(a))
-            else:
-                if GPIO:
-                    value = GPIO.input(pin)
-
-            self.evalkey(pin, value)
+        self.evalkeys()
+                
         events = self.events
         self.events = []
         return events
 
-    def evalkey(self, pin, value):
-        if value:
-            if self.keystate[pin]:
-                self.keystate[pin] = 0
-            else:
-                return
-        else:
-            self.keystate[pin] += 1
+    def evalkeys(self):
+        pin = 1
+        for p in self.pins:
+            if self.lastkeystate[pin]:
+                pin *= p # multiple keys
 
-        self.events.append(('gpio%d'%pin, self.keystate[pin]))
+        if pin == self.keypin:
+            self.keystate += 1
+        else:
+            if self.keypin > 1:
+                self.events.append(('gpio%d'%self.keypin, 0))
+            self.keypin = pin
+            self.keystate = 1
+
+        if pin > 1:
+            self.events.append(('gpio%d'%pin, self.keystate))
+
 
 def main():
     gp = gpio()

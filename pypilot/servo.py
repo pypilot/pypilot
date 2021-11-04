@@ -470,22 +470,13 @@ class Servo(object):
     def stop(self):
         self.brake_on = False
         self.do_raw_command(0)
-        self.rawcommand.set(command)
-        self.compute_duty()
         self.lastdir = 0
         self.state.update('stop')
 
-    def compute_duty(self):
-        # compute duty cycle
-        lp = .001
-        self.duty.set(lp*int(not not self.rawcommand.value) + (1-lp)*self.duty.value)
-        
     def raw_command(self, command):
         # apply command before other calculations
         self.brake_on = self.use_brake.value
         self.do_raw_command(command)
-        self.rawcommand.set(command)
-        self.compute_duty()
 
         if command <= 0:
             if command < 0:
@@ -502,6 +493,11 @@ class Servo(object):
             self.lastdir = 1
         
     def do_raw_command(self, command):
+        self.rawcommand.set(command)
+        # compute duty cycle
+        lp = .001
+        self.duty.set(lp*int(not not command) + (1-lp)*self.duty.value)
+
         t = time.monotonic()
         if command == 0:
             # only send at .2 seconds when command is zero for more than a second

@@ -15,7 +15,7 @@ disabled = True
 # the gps pilot requires gps
 # it does not rely on the compass or calibration (unless in compass mode)
 # and is therefore not affected by magnetic changes.   Even in compass mode this pilot
-# will follow wind shifts and only hold the general compass course
+# will a gps course being more immune to magnetic distortions and only hold the general compass course
 
 class GPSPilot(AutopilotPilot):
   def __init__(self, ap):

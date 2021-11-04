@@ -442,18 +442,23 @@ class BoatIMU(object):
         self.last_imuread = time.monotonic()
         self.frequency.strobe()
   
-        # apply alignment calibration
-        gyro_q = quaternion.rotvecquat(data['gyro'], data['fusionQPose'])
-    
-        data['pitchrate'], data['rollrate'], data['headingrate'] = map(math.degrees, gyro_q)
-        
+        # apply alignment calibration                                       
         aligned = quaternion.multiply(data['fusionQPose'], self.alignmentQ.value)
         aligned = quaternion.normalize(aligned) # floating point precision errors
     
         data['roll'], data['pitch'], data['heading'] = map(math.degrees, quaternion.toeuler(aligned))
-  
         if data['heading'] < 0:
             data['heading'] += 360
+
+        gyro_q = quaternion.rotvecquat(data['gyro'], data['fusionQPose'])
+
+        # optimized below
+        #gyro_q = quaternion.rotvecquat(gyro_q, quaternion.angvec2quat(-math.radians(data['heading']), [0, 0, 1]))
+        ur, vr, data['headingrate'] = map(math.degrees, gyro_q)
+        rh = math.radians(data['heading'])
+        srh = math.sin(rh), crh = math.cos(rh)
+        data['rollrate'] = ur*crh + vr*srh
+        data['pitchrate'] = vr*crh - ur*srh
   
         dt = data['timestamp'] - self.lasttimestamp
         self.lasttimestamp = data['timestamp']

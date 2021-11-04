@@ -10,15 +10,13 @@ SKETCHNAME = weathersensors
 DEVICE = /dev/ttyUSB0
 
 MCU = atmega328p
+#MCU = atmega32
 
 ARDUINO_PATH = /usr/share/arduino
 CC = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-gcc
 CXX = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-g++
 OBJCOPY = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-objcopy
 
-
-CXXFLAGS = -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=16000000L -DUSB_VID=null -DUSB_PID=null -DARDUINO=105 -D__PROG_TYPES_COMPAT__ -I$(ARDUINO_PATH)/hardware/arduino/cores/arduino -I$(ARDUINO_PATH)/hardware/arduino/variants/standard  -I$(ARDUINO_PATH)/libraries/Wire -I$(ARDUINO_PATH)/libraries/Wire/utility  -I$(ARDUINO_PATH)/libraries/SPI -I.
-LDFLAGS = -Os -Wl,--gc-sections -lm
 
 
 ARDUINO_SRCS = \
@@ -38,7 +36,12 @@ $(ARDUINO_PATH)/hardware/arduino/cores/arduino/Print.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/HardwareSerial.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/WMath.cpp \
 $(ARDUINO_PATH)/hardware/arduino/cores/arduino/main.cpp \
-/usr/share/arduino/libraries/SPI/SPI.cpp \
+$(ARDUINO_PATH)/libraries/SPI/SPI.cpp
+
+
+CXXFLAGS = -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=16000000L -DUSB_VID=null -DUSB_PID=null -DARDUINO=105 -D__PROG_TYPES_COMPAT__ -I$(ARDUINO_PATH)/hardware/arduino/cores/arduino -I$(ARDUINO_PATH)/hardware/arduino/variants/standard  -I$(ARDUINO_PATH)/libraries/Wire -I$(ARDUINO_PATH)/libraries/Wire/utility  -I$(ARDUINO_PATH)/libraries/SPI -I.
+LDFLAGS = -Os -Wl,--gc-sections -lm
+
 
 #$(ARDUINO_PATH)/libraries/Wire/utility/twi.c \
 
@@ -68,7 +71,7 @@ obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 
 AVRDUDE = avrdude
 BOOTLOADER = arduino
-BAUDRATE = 57600
+BAUDRATE = 115200
 upload: $(SKETCHNAME).cpp.hex
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:w:$(SKETCHNAME).cpp.hex -b $(BAUDRATE)
 

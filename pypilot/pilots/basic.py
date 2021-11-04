@@ -12,8 +12,8 @@ from resolv import resolv
 from pypilot.values import *
 
 class BasicPilot(AutopilotPilot):
-  def __init__(self, ap):
-    super(BasicPilot, self).__init__('basic', ap)
+  def __init__(self, ap, name='basic'):
+    super(BasicPilot, self).__init__(name, ap)
 
     # create extended pid filter
     self.gains = {}

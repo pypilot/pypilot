@@ -474,6 +474,8 @@ class controlbase(page):
         self.lcd = lcd
         self.batt = False
         self.wifi = False
+        self.pilot = False
+
         self.charging_blink = False
         self.charging_blink_time = 0
 
@@ -481,6 +483,7 @@ class controlbase(page):
         if refresh:
             self.box(rectangle(0, .92, 1, .1), black)
             self.wifi = False
+            self.pilot = False
             
         if self.lcd.battery_voltage:
             battrect = rectangle(0.03, .93, .25, .06)
@@ -501,12 +504,18 @@ class controlbase(page):
                     self.batt = 0
             else:
                 self.charging_blink = False
+
+        pilot = self.last_val('ap.pilot')
+        if self.pilot != pilot:
+            self.pilot = pilot
+            pilotrect = rectangle(0, .92, .4, .09)
+            self.fittext(pilotrect, pilot[:6])
                 
         wifi = test_wifi()
         if self.wifi == wifi and not refresh:
             return # done displaying
         self.wifi = wifi
-        wifirect = rectangle(.35, .92, .6, .09)
+        wifirect = rectangle(.4, .92, .55, .09)
         if wifi:
             text = 'WIFI'
             if self.lcd.host != 'localhost':

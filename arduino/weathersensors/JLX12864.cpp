@@ -51,8 +51,13 @@ void JLX12864::begin()
         pinMode(pin_sce, OUTPUT);
 
 #ifdef HWSPI
+#if defined(__AVR_ATmega32__)
+    DDRB|=(1<<4)|(1<<5)|(1<<7);
+    SPCR=(1<<SPE)|(1<<MSTR)|(1<<SPR0);
+#else
     SPI.begin();
     SPI.setClockDivider(SPI_CLOCK_DIV16);
+#endif
 #endif
     // Reset the controller state...
     digitalWrite(pin_sce, HIGH);
@@ -202,8 +207,11 @@ void JLX12864::SetParameters()
         0xaf // Open the display
     };
 
-    for(uint8_t i=0; i<(sizeof cmd) / (sizeof *cmd); i++)
-        SPI.transfer(cmd[i]);
+    for(uint8_t i=0; i<(sizeof cmd) / (sizeof *cmd); i++) {
+        SPDR = cmd[i];
+        while (!(SPSR & _BV(SPIF)));
+    }
+        ;//SPI.transfer(cmd[i]);
 }
 
 size_t JLX12864::write(uint8_t chr)
@@ -262,7 +270,7 @@ void JLX12864::clear()
 
 void JLX12864::refresh(uint8_t page)
 {
-   SetParameters();
+    SetParameters();
 
     if(page == flip)
         page = 0x10;

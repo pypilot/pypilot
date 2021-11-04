@@ -93,8 +93,7 @@ class LCD():
         use_tft = True if micropython else False
         self.keypress = False
 
-        if not use_tft:
-            use_glut = 'DISPLAY' in os.environ
+        use_glut = not use_tft and 'DISPLAY' in os.environ
         self.surface = None
 
         self.use_glut = False

@@ -76,7 +76,7 @@ class ActionHeading(Action):
             self.servo_timeout = time.monotonic() + abs(self.offset)**.5/2
             self.hat.client.set('servo.command', 1 if self.offset > 0 else -1)
             self.hat.client.poll() # reduce lag
-            
+
 class ActionTack(ActionPypilot):
     def  __init__(self, hat, name, direction):
         super(ActionTack, self).__init__(hat, name, 'ap.tack.state', 'begin')
@@ -274,6 +274,7 @@ class Hat(object):
             self.write_config()
 
         host = self.config['host']
+        print('host', host)
 
         self.poller = select.poll()
         self.gpio = gpio.gpio()
@@ -297,6 +298,7 @@ class Hat(object):
         self.lirc = lircd.lirc(self.config)
         self.lirc.registered = False
         self.keytimes = {}
+        self.keycounts = {}
         self.keytimeouts = {}
 
         # keypad for lcd interface
@@ -456,9 +458,23 @@ class Hat(object):
                 events = i.poll()
                 for event in events:
                     #print('apply', event, time.monotonic())
-                    self.apply_code(*event)
+                    key, count = event
+                    self.keycounts[key] = count
+
             except Exception as e:
                 print('WARNING, failed to poll!!', e, i)
+
+        key = ''
+        count = 0
+        for k, c in self.keycounts.items():
+            if c:
+                if key:
+                    key += '_'
+                key += k
+                count = min(self.keycounts[k])
+
+        if count:
+            self.apply_code(key, count)
 
         t1 = time.monotonic()
         msgs = self.client.receive()

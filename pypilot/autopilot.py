@@ -28,12 +28,18 @@ import pilots
 def minmax(value, r):
     return min(max(value, -r), r)
 
-def compute_true_wind(gps_speed, wind_speed, wind_direction):
+def compute_true_wind(water_speed, wind_speed, wind_direction):
     rd = math.radians(wind_direction)
-    windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
-    truewind = math.degrees(math.atan2(windv[0], windv[1] - gps_speed))
-    #print 'truewind', truewind
+    windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd) - water_speed
+    truewind = math.degrees(math.atan2(*windv))
+    #print( 'truewind', truewind, math.hypot(*windv))
     return truewind
+
+def compute_true_wind_speed(water_speed, wind_speed, wind_direction):
+    rd = math.radians(wind_direction)
+    windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd) - water_speed
+    return math.hypot(*windv)
+
 
 class ModeProperty(EnumProperty):
     def __init__(self, name):
@@ -132,6 +138,10 @@ class Autopilot(object):
             #try:
                 pilot = pilot_type(self)
                 self.pilots[pilot.name] = pilot
+
+                if pilot.name == 'basic': # create basic2 and basic3
+                    self.pilots['basic2'] = pilot_type(self, 'basic2')
+                    self.pilots['basic3'] = pilot_type(self, 'basic3')
             #except Exception as e:
             #    print(_('failed to load pilot'), pilot_type, e)
 
@@ -328,7 +338,7 @@ class Autopilot(object):
         for msg in msgs: # we aren't usually subscribed to anything
             print('autopilot main process received:', msg, msgs[msg])
 
-        if not self.enabled.value:
+        if not self.enabled.value: # in standby, command servo here for lower latency
             self.servo.poll()
 
         t1 = time.monotonic()
@@ -422,6 +432,9 @@ class Autopilot(object):
         if self.enabled.value:
             self.servo.poll()
 
+        self.sensors.gps.predict() # make gps position/velocity prediction
+                                   # from inertial sensors
+        self.sensors.water.compute() # calculate leeway and currents
         self.boatimu.send_cal_data() # after critical loop is done
 
         t5 = time.monotonic()
@@ -433,7 +446,11 @@ class Autopilot(object):
           
         if self.watchdog_device:
             self.watchdog_device.write('c')
-            
+
+        t6 = time.monotonic()
+        if t6-t0 > period:
+            print(_('autopilot iteration running too slow'), t6-t0)
+
         while True: # sleep remainder of period
             dt = period - (time.monotonic() - t0) + sp
             if dt >= period or dt <= 0:

@@ -34,6 +34,7 @@ class WindPilot(AutopilotPilot):
     self.PosGain('DD', .05, 1.0)  # position root
     self.Gain('WG', 0, -.1, .1)  # wind gust
 
+
   def compute_heading(self):
     ap = self.ap
     # compute the difference from wind to other headings
@@ -46,8 +47,8 @@ class WindPilot(AutopilotPilot):
     if sensors.gps.source.value != 'none':
       gps_track  = sensors.gps.track.value
       # difference from gps to wind
-      if gps_speed > 1:
-        d = .005*math.log(gps_speed + 1)
+      pif ap.gps_speed > 1:
+        d = .005*math.log(ap.gps_speed + 1)
         self.gps_wind_offset.update(wind + gps_track, d)
 
     mode = ap.mode.value
@@ -80,6 +81,7 @@ class WindPilot(AutopilotPilot):
           return 'wind'
 
       return mode
+
       
   def process(self):
     ap = self.ap
