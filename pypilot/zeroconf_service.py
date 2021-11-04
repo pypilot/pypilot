@@ -75,7 +75,7 @@ class zeroconf(threading.Thread):
         while True:
             t=time.time()
             i = get_local_addresses()
-            print("t", time.time()-t)
+            #print("t", time.time()-t)
             if i != addresses:
                 print('zeroconf addresses', i, len(i))
                 # close addresses
