@@ -482,7 +482,7 @@ class controlbase(page):
     def display(self, refresh):
         if refresh:
             self.box(rectangle(0, .92, 1, .1), black)
-            self.profile = False
+            self.profile = '0'
             self.pilot = False
             self.wifi = False
             
