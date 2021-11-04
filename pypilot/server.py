@@ -18,6 +18,7 @@ from bufferedsocket import LineBufferedNonBlockingSocket
 from nonblockingpipe import NonBlockingPipe
 
 DEFAULT_PORT = 23322
+from zeroconf_service import zeroconf
 max_connections = 30
 configfilepath = os.getenv('HOME') + '/.pypilot/'
 server_persistent_period = 120 # store data every 120 seconds
@@ -461,25 +462,9 @@ class pypilotServer(object):
                 self.fd_to_pipe[fd] = pipe
             pipe.cwatches = {'values': True} # server always watches client values
         self.initialized = True
+        self.zeroconf = zeroconf()
+        self.zeroconf.start()
             
-        # register zeroconf service
-        from zeroconf import IPVersion, ServiceInfo, Zeroconf
-        from version import strversion
-
-        self.info = ServiceInfo(
-            "_pypilot._tcp.local.",
-            "pypilot._pypilot._tcp.local.",
-            addresses=[socket.inet_aton("127.0.0.1")],
-            port=DEFAULT_PORT,
-            properties={'version': strversion},
-        )
-
-        #ip_version = IPVersion.All
-        #ip_version = IPVersion.V6Only
-        ip_version = IPVersion.V4Only
-        self.zeroconf = Zeroconf(ip_version=ip_version)
-        self.zeroconf.register_service(self.info)
-
     def __del__(self):
         if not self.initialized:
             return
@@ -489,10 +474,6 @@ class pypilotServer(object):
             socket.close()
         for pipe in self.pipes:
             pipe.close()
-
-        if self.zeroconf:
-            self.zeroconf.unregister_service(self.info)
-            self.zeroconf.close()
 
     def RemoveSocket(self, socket):
         print('server, remove socket', socket.address)
