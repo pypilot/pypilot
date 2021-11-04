@@ -384,7 +384,7 @@ class ServerValues(pypilotValue):
                 for name in self.persistent_data:
                     file.write(self.persistent_data[name])
                 file.close()
-            except Exception as ke:
+            except Exception as e:
                 print(_('failed to write'), 'pypilot.conf', e)
 
 class pypilotServer(object):

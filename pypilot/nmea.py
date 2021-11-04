@@ -77,7 +77,7 @@ def parse_nmea_gps(line):
             if ts > t0 or ts < t0 - sec_in_day: # wrong day
                 ts -= gps_timeoffset # undo offset
                 day = int(t0/sec_in_day)
-                gps_timeoffset = sec_in_day*sec_in_day
+                gps_timeoffset = sec_in_day*day
                 if ts + gps_timeoffset > t0:
                     gps_timeoffset -= sec_in_day
                 ts += gps_timeoffset
@@ -833,12 +833,11 @@ class nmeaBridge(object):
                         self.receive_nmea(line, sock)
             else:
                 print(_('nmea bridge unhandled poll flag'), flag)
+        t2 = time.monotonic()
 
         # if we are not multiprocessing, the pipe won't be pollable, so receive any data now
         if not self.process:
             self.receive_pipe()
-                
-        t2 = time.monotonic()
 
         # send any parsed nmea messages the server might care about
         if self.msgs:
@@ -881,11 +880,11 @@ class nmeaBridge(object):
             except Exception as e:
                 print('failed to assembly nmea', fix, e)
                 pass
+        t5 = time.monotonic()
         
         # flush sockets
         for sock in self.sockets:
             sock.flush()
-        t5 = time.monotonic()
 
         # reconnect client tcp socket
         self.connect_client()

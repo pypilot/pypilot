@@ -425,6 +425,7 @@ class pypilotClient(object):
         for name in self.watches:
             self.wwatches[name] = False
         self.watches = {}
+        self.poll()
 
     def register(self, value):
         self.values.register(value)
