@@ -537,7 +537,8 @@ class ServerValues(pypilotValue):
             profile.replace('"', '')
             file.write('[profile="' + profile + '"]\n')
             for name, value in data.items():
-                file.write(value)
+                if value:
+                    file.write(value)
         file.close()
 
     def store(self):

@@ -96,14 +96,14 @@ body{
 
 
 /* progress */
-.myProgress {
+.progress {
     position: relative;
     width: 100%;
     height: 30px;
     background-color: grey;
 }
 
-.myBar {
+.bar {
     position: absolute;
     width: 0%;
     height: 100%;
@@ -122,9 +122,6 @@ body{
     overflow-x: hidden;
 }
 
-#configuration_container {
-    display:table;
-}
 
 .tabItem {
 	text-align: center;
