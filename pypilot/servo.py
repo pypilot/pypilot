@@ -238,6 +238,7 @@ class Servo(object):
         # power usage
         self.voltage = self.register(SensorValue, 'voltage')
         self.current = self.register(SensorValue, 'current')
+        self.current.noise = self.register(SensorValue, 'current.noise')
         self.current.lasttime = time.monotonic()
         self.controller_temp = self.register(TimeoutSensorValue, 'controller_temp')
         self.motor_temp = self.register(TimeoutSensorValue, 'motor_temp')
@@ -648,6 +649,10 @@ class Servo(object):
                             'device': self.device.path}
                     self.sensors.write('rudder', data, 'servo')
         if result & ServoTelemetry.CURRENT:
+            if self.driver.current < self.current.noise.value*1.2:
+                self.driver.current = 0
+            elif self.driver.current and t - self.command_timeout > 3:
+                self.current.noise.update(min(max(self.current.noise.value, self.driver.current), 1))
             # apply correction
             corrected_current = self.current.factor.value*self.driver.current
             if self.driver.current:
