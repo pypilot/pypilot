@@ -15,26 +15,31 @@ import threading
 DEFAULT_PORT = 23322
 from version import strversion
 
+retries = 0
+
+# creating a socket is somehow slow...
+zerosocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 def get_local_addresses():
+    global retries
     addresses = []
-    try:
-        from netifaces import interfaces, ifaddresses
-        for interface in interfaces():
-            addrs = ifaddresses(interface)
-            for i in addrs:
-                if 'addr' in i:
-                    addresses.append(i['addr'])
-        return addresses
-    except Exception as e:
-        #print('zeroconf service fallback to socket address')
-        pass
+    if retries:
+        try:
+            from netifaces import interfaces, ifaddresses
+            for interface in interfaces():
+                addrs = ifaddresses(interface)
+                for i in addrs:
+                    if 'addr' in i:
+                        addresses.append(i['addr'])
+            return addresses
+        except Exception as e:
+            #print('zeroconf service fallback to socket address')
+            retries -= 1
         
     interfaces = os.listdir('/sys/class/net')
     for interface in interfaces:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             addresses.append(socket.inet_ntoa(fcntl.ioctl(
-                s.fileno(),
+                zerosocket.fileno(),
                 0x8915,  # SIOCGIFADDR
                 struct.pack('256s', bytes(interface[:15], 'utf-8'))
             )[20:24]))
@@ -68,9 +73,11 @@ class zeroconf(threading.Thread):
         ip_version = IPVersion.V4Only
 
         while True:
+            t=time.time()
             i = get_local_addresses()
+            print("t", time.time()-t)
             if i != addresses:
-                print('zeroconf addresses', addresses, len(i))
+                print('zeroconf addresses', i, len(i))
                 # close addresses
                 for address in zeroconf:
                     zeroconf[address].unregister_service(info[address])
@@ -93,7 +100,7 @@ class zeroconf(threading.Thread):
                     zeroconf[address] = Zeroconf(ip_version=ip_version, interfaces=[address])
                     zeroconf[address].register_service(info[address])
                 
-            time.sleep(20)
+            time.sleep(60)
 
 
 if __name__ == '__main__':
