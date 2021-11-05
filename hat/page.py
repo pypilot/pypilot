@@ -364,7 +364,7 @@ class info(page):
         elif self.page == 1:
             spacing = .11
             v = self.round_last_val('servo.voltage', 3)
-            rate = self.round_last_valw('imu.frequency', 2)
+            rate = self.round_last_val('imu.frequency', 2)
             uptime = self.last_val('imu.uptime')[:7]
             items = [_('voltage'), v, _('rate'), rate, _('uptime'), uptime]
         elif self.page == 2:
@@ -667,7 +667,7 @@ class control(controlbase):
         warning = ''
         for flag in flags:
             if flag.endswith('_FAULT'):
-                warning += flag[:-6] + ' '
+                warning += flag[:-6].replace('_', ' ') + ' '
 
         if warning:
             if self.lcd.config['buzzer'] > 1:
