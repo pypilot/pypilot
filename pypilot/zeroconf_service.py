@@ -32,11 +32,14 @@ def get_local_addresses():
     interfaces = os.listdir('/sys/class/net')
     for interface in interfaces:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        addresses.append(socket.inet_ntoa(fcntl.ioctl(
-            s.fileno(),
-            0x8915,  # SIOCGIFADDR
-            struct.pack('256s', bytes(interface[:15], 'utf-8'))
-        )[20:24]))
+        try:
+            addresses.append(socket.inet_ntoa(fcntl.ioctl(
+                s.fileno(),
+                0x8915,  # SIOCGIFADDR
+                struct.pack('256s', bytes(interface[:15], 'utf-8'))
+            )[20:24]))
+        except: # no address for this interface
+            pass
 
     return addresses
 
@@ -67,11 +70,11 @@ class zeroconf(threading.Thread):
         while True:
             i = get_local_addresses()
             if i != addresses:
+                print('zeroconf addresses', addresses, len(i))
                 # close addresses
                 for address in zeroconf:
                     zeroconf[address].unregister_service(info[address])
                     zeroconf[address].close()
-                    del zeroconf[address]
                 zeroconf = {}
                 info = {}
 
@@ -79,7 +82,7 @@ class zeroconf(threading.Thread):
 
                 # register addresses
                 for address in addresses:
-                    print('zeroconf registering address', address)
+                    #print('zeroconf registering address', address)
                     info[address] = ServiceInfo(
                         "_pypilot._tcp.local.",
                         "pypilot._pypilot._tcp.local.",
