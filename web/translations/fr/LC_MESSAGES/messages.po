@@ -20,23 +20,23 @@ msgstr ""
 
 #: static/pypilot_control.js:37
 msgid "Not Connected"
-msgstr "Pas connecté"
+msgstr "Non connecté"
 
 #: static/pypilot_control.js:68
 msgid "Connected"
-msgstr "Lié"
+msgstr "Connecté"
 
 #: static/pypilot_control.js:175
 msgid "Disconnected"
-msgstr "Débranché"
+msgstr "Déconnecté"
 
 #: static/pypilot_control.js:245
 msgid "compass or gyro failure!"
-msgstr "panne de boussole ou de gyroscope !"
+msgstr "erreur de boussole ou de gyroscope !"
 
 #: static/pypilot_control.js:258
 msgid "Tack"
-msgstr "Clouer"
+msgstr "Bord"
 
 #: static/pypilot_control.js:261
 msgid "Cancel"
@@ -69,7 +69,7 @@ msgstr ""
 
 #: templates/calibrationplot.html:28
 msgid "Connection"
-msgstr "Lien"
+msgstr "Connexion"
 
 #: templates/index.html:30
 msgid "Control"
@@ -77,7 +77,7 @@ msgstr "Contrôler"
 
 #: templates/index.html:33
 msgid "Gain"
-msgstr "Gagner"
+msgstr "Gain"
 
 #: templates/index.html:36
 msgid "Calibration"
@@ -93,7 +93,7 @@ msgstr "Statistiques"
 
 #: templates/index.html:51
 msgid "Heading"
-msgstr "Titre"
+msgstr "Cap"
 
 #: templates/index.html:53
 msgid "Command"
@@ -105,15 +105,15 @@ msgstr "Cap magnétique"
 
 #: templates/index.html:97
 msgid "Pitch"
-msgstr "Terrain"
+msgstr "Assiette"
 
 #: templates/index.html:98
 msgid "Roll"
-msgstr "Rouleau"
+msgstr "Roulis"
 
 #: templates/index.html:99
 msgid "Press"
-msgstr "presse"
+msgstr "Appuyez"
 
 #: templates/index.html:99
 msgid "here"
@@ -145,11 +145,11 @@ msgstr "centré"
 
 #: templates/index.html:114
 msgid "port range"
-msgstr "plage de ports"
+msgstr "plage babord"
 
 #: templates/index.html:115
 msgid "starboard range"
-msgstr "gamme tribord"
+msgstr "plage tribord"
 
 #: templates/index.html:116 templates/index.html:140
 msgid "reset"
@@ -157,7 +157,7 @@ msgstr "réinitialiser"
 
 #: templates/index.html:119
 msgid "Rudder Range"
-msgstr "Gamme de gouvernail"
+msgstr "plage de gouvernail"
 
 #: templates/index.html:120
 msgid "Degrees"
@@ -169,7 +169,7 @@ msgstr "Affichage"
 
 #: templates/index.html:127
 msgid "Clear"
-msgstr "Dégager"
+msgstr "Clair"
 
 #: templates/index.html:128
 msgid "Dark"
@@ -211,7 +211,7 @@ msgstr "Serveur"
 
 #: templates/index.html:150
 msgid "Errors"
-msgstr "les erreurs"
+msgstr "Erreurs"
 
 #: templates/index.html:151
 msgid "Web Server Latency"
@@ -219,7 +219,7 @@ msgstr "Latence du serveur Web"
 
 #: templates/wifi.html:4
 msgid "setup"
-msgstr "mettre en place"
+msgstr "configurer"
 
 #: templates/wifi.html:8
 msgid "Wireless Configuration"
@@ -260,4 +260,3 @@ msgstr "arrière"
 
 #~ msgid "If there is a problem, edit the file"
 #~ msgstr "En cas de problème, modifiez le fichier"
-
