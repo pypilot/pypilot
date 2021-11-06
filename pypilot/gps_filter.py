@@ -14,7 +14,6 @@
 
 import os
 import multiprocessing
-import numpy as np
 import math
 
 from values import *
@@ -63,7 +62,17 @@ class GPSFilterProcess(multiprocessing.Process):
         self.pipe.send(('update', (gps, t)))
         
     def filter_process(self, pipe):
+        # wait for numpy package to be available
+        while True:
+            try:
+                global np
+                import numpy as np
+                break
+            except:
+                pass
+            time.sleep(20)
         print('gps filter process', os.getpid())
+                
         f = GPSFilter(self.client)
         while True:
             while True:
@@ -192,6 +201,7 @@ class GPSFilter(object):
         tb = time.monotonic()
 
     def apply_prediction(self, dt, U):
+        
         dt = min(max(dt, .02), .1)
         dt2 = dt*dt/2
         c = 3 if self.use3d else 2
