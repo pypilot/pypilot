@@ -9,17 +9,10 @@
 
 import socket, select, sys, os, time
 
-if sys.stdout.encoding.lower().startswith('utf'):
-    import gettext
-    locale_d = os.path.abspath(os.path.dirname(__file__)) + '/locale'
-    gettext.translation('pypilot', locale_d, fallback=True).install()
-else:
-    # 'no translation'
-    globals()['_'] = lambda x : x
-
 import heapq
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pyjson
+import gettext_loader
 from bufferedsocket import LineBufferedNonBlockingSocket
 from values import Value
 
