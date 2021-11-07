@@ -189,18 +189,21 @@ void set_buzzer(uint8_t mode, uint8_t timeout)
     TCCR2B = _BV(WGM22) | _BV(CS22); // divide by 128
 
     uint8_t freq;
-    switch(mode) {
-    case 0: // buzzer off
-        buzzer_off();
-        return;
+    switch(mode&0xf) {
     case 1: // steady
         freq = 200;
         break;
     case 2: // ... ... ...
         freq = 60;
         break;
+    default:
+    case 0: // buzzer off
+        buzzer_off();
+        return;
     }
-    pinMode(5, OUTPUT);
+    int volume = (mode & 0xf0)
+    if(!volume)
+        pinMode(5, OUTPUT);
     pinMode(6, OUTPUT);
     buzzer_mode = mode;
     OCR2A = freq;
