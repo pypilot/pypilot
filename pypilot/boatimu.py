@@ -492,10 +492,9 @@ class BoatIMU(object):
         self.uptime.update()
 
         # count down to alignment
-        if self.alignmentCounter.value != self.last_alignmentCounter:
-            self.alignmentPose = [0, 0, 0, 0]
-
         if self.alignmentCounter.value > 0:
+            if self.alignmentCounter.value != self.last_alignmentCounter:
+                self.alignmentPose = [0, 0, 0, 0]
             self.alignmentPose = list(map(lambda x, y : x + y, self.alignmentPose, aligned))
             self.alignmentCounter.set(self.alignmentCounter.value-1)
 

@@ -464,6 +464,8 @@ $(document).ready(function() {
             $('#roll').text(data['imu.roll']);
         if('imu.alignmentCounter' in data)
             $('#levelprogress').width((100-data['imu.alignmentCounter'])+'%');
+        if('gps.alignmentCounter' in data)
+            $('#align_compassprogress').width((100-10*data['gps.alignmentCounter'])+'%');
         if('imu.heading_offset' in data)
             $('#imu_heading_offset').val(data['imu.heading_offset']);
         if('imu.compass_calibration_locked' in data)
@@ -607,6 +609,11 @@ $(document).ready(function() {
         return false;
     });
 
+    $('#align_compass').click(function(event) {
+        pypilot_set('gps.alignmentCounter', 10);
+        return false;
+    });
+    
     $('#imu_heading_offset').change(function(event) {
         pypilot_set('imu.heading_offset', $('#imu_heading_offset').val());
     });

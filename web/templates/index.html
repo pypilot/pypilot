@@ -104,6 +104,12 @@
       </div>
       {{_('Magnetic Heading Offset')}}
       <input type="spin" id="imu_heading_offset" min=-180 max=180 value=0>Degrees</input>
+      <p>{{_('Press')}} <button id="align_compass" class="button">{{_('here')}}</button>
+        {{_('when the boat is traveling straight with no leeway, no currents, and gps to align the compass.')}}
+      </p>
+      <div class="progress">
+        <div id="align_compassprogress" class="bar"> </div>
+      </div>
       <p><input type="checkbox" id="calibration_locked">{{_('Lock Calibration')}}</input>
       </p>
       <br><a href="/calibrationplot">{{_('calibration plot')}}</a>
