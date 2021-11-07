@@ -214,7 +214,7 @@ class ServerProfiles(pypilotValue):
     def __init__(self, values):
         super(ServerProfiles, self).__init__(values, 'profiles', info = {'type': 'Value', 'persistent': True, 'writable': True})
         self.msg = 'new'
-        self.profiles = ['0']
+        self.profiles = ['default']
 
     def get_msg(self):
         if not self.msg or self.msg == 'new':
@@ -237,7 +237,7 @@ class ServerProfiles(pypilotValue):
             for profile in profiles:
                 sprofiles.append(str(profile))
             if not sprofiles:
-                profiles.append('0')
+                profiles.append('default')  # ensure the default profile exists if there are no others
             self.profiles = sprofiles
             profile = self.server_values.values['profile']
 
@@ -255,7 +255,7 @@ class ServerProfiles(pypilotValue):
 class ServerProfile(pypilotValue):
     def __init__(self, values):
         super(ServerProfile, self).__init__(values, 'profile', info = {'type': 'Value', 'persistent': True, 'writable': True})
-        self.profile = '0'
+        self.profile = 'default'
         self.msg = 'new'
 
     def get_msg(self):
@@ -273,7 +273,8 @@ class ServerProfile(pypilotValue):
             strprofile.replace('"', '')
         except Exception as e:
             print('server bad profile', e, msg)
-            strprofile = '0'
+            return
+
         if strprofile != profile:
             msg = n + '="' + strprofile + '"\n'
 
@@ -431,7 +432,7 @@ class ServerValues(pypilotValue):
 
     def load_file(self, filename):
         profile = None
-        self.persistent_data = {None : {}, '0' : {}}
+        self.persistent_data = {None : {}, 'default' : {}}
         #print("load file",filename)
         f = open(filename)
         linei=0
