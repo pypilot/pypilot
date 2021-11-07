@@ -39,7 +39,7 @@ class ActionKeypad(Action):
         self.lcd.keypad(self.index, count)
         
 class ActionPypilot(Action):
-    def  __init__(self, hat, name, pypilot_name, pypilot_value):
+    def  __init__(self, hat, name, pypilot_name, pypilot_value=None):
         super(ActionPypilot, self).__init__(hat, name)
         self.pypilot_name = pypilot_name
         self.value = pypilot_value
@@ -47,7 +47,7 @@ class ActionPypilot(Action):
     def trigger(self, count):
         if self.hat.client and not count:
             self.hat.client.set(self.pypilot_name, self.value)
-
+            
 class ActionEngage(ActionPypilot):
     def  __init__(self, hat):
         super(ActionEngage, self).__init__(hat, 'engage', 'ap.enabled', True)
@@ -57,6 +57,17 @@ class ActionEngage(ActionPypilot):
         # set heading to current heading
         if self.hat.client and not count and 'ap.heading' in self.hat.last_msg:
             self.hat.client.set('ap.heading_command', self.hat.last_msg['ap.heading'])
+
+class ActionMode(ActionEngage):
+    def  __init__(self, hat, mode):
+        super(ActionMode, self).__init__(hat)
+        self.mode = mode
+
+    def trigger(self, count):
+        if self.hat.client and not count:
+            self.hat.client.set('ap.mode', self.mode)
+        
+        super(ActionMode, self).trigger(count)
             
 class ActionHeading(Action):
     def __init__(self, hat, offset):
@@ -96,7 +107,7 @@ class ActionTack(ActionPypilot):
 
 class ActionDodge(ActionPypilot):
     def  __init__(self, hat, name, direction):
-        super(ActionDodge, self).__init__(hat, name, 'servo.command', 0)
+        super(ActionDodge, self).__init__(hat, name, 'servo.command')
         self.direction = direction
 
     def trigger(self, count):
@@ -106,17 +117,18 @@ class ActionDodge(ActionPypilot):
 
 class ActionProfile(ActionPypilot):
     def __init__(self, hat, index):
-        super(ActionProfile, self).__init__(hat, 'profile '+str(index), 'profile', '0')
+        super(ActionProfile, self).__init__(hat, 'profile '+str(index), 'profile')
         self.index = index
 
     def trigger(self, count):
         profiles = self.hat.last_msg['profiles']
-        self.value = profiles[index]
-        super(ActionProfile, self).trigger(count)
+        if len(profiles) > self.index:
+            self.value = profiles[self.index]
+            super(ActionProfile, self).trigger(count)
         
 class ActionProfileRelative(ActionPypilot):
     def __init__(self, hat, name, offset):
-        super(ActionProfileRelative, self).__init__(hat, name, 'profile', '0')
+        super(ActionProfileRelative, self).__init__(hat, name, 'profile')
         self.offset = offset
 
     def trigger(self, count):
@@ -309,8 +321,8 @@ class Hat(object):
         self.last_msg = {'ap.enabled': False,
                          'ap.heading_command': 0,
                          'ap.mode': '',
-                         'profile': '0',
-                         'profiles': ['0']}
+                         'profile': None,
+                         'profiles': []}
 
         if len(sys.argv) > 1:
             self.config['host'] = sys.argv[1]
@@ -360,7 +372,7 @@ class Hat(object):
 
         # stateless actions for autopilot control
         self.actions += [ActionEngage(self),
-                         ActionPypilot(self, 'disengage', 'ap.enabled', False),
+                         ActionPypilot(self, 'standby', 'ap.enabled', False),
                          ActionHeading(self,  1),
                          ActionHeading(self, -1),
                          ActionHeading(self,  2),
@@ -369,10 +381,10 @@ class Hat(object):
                          ActionHeading(self, -5),
                          ActionHeading(self,  10),
                          ActionHeading(self, -10),
-                         ActionPypilot(self, 'compassmode', 'ap.mode', 'compass'),
-                         ActionPypilot(self, 'gpsmode', 'ap.mode', 'gps'),
-                         ActionPypilot(self, 'windmode', 'ap.mode', 'wind'),
-                         ActionPypilot(self, 'truewindmode', 'ap.mode', 'truewind'),
+                         ActionMode(self, 'compass'),
+                         ActionMode(self, 'gps'),
+                         ActionMode(self, 'wind'),
+                         ActionMode(self, 'truewind'),                                    
                          ActionPypilot(self, 'center', 'servo.position', 0),
                          ActionTack(self, 'tack_port', 'port'),
                          ActionTack(self, 'tack_starboard', 'starboard'),

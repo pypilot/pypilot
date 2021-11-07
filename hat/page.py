@@ -273,9 +273,7 @@ class page(object):
     def testkeydown(self, key):
         k = self.lcd.keypad[key]
         if k.down:
-            if self.lcd.config['buzzer'] > 1:
-                self.lcd.send('buzzer', (1, .1))
-
+            self.lcd.buzz(1, .1, 1)
             k.down -= 1
             return True
         return False
@@ -473,7 +471,7 @@ class controlbase(page):
     def display(self, refresh):
         if refresh:
             self.box(rectangle(0, .92, 1, .1), black)
-            self.profile = '0'
+            self.profile = ''
             self.pilot = False
             self.wifi = False
             
@@ -687,8 +685,8 @@ class control(controlbase):
                     buzz = True
 
         if warning:
-            if buzz and self.lcd.config['buzzer'] > 0:
-                self.lcd.send('buzzer', (1, .1))
+            if buzz:
+                self.lcd.buzz(2, .1, 0)
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:
