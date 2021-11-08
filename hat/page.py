@@ -563,12 +563,13 @@ class control(controlbase):
         if not mode in modes:
             return
         index = modes.index(mode)
+        nmodes = len(modes)
 
         # flash the compass C if there are calibration warnings
         if self.last_val('imu.compass.calibration.warning', default=False):
             if int(time.monotonic()) % 2:
                 modes = list(modes)
-                for i in range(len(modes)):
+                for i in range(nmodes):
                     if modes[i] == 'compass':
                         modes[i] = ' '
 
@@ -579,9 +580,9 @@ class control(controlbase):
         if index < 2:
             rindex = index
             mindex = 0
-        elif index == len(modes)-1:
+        elif nmodes > 3 and index == nmodes-1:
             rindex = 3
-            mindex = len(modes)-4
+            mindex = nmodes-4
         else:
             rindex = 2
             mindex = index - 2
@@ -596,7 +597,7 @@ class control(controlbase):
         marg = 0.02
         for i in range(4):
             ind = mindex+i
-            if ind < len(modes):
+            if ind < nmodes:
                 ret=self.fittext(modes_r[i], modes[ind][0].upper())
 
         # draw rectangle around mode

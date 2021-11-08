@@ -376,7 +376,7 @@ class Autopilot(object):
             if sensors['gps']:
                 if self.gps_and_nav_modes.value:
                     modes.append('gps')
-                elif not sensors['abp']:
+                elif not sensors['apb']:
                     modes.append('gps')
                 if sensors['apb']:
                     modes.append('nav')
