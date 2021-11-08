@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2023 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -50,6 +50,7 @@ class IMU(object):
         self.client.watch('imu.rate')
 
         self.gyrobias = self.client.register(SensorValue('imu.gyrobias', persistent=True))
+        self.warning = self.client.register(StringValue('imu.warning', ''))
         self.lastgyrobiastime = time.monotonic()
 
         SETTINGS_FILE = "RTIMULib"
@@ -94,6 +95,7 @@ class IMU(object):
         if rtimu.IMUName() == 'Null IMU':
             if self.rtimu:
                 print(_('ERROR: No IMU Detected'), t0)
+                self.warning.set('No IMU')
             self.s.IMUType = 0
             self.rtimu = False
             return
@@ -102,6 +104,7 @@ class IMU(object):
 
         if not rtimu.IMUInit():
             print(_('ERROR: IMU Init Failed, no inertial data available'), t0)
+            self.warning.set('IMU Failed')
             self.s.IMUType = 0
             return
 
@@ -115,6 +118,9 @@ class IMU(object):
 
         self.avggyro = [0, 0, 0]
         self.compass_calibration_updated = False
+        self.axes_test = [False]*9
+        self.last_axes = False
+        self.warning.set('IMU not initialized')
 
     def process(self, pipe):
         print('imu process', os.getpid())
@@ -174,7 +180,7 @@ class IMU(object):
             data['compass_calibration_updated'] = True
             self.compass_calibration_updated = False
 
-        self.lastdata = list(data['gyro']), list(data['compass'])
+        self.lastdata = list(data['accel']), list(data['gyro']), list(data['compass'])
         return data
 
     def poll(self):
@@ -197,9 +203,23 @@ class IMU(object):
 
         if not self.lastdata:
             return
-        gyro, compass = self.lastdata
+
+        accel, gyro, compass = self.lastdata
         self.lastdata = False
 
+        if self.axes_test: # test to see if all axes are producing changing outputs
+            axes = accel + gyro + compass
+            if self.last_axes:
+                self.axes_test = map(lambda a, b, p: p or (a != b), axes, self.last_axes, self.axes_test)
+            self.last_axes = axes
+
+            if not all(self.axes_test):
+                self.warning.set('IMU waiting on axes')
+            else:
+                print('IMU all sensor axes verified')
+                self.warning.set('')
+                self.axes_test = False
+                
         # see if gyro is out of range, sometimes the sensors read
         # very high gyro readings and the sensors need to be reset by software
         # this is probably a bug in the underlying driver with fifo misalignment
@@ -365,7 +385,8 @@ class BoatIMU(object):
         self.last_alignmentCounter = False
 
         self.uptime = self.register(TimeValue, 'uptime')
-    
+        self.warning = self.register(StringValue, 'warning', '')
+        
         self.auto_cal = AutomaticCalibrationProcess(client.server)
 
         self.lasttimestamp = 0

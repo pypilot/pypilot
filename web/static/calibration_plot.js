@@ -355,7 +355,7 @@ $(document).ready(function() {
     socket.on('pypilot_values', function(msg) {
         //var list_values = JSON.parse(msg);
         $('#connection').text('Connected');
-        watches = ['.calibration', '.calibration.age', '.calibration.log'];
+        watches = ['', '.age', '.log', '.warning'].map(function (e) { return '.calibration'+e; });
         for(var watch in watches)
             for(var plot in plots)
                 pypilot_watch('imu.' + plots[plot] + watches[watch]);
@@ -393,7 +393,7 @@ $(document).ready(function() {
         data = JSON.parse(msg);
 
         for(s of ['accel', 'compass'])
-            for(n of ['', 'age', 'log']) {
+            for(n of ['', 'age', 'log', 'warning']) {
                 name = 'imu.' + s + '.calibration';
                 id = '#'+s+'_calibration'
                 if(n) {
@@ -403,20 +403,24 @@ $(document).ready(function() {
                 
                 if(name in data) {
                     value = data[name];
-                    if(!n)
+                    if(!n) {
                         value = value[0];
+                        if(s == 'accel')
+                            accel_calibration = value;
+                        else
+                            compass_calibration = value;
+                    }
                     if(n == 'log') {
                         calibration_log[s].push(value);
-                        if(calibration_log.length > 4)
+                        if(calibration_log[s].length > 4)
                             calibration_log[s].shift();
                         value = '';
                         for(line of calibration_log[s])
-                            value += '<p>' + line + '</p>\n';
+                            value += line + '\n';
                     }
                     $(id).text(value);
                 }
             }
-
 
         if(current_plot == 'accel')
             calibration = accel_calibration;
@@ -448,5 +452,5 @@ $(document).ready(function() {
             gl.bindBuffer(gl.ARRAY_BUFFER, points_buffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points_points), gl.STATIC_DRAW);   
         }
-    });    
+    });
 });
