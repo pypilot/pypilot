@@ -51,16 +51,21 @@ class GPSFilterProcess(multiprocessing.Process):
     def __init__(self, client):
         self.client = pypilotClient(client.server)
         self.process = self
+
+        # this value is registered in main process
+        self.output = client.register(BooleanProperty('gps.filtered.output', False, persistent=True))
+
         self.pipe, pipe = NonBlockingPipe('gps filter pipe', True)
         super(GPSFilterProcess, self).__init__(target=self.filter_process, args=(pipe,), daemon=True)
         self.start()
+        
 
     def predict(self, accel, fusionQpose_ned_magnetic, t):
-        self.pipe.send(('predict', (accel, fusionQpose, t)))
+        self.pipe.send(('predict', (accel, fusionQpose_ned_magnetic, t)))
 
     def update(self, gps, t):
         self.pipe.send(('update', (gps, t)))
-        
+
     def filter_process(self, pipe):
         # wait for numpy package to be available
         while True:
@@ -106,7 +111,6 @@ class GPSFilter(object):
             self.R = np.diag([posSigma, posSigma, velSigma, velSigma])
             
         self.enabled = self.register(BooleanProperty, 'enabled', False, persistent=True)
-        self.output = self.register(BooleanProperty, 'output', False, persistent=True)
         self.declination = self.register(SensorValue, 'declination')
         self.declination_time = 0
 
@@ -115,7 +119,7 @@ class GPSFilter(object):
 
         self.compass_offset = self.register(SensorValue, 'compass_offset')
 
-        self.fix = self.register(Value, 'fix', False)
+        self.fix = self.register(JSONValue, 'fix', False)
         self.speed = self.register(SensorValue, 'speed')
         self.track = self.register(SensorValue, 'track', directional=True)
 

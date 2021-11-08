@@ -357,7 +357,7 @@ class Nmea(object):
             # we output mwv and rsa messages after calibration
             # do not relay apb messages
             blacklist = ['MWV', 'RSA', 'APB']
-            if self.sensors.gps.filtered_output.value:  # pass gps through, or use filtered gps depends on setting
+            if self.sensors.gps.filtered.output.value:  # pass gps through, or use filtered gps depends on setting
                 blacklist.append('RMC')
             
             if not nmea_name[3:] in blacklist:
@@ -457,21 +457,28 @@ class Nmea(object):
                 self.send_nmea('APROT,%.3f,A' % values['imu.headingrate_lowpass'].value)
                 self.last_imu_time = time.monotonic()
 
-            # limit to 4hz output of wind and rudder
+            # limit output rate of wind and rudder
             t = time.monotonic()
             for name in ['wind', 'rudder']:
-                dt = t - (self.nmea_times[name] if name in self.nmea_times else t)
-                freq = 1/dt
                 source = self.sensors.sensors[name].source.value
-                rate = self.sensors.sensors[name].rate.value
                 # only output to tcp if we have a better source
-                if freq < rate and source_priority[source] < source_priority['tcp']:
+                if source_priority[source] >= source_priority['tcp']:
+                    continue
+                
+                if not name in self.nmea_times:
+                    self.nmea_times[name] = 0
+                    
+                dt = t - self.nmea_times[name]
+                freq = 1/dt
+                rate = self.sensors.sensors[name].rate.value
+                if freq < rate:
                     if name == 'wind':
                         wind = self.sensors.wind
                         self.send_nmea('APMWV,%.3f,R,%.3f,N,A' % (wind.direction.value, wind.speed.value))
                     elif name == 'rudder':
                         self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
-                    self.nmea_times[name] = t
+                    period = 1/rate
+                    self.nmea_times[name] = max(min(self.nmea_times[name] + period, t+period), t)
 
         t5 = time.monotonic()
         if not self.nmea_bridge.process:
