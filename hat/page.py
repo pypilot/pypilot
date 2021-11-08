@@ -562,11 +562,20 @@ class control(controlbase):
         modes = self.last_val('ap.modes')
         if not mode in modes:
             return
+        index = modes.index(mode)
+
+        # flash the compass C if there are calibration warnings
+        if self.last_val('imu.compass.calibration.warning', default=False):
+            if int(time.monotonic()) % 2:
+                modes = list(modes)
+                for i in range(len(modes)):
+                    if modes[i] == 'compass':
+                        modes[i] = ' '
+
         if self.control['mode'] == mode and self.control['modes'] == modes:
             return # no need to refresh
         self.control['mode'] = mode
         self.control['modes'] = modes
-        index = modes.index(mode)
         if index < 2:
             rindex = index
             mindex = 0
@@ -698,6 +707,11 @@ class control(controlbase):
             if self.control['heading_command'] != no_mode:
                 self.fittext(rectangle(0, .4, 1, .35), mode.upper() + ' ' + _('not detected'), True, black)
                 self.control['heading_command'] = no_mode
+        elif self.last_val('imu.warning'):
+            warning = self.last_val('imu.warning')
+            if self.control['heading_command'] != 'imu warning':
+                self.fittext(rectangle(0, .4, 1, .35), warning, True, black)
+                self.control['heading_command'] = 'imu warning'
         elif self.last_val('servo.controller') == 'none':
             if self.control['heading_command'] != 'no controller':
                 self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
