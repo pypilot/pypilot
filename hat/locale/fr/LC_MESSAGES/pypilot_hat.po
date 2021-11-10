@@ -36,11 +36,11 @@ msgstr "niveau"
 
 #: ../menu.py:333
 msgid "heading"
-msgstr "titre"
+msgstr "cap"
 
 #: ../menu.py:334
 msgid "lock"
-msgstr "fermer à clé"
+msgstr "verrouiller"
 
 #: ../menu.py:363
 msgid "motor"
@@ -52,7 +52,7 @@ msgstr "vitesse min"
 
 #: ../menu.py:364 ../menu.py:365
 msgid "relative"
-msgstr "relatif"
+msgstr "relative"
 
 #: ../menu.py:365
 msgid "max speed"
@@ -64,7 +64,7 @@ msgstr "courant max"
 
 #: ../menu.py:366
 msgid "amps"
-msgstr "amplis"
+msgstr "ampères"
 
 #: ../menu.py:367
 msgid "period"
@@ -160,7 +160,7 @@ msgstr "Chargement"
 
 #: ../menu.py:568
 msgid "timeout"
-msgstr "temps libre"
+msgstr "dépassement du délais d'attente"
 
 #: ../page.py:286
 msgid "info"
@@ -180,7 +180,7 @@ msgstr "Ampères-heures"
 
 #: ../page.py:308
 msgid "runtime"
-msgstr "Durée"
+msgstr "Durée de fonctionnement"
 
 #: ../page.py:314
 msgid "voltage"
@@ -192,15 +192,15 @@ msgstr "taux"
 
 #: ../page.py:314
 msgid "uptime"
-msgstr "disponibilité"
+msgstr "temps de fonctionnement"
 
 #: ../page.py:320
 msgid "cont temp"
-msgstr "temp cont"
+msgstr "temp. cont."
 
 #: ../page.py:320
 msgid "motor temp"
-msgstr "température du moteur"
+msgstr "temp. moteur"
 
 #: ../page.py:320
 msgid "faults"
@@ -264,19 +264,19 @@ msgstr "WIND non détecté"
 
 #: ../page.py:642
 msgid "WARNING no motor controller"
-msgstr "AVERTISSEMENT pas de contrôleur"
+msgstr "AVERTISSEMENT pas de contrôleur moteur"
 
 #: ../page.py:653
 msgid "standby"
-msgstr "Etre prêt"
+msgstr "veille"
 
 #: ../page.py:674
 msgid "No Cal"
-msgstr "Pas de cal"
+msgstr "Pas de cal."
 
 #: ../page.py:677
 msgid "Bad Cal"
-msgstr "Bad Cal"
+msgstr "Mauvaise Cal."
 
 #: ../page.py:767
 msgid "connect to server"

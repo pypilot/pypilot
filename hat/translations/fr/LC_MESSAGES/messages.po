@@ -20,7 +20,7 @@ msgstr ""
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
-msgstr "configuration du chapeau pypilot"
+msgstr "configuration du hat pypilot"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
@@ -28,7 +28,7 @@ msgstr "Configuration de l'écran LCD et de la télécommande"
 
 #: templates/index.html:17
 msgid "clear"
-msgstr "dégager"
+msgstr "effacer"
 
 #: templates/index.html:17
 msgid "default"
@@ -40,7 +40,7 @@ msgid ""
 "button."
 msgstr ""
 "appuyez sur le(s) bouton(s) du clavier ou de la télécommande puis attribuez "
-"une commande avec le bouton."
+"une commande au bouton."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
@@ -74,7 +74,7 @@ msgid ""
 msgstr ""
 "Le port ir peut être géré directement depuis le pi ou l'arduino. "
 "L'utilisation de l'arduino peut recevoir de nombreuses télécommandes "
-"différentes sans enregistrements d'étalonnage spéciaux."
+"différentes sans étalonnage spécial."
 
 #: templates/index.html:36
 msgid "remote mode"
