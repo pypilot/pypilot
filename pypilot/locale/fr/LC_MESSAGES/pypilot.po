@@ -722,7 +722,7 @@ msgstr "N/A"
 
 #: ui/autopilot_control_ui.py:121
 msgid "port"
-msgstr "ort"
+msgstr "babord"
 
 #: ui/autopilot_control_ui.py:121
 msgid "starboard"
@@ -734,7 +734,7 @@ msgstr "Pilote"
 
 #: ui/autopilot_control_ui.py:146 ui/autopilot_control_ui.py:425
 msgid "Compass"
-msgstr "Boussole"
+msgstr "Compas"
 
 #: ui/autopilot_control_ui.py:149
 msgid "GPS"
@@ -787,7 +787,7 @@ msgstr "Alignement"
 
 #: ui/autopilot_control_ui.py:399
 msgid "Heading"
-msgstr "Titre"
+msgstr "Cap"
 
 #: ui/autopilot_control_ui.py:404 ui/autopilot_control_ui.py:470
 #: ui/autopilot_control_ui.py:480
@@ -816,7 +816,7 @@ msgstr "Portée"
 
 #: ui/autopilot_control_ui.py:455
 msgid "Pitch"
-msgstr "Assiette"
+msgstr "Tangage"
 
 #: ui/autopilot_control_ui.py:465
 msgid "Roll"
@@ -864,7 +864,7 @@ msgstr "Points d'étalonnage"
 
 #: ui/autopilot_control_ui.py:708
 msgid "compass"
-msgstr "boussole"
+msgstr "compas"
 
 #: ui/autopilot_control_ui.py:718
 msgid ""
