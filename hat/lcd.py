@@ -204,7 +204,7 @@ class LCD():
 
     def buzz(self, mode, duration, threshold):
         if self.config['buzzer'] > threshold:
-            self.send('buzzer', (2, .1, self.lcd.config['buzzer_volume']))
+            self.send('buzzer', (2, .1, self.config['buzzer_volume']))
             
     def write_config(self):
         if micropython:

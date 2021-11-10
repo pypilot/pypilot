@@ -699,7 +699,7 @@ class control(controlbase):
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:
-                self.fittext(rectangle(0, .4, 1, .4), _(warning), True, black)
+                self.fittext(rectangle(0, .4, 1, .5), _(warning), True, black)
                 self.control['heading_command'] = warning
                 self.control['mode'] = warning
         elif mode not in modes:
@@ -708,9 +708,8 @@ class control(controlbase):
                 self.fittext(rectangle(0, .4, 1, .35), mode.upper() + ' ' + _('not detected'), True, black)
                 self.control['heading_command'] = no_mode
         elif self.last_val('imu.warning'):
-            warning = self.last_val('imu.warning')
             if self.control['heading_command'] != 'imu warning':
-                self.fittext(rectangle(0, .4, 1, .35), warning, True, black)
+                self.fittext(rectangle(0, .4, 1, .35), self.last_val('imu.warning'), True, black)
                 self.control['heading_command'] = 'imu warning'
         elif self.last_val('servo.controller') == 'none':
             if self.control['heading_command'] != 'no controller':
@@ -719,16 +718,16 @@ class control(controlbase):
         elif self.lcd.check_voltage():
             msg = self.lcd.check_voltage()
             if self.control['heading_command'] != msg:
-                self.fittext(rectangle(0, .4, 1, .34), msg, True, black)
+                self.fittext(rectangle(0, .4, 1, .35), msg, True, black)
                 self.control['heading_command'] = msg
         elif self.last_val('ap.enabled') != True:
             # no warning, display the desired course or 'standby'
             if self.control['heading_command'] != 'standby':
-                r = rectangle(0, .4, 1, .34)
+                r = rectangle(0, .4, 1, .35)
                 self.fittext(r, _('standby'), False, black)
                 self.control['heading_command'] = 'standby'
         elif self.last_val('ap.tack.state') != 'none':
-            r = rectangle(0, .4, 1, .34)
+            r = rectangle(0, .4, 1, .35)
             d = self.last_val('ap.tack.direction')
             if self.last_val('ap.tack.state') == 'waiting':
                 msg = _('tack') + ' ' + str(self.last_val('ap.tack.timeout'))
