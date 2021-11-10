@@ -68,6 +68,8 @@ class ActionHeading(Action):
             return
         if self.hat.last_msg['ap.enabled']:
             if not count:
+                if 'wind' in self.hat.last_msg['ap.mode']:
+                    sign = -sign
                 self.hat.client.set('ap.heading_command',
                                     self.hat.last_msg['ap.heading_command'] + self.offset)
         else: # manual mode
@@ -265,6 +267,7 @@ class Hat(object):
         self.last_msg = {}
         self.last_msg['ap.enabled'] = False
         self.last_msg['ap.heading_command'] = 0
+        self.last_msg['ap.mode'] = ''
 
         if len(sys.argv) > 1:
             self.config['host'] = sys.argv[1]
@@ -278,7 +281,7 @@ class Hat(object):
         time.sleep(1)
         self.client = pypilotClient(host)
         self.client.registered = False
-        self.watchlist = ['ap.enabled', 'ap.heading_command']
+        self.watchlist = ['ap.enabled', 'ap.heading_command', 'ap.mode']
 
         for name in self.watchlist:
             self.client.watch(name)

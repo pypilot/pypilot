@@ -809,6 +809,9 @@ class control(controlbase):
                 if self.manualkeystate['change'] != change:
                     self.manualkeystate['change'] = change
                     sign = keys[key][1]
+                    if 'wind' in self.control['mode']:
+                        sign = -sign
+
                     change = float(change)
                     cmd = self.manualkeystate['command'] + sign*change
                     self.tack_hint = time.monotonic(), sign
