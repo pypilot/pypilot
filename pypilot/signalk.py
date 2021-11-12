@@ -518,7 +518,7 @@ class signalk(object):
         if watch:
             watch = self.period.value
 
-        if sensor == 'gps':
+        if sensor == 'gps': # the fix contains everything
             self.client.watch('gps.fix', watch)
         else:
             for signalk_path_conversion, pypilot_path in signalk_table[sensor].items():
