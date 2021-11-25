@@ -30,7 +30,7 @@ class GpsProbe():
                 time.sleep(3)
 
     def probe(self):
-        if not os.system('timeout -s KILL -t 5 gpsctl 2> /dev/null'):
+        if not os.system('timeout -s KILL 5 gpsctl 2> /dev/null'):
             return True
 
         # try to probe all possible usb devices
@@ -43,7 +43,7 @@ class GpsProbe():
         for device in devices:
             if not os.path.exists(device):
                 continue
-            if not os.system('timeout -s KILL -t 5 gpsctl -f ' + device + ' 2> /dev/null'):
+            if not os.system('timeout -s KILL 5 gpsctl -f ' + device + ' 2> /dev/null'):
                 os.environ['GPSD_SOCKET'] = '/tmp/gpsd.sock'
                 os.system('gpsdctl add ' + device)
                 print('GPS found: ' + device)
