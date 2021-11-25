@@ -132,7 +132,7 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
         data = list(image.getdata())
         for i in range(len(data)):
             d = 255 / (1<<bpp)
-            v = int(round(data[i][0] / (255 / (1<<bpp))) * (255 / ((1<<bpp)-1)))
+            v = int(round(data[i][3] / (255 / (1<<bpp))) * (255 / ((1<<bpp)-1)))
             data[i] = (v,v,v,v)
         image.putdata(data)
 
