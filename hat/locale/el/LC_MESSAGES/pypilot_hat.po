@@ -264,7 +264,7 @@ msgstr "Δεν εντοπίστηκε WIND"
 
 #: ../page.py:642
 msgid "WARNING no motor controller"
-msgstr "ΠΡΟΕΙΔΟΠΟΙΗΣΗ χωρίς ελεγκτή"
+msgstr "ΠΡΟΕΙΔΟΠΟ χωρίς ελεγκτή"
 
 #: ../page.py:653
 msgid "standby"
