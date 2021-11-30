@@ -87,6 +87,8 @@ class menu(page):
                 minv = values[name]['min']
                 maxv = values[name]['max']
                 val = (self.last_val(name, 0, 0)-minv) / (maxv - minv)
+                if val <= 0:
+                    continue
                 sliderarea.width *= val
                 self.rectangle(sliderarea)
             except Exception as e:
