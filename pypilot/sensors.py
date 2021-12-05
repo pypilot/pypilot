@@ -71,7 +71,7 @@ class Wind(Sensor):
         if 'direction' in data:
             data['direction'] += self.offset.value
 
-        if self.compensation_height.value and 'direction' in data and 'speed' in data:
+        if self.compensation_height.value and 'direction' in data and 'speed' in data and self.boatimu:
             # use imu boat motion to compensate wind reading
             # compute apparent wind at sensor height from pitch and roll rates
             # for this to work, the heading alighment must be correct
