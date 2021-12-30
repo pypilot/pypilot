@@ -212,11 +212,11 @@ class ServerValues(pypilotValue):
         self.internal = list(self.values)
         self.pipevalues = {}
         self.msg = 'new'
+        self.persistent_timeout = time.monotonic() + server_persistent_period
+        self.persistent_values = {}
         self.load()
         self.pqwatches = [] # priority queue of watches
         self.last_send_watches = 0
-        self.persistent_timeout = time.monotonic() + server_persistent_period
-        self.persistent_values = {}
 
     def get_msg(self):
         if not self.msg or self.msg == 'new':
