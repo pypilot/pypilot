@@ -533,9 +533,13 @@ class control(controlbase):
         return self.last_val('ap.heading_command')
 
     def set_ap_heading_command(self, command):
-        while command < 0:
+        if 'wind' in self.control['mode']:
+            d = -180
+        else:
+            d = 0
+        while command < d:
             command += 360
-        while command >= 360:
+        while command >= d+360:
             command -= 360
         self.set('ap.heading_command', command)
         self.ap_heading_command = command

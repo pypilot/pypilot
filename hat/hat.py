@@ -121,7 +121,7 @@ class Web(Process):
                     print('warning, failed to make hat web process idle, trying renice')
                 if os.system("renice 20 %d" % os.getpid()):
                     print('warning, failed to renice hat web process')
-                if os.getenv('USER') == 'tc' and time.monotonic() < 300:
+                if os.getenv('USER') == 'tc' and time.monotonic() < 360:
                     time.sleep(30) # delay loading web and wait until modules are loaded
                 else:
                     time.sleep(5) # delay less on other platforms
