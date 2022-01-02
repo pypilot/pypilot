@@ -178,7 +178,7 @@ class pypilotClient(object):
     def onconnected(self):
         #print('connected to pypilot server', time.time())
         self.last_values_list = False
-        
+
         # write config if connection succeeds
         try:
             file = open(self.configfilename, 'w')
@@ -218,13 +218,15 @@ class pypilotClient(object):
                 pass
 
             def add_service(self, zeroconf, type, name):
+                #print('service', name)
                 self.name_type = name, type
                 info = zeroconf.get_service_info(type, name)
-                #print('info', info)
+                #print('info', info, info.parsed_addresses()[0])
                 if not info:
                     return
                 #for name, value in info.properties.items():
                 config = self.client.config
+                #print('info', info.addresses)
                 config['host'] = socket.inet_ntoa(info.addresses[0])
                 config['port'] = info.port
                 print('found pypilot', config['host'], config['port'])
@@ -449,7 +451,12 @@ def pypilotClientFromArgs(values, period=True, host=False):
     client = pypilotClient(host)
     if not client.connect(True):
         print(_('failed to connect to'), host)
-        if not client.probewait(5) or not client.connect(True):
+        if client.probewait(5):
+            if not client.connect(True):
+                print(_('failed to connect to'), client.config['host'])
+                exit(1)
+        else:
+            print(_('no pypilot server found'))
             exit(1)
 
     # set any value specified with path=value
