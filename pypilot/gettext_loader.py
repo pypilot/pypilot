@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2021 Sean D'Epagnier
+#   Copyright (C) 2022 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -10,9 +10,9 @@
 import sys
 
 e = sys.stdout.encoding.lower()
-print('terminal encoding: ', e)
+#print('terminal encoding:', e)
 if e.startswith('utf'):
-    import gettext
+    import gettext, os
     locale_d = os.path.abspath(os.path.dirname(__file__)) + '/locale'
     gettext.translation('pypilot', locale_d, fallback=True).install()
 else:

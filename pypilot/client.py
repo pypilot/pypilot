@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2022 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -120,7 +120,7 @@ class pypilotClient(object):
             host='127.0.0.1'
 
         if host and type(host) != type(''):
-            # host is the server object
+            # host is the server object for direct pipe connection
             self.server = host
             self.connection = host.pipe()
             self.poller = select.poll()
@@ -161,6 +161,9 @@ class pypilotClient(object):
                 config['port'] = host[i+1:]
             else:
                 config['host'] = host
+
+        self.host_specified = host
+        
         if not 'host' in config:
             config['host'] = '127.0.0.1'
 
@@ -170,6 +173,7 @@ class pypilotClient(object):
             
         self.connection = False # connect later
         self.connection_in_progress = False
+        self.probed = False
 
     def onconnected(self):
         #print('connected to pypilot server', time.time())
@@ -196,6 +200,42 @@ class pypilotClient(object):
 
         self.values.onconnected()
 
+    def probe(self):
+        if self.host_specified:
+            return # do not search if host is specified by commandline, or again
+
+        try:
+            from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
+        except Exception as e:
+            print(_('failed to') + ' import zeroconf, ' + _('autodetecting pypilot server not possible'))
+            print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
+
+        class Listener:
+            def __init__(self, client):
+                self.client = client
+
+            def remove_service(self, zeroconf, type, name):
+                pass
+
+            def add_service(self, zeroconf, type, name):
+                self.name_type = name, type
+                info = zeroconf.get_service_info(type, name)
+                #print('info', info)
+                if not info:
+                    return
+                #for name, value in info.properties.items():
+                config = self.client.config
+                config['host'] = socket.inet_ntoa(info.addresses[0])
+                config['port'] = info.port
+                print('found pypilot', config['host'], config['port'])
+                self.client.probed = True
+                zeroconf.close()
+
+        host_specified = True                
+        zeroconf = Zeroconf()
+        listener = Listener(self)
+        browser = ServiceBrowser(zeroconf, "_pypilot._tcp.local.", listener)
+
     def poll(self, timeout=0):
         if not self.connection:
             if self.connection_in_progress:
@@ -206,6 +246,7 @@ class pypilotClient(object):
                         # hung hup
                         self.connection_in_progress.close()
                         self.connection_in_progress = False
+                        self.probe()
                         return
 
                     self.onconnected()
@@ -283,6 +324,14 @@ class pypilotClient(object):
             self.connection.close()
         self.connection = False
 
+    def probewait(self, timeout):
+        t0 = time.monotonic()
+        while time.monotonic() - t0 < timeout:
+            if self.probed:
+                return True
+            time.sleep(.1)
+        return False
+
     def connect(self, verbose=True):
         if self.connection:
             print(_('warning, pypilot client aleady has connection'))
@@ -306,6 +355,8 @@ class pypilotClient(object):
                 pass
             else:
                 print(_('connect failed to') + (' %s:%d' % host_port), e)
+
+            self.probe()
             #time.sleep(.25)
                 
             return False
@@ -398,7 +449,8 @@ def pypilotClientFromArgs(values, period=True, host=False):
     client = pypilotClient(host)
     if not client.connect(True):
         print(_('failed to connect to'), host)
-        exit(1)
+        if not client.probewait(5) or not client.connect(True):
+            exit(1)
 
     # set any value specified with path=value
     watches = {}
@@ -420,7 +472,6 @@ def pypilotClientFromArgs(values, period=True, host=False):
 
     if sets:
         client.poll(1)
-        #time.sleep(.2) # is this needed?
         
     for name in watches:
         client.watch(name, watches[name])

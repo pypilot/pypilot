@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2022 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -460,8 +460,25 @@ class pypilotServer(object):
                 self.fd_to_connection[fd] = pipe
                 self.fd_to_pipe[fd] = pipe
             pipe.cwatches = {'values': True} # server always watches client values
-
         self.initialized = True
+            
+        # register zeroconf service
+        from zeroconf import IPVersion, ServiceInfo, Zeroconf
+        from version import strversion
+
+        self.info = ServiceInfo(
+            "_pypilot._tcp.local.",
+            "pypilot._pypilot._tcp.local.",
+            addresses=[socket.inet_aton("127.0.0.1")],
+            port=DEFAULT_PORT,
+            properties={'version': strversion},
+        )
+
+        #ip_version = IPVersion.All
+        #ip_version = IPVersion.V6Only
+        ip_version = IPVersion.V4Only
+        self.zeroconf = Zeroconf(ip_version=ip_version)
+        self.zeroconf.register_service(self.info)
 
     def __del__(self):
         if not self.initialized:
@@ -472,6 +489,10 @@ class pypilotServer(object):
             socket.close()
         for pipe in self.pipes:
             pipe.close()
+
+        if self.zeroconf:
+            self.zeroconf.unregister_service(self.info)
+            self.zeroconf.close()
 
     def RemoveSocket(self, socket):
         print('server, remove socket', socket.address)
