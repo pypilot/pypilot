@@ -356,7 +356,7 @@ class Autopilot(object):
             #print('autopilot failed to read imu at time:', time.monotonic(), period)
 
         t3 = time.monotonic()
-        if t3-t2 > period/2 and data:
+        if t3-t2 > period*2/3 and data:
             print('read imu running too _slowly_', t3-t2, period)
 
         self.fix_compass_calibration_change(data, t0)

@@ -94,7 +94,7 @@ class Process():
     
     def send(self, value):
         if self.process:
-            self.pipe.send(value)
+            self.pipe.send(value, maxdt=.1)
 
     def create(self, process):
         import multiprocessing
@@ -361,13 +361,19 @@ class Hat(object):
                 except ProcessLookupError:
                     pass # ok, process is already terminated
                 #os.waitpid(pid, 0)
-                sys.stdout.flush()
+                try:
+                    sys.stdout.flush()
+                except Exception as e:
+                    print('failed to flush stdout', e)
             for process in processes:
                 if process:
                     process.process = False
 
             raise KeyboardInterrupt # to get backtrace on all processes
-            sys.stdout.flush()
+            try:
+                sys.stdout.flush()
+            except Exception as e:
+                print('failed to flush stdout2', e)
 
         for s in range(1, 16):
             if s != 9 and s != 13:
