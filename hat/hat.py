@@ -274,6 +274,7 @@ class Hat(object):
             self.write_config()
 
         host = self.config['host']
+        print('host', host)
 
         self.poller = select.poll()
         self.gpio = gpio.gpio()
