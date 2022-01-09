@@ -161,8 +161,6 @@ class pypilotClient(object):
                 config['port'] = host[i+1:]
             else:
                 config['host'] = host
-
-        self.host_specified = host
         
         if not 'host' in config:
             config['host'] = '127.0.0.1'
@@ -173,6 +171,7 @@ class pypilotClient(object):
             
         self.connection = False # connect later
         self.connection_in_progress = False
+        self.can_probe = True
         self.probed = False
 
     def onconnected(self):
@@ -201,7 +200,7 @@ class pypilotClient(object):
         self.values.onconnected()
 
     def probe(self):
-        if self.host_specified:
+        if not self.can_probe:
             return # do not search if host is specified by commandline, or again
 
         try:
@@ -233,7 +232,7 @@ class pypilotClient(object):
                 self.client.probed = True
                 zeroconf.close()
 
-        host_specified = True                
+        self.can_probe = False
         zeroconf = Zeroconf()
         listener = Listener(self)
         browser = ServiceBrowser(zeroconf, "_pypilot._tcp.local.", listener)
@@ -449,6 +448,8 @@ class pypilotClient(object):
 
 def pypilotClientFromArgs(values, period=True, host=False):
     client = pypilotClient(host)
+    if host:
+        client.probe = False # dont probe
     if not client.connect(True):
         print(_('failed to connect to'), host)
         if client.probewait(5):
