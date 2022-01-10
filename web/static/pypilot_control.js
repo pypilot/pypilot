@@ -645,5 +645,5 @@ function setCookie(key, value, expiry=365) {
  */
 function getCookie(key) {
     var keyValue = document.cookie.match('(^|;) ?' + key + '=([^;]*)(;|$)');
-    return keyValue ? keyValue[2] : null;
+    return keyValue ? keyValue[2] : 'dark';  // dark by default
 }
