@@ -38,7 +38,7 @@ class Rudder(Sensor):
         oldminmax = self.minmax
         self.minmax = (-range - offset)/scale, (range - offset)/scale
 
-        if self.lastrange != self.range.value:
+        if self.lastrange and self.lastrange != self.range.value:
             # compute and update scale and offset if range changes
             nonlinearity = self.nonlinearity.value
 
