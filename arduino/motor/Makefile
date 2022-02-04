@@ -9,7 +9,7 @@ SKETCHNAME = motor
 DEVICE = /dev/ttyUSB0
 #DEVICE = /dev/ttyAMA0
 
-MCU = atmega328p
+MCU = atmega168p
 
 ARDUINO_PATH = /usr/share/arduino
 CC = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-gcc
