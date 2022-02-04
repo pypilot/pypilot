@@ -688,7 +688,13 @@ void read_anemometer()
     const int nowindtimeout = 30;
     if(rcount) {
         if(nowindcount!=nowindtimeout) {
-            float newknots = .868976 * 2.25 * 1000 * rcount / period;
+            float newknots;
+            if(eeprom_data.sensor_type)
+                newknots = .868976 * 2.25;
+            else
+                newknots = 2.4;
+                    
+            newknots *= 1000 * rcount / period;
 #if 0
             Serial.print(lastnewknots);
             Serial.print(F("   "));
