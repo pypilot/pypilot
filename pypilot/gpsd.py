@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+from datetime import datetime
 import multiprocessing, time, socket, select
 from nonblockingpipe import NonBlockingPipe
 from bufferedsocket import LineBufferedNonBlockingSocket
@@ -108,9 +109,18 @@ class gpsProcess(multiprocessing.Process):
         elif cls == 'TPV':
             if msg['mode'] == 3:
                 fix = {'speed': 0}
-                for key in ['track', 'speed', 'lat', 'lon', 'device']:
+                for key in ['track', 'speed', 'lat', 'lon', 'device', 'climb']:
                     if key in msg:
                         fix[key] = msg[key]
+                if 'altHAE' in msg:
+                    fix['alt'] = msg['altHAE']
+                if 'time' in msg:
+                    try:
+                        ts = time.strptime(msg['time'], '%Y-%m-%dT%H:%M:%S.%f%z')
+                        fix['timestamp'] = time.mktime(ts)
+                    except:
+                        pass
+
                 fix['speed'] *= 1.944 # knots
                 device = msg['device']
                 if self.baud_boot_device_hint != device:
