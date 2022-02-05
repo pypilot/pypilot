@@ -338,7 +338,7 @@ class Autopilot(object):
         for msg in msgs: # we aren't usually subscribed to anything
             print('autopilot main process received:', msg, msgs[msg])
 
-        if not self.enabled.value:
+        if not self.enabled.value: # in standby, command servo here for lower latency
             self.servo.poll()
 
         t1 = time.monotonic()
@@ -432,6 +432,8 @@ class Autopilot(object):
         if self.enabled.value:
             self.servo.poll()
 
+        self.sensors.gps.predict() # make gps position/velocity prediction
+                                   # from inertial sensors
         self.boatimu.send_cal_data() # after critical loop is done
 
         t5 = time.monotonic()
@@ -443,7 +445,11 @@ class Autopilot(object):
           
         if self.watchdog_device:
             self.watchdog_device.write('c')
-            
+
+        t6 = time.monotonic()
+        if t6-t0 > period:
+            print(_('autopilot iteration running too slow'), t6-t0)
+
         while True: # sleep remainder of period
             dt = period - (time.monotonic() - t0) + sp
             if dt >= period or dt <= 0:
