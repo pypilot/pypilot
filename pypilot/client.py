@@ -449,10 +449,10 @@ class pypilotClient(object):
 def pypilotClientFromArgs(values, period=True, host=False):
     client = pypilotClient(host)
     if host:
-        client.probe = False # dont probe
+        client.probed = True # dont probe
     if not client.connect(True):
         print(_('failed to connect to'), host)
-        if client.probewait(5):
+        if not host and client.probewait(5):
             if not client.connect(True):
                 print(_('failed to connect to'), client.config['host'])
                 exit(1)
