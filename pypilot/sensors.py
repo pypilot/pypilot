@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import math, datetime
+import math, datetime, quaternion
 
 from client import *
 from values import *
@@ -149,7 +149,7 @@ class APB(Sensor):
             heading_command.set(command)
 
 class gps(Sensor):
-    def __init__(self, client):
+    def __init__(self, client, boatimu):
         super(gps, self).__init__(client, 'gps')
         self.track = self.register(SensorValue, 'track', directional=True)
         self.speed = self.register(SensorValue, 'speed')
@@ -157,6 +157,7 @@ class gps(Sensor):
         self.lat = self.register(SensorValue, 'lat', fmt='%.11f')
         self.lon = self.register(SensorValue, 'lon', fmt='%.11f')
         self.alt = self.register(SensorValue, 'alt', fmt='%.11f')
+        self.boatimu = boatimu
 
         self.leeway_ground = self.register(SensorValue, 'leeway_ground')
         self.compass_error = self.register(SensorValue, 'compass_error')
@@ -202,8 +203,8 @@ class gps(Sensor):
         if not self.smoothing.value:
             return
 
-        accel = self.ap.boatimu.SensorValues['accel'].value
-        fusionQPose = self.ap.boatimu.SensorValues['fusionQPose'].value
+        accel = self.boatimu.SensorValues['accel'].value
+        fusionQPose = self.boatimu.SensorValues['fusionQPose'].value
 
         self.filter.predict(quaternion.rotvecquat(accel, fusionQPose), time.monotonic())
 
@@ -250,7 +251,7 @@ class Sensors(object):
         self.gpsd = gpsd(self)
 
         # actual sensors supported
-        self.gps = gps(client)
+        self.gps = gps(client, boatimu)
         self.wind = Wind(client, boatimu)
         self.rudder = Rudder(client)
         self.apb = APB(client)

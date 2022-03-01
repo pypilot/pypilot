@@ -16,7 +16,9 @@
 import math
 import numpy as np
 
+import quaternion
 from resolv import *
+from values import SensorValue
 
 try:
     import wmm2020
@@ -41,8 +43,8 @@ def xy_to_ll(x, y, lat0, lon0):
     return yc + lat0, xc + lon0
     
 class GPSFilter(object):
-    def __init__(self, ap):
-        self.ap = ap
+    def __init__(self, client):
+        self.client = client
         self.f3d = False # estimate altitude and climb
 
         velSigma = posSigma * 1.0e-1;
@@ -70,14 +72,14 @@ class GPSFilter(object):
         cov = np.diag([posDev*velDev]*c)
 
         # what to set this to? for accels?
-        self.Q = np.vstack(np.hstack((pos, cov)), np.hstack((cov, vel)))
+        self.Q = np.vstack((np.hstack((pos, cov)), np.hstack((cov, vel))))
 
         self.predict_t = 0
 
         self.reset()
 
     def register(self, _type, name, *args, **kwargs):
-        return self.ap.client.register(_type(*(['gps.filter.' + name] + list(args)), **kwargs))
+        return self.client.register(_type(*(['gps.filter.' + name] + list(args)), **kwargs))
 
     def reset(self):
         c = 3 if self.f3d else 2
