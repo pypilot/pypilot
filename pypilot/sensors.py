@@ -163,7 +163,7 @@ class gps(Sensor):
 
         self.smoothing = self.register(BooleanProperty, 'smoothing', True)
 
-        self.filter = GPSFilter()
+        self.filter = GPSFilter(client)
         self.lastpredictt = time.monotonic()
 
         self.stale_count = 0
@@ -226,8 +226,8 @@ class gps(Sensor):
     def getrmc(self):
         lat = self.lat.value
         lon = self.lon.value
-        return 'APRMC,%.3f' % time.time() + ',A,%.4f,' % abs(lat) + lat > 0 ? 'N' : 'S' \
-            + ',%.4f,' % abs(lon) + lon > 0 ? 'E' : 'W' + ',%.2f' % self.speed.value \
+        return 'APRMC,%.3f' % time.time() + ',A,%.4f,' % abs(lat) + 'N' if lat > 0 else 'S' \
+            + ',%.4f,' % abs(lon) + 'E' if lon > 0 else 'W' + ',%.2f' % self.speed.value \
             + ',%.2f,' % self.track.value + ',' + getddmmyy() + ',' + ','
 
     def reset(self):

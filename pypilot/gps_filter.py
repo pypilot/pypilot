@@ -13,6 +13,7 @@
 # wave height
 # boat speed
 
+import math
 import numpy as np
 
 from resolv import *
@@ -42,10 +43,10 @@ def xy_to_ll(x, y, lat0, lon0):
 class GPSFilter(object):
     def __init__(self, ap):
         self.ap = ap
-        self.3d = False # estimate altitude and climb
+        self.f3d = False # estimate altitude and climb
 
         velSigma = posSigma * 1.0e-1;
-        if self.3d:
+        if self.f3d:
             self.R = np.diag([posSigma, posSigma, posSigma*2, velSigma, velSigma, velSigma*2])
         else:
             self.R = np.diag([posSigma, posSigma, velSigma, velSigma])
@@ -63,7 +64,7 @@ class GPSFilter(object):
         self.speed = self.register(SensorValue, 'speed')
         self.track = self.register(SensorValue, 'track')
 
-        c = 3 if self.3d else 2
+        c = 3 if self.f3d else 2
         pos = np.diag([posDev**2]*c)
         vel = np.diag([velDev**2]*c)
         cov = np.diag([posDev*velDev]*c)
@@ -79,7 +80,7 @@ class GPSFilter(object):
         return self.ap.client.register(_type(*(['gps.filter.' + name] + list(args)), **kwargs))
 
     def reset(self):
-        c = 3 if self.3d else 2
+        c = 3 if self.f3d else 2
         self.X = False
         self.P = np.identity(2*c)
         self.history = []
@@ -99,7 +100,7 @@ class GPSFilter(object):
         accel_ned = quaternion.rotvecquat(accel_true, error_q)
 
         U = 9.81*accel_ned
-        if not self.3d:
+        if not self.f3d:
             U = U[:2]
 
         t = time.monotonic()
@@ -109,7 +110,7 @@ class GPSFilter(object):
             self.reset()
 
         self.apply_prediction(dt, U)
-        self.history.append({'t': t, 'dt': dt, 'U': U, 'X': self.X, 'P', self.P})
+        self.history.append({'t': t, 'dt': dt, 'U': U, 'X': self.X, 'P': self.P})
 
         if not self.X: # do not have a trusted measurement yet, so cannot perform predictions
             return
@@ -120,14 +121,14 @@ class GPSFilter(object):
         self.lon.set(ll[1])
 
         # filtered speed and track
-        c = 3 if self.3d else 2
+        c = 3 if self.f3d else 2
         vx = self.X[c]
         vy = self.X[c+1]
         self.speed.set(math.hypot(vx, vy))
         self.track.set(resolv(math.degrees(math.atan2(vx, vy)), 180))
 
         # filtered altitude and climb
-        if self.3d:
+        if self.f3d:
             self.alt.set(self.X[2])
             self.climb.set(self.X[5])
 
@@ -148,12 +149,12 @@ class GPSFilter(object):
     def update(self, gps):        
         # update magnetic declination from magnetic model once every few hours if available
         if t - self.declination_time > 3600 * 4:
-            self.declination_time = t:
+            self.declination_time = t
             if wmm2020:
                 year = datetime.date.today().year
                 self.declination.update(wmm2020.wmm(self.lastll[0], self.lastll[1], 0, year).decl)
 
-        c = 3 if self.3d else 2
+        c = 3 if self.f3d else 2
         try:
             ts = gps['timestamp'] - self.gps_time_offset.value # in system time
             
@@ -162,12 +163,12 @@ class GPSFilter(object):
             track = gps['track']
             
             Z = xy
-            if self.3d:
+            if self.f3d:
                 Z.append(gps['alt'] if 'alt' in gps else 0)
 
             Z += [speed*math.sin(math.radians(track)),
                   speed*math.cos(math.radians(track))]
-            if self.3d:
+            if self.f3d:
                 Z.append(gps['climb'] if 'climb' in gps else 0)
         except Exception as e:
             print('gps filter update failed', e)
@@ -177,7 +178,7 @@ class GPSFilter(object):
         t0 = False
         i = 0
         for i in len(self.history):
-            h = self.history[-i-1]:
+            h = self.history[-i-1]
             t0 = h['t']
             if t0 < ts:
                 self.X = h['X']
