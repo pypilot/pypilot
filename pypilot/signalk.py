@@ -349,10 +349,6 @@ class signalk(object):
                     signalk_path, signalk_conversion = signalk_path_conversion
                     if signalk_path in values:
                         try:
-                            if not 'timestamp'in data and signalk_path in self.signalk_last_msg_time:
-                                ts = time.strptime(self.signalk_last_msg_time[signalk_path], '%Y-%m-%dT%H:%M:%S.%f%z')
-                                data['timestamp'] = time.mktime(ts)
-
                             value = values[signalk_path]
                             if type(pypilot_path) == type({}): # single path translates to multiple pypilot
                                 for signalk_key, pypilot_key in pypilot_path.items():

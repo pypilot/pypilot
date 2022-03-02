@@ -1,20 +1,19 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2022 Sean D'Epagnier
+#   Copyright (C) 2020 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import math, datetime
-
 from client import *
 from values import *
 from resolv import resolv
 
 from gpsd import gpsd
-from gps_filter import GPSFilter
+
+import math
 
 # favor lower priority sources
 source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'signalk' : 4, 'none' : 5}
@@ -22,8 +21,6 @@ source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'signalk' : 
 class Sensor(object):
     def __init__(self, client, name):
         self.source = client.register(StringValue(name + '.source', 'none'))
-        if name != 'apb':
-            self.rate = client.register(RangeProperty(name + '.rate', 4, 0, 50))
         self.lastupdate = 0
         self.device = None
         self.name = name
@@ -39,6 +36,7 @@ class Sensor(object):
            data['device'] != self.device:
             return False
 
+        #timestamp = data['timestamp'] if 'timestamp' in data else time.monotonic()-self.starttime
         self.update(data)
                 
         if self.source.value != source:
@@ -153,88 +151,20 @@ class gps(Sensor):
         super(gps, self).__init__(client, 'gps')
         self.track = self.register(SensorValue, 'track', directional=True)
         self.speed = self.register(SensorValue, 'speed')
-        self.climb = self.register(SensorValue, 'climb')
         self.lat = self.register(SensorValue, 'lat', fmt='%.11f')
         self.lon = self.register(SensorValue, 'lon', fmt='%.11f')
-        self.alt = self.register(SensorValue, 'alt', fmt='%.11f')
-
-        self.leeway_ground = self.register(SensorValue, 'leeway_ground')
-        self.compass_error = self.register(SensorValue, 'compass_error')
-
-        self.smoothing = self.register(BooleanProperty, 'smoothing', True)
-
-        self.filter = GPSFilter()
-        self.lastpredictt = time.monotonic()
-
-        self.stale_count = 0
 
     def update(self, data):
-        if not self.smoothing.value:
-            self.speed.set(data['speed'])
-            if 'track' in data:
-                self.track.set(data['track'])
-            if 'lat' in data and 'lon' in data:
-                self.lat.set(data['lat'])
-                self.lon.set(data['lon'])
-            if 'climb' in data:
-                self.climb.set(data['climb'])
-            if 'alt' in data:
-                self.alt.set(data['alt'])
-        else:
-            ts = data['timestamp']
-            ts -= self.gps_system_time_offset
-            t = time.monotonic()
-
-            if ts < t-3: # older than 3 seconds
-                self.stale_count += 1
-                if self.stale_count > 5:
-                    self.gps_system_time_offset = ts - t
-                    self.filter.reset()
-            else:
-                self.stale_count = 0
-                if ts > t: # newer than now..
-                    self.gps_system_time_offset = ts - t
-                    self.filter.reset()
-                
-            self.filter.update(data)
-
-    def predict(self):
-        if not self.smoothing.value:
-            return
-
-        accel = self.ap.boatimu.SensorValues['accel'].value
-        fusionQPose = self.ap.boatimu.SensorValues['fusionQPose'].value
-
-        self.filter.predict(quaternion.rotvecquat(accel, fusionQPose), time.monotonic())
-
-        lat, lon = self.filter.latlon()
-        self.lat.set(lat)
-        self.lon.set(lon)
-
-        speed, track = self.filter.speedtrack()
-        self.speed.set(speed)
-        self.track.set(track)
-
-        alt, climb = self.filter.altclimb()
-        self.alt.update(alt)
-        self.climb.update(climb)
-
-    def getddmmyy(self):
-        today = datetime.date.today()
-        return '%02d%02d%02d', today.day, today.month, (today.year%100)
-
-    def getrmc(self):
-        lat = self.lat.value
-        lon = self.lon.value
-        return 'APRMC,%.3f' % time.time() + ',A,%.4f,' % abs(lat) + lat > 0 ? 'N' : 'S' \
-            + ',%.4f,' % abs(lon) + lon > 0 ? 'E' : 'W' + ',%.2f' % self.speed.value \
-            + ',%.2f,' % self.track.value + ',' + getddmmyy() + ',' + ','
+        self.speed.set(data['speed'])
+        if 'track' in data:
+            self.track.set(data['track'])
+        if 'lat' in data and 'lon' in data:
+            self.lat.set(data['lat'])
+            self.lon.set(data['lon'])
 
     def reset(self):
         self.track.set(False)
         self.speed.set(False)
-        self.climb.set(False)
-
 
 class Sensors(object):
     def __init__(self, client, boatimu):
