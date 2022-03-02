@@ -23,6 +23,7 @@
 DEFAULT_PORT = 20220
 
 import sys, select, time, socket
+
 import multiprocessing
 import serial
 from client import pypilotClient
@@ -50,7 +51,7 @@ def check_nmea_cksum(line):
     except:
         return False
 
-    
+gps_timeoffset = 0
 def parse_nmea_gps(line):
     def degrees_minutes_to_decimal(n):
         n/=100
@@ -67,7 +68,22 @@ def parse_nmea_gps(line):
             return False
         gps = {}
 
-        timestamp = float(data[0])
+        try: # since we are given only time and not date, use current day
+            ts = time.mktime(time.strptime(data[0], '%H%M%S.%f'))
+            t0 = time.time()
+            global gps_timeoffset
+            ts += gps_timeoffset # seconds since 1970
+            sec_in_day = 86400
+            if ts > t0 or ts < t0 - sec_in_day: # wrong day
+                ts -= gps_timeoffset # undo offset
+                day = int(t0/sec_in_day)
+                gps_timeoffset = sec_in_day*sec_in_day
+                if ts + gps_timeoffset > t0:
+                    gps_timeoffset -= sec_in_day
+                ts += gps_timeoffset
+                print('reset gps timeoffset', day)
+        except:
+            ts = time.time()
 
         lat = degrees_minutes_to_decimal(float(data[2]))
         if data[3] == 'S':
@@ -78,7 +94,7 @@ def parse_nmea_gps(line):
             lon = -lon
 
         speed = float(data[6]) if data[6] else 0
-        gps = {'timestamp': timestamp, 'speed': speed, 'lat': lat, 'lon': lon}
+        gps = {'timestamp': ts, 'speed': speed, 'lat': lat, 'lon': lon}
         if data[7]:
             gps['track'] = float(data[7])
 
@@ -287,7 +303,7 @@ class Nmea(object):
             nmea_name = line[:6]
             # we output mwv and rsa messages after calibration
             # do not relay apb messages
-            if not nmea_name[3:] in ['MWV', 'RSA', 'APB']:
+            if not nmea_name[3:] in ['MWV', 'RSA', 'APB']: #, 'RMC']:
                 # do not output nmea data over tcp faster than 4hz
                 # for each message time
                 # forward nmea lines from serial to tcp
@@ -387,16 +403,20 @@ class Nmea(object):
             # should we output gps?  for now no
             # limit to 4hz output of wind and rudder
             t = time.monotonic()
-            for name in ['wind', 'rudder']:
+            freq = 1/dt
+            for name in ['wind', 'rudder', 'gps']:
                 dt = t - self.nmea_times[name] if name in self.nmea_times else 1
                 source = self.sensors.sensors[name].source.value
-                # only output to tcp if we have a better source
-                if dt > .25 and source_priority[source] < source_priority['tcp']:
+                rate = self.sensors.sensors[name].rate.value
+                # only outoput to tcp if we have a better source
+                if freq < rate and source_priority[source] < source_priority['tcp']:
                     if name == 'wind':
                         wind = self.sensors.wind
                         self.send_nmea('APMWV,%.3f,R,%.3f,N,A' % (wind.direction.value, wind.speed.value))
                     elif name == 'rudder':
                         self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
+                    elif name == 'gps':
+                        self.send_nmea(self.sensors.gps.getrmc())
                     self.nmea_times[name] = t
             
         t5 = time.monotonic()

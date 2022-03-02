@@ -13,6 +13,7 @@ from resolv import resolv
 
 from gpsd import gpsd
 
+import datetime
 import math
 
 # favor lower priority sources
@@ -21,6 +22,8 @@ source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'signalk' : 
 class Sensor(object):
     def __init__(self, client, name):
         self.source = client.register(StringValue(name + '.source', 'none'))
+        if name != 'apb':
+            self.rate = client.register(RangeProperty(name + '.rate', 4, 0, 50))
         self.lastupdate = 0
         self.device = None
         self.name = name
@@ -46,6 +49,25 @@ class Sensor(object):
         self.lastupdate = time.monotonic()
         
         return True
+
+    def getddmmyy(self):
+        today = datetime.date.today()
+        return '%02d%02d%02d' % (today.day, today.month, (today.year%100))
+
+    def gethhmmss(self):
+        t = datetime.datetime.now()
+        return t.strftime("%H%M%S.%f")[:-4]
+
+    def getddmmmmmm(self, degrees, n, s):
+        minutes = (abs(degrees) - abs(int(degrees))) * 60
+        return '%02d%07.4f,%c' % ( abs(degrees), minutes, n if degrees > 0 else s)
+
+    def getrmc(self):
+        return 'APRMC,' + self.gethhmmss() + ',A,' \
+            + self.getddmmmmmm(self.lat.value, 'N', 'S') + ',' \
+            + self.getddmmmmmm(self.lon.value, 'E', 'W') \
+            + ',%.2f' % self.speed.value + ',%.2f,' % self.track.value + ',' \
+            + self.getddmmyy() + ',' + ',' + ',A'
 
     def reset(self):
         raise 'reset should be overloaded'
