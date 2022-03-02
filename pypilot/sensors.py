@@ -175,6 +175,7 @@ class gps(Sensor):
         self.speed = self.register(SensorValue, 'speed')
         self.lat = self.register(SensorValue, 'lat', fmt='%.11f')
         self.lon = self.register(SensorValue, 'lon', fmt='%.11f')
+        self.rate.set(1.0)
 
     def update(self, data):
         self.speed.set(data['speed'])

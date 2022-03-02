@@ -400,15 +400,14 @@ class Nmea(object):
                 self.send_nmea('APROT,%.3f,A' % values['imu.headingrate_lowpass'].value)
                 self.last_imu_time = time.monotonic()
 
-            # should we output gps?  for now no
             # limit to 4hz output of wind and rudder
             t = time.monotonic()
-            freq = 1/dt
             for name in ['wind', 'rudder', 'gps']:
-                dt = t - self.nmea_times[name] if name in self.nmea_times else 1
+                dt = t - self.nmea_times[name] if name in self.nmea_times else t
+                freq = 1/dt
                 source = self.sensors.sensors[name].source.value
                 rate = self.sensors.sensors[name].rate.value
-                # only outoput to tcp if we have a better source
+                # only output to tcp if we have a better source
                 if freq < rate and source_priority[source] < source_priority['tcp']:
                     if name == 'wind':
                         wind = self.sensors.wind
