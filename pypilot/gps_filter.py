@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 # combine GPS and inertial measurements in a kalman filter to esimate
-#
 # speed and position with high output rate and better accuracy
 # wave height
 # boat speed
@@ -76,7 +75,7 @@ class GPSFilter(object):
         self.reset()
 
     def register(self, _type, name, *args, **kwargs):
-        return self.ap.client.register(_type(*(['gps.filter.' + name] + list(args)), **kwargs))
+        return self.ap.client.register(_type(*(['gps.filtered.' + name] + list(args)), **kwargs))
 
     def reset(self):
         c = 3 if self.3d else 2

@@ -28,7 +28,10 @@ signalk_table = {'wind': {('environment.wind.speedApparent', meters_s): 'speed',
                  'apb': {('steering.autopilot.target.headingTrue', radians): 'track'},
                  'imu': {('navigation.headingMagnetic', radians): 'heading_lowpass',
                          ('navigation.attitude', radians): {'pitch': 'pitch', 'roll': 'roll', 'yaw': 'heading_lowpass'},
-                         ('navigation.rateOfTurn', radians): 'headingrate_lowpass'}}
+                         ('navigation.rateOfTurn', radians): 'headingrate_lowpass'},
+                 'water': {('navigation.speedThroughWater', meters_s): 'speed',
+                           ('navigation.leewayAngle', radians): 'leeway'}}
+
 
 token_path = os.getenv('HOME') + '/.pypilot/signalk-token'
 

@@ -204,7 +204,60 @@ def parse_nmea_apb(line):
         print(_('exception parsing apb'), e, line)
         return False
 
-nmea_parsers = {'gps': parse_nmea_gps, 'wind': parse_nmea_wind, 'rudder': parse_nmea_rudder, 'apb': parse_nmea_apb}
+
+# waterspeed
+def parse_nmea_water(line):
+    '''
+   ** VHW - Water speed and heading
+   **
+   **        1   2 3   4 5   6 7   8 9
+   **        |   | |   | |   | |   | |
+   ** $--VHW,x.x,T,x.x,M,x.x,N,x.x,K*hh<CR><LF>
+   **
+   ** Field Number:
+   **  1) Degress True
+   **  2) T = True
+   **  3) Degrees Magnetic
+   **  4) M = Magnetic
+   **  5) Knots (speed of vessel relative to the water)
+   **  6) N = Knots
+   **  7) Kilometers (speed of vessel relative to the water)
+   **  8) K = Kilometers
+   **  9) Checksum
+
+   ** LWY - Nautical Leeway Angle Measurement
+   **
+   **        1 2   3
+   **        | |   |
+   ** $--LWY,A,x.x*hh<CR><LF>
+   **
+   ** Field Number:
+   **  1) A=Valid V=not valid
+   **  2) Nautical Leeway Angle in degrees (positive indicates slippage to starboard)
+   **  3) Checksum
+    '''
+    if line[3:6] == 'VHW':
+        try:
+            # for now only use the knots field
+            data = line.split(',')
+            speed = float(data[5])
+            return 'water', {'speed': speed}
+        except Exception as e:
+            print(_('exception parsing vhw'), e, line)
+
+    elif line[3:6] == 'LWY':
+        try:
+            # for now only use the knots field
+            data = line.split(',')
+            if data[1] == 'A':
+                leeway = float(data[2])
+                return 'water', {'leeway': leeway}
+        except Exception as e:
+            print(_('exception parsing vhw'), e, line)
+        
+    return False
+
+nmea_parsers = {'gps': parse_nmea_gps, 'wind': parse_nmea_wind, 'rudder': parse_nmea_rudder, 'apb': parse_nmea_apb, 'water': parse_nmea_water}
 
 from pypilot.linebuffer import linebuffer
 class NMEASerialDevice(object):

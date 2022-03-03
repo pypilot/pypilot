@@ -434,6 +434,7 @@ class Autopilot(object):
 
         self.sensors.gps.predict() # make gps position/velocity prediction
                                    # from inertial sensors
+        self.sensors.water.compute() # calculate leeway and currents
         self.boatimu.send_cal_data() # after critical loop is done
 
         t5 = time.monotonic()

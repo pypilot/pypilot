@@ -77,7 +77,7 @@ class Wind(Sensor):
             # use imu boat motion to compensate wind reading
             # compute apparent wind at sensor height from pitch and roll rates
             # for this to work, the heading alighment must be correct
-            # for now just use roll an pitch, eventually also accelerations?
+            # for now just use roll and pitch, eventually also accelerations?
 
             # convert input data into rectangular with y along boat forward direction
             speed = data['speed']
@@ -161,45 +161,42 @@ class gps(Sensor):
         self.leeway_ground = self.register(SensorValue, 'leeway_ground')
         self.compass_error = self.register(SensorValue, 'compass_error')
 
-        self.smoothing = self.register(BooleanProperty, 'smoothing', True)
-
         self.filter = GPSFilter()
         self.lastpredictt = time.monotonic()
 
         self.stale_count = 0
 
     def update(self, data):
-        if not self.smoothing.value:
-            self.speed.set(data['speed'])
-            if 'track' in data:
-                self.track.set(data['track'])
-            if 'lat' in data and 'lon' in data:
-                self.lat.set(data['lat'])
-                self.lon.set(data['lon'])
-            if 'climb' in data:
-                self.climb.set(data['climb'])
-            if 'alt' in data:
-                self.alt.set(data['alt'])
-        else:
-            ts = data['timestamp']
-            ts -= self.gps_system_time_offset
-            t = time.monotonic()
+        self.speed.set(data['speed'])
+        if 'track' in data:
+            self.track.set(data['track'])
+        if 'lat' in data and 'lon' in data:
+            self.lat.set(data['lat'])
+            self.lon.set(data['lon'])
+        if 'climb' in data:
+            self.climb.set(data['climb'])
+        if 'alt' in data:
+            self.alt.set(data['alt'])
 
-            if ts < t-3: # older than 3 seconds
-                self.stale_count += 1
-                if self.stale_count > 5:
-                    self.gps_system_time_offset = ts - t
-                    self.filter.reset()
-            else:
-                self.stale_count = 0
-                if ts > t: # newer than now..
-                    self.gps_system_time_offset = ts - t
-                    self.filter.reset()
+        ts = data['timestamp']
+        ts -= self.gps_system_time_offset
+        t = time.monotonic()
+
+        if ts < t-3: # older than 3 seconds
+            self.stale_count += 1
+            if self.stale_count > 5:
+                self.gps_system_time_offset = ts - t
+                self.filter.reset()
+        else:
+            self.stale_count = 0
+            if ts > t: # newer than now..
+                self.gps_system_time_offset = ts - t
+                self.filter.reset()
                 
-            self.filter.update(data)
+        self.filter.update(data)
 
     def predict(self):
-        if not self.smoothing.value:
+        if not self.smoothing.value or self.source.value == 'none':
             return
 
         accel = self.ap.boatimu.SensorValues['accel'].value
@@ -236,6 +233,92 @@ class gps(Sensor):
         self.climb.set(False)
 
 
+# water speed and leeway sensor
+class Water(Sensor):
+    def __init__(self, client):
+        super(Water, self).__init__(client, 'water')
+
+        self.speed = self.register(SensorValue, 'speed')
+        self.leeway = self.register(SensorValue, 'leeway')
+        self.leeway.source = self.register(Value, 'leeway.source', 'none')
+
+        self.last_leeway_measurement = 0
+
+        self.current_speed = self.register(SensorValue, 'current.speed')
+        self.current_direction = self.register(SensorValue, 'current.direction')
+
+        self.water_wind_speed = self.register(SensorValue, 'wind.speed')
+        self.water_wind_direction = self.register(SensorValue, 'wind.direction')
+
+    def update(self, data):
+        t = time.monotonic()
+        if 'leeway' in data:
+            self.leeway.set(data['leeway'])
+            self.leeway_source.update('sensor')
+            self.last_leeway_measurement = t
+        if 'speed' in data:
+            self.speed.set(data['speed'])
+
+    def compute(self):
+        if self.source.value == 'none':
+            self.leeway.source.update('none')
+            return
+
+        t = time.monotonic()
+        if t-self.last_leeway_measurement > 3:
+            heel = self.ap.boatimu.heel
+            K = 5 # need to calibrate from gps when user indicates there are no currents
+            self.leeway.set(K*heel/self.speed.value**2)
+            self.leeway.source.update('computed')
+
+        # estimate currents over ground
+        gps = self.ap.sensors.gps
+        if gps.source.value != 'none':
+            speed = gps.filtered.speed
+            rtrack = math.radians(gps.filtered.track)
+            vg_north = speed*math.cos(rtrack)
+            vg_east = speed*math.sin(rtrack)
+
+            heading = self.ap.boatimu.SensorValues['heading_lowpass'].value
+            declination = gps.filtered.declination.value
+            compass_error = gps.filtered.compass_error.value
+
+            direction_true = heading + declination + compass_error + self.leeway.value
+            rdirection = math.radians(direction_true)
+            water_speed = self.speed.value
+
+            vw_north = water_speed*math.cos(rdirection)
+            vw_east = water_speed*math.sin(rdirection)
+
+            c_north = vg_north - vw_north
+            c_east = vg_east - vw_east
+
+            self.current_speed.set(math.hypot(c_north, c_east))
+            self.current_direction.set(resolv(math.degrees(math.atan2(c_north, c_east)), 180))
+
+        # estimate relative true wind over water
+        wind = self.ap.sensors.wind
+        if wind.source.value != 'none':
+            awa = wind.direction.value
+            aws = wind.speed.value
+
+            heading = self.ap.boatimu.SensorValues['heading_lowpass'].value
+            declination = gps.filtered.declination.value
+            compass_error = gps.filtered.compass_error.value
+
+            ra = math.radians(awa - self.leeway.value)
+            vya = aws*math.cos(ra) - self.speed.value
+            vxa = aws*math.sin(ra)
+
+            self.water_wind_speed.set(math.hypot(vya, vxa))
+            self.water_wind_direction.set(math.degrees(math.atan2(vya, vxa)))
+            
+
+    def reset(self):
+        self.direction.set(False)
+        self.speed.set(False)
+        
+
 class Sensors(object):
     def __init__(self, client, boatimu):
         from rudder import Rudder
@@ -254,6 +337,7 @@ class Sensors(object):
         self.wind = Wind(client, boatimu)
         self.rudder = Rudder(client)
         self.apb = APB(client)
+        self.water = Water(client)
 
         self.sensors = {'gps': self.gps, 'wind': self.wind, 'rudder': self.rudder, 'apb': self.apb}
 

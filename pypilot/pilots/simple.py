@@ -22,7 +22,7 @@ class SimplePilot(AutopilotPilot):
 
   def process(self, reset):
     ap = self.ap
-    headingrate = ap.boatimu.SensorValues['headingrate'].value
+    headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     gain_values = {'P': ap.heading_error.value,
                    'I': ap.heading_error_int.value,
                    'D': headingrate}
