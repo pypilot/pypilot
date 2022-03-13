@@ -282,8 +282,12 @@ void JLX12864::refresh(uint8_t page)
     for(uint8_t c=0;c<8;c++)
     {
         digitalWrite(pin_dc, CMD);
-        SPI.transfer(0xb0 + c);
-        SPI.transfer(page);
+        //SPI.transfer(0xb0 + c);
+        SPDR = 0xb0+c;
+        while (!(SPSR & _BV(SPIF)));
+        //SPI.transfer(page);
+        SPDR = page;
+        while (!(SPSR & _BV(SPIF)));
 
         digitalWrite(pin_dc, DATA);
         for(unsigned int i=0; i<64; i++) {

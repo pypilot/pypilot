@@ -289,7 +289,9 @@ void setup()
     WDTCSR = (1<<WDCE) | (1<<WDE);
     WDTCSR = (1<<WDIE) | (1<<WDP2) | (1<<WDP1); // interrupt in 1 second
 #else
+    #if 0
     WDTCR = (1<<WDE) | (1<<WDP2) | (1<<WDP1); // reset in 1 second
+    #endif
 #endif
     sei();
 

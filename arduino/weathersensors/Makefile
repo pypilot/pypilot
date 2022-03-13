@@ -9,8 +9,8 @@ SKETCHNAME = weathersensors
 #DEVICE = /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
 DEVICE = /dev/ttyUSB0
 
-MCU = atmega328p
-#MCU = atmega32
+#MCU = atmega328p
+MCU = atmega32
 
 ARDUINO_PATH = /usr/share/arduino
 CC = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-gcc

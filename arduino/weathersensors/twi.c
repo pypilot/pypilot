@@ -414,7 +414,7 @@ void twi_stop(void)
   // TWINT is not set after a stop condition!
   int timeout = 0;
   while(TWCR & _BV(TWSTO)){
-      if(timeout++ == 100000)
+      if(timeout++ == 1000)
 #if defined(__AVR_ATmega32__)
           break;
 #else
