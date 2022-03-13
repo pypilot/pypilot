@@ -197,12 +197,13 @@ class Rudder(Sensor):
             self.calibration_state.set('idle')
 
     def update(self, data):
+        if not data:
+            self.angle.update(False)
+            return
+
         # prevent data echo
         if data['device'] != self.lastdevice:
             self.lastdevice = data['device']
-            data = False
-
-        if not data:
             self.angle.update(False)
             return
         
