@@ -166,6 +166,15 @@ void Serial_begin(uint8_t baud)
 
 uint32_t buzzer_timeout;
 uint8_t buzzer_mode;
+void buzzer_off()
+{
+    TIMSK2 = 0;
+    pinMode(5, INPUT_PULLUP);
+    pinMode(6, INPUT_PULLUP);
+    PORTD &= ~_BV(PD5);
+    PORTD &= ~_BV(PD6);
+}
+
 void set_buzzer(uint8_t mode, uint8_t timeout)
 {
     buzzer_timeout = millis() + timeout*10; // duration
@@ -178,9 +187,7 @@ void set_buzzer(uint8_t mode, uint8_t timeout)
     uint8_t freq;
     switch(mode) {
     case 0: // buzzer off
-        pinMode(5, INPUT_PULLUP);
-        pinMode(6, INPUT_PULLUP);
-        TIMSK2 = 0;
+        buzzer_off();
         return;
     case 1: // steady
         freq = 200;
@@ -511,16 +518,14 @@ void loop() {
         if(buzzer_timeout < t0) {
             buzzer_timeout = 0;
             buzzer_mode = 0;
-            TIMSK2 = 0;
-            pinMode(5, INPUT_PULLUP);
-            pinMode(6, INPUT_PULLUP);
+            buzzer_off();
         } else {
             if(buzzer_mode == 2) {
                 uint8_t pos = ((buzzer_timeout - t0) / 50)%16;
                 if(pos & 1 && pos != 7 && pos != 15)
                     TIMSK2 |= _BV(OCIE2B) | _BV(TOIE2);
                 else
-                    TIMSK2 = 0;
+                    buzzer_off();
             }
         }
     }
