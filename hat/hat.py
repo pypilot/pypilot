@@ -276,6 +276,10 @@ class Hat(object):
         host = self.config['host']
         print('host', host)
 
+        if 'arduino' in self.config['hat']:
+            import arduino
+            arduino.arduino(config).firmware()
+
         self.poller = select.poll()
         self.gpio = gpio.gpio()
         self.lcd = LCD(self)
