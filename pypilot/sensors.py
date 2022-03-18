@@ -204,7 +204,8 @@ class gps(Sensor):
         accel = ap.boatimu.SensorValues['accel'].value
         fusionQPose = ap.boatimu.SensorValues['fusionQPose'].value
 
-        self.filtered.predict(quaternion.rotvecquat(accel, fusionQPose), time.monotonic())
+        if accel and fusionQPose:
+            self.filtered.predict(quaternion.rotvecquat(accel, fusionQPose), time.monotonic())
 
     def getddmmyy(self):
         today = datetime.date.today()
