@@ -298,7 +298,6 @@ class Hat(object):
         self.lirc = lircd.lirc(self.config)
         self.lirc.registered = False
         self.keytimes = {}
-        self.keycounts = {}
         self.keytimeouts = {}
 
         # keypad for lcd interface
@@ -451,6 +450,7 @@ class Hat(object):
 
     def poll(self):            
         t0 = time.monotonic()
+        keycounts = {}
         for i in [self.gpio, self.arduino, self.lirc]:
             try:
                 if not i:
@@ -459,22 +459,27 @@ class Hat(object):
                 for event in events:
                     #print('apply', event, time.monotonic())
                     key, count = event
-                    self.keycounts[key] = count
+                    keycounts[key] = count
 
             except Exception as e:
                 print('WARNING, failed to poll!!', e, i)
 
         key = ''
         count = 0
-        for k, c in self.keycounts.items():
+        for k, c in keycounts.items():
             if c:
                 if key:
-                    key += '_'
-                key += k
-                count = min(self.keycounts[k])
-
+                    key += '_' + k
+                    count = min(count, c)
+                else:
+                    key = k
+                    count = c
         if count:
             self.apply_code(key, count)
+
+        for k, c in keycounts.items():
+            if c == 0:
+                self.apply_code(k, 0)
 
         t1 = time.monotonic()
         msgs = self.client.receive()

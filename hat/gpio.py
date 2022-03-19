@@ -50,6 +50,7 @@ class gpio(object):
         else:
             self.pins = [17, 23, 27, 22, 18, 5, 6, 26]
 
+        self.lastkeystate = {}
         for p in self.pins:
             self.lastkeystate[p] = False
 
