@@ -165,6 +165,7 @@ class gps(Sensor):
 
         self.filtered = GPSFilter(client)
         self.lastpredictt = time.monotonic()
+        self.gps_system_time_offset = 0
 
         self.stale_count = 0
 
