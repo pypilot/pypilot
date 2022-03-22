@@ -222,10 +222,16 @@ class gps(Sensor):
         return '%02d%07.4f,%c' % (abs(degrees), minutes, n if degrees >= 0 else s)
 
     def getrmc(self):
-        lat = self.filtered.lat.value
-        lon = self.filtered.lon.value
-        speed = self.filtered.speed.value
-        track = self.filtered.track.value
+        if self.source.value == 'none':
+            lat = self.filtered.lat.value
+            lon = self.filtered.lon.value
+            speed = self.filtered.speed.value
+            track = self.filtered.track.value
+        else:
+            lat = self.lat.value
+            lon = self.lon.value
+            speed = self.speed.value
+            track = self.track.value
         return 'APRMC,' + self.gethhmmss() + ',A,' \
             + self.getddmmmmmm(lat, 'N', 'S') + ',' + self.getddmmmmmm(lon, 'E', 'W') \
             + ',%.2f,' % speed + '%.2f,' % (track if track > 0 else 360 + track) \
