@@ -468,7 +468,7 @@ class Nmea(object):
                     elif name == 'rudder':
                         self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
                     elif name == 'gps':
-                        self.send_nmea(self.sensors.gps.getrmc())
+                        self.send_nmea(self.sensors.gps.getnmea())
                     self.nmea_times[name] = t
             
         t5 = time.monotonic()
