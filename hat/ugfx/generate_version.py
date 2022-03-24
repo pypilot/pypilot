@@ -41,7 +41,7 @@ f.write('static char header_data[] = {')
 
 for i in range(len(data)):
     d = data[i]
-    if d[0] < 128:
+    if d[3] < 128:
         f.write('255,')
     else:
         f.write('0,')

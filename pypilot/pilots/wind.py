@@ -47,7 +47,7 @@ class WindPilot(AutopilotPilot):
     if sensors.gps.source.value != 'none':
       gps_track  = sensors.gps.track.value
       # difference from gps to wind
-      pif ap.gps_speed > 1:
+      if ap.gps_speed > 1:
         d = .005*math.log(ap.gps_speed + 1)
         self.gps_wind_offset.update(wind + gps_track, d)
 
