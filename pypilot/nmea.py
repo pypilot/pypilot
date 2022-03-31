@@ -562,7 +562,7 @@ class nmeaBridge(object):
 
         self.client_socket_nmea_address = False
         self.nmea_client_connect_time = 0
-        self.last_values = {'gps.source' : 'none', 'wind.source' : 'none', 'rudder.source': 'none', 'apb.source': 'none'}
+        self.last_values = {'gps.source' : 'none', 'wind.source' : 'none', 'rudder.source': 'none', 'apb.source': 'none', 'water.source': 'none'}
         for name in self.last_values:
             self.client.watch(name)
         self.addresses = {}

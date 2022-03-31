@@ -162,7 +162,7 @@ class gps(Sensor):
 
         self.leeway_ground = self.register(SensorValue, 'leeway_ground')
         self.compass_error = self.register(SensorValue, 'compass_error')
-        self.nmea_sentence = self.register(Property, 'nmea_sentence', 'APRMC', persistent=True)
+        self.nmea_sentence = self.register(EnumProperty, 'nmea_sentence', 'APRMC', ['APRMC', 'GPRMC'], persistent=True)
 
         self.filtered = GPSFilter(client)
         self.lastpredictt = time.monotonic()
@@ -233,14 +233,11 @@ class gps(Sensor):
             lon = self.lon.value
             speed = self.speed.value
             track = self.track.value
-        if self.nmea_sentence.value == 'APRMC' or self.nmea_sentence.value == 'GPRMC':
-            return self.nmea_sentence.value + ',' + self.gethhmmss() + ',A,' \
-                + self.getddmmmmmm(lat, 'N', 'S') + ',' + self.getddmmmmmm(lon, 'E', 'W') \
-                + ',%.2f,' % speed + '%.2f,' % (track if track > 0 else 360 + track) \
-                + self.getddmmyy() + ',,,A'
-        else:
-            print(_('unable to generate'), self.nmea_sentence.value, _('GPS NMEA sentence'))
-            return ''
+
+        return self.nmea_sentence.value + ',' + self.gethhmmss() + ',A,' \
+            + self.getddmmmmmm(lat, 'N', 'S') + ',' + self.getddmmmmmm(lon, 'E', 'W') \
+            + ',%.2f,' % speed + '%.2f,' % (track if track > 0 else 360 + track) \
+            + self.getddmmyy() + ',,,A'
 
     def reset(self):
         self.track.set(False)
