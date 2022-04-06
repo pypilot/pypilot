@@ -712,7 +712,7 @@ void read_anemometer()
             if(eeprom_data.sensor_type)
                 newknots = .868976 * 2.25;
             else
-                newknots = 2.4;
+                newknots = 2.8;  // TODO:  use non-linear calibration from recorded data
 
             newknots *= 1000.0 * rcount / period;
 #if 0
