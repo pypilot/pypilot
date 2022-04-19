@@ -248,7 +248,7 @@ class GPSFilter(object):
             cx, cy = self.X[c:c+2] # kalman measurement update
 
             ad, cd = math.hypot(ax, ay), math.hypot(cx, cy)
-            s = vd / wd
+            s = ad / cd
             if s > .8 and s < 1.2:
                 comp_adj = -math.degrees(math.asin((ax*cy-ay*cx) / (ad*cd)))
                 comp_adj = min(max(comp_adj, -10), 10) # max error 10 degrees
