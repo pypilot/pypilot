@@ -198,7 +198,7 @@ class gps(Sensor):
                 self.gps_system_time_offset = ts - t
                 self.filtered.reset()
                 
-        self.filtered.update(data)
+        #self.filtered.update(data)
 
     def predict(self, ap):
         if not self.source.value == 'none':
@@ -208,7 +208,8 @@ class gps(Sensor):
         fusionQPose = ap.boatimu.SensorValues['fusionQPose'].value
 
         if accel and fusionQPose:
-            self.filtered.predict(quaternion.rotvecquat(accel, fusionQPose), time.monotonic())
+            #self.filtered.predict(quaternion.rotvecquat(accel, fusionQPose), time.monotonic())
+            pass
 
     def getddmmyy(self):
         today = datetime.date.today()
