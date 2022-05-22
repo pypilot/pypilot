@@ -16,10 +16,10 @@ if gc.mem_free() > 1e6:  # larger ttgo display
     keypad_touch = []                                            #add the pins that are esp32 touchpins and are used without pushbuttons
     power_down_pin_number = None
 else:
-    keypad_pin_numbers = [2, 15, 12, 13, 27, 32, 33, -1, -1, -1] #AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, NUDGE_PORT, NUDGE_STARBOARD
-    keypad_pullup = []                                     #add the pins that have pullups(LOW activ) ALL other will have pulldowns(HIGH active)
-    keypad_touch = [2, 15, 12, 13, 27, 32, 33]                                      #add the pins that are esp32 touchpins and are used without pushbuttons
-    power_down_pin_number = None
+    keypad_pin_numbers = [33, 25, 12, 13, 27, 15, 32, -1, 0, 35] #AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, NUDGE_PORT, NUDGE_STARBOARD
+    keypad_pullup = [0, 35]                                     #add the pins that have pullups(LOW activ) ALL other will have pulldowns(HIGH active)
+    keypad_touch = []                                      #add the pins that are esp32 touchpins and are used without pushbuttons
+    power_down_pin_number = 26
 
 noisr = False
 
