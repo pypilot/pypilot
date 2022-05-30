@@ -66,11 +66,12 @@ class AutopilotPilot(object):
         sensors = self.ap.sensors
         nowind = sensors.wind.source.value == 'none'
         nogps = sensors.gps.source.value == 'none'
+        nowater = sensors.water.source.value == 'none'
 
-        if mode == 'true wind': # for true wind, need both wind and gps
+        if mode == 'true wind': # for true wind, need wind and gps or water speed
             if nowind:
                 return 'gps'
-            if nogps:
+            if nogps and nowater:
                 return 'wind'
         if mode == 'wind' and nowind:
             return 'compass'

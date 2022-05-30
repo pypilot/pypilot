@@ -156,6 +156,7 @@ class Autopilot(object):
 
         self.wind_compass_offset = HeadingOffset()
         self.true_wind_compass_offset = HeadingOffset()
+        self.true_wind_source = self.register(Value, 'true_wind_source', 'none')
 
         self.wind_direction = self.register(SensorValue, 'wind_direction', directional=True)
         self.wind_speed = 0
@@ -263,8 +264,17 @@ class Autopilot(object):
             self.wind_direction.set(resolv(wind_direction))
             self.wind_compass_offset.update(wind_direction + compass, d)
 
-            if self.sensors.gps.source.value != 'none':
-                true_wind = compute_true_wind(self.gps_speed, self.wind_speed,
+            if self.sensors.water.source.value != 'none':
+                boat_speed = self.sensors.water.speed.value
+                self.true_wind_source.update('water')
+            elif self.sensors.gps.source.value != 'none':
+                boat_speed = self.gps_speed
+                self.true_wind_source.update('gps')
+            else:
+                self.true_wind_source.update('none')
+
+            if self.true_wind_source.value != 'none':
+                true_wind = compute_true_wind(boat_speed, self.wind_speed,
                                               self.wind_direction.value)
                 offset = resolv(true_wind + compass, self.true_wind_compass_offset.value)
                 d = .05

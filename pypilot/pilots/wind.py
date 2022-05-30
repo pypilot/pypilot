@@ -61,7 +61,14 @@ class WindPilot(AutopilotPilot):
       gps = resolv(self.gps_wind_offset.value - wind, 180)
       ap.heading.set(gps)
     elif mode == 'true wind':
-      true_wind = autopilot.compute_true_wind(ap.gps_speed,
+      if ap.true_wind_sensor.value == 'water':
+          boat_speed = sensors.water.speed
+      elif ap.true_wind_sensor.value == 'gps':
+          boat_speed = ap.gps_speed
+      else:
+          boat_speed = 0
+        
+      true_wind = autopilot.compute_true_wind(boat_speed,
                                               sensors.wind.speed, wind)
       ap.heading.set(true_wind)
 
@@ -72,12 +79,13 @@ class WindPilot(AutopilotPilot):
       sensors = self.ap.sensors
       nocompass = self.ap.boatimu.SensorValues['compass'] == False
       nogps = sensors.gps.source.value == 'none'
+      nowater = sensors.water.source.value == 'none'
 
       if mode == 'compass':
         if nocompass:
           return 'wind'
       else:
-        if nogps: # if gps drops out switch to wind mode
+        if nogps and nowater: # need one of these for true wind
           return 'wind'
 
       return mode

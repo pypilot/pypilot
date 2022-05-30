@@ -45,9 +45,17 @@ class GPSPilot(AutopilotPilot):
     # compute offset between wind and gps
     if sensors.wind.source.value != 'none':
       d = .005
-      wind = self.ap.wind_direction.value
+      wind = ap.wind_direction.value
       self.wind_gps_offset.update(wind_direction + gps_course, d)
-      true_wind = autopilot.compute_true_wind(ap.gps_speed, ap.wind_speed,
+
+
+      if ap.true_wind_sensor.value == 'water':
+          boat_speed = sensors.water.speed
+      elif ap.true_wind_sensor.value == 'gps':
+          boat_speed = ap.gps_speed
+      else:
+          boat_speed = 0
+      true_wind = autopilot.compute_true_wind(boat_speed, ap.wind_speed,
                                               ap.wind_direction.value)
       offset = resolv(true_wind + gps_course, self.true_wind_gps_offset.value)
       d = .05
