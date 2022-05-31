@@ -498,8 +498,8 @@ void send_nmea(const char *buf)
     const char *fmt;
     uint8_t ck;
     if(eeprom_data.sensor_type == 0) {
-        fmt = PSTR("$PY%s*%02x\r\n");
-        ck = 0x09; // 'P' ^ 'Y'
+        fmt = PSTR("$QY%s*%02x\r\n");
+        ck = 0x08; // 'Q' ^ 'Y'
     } else {
         fmt = PSTR("$AR%s*%02x\r\n");
         ck = 0x13; // 'A' ^ 'R'
