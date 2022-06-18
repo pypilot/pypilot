@@ -156,7 +156,7 @@ class PipeNonBlockingPipeEnd(object):
         t0 = time.time()
         os.write(self.w, data.encode())
         t1 = time.time()
-        if t1-t0 > .024:
+        if t1-t0 > .04:
             print('too long write pipe', t1-t0, self.name, len(data))
 
     def send(self, value, block=False, maxdt=.025):

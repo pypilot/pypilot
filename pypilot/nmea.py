@@ -356,11 +356,14 @@ class Nmea(object):
             nmea_name = line[:6]
             # we output mwv and rsa messages after calibration
             # do not relay apb messages
-            if not nmea_name[3:] in ['MWV', 'RSA', 'APB']: #, 'RMC']:
+            blacklist = ['MWV', 'RSA', 'APB']
+            if self.sensors.gps.filtered_output.value:  # pass gps through, or use filtered gps depends on setting
+                blacklist.append('RMC')
+            
+            if not nmea_name[3:] in blacklist:
                 # do not output nmea data over tcp faster than 4hz
                 # for each message time
                 # forward nmea lines from serial to tcp
-
                 dt = t-self.nmea_times[nmea_name] if nmea_name in self.nmea_times else 1
                 if dt > .25:
                     self.pipe.send(line)
@@ -418,6 +421,7 @@ class Nmea(object):
                         print(_('nmea got flag for process pipe:'), flag)
                     else:
                         self.read_process_pipe()
+
                 elif flag == select.POLLIN:
                     #if flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
                     self.read_serial_device(self.device_fd[fd], serial_msgs)
@@ -455,8 +459,8 @@ class Nmea(object):
 
             # limit to 4hz output of wind and rudder
             t = time.monotonic()
-            for name in ['wind', 'rudder', 'gps']:
-                dt = t - self.nmea_times[name] if name in self.nmea_times else t
+            for name in ['wind', 'rudder']:
+                dt = t - (self.nmea_times[name] if name in self.nmea_times else t)
                 freq = 1/dt
                 source = self.sensors.sensors[name].source.value
                 rate = self.sensors.sensors[name].rate.value
@@ -467,18 +471,15 @@ class Nmea(object):
                         self.send_nmea('APMWV,%.3f,R,%.3f,N,A' % (wind.direction.value, wind.speed.value))
                     elif name == 'rudder':
                         self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
-                    # too slow?  make more tests!
-                    #elif name == 'gps':
-                    #   self.send_nmea(self.sensors.gps.getnmea())
                     self.nmea_times[name] = t
-            
+
         t5 = time.monotonic()
         if not self.nmea_bridge.process:
             self.nmea_bridge.poll()
         
         t6 = time.monotonic()
-        if t6 - t0 > .1 and self.start_time - t0 > 1: # report times if processing takes more than 0.1 seconds
-            print('nmea poll times', self.start_time-t0, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
+        if t6 - t0 > .05 and t0-self.start_time > 1: # report times if processing takes more than 0.05 seconds
+            print('nmea poll times', t6-self.start_time, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t6-t0)
             
     def probe_serial(self):
         # probe new nmea data devices
@@ -523,10 +524,24 @@ class Nmea(object):
 
     def send_nmea(self, msg):
         self.pipe.send(msg)
+
+
+def getddmmyy(self):
+    today = datetime.date.today()
+    return '%02d%02d%02d' % (today.day, today.month, today.year % 100)
+
+def gethhmmss(self):
+    t = datetime.datetime.now()
+    return t.strftime("%H%M%S.%f")[:-4]
+
+def getddmmmmmm(self, degrees, n, s):
+    minutes = (abs(degrees) - abs(int(degrees))) * 60
+    return '%02d%07.4f,%c' % (abs(degrees), minutes, n if degrees >= 0 else s)
         
 class nmeaBridge(object):
     def __init__(self, server):
         self.client = pypilotClient(server)
+        self.client.connection.name += 'nmeabridge'
         self.multiprocessing = server.multiprocessing
         self.pipe, self.pipe_out = NonBlockingPipe('nmea pipe', self.multiprocessing)
         if self.multiprocessing:
@@ -540,6 +555,10 @@ class nmeaBridge(object):
         self.sockets = []
 
         self.nmea_client = self.client.register(Property('nmea.client', '', persistent=True))
+
+        self.gps_id = self.client.register(EnumProperty('nmea.gps_id', 'APRMC', ['APRMC', 'GPRMC'], persistent=True))
+
+        
         self.client_socket_warning_address = False
 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -563,7 +582,10 @@ class nmeaBridge(object):
 
         self.client_socket_nmea_address = False
         self.nmea_client_connect_time = 0
-        self.last_values = {'gps.source' : 'none', 'wind.source' : 'none', 'rudder.source': 'none', 'apb.source': 'none', 'water.source': 'none'}
+        self.last_values = {}
+        keys = ['gps.source', 'wind.source', 'rudder.source', 'apb.source', 'water.source', 'gps.filtered.output']
+        for k in keys:
+            self.last_values[k] = 'none'                    
         for name in self.last_values:
             self.client.watch(name)
         self.addresses = {}
@@ -620,6 +642,7 @@ class nmeaBridge(object):
                 return
 
     def new_socket_connection(self, connection, address):
+        #print('nmea new socket connection', connection, address)
         max_connections = 10
         if len(self.sockets) == max_connections:
             connection.close()
@@ -807,6 +830,7 @@ class nmeaBridge(object):
                         line = sock.readline()
                         if not line:
                             break
+                
                         self.receive_nmea(line, sock)
             else:
                 print(_('nmea bridge unhandled poll flag'), flag)
@@ -829,10 +853,31 @@ class nmeaBridge(object):
         for name in pypilot_msgs:
             value = pypilot_msgs[name]
             self.last_values[name] = value
+            if name == 'gps.filtered.output': # watch filtered fix only if we are outputting it
+                self.client.watch('gps.filtered.fix', value)
         #except Exception as e:
         #    print('nmea exception receiving:', e)
         t4 = time.monotonic()
 
+        # generate filtered gps output if enabled
+        if self.last_values['gps.filtered.output'] is True and self.last_values['gps.filtered.fix']:
+            fix = self.last_values['gps.filtered.fix']
+            self.last_values['gps.filtered.fix'] = False
+            try:
+                lat, lon, speed, track = map(lambda k: fix[k], ['lat', 'lon', 'speed', 'track'])
+                # todo: incorporate timestamp accurate?
+                msg = self.gps_id.value + ',' + gethhmmss() + ',A,' \
+                      + getddmmmmmm(lat, 'N', 'S') + ',' + getddmmmmmm(lon, 'E', 'W') \
+                      + ',%.2f,' % speed + '%.2f,' % (track if track > 0 else 360 + track) \
+                      + getddmmyy() + ',,,A'
+                msg = '$' + msg + ('*%02X' % nmea_cksum(msg))
+                # relay nmea message from server to all tcp sockets
+                for sock in self.sockets:
+                    sock.write(msg + '\r\n')
+
+            except:
+                pass
+        
         # flush sockets
         for sock in self.sockets:
             sock.flush()

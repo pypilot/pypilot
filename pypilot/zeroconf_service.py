@@ -98,8 +98,11 @@ class zeroconf(threading.Thread):
                         properties={'version': strversion})
         
                     zeroconf[address] = Zeroconf(ip_version=ip_version, interfaces=[address])
-                    zeroconf[address].register_service(info[address])
-                
+                    try:
+                        zeroconf[address].register_service(info[address])
+                    except Exception as e:
+                        print('zeroconf exception:', e)
+                        
             time.sleep(60)
 
 

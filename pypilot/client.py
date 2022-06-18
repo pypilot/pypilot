@@ -273,12 +273,13 @@ class pypilotClient(object):
         if self.connection.fileno():
             # flush output
             self.connection.flush()
-            try:
-                events = self.poller.poll(int(1000 * timeout))
-            except Exception as e:
-                print('exception polling', e, os.getpid())
-                self.disconnect()
-                return
+            events = self.poller.poll(int(1000 * timeout))
+            #try:
+            #    events = self.poller.poll(int(1000 * timeout))
+            #except Exception as e:
+            #    print('exception polling', e, os.getpid())
+            #    self.disconnect()
+            #    return
 
             if not events:
                 # 3 seconds without data in either direction, send linefeed
