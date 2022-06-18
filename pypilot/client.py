@@ -503,7 +503,7 @@ def nice_str(value):
         s += ']'
         return s
     if type(value) == type(1.0):
-        return '%.8g' % value
+        return '%.11g' % value
     return str(value)
 
 
