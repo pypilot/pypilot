@@ -629,12 +629,14 @@ void read_anemometer()
     if(cross_count)
         calibrate_wind_direction(val, count);
     
-    int16_t sensorValue = -1;
-    if((count[0] > 0) + (count[1] > 0) + (count[2] > 0) != 1) {
+    int16_t sensorValue = -1, i;
+    if((count[0] > 0) && (count[2] > 0)) {
+        if(count[1] > 0) // invalid
+            return;
         // crossed zero
         sensorValue = eeprom_data.wind_min_reading;
     } else {
-        for(int i=0; i<3; i++)
+        for(i=0; i<3; i++)
             if(count[i] > 0) {
                 sensorValue = val[i] / count[i]; // average data                
                 break;
