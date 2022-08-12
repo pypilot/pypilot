@@ -135,15 +135,12 @@ class Autopilot(object):
         
         self.pilots = {}
         for pilot_type in pilots.default:
-            #try:
+            try:
                 pilot = pilot_type(self)
                 self.pilots[pilot.name] = pilot
 
-                if pilot.name == 'basic': # create basic2 and basic3
-                    self.pilots['basic2'] = pilot_type(self, 'basic2')
-                    self.pilots['basic3'] = pilot_type(self, 'basic3')
-            #except Exception as e:
-            #    print(_('failed to load pilot'), pilot_type, e)
+            except Exception as e:
+                print(_('failed to load pilot'), pilot_type, e)
 
         pilot_names = list(self.pilots)
         print(_('Available Pilots') + ':', pilot_names)

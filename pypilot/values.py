@@ -28,6 +28,8 @@ class Value(object):
     def get_msg(self):
         if isinstance(self.value, str):
             return '"' + self.value + '"'
+        if isinstance(self.value, bool):
+            return 'true' if self.value else 'false'
         return str(self.value)
 
     def set(self, value):
