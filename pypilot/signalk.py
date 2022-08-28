@@ -364,7 +364,7 @@ class signalk(object):
                             if type(pypilot_path) == type({}): # single path translates to multiple pypilot
                                 for signalk_key, pypilot_key in pypilot_path.items():
                                     if not value[signalk_key] is None:
-                                    data[pypilot_key] = value[signalk_key] / signalk_conversion
+                                        data[pypilot_key] = value[signalk_key] / signalk_conversion
                             elif not value is None:
                                 data[pypilot_path] = value / signalk_conversion
                         except Exception as e:
