@@ -88,8 +88,8 @@ class Wind(Sensor):
             dy = speed*math.cos(math.radians(direction))
 
             m = math.radians(self.compensation_height.value)
-            dx -= m * self.boatimu.SensorValues['rollrate'] # is this positive or negative?!?
-            dy -= m * self.boatimu.SensorValues['pitchrate']
+            dx -= m * self.boatimu.SensorValues['rollrate'].value # is this positive or negative?!?
+            dy -= m * self.boatimu.SensorValues['pitchrate'].value
 
             data['speed'] = math.hypot(dx, dy)
             data['direction'] = math.degrees(math.atan2(dx, dy))
