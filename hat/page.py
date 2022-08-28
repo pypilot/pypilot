@@ -678,12 +678,15 @@ class control(controlbase):
         # display warning about any servo faults
         flags = self.last_val('servo.flags').split()
         warning = ''
+        buzz = False
         for flag in flags:
             if flag.endswith('_FAULT'):
                 warning += flag[:-6].replace('_', ' ') + ' '
+                if 'OVER' in flag: # beep overtemp/overcurrent
+                    buzz = True
 
         if warning:
-            if self.lcd.config['buzzer'] > 1:
+            if buzz and self.lcd.config['buzzer'] > 0:
                 self.lcd.send('buzzer', (1, .1))
             warning = warning.lower()
             warning += 'fault'

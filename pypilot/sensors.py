@@ -155,7 +155,7 @@ class gps(Sensor):
         super(gps, self).__init__(client, 'gps')
         self.track = self.register(SensorValue, 'track', directional=True)
         self.speed = self.register(SensorValue, 'speed')
-        self.fix = self.register(Value, 'fix', False)
+        self.fix = self.register(JSONValue, 'fix', False)
 
         self.leeway_ground = self.register(SensorValue, 'leeway_ground')
         self.compass_error = self.register(SensorValue, 'compass_error')
@@ -187,7 +187,6 @@ class gps(Sensor):
     def reset(self):
         self.track.set(False)
         self.speed.set(False)
-        self.climb.set(False)
 
 
 # water speed and leeway sensor
