@@ -343,7 +343,7 @@ class signalk(object):
             try:
                 self.receive_signalk(msg)
             except Exception as e:
-                debug('failed to parse signalk', e)
+                debug('failed to parse signalk', msg, e)
                 return
             self.keep_token = True # do not throw away token if we got valid data
 
@@ -363,8 +363,9 @@ class signalk(object):
                             value = values[signalk_path]
                             if type(pypilot_path) == type({}): # single path translates to multiple pypilot
                                 for signalk_key, pypilot_key in pypilot_path.items():
+                                    if not value[signalk_key] is None:
                                     data[pypilot_key] = value[signalk_key] / signalk_conversion
-                            else:
+                            elif not value is None:
                                 data[pypilot_path] = value / signalk_conversion
                         except Exception as e:
                             print(_('Exception converting signalk->pypilot'), e, self.signalk_values)
@@ -465,10 +466,12 @@ class signalk(object):
             updates = data['updates']
             for update in updates:
                 source = 'unknown'
-                if 'source' in update:
-                    source = update['source']['talker']
-                elif '$source' in update:
+                if '$source' in update:
                     source = update['$source']
+                elif 'source' in update:
+                    if 'talker' in update['source']:
+                        source = update['source']['talker']
+
                 if 'timestamp' in update:
                     timestamp = update['timestamp']
                 if not source in self.signalk_values:
