@@ -7,17 +7,20 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-# combine GPS and inertial measurements in a kalman filter to esimate
+# combine GPS and inertial measurements in a kalman filter to estimate
 # speed and position with high output rate and better accuracy
 # wave height
 # boat speed
 
-import numpy as np
+import os
+import multiprocessing
 import math
 
 from values import *
 from resolv import *
 
+from client import pypilotClient
+from nonblockingpipe import NonBlockingPipe
 import vector
 import quaternion
 
@@ -42,42 +45,91 @@ def xy_to_ll(x, y, lat0, lon0):
     xc = x/earth_md/cs
     yc = y/earth_md
     return yc + lat0, xc + lon0
-    
+
+
+class GPSFilterProcess(multiprocessing.Process):
+    def __init__(self, client):
+        self.client = pypilotClient(client.server)
+        self.process = self
+
+        # this value is registered in main process
+        self.output = client.register(BooleanProperty('gps.filtered.output', False, persistent=True))
+
+        self.pipe, pipe = NonBlockingPipe('gps filter pipe', True)
+        super(GPSFilterProcess, self).__init__(target=self.filter_process, args=(pipe,), daemon=True)
+        self.start()
+        
+
+    def predict(self, accel, fusionQpose_ned_magnetic, t):
+        self.pipe.send(('predict', (accel, fusionQpose_ned_magnetic, t)))
+
+    def update(self, gps, t):
+        self.pipe.send(('update', (gps, t)))
+
+    def filter_process(self, pipe):
+        # wait for numpy package to be available
+        while True:
+            try:
+                global np
+                import numpy as np
+                break
+            except:
+                pass
+            time.sleep(20)
+        print('gps filter process', os.getpid())
+                
+        f = GPSFilter(self.client)
+        while True:
+            while True:
+                inp = pipe.recv()
+                if not inp:
+                    break
+                cmd, args = inp
+                if cmd == 'predict':
+                    f.predict(*args)
+                elif cmd == 'update':
+                    f.update(*args)
+
+            msgs = self.client.receive(.1)
+            for msg in msgs:
+                self.values[msg] = msgs[msg]
+        
+
 class GPSFilter(object):
     def __init__(self, client):
         self.client = client
+        self.gps_system_time_offset = 0
+        self.stale_count = 0
+        
         self.use3d = False # estimate altitude and climb
 
-        posSigma = 10 # 10 meters
-        velSigma = 1  # 1 m/s
+        posSigma = 10 # meters
+        velSigma = .25  # m/s
         if self.use3d:
             self.R = np.diag([posSigma, posSigma, posSigma*2, velSigma, velSigma, velSigma*2])
         else:
             self.R = np.diag([posSigma, posSigma, velSigma, velSigma])
-
+            
+        self.enabled = self.register(BooleanProperty, 'enabled', False, persistent=True)
         self.declination = self.register(SensorValue, 'declination')
         self.declination_time = 0
 
         self.gps_time_offset = self.register(SensorValue, 'time_offset')
-        self.gps_time_offset.update(.5)
+        self.gps_time_offset.update(.7)
 
         self.compass_offset = self.register(SensorValue, 'compass_offset')
 
-        self.lat = self.register(SensorValue, 'lat', fmt='%.11f')
-        self.lon = self.register(SensorValue, 'lon', fmt='%.11f')
+        self.fix = self.register(JSONValue, 'fix', False)
         self.speed = self.register(SensorValue, 'speed')
         self.track = self.register(SensorValue, 'track', directional=True)
-        self.alt = self.register(SensorValue, 'alt')
-        self.climb = self.register(SensorValue, 'climb')
 
-        posDev = 1
-        velDev = .1
+        posDev = 30
+        velDev = 3
         c = 3 if self.use3d else 2
         pos = np.diag([posDev**2]*c)
         vel = np.diag([velDev**2]*c)
         cov = np.diag([posDev*velDev]*c)
 
-        # what to set this to? for accels?
         self.Q = np.vstack((np.hstack((pos, cov)), np.hstack((cov, vel))))
         self.predict_t = 0
 
@@ -91,9 +143,16 @@ class GPSFilter(object):
         self.X = False
         self.P = np.identity(2*c)
         self.history = []
-        self.lastll = False, False
+        self.lastll = False
 
-    def predict(self, accel_ned_magnetic, t):
+    def predict(self, accel, fusionQPose, t):
+        if not self.enabled.value:
+            return
+
+        ta = time.monotonic()
+        # convert accel to magnetic world frame
+        accel_ned_magnetic = quaternion.rotvecquat(accel, fusionQPose)        
+        
         # log new prediction and apply it estimating new state
 
         # subtract gravity
@@ -111,53 +170,85 @@ class GPSFilter(object):
         if not self.use3d:
             U = U[:2]
 
-        t = time.monotonic()
+        #t = time.monotonic()
         dt = t - self.predict_t
+        
         self.predict_t = t
         if dt < 0 or dt > .5:
+            print('gpsfilter reset', dt)
             self.reset()
 
-        if not self.X: # do not have a trusted measurement yet, so cannot perform predictions
-            return
-
+        if type(self.X) == bool and not self.X: # filter was reset            
+            return # do not have a trusted measurement yet, so cannot perform predictions
+        
         self.apply_prediction(dt, U)
         self.history.append({'t': t, 'dt': dt, 'U': U, 'X': self.X, 'P': self.P})
 
         # filtered position
         ll = xy_to_ll(self.X[0], self.X[1], *self.lastll)
-        self.lat.set(ll[0])
-        self.lon.set(ll[1])
-
         # filtered speed and track
         c = 3 if self.use3d else 2
         vx = self.X[c]
         vy = self.X[c+1]
-        self.speed.set(math.hypot(vx, vy))
-        self.track.set(resolv(math.degrees(math.atan2(vx, vy)), 180))
+        speed = math.hypot(vx, vy) * 1.94
+        fix = {'lat': ll[0], 'lon': ll[1],
+               'speed': speed, 'track': track}
+        self.speed.set(speed)
+        track = resolv(math.degrees(math.atan2(vx, vy)), 180)
+        self.track.set(track)
 
         # filtered altitude and climb
         if self.use3d:
-            self.alt.set(self.X[2])
-            self.climb.set(self.X[5])
+            self.fix['alt'] = self.X[2]
+            self.fix['climb'] = self.X[5]
+
+        tb = time.monotonic()
 
     def apply_prediction(self, dt, U):
+        
         dt = min(max(dt, .02), .1)
         dt2 = dt*dt/2
         c = 3 if self.use3d else 2
-        B = np.vstack((dt2*np.identity(c), dt*np.identity(c)))
-        F = np.vstack((np.hstack((np.identity(c), dt*np.identity(c))),
-                       np.hstack((np.zeros([c, c]), np.identity(c)))))
-            
+        i = np.identity(c)
+        B = np.vstack((dt2*i, dt*i))
+        F = np.vstack((np.hstack((i, dt*i)),
+                       np.hstack((np.zeros([c, c]), i))))
         #X = F*X + B*U
         self.X = F@self.X + B@U
 
         #P = F*P*Ft + Q
         self.P = F@self.P@F.transpose() + self.Q
 
+    def update(self, data, t):
+        if not self.enabled.value:
+            return
 
-    def update(self, gps):        
+        ts = data['timestamp']
+        dt = t - ts + self.gps_system_time_offset
+        if dt > 5: # older than 5 seconds
+            print('gpsfilter stale time', dt)
+            self.stale_count += 1
+            if self.stale_count > 5:
+                self.gps_system_time_offset = ts-t
+                self.reset()
+        else:
+            self.stale_count = 0
+            if dt < 0: # newer than now..
+                print('gpsfilter reset time')
+                self.gps_system_time_offset = ts-t
+                self.reset()
+
+        ts -= self.gps_system_time_offset # in system time
+        ts -= self.gps_time_offset.value # apply gps reading lag
+
+        # adjust coordinate frame
+        ll = data['lat'], data['lon']
+        if type(self.X) != bool:
+            pll = xy_to_ll(self.X[0], self.X[1], *self.lastll)
+            self.X[0], self.X[1] = ll_to_xy(pll[0], pll[1], *ll)
+        self.lastll = ll
+
         # update magnetic declination from magnetic model once every few hours if available
-        t = time.monotonic()
         if t - self.declination_time > 3600 * 4:
             self.declination_time = t
             if wmm2020:
@@ -166,20 +257,21 @@ class GPSFilter(object):
 
         c = 3 if self.use3d else 2
         try:
-            ts = gps['timestamp'] - self.gps_time_offset.value # in system time
             
-            xy = ll_to_xy(gps['lat'], gps['lon'], *self.lastll)
-            speed = gps['speed'] / 1.944 # in meters/second
-            track = gps['track']
+            #xy = ll_to_xy(data['lat'], data['lon'], *self.lastll)
+            xy = 0, 0
+            
+            speed = data['speed'] / 1.944 # in meters/second
+            track = data['track']
             
             Z = list(xy)
             if self.use3d:
-                Z.append(gps['alt'] if 'alt' in gps else 0)
+                Z.append(data['alt'] if 'alt' in data else 0)
 
             Z += [speed*math.sin(math.radians(track)),
                   speed*math.cos(math.radians(track))]
             if self.use3d:
-                Z.append(gps['climb'] if 'climb' in gps else 0)
+                Z.append(data['climb'] if 'climb' in data else 0)
         except Exception as e:
             print('gps filter update failed', e)
             return
@@ -196,16 +288,17 @@ class GPSFilter(object):
                 break
 
         # compute time offset prediction and filter it
-        if i > 0:
-            a0 = math.degrees(math.atan2(*self.history[-i-1]['X'][c:c+1]))
-            a1 = math.degrees(math.atan2(*self.history[-i]['X'][c:c+1]))
+        if i > 0 and 0: # disable for now
+            a0 = math.degrees(math.atan2(*self.history[-i-1]['X'][c:c+2]))
+            a1 = math.degrees(math.atan2(*self.history[-i]['X'][c:c+2]))
             t1 = self.history[-i]['t']
 
             da = resolv(a1-a0)
             db = resolv(track-a0)
             # db / da = (ts-t0) / (t1-t0)
             # db*(t1-t0) = da*(ts-t0)
-            nts = db/da*(t1-t0) - t0
+            nts = db/da*(t1-t0)
+
             nts = min(max(nts, t0), t1)
             dt = nts - ts # time update
 
@@ -236,14 +329,14 @@ class GPSFilter(object):
         K = self.P@H.transpose()@invS
 
         #x = x + K*Y
-        curX = self.X
+        curX = self.X.copy()
         self.X += K@Y
 
         #P = (I - K*H) * P
         self.P = (np.identity(2*c) - K@H) @ self.P
 
         # adjust compass alignment based on the disagreement in corrections
-        if speed > 2:
+        if 0 and speed > 2:
             ax, ay = curX[c:c+2]   # accelerometer update
             cx, cy = self.X[c:c+2] # kalman measurement update
 
@@ -255,12 +348,8 @@ class GPSFilter(object):
                 d = .0005 # filter
                 self.compass_offset.set(resolv(self.compass_offset.value + d*comp_adj))
 
-        # reset projection origin
-        self.lastll = xy_to_ll(self.X[0], self.X[1], *self.lastll)
-        self.X[0] = self.X[1] = 0
-                
         # fast forward previous measurements
         for h in self.history[-i:]:
             self.apply_prediction(h['dt'], h['U'])
 
-        self.history = [] # reset history
+        self.history = self.history[-i:] # reset history

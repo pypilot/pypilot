@@ -9,6 +9,7 @@ SKETCHNAME = motor
 DEVICE = /dev/ttyUSB0
 #DEVICE = /dev/ttyAMA0
 
+#MCU = atmega328pb
 MCU = atmega328p
 
 ARDUINO_PATH = /usr/share/arduino

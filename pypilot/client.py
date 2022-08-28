@@ -273,12 +273,13 @@ class pypilotClient(object):
         if self.connection.fileno():
             # flush output
             self.connection.flush()
-            try:
-                events = self.poller.poll(int(1000 * timeout))
-            except Exception as e:
-                print('exception polling', e, os.getpid())
-                self.disconnect()
-                return
+            events = self.poller.poll(int(1000 * timeout))
+            #try:
+            #    events = self.poller.poll(int(1000 * timeout))
+            #except Exception as e:
+            #    print('exception polling', e, os.getpid())
+            #    self.disconnect()
+            #    return
 
             if not events:
                 # 3 seconds without data in either direction, send linefeed
@@ -311,7 +312,6 @@ class pypilotClient(object):
                 value = pyjson.loads(data)
             except ValueError as e:
                 print('client value error:', line, e)
-                #raise Exception
                 continue
 
             except Exception as e:

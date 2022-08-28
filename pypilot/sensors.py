@@ -14,7 +14,7 @@ from values import *
 from resolv import resolv
 
 from gpsd import gpsd
-from gps_filter import GPSFilter
+from gps_filter import *
 
 import quaternion
 
@@ -44,7 +44,7 @@ class Sensor(object):
         self.update(data)
                 
         if self.source.value != source:
-            print(_('sensor found'), self.name, source, data['device'])
+            print(_('sensor found'), self.name, source, data['device'], time.asctime(time.localtime(time.time())))
             self.source.set(source)
             self.device = data['device']
         self.lastupdate = time.monotonic()
@@ -88,8 +88,8 @@ class Wind(Sensor):
             dy = speed*math.cos(math.radians(direction))
 
             m = math.radians(self.compensation_height.value)
-            dx -= m * self.boatimu.SensorValues['rollrate'] # is this positive or negative?!?
-            dy -= m * self.boatimu.SensorValues['pitchrate']
+            dx -= m * self.boatimu.SensorValues['rollrate'].value # is this positive or negative?!?
+            dy -= m * self.boatimu.SensorValues['pitchrate'].value
 
             data['speed'] = math.hypot(dx, dy)
             data['direction'] = math.degrees(math.atan2(dx, dy))
@@ -155,95 +155,38 @@ class gps(Sensor):
         super(gps, self).__init__(client, 'gps')
         self.track = self.register(SensorValue, 'track', directional=True)
         self.speed = self.register(SensorValue, 'speed')
-        self.lat = self.register(SensorValue, 'lat', fmt='%.11f')
-        self.lon = self.register(SensorValue, 'lon', fmt='%.11f')
-        self.alt = self.register(SensorValue, 'alt')
-        self.climb = self.register(SensorValue, 'climb')
+        self.fix = self.register(JSONValue, 'fix', False)
 
         self.leeway_ground = self.register(SensorValue, 'leeway_ground')
         self.compass_error = self.register(SensorValue, 'compass_error')
-        self.nmea_sentence = self.register(EnumProperty, 'nmea_sentence', 'APRMC', ['APRMC', 'GPRMC'], persistent=True)
-
-        self.filtered = GPSFilter(client)
+        
+        self.filtered = GPSFilterProcess(client)
         self.lastpredictt = time.monotonic()
-        self.gps_system_time_offset = 0
 
-        self.stale_count = 0
         self.rate.set(1.0)
 
     def update(self, data):
+        if 'fix' in data: # flatten if needed
+            data.update(data['fix'])
+            del data['fix']
         self.speed.set(data['speed'])
         if 'track' in data:
             self.track.set(data['track'])
-        if 'lat' in data and 'lon' in data:
-            self.lat.set(data['lat'])
-            self.lon.set(data['lon'])
-        if 'climb' in data:
-            self.climb.set(data['climb'])
-        if 'alt' in data:
-            self.alt.set(data['alt'])
-
-        ts = data['timestamp']
-        ts -= self.gps_system_time_offset
-        t = time.monotonic()
-
-        if ts < t-3: # older than 3 seconds
-            self.stale_count += 1
-            if self.stale_count > 5:
-                self.gps_system_time_offset = ts - t
-                self.filtered.reset()
-        else:
-            self.stale_count = 0
-            if ts > t: # newer than now..
-                self.gps_system_time_offset = ts - t
-                self.filtered.reset()
-                
-        #self.filtered.update(data)
+        self.fix.set(data)
+        self.filtered.update(data, time.monotonic())
 
     def predict(self, ap):
-        if not self.source.value == 'none':
+        if self.source.value == 'none':
             return
 
         accel = ap.boatimu.SensorValues['accel'].value
         fusionQPose = ap.boatimu.SensorValues['fusionQPose'].value
-
         if accel and fusionQPose:
-            #self.filtered.predict(quaternion.rotvecquat(accel, fusionQPose), time.monotonic())
-            pass
-
-    def getddmmyy(self):
-        today = datetime.date.today()
-        return '%02d%02d%02d' % (today.day, today.month, today.year % 100)
-
-    def gethhmmss(self):
-        t = datetime.datetime.now()
-        return t.strftime("%H%M%S.%f")[:-4]
-
-    def getddmmmmmm(self, degrees, n, s):
-        minutes = (abs(degrees) - abs(int(degrees))) * 60
-        return '%02d%07.4f,%c' % (abs(degrees), minutes, n if degrees >= 0 else s)
-
-    def getnmea(self):
-        if self.source.value == 'none':
-            lat = self.filtered.lat.value
-            lon = self.filtered.lon.value
-            speed = self.filtered.speed.value
-            track = self.filtered.track.value
-        else:
-            lat = self.lat.value
-            lon = self.lon.value
-            speed = self.speed.value
-            track = self.track.value
-
-        return self.nmea_sentence.value + ',' + self.gethhmmss() + ',A,' \
-            + self.getddmmmmmm(lat, 'N', 'S') + ',' + self.getddmmmmmm(lon, 'E', 'W') \
-            + ',%.2f,' % speed + '%.2f,' % (track if track > 0 else 360 + track) \
-            + self.getddmmyy() + ',,,A'
+            self.filtered.predict(accel, fusionQPose, time.monotonic())
 
     def reset(self):
         self.track.set(False)
         self.speed.set(False)
-        self.climb.set(False)
 
 
 # water speed and leeway sensor
@@ -370,7 +313,7 @@ class Sensors(object):
                 self.lostsensor(sensor)
 
     def lostsensor(self, sensor):
-        print('sensor', sensor.name, 'lost', sensor.source.value, sensor.device)
+        print('sensor lost', sensor.name, sensor.source.value, sensor.device, time.asctime(time.localtime(time.time())))
         sensor.source.set('none')
         sensor.reset()
         sensor.device = None

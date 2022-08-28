@@ -23,7 +23,7 @@ signalk_table = {'wind': {('environment.wind.speedApparent', meters_s): 'speed',
                           ('environment.wind.angleApparent', radians): 'direction'},
                  'gps': {('navigation.courseOverGroundTrue', radians): 'track',
                          ('navigation.speedOverGround', meters_s): 'speed',
-                         ('navigation.position', 1): {'latitude': 'lat', 'longitude': 'lon'}},
+                         ('navigation.position', 1): 'fix'},
                  'rudder': {('steering.rudderAngle', radians): 'angle'},
                  'apb': {('steering.autopilot.target.headingTrue', radians): 'track'},
                  'imu': {('navigation.headingMagnetic', radians): 'heading_lowpass',
@@ -284,7 +284,6 @@ class signalk(object):
             self.request_access()
             return
 
-        t3 = time.monotonic()
         if not self.ws:
             self.connect_signalk()
             if not self.ws:
@@ -293,6 +292,7 @@ class signalk(object):
 
             # setup pypilot watches
             watches = ['imu.heading_lowpass', 'imu.roll', 'imu.pitch', 'timestamp']
+            watches += ['gps.filtered.output'] # for gps generation
             for watch in watches:
                 self.client.watch(watch, self.period.value)
             for sensor in signalk_table:
@@ -318,9 +318,13 @@ class signalk(object):
                     if name == source_name:
                         self.update_sensor_source(sensor, value)
                 self.last_sources[name[:-7]] = value
+            elif name == 'gps.filtered.output':
+                self.client.watch('gps.filtered.fix', value)
             else:
                 self.last_values[name] = value
 
+        t3 = time.monotonic()
+                
         t4 = time.monotonic()
         while True:
             try:
@@ -339,7 +343,7 @@ class signalk(object):
             try:
                 self.receive_signalk(msg)
             except Exception as e:
-                debug('failed to parse signalk', e)
+                debug('failed to parse signalk', msg, e)
                 return
             self.keep_token = True # do not throw away token if we got valid data
 
@@ -359,8 +363,9 @@ class signalk(object):
                             value = values[signalk_path]
                             if type(pypilot_path) == type({}): # single path translates to multiple pypilot
                                 for signalk_key, pypilot_key in pypilot_path.items():
+                                    if not value[signalk_key] is None:
                                     data[pypilot_key] = value[signalk_key] / signalk_conversion
-                            else:
+                            elif not value is None:
                                 data[pypilot_path] = value / signalk_conversion
                         except Exception as e:
                             print(_('Exception converting signalk->pypilot'), e, self.signalk_values)
@@ -390,6 +395,9 @@ class signalk(object):
                 #debug('signalk skip send from priority', sensor)
                 continue
 
+            if sensor == 'gps' and self.last_values['gps.filtered.output'] is True:
+                continue
+            
             for signalk_path_conversion, pypilot_path in signalk_table[sensor].items():
                 signalk_path, signalk_conversion = signalk_path_conversion
                 if type(pypilot_path) == type({}): # single path translates to multiple pypilot
@@ -415,6 +423,20 @@ class signalk(object):
                     if key in self.last_values:
                         v = self.last_values[key]*signalk_conversion
                         updates.append({'path': signalk_path, 'value': v})
+
+        # generate filtered gps output if enabled
+        if self.last_values['gps.filtered.output'] is True and self.last_values['gps.filtered.fix']:
+            fix = self.last_values['gps.filtered.fix']
+            self.last_values['gps.filtered.fix'] = False
+            try:
+                for signalk_path_conversion, pypilot_path in signalk_table['gps'].items():
+                    signalk_path, signalk_conversion = signalk_path_conversion
+                    key = sensor+'.'+pypilot_path
+                    if key in self.last_values:
+                        v = fix[key]*signalk_conversion
+                        updates.append({'path': signalk_path, 'value': v})
+            except:
+                pass
 
         if updates:
             # send signalk updates
@@ -444,10 +466,12 @@ class signalk(object):
             updates = data['updates']
             for update in updates:
                 source = 'unknown'
-                if 'source' in update:
-                    source = update['source']['talker']
-                elif '$source' in update:
+                if '$source' in update:
                     source = update['$source']
+                elif 'source' in update:
+                    if 'talker' in update['source']:
+                        source = update['source']['talker']
+
                 if 'timestamp' in update:
                     timestamp = update['timestamp']
                 if not source in self.signalk_values:
