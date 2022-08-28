@@ -312,7 +312,6 @@ class pypilotClient(object):
                 value = pyjson.loads(data)
             except ValueError as e:
                 print('client value error:', line, e)
-                #raise Exception
                 continue
 
             except Exception as e:
