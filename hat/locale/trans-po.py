@@ -4,7 +4,13 @@ __author__ = 'Rory McCann <rory@technomancy.org>'
 __version__ = '1.0'
 __licence__ = 'GPLv3'
 
-import polib, subprocess, re, sys, time
+import sys, time
+
+try:
+    import polib, subprocess, re
+except:
+    print('failed to translate', sys.argv[1])
+    exit(0)
 
 def translate_subpart(string, lang):
     """Simple translate for just a certin string"""
@@ -93,3 +99,4 @@ def translate_po(filename, lang):
 
 if __name__ == '__main__':
     translate_po(sys.argv[1], sys.argv[2])
+

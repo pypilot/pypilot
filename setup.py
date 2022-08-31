@@ -79,13 +79,19 @@ if ugfx_libraries:
 else:
     spireader_module = None
 
+os.system('cd hat/locale;./translate.sh')
+os.system('cd hat; pybabel compile -d translations')
+os.system('cd pypilot/locale;./translate.sh')
+os.system('cd web; pybabel compile -d translations')
+
+    
 def find_locales(name, dir = 'locale'):
     locale_files = []
     for walk in os.walk('./' + name + '/' + dir):
         path, dirs, files = walk
         path = path[len(name) + 3:]
         for file in files:
-            if file[len(file)-3:] == '.mo':
+            if file[-3:] == '.mo':
                 locale_files.append(os.path.join(path, file))
     return locale_files
 
@@ -117,6 +123,7 @@ ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module]
 if spireader_module:
     ext_modules.append(spireader_module)    
 
+    
 setup (name = 'pypilot',
        version = version.strversion,
        description = 'pypilot sailboat autopilot',

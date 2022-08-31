@@ -210,7 +210,7 @@ ss('python_gui', 'python scripts for control and configuration',
    [sys_dep('python3-wxgtk4.0'), py_dep('opengl'), py_dep('pyglet'), py_dep('pywavefront')])
 
 ss('data', 'data files used by various pypilot components',
-   [data_dep()])
+   [data_dep(), sys_dep('gettext')])
 
 
 if os.path.basename(os.path.abspath(os.curdir)) != 'pypilot':
