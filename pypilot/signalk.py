@@ -425,7 +425,7 @@ class signalk(object):
                         updates.append({'path': signalk_path, 'value': v})
 
         # generate filtered gps output if enabled
-        if self.last_values['gps.filtered.output'] is True and self.last_values['gps.filtered.fix']:
+        if self.last_values.get('gps.filtered.output') is True and self.last_values.get('gps.filtered.fix'):
             fix = self.last_values['gps.filtered.fix']
             self.last_values['gps.filtered.fix'] = False
             try:
