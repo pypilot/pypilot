@@ -366,7 +366,9 @@ class signalk(object):
                                     if not value[signalk_key] is None:
                                         data[pypilot_key] = value[signalk_key] / signalk_conversion
                             elif not value is None:
-                                data[pypilot_path] = value / signalk_conversion
+                                data[pypilot_path] = value
+                                if signalk_conversion != 1:
+                                    data[pypilot_path] /= signalk_conversion
                         except Exception as e:
                             print(_('Exception converting signalk->pypilot'), e, self.signalk_values)
                             break
