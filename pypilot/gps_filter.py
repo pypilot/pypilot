@@ -77,7 +77,7 @@ class GPSFilterProcess(multiprocessing.Process):
                 pass
             time.sleep(20)
         print('gps filter process', os.getpid())
-                
+
         f = GPSFilter(self.client)
         while True:
             while True:
@@ -191,17 +191,19 @@ class GPSFilter(object):
         vx = self.X[c]
         vy = self.X[c+1]
         speed = math.hypot(vx, vy) * 1.94
-        fix = {'lat': ll[0], 'lon': ll[1],
-               'speed': speed, 'track': track}
         self.speed.set(speed)
         track = resolv(math.degrees(math.atan2(vx, vy)), 180)
         self.track.set(track)
 
+        fix = {'lat': ll[0], 'lon': ll[1],
+               'speed': speed, 'track': track,
+               'timestamp': time.time()}
         # filtered altitude and climb
         if self.use3d:
-            self.fix['alt'] = self.X[2]
-            self.fix['climb'] = self.X[5]
-
+            fix['alt'] = self.X[2]
+            fix['climb'] = self.X[5]
+        self.fix.set(fix)
+        
         tb = time.monotonic()
 
     def apply_prediction(self, dt, U):

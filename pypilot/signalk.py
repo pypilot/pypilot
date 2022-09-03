@@ -17,13 +17,14 @@ from sensors import source_priority
 signalk_priority = source_priority['signalk']
 radians = 3.141592653589793/180
 meters_s = 0.5144456333854638
-
+        
 # provide bi-directional translation of these keys
 signalk_table = {'wind': {('environment.wind.speedApparent', meters_s): 'speed',
                           ('environment.wind.angleApparent', radians): 'direction'},
                  'gps': {('navigation.courseOverGroundTrue', radians): 'track',
                          ('navigation.speedOverGround', meters_s): 'speed',
-                         ('navigation.position', 1): 'fix'},
+                         ('navigation.position', 1): {'latitude': 'lat',
+                                                      'longitude': 'lon'}},
                  'rudder': {('steering.rudderAngle', radians): 'angle'},
                  'apb': {('steering.autopilot.target.headingTrue', radians): 'track'},
                  'imu': {('navigation.headingMagnetic', radians): 'heading_lowpass',
@@ -361,7 +362,7 @@ class signalk(object):
                                 data['timestamp'] = time.mktime(ts)
 
                             value = values[signalk_path]
-                            if type(pypilot_path) == type({}): # single path translates to multiple pypilot
+                            if type(pypilot_path) == dict: # single path translates to multiple pypilot
                                 for signalk_key, pypilot_key in pypilot_path.items():
                                     if not value[signalk_key] is None:
                                         data[pypilot_key] = value[signalk_key] / signalk_conversion
@@ -397,48 +398,47 @@ class signalk(object):
                 #debug('signalk skip send from priority', sensor)
                 continue
 
-            if sensor == 'gps' and self.last_values['gps.filtered.output'] is True:
-                continue
-            
+            sensork = sensor
+            if sensor == 'gps' and self.last_values.get('gps.filtered.output') is True:
+                sensork = 'gps.filtered'
+
             for signalk_path_conversion, pypilot_path in signalk_table[sensor].items():
                 signalk_path, signalk_conversion = signalk_path_conversion
-                if type(pypilot_path) == type({}): # single path translates to multiple pypilot
+                if type(pypilot_path) == dict: # single path translates to multiple pypilot
                     keys = self.last_values_keys[signalk_path]
-                    # store keys we need for this signalk path in dictionary
+                    # store keys we need for this signalk path in dictionary                    
                     for signalk_key, pypilot_key in pypilot_path.items():
-                        key = sensor+'.'+pypilot_key
-                        if key in self.last_values:
-                            keys[key] = self.last_values[key]
+                        key = sensork+'.'+pypilot_key
+                        if sensor == 'gps':
+                            if sensork+'.fix' in self.last_values:
+                                keys[key] = self.last_values[sensork+'.fix'][pypilot_key]
+                        else:
+                            if key in self.last_values:
+                                keys[key] = self.last_values[key]
 
                     # see if we have the keys needed
                     v = {}
                     for signalk_key, pypilot_key in pypilot_path.items():
-                        key = sensor+'.'+pypilot_key
+                        key = sensork+'.'+pypilot_key
                         if not key in keys:
                             break
                         v[signalk_key] = keys[key]*signalk_conversion
-                    else:
+                    else: # we have all the keys required
                         updates.append({'path': signalk_path, 'value': v})
                         self.last_values_keys[signalk_path] = {}
                 else:
-                    key = sensor+'.'+pypilot_path
-                    if key in self.last_values:
-                        v = self.last_values[key]*signalk_conversion
+                    v = None
+                    if sensor == 'gps': # for now gps fix is stored in dictionary
+                        key = sensor+'.fix'
+                        if self.last_values.get(key):
+                            v = self.last_values[key][pypilot_path]
+                    else:
+                        key = sensork+'.'+pypilot_path
+                        if self.last_values.get(key):
+                            v = self.last_values[key]
+                    if v:
+                        v *= signalk_conversion
                         updates.append({'path': signalk_path, 'value': v})
-
-        # generate filtered gps output if enabled
-        if self.last_values.get('gps.filtered.output') is True and self.last_values.get('gps.filtered.fix'):
-            fix = self.last_values['gps.filtered.fix']
-            self.last_values['gps.filtered.fix'] = False
-            try:
-                for signalk_path_conversion, pypilot_path in signalk_table['gps'].items():
-                    signalk_path, signalk_conversion = signalk_path_conversion
-                    key = sensor+'.'+pypilot_path
-                    if key in self.last_values:
-                        v = fix[key]*signalk_conversion
-                        updates.append({'path': signalk_path, 'value': v})
-            except:
-                pass
 
         if updates:
             # send signalk updates
@@ -502,19 +502,22 @@ class signalk(object):
         watch = priority < signalk_priority # translate from pypilot -> signalk
         if watch:
             watch = self.period.value
-        for signalk_path_conversion, pypilot_path in signalk_table[sensor].items():
-            if type(pypilot_path) == type({}):
-                for signalk_key, pypilot_key in pypilot_path.items():
-                    pypilot_path = sensor + '.' + pypilot_key
+        if sensor == 'gps':
+            self.client.watch('gps.fix', watch)
+        else:
+            for signalk_path_conversion, pypilot_path in signalk_table[sensor].items():
+                if type(pypilot_path) == type({}):
+                    for signalk_key, pypilot_key in pypilot_path.items():
+                        pypilot_path = sensor + '.' + pypilot_key
+                        if pypilot_path in self.last_values:
+                            del self.last_values[pypilot_path]
+                        self.client.watch(pypilot_path, watch)
+                else:
+                    # remove any last values from this sensor
+                    pypilot_path = sensor + '.' + pypilot_path
                     if pypilot_path in self.last_values:
                         del self.last_values[pypilot_path]
-                    self.client.watch(pypilot_path, watch)
-            else:
-                # remove any last values from this sensor
-                pypilot_path = sensor + '.' + pypilot_path
-                if pypilot_path in self.last_values:
-                    del self.last_values[pypilot_path]
-                self.client.watch(pypilot_path, watch)
+                        self.client.watch(pypilot_path, watch)
         subscribe = priority >= signalk_priority
 
         # prevent duplicating subscriptions

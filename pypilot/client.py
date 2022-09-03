@@ -171,7 +171,7 @@ class pypilotClient(object):
             
         self.connection = False # connect later
         self.connection_in_progress = False
-        self.can_probe = True
+        self.can_probe = not host
         self.probed = False
 
     def onconnected(self):
@@ -193,9 +193,10 @@ class pypilotClient(object):
         self.connection_in_progress = False
         self.poller = select.poll()
         self.poller.register(self.connection.socket, select.POLLIN)
+
+        if self.watches:
+            self.connection.write('watch=' + pyjson.dumps(self.watches) + '\n')
         self.wwatches = {}
-        for name, value in self.watches.items():
-            self.wwatches[name] = value # resend watches
 
         self.values.onconnected()
 
@@ -264,7 +265,7 @@ class pypilotClient(object):
         # inform server of any watches we have changed
         if self.wwatches:
             self.connection.write('watch=' + pyjson.dumps(self.wwatches) + '\n')
-            #print('watch', watches, self.wwatches, self.watches)
+            #print('client watch', self.wwatches, self.watches)
             self.wwatches = {}
 
         # send any delayed watched values

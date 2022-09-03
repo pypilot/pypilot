@@ -362,7 +362,7 @@ class Nmea(object):
             
             if not nmea_name[3:] in blacklist:
                 # do not output nmea data over tcp faster than 4hz
-                # for each message time
+                # for each message type
                 # forward nmea lines from serial to tcp
                 dt = t-self.nmea_times[nmea_name] if nmea_name in self.nmea_times else 1
                 if dt > .25:
@@ -533,15 +533,7 @@ class Nmea(object):
         self.pipe.send(msg)
 
 
-def getddmmyy(self):
-    today = datetime.date.today()
-    return '%02d%02d%02d' % (today.day, today.month, today.year % 100)
-
-def gethhmmss(self):
-    t = datetime.datetime.now()
-    return t.strftime("%H%M%S.%f")[:-4]
-
-def getddmmmmmm(self, degrees, n, s):
+def getddmmmmmm(degrees, n, s):
     minutes = (abs(degrees) - abs(int(degrees))) * 60
     return '%02d%07.4f,%c' % (abs(degrees), minutes, n if degrees >= 0 else s)
         
@@ -862,27 +854,32 @@ class nmeaBridge(object):
             self.last_values[name] = value
             if name == 'gps.filtered.output': # watch filtered fix only if we are outputting it
                 self.client.watch('gps.filtered.fix', value)
+
         #except Exception as e:
         #    print('nmea exception receiving:', e)
         t4 = time.monotonic()
 
         # generate filtered gps output if enabled
-        if self.last_values['gps.filtered.output'] is True and self.last_values['gps.filtered.fix']:
+        if self.last_values['gps.filtered.output'] is True and self.last_values.get('gps.filtered.fix'):
             fix = self.last_values['gps.filtered.fix']
-            self.last_values['gps.filtered.fix'] = False
+            self.last_values['gps.filtered.fix'] = False # ensure it is update for each output
             try:
-                lat, lon, speed, track = map(lambda k: fix[k], ['lat', 'lon', 'speed', 'track'])
-                # todo: incorporate timestamp accurate?
-                msg = self.gps_id.value + ',' + gethhmmss() + ',A,' \
-                      + getddmmmmmm(lat, 'N', 'S') + ',' + getddmmmmmm(lon, 'E', 'W') \
-                      + ',%.2f,' % speed + '%.2f,' % (track if track > 0 else 360 + track) \
-                      + getddmmyy() + ',,,A'
+                lat, lon, speed, track, timestamp = map(lambda k: fix[k], ['lat', 'lon', 'speed', 'track', 'timestamp'])
+                lt = time.localtime(timestamp)
+                ms = int(math.fmod(timestamp*1000, 1000))
+                msg = self.gps_id.value + ',' \
+                    + '%02d%02d%02d.%03d' % (lt.tm_hour, lt.tm_min, lt.tm_sec, ms) + ',A,' \
+                    + getddmmmmmm(lat, 'N', 'S') + ',' + getddmmmmmm(lon, 'E', 'W') \
+                    + ',%.2f,' % speed + '%.2f,' % (track if track > 0 else 360 + track) \
+                    + '%02d%02d%02d' % (lt.tm_mday, lt.tm_mon, lt.tm_year % 100) \
+                    + ',,,A'
                 msg = '$' + msg + ('*%02X' % nmea_cksum(msg))
                 # relay nmea message from server to all tcp sockets
                 for sock in self.sockets:
                     sock.write(msg + '\r\n')
 
-            except:
+            except Exception as e:
+                print('failed to assembly nmea', fix, e)
                 pass
         
         # flush sockets
