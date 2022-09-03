@@ -278,7 +278,7 @@ class Hat(object):
 
         if 'arduino' in self.config['hat']:
             import arduino
-            arduino.arduino(config).firmware()
+            arduino.arduino(self.config).firmware()
 
         self.poller = select.poll()
         self.gpio = gpio.gpio()
@@ -303,6 +303,8 @@ class Hat(object):
         self.lirc.registered = False
         self.keytimes = {}
         self.keytimeouts = {}
+
+        self.inputs = [self.gpio, self.arduino, self.lirc]
 
         # keypad for lcd interface
         self.actions = []
@@ -431,7 +433,7 @@ class Hat(object):
     def update_values(self):
         values = self.client.list_values()
         if values:
-            if 'ap.pilot' in values:
+            if 'ap.pilot' in values:                
                 pilots = values['ap.pilot']['choices']
                 update = False
                 for pilot in pilots:
@@ -455,7 +457,7 @@ class Hat(object):
     def poll(self):            
         t0 = time.monotonic()
         keycounts = {}
-        for i in [self.gpio, self.arduino, self.lirc]:
+        for i in self.inputs:
             try:
                 if not i:
                     continue
@@ -466,7 +468,10 @@ class Hat(object):
                     keycounts[key] = count
 
             except Exception as e:
+                self.inputs.remove(i)
                 print('WARNING, failed to poll!!', e, i)
+                del i
+                return
 
         key = ''
         count = 0
