@@ -37,7 +37,11 @@ class pypilotScope(pypilotScopeBase):
         self.plot = pypilotPlot()
         self.glContext =  wx.glcanvas.GLContext(self.glArea)
 
-        self.client = pypilotClientFromArgs(sys.argv)
+        host = False
+        args = []
+        if len(sys.argv) > 1:
+            host, args = sys.argv[1], sys.argv[2:]
+        self.client = pypilotClientFromArgs(args, host=host)
         self.client.watch('timestamp')
         self.watches = {}
 
