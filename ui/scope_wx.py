@@ -38,10 +38,10 @@ class pypilotScope(pypilotScopeBase):
         self.glContext =  wx.glcanvas.GLContext(self.glArea)
 
         host = False
-        args = []
+        self.args = []
         if len(sys.argv) > 1:
-            host, args = sys.argv[1], sys.argv[2:]
-        self.client = pypilotClientFromArgs(args, host=host)
+            host, self.args = sys.argv[1], sys.argv[2:]
+        self.client = pypilotClientFromArgs(self.args, host=host)
         self.client.watch('timestamp')
         self.watches = {}
 
@@ -53,7 +53,7 @@ class pypilotScope(pypilotScopeBase):
         self.plot_reshape = False
 
     def enumerate_values(self, value_list):
-        watches = sys.argv[1:]
+        watches = self.args
         for name in sorted(value_list):
             if value_list[name]['type'] != 'SensorValue' or name == 'timestamp':
                 continue

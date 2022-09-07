@@ -402,8 +402,8 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.BoatPlot.Refresh()
 
     def onIMUScope( self, event ):
-        host, port = self.client.host_port
-        args = ['pypilot_scope', host + ':' + str(port),
+        host = self.client.config['host']
+        args = ['pypilot_scope', host,
                 'imu.pitch', 'imu.roll', 'imu.heel', 'imu.heading']
         subprocess.Popen(args)
 
