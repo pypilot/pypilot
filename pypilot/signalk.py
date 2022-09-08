@@ -442,8 +442,9 @@ class signalk(object):
                     v = None
                     if sensor == 'gps': # for now gps fix is stored in dictionary
                         key = sensork+'.fix'
-                        if self.last_values.get(key):
-                            v = self.last_values[key][pypilot_path]
+                        kv = self.last_values.get(key)
+                        if kv and pypilot_path in kv:
+                            v = kv[pypilot_path]
                     else:
                         key = sensor+'.'+pypilot_path
                         if self.last_values.get(key):
