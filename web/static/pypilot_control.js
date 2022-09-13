@@ -127,11 +127,19 @@ $(document).ready(function() {
         pypilot_watch('imu.heading_offset', .5);
         pypilot_watch('imu.alignmentQ', .5);
         pypilot_watch('imu.alignmentCounter', .25);
-        pypilot_watch('imu.compass_calibration_locked');
-        $('#calibration_locked').change(function(event) {
-            check = $('#calibration_locked').prop('checked');
-            pypilot_set('imu.compass_calibration_locked', check);
+
+        pypilot_watch('imu.accel.calibration.locked');
+        $('#accel_calibration_locked').change(function(event) {
+            check = $('#accel_calibration_locked').prop('checked');
+            pypilot_set('imu.accel.calibration.locked', check);
         });
+
+        pypilot_watch('imu.compass.calibration.locked');
+        $('#compass_calibration_locked').change(function(event) {
+            check = $('#compass_calibration_locked').prop('checked');
+            pypilot_set('imu.compass.calibration.locked', check);
+        });
+
 
         pypilot_watch('rudder.offset');
         pypilot_watch('rudder.scale');
@@ -340,8 +348,10 @@ $(document).ready(function() {
             $('.myBar').width((100-data['imu.alignmentCounter'])+'%');
         if('imu.heading_offset' in data)
             $('#imu_heading_offset').val(data['imu.heading_offset']);
-        if('imu.compass_calibration_locked' in data)
-            $('#calibration_locked').prop('checked', data['imu.compass_calibration_locked']);
+        if('imu.accel.calibration.locked' in data)
+            $('#accel_calibration_locked').prop('checked', data['imu.accel.calibration.locked']);
+        if('imu.compass.calibration.locked' in data)
+            $('#compass_calibration_locked').prop('checked', data['imu.compass.calibration.locked']);
 
         var rudder_dict = {'rudder.offset': 'Offset',
                            'rudder.scale': 'Scale',
