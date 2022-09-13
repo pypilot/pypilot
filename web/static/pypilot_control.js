@@ -23,7 +23,7 @@ function openTab(evt, tabName) {
       evt.currentTarget.firstElementChild.className += " active";
     currentTab = tabName;
 
-    setup_watches()
+    setup_watches();
 }
 
 var setup_watches = false;
@@ -89,7 +89,7 @@ $(document).ready(function() {
                 $('#pilot').append('<option value="' + pilots[pilot] + '">' + pilots[pilot] + '</option');
         }
 
-        $('#gain_container').append('</select></div>')
+        $('#gain_container').append('</select></div>');
 
         $('#pilot').change(function(event) {
             pypilot_set('ap.pilot', $('#pilot').val());
@@ -109,7 +109,7 @@ $(document).ready(function() {
             var info = list_values[gains[i]];
             var min = info['min'];
             var max = info['max'];
-            var iname = 'gain'+pilot+subname
+            var iname = 'gain'+pilot+subname;
             html = '<div class="gain pilot' + pilot + '" style="display: table-row">'
             html += '<div style="display: table-cell">'+subname+'</div>'
             html += '<div style="display: table-cell;width: 100%"><input type="range" id="' + iname + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" name="'+gains[i]+'" style="width: 100%"></input></div>'
@@ -121,6 +121,8 @@ $(document).ready(function() {
             });
         }
 
+        $('#gain_container').append('<div id="Reset"><p><button id="reset_default_gain">Reset to default</button></p></div>');
+
         // calibration
         pypilot_watch('imu.heading_offset', .5);
         pypilot_watch('imu.alignmentQ', .5);
@@ -131,13 +133,13 @@ $(document).ready(function() {
             pypilot_set('imu.compass_calibration_locked', check);
         });
 
-        pypilot_watch('rudder.offset')
-        pypilot_watch('rudder.scale')
-        pypilot_watch('rudder.nonlinearity')
-        pypilot_watch('rudder.range')
+        pypilot_watch('rudder.offset');
+        pypilot_watch('rudder.scale');
+        pypilot_watch('rudder.nonlinearity');
+        pypilot_watch('rudder.range');
 
         // configuration
-        $('#configuration_container').text('')
+        $('#configuration_container').text('');
         conf_names = [];
         for (var name in list_values)
             if(list_values[name]['type'] == 'RangeSetting')
@@ -160,8 +162,12 @@ $(document).ready(function() {
             });
         }
 
-        if(tinypilot)
-            $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>')
+        if(tinypilot) {
+            $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>');
+            $('#configuration_container').append('<p><a href="/nmea">Configure NMEA</a>');
+            $('#configuration_container').append('<p><a href=":33333">Configure LCD Keypad and Remotes</a>');
+            $('#configuration_container').append('<div id="Reset"><p><button id="reset_default">Reset to default</button></p></div>');
+        }
 
         pypilot_watch('nmea.client')
 
@@ -172,13 +178,13 @@ $(document).ready(function() {
     });
 
     socket.on('pypilot_disconnect', function() {
-        $('#connection').text(_('Disconnected'))
+        $('#connection').text(_('Disconnected'));
     });
 
     // update manual servo command
-    setTimeout(poll_pypilot, 1000)
+    setTimeout(poll_pypilot, 1000);
     function poll_pypilot() {
-        setTimeout(poll_pypilot, 200)
+        setTimeout(poll_pypilot, 200);
         if(servo_command_timeout > 0) {
             servo_command_timeout--;
             if(servo_command_timeout <= 0)
@@ -215,21 +221,21 @@ $(document).ready(function() {
     var heading_command = 0;
     var heading_set_time = new Date().getTime();
     var heading_local_command;
-    var last_rudder_data = {}
+    var last_rudder_data = {};
 
     function heading_str(heading) {
         if(heading.toString()=="false")
-            return "N/A"
+            return "N/A";
 
         // round to 1 decimal place
-        heading = Math.round(10*heading)/10
+        heading = Math.round(10*heading)/10;
 
         mode = $('#mode').val()
         if(mode == 'wind' || mode == 'true wind') {
             if(heading > 0)
                heading += '-';
         }
-        return heading
+        return heading;
     }
 
     socket.on('pypilot', function(msg) {
@@ -283,7 +289,7 @@ $(document).ready(function() {
                 $('#star2').text('2');
                 $('#star10').text('10');
             } else {
-                $('#tb_engaged button').css('left', "0px")
+                $('#tb_engaged button').css('left', "0px");
                 $('#tb_engaged').removeClass('toggle-button-selected');
 
                 $('#port10').text('<<');
@@ -301,7 +307,7 @@ $(document).ready(function() {
 
         for (var i = 0; i<gains.length; i++)
             if(gains[i] in data) {
-                value = data[gains[i]]
+                value = data[gains[i]];
                 var sp = gains[i].split('.');
                 var subname = sp[3];
                 var pilot = sp[2];
@@ -400,7 +406,7 @@ $(document).ready(function() {
         if('servo.flags' in data)
             $('#servoflags').text(data['servo.flags']);
     });
-    
+
     function pypilot_set(name, value) {
         socket.emit('pypilot', name + '=' + JSON.stringify(value));
     }
@@ -415,17 +421,17 @@ $(document).ready(function() {
     // Control
     $('.toggle-button').click(function(event) {
         if($(this).hasClass('toggle-button-selected')) {
-            pypilot_set('ap.enabled', false)
+            pypilot_set('ap.enabled', false);
         } else {
-            pypilot_set('ap.heading_command', heading)
-            pypilot_set('ap.enabled', true)
+            pypilot_set('ap.heading_command', heading);
+            pypilot_set('ap.enabled', true);
         }
     });
     
     move = function(x) {
         var engaged = $('#tb_engaged').hasClass('toggle-button-selected');
         if(engaged) {
-            time = new Date().getTime()
+            time = new Date().getTime();
             if(time - heading_set_time > 1000)
                 heading_local_command = heading_command;
             heading_set_time = time;
@@ -438,7 +444,7 @@ $(document).ready(function() {
                 servo_command_timeout = Math.abs(x) > 5 ? 6 : 2;
             }
         }
-    }
+    };
 
     $('#mode').change(function(event) {
         pypilot_set('ap.mode', $('#mode').val());
@@ -463,6 +469,11 @@ $(document).ready(function() {
             pypilot_set('ap.tack.direction', 'starboard');
         else
             pypilot_set('ap.tack.direction', 'port');
+    });
+
+     $('body').on('click', '#reset_default_config', function() {
+         confirm('Reset values to default, are you sure?');
+         // TODO.. reset values from server side
     });
 
     // Gain
