@@ -268,7 +268,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             self.client.set('ap.heading_command', self.heading)
             self.client.set('ap.enabled', True)
         else:
-            self.client.set('servo.command', 0)
             self.client.set('ap.enabled', False)
 
     def onMode( self, event):
