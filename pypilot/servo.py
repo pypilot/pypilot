@@ -285,7 +285,6 @@ class Servo(object):
         self.use_eeprom = self.register(BooleanValue, 'use_eeprom', True, persistent=True)
 
         self.inttime = 0
-        self.position.amphours = 0
 
         self.windup = 0
         self.windup_change = 0
