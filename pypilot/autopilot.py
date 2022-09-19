@@ -346,6 +346,8 @@ class Autopilot(object):
             print('autopilot main process received:', msg, msgs[msg])
 
         if not self.enabled.value: # in standby, command servo here for lower latency
+            if self.lastenabled: # if autopilot is disabled clear command
+                self.servo.command.set(0)
             self.servo.poll()
 
         t1 = time.monotonic()
