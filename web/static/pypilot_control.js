@@ -415,6 +415,11 @@ $(document).ready(function() {
 
         if('servo.flags' in data)
             $('#servoflags').text(data['servo.flags']);
+
+        if('ap.version' in data) {
+            value = data['ap.version'];
+            $('#version').text(value);
+        }
     });
 
     function pypilot_set(name, value) {
@@ -562,7 +567,7 @@ $(document).ready(function() {
         pypilot_watches(gains, tab == 'Gain', 1);
         pypilot_watches(['imu.heading', 'imu.pitch', 'imu.roll', 'rudder.angle'], tab == 'Calibration', .5);
         pypilot_watches(conf_names, tab == 'Configuration', 1);
-        pypilot_watches(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'servo.engaged'], tab == 'Statistics', 1);
+        pypilot_watches(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'servo.engaged', 'ap.version'], tab == 'Statistics', 1);
     }
     setup_watches();
 
