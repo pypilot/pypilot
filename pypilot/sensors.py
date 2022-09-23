@@ -220,11 +220,15 @@ class Water(Sensor):
             self.leeway.source.update('none')
             return
 
+        return # disable until further testing
+
         t = time.monotonic()
         if t-self.last_leeway_measurement > 3:
             heel = ap.boatimu.heel
             K = 5 # need to calibrate from gps when user indicates there are no currents
-            self.leeway.set(K*heel/self.speed.value**2)
+            spd2 = self.speed.value**2
+            if spd2 > 2:
+                self.leeway.set(K*heel/spd2)
             self.leeway.source.update('computed')
 
         # estimate currents over ground
