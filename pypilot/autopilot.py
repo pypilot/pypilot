@@ -453,8 +453,8 @@ class Autopilot(object):
         self.timings.set([t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t5-t0])
         self.timestamp.set(t0-self.starttime)
           
-        if self.watchdog_device:
-            self.watchdog_device.write('c')
+        #if self.watchdog_device:
+        #    self.watchdog_device.write('c')
 
         t6 = time.monotonic()
         if t6-t0 > period:
@@ -470,8 +470,10 @@ class Autopilot(object):
             self.dt = 0 if self.enabled.value else dt*.8
 
 def main():
+    if os.geteuid() == 0:
+        print(_('WARNING: running autopilot as root!!'))
     ap = Autopilot()
-    print('autopilot init complete', time.monotonic())
+    print('pypilot' + _('init complete'), time.monotonic())
     while True:
         ap.iteration()
 
