@@ -420,11 +420,10 @@ class BoatIMU(object):
                 lastdata = data
         return self.imu.read()
 
-    def poll(self):
+    def read(self):
         if not self.imu.multiprocessing:
             self.imu.poll()
 
-    def read(self):
         data = self.IMUread()
         if not data:
             if time.monotonic() - self.last_imuread > 1 and self.frequency.value:
@@ -558,7 +557,6 @@ def main():
             if t0-lastprint > .25:
                 printline('pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading'])
                 lastprint = t0
-        boatimu.poll()
         while True:
             dt = 1/boatimu.rate.value - (time.monotonic() - t0)
             if dt < 0:
