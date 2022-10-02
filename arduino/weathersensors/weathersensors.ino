@@ -1501,7 +1501,7 @@ void loop()
         draw_setting(eeprom_data.direction_type, PSTR("direction"), PSTR("+-180"), PSTR("0-360"));
         break;
     case 4:
-        draw_setting(eeprom_data.temperature_units, PSTR("temperature"), PSTR("celcius"), PSTR("fahrenheit"));
+        draw_setting(eeprom_data.temperature_units, PSTR("temperature"), PSTR("celsius"), PSTR("fahrenheit"));
         break;
     case 5:
         draw_setting(eeprom_data.backlight_mode, PSTR("backlight"), PSTR("off"), PSTR("on"), PSTR("auto"));
