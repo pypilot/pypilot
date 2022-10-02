@@ -15,7 +15,7 @@ black = 0x00
 #white = ugfx.color(255, 255, 255)
 #black = ugfx.color(0, 0, 0)
 
-AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, NUDGE_PORT, NUDGE_STARBOARD, NUM_KEYS = range(11)
+AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, DODGE_PORT, DODGE_STARBOARD, NUM_KEYS = range(11)
 
 class rectangle():
     def __init__(self, x, y, width, height):
@@ -329,11 +329,11 @@ class page(object):
 
         # these work from any page (even menu) to dodge
         lcd = self.lcd
-        if lcd.keypad[NUDGE_PORT].dt():
+        if lcd.keypad[DODGE_PORT].dt():
             lcd.client.set('servo.command', -1)
-        elif lcd.keypad[NUDGE_STARBOARD].dt():
+        elif lcd.keypad[DODGE_STARBOARD].dt():
             lcd.client.set('servo.command', 1)           
-        elif self.testkeyup(NUDGE_PORT) or self.testkeyup(NUDGE_STARBOARD):
+        elif self.testkeyup(DODGE_PORT) or self.testkeyup(DODGE_STARBOARD):
             lcd.client.set('servo.command', 0)           
 
 class info(page):

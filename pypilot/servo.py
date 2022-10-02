@@ -175,9 +175,20 @@ class TimedProperty(Property):
     def __init__(self, name):
         super(TimedProperty, self).__init__(name, 0)
         self.time = 0
+        self.use_period = True
 
+    # record time whenever externally set (manual override or control)
     def set(self, value):
         self.time = time.monotonic()
+        self.use_period = False # manual control is not delayed by period
+        return super(TimedProperty, self).set(value)
+
+    # internal command set, normal autopilot uses a period
+    # to avoid short movements, but this can be overriden by some pilots
+    def command(self, value, use_period=True):
+        if time.monotonic() - self.time < 1:
+            return # ignore pilot command if recent manual override
+        self.use_period = use_period
         return super(TimedProperty, self).set(value)
 
 class TimeoutSensorValue(SensorValue):
@@ -287,7 +298,6 @@ class Servo(object):
         self.windup_change = 0
 
         self.disengaged = True
-        self.disengage_on_timeout = self.register(BooleanValue, 'disengage_on_timeout', True, persistent=True)
         self.force_engaged = False
 
         self.last_zero_command_time = self.command_timeout = time.monotonic()
@@ -315,17 +325,15 @@ class Servo(object):
         dc = t - self.command.time
 
         if dp < dc and not self.sensors.rudder.invalid():
-            timeout = 10 # position command will expire after 10 seconds
             self.disengaged = False
             if abs(self.position.value - self.command.value) < 1:
-                self.command.set(0)
+                self.command.command(0)
             else:
                 self.do_position_command(self.position_command.value)
                 return
         elif self.command.value and not self.fault():
             timeout = 1 # command will expire after 1 second
             if time.monotonic() - self.command.time > timeout:
-                #print('servo command timeout', time.monotonic() - self.command.time)
                 self.command.set(0)
             self.disengaged = False
         self.do_command(self.command.value)
@@ -360,9 +368,7 @@ class Servo(object):
 
         if not speed:
             #print('timeout', t - self.command_timeout)
-            if self.disengage_on_timeout.value and \
-               not self.force_engaged and \
-               time.monotonic() - self.command_timeout > self.period.value*3:
+            if not self.force_engaged and time.monotonic() - self.command.time > 1:
                 self.disengaged = True
             self.raw_command(0)
             return
@@ -394,7 +400,7 @@ class Servo(object):
         # ensure it is in range
         min_speed = min(min_speed, max_speed)
         
-        if self.force_engaged:  # use servo period when autopilot is in control
+        if self.command.use_period:  # use servo period when autopilot is in control
             # rarely: if the rate is slow and period set low windup overflows easily
             period = max(self.period.value, 2*dt)
             

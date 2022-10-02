@@ -140,7 +140,7 @@ class LearningPilot(AutopilotPilot):
 
         if ap.enabled.value:
             actions = self.model.predict(self.loss)
-            ap.servo.command.set(actions[0])
+            ap.servo.command.command(actions[0])
 
         
 pilot = LearningPilot

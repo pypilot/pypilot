@@ -43,6 +43,6 @@ class AbsolutePilot(AutopilotPilot):
     command = self.Compute(gain_values)
 
     if ap.enabled.value:
-        ap.servo.position_command.set(command)
+        ap.servo.position_command.command(command)
 
 pilot = AbsolutePilot

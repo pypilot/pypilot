@@ -167,5 +167,5 @@ class Tack(object):
             command = (headingrate + headingraterate/2)/self.rate.value + direction
             
             command = min(max(command, -1), 1) # do not cause integrator windup
-            ap.servo.command.set(command)
+            ap.servo.command.command(command)
             return True # ensure current pilot is overridden

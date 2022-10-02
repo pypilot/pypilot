@@ -86,19 +86,19 @@ class GPSPilot(AutopilotPilot):
       return mode
       
   def process(self):
-    ap = self.ap
+      ap = self.ap
 
-    # compute command
-    headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
-    headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
-    gain_values = {'P': ap.heading_error.value,
-                   'D': headingrate,      
-                   'DD': headingraterate,
-                   'FF': ap.heading_command_rate.value}
+      # compute command
+      headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
+      headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
+      gain_values = {'P': ap.heading_error.value,
+                     'D': headingrate,      
+                     'DD': headingraterate,
+                     'FF': ap.heading_command_rate.value}
 
-    command = self.Compute(gain_values)
-
-    if ap.enabled.value:
-      ap.servo.command.set(command)
+      command = self.Compute(gain_values)
+      
+      if ap.enabled.value:
+          ap.servo.command.command(command)
 
 pilot = GPSPilot
