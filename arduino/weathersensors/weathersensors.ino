@@ -241,11 +241,21 @@ void apply_settings()
     lcd.flip = eeprom_data.display_orientation;
 #endif
     if(eeprom_data.leds_on) {
+#if defined(__AVR_ATmega32__)
+        DDRC |=  _BV(3);
+        PORTC |= _BV(3);
+#else
         pinMode( A3, OUTPUT);
         digitalWrite(A3, HIGH);
+#endif
     } else {        
+#if defined(__AVR_ATmega32__)
+        DDRC &= ~_BV(3);
+        PORTC &= ~_BV(3);
+#else
         digitalWrite(A3, LOW);
         pinMode( A3, INPUT);
+#endif
     }
 }
         
@@ -335,24 +345,24 @@ void setup()
     else
         Serial.println(F("pypilot"));
 
-    Serial.print(F("Wind Offset:"));
+    Serial.print(F("Wind Off:"));
     Serial.println(eeprom_data.wind_offset);
 
-    Serial.print(F("Barometer Offset:"));
+    Serial.print(F("Baro Off:"));
     Serial.println(eeprom_data.barometer_offset);
     
-    Serial.print(F("Temperature Offset:"));
+    Serial.print(F("Temp Off:"));
     Serial.println(eeprom_data.temperature_offset);
     
     if(eeprom_data.wind_min_reading > 0 && // ensure somewhat sane range
        eeprom_data.wind_max_reading < 1024 &&
        eeprom_data.wind_min_reading < eeprom_data.wind_max_reading-100) {
-        Serial.print(F("Calibration valid  "));
+        Serial.print(F("Cal valid  "));
         Serial.print(eeprom_data.wind_min_reading);
         Serial.print(F("  "));
         Serial.println(eeprom_data.wind_max_reading);
     } else {
-        Serial.println(F("Warning: calibration invalid, resetting it"));
+        Serial.println(F("Warning: cal invalid"));
         eeprom_data.wind_min_reading = 118;
         eeprom_data.wind_max_reading = 901;
     }

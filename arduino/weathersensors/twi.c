@@ -95,9 +95,9 @@ void twi_init(void)
   twi_sendStop = true;  // default value
   twi_inRepStart = false;
   
-  // activate internal pullups for twi.
+  // do not activate internal pullups for twi.
 #if defined(__AVR_ATmega32__)
-  PORTC |= _BV(PC0) | _BV(PC1);
+  PORTC &= ~(_BV(PC0) | _BV(PC1));
   DDRC &= ~_BV(PC0);
   DDRC &= ~_BV(PC1);
 #else

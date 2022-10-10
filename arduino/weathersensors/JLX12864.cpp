@@ -43,6 +43,20 @@ void JLX12864::begin()
     width = width;
     height = height;
 
+#ifdef HWSPI
+#if defined(__AVR_ATmega32__)
+
+    DDRB|=(1<<0)|(1<<4)|(1<<5)|(1<<7);
+    SPCR=(1<<SPE)|(1<<MSTR)|(1<<SPR0);
+
+    DDRD &= ~(1<<7);
+    delay(50);
+    DDRD |= (1<<7);
+    PORTD &= ~(1<<7);
+    delay(50);
+    DDRD &= ~(1<<7);
+    PORTD |= (1<<7);
+#else
     // All pins are outputs (these displays cannot be read)...
     pinMode(pin_sclk, OUTPUT);
     pinMode(pin_sdin, OUTPUT);
@@ -50,15 +64,9 @@ void JLX12864::begin()
     if(pin_sce != 99)
         pinMode(pin_sce, OUTPUT);
 
-#ifdef HWSPI
-#if defined(__AVR_ATmega32__)
-    DDRB|=(1<<4)|(1<<5)|(1<<7);
-    SPCR=(1<<SPE)|(1<<MSTR)|(1<<SPR0);
-#else
     SPI.begin();
     SPI.setClockDivider(SPI_CLOCK_DIV16);
-#endif
-#endif
+
     // Reset the controller state...
     digitalWrite(pin_sce, HIGH);
 
@@ -68,6 +76,8 @@ void JLX12864::begin()
     digitalWrite(pin_reset, LOW);
     delay(50);
     pinMode(pin_reset, INPUT_PULLUP);
+#endif
+#endif
 
     // Clear RAM contents...
     clear();
@@ -184,7 +194,11 @@ void JLX12864::line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t colo
 
 void JLX12864::SetParameters()
 {
+#if defined(__AVR_ATmega32__)
+    PORTB &= ~_BV(0);
+#else
     digitalWrite(pin_dc, CMD);
+#endif
 
     const int contrast = 90;
     unsigned char cmd[] = {
@@ -271,7 +285,6 @@ void JLX12864::clear()
 void JLX12864::refresh(uint8_t page)
 {
     SetParameters();
-
     if(page == flip)
         page = 0x10;
     else
@@ -281,7 +294,11 @@ void JLX12864::refresh(uint8_t page)
     
     for(uint8_t c=0;c<8;c++)
     {
+#if defined(__AVR_ATmega32__)
+        PORTB &= ~_BV(0);
+#else
         digitalWrite(pin_dc, CMD);
+#endif
         //SPI.transfer(0xb0 + c);
         SPDR = 0xb0+c;
         while (!(SPSR & _BV(SPIF)));
@@ -289,7 +306,11 @@ void JLX12864::refresh(uint8_t page)
         SPDR = page;
         while (!(SPSR & _BV(SPIF)));
 
+#if defined(__AVR_ATmega32__)
+        PORTB |= _BV(0);
+#else
         digitalWrite(pin_dc, DATA);
+#endif
         for(unsigned int i=0; i<64; i++) {
             SPDR = *fb++;
             while (!(SPSR & _BV(SPIF)));
