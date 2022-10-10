@@ -233,9 +233,17 @@ void isr_anemometer_count()
 void apply_settings()
 {
     if(eeprom_data.sensor_type)
+#if defined(__AVR_ATmega32__)
+        PORTA &= ~_BV(PA7);
+#else
         pinMode(3, INPUT); // do not use pullup for potentiometer style
+#endif
     else // apply weak pullup to input wind direction to detect if wire is disconnected
+#if defined(__AVR_ATmega32__)
+        PORTA |= _BV(PA7);
+#else
         pinMode(3, INPUT_PULLUP);
+#endif
 
 #if LCD
     lcd.flip = eeprom_data.display_orientation;
