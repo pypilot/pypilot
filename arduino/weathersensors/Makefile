@@ -20,26 +20,25 @@ OBJCOPY = $(ARDUINO_PATH)/hardware/tools/avr/bin/avr-objcopy
 
 
 ARDUINO_SRCS = \
-$(ARDUINO_PATH)/libraries/Wire/Wire.cpp \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/avr-libc/realloc.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/avr-libc/malloc.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_digital.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_analog.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_shift.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/wiring_pulse.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/WInterrupts.c \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/new.cpp \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/WString.cpp \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/Stream.cpp \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/Print.cpp \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/HardwareSerial.cpp \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/WMath.cpp \
-$(ARDUINO_PATH)/hardware/arduino/cores/arduino/main.cpp \
-$(ARDUINO_PATH)/libraries/SPI/SPI.cpp
+$(ARDUINO_PATH)/hardware/arduino/avr/libraries/Wire/src/Wire.cpp \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/wiring_digital.c \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/wiring.c \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/hooks.c \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/wiring_analog.c \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/wiring_shift.c \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/wiring_pulse.c \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/WInterrupts.c \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/new.cpp \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/WString.cpp \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/Stream.cpp \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/Print.cpp \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/HardwareSerial.cpp \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/HardwareSerial0.cpp \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/WMath.cpp \
+$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/main.cpp \
+$(ARDUINO_PATH)/hardware/arduino/avr/libraries/SPI/src/SPI.cpp
 
-
-CXXFLAGS = -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=16000000L -DUSB_VID=null -DUSB_PID=null -DARDUINO=105 -D__PROG_TYPES_COMPAT__ -I$(ARDUINO_PATH)/hardware/arduino/cores/arduino -I$(ARDUINO_PATH)/hardware/arduino/variants/standard  -I$(ARDUINO_PATH)/libraries/Wire -I$(ARDUINO_PATH)/libraries/Wire/utility  -I$(ARDUINO_PATH)/libraries/SPI -I.
+CXXFLAGS = -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=16000000L -DARDUINO=1818 -DARDUINO_ARCH_AVR -D__PROG_TYPES_COMPAT__ -I$(ARDUINO_PATH)/hardware/arduino/avr/variants/standard -I$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino -I$(ARDUINO_PATH)/hardware/arduino/avr/libraries/Wire/src/ -I$(ARDUINO_PATH)/hardware/arduino/avr/libraries/Wire/src/utility  -I$(ARDUINO_PATH)/hardware/arduino/avr/libraries/SPI/src/ -I. -std=c++11
 LDFLAGS = -Os -Wl,--gc-sections -lm
 
 
@@ -108,3 +107,6 @@ obj/JLX12864.o : JLX12864.cpp charset.h
 
 charset.h: make_charset.py font.ttf
 	python3 make_charset.py > charset.h
+
+clean:
+	rm -rf objs obj
