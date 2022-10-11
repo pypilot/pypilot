@@ -19,9 +19,6 @@
 #define CMD  LOW
 #define DATA HIGH
 
-#define HWSPI // hardware spi is 12x faster
-
-
 // with only 2k ram, we cannot have a full framebuffer, so split
 // into two pages for top and bottom half of display each 64x64
 static unsigned char framebuffer[8*64];
@@ -34,7 +31,8 @@ JLX12864::JLX12864(unsigned char sclk, unsigned char sdin,
     pin_sdin(sdin),
     pin_dc(dc),
     pin_reset(reset),
-    pin_sce(sce)
+    pin_sce(sce),
+    spi_settings(1000000, MSBFIRST, SPI_MODE0)
 {}
 
 
@@ -43,23 +41,6 @@ void JLX12864::begin()
     width = width;
     height = height;
 
-#ifdef HWSPI
-#if defined(__AVR_ATmega32__)
-
-    DDRB|=(1<<0)|(1<<4)|(1<<5)|(1<<7);
-    SPCR=(1<<SPE)|(1<<MSTR)|(1<<SPR0);
-
-    DDRD &= ~(1<<7);
-    delay(50);
-    DDRD |= (1<<7);
-    PORTD &= ~(1<<7);
-    delay(50);
-    DDRD &= ~(1<<7);
-    PORTD |= (1<<7);
-#else
-    // All pins are outputs (these displays cannot be read)...
-    pinMode(pin_sclk, OUTPUT);
-    pinMode(pin_sdin, OUTPUT);
     pinMode(pin_dc, OUTPUT);
     if(pin_sce != 99)
         pinMode(pin_sce, OUTPUT);
@@ -77,8 +58,6 @@ void JLX12864::begin()
     digitalWrite(pin_reset, LOW);
     delay(50);
     pinMode(pin_reset, INPUT_PULLUP);
-#endif
-#endif
 
     // Clear RAM contents...
     clear();
@@ -195,11 +174,7 @@ void JLX12864::line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t colo
 
 void JLX12864::SetParameters()
 {
-#if defined(__AVR_ATmega32__)
-    PORTB &= ~_BV(0);
-#else
     digitalWrite(pin_dc, CMD);
-#endif
 
     const int contrast = 90;
     unsigned char cmd[] = {
@@ -222,11 +197,11 @@ void JLX12864::SetParameters()
         0xaf // Open the display
     };
 
+    SPI.beginTransaction(spi_settings);
     for(uint8_t i=0; i<(sizeof cmd) / (sizeof *cmd); i++) {
-        SPDR = cmd[i];
-        while (!(SPSR & _BV(SPIF)));
+        SPI.transfer(cmd[i]);
     }
-        ;//SPI.transfer(cmd[i]);
+    SPI.endTransaction();
 }
 
 size_t JLX12864::write(uint8_t chr)
@@ -293,28 +268,17 @@ void JLX12864::refresh(uint8_t page)
 
     unsigned char *fb = framebuffer;
     
+    SPI.beginTransaction(spi_settings);
     for(uint8_t c=0;c<8;c++)
     {
-#if defined(__AVR_ATmega32__)
-        PORTB &= ~_BV(0);
-#else
         digitalWrite(pin_dc, CMD);
-#endif
-        //SPI.transfer(0xb0 + c);
-        SPDR = 0xb0+c;
-        while (!(SPSR & _BV(SPIF)));
-        //SPI.transfer(page);
-        SPDR = page;
-        while (!(SPSR & _BV(SPIF)));
+        SPI.transfer(0xb0 + c);
+        SPI.transfer(page);
 
-#if defined(__AVR_ATmega32__)
-        PORTB |= _BV(0);
-#else
         digitalWrite(pin_dc, DATA);
-#endif
         for(unsigned int i=0; i<64; i++) {
-            SPDR = *fb++;
-            while (!(SPSR & _BV(SPIF)));
+            SPI.transfer(*fb++);
         }
     }
+    SPI.endTransaction();
 }

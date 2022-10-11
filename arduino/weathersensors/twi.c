@@ -60,13 +60,6 @@ static volatile uint8_t twi_rxBufferIndex;
 
 static volatile uint8_t twi_error;
 
-
-#if defined(__AVR_ATmega32__)
-#define SCL A0
-#define SDA A1
-#endif
-
-
 /* 
  * Function twi_init
  * Desc     readys twi pins and sets twi bitrate
@@ -96,14 +89,8 @@ void twi_init(void)
   twi_inRepStart = false;
   
   // do not activate internal pullups for twi.
-#if defined(__AVR_ATmega32__)
-  PORTC &= ~(_BV(PC0) | _BV(PC1));
-  DDRC &= ~_BV(PC0);
-  DDRC &= ~_BV(PC1);
-#else
-  digitalWrite(SDA, 1);
-  digitalWrite(SCL, 1);
-#endif
+  pinMode(SDA, INPUT);
+  pinMode(SCL, INPUT);
 
   // initialize twi prescaler and bit rate
   cbi(TWSR, TWPS0);

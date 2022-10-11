@@ -65,6 +65,13 @@ const int digitalWindspeedPin = 2;
 const int digitalKey0Pin = 5;
 const int digitalKey1Pin = 6;
 const int analogBacklightPin = 9;
+#if defined(__AVR_ATmega32__)
+const int analogWinddirPullupPin = A7;
+const int digitalLedsPin = 19;
+#else
+const int analogWinddirPullupPin = 3;
+const int digitalLedsPin = 17;
+#endif
 
 int16_t cross_count = 0; // set to calibrate
 
@@ -239,37 +246,21 @@ void isr_anemometer_count()
 void apply_settings()
 {
     if(eeprom_data.sensor_type)
-#if defined(__AVR_ATmega32__)
-        PORTA &= ~_BV(PA7);
-#else
-        pinMode(3, INPUT); // do not use pullup for potentiometer style
-#endif
-    else // apply weak pullup to input wind direction to detect if wire is disconnected
-#if defined(__AVR_ATmega32__)
-        PORTA |= _BV(PA7);
-#else
-        pinMode(3, INPUT_PULLUP);
-#endif
+        // do not use pullup for potentiometer style
+        pinMode(analogWinddirPullupPin, INPUT);
+    else
+        // apply weak pullup to input wind direction to detect if wire is disconnected
+        pinMode(analogWinddirPullupPin, INPUT_PULLUP);
 
 #if LCD
     lcd.flip = eeprom_data.display_orientation;
 #endif
     if(eeprom_data.leds_on) {
-#if defined(__AVR_ATmega32__)
-        DDRC |=  _BV(3);
-        PORTC |= _BV(3);
-#else
-        pinMode( A3, OUTPUT);
-        digitalWrite(A3, HIGH);
-#endif
-    } else {        
-#if defined(__AVR_ATmega32__)
-        DDRC &= ~_BV(3);
-        PORTC &= ~_BV(3);
-#else
-        digitalWrite(A3, LOW);
-        pinMode( A3, INPUT);
-#endif
+        pinMode(digitalLedsPin, OUTPUT);
+        digitalWrite(digitalLedsPin, HIGH);
+    } else {
+        digitalWrite(digitalLedsPin, LOW);
+        pinMode(digitalLedsPin, INPUT);
     }
 }
         
