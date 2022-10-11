@@ -38,7 +38,13 @@ $(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/WMath.cpp \
 $(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino/main.cpp \
 $(ARDUINO_PATH)/hardware/arduino/avr/libraries/SPI/src/SPI.cpp
 
-CXXFLAGS = -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=16000000L -DARDUINO=1818 -DARDUINO_ARCH_AVR -D__PROG_TYPES_COMPAT__ -I$(ARDUINO_PATH)/hardware/arduino/avr/variants/standard -I$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino -I$(ARDUINO_PATH)/hardware/arduino/avr/libraries/Wire/src/ -I$(ARDUINO_PATH)/hardware/arduino/avr/libraries/Wire/src/utility  -I$(ARDUINO_PATH)/hardware/arduino/avr/libraries/SPI/src/ -I. -std=c++11
+ifeq ($(MCU), atmega32)
+	VARIANT = .
+else
+	VARIANT = $(ARDUINO_PATH)/hardware/arduino/avr/variants/standard
+endif
+
+CXXFLAGS = -g -Os -Wall -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=16000000L -DARDUINO=1818 -DARDUINO_ARCH_AVR -D__PROG_TYPES_COMPAT__ -I$(VARIANT) -I$(ARDUINO_PATH)/hardware/arduino/avr/cores/arduino -I$(ARDUINO_PATH)/hardware/arduino/avr/libraries/Wire/src/ -I$(ARDUINO_PATH)/hardware/arduino/avr/libraries/Wire/src/utility  -I$(ARDUINO_PATH)/hardware/arduino/avr/libraries/SPI/src/ -I. -std=c++11
 LDFLAGS = -Os -Wl,--gc-sections -lm
 
 
