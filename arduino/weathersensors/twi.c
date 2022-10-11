@@ -129,10 +129,6 @@ void twi_disable(void)
 {
   // disable twi module, acks, and twi interrupt
   TWCR &= ~(_BV(TWEN) | _BV(TWIE) | _BV(TWEA));
-
-  // deactivate internal pullups for twi.
-  digitalWrite(SDA, 0);
-  digitalWrite(SCL, 0);
 }
 
 /* 
