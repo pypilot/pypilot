@@ -45,19 +45,25 @@ extern "C" {
 
 #if LCD == NOKIA5110L
 #include "PCD8544.h"
-static PCD8544 lcd(13, 11, 8, 7, 4);
+static PCD8544 lcd(13, 11, 8, 7, 99);
 #elif LCD == JLX12864G
 #include "JLX12864.h"
 #if defined(__AVR_ATmega32__)
-static JLX12864 lcd(15, 13, 8, 7, 4);
+static JLX12864 lcd(15, 13, 8, 7, 99);
 #else
-static JLX12864 lcd(13, 11, 8, 7, 4);
+static JLX12864 lcd(13, 11, 8, 7, 99);
 #endif
 #define LCD_BL_HIGH
 #endif
 
-const int analogInPin = A7;  // Analog input pin that the potentiometer is attached to
 const int analogLightPin = A6;
+const int adcLightChannel = 6;
+const int analogWinddirPin = A7;
+const int adcWinddirChannel = 7;
+
+const int digitalWindspeedPin = 2;
+const int digitalKey0Pin = 5;
+const int digitalKey1Pin = 6;
 const int analogBacklightPin = 9;
 
 int16_t cross_count = 0; // set to calibrate
@@ -203,7 +209,7 @@ volatile uint16_t lastperiod;
 
 void isr_anemometer_count()
 {
-    uint8_t pin = digitalRead(2);
+    uint8_t pin = digitalRead(digitalWindspeedPin);
 //    Serial.print("read:  ");
 //      Serial.println(pin);
 
@@ -399,12 +405,12 @@ void setup()
     bmX280_setup();
     
     attachInterrupt(0, isr_anemometer_count, CHANGE);
-    pinMode(analogInPin, INPUT);
-    pinMode(2, INPUT_PULLUP);
+    pinMode(analogWinddirPin, INPUT);
+    pinMode(digitalWindspeedPin, INPUT_PULLUP);
 
     apply_settings();
     
-    ADMUX = _BV(REFS0) | 6;
+    ADMUX = _BV(REFS0) | adcLightChannel;
     ADCSRA |= _BV(ADIE);
     ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
 
@@ -415,10 +421,10 @@ void setup()
     lcd.begin();
 #endif
     
-    pinMode( analogLightPin, INPUT);
+    pinMode(analogLightPin, INPUT);
     // enable pullups on buttons
-    pinMode( 5, INPUT_PULLUP);
-    pinMode( 6, INPUT_PULLUP);
+    pinMode(digitalKey0Pin, INPUT_PULLUP);
+    pinMode(digitalKey1Pin, INPUT_PULLUP);
 
     for(int i=0; i<3; i++) {
         baro_history[i].data[history_len-1] = -127;
@@ -454,7 +460,7 @@ ISR(ADC_vect)
         // backlight sensor
         if(adcchannel == 0 && adccount[0] >= 1) {
             adcval[0] = adcw;
-            ADMUX = _BV(REFS0) | 7, adcchannel = 1;
+            ADMUX = _BV(REFS0) | adcWinddirChannel, adcchannel = 1;
         }
     } else {
         uint8_t b = adcw < 448 ? 1 : adcw < 576 ? 2 : 3;
@@ -634,10 +640,9 @@ void read_anemometer()
     }
 #if LCD
     // read from backlight sense
-    adcchannel = 0;
-    ADMUX = _BV(REFS0) | 6;
+    ADMUX = _BV(REFS0) | adcLightChannel, adcchannel = 0;
 #else
-    ADMUX = _BV(REFS0) | 7, adcchannel = 1;
+    ADMUX = _BV(REFS0) | adcWinddirChannel, adcchannel = 1;
 #endif
     sei();
 
@@ -1265,7 +1270,7 @@ void draw_wind_graph()
 void draw_setting(uint8_t &setting, const char* name, const char* first, const char* second, const char* third=0)
 {
 #if LCD
-    uint8_t cursetting_key = digitalRead(5);
+    uint8_t cursetting_key = digitalRead(digitalKey0Pin);
     static uint8_t setting_key;
 
     if(millis()-eeprom_write_timeout > 500)
@@ -1449,7 +1454,7 @@ void loop()
     read_light();
 
     static uint8_t keys=3; // in case no touch sensors
-    uint8_t key0 = digitalRead(5), key1 = digitalRead(6);
+    uint8_t key0 = digitalRead(digitalKey0Pin), key1 = digitalRead(digitalKey1Pin);
     
     uint8_t curkeys = key0 + 2*key1;
     uint32_t t = millis();

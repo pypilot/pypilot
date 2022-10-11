@@ -68,7 +68,8 @@ void JLX12864::begin()
     SPI.setClockDivider(SPI_CLOCK_DIV16);
 
     // Reset the controller state...
-    digitalWrite(pin_sce, HIGH);
+    if(pin_sce != 99)
+        digitalWrite(pin_sce, HIGH);
 
     pinMode(pin_reset, INPUT_PULLUP);
     delay(50);
