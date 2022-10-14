@@ -35,26 +35,13 @@ extern "C" {
   #include <twi.h>
 }
 
-#define NONE      0 
+#define NONE       0
 #define NOKIA5110L 1
-#define JLX12864G 2
+#define JLX12864G  2
 
 //#define LCD NONE
 //#define LCD NOKIA5110L
 #define LCD JLX12864G
-
-#if LCD == NOKIA5110L
-#include "PCD8544.h"
-static PCD8544 lcd(13, 11, 8, 7, 99);
-#elif LCD == JLX12864G
-#include "JLX12864.h"
-#if defined(__AVR_ATmega32__)
-static JLX12864 lcd(15, 13, 8, 7, 99);
-#else
-static JLX12864 lcd(13, 11, 8, 7, 99);
-#endif
-#define LCD_BL_HIGH
-#endif
 
 const int analogLightPin = A6;
 const int adcLightChannel = 6;
@@ -64,6 +51,8 @@ const int adcWinddirChannel = 7;
 const int digitalWindspeedPin = 2;
 const int digitalKey0Pin = 5;
 const int digitalKey1Pin = 6;
+const int digitalLcdResetPin = 7;
+const int digitalLcdDcPin = 8;
 const int analogBacklightPin = 9;
 #if defined(__AVR_ATmega32__)
 const int analogWinddirPullupPin = A7;
@@ -71,6 +60,15 @@ const int digitalLedsPin = 19;
 #else
 const int analogWinddirPullupPin = 3;
 const int digitalLedsPin = 17;
+#endif
+
+#if LCD == NOKIA5110L
+#include "PCD8544.h"
+static PCD8544 lcd(SCK, MOSI, digitalLcdDcPin, digitalLcdResetPin, 99);
+#elif LCD == JLX12864G
+#include "JLX12864.h"
+static JLX12864 lcd(SCK, MOSI, digitalLcdDcPin, digitalLcdResetPin, 99);
+#define LCD_BL_HIGH
 #endif
 
 int16_t cross_count = 0; // set to calibrate
