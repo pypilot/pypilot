@@ -9,6 +9,7 @@
 
 #include <Arduino.h>
 
+#include <SPI.h>
 
 class JLX12864: public Print {
     public:
@@ -49,6 +50,8 @@ class JLX12864: public Print {
         unsigned char pin_dc;
         unsigned char pin_reset;
         unsigned char pin_sce;
+
+        SPISettings spi_settings;
 
         // Chip variant in use...
         unsigned char model;
