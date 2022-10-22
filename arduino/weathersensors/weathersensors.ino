@@ -1131,8 +1131,12 @@ void draw_barometer_graph()
     int v = 0;
     for(int i=0; i<history_len; i++) {
         int y = my/2 - v;
-        if(y >= 0 && y < my)
+        if(y >= 0 && y < my) {
             lcd.putpixel(history_len-i-1, y, 255);
+            lcd.putpixel(history_len-i-1, y-1, 255);
+            lcd.putpixel(history_len-i, y, 255);
+            lcd.putpixel(history_len-i, y-1, 255);
+	}
         int p = baro_history[index].pos - i - 1;
         if(p < 0)
             p += history_len;
@@ -1245,8 +1249,12 @@ void draw_wind_graph()
             p += history_len;
         uint8_t v = wind_history[index].data[p] >> shift;
         int y = my - v;
-        if(y >= 0 && y <= my)
+        if(y >= 0 && y <= my) {
             lcd.putpixel(history_len-i-1, y, 255);
+            lcd.putpixel(history_len-i-1, y-1, 255);
+            lcd.putpixel(history_len-i, y, 255);
+            lcd.putpixel(history_len-i, y-1, 255);
+	}
     }
 #if LCD == JLX12864G
     lcd.refresh(0);
