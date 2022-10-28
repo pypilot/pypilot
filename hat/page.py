@@ -569,8 +569,8 @@ class control(controlbase):
         return self.last_val('wind.source') != 'none'
 
     def have_true_wind(self):
-        return self.have_gps() and self.have_wind()
-    
+        return self.last_val('truewind.source') != 'none'
+
     def display_mode(self):
         mode = self.last_val('ap.mode')
         modes = [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
@@ -698,7 +698,11 @@ class control(controlbase):
             if self.control['heading_command'] != 'no gps':
                 self.fittext(rectangle(0, .4, 1, .35), _('GPS not detected'), True, black)
                 self.control['heading_command'] = 'no gps'
-        elif (mode == 'wind' or mode == 'true wind') and not self.have_wind():
+        elif mode == 'wind' and not self.have_wind():
+            if self.control['heading_command'] != 'no wind':
+                self.fittext(rectangle(0, .4, 1, .35), _('WIND not detected'), True, black)
+                self.control['heading_command'] = 'no wind'
+        elif mode == 'true wind' and not self.have_true_wind():
             if self.control['heading_command'] != 'no wind':
                 self.fittext(rectangle(0, .4, 1, .35), _('WIND not detected'), True, black)
                 self.control['heading_command'] = 'no wind'
