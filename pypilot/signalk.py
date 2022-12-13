@@ -113,7 +113,7 @@ class signalk(object):
                 self.name_type = False
             
             def remove_service(self, zeroconf, type, name):
-                print('signalk zeroconf ' + _('service removed'), name, type)
+                debug('signalk zeroconf ' + _('service removed'), name, type)
                 if self.name_type == (name, type):
                     self.signalk.signalk_host_port = False
                     self.signalk.disconnect_signalk()
@@ -123,7 +123,7 @@ class signalk(object):
                 self.add_service(zeroconf, type, name)
 
             def add_service(self, zeroconf, type, name):
-                print('signalk zeroconf ' + _('service add'), name, type)
+                debug('signalk zeroconf ' + _('service add'), name, type)
                 self.name_type = name, type
                 info = zeroconf.get_service_info(type, name)
                 if not info:
@@ -150,7 +150,7 @@ class signalk(object):
         self.initialized = True
 
     def probe_signalk(self):
-        print('signalk ' + _('probe') + '...', self.signalk_host_port)
+        debug('signalk ' + _('probe') + '...', self.signalk_host_port)
         try:
             import requests
         except Exception as e:
@@ -180,7 +180,7 @@ class signalk(object):
             try:
                 r = requests.get(self.signalk_access_url)
                 contents = pyjson.loads(r.content)
-                print('signalk ' + _('see if token is ready'), self.signalk_access_url, contents)
+                debug('signalk ' + _('see if token is ready'), self.signalk_access_url, contents)
                 if contents['state'] == 'COMPLETED':
                     if 'accessRequest' in contents:
                         access = contents['accessRequest']
@@ -212,10 +212,10 @@ class signalk(object):
             r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":self.uid.value, "description": "pypilot"})
             
             contents = pyjson.loads(r.content)
-            print('signalk post', contents)
+            debug('signalk post', contents)
             if contents['statusCode'] == 202 or contents['statusCode'] == 400:
                 self.signalk_access_url = 'http://' + self.signalk_host_port + contents['href']
-                print('signalk ' + _('request access url'), self.signalk_access_url)
+                debug('signalk ' + _('request access url'), self.signalk_access_url)
         except Exception as e:
             print('signalk ' + _('error requesting access'), e)
             self.signalk_ws_url = False
