@@ -284,23 +284,16 @@ class ServerValues(pypilotValue):
                 if value.msg:
                     connection.write(value.get_msg()) # send value                
                 value.calculate_watch_period()
-                self.msg = 'new'
-                continue
+            else:
+                value = pypilotValue(self, name, info, connection)
+                self.values[name] = value
 
-            value = pypilotValue(self, name, info, connection)
             if 'persistent' in info and info['persistent']:
                 # when a persistant value is missing from pypilot.conf
                 value.calculate_watch_period()
-                #info['persistent'] = 'new' ???
-                if name in self.persistent_data:
-                    print('IS THIS POSSIBLE TO HIT?????')
-                    v = self.persistent_data[name]
-                    if isinstance(v, numbers.Number):
-                        v = float(v) # convert any numeric to floating point
-                    value.set(v, connection) # set persistent value
-                self.persistent_values[name] = value
+                if not name in self.persistent_data:
+                    self.persistent_values[name] = value
 
-            self.values[name] = value
             self.msg = 'new'
 
         msg = False # inform watching clients of updated values
