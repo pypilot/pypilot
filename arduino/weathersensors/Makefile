@@ -77,7 +77,7 @@ obj/$(SKETCHNAME).o : $(SKETCHNAME).ino
 AVRDUDE = avrdude
 BOOTLOADER = arduino
 BAUDRATE = 115200
-upload: $(SKETCHNAME).cpp.hex
+upload:
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:w:$(SKETCHNAME).cpp.hex -b $(BAUDRATE)
 
 bootloader:
