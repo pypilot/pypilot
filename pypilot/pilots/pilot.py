@@ -12,7 +12,7 @@ from pypilot.resolv import resolv
 
 class AutopilotGain(RangeProperty):
     def __init__(self, *cargs):
-        super(AutopilotGain, self).__init__(*cargs, persistent=True)
+        super(AutopilotGain, self).__init__(*cargs, persistent=True, profiled=True)
         self.info['AutopilotGain'] = True
 
 class AutopilotPilot(object):

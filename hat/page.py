@@ -482,8 +482,9 @@ class controlbase(page):
     def display(self, refresh):
         if refresh:
             self.box(rectangle(0, .92, 1, .1), black)
-            self.wifi = False
+            self.profile = False
             self.pilot = False
+            self.wifi = False
             
         if self.lcd.battery_voltage:
             battrect = rectangle(0.03, .93, .25, .06)
@@ -505,10 +506,16 @@ class controlbase(page):
             else:
                 self.charging_blink = False
 
+        profile = self.last_val('profile')
+        if self.profile != profile:
+            self.profile = profile
+            profilerect = rectangle(0, .92, .2, .09)
+            self.fittext(profilerect, 'P'+profile[:1])
+                
         pilot = self.last_val('ap.pilot')
         if self.pilot != pilot:
             self.pilot = pilot
-            pilotrect = rectangle(0, .92, .6, .09)
+            pilotrect = rectangle(.2, .92, .5, .09)
             self.fittext(pilotrect, pilot[:6])
                 
         wifi = test_wifi()

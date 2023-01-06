@@ -590,7 +590,7 @@ class CalibrationProperty(RoundedValue):
 
 class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
-        super(AgeValue, self).__init__(name, time.monotonic(), **kwargs)
+        super(AgeValue, self).__init__(name, 0, **kwargs)
         self.lastreadable = 0
 
     def reset(self):
@@ -604,7 +604,9 @@ class AgeValue(StringValue):
 
     def get_msg(self):
         t = time.monotonic()
-        return '"' + boatimu.readable_timespan(t - self.value) + '"'
+        if self.value:
+            return '"' + boatimu.readable_timespan(t - self.value) + '"'
+        return 'N/A'
 
 def RegisterCalibration(client, name, default):
     calibration = client.register(CalibrationProperty(name, default))
