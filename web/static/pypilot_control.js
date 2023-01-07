@@ -1,5 +1,5 @@
 /*
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2023 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -14,15 +14,18 @@ function openTab(evt, tabName) {
          x[i].style.display = "none";
     }
     tablinks = document.getElementsByClassName("tablink");
-    for (i = 0; i < x.length; i++) {
+    for (i = 0; i < tablinks.length; i++) {
         tablinks[i].className = tablinks[i].className.replace(" w3-red", "");
         tablinks[i].className = tablinks[i].className.replace(" active", "");
     }
-    document.getElementById(tabName).style.display = "block";
-      evt.currentTarget.firstElementChild.className += " w3-red";
-      evt.currentTarget.firstElementChild.className += " active";
-    currentTab = tabName;
 
+    document.getElementById(tabName).style.display = "block";
+    if(evt.currentTarget.firstElementChild) {
+        evt.currentTarget.firstElementChild.className += " w3-red";
+        evt.currentTarget.firstElementChild.className += " active";
+    }
+    
+    currentTab = tabName;
     setup_watches();
 }
 
@@ -47,6 +50,13 @@ $(document).ready(function() {
     port = pypilot_web_port;
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + port + namespace);
 
+
+    function is_touch_enabled() {
+        return ( 'ontouchstart' in window ) ||
+            ( navigator.maxTouchPoints > 0 ) ||
+            ( navigator.msMaxTouchPoints > 0 );
+    }
+
     function show_gains() {
         var x = document.getElementsByClassName('gain');
         for (i = 0; i < x.length; i++)
@@ -62,9 +72,52 @@ $(document).ready(function() {
     var servo_command = 0, servo_command_timeout=0;
     var gains = [];
     var conf_names = [];
+    var profile="0", profiles = [profile];
+    var touch = is_touch_enabled();
+
     socket.on('pypilot_values', function(msg) {
         watches = {};
         var list_values = JSON.parse(msg);
+        var handlers = {};
+
+        function MakeRange(name, iname, subname, size, size2) {
+            htm = ''
+            var info = list_values[name];
+            var min = info['min'];
+            var max = info['max'];
+            htm+='<div style="display: table-cell;font-size: ' + size + ';">'+subname+'</div>';
+
+            if(touch) {
+                function button(bname, text, per) {
+                    htm += '<div style="display: table-cell;width: 15%; height 20%; border: 10px solid transparent;"><button id="' + iname + bname +'" class="button button-resizable2 font-resizable2">' + text + '</button></div>';
+                    range = max - min;
+                    step = per * range / 100;
+                    handlers[iname + bname] = {step: step, iname: iname, name: name, func: function(event) {
+                        cur = Number($('#' + event.data.iname + 'label').text())
+                        pypilot_set(event.data.name, cur + event.data.step);
+                    }};
+
+                }
+                button('1', '<<', -10);
+                button('2', '<', -1);
+                button('3', '>', 1);
+                button('4', '>>', 10);
+            }
+            
+            htm += '<div style="display: table-cell;width: 100%">';
+            if(touch) {
+                htm += '<div class="progress"><div id="' + iname + '" class="bar" min="' + min + '" max="' + max + '"></div></div>'             
+            } else {
+                htm += '<input type="range" id="' + iname + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" style="width: 100%"></input>'
+                handlers[iname] = {name: name, func: function(event) {
+                    pypilot_set(event.data.name, this.valueAsNumber);
+                }};
+            }
+            htm += '</div>'
+            htm += '<div id="' + iname + 'label" style="display: table-cell; font-size: '+size2 + ';"></div>';
+            return htm;
+        }
+        
         $('#connection').text(_('Connected'));
         $('#aperrors0').text("");
         $('#aperrors1').text("");
@@ -72,54 +125,88 @@ $(document).ready(function() {
         // control
         pypilot_watch('ap.enabled');
         pypilot_watch('ap.mode');
+        pypilot_watch('ap.modes');
         pypilot_watch('ap.tack.timeout', .25);
         pypilot_watch('ap.tack.state');
         pypilot_watch('ap.tack.direction');
 
         pypilot_watch('ap.heading_command', .5);
 
-        // gain
-        pypilot_watch('ap.pilot');
-        $('#gain_container').text('');
-
-        $('#gain_container').append('<div class="w3-row">Pilot&emsp;<select id="pilot">');
-        if('ap.pilot' in list_values && 'choices' in list_values['ap.pilot']) {
-            var pilots = list_values['ap.pilot']['choices'];
-            for (var pilot in pilots)
-                $('#pilot').append('<option value="' + pilots[pilot] + '">' + pilots[pilot] + '</option');
-        }
-
-        $('#gain_container').append('</select></div>');
-
-        $('#pilot').change(function(event) {
-            pypilot_set('ap.pilot', $('#pilot').val());
-            show_gains();
+        $('#mode').change(function(event) {
+            pypilot_set('mode', $('#mode').val());
         });
+
+        // gain
+        pypilot_watch('profile');
+        pypilot_watch('profiles');
+        pypilot_watch('ap.pilot');
+
+        $('#profile').change(function(event) {
+            pypilot_set('profile', $('#profile').val());
+        });
+        
+        $('#add_profile').click(function(event) {
+            profile = prompt(_("Enter profile name."));
+            if(profile != null) {
+                if(profiles.includes(profile))
+                    alert("Already have profile " + profile);
+                else {
+                    profiles.push(profile);
+                    //pypilot_set('profiles', profiles);
+                    pypilot_set('profile', profile);
+                }
+            }
+        });
+
+
+        $('#remove_profile').click(function(event) {
+            if(profiles.length > 1 && profile != "0") {
+                if(!confirm(_("Remove current profile?")))
+                    return;
+                new_profiles = []
+                for(var p of profiles)
+                    if(p != profile)
+                        new_profiles.push(p);
+                pypilot_set('profiles', new_profiles);
+            }
+        });
+        
         
         gains = [];
         for (var name in list_values)
             if('AutopilotGain' in list_values[name] && name.substr(0, 3) == 'ap.')
                 gains.push(name);
 
+
+        $('#gain_container').text('');
+
+        html = ''
+        html += '<div style="display: table; border-collapse: collapse;">';
         for (var i = 0; i<gains.length; i++) {
-            var w = $(window).width();
             var sp = gains[i].split('.');
             var subname = sp[3];
             var pilot = sp[2];
-            var info = list_values[gains[i]];
-            var min = info['min'];
-            var max = info['max'];
-            var iname = 'gain'+pilot+subname;
-            html = '<div class="gain pilot' + pilot + '" style="display: table-row">'
-            html += '<div style="display: table-cell">'+subname+'</div>'
-            html += '<div style="display: table-cell;width: 100%"><input type="range" id="' + iname + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" name="'+gains[i]+'" style="width: 100%"></input></div>'
-            html += '<div id="' + iname + 'label" style="display: table-cell"></div>';
+            var iname = 'gain'+pilot+subname
+            html+='<div class="gain pilot' + pilot + '" style="display: none; border=10px solid #000;">';
+            html += MakeRange(gains[i], iname, subname, '3em', '2em');
             html += '</div>'
-            $('#gain_container').append(html)
-            $('#'+iname).change(function(event) {
-                pypilot_set(this.name, this.valueAsNumber);
-            });
         }
+        html += '</div>';
+        $('#gain_container').append(html);
+
+        $('#gain_container').append('<div class="w3-row">Pilot&emsp;<select id="pilot">');
+        if('ap.pilot' in list_values && 'choices' in list_values['ap.pilot']) {
+            var pilots = list_values['ap.pilot']['choices'];
+            for (var pilot in pilots)
+                $('#pilot').append('<option value="' + pilots[pilot] + '">' + pilots[pilot] + '</option>');
+        }
+
+        $('#gain_container').append('</select></div>')
+
+        $('#pilot').change(function(event) {
+            pypilot_set('ap.pilot', $('#pilot').val());
+            show_gains();
+        });
 
         $('#gain_container').append('<div id="Reset"><p><button id="reset_default_gain">Reset to default</button></p></div>');
 
@@ -154,21 +241,33 @@ $(document).ready(function() {
                 conf_names.push(name); // remove ap.
         conf_names.sort();
 
+        phtml = '';
+        $('#configuration_container').append('<div style="display: table; border-collapse: collapse;">');
+        
         for (var i = 0; i<conf_names.length; i++) {
+            html = '';
             var name = conf_names[i];
             var info = list_values[name];
-
-            var min = info['min'];
-            var max = info['max'];
-            var unit = info['units'];
-
-            var iname = 'confname'+i;
-
-            $('#configuration_container').append('<div style="display: table-row"><div style="display: table-cell">' + name + '</div><div style="display: table-cell; width: 100%"><input type="range" id="'+iname+'" min="' + min + '" max="' + max + '" step=".01" value="2" style="width: 100%" name="'+name+'"></div><div style="display: table-cell"><span id="'+ iname+'label"></span></div><div style="display: table-cell">' + unit + '</div></div>');
-            $('#'+iname).change(function(event) {
-                pypilot_set(this.name, this.valueAsNumber);
-            });
+            var units = info['units'];
+            html += '<div style="display: table-row;">';
+            html += MakeRange(name, 'confname'+i, name, '1em', '1em');
+            html += '<div style="display: table-cell;">' + units + '</div>';
+            html += '</div>';
+            var persistent = info['profiled'];
+            
+            if(info['profiled'])
+                phtml += html;
+            else
+                $('#configuration_container').append(html);
         }
+        $('#configuration_container').append('</div>');
+        $('#configuration_container').append('<br>');
+        $('#configuration_container').append(_('The following settings are captured by the current profile'));
+
+
+        $('#configuration_container').append('<div style="display: table; border-collapse: collapse;">');
+        $('#configuration_container').append(phtml);
+        $('#configuration_container').append('</div>');
 
         if(tinypilot) {
             $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>');
@@ -177,11 +276,20 @@ $(document).ready(function() {
             $('#configuration_container').append('<div id="Reset"><p><button id="reset_default">Reset to default</button></p></div>');
         }
 
-        pypilot_watch('nmea.client')
+        pypilot_watch('nmea.client');
 
         pypilot_watch('servo.controller');
         pypilot_watch('servo.flags');
 
+        // install function handlers for configuration sliders/buttons
+        for (var handler in handlers)
+            if(touch)
+                $('#' + handler).click(handlers[handler], handlers[handler]['func']);
+            else
+                $('#' + handler).change(handlers[handler], handlers[handler]['func']);
+
+        window_resize();        
+            
         setup_watches();
     });
 
@@ -230,6 +338,7 @@ $(document).ready(function() {
     var heading_set_time = new Date().getTime();
     var heading_local_command;
     var last_rudder_data = {};
+    var current_mode = "NA";
 
     function heading_str(heading) {
         if(heading.toString()=="false")
@@ -238,8 +347,7 @@ $(document).ready(function() {
         // round to 1 decimal place
         heading = Math.round(10*heading)/10;
 
-        mode = $('#mode').val()
-        if(mode == 'wind' || mode == 'true wind') {
+        if(current_mode == 'wind' || current_mode == 'true wind') {
             if(heading > 0)
                heading += '-';
         }
@@ -250,8 +358,16 @@ $(document).ready(function() {
         data = JSON.parse(msg);
 
         if('ap.mode' in data) {
-            value = data['ap.mode'];
-            $('#mode').val(value);
+            current_mode = data['ap.mode'];
+            $('#mode').val(current_mode);
+        }
+
+        if('ap.modes' in data) {
+            value = data['ap.modes'];
+            $('#mode').empty();
+            for (let mode of value)
+                $('#mode').append('<option value="' + mode + '">' + mode + '</option>');
+            $('#mode').val(current_mode);
         }
 
         if('ap.heading' in data) {
@@ -278,14 +394,6 @@ $(document).ready(function() {
             }
         }
         
-        if('ap.tack.direction' in data) {
-            value = data['ap.tack.direction'];
-            if(value == 'port')
-                $('#tack_direction option')[1].selected = true;
-            else
-                $('#tack_direction option')[0].selected = true;
-        }
-
         if('ap.enabled' in data) {
             if(data['ap.enabled']) {
                 var w = $(window).width();
@@ -313,6 +421,19 @@ $(document).ready(function() {
             show_gains();
         }
 
+        if('profile' in data) {
+            profile = data['profile'].toString();
+            $('#profile').val(profile);
+        }
+
+        if('profiles' in data) {
+            profiles = data['profiles'];
+            $('#profile').empty();
+            for (p of profiles)
+                $('#profile').append('<option value="' + p + '">' + p + '</option>');
+            $('#profile').val(profile);
+        }
+
         for (var i = 0; i<gains.length; i++)
             if(gains[i] in data) {
                 value = data[gains[i]];
@@ -321,7 +442,13 @@ $(document).ready(function() {
                 var pilot = sp[2];
                 var iname = 'gain'+pilot+subname
                 if(value != $('#' + iname).valueAsNumber) {
-                    $('#' + iname).val(value);
+                    if(touch) {
+                        min = Number($('#' + iname).attr('min'));
+                        max = Number($('#' + iname).attr('max'));
+                        per = 100*(value-min)/(max-min);
+                        $('#' + iname).width(per+'%');
+                    } else // slider
+                        $('#' + iname).val(value);
                     $('#' + iname + 'label').text(value);
                 }
             }
@@ -345,7 +472,7 @@ $(document).ready(function() {
         if('imu.roll' in data)
             $('#roll').text(data['imu.roll']);
         if('imu.alignmentCounter' in data)
-            $('.myBar').width((100-data['imu.alignmentCounter'])+'%');
+            $('#levelprogress').width((100-data['imu.alignmentCounter'])+'%');
         if('imu.heading_offset' in data)
             $('#imu_heading_offset').val(data['imu.heading_offset']);
         if('imu.accel.calibration.locked' in data)
@@ -376,7 +503,13 @@ $(document).ready(function() {
             if(conf_names[i] in data) {
                 value = data[conf_names[i]];
                 var iname = 'confname'+i;
-                $('#' + iname).val(value);
+                if(touch) {
+                    min = Number($('#' + iname).attr('min'));
+                    max = Number($('#' + iname).attr('max'));
+                    per = 100*(value-min)/(max-min);
+                    $('#' + iname).width(per+'%');
+                } else // slider
+                    $('#' + iname).val(value);
                 $('#' + iname + 'label').text(value);
             }
         }
@@ -400,9 +533,19 @@ $(document).ready(function() {
             $('#controller_temp').text(value);
         }
 
+        if('servo.motor_temp' in data) {
+            value = data['servo.motor_temp'];
+            $('#motor_temp').text('<br>'+_('Motor temperature')+' '+value.toString()+' C');
+        }
+
         if('ap.runtime' in data) {
             value = data['ap.runtime'];
             $('#runtime').text(value);
+        }
+
+        if('ap.version' in data) {
+            value = data['ap.version'];
+            $('#version').text(value);
         }
 
         if('servo.controller' in data) {
@@ -459,36 +602,18 @@ $(document).ready(function() {
                 servo_command_timeout = Math.abs(x) > 5 ? 6 : 2;
             }
         }
-    };
 
-    $('#mode').change(function(event) {
-        pypilot_set('ap.mode', $('#mode').val());
-    });
+    };
     
     $('#port10').click(function(event) { move(-10); });
     $('#port2').click(function(event) { move(-2); });
     $('#star2').click(function(event) { move(2); });
     $('#star10').click(function(event) { move(10); });
-
     $('#tack_button').click(function(event) {
-        direction = $('#tack_direction').val();
         if($('#tack_button').attr('state') == 'tack')
-            pypilot_set('ap.tack.state', 'begin');
+            openTab(event, 'Tack');
         else
             pypilot_set('ap.tack.state', 'none');
-    });
-
-    $('#tack_direction').change(function(event) {
-        value = $('#tack_direction option')[0].selected;
-        if(value)
-            pypilot_set('ap.tack.direction', 'starboard');
-        else
-            pypilot_set('ap.tack.direction', 'port');
-    });
-
-     $('body').on('click', '#reset_default_config', function() {
-         confirm('Reset values to default, are you sure?');
-         // TODO.. reset values from server side
     });
 
     // Gain
@@ -524,12 +649,28 @@ $(document).ready(function() {
     });
 
     // Configuration
-
     $('#nmea_client').change(function(event) {
         pypilot_set('nmea.client', $('#nmea_client').val());
     });
+
+    // Tack
+    function tack(event, state) {
+        pypilot_set('ap.tack.state', state);
+        openTab(event, 'Control');
+    }
     
-    // hack
+    $('#tack_cancel').click(function(event) { tack(event, 'none'); });
+    $('#tack_port').click(function(event) {
+        pypilot_set('ap.tack.direction', 'port');
+        tack(event, 'begin');
+    });
+    $('#tack_starboard').click(function(event) {
+        pypilot_set('ap.tack.direction', 'starboard');
+        tack(event, 'begin');
+    });
+
+    
+    // hack to get to :33333
     document.addEventListener('click', function(event) {
         var target = event.target;
         if (target.tagName.toLowerCase() == 'a')
@@ -567,7 +708,7 @@ $(document).ready(function() {
         pypilot_watches(gains, tab == 'Gain', 1);
         pypilot_watches(['imu.heading', 'imu.pitch', 'imu.roll', 'rudder.angle'], tab == 'Calibration', .5);
         pypilot_watches(conf_names, tab == 'Configuration', 1);
-        pypilot_watches(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'servo.engaged', 'ap.version'], tab == 'Statistics', 1);
+        pypilot_watches(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'ap.version', 'servo.engaged'], tab == 'Statistics', 1);
     }
     setup_watches();
 
@@ -599,6 +740,10 @@ $(document).ready(function() {
         $(".button-resizable2").each(function(i, obj) {
             $(this).css('width', w/8+"px")
             $(this).css('height', w/18+"px")
+        });
+        $(".button-resizable3").each(function(i, obj) {
+            $(this).css('width', w/4+"px")
+            $(this).css('height', w/8+"px")
         });
         $(".toggle-button-selected button").each(function(i, obj) {
             $(this).css('left', w/12+"px")

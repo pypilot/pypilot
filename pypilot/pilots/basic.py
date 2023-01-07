@@ -19,11 +19,11 @@ class BasicPilot(AutopilotPilot):
     self.gains = {}
         
     self.PosGain('P', .003, .02)   # position (heading error)
-    self.PosGain('I', 0, .1)   # integral
-    self.PosGain('D',  .09, .8)   # derivative (gyro)
+    self.PosGain('I', 0, .1)       # integral
+    self.PosGain('D',  .09, .8)    # derivative (gyro)
     self.PosGain('DD',  .075, 0.8) # rate of derivative
-    self.PosGain('PR',  .005, .02)  # position root
-    self.PosGain('FF',  .6, 5.0) # feed forward
+    self.PosGain('PR',  .005, .02) # position root
+    self.PosGain('FF',  .6, 5.0)   # feed forward
     #self.PosGain('R',  0.0, 1.0)  # reactive
     #self.reactive_time = self.register(RangeProperty, 'Rtime', 1, 0, 3)
 

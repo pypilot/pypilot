@@ -28,17 +28,15 @@ class WindPilot(AutopilotPilot):
     # create simple pid filter
     self.gains = {}
         
-    self.PosGain('P', .003, .02)  # position (heading error)
-    self.PosGain('I', 0, .1)      # integral
+    self.PosGain('P', .003, .02) # position (heading error)
+    self.PosGain('I', 0, .1)     # integral
     self.PosGain('D', .1, 1.0)   # derivative (gyro)
-    self.PosGain('DD', .05, 1.0)  # position root
+    self.PosGain('DD', .05, 1.0) # rate of derivative
     self.Gain('WG', 0, -.1, .1)  # wind gust
-
 
   def compute_heading(self):
     ap = self.ap
     # compute the difference from wind to other headings
-    wind = self.ap.wind_direction.value
     compass = self.ap.boatimu.SensorValues['heading_lowpass'].value
 
     sensors = self.ap.sensors

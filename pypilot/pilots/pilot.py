@@ -12,7 +12,7 @@ from pypilot.resolv import resolv
 
 class AutopilotGain(RangeProperty):
     def __init__(self, *cargs):
-        super(AutopilotGain, self).__init__(*cargs, persistent=True)
+        super(AutopilotGain, self).__init__(*cargs, persistent=True, profiled=True)
         self.info['AutopilotGain'] = True
 
 class AutopilotPilot(object):
@@ -63,18 +63,10 @@ class AutopilotPilot(object):
 
     # return new mode if sensors don't support it
     def best_mode(self, mode):
-        sensors = self.ap.sensors
-        nowind = sensors.wind.source.value == 'none'
-        nogps = sensors.gps.source.value == 'none'
-        nowater = sensors.water.source.value == 'none'
-
-        if mode == 'true wind': # for true wind, need wind and gps or water speed
-            if nowind:
-                return 'gps'
-            if nogps and nowater:
-                return 'wind'
-        if mode == 'wind' and nowind:
-            return 'compass'
-        elif mode == 'gps' and nogps:
-            return 'compass'
+        modes = self.ap.modes.value
+        while not mode in modes:
+            fallbacks = {'nav': 'gps', 'gps': 'compass', 'wind': 'compass', 'true wind': 'wind'}
+            if not mode in fallbacks:
+                break
+            mode = fallbacks[mode] 
         return mode

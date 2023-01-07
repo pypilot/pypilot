@@ -175,7 +175,7 @@ class PipeNonBlockingPipeEnd(object):
                 print('too long send nonblocking pipe', t1-t0, t2-t1, self.name, len(data))
             return True
         except Exception as e:
-            print("failed send ex", t0, time.monotonic(), e)
+            print("failed send ex", t0, time.monotonic(), self.name, e)
             if not self.sendfailok:
                 print('failed to encode data pipe!', self.name, e)
             return False

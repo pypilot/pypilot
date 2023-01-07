@@ -6,8 +6,8 @@ Conflicts=pypilot_boatimu.service
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/pypilot
-StandardOutput=syslog
-StandardError=syslog
+#StandardOutput=syslog
+#StandardError=syslog
 User=pi
 Restart=always
 RestartSec=2

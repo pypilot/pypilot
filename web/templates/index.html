@@ -44,14 +44,14 @@
     </div>
     <br>
     <div id="Control" class="w3-container tab">
-      <div id="heading_info" class="w3-row heading_info">
-          <div class="toggle-button button-resizable1" id="tb_engaged" >
-            <button id="engaged" class="font-resizable2 button-resizable2">AP</button>
-          </div>
-            <div class="data_label" style="flex-grow: 1;">{{_('Heading')}}</div>
-            <div class="data_value" style="font-size: 2em; flex-grow: 2;" id="heading">---</div>
-            <div class="data_label" style="flex-grow: 1;">{{_('Command')}}</div>
-            <div class="data_value" style="font-size: 2em; flex-grow: 2;" id="heading_command">---</div>
+      <div class="w3-row" style="display:flex">
+
+        <div class="w3-col" style="font-size: 2em;width:20%;">{{_('Heading')}}</div>
+        <div class="w3-col" style="font-size: 3em;width:30%;" id="heading">---</div>
+
+        <div class="w3-col" style="font-size: 2em;width:20%;">{{_('Command')}}</div>
+        <div class="w3-col" style="font-size: 3em;width:30%;" id="heading_command">---</div
+>
       </div>
       <div id="steer_buttons_container" class="w3-row" >
           <button id="port10" class="button font-resizable1 button-resizable">
@@ -70,25 +70,25 @@
       <br>
       <br>
       <div class="w3-row" style="display: flex; align-items: center;">
-        <select id="mode">
-          <option value="compass">compass</option>
-          <option value="gps">gps</option>
-          <option value="wind">wind</option>
-          <option value="true wind">true wind</option>
-        </select>
+        <select id="mode"></select>
+        <div style="flex-grow: 1; text-align: center;"></div>
+        <div class="toggle-button button-resizable1" id="tb_engaged" style="margin:auto">
+          <button id="engaged" class="font-resizable2 button-resizable2">AP</button>
+        </div>
         <div style="flex-grow: 1"></div>
-        <button id="tack_button" class="button button-resizable1 font-resizable2">      </button>
-        <div style="flex-grow: 1"></div>
-        <div id="tack_timeout" style="flex-grow: 1"></div>
-        <div id="tack_state" style="flex-grow: 3"></div>
-        <select id="tack_direction">
-          <option value="port">--&gt; starboard</option>
-          <option value="starboard">&lt;-- port</option>
-        </select>
+        <button id="tack_button" class="button button-resizable1 font-resizable2"></button>
       </div>
     </div>
-    
-    <div id="Gain" class="w3-container tab">
+    <div id="Gain" class="w3-container tab" style="min-width: 480px;">
+      <br>
+      <br>
+      <div class="w3-row">
+        Profile&emsp;
+        <select id="profile"></select>
+        &emsp;&emsp;
+          <button class="button button-resizable2 font-resizable2" id="add_profile">{{_('Add')}}</button>
+          <button class="button button-resizable2 font-resizable2" id="remove_profile">{{_('Remove')}}</button>
+      </div>
       <div id="gain_container"></div>
     </div>
     
@@ -99,8 +99,8 @@
       <p>{{_('Press')}} <button id="level" class="button">{{_('here')}}</button>
         {{_('when the boat is level to align the inertial sensors.')}}
       </p>
-      <div class="myProgress">
-        <div class="myBar" id="progress"> </div>
+      <div class="progress">
+        <div id="levelprogress" class="bar"> </div>
       </div>
       {{_('Magnetic Heading Offset')}}
       <input type="spin" id="imu_heading_offset" min=-180 max=180 value=0>Degrees</input>
@@ -109,7 +109,7 @@
       </p>
       <br><a href="/calibrationplot">{{_('calibration plot')}}</a>
       <br>
-      <p>{{_('Rudder')}} <span id="rudder"></span></p>
+      <p>{{_('Rudder Sensor')}}: <span id="rudder"></span></p>
       <p>
         <button id="rudder_centered" class="button">{{_('centered')}}</button>
         <button id="rudder_port_range" class="button">{{_('port range')}}</button>
@@ -122,30 +122,45 @@
       </p>
     </div>
 
-    <div id="Configuration" class="w3-container tab">
+    <div id="Configuration" class="w3-container tab" style="min-width: 560px;">
       <div id='theme_selector' class="configuration_item">
           <spawn calss="value_name">{{_('Display')}}:</spawn>
           <label for="theme_clear" class="theme_name">{{_('Clear')}}&nbsp;</label><input type="radio" name="theme" class="theme_option" id="theme_clear" value="clear">
           <label for="theme_dark"  class="theme_name">{{_('Dark')}}&nbsp;</label><input type="radio" name="theme" class="theme_option" id="theme_dark"  value="dark" >
       </div>
-      <div id="configuration_container"></div>
+      <div id="configuration_container" ></div>
       <p><a href=":33333">{{_('Configure LCD Keypad and Remotes')}}</a>
       <p>
       {{_('NMEA Client host:port (leave blank for none) eg: 192.168.0.1:10110')}}
       <p><input type="text" id="nmea_client"></input>
     </div>
 
-    <div id="Statistics" class="w3-container tab">
+    <div id="Statistics" class="w3-container tab" style="font-size: 1em">
       <br>{{_('Amp Hours')}}
       <span id="amp_hours"></span>
       <button id="reset_amp_hours" class="button">{{_('reset')}}</button>
       <br>{{_('Voltage')}} <span id="voltage"></span>
       <br>{{_('Controller temperature')}} <span id="controller_temp"></span> C
+      <span id="motor_temp"></span>
       <br>{{_('Runtime')}} <span id="runtime"></span>
       <br>{{_('Version')}} <span id="version"></span>
       <br>{{_('Servo')}}: <b><span id="servo_engaged"></span></b>
-        <div id="log"></div>
+      <br>{{_('Version')}}: <span id="version"></span>
+      <br>
+      <br><button id="logs" class="button font-resizable3 button-resizable2" onclick="window.location.href='logs';">{{_('Logs')}}</button>
     </div>
+    <div id="Tack" class="w3-container tab">
+      <br>
+      <br>
+      <div class="w3-row">
+          <button id="tack_port" class="button font-resizable2 button-resizable3">{{_('Tack')}} {{_('Port')}}</button>
+          <button id="tack_cancel" class="button font-resizable2 button-resizable3" style="margin: 0; position: absolute;left: 50%; transform: translate(-50%, 0%);">{{_('Cancel')}}</button>
+          <button id="tack_starboard" class="button font-resizable2 button-resizable3" style="float:right">{{_('Tack')}} {{_('Starboard')}}</button>
+      </div>
+      Timeout <div id="tack_timeout" style="flex-grow: 1"></div>
+      State <div id="tack_state" style="flex-grow: 3"></div>
+    </div>
+
     <div id="status_container" class="data_block" style="position:fixed;bottom:-10">
       <br>pypilot {{_('Server')}}: <b><span id="connection"></span></b>
       <br>Servo Flags: <b><span id="servoflags"></span></b>

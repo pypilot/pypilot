@@ -813,7 +813,7 @@ void adc_isr()
     if(adc_counter == CONTROLLER_TEMP)
         adc_counter+=2;
 #endif
-#ifdef DISABLE_RUDDER
+#ifdef DISABLE_RUDDER_SENSE
     if(adc_counter == RUDDER)
         adc_counter=0;
 #endif

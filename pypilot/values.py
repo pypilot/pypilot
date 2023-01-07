@@ -17,6 +17,9 @@ class Value(object):
         self.set(initial)
 
         self.info = {'type': 'Value'}
+        if 'profiled' in kwargs and kwargs['profiled']:
+            self.info['profiled'] = True
+            self.info['persistent'] = True
         # if persistent argument make the server store/load this value regularly
         if 'persistent' in kwargs and kwargs['persistent']:
             self.info['persistent'] = True
@@ -154,9 +157,9 @@ class RangeProperty(Property):
 
 # a range property that is persistent and specifies the units
 class RangeSetting(RangeProperty):
-    def __init__(self, name, initial, min_value, max_value, units):
+    def __init__(self, name, initial, min_value, max_value, units, **kwargs):
         self.units = units
-        super(RangeSetting, self).__init__(name, initial, min_value, max_value, persistent=True)
+        super(RangeSetting, self).__init__(name, initial, min_value, max_value, persistent=True, **kwargs)
 
         self.info['type'] = 'RangeSetting'
         self.info['units'] = self.units

@@ -59,6 +59,34 @@ except Exception as e:
     app.jinja_env.globals.update(_=_)
     babel = None
 
+
+@app.route('/logs')
+def logs():
+    log_links = ''
+    try:
+        logdirs = os.listdir('/var/log')
+        for name in logdirs:
+            if os.path.exists(os.path.join('/var/log', name, 'current')):
+                log_links+='<br><p><a href="log/'+name+'">'+name+'</a></p>';
+    except Exception as e:
+        print('failed to enumerate log directory', e)
+
+    return render_template('logs.html', async_mode=socketio.async_mode, log_links=Markup(log_links))
+
+@app.route('/log/<name>')
+def log(name):
+    log = ''
+    try:
+        f = open('/var/log/' + name + '/current')
+        log = f.read()
+        f.close()
+    except Exception as e:
+        log = _('failed to read log file') + ' "' + name + '": ' + str(e)
+    r = app.make_response(log)
+    r.mimetype = 'text/plain'
+    return r
+
+    
 @app.route('/wifi', methods=['GET', 'POST'])
 def wifi():
     networking = '/home/tc/.pypilot/networking.txt'

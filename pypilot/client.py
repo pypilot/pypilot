@@ -304,7 +304,7 @@ class pypilotClient(object):
             line = self.connection.readline()
             if not line:
                 return
-            #print('line', line, time.monotonic())
+            #print('client line', line, time.monotonic())
             try:
                 name, data = line.rstrip().split('=', 1)
                 if name == 'error':
