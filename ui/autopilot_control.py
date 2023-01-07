@@ -8,8 +8,41 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import wx, sys, subprocess, socket, os, time
-from pypilot.ui import autopilot_control_ui
 from pypilot.client import *
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import autopilot_control_ui
+
+class TackDialog(autopilot_control_ui.TackDialogBase):
+    def __init__(self, parent):
+        super(TackDialog, self).__init__(parent)
+
+    def receive(self, name, value):
+        if name == 'ap.tack.state':
+            self.stTackState.SetLabel(value)
+            self.tackstate = value
+            return True
+        elif name == 'ap.tack.timeout':
+            if self.tackstate == 'waiting':
+                self.stTackState.SetLabel(str(value))
+            return True
+        return False
+
+    def do(self, state, direction=None):
+        if direction:
+            self.GetParent().client.set('ap.tack.direction', direction)
+        self.GetParent().client.set('ap.tack.state', state)
+        self.Hide()
+            
+    def OnTackPort(self, event):
+        self.do('begin', 'port')
+
+    def OnTackCancel(self, event):
+        self.do('none')
+        
+    def OnTackStarboard(self, event):
+        self.do('begin', 'starboard')
+
 
 class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     ID_MESSAGES = 1000
@@ -48,14 +81,18 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.gains = {}
         self.enumerated = False
 
-        watchlist = ['ap.enabled', 'ap.mode', 'ap.heading_command',
-                     'ap.tack.state', 'ap.tack.timeout', 'ap.tack.direction',
+        watchlist = ['profile', 'profiles',
+                     'ap.enabled', 'ap.mode', 'ap.modes', 'ap.heading_command',
+                     'ap.tack.state', 'ap.tack.timeout',
                      'ap.heading', 'ap.pilot',
-                     'gps.source', 'wind.source',
                      'servo.controller', 'servo.engaged', 'servo.flags',
                      'rudder.angle']
         for name in watchlist:
             self.client.watch(name)
+
+        self.tackdialog = TackDialog(self)
+        self.mode = None
+        self.profile = None
 
     def servo_command(self, command):
         if self.lastcommand != command or command != 0:
@@ -67,7 +104,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.client.set(name, slidervalue)
 
     def set_mode_color(self):
-        modecolors = {'compass': wx.GREEN, 'gps': wx.YELLOW,
+        modecolors = {'compass': wx.GREEN, 'gps': wx.YELLOW, 'nav': wx.Colour(255, 0, 255),
                       'wind': wx.BLUE, 'true wind': wx.CYAN}
         if self.tbAP.GetValue() and self.mode in modecolors:
             color = modecolors[self.mode]
@@ -130,7 +167,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.cPilot.Clear()
         for pilot in pilots:
             self.cPilot.Append(pilot)
-                
+
         self.GetSizer().Fit(self)
         self.SetSize(wx.Size(570, 420))
         
@@ -206,6 +243,23 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 #            elif name == 'servo.raw_command':
 #                self.tbAP.SetValue(False)
 #                self.tbAP.SetForegroundColour(wx.RED)
+
+            if self.tackdialog.receive(name, value):
+                pass
+            elif name == 'profile':
+                value = str(value)
+                n = self.cProfile.FindString(value)
+                if n < 0:
+                    n = self.cProfile.Append(value)
+                self.cProfile.SetSelection(n)
+            elif name == 'profiles':
+                profile = self.cProfile.GetStringSelection()
+                self.cProfile.Clear()
+                for profile in value:
+                    self.cProfile.Append(profile)
+                n = self.cProfile.FindString(profile)
+                if n >= 0:
+                    self.cProfile.SetSelection(n)
             elif name == 'ap.enabled':
                 self.tbAP.SetValue(int(value))
                 self.set_mode_color()
@@ -221,10 +275,19 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                     self.bCenter.Show(not self.bCenter.IsShown())
                 self.stRudder.SetLabel(str(value))
             elif name == 'ap.mode':
-                rb = {'compass': self.rbCompass, 'gps': self.rbGPS, 'wind': self.rbWind, 'true wind': self.rbTrueWind}
-                rb[value].SetValue(True)
+                n = self.cMode.FindString(value)
+                if n >= 0:
+                    self.cMode.SetSelection(n)
+                    self.set_mode_color()
                 self.mode = value
-                self.set_mode_color()
+            elif name == 'ap.modes':
+                self.cMode.Clear()
+                n = 0
+                for mode in value:
+                    self.cMode.Append(mode)
+                    if mode == self.mode:
+                        self.cMode.SetSelection(n)
+                    n += 1
             elif name == 'ap.heading_command':
                 self.stHeadingCommand.SetLabel('%.1f' % value)
                 if command == 0:
@@ -232,24 +295,9 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'ap.pilot':
                 self.cPilot.SetStringSelection(value)
                 self.enumerate_gains()
-            elif name == 'gps.source':
-                self.rbGPS.Enable(value != 'none')
-                self.rbTrueWind.Enable(value != 'none' and self.rbWind.IsEnabled())
-            elif name == 'wind.source':
-                self.rbWind.Enable(value != 'none')
-                self.rbTrueWind.Enable(value != 'none' and self.rbGPS.IsEnabled())
             elif name == 'ap.heading':
                 self.stHeading.SetLabel('%.1f' % value)
                 self.heading = value
-            elif name == 'ap.tack.state':
-                self.stTackState.SetLabel(value)
-                self.bTack.SetLabel('Tack' if value == 'none' else 'Cancel')
-                self.tackstate = value
-            elif name == 'ap.tack.timeout':
-                if self.tackstate == 'waiting':
-                    self.stTackState.SetLabel(str(value))
-            elif name == 'ap.tack.direction':
-                self.cTackDirection.SetSelection(value == 'starboard')
             elif name == 'servo.engaged':
                 self.stEngaged.SetLabel('Engaged' if value else 'Disengaged')
             elif name == 'servo.flags':
@@ -285,14 +333,10 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.client.set('ap.pilot', self.cPilot.GetStringSelection())
 
     def onTack(self, event):
-        if self.bTack.GetLabel() == 'Tack':
-            self.tackstate = 'begin'
-        else:
-            self.tackstate = 'none'
-        self.client.set('ap.tack.state', self.tackstate)
-
-    def onTackDirection(self, event):
-        self.client.set('ap.tack.direction', 'starboard' if self.cTackDirection.GetSelection() else 'port')
+        s = wx.DisplaySize()
+        print("s", s)
+        self.tackdialog.Show(True)
+        self.tackdialog.Move(int(s[0]/2), int(s[1]/2))
 
     def onPaintControlSlider( self, event ):
         return

@@ -69,7 +69,7 @@ class screen(ugfx.surface):
 
         def key(k, x, y):
             if k == 'q' or k == 27:
-                exit(0)
+                glutLeaveMainLoop()
         
         glutDisplayFunc(display)
         glutReshapeFunc(reshape)

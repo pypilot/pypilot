@@ -125,7 +125,11 @@ class LCD():
             
             from OpenGL.GLUT import glutKeyboardFunc, glutKeyboardUpFunc
             from OpenGL.GLUT import glutSpecialFunc, glutSpecialUpFunc
-            
+
+            from OpenGL.GLUT import glutLeaveMainLoop
+            self.leave = glutLeaveMainLoop
+
+
             glutKeyboardFunc(self.glutkeydown)
             glutKeyboardUpFunc(self.glutkeyup)
             glutSpecialFunc(self.glutspecialdown)
@@ -228,7 +232,7 @@ class LCD():
     def glutkey(self, k, down=True):
         k = k.decode()
         if k == 'q' or ord(k) == 27:
-            exit(0)
+            self.leave()
         if k == ' ':
             key = AUTO
         elif k == '\n':
