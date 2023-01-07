@@ -41,6 +41,70 @@ def debug(*args):
     #print(*args)
     pass
 
+class ZeroConfProcess(multiprocessing.Process): 
+    def __init__(self, signalk):
+        self.name_type = False
+        self.pipe = NonBlockingPipe('zeroconf', True)
+        super(ZeroConfProcess, self).__init__(target=self.process, daemon=True)
+        self.start()
+            
+    def remove_service(self, zeroconf, type, name):
+        print('signalk zeroconf ' + _('service removed'), name, type)
+        if self.name_type == (name, type):
+            self.pipe[1].send('disconnect')
+            print('signalk zeroconf ' + _('server lost'))
+
+    def update_service(self, zeroconf, type, name):
+        self.add_service(zeroconf, type, name)
+
+    def add_service(self, zeroconf, type, name):
+        print('signalk zeroconf ' + _('service add'), name, type)
+        info = zeroconf.get_service_info(type, name)
+        if not info:
+            return
+        properties = {}
+        for name, value in info.properties.items():
+            try:
+                properties[name.decode()] = value.decode()
+            except Exception as e:
+                print('signalk zeroconf exception', e, name, value)
+
+        if 'swname' in properties and properties['swname'] == 'signalk-server':
+            try:
+                host_port = socket.inet_ntoa(info.addresses[0]) + ':' + str(info.port)
+            except Exception as e:
+                host_port = socket.inet_ntoa(info.address) + ':' + str(info.port)
+            self.name_type = name, type
+            self.pipe[1].send(host_port)
+
+
+    def process(self):
+        try:
+            from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
+        except Exception as e:
+            if not self.missingzeroconfwarned:
+                print('signalk: ' + _('failed to') + ' import zeroconf, ' + _('autodetection not possible'))
+                print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
+                self.missingzeroconfwarned = True
+            time.sleep(20)
+            return
+
+        zeroconf = Zeroconf()
+        self.browser = ServiceBrowser(zeroconf, "_http._tcp.local.", self)
+        #zeroconf.close()
+        while True:
+            time.sleep(1000)
+
+    def poll(self):  # from signalk process
+        last = False
+        while True:
+            p = self.pipe[0].recv()
+            if not p:
+                return last
+            last = p
+
+
+
 class signalk(object):
     def __init__(self, sensors=False):
         self.sensors = sensors
@@ -75,15 +139,6 @@ class signalk(object):
             print('signalk ' + _('failed to read token'), token_path)
             self.token = False
 
-        try:
-            from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
-        except Exception as e:
-            if not self.missingzeroconfwarned:
-                print('signalk: ' + _('failed to') + ' import zeroconf, ' + _('autodetection not possible'))
-                print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
-                self.missingzeroconfwarned = True
-            time.sleep(20)
-            return
             
         self.last_values = {}
         self.last_sources = {}
@@ -106,48 +161,10 @@ class signalk(object):
         self.signalk_host_port = False
         self.signalk_ws_url = False
         self.ws = False
-        
-        class Listener:
-            def __init__(self, signalk):
-                self.signalk = signalk
-                self.name_type = False
-            
-            def remove_service(self, zeroconf, type, name):
-                debug('signalk zeroconf ' + _('service removed'), name, type)
-                if self.name_type == (name, type):
-                    self.signalk.signalk_host_port = False
-                    self.signalk.disconnect_signalk()
-                    print('signalk ' + _('server lost'))
 
-            def update_service(self, zeroconf, type, name):
-                self.add_service(zeroconf, type, name)
-
-            def add_service(self, zeroconf, type, name):
-                debug('signalk zeroconf ' + _('service add'), name, type)
-                self.name_type = name, type
-                info = zeroconf.get_service_info(type, name)
-                if not info:
-                    return
-                properties = {}
-                for name, value in info.properties.items():
-                    try:
-                        properties[name.decode()] = value.decode()
-                    except Exception as e:
-                        print('signalk zeroconf exception', e, name, value)
-
-                if 'swname' in properties and properties['swname'] == 'signalk-server':
-                    try:
-                        host_port = socket.inet_ntoa(info.addresses[0]) + ':' + str(info.port)
-                    except Exception as e:
-                        host_port = socket.inet_ntoa(info.address) + ':' + str(info.port)
-                    self.signalk.signalk_host_port = host_port
-                    print('signalk ' + _('server found'), host_port)
-
-        zeroconf = Zeroconf()
-        listener = Listener(self)
-        browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
-        #zeroconf.close()
+        self.zero_conf = ZeroConfProcess(self)
         self.initialized = True
+        
 
     def probe_signalk(self):
         debug('signalk ' + _('probe') + '...', self.signalk_host_port)
@@ -285,6 +302,16 @@ class signalk(object):
             self.setup()
             return
 
+        zc = self.zero_conf.poll()
+        if zc == 'disconnect':
+            self.signalk_host_port = False
+            self.disconnect_signalk()
+        elif zc:
+            host_port = p
+            self.signalk_host_port = host_port
+            print('signalk ' + _('server found'), host_port)
+        
+        
         self.client.poll(timeout)
         if not self.signalk_host_port:
             return # waiting for signalk to detect
