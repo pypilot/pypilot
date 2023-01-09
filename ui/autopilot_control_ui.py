@@ -208,7 +208,9 @@ class AutopilotControlBase ( wx.Frame ):
 		# Connect Events
 		self.tbAP.Bind( wx.EVT_TOGGLEBUTTON, self.onAP )
 		self.bTack.Bind( wx.EVT_BUTTON, self.onTack )
+		self.cProfile.Bind( wx.EVT_CHOICE, self.onProfile )
 		self.cPilot.Bind( wx.EVT_CHOICE, self.onPilot )
+		self.cMode.Bind( wx.EVT_CHOICE, self.onMode )
 		self.sCommand.Bind( wx.EVT_SCROLL, self.onCommand )
 		self.sCommand.Bind( wx.EVT_UPDATE_UI, self.onPaintControlSlider )
 		self.bCenter.Bind( wx.EVT_BUTTON, self.onCenter )
@@ -221,7 +223,9 @@ class AutopilotControlBase ( wx.Frame ):
 		# Disconnect Events
 		self.tbAP.Unbind( wx.EVT_TOGGLEBUTTON, None )
 		self.bTack.Unbind( wx.EVT_BUTTON, None )
+		self.cProfile.Unbind( wx.EVT_CHOICE, None )
 		self.cPilot.Unbind( wx.EVT_CHOICE, None )
+		self.cMode.Unbind( wx.EVT_CHOICE, None )
 		self.sCommand.Unbind( wx.EVT_SCROLL, None )
 		self.sCommand.Unbind( wx.EVT_UPDATE_UI, None )
 		self.bCenter.Unbind( wx.EVT_BUTTON, None )
@@ -238,7 +242,13 @@ class AutopilotControlBase ( wx.Frame ):
 	def onTack( self, event ):
 		event.Skip()
 
+	def onProfile( self, event ):
+		event.Skip()
+
 	def onPilot( self, event ):
+		event.Skip()
+
+	def onMode( self, event ):
 		event.Skip()
 
 	def onCommand( self, event ):
@@ -285,7 +295,7 @@ class TackDialogBase ( wx.Dialog ):
 		fgSizer40.SetFlexibleDirection( wx.BOTH )
 		fgSizer40.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.stTackState = wx.StaticText( self, wx.ID_ANY, _(u"    "), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stTackState = wx.StaticText( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stTackState.Wrap( -1 )
 
 		fgSizer40.Add( self.stTackState, 0, wx.ALL|wx.EXPAND, 5 )

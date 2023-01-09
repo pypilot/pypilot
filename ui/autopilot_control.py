@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2023 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -318,19 +318,15 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         else:
             self.client.set('ap.enabled', False)
 
-    def onMode( self, event):
-        if self.rbGPS.GetValue():
-            mode = 'gps'
-        elif self.rbWind.GetValue():
-            mode = 'wind'
-        elif self.rbTrueWind.GetValue():
-            mode = 'true wind'
-        else:
-            mode = 'compass'
-        self.client.set('ap.mode', mode)
+    def onProfile(self, event):
+        self.client.set('profile', self.cProfile.GetStringSelection())
 
     def onPilot(self, event):
         self.client.set('ap.pilot', self.cPilot.GetStringSelection())
+
+    def onMode( self, event):
+        mode = self.cMode.GetStringSelection()
+        self.client.set('ap.mode', mode)
 
     def onTack(self, event):
         s = wx.DisplaySize()
