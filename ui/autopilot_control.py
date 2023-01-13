@@ -82,11 +82,14 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.enumerated = False
 
         watchlist = ['profile', 'profiles',
+                     'imu.warning', 'imu.compass.calibration.warning',
                      'ap.enabled', 'ap.mode', 'ap.modes', 'ap.heading_command',
                      'ap.tack.state', 'ap.tack.timeout',
                      'ap.heading', 'ap.pilot',
                      'servo.controller', 'servo.engaged', 'servo.flags',
                      'rudder.angle']
+
+        self.warning = False
         for name in watchlist:
             self.client.watch(name)
 
@@ -260,6 +263,14 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 n = self.cProfile.FindString(profile)
                 if n >= 0:
                     self.cProfile.SetSelection(n)
+            if name == 'imu.warning':
+                self.warning = value
+                if value:
+                    self.stStatus.SetLabel(value)
+            if name == 'imu.compass.calibration.warning':
+                self.warning = value
+                if value:
+                    self.stStatus.SetLabel(value)
             elif name == 'ap.enabled':
                 self.tbAP.SetValue(int(value))
                 self.set_mode_color()
@@ -299,9 +310,10 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.stHeading.SetLabel('%.1f' % value)
                 self.heading = value
             elif name == 'servo.engaged':
-                self.stEngaged.SetLabel('Engaged' if value else 'Disengaged')
+                self.stEngaged.SetLabel('Engaged' if value else 'Disengaged')                
             elif name == 'servo.flags':
-                self.stStatus.SetLabel(value)
+                if not self.warning:
+                    self.stStatus.SetLabel(value)
             elif name == 'servo.controller':
                 self.stController.SetLabel(value)
             elif name == 'servo.current':
