@@ -74,6 +74,7 @@ $(document).ready(function() {
     var conf_names = [];
     var profile="0", profiles = [profile];
     var touch = is_touch_enabled();
+    var register = true;
 
     socket.on('pypilot_values', function(msg) {
         watches = {};
@@ -132,35 +133,35 @@ $(document).ready(function() {
 
         pypilot_watch('ap.heading_command', .5);
 
-        $('#mode').change(function(event) {
-            pypilot_set('mode', $('#mode').val());
-        });
+        if(register)
+            $('#mode').change(function(event) {
+                pypilot_set('mode', $('#mode').val());
+            });
 
         // gain
         pypilot_watch('profile');
         pypilot_watch('profiles');
         pypilot_watch('ap.pilot');
 
-        $('#profile').change(function(event) {
-            pypilot_set('profile', $('#profile').val());
-        });
-        
-        $('#add_profile').click(function(event) {
-            profile = prompt(_("Enter profile name."));
-            if(profile != null) {
-                if(profiles.includes(profile))
-                    alert("Already have profile " + profile);
-                else {
-                    profiles.push(profile);
-                    //pypilot_set('profiles', profiles);
-                    pypilot_set('profile', profile);
+        if(register) {
+            $('#profile').change(function(event) {
+                pypilot_set('profile', $('#profile').val());
+            });
+            
+            $('#add_profile').click(function(event) {
+                profile = prompt(_("Enter profile name."));
+                if(profile != null) {
+                    if(profiles.includes(profile))
+                        alert("Already have profile " + profile);
+                    else {
+                        profiles.push(profile);
+                        //pypilot_set('profiles', profiles);
+                        pypilot_set('profile', profile);
+                    }
                 }
-            }
-        });
+            });
 
-
-        $('#remove_profile').click(function(event) {
-            if(profiles.length > 1 && profile != "0") {
+            $('#remove_profile').click(function(event) {
                 if(!confirm(_("Remove current profile?")))
                     return;
                 new_profiles = []
@@ -168,8 +169,8 @@ $(document).ready(function() {
                     if(p != profile)
                         new_profiles.push(p);
                 pypilot_set('profiles', new_profiles);
-            }
-        });
+            });
+        }
         
         
         gains = [];
@@ -203,6 +204,7 @@ $(document).ready(function() {
 
         $('#gain_container').append('</select></div>')
 
+        if(register)
         $('#pilot').change(function(event) {
             pypilot_set('ap.pilot', $('#pilot').val());
             show_gains();
@@ -282,11 +284,14 @@ $(document).ready(function() {
         pypilot_watch('servo.flags');
 
         // install function handlers for configuration sliders/buttons
-        for (var handler in handlers)
-            if(touch)
-                $('#' + handler).click(handlers[handler], handlers[handler]['func']);
-            else
-                $('#' + handler).change(handlers[handler], handlers[handler]['func']);
+        if(register) {
+            for (var handler in handlers)
+                if(touch)
+                    $('#' + handler).click(handlers[handler], handlers[handler]['func']);
+                else
+                    $('#' + handler).change(handlers[handler], handlers[handler]['func']);
+        }
+        register=false;
 
         window_resize();        
             
@@ -473,6 +478,8 @@ $(document).ready(function() {
             $('#roll').text(data['imu.roll']);
         if('imu.alignmentCounter' in data)
             $('#levelprogress').width((100-data['imu.alignmentCounter'])+'%');
+        if('gps.alignmentCounter' in data)
+            $('#align_compassprogress').width((100-10*data['gps.alignmentCounter'])+'%');
         if('imu.heading_offset' in data)
             $('#imu_heading_offset').val(data['imu.heading_offset']);
         if('imu.accel.calibration.locked' in data)
@@ -624,6 +631,11 @@ $(document).ready(function() {
         return false;
     });
 
+    $('#align_compass').click(function(event) {
+        pypilot_set('gps.alignmentCounter', 10);
+        return false;
+    });
+    
     $('#imu_heading_offset').change(function(event) {
         pypilot_set('imu.heading_offset', $('#imu_heading_offset').val());
     });

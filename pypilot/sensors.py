@@ -199,6 +199,10 @@ class gps(Sensor):
 
         self.leeway_ground = self.register(SensorValue, 'leeway_ground')
         self.compass_error = self.register(SensorValue, 'compass_error')
+
+        self.declination = self.register(SensorValue, 'declination')
+        self.alignmentCounter = self.register(Property, 'alignmentCounter', 0)
+        self.last_alignmentCounter = False
         
         self.filtered = GPSFilterProcess(client)
         self.lastpredictt = time.monotonic()
@@ -212,9 +216,40 @@ class gps(Sensor):
         self.speed.set(data['speed'])
         if 'track' in data:
             self.track.set(data['track'])
+        if 'declination' in data:
+            self.declination.set(data['declination'])
+
         self.fix.set(data)
         self.filtered.update(data, time.monotonic())
 
+        if self.alignmentCounter.value > 0:
+            # initiated,  reset average
+            t0 = time.monotonic()
+            if self.alignmentCounter.value != last:
+                x, y, last = 0, 0, self.alignmentCounter.value, t0
+            else:
+                x, y, last, t = self.gps_alignment_track
+
+            if t0 - t > 20: # too long without gps
+                self.alignmentCounter.set(0)
+            else:
+                x+=math.sin(math.radians(self.track.value))
+                y+=math.cos(math.radians(self.track.value))
+                last -= 1
+                self.gps_alignment_track = x, y, last, t0
+                self.alignmentCounter.set(last)
+
+                if self.alignmentCounter.value == 0:  # alignment complete
+                    if x or y:
+                        avg_track = math.degrees(math.atan2(y, x))
+                        mag_track = avg_track
+                        if self.declination.value:
+                            mag_track -= self.declination
+                        heading = self.client.values.values['imu.heading']
+                        self.client.values.values['imu.heading_offset'].set(heading - mag_track)
+                    
+                self.gps_alignment_track = total, count, self.alignmentCounter.value
+            
         return True
 
     def predict(self, ap):

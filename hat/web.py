@@ -24,9 +24,7 @@ default_actions = \
      'starboard1':['ir03211800','ir03211000','KEY_DOWN','gpio22','rf7B1C2950','rf7B0C2950'],
      'select':['ir030B1000','ir030B1800','KEY_SELECT','gpio18','rf6F1C2950','rf6F0C2950'],
      'port10':['ir03111800','ir03111000','KEY_LEFT','gpio6','rf3F1C2950','rf3F0C2950'],
-     'starboard10':['ir03101800','ir03101000','KEY_RIGHT','gpio5','rf5F1C2950','rf5F0C2950'],
-     'tack':['gpio26','rf7F1C2910','rf7F0C2910']}
-
+     'starboard10':['ir03101800','ir03101000','KEY_RIGHT','gpio5','rf5F1C2950','rf5F0C2950']}
 
 try:
     from flask_babel import Babel, gettext
@@ -51,6 +49,7 @@ class WebConfig(Namespace):
         self.pipe = pipe
         self.config = config
         self.status = 'N/A'
+        self.profiles = False
 
         self.last_key = False
 
@@ -63,7 +62,7 @@ class WebConfig(Namespace):
         i = 0
         actions = config['actions']
         for name in actions:
-            if i == 8:
+            if i == 7:
                 acts[ind] += Markup('</tr></table>')
                 ind = 1
                 acts[ind] += Markup('<table border=0>')
@@ -72,7 +71,7 @@ class WebConfig(Namespace):
     
             if col == 0:
                 acts[ind] += Markup('<tr>')
-            acts[ind] += Markup('<td><button id="action_' + name + '">' +
+            acts[ind] += Markup('<td><button id="action_' + name.replace(' ', '') + '">' +
                            name + '</button></td><td><span id="action' +
                            name + 'keys"></span></td>')
             if col == cols-1:
@@ -160,9 +159,12 @@ class WebConfig(Namespace):
             keys = {'name': name, 'keys': keys}
             socketio.emit('action_keys', keys)
         self.pipe.send({'actions': actions})
-        
+
     def on_connect(self):
         self.emit_keys()
+        if self.profiles:
+            socketio.emit('profiles', self.profiles)
+
         print('web client connected', request.sid)
         socketio.emit('status', self.status)
 
@@ -196,10 +198,15 @@ class WebConfig(Namespace):
                     self.last_key = msg['key']
                     last_key_time = time.monotonic()
                 for name in msg:
-                    socketio.emit(name, str(msg[name]))
+                    d = msg[name]
+                    if name != 'profiles':
+                        d = str(d)
+                    socketio.emit(name, d)
                 if 'status' in msg:
                     self.status = msg['status']
-                    socketio.emit('status', self.status)
+                    #socketio.emit('status', self.status)
+                if 'profiles' in msg:
+                    self.profiles = msg['profiles']
 
 def web_process(pipe, config):
     print('web process', os.getpid())
