@@ -8,10 +8,10 @@
 SKETCHNAME = hat
 #DEVICE = /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
 #DEVICE = /dev/ttyAMA0
-DEVICE = /dev/spidev0.1:/dev/gpiochip0:16
+DEVICE = /dev/spidev0.1:/dev/gpiochip0:26
 
-MCU = atmega88p
-#MCU = atmega328p
+#MCU = atmega88p
+MCU = atmega328p
 
 ARDUINO_PATH = /usr/share/arduino/hardware/arduino/avr
 CC = avr-gcc
@@ -79,6 +79,16 @@ install: $(SKETCHNAME).cpp.hex
 
 setfuses:
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -b 10000  -Uefuse:w:0xfd:m -Uhfuse:w:0xDA:m -Ulfuse:w:0xFF:m -Ulock:w:0xff:m
+
+resetpin:
+	echo 26 > /sys/class/gpio/export || echo ok
+	echo in > /sys/class/gpio/gpio26/direction
+	echo 26 > /sys/class/gpio/unexport || echo ok
+
+prog:
+	make setfuses
+	make upload
+	sudo make resetpin
 
 serial:
 	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5 38400
