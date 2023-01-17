@@ -39,7 +39,7 @@ class ActionKeypad(Action):
         self.lcd.keypad(self.index, count)
         
 class ActionPypilot(Action):
-    def  __init__(self, hat, name, pypilot_name, pypilot_value):
+    def  __init__(self, hat, name, pypilot_name, pypilot_value=None):
         super(ActionPypilot, self).__init__(hat, name)
         self.pypilot_name = pypilot_name
         self.value = pypilot_value
@@ -47,7 +47,7 @@ class ActionPypilot(Action):
     def trigger(self, count):
         if self.hat.client and not count:
             self.hat.client.set(self.pypilot_name, self.value)
-
+            
 class ActionEngage(ActionPypilot):
     def  __init__(self, hat):
         super(ActionEngage, self).__init__(hat, 'engage', 'ap.enabled', True)
@@ -57,6 +57,17 @@ class ActionEngage(ActionPypilot):
         # set heading to current heading
         if self.hat.client and not count and 'ap.heading' in self.hat.last_msg:
             self.hat.client.set('ap.heading_command', self.hat.last_msg['ap.heading'])
+
+class ActionMode(ActionEngage):
+    def  __init__(self, hat, mode):
+        super(ActionMode, self).__init__(hat)
+        self.mode = mode
+
+    def trigger(self, count):
+        if self.hat.client and not count:
+            self.hat.client.set('ap.mode', self.mode)
+        
+        super(ActionMode, self).trigger(count)
             
 class ActionHeading(Action):
     def __init__(self, hat, offset):
@@ -66,6 +77,7 @@ class ActionHeading(Action):
     def trigger(self, count):
         if not self.hat.client:
             return
+
         if self.hat.last_msg['ap.enabled']:
             if not count:
                 if 'wind' in self.hat.last_msg['ap.mode']:
@@ -82,22 +94,51 @@ class ActionTack(ActionPypilot):
         super(ActionTack, self).__init__(hat, name, 'ap.tack.state', 'begin')
         self.direction = direction
                                 
-    def trigger(self):
-        if self.hat.client:
-            self.hat.client.set('ap.tack.direction', self.direction)
-        super(ActionTack, self).trigger()
+    def trigger(self, count):
+        if self.hat.client and not count:
+            state =  self.hat.last_msg['ap.tack.state']
+            if state == 'none':
+                self.hat.client.set('ap.tack.direction', self.direction)
+                self.hat.client.set('ap.tack.state', 'begin')
+            else:
+                direction =  self.hat.last_msg['ap.tack.direction']
+                if direction != self.direction: # cancel tack by tacking "other way"
+                    self.hat.client.set('ap.tack.state', 'none')
 
+class ActionDodge(ActionPypilot):
+    def  __init__(self, hat, name, direction):
+        super(ActionDodge, self).__init__(hat, name, 'servo.command')
+        self.direction = direction
+
+    def trigger(self, count):
+        if self.hat.client:
+            value = self.direction if count else 0
+            self.hat.client.set(self.pypilot_name, value)
+
+class ActionProfile(ActionPypilot):
+    def __init__(self, hat, index):
+        super(ActionProfile, self).__init__(hat, 'profile '+str(index), 'profile')
+        self.index = index
+
+    def trigger(self, count):
+        profiles = self.hat.last_msg['profiles']
+        if len(profiles) > self.index:
+            self.value = profiles[self.index]
+            super(ActionProfile, self).trigger(count)
+        
 class ActionProfileRelative(ActionPypilot):
     def __init__(self, hat, name, offset):
-        super(ActionProfileRelative, self).__init__(hat, name, 'profile', 0)
+        super(ActionProfileRelative, self).__init__(hat, name, 'profile')
         self.offset = offset
 
     def trigger(self, count):
-        try:
-            self.value = (self.hat.last_msg['profile'] + self.offset) % 5
-        except:
-            self.value = 0
-        super(ActionProfileRelative, self).set(count)
+        profile = self.hat.last_msg['profile']
+        profiles = self.hat.last_msg['profiles']
+
+        if profile in profiles:
+            index = (profiles.index(profile) + offset) % len(profiles)
+            self.value = profiles[index]
+            super(ActionProfileRelative, self).trigger(count)
         
 
 class Process():
@@ -277,11 +318,11 @@ class Hat(object):
 
         self.servo_timeout = time.monotonic() + 1
         
-        self.last_msg = {}
-        self.last_msg['ap.enabled'] = False
-        self.last_msg['ap.heading_command'] = 0
-        self.last_msg['ap.mode'] = ''
-        self.last_msg['profile'] = 0
+        self.last_msg = {'ap.enabled': False,
+                         'ap.heading_command': 0,
+                         'ap.mode': '',
+                         'profile': None,
+                         'profiles': []}
 
         if len(sys.argv) > 1:
             self.config['host'] = sys.argv[1]
@@ -300,7 +341,9 @@ class Hat(object):
         time.sleep(1)
         self.client = pypilotClient(host)
         self.client.registered = False
-        self.watchlist = ['ap.enabled', 'ap.heading_command', 'ap.mode', 'profile']
+        self.watchlist = ['ap.enabled', 'ap.heading_command', 'ap.mode']
+        self.watchlist += ['profile', 'profiles']
+        self.watchlist += ['ap.tack.state', 'ap.tack.direction']
 
         for name in self.watchlist:
             self.client.watch(name)
@@ -322,14 +365,14 @@ class Hat(object):
 
         # keypad for lcd interface
         self.actions = []
-        keypadnames = ['auto', 'menu', 'port1', 'starboard1', 'select', 'port10', 'starboard10', 'tack', 'dodge_port', 'dodge_starboard']
+        keypadnames = ['auto', 'menu', 'port1', 'starboard1', 'select', 'port10', 'starboard10']
         
         for i in range(len(keypadnames)):
             self.actions.append(ActionKeypad(self.lcd, i, keypadnames[i]))
 
         # stateless actions for autopilot control
         self.actions += [ActionEngage(self),
-                         ActionPypilot(self, 'disengage', 'ap.enabled', False),
+                         ActionPypilot(self, 'standby', 'ap.enabled', False),
                          ActionHeading(self,  1),
                          ActionHeading(self, -1),
                          ActionHeading(self,  2),
@@ -338,18 +381,20 @@ class Hat(object):
                          ActionHeading(self, -5),
                          ActionHeading(self,  10),
                          ActionHeading(self, -10),
-                         ActionPypilot(self, 'compassmode', 'ap.mode', 'compass'),
-                         ActionPypilot(self, 'gpsmode', 'ap.mode', 'gps'),
-                         ActionPypilot(self, 'windmode', 'ap.mode', 'wind'),
-                         ActionPypilot(self, 'truewindmode', 'ap.mode', 'truewind'),
+                         ActionMode(self, 'compass'),
+                         ActionMode(self, 'gps'),
+                         ActionMode(self, 'wind'),
+                         ActionMode(self, 'truewind'),                                    
                          ActionPypilot(self, 'center', 'servo.position', 0),
-                         ActionTack(self, 'tackport', 'port'),
-                         ActionTack(self, 'tackstarboard', 'starboard')
+                         ActionTack(self, 'tack_port', 'port'),
+                         ActionTack(self, 'tack_starboard', 'starboard'),
+                         ActionDodge(self, 'dodge_port', -1),
+                         ActionDodge(self, 'dodge_starboard', 1)
         ]
 
         # profiles
         for i in range(5):
-            self.actions.append(ActionPypilot(self, 'profile', 'profile', i))
+            self.actions.append(ActionProfile(self, i))
 
         self.actions += [ActionProfileRelative(self, 'profile+', 1),
                          ActionProfileRelative(self, 'profile-', -1)]
@@ -410,6 +455,10 @@ class Hat(object):
         signal.signal(signal.SIGCHLD, cleanup)
 
     def write_config(self):
+        actions = self.config['actions']
+        for name in list(actions):
+            if not actions[name] and name[:6] != 'pilot_':
+                del actions[name]
         try:
             f = open(self.configfilename, 'w')
             f.write(pyjson.dumps(self.config) + '\n')
@@ -518,6 +567,9 @@ class Hat(object):
         for name, value in msgs.items():
             self.last_msg[name] = value
 
+        if 'profiles' in msgs:
+            self.web.send({'profiles': msgs['profiles']})
+
         for i in [self.lcd, self.web]:
             i.poll()
         t3 = time.monotonic()
@@ -548,7 +600,6 @@ class Hat(object):
                 self.client.registered = True
 
             self.update_values()                    
-
         else:
             self.client.registered = False
             self.web.set_status('disconnected')

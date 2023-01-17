@@ -94,10 +94,17 @@ def parse_nmea_gps(line):
             lon = -lon
 
         speed = float(data[6]) if data[6] else 0
+
         gps = {'timestamp': ts, 'speed': speed, 'lat': lat, 'lon': lon}
         if data[7]:
             gps['track'] = float(data[7])
 
+        if data[9]:
+            decl = float(data[9])
+            if data[10] == 'W':
+                decl = -decl
+            gps['declination'] = decl
+            
     except Exception as e:
         print(_('nmea failed to parse gps'), line, e)
         return False

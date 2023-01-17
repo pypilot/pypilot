@@ -74,7 +74,7 @@ class LCD():
             
         default = {'contrast': 60, 'invert': False, 'backlight': 20,
                    'hue': 214, 'flip': False, 'language': 'en', 'bigstep': 10,
-                   'smallstep': 1, 'buzzer': 2};
+                   'smallstep': 1, 'buzzer': 2, 'buzzer_volume': 5};
 
         for name in default:
             if not name in self.config:
@@ -126,7 +126,11 @@ class LCD():
             
             from OpenGL.GLUT import glutKeyboardFunc, glutKeyboardUpFunc
             from OpenGL.GLUT import glutSpecialFunc, glutSpecialUpFunc
-            
+
+            from OpenGL.GLUT import glutLeaveMainLoop
+            self.leave = glutLeaveMainLoop
+
+
             glutKeyboardFunc(self.glutkeydown)
             glutKeyboardUpFunc(self.glutkeyup)
             glutSpecialFunc(self.glutspecialdown)
@@ -203,6 +207,10 @@ class LCD():
         if self.pipe:
             self.pipe.send((key, code))
 
+    def buzz(self, mode, duration, threshold):
+        if self.config['buzzer'] > threshold:
+            self.send('buzzer', (2, .1, self.lcd.config['buzzer_volume']))
+            
     def write_config(self):
         if micropython:
             from config_esp32 import write_config
@@ -229,7 +237,7 @@ class LCD():
     def glutkey(self, k, down=True):
         k = k.decode()
         if k == 'q' or ord(k) == 27:
-            exit(0)
+            self.leave()
         if k == ' ':
             key = AUTO
         elif k == '\n':

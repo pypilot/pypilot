@@ -172,8 +172,10 @@ class arduino(object):
         self.debug('nmea set baud', d)
         self.send(SET_BAUD, d)
 
-    def set_buzzer(self, mode, duration):
+    def set_buzzer(self, mode, duration, volume):
         duration = int(min(max(duration, 0), 2)*100)
+        if volume == 1:
+            mode |= 0x10
         self.send(SET_BUZZER, (mode, duration))
 
     def get_baud_rate(self):

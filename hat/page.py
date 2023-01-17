@@ -15,7 +15,7 @@ black = 0x00
 #white = ugfx.color(255, 255, 255)
 #black = ugfx.color(0, 0, 0)
 
-AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, DODGE_PORT, DODGE_STARBOARD, NUM_KEYS = range(11)
+AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, NUM_KEYS = range(8)
 
 class rectangle():
     def __init__(self, x, y, width, height):
@@ -273,9 +273,7 @@ class page(object):
     def testkeydown(self, key):
         k = self.lcd.keypad[key]
         if k.down:
-            if self.lcd.config['buzzer'] > 1:
-                self.lcd.send('buzzer', (1, .1))
-
+            self.lcd.buzz(1, .1, 1)
             k.down -= 1
             return True
         return False
@@ -326,15 +324,6 @@ class page(object):
             if self.prev:
                 return self.prev
             return control(self.lcd)
-
-        # these work from any page (even menu) to dodge
-        lcd = self.lcd
-        if lcd.keypad[DODGE_PORT].dt():
-            lcd.client.set('servo.command', -1)
-        elif lcd.keypad[DODGE_STARBOARD].dt():
-            lcd.client.set('servo.command', 1)           
-        elif self.testkeyup(DODGE_PORT) or self.testkeyup(DODGE_STARBOARD):
-            lcd.client.set('servo.command', 0)           
 
 class info(page):
     def __init__(self, num_pages=4):
@@ -482,7 +471,7 @@ class controlbase(page):
     def display(self, refresh):
         if refresh:
             self.box(rectangle(0, .92, 1, .1), black)
-            self.profile = '0'
+            self.profile = ''
             self.pilot = False
             self.wifi = False
             
@@ -506,7 +495,7 @@ class controlbase(page):
             else:
                 self.charging_blink = False
 
-        profile = self.last_val('profile')
+        profile = str(self.last_val('profile'))
         if self.profile != profile:
             self.profile = profile
             profilerect = rectangle(0, .92, .32, .09)
@@ -573,11 +562,20 @@ class control(controlbase):
         modes = self.last_val('ap.modes')
         if not mode in modes:
             return
+        index = modes.index(mode)
+
+        # flash the compass C if there are calibration warnings
+        if self.last_val('imu.compass.calibration.warning', default=False):
+            if int(time.monotonic()) % 2:
+                modes = list(modes)
+                for i in range(len(modes)):
+                    if modes[i] == 'compass':
+                        modes[i] = ' '
+
         if self.control['mode'] == mode and self.control['modes'] == modes:
             return # no need to refresh
         self.control['mode'] = mode
         self.control['modes'] = modes
-        index = modes.index(mode)
         if index < 2:
             rindex = index
             mindex = 0
@@ -696,8 +694,8 @@ class control(controlbase):
                     buzz = True
 
         if warning:
-            if buzz and self.lcd.config['buzzer'] > 0:
-                self.lcd.send('buzzer', (1, .1))
+            if buzz:
+                self.lcd.buzz(2, .1, 0)
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:
@@ -709,6 +707,11 @@ class control(controlbase):
             if self.control['heading_command'] != no_mode:
                 self.fittext(rectangle(0, .4, 1, .35), mode.upper() + ' ' + _('not detected'), True, black)
                 self.control['heading_command'] = no_mode
+        elif self.last_val('imu.warning'):
+            warning = self.last_val('imu.warning')
+            if self.control['heading_command'] != 'imu warning':
+                self.fittext(rectangle(0, .4, 1, .35), warning, True, black)
+                self.control['heading_command'] = 'imu warning'
         elif self.last_val('servo.controller') == 'none':
             if self.control['heading_command'] != 'no controller':
                 self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
@@ -776,6 +779,7 @@ class control(controlbase):
                 self.set('servo.command', 0) # stop
                 self.set('ap.enabled', False)
 
+
         if self.testkeydown(SELECT):
             # change mode
             modes = self.last_val('ap.modes')
@@ -791,21 +795,14 @@ class control(controlbase):
             self.set('ap.mode', next_mode)
             return
 
-        if self.testkeydown(TACK):
-            if self.last_val('ap.tack.state') == 'none':
-                t, direction = self.tack_hint
-                if time.monotonic() - t < 3:
-                    self.set('ap.tack.direction', 'starboard' if direction > 0 else 'port')
-                self.set('ap.tack.state', 'begin')
-            else:
-                self.set('ap.tack.state', 'none')
-            return
-                        
         if self.last_val('ap.enabled'):
             keys = {SMALL_STARBOARD : (0, 1),
                     SMALL_PORT      : (0, -1),
                     BIG_PORT        : (1, -1),
                     BIG_STARBOARD   : (1, 1)}
+            if self.last_val('ap.tack.state') != 'none':
+                
+                return
             key = None
             dt = 0
             for k in keys:

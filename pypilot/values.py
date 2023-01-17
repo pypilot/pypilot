@@ -96,7 +96,7 @@ class SensorValue(Value):
     def __init__(self, name, initial=False, fmt='%.3f', **kwargs):
         super(SensorValue, self).__init__(name, initial, **kwargs)
         self.directional = 'directional' in kwargs and kwargs['directional']
-        self.fmt = fmt # round to 3 places unless overrideen
+        self.fmt = fmt # round to 3 places unless overridden
 
         self.info['type'] = 'SensorValue'
         if self.directional:

@@ -214,7 +214,7 @@ class ServerProfiles(pypilotValue):
     def __init__(self, values):
         super(ServerProfiles, self).__init__(values, 'profiles', info = {'type': 'Value', 'persistent': True, 'writable': True})
         self.msg = 'new'
-        self.profiles = ['0']
+        self.profiles = ['default']
 
     def get_msg(self):
         if not self.msg or self.msg == 'new':
@@ -233,16 +233,17 @@ class ServerProfiles(pypilotValue):
         n, profiles = msg.rstrip().split('=', 1)
         try:
             profiles = pyjson.loads(profiles)
-            sprofiles = ['0']
+            sprofiles = []
             for profile in profiles:
-                if profile != '0':
-                    sprofiles.append(str(profile))
+                sprofiles.append(str(profile))
+            if not sprofiles:
+                profiles.append('default')  # ensure the default profile exists if there are no others
             self.profiles = sprofiles
             profile = self.server_values.values['profile']
 
-            # if current profile is removed switch to 0
+            # if current profile is removed switch to first profile
             if not profile.profile in self.profiles:
-                profile.set('profile=0\n', False)
+                profile.set('profile="' + profiles[0] + '"\n', False)
                 
         except Exception as e:
             print('pypilot server failed to set new visible profiles', e, msg)
@@ -254,7 +255,7 @@ class ServerProfiles(pypilotValue):
 class ServerProfile(pypilotValue):
     def __init__(self, values):
         super(ServerProfile, self).__init__(values, 'profile', info = {'type': 'Value', 'persistent': True, 'writable': True})
-        self.profile = '0'
+        self.profile = 'default'
         self.msg = 'new'
 
     def get_msg(self):
@@ -272,7 +273,8 @@ class ServerProfile(pypilotValue):
             strprofile.replace('"', '')
         except Exception as e:
             print('server bad profile', e, msg)
-            strprofile = '0'
+            return
+
         if strprofile != profile:
             msg = n + '="' + strprofile + '"\n'
 
@@ -430,7 +432,7 @@ class ServerValues(pypilotValue):
 
     def load_file(self, filename):
         profile = None
-        self.persistent_data = {None : {}, '0' : {}}
+        self.persistent_data = {None : {}, 'default' : {}}
         #print("load file",filename)
         f = open(filename)
         linei=0
