@@ -191,6 +191,7 @@ class LCD():
         self.last_msg = {}
         self.last_msg['gps.source'] = 'none'
         self.last_msg['wind.source'] = 'none'
+        self.last_msg['truewind.source'] = 'none'
         self.last_msg['ap.heading_command'] = 0
         
         if self.client:

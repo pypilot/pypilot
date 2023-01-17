@@ -636,6 +636,10 @@ def CalibrationProcess(cal_pipe, client):
         def debug_by_name(*args):
             s = ''
             for a in args:
+                try:
+                    s = '%.5f' % value
+                except Exception as e:
+                    pass
                 s += str(a) + ' '
             client.set('imu.'+name+'.calibration.log', s)
         return debug_by_name

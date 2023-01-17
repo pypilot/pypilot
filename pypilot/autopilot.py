@@ -28,23 +28,10 @@ import pilots
 def minmax(value, r):
     return min(max(value, -r), r)
 
-def compute_true_wind(water_speed, wind_speed, wind_direction):
-    rd = math.radians(wind_direction)
-    windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd) - water_speed
-    truewind = math.degrees(math.atan2(*windv))
-    #print( 'truewind', truewind, math.hypot(*windv))
-    return truewind
-
-def compute_true_wind_speed(water_speed, wind_speed, wind_direction):
-    rd = math.radians(wind_direction)
-    windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd) - water_speed
-    return math.hypot(*windv)
-
-
 class ModeProperty(EnumProperty):
     def __init__(self, name):
         self.ap = False
-        super(ModeProperty, self).__init__(name, 'compass', ['compass', 'gps', 'wind', 'true wind'], persistent=True)
+        super(ModeProperty, self).__init__(name, 'compass', ['compass', 'gps', 'nav', 'wind', 'true wind'], persistent=True)
 
     def set(self, value):
         # update the preferred mode when the mode changes from user
@@ -110,6 +97,9 @@ class Autopilot(object):
         self.timestamp = self.client.register(TimeStamp())
         self.starttime = time.monotonic()
         self.mode = self.register(ModeProperty, 'mode')
+        self.modes = self.register(JSONValue, 'modes', [])
+        self.modes.sensors = {}
+        self.gps_and_nav_modes = self.register(BooleanProperty, 'gps_and_nav_modes', True, persistent=True)
 
         self.preferred_mode = self.register(Value, 'preferred_mode', 'compass')
         self.lastmode = False    
@@ -153,10 +143,6 @@ class Autopilot(object):
 
         self.wind_compass_offset = HeadingOffset()
         self.true_wind_compass_offset = HeadingOffset()
-        self.true_wind_source = self.register(Value, 'true_wind_source', 'none')
-
-        self.wind_direction = self.register(SensorValue, 'wind_direction', directional=True)
-        self.wind_speed = 0
 
         self.runtime = self.register(TimeValue, 'runtime') #, persistent=True)
         self.timings = self.register(SensorValue, 'timings', False)
@@ -251,32 +237,26 @@ class Autopilot(object):
                 self.gps_compass_offset.update(gps_track - compass, d)
 
         if self.sensors.wind.source.value != 'none':
-            d = .005
-            wind_speed = self.sensors.wind.speed.value
-            self.wind_speed = (1-d)*self.wind_speed + d*wind_speed
-            # weight wind direction more with higher wind speed
-            d = .05*math.log(wind_speed/5.0 + 1.2)
-            wind_direction = resolv(self.sensors.wind.direction.value, self.wind_direction.value)
-            wind_direction = (1-d)*self.wind_direction.value + d*wind_direction
-            self.wind_direction.set(resolv(wind_direction))
-            self.wind_compass_offset.update(wind_direction + compass, d)
+            offset = resolv(self.sensors.wind.wdirection + compass, self.wind_compass_offset.value)
+            self.wind_compass_offset.update(offset, self.sensors.wind.wfactor)
 
+            boat_speed = None
             if self.sensors.water.source.value != 'none':
                 boat_speed = self.sensors.water.speed.value
-                self.true_wind_source.update('water')
+                if self.sensors.truewind.source.value == 'none':
+                    self.sensors.truewind.source.update('water+wind')
             elif self.sensors.gps.source.value != 'none':
                 boat_speed = self.gps_speed
-                self.true_wind_source.update('gps')
-            else:
-                self.true_wind_source.update('none')
+                if self.sensors.truewind.source.value == 'none':
+                    self.sensors.truewind.source.update('gps+wind')
+            if boat_speed != None:
+                self.sensors.truewind.update_from_apparent(boat_speed, self.sensors.wind.wspeed,
+                                                           self.sensors.wind.wdirection)
 
-            if self.true_wind_source.value != 'none':
-                true_wind = compute_true_wind(boat_speed, self.wind_speed,
-                                              self.wind_direction.value)
-                offset = resolv(true_wind + compass, self.true_wind_compass_offset.value)
-                d = .05
-                self.true_wind_compass_offset.update(offset, d)
-    
+        if self.sensors.truewind.source.value != 'none':
+            offset = resolv(self.sensors.truewind.wdirection + compass, self.true_wind_compass_offset.value)
+            self.true_wind_compass_offset.update(offset, self.sensors.truewind.wfactor)
+
     def fix_compass_calibration_change(self, data, t0):
         headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
         dt = min(t0 - self.lasttime, .25) # maximum dt of .25 seconds
@@ -335,7 +315,8 @@ class Autopilot(object):
         self.heading_error_int_time = t
         # int error +- 1, from 0 to 1500 deg/s
         self.heading_error_int.set(minmax(self.heading_error_int.value + \
-                                          (self.heading_error.value/1500)*dt, 1))          
+                                          (self.heading_error.value/1500)*dt, 1))
+
     def iteration(self):
         data = False
         t0 = time.monotonic()
@@ -376,7 +357,7 @@ class Autopilot(object):
             #print('autopilot failed to read imu at time:', time.monotonic(), period)
 
         t3 = time.monotonic()
-        if t3-t2 > period*2/3 and data:
+        if t3-t2 > period*2/3 and data and t2-self.starttime > 15:
             print('read imu running too _slowly_', t3-t2, period)
 
         self.fix_compass_calibration_change(data, t0)
@@ -384,6 +365,29 @@ class Autopilot(object):
 
         pilot = self.pilots[self.pilot.value] # select pilot
 
+        # compute available modes
+        s = self.sensors
+        sensors = {'gps': s.gps, 'apb': s.apb, 'wind': s.wind, 'truewind': s.truewind}
+        for sensor in sensors:
+            sensors[sensor] = sensors[sensor].source.value != 'none'
+        sensors['gps_and_nav_modes'] = self.gps_and_nav_modes.value
+        if sensors != self.modes.sensors: # available modes changed?
+            self.modes.sensors = sensors
+            modes = ['compass']
+            if sensors['gps']:
+                if self.gps_and_nav_modes.value:
+                    modes.append('gps')
+                elif not sensors['abp']:
+                    modes.append('gps')
+                if sensors['apb']:
+                    modes.append('nav')
+            if sensors['wind']:
+                modes.append('wind')
+            if sensors['truewind']:
+                modes.append('true wind')
+            self.modes.update(modes)
+                    
+                        
         self.adjust_mode(pilot)
         pilot.compute_heading()
         self.compute_heading_error(t0)
@@ -458,7 +462,7 @@ class Autopilot(object):
         #    self.watchdog_device.write('c')
 
         t6 = time.monotonic()
-        if t6-t0 > period:
+        if t6-t0 > period and t0-self.starttime > 5:
             print(_('autopilot iteration running too slow'), t6-t0)
 
         while True: # sleep remainder of period

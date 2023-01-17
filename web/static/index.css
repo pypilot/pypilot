@@ -38,6 +38,13 @@
 
 .center { text-align:center; }
 
+.button-centered {
+    margin: 0;
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, 0%);
+}
+
 #headerTab {
 	position: fixed;
 	z-index: 800;
@@ -89,14 +96,14 @@ body{
 
 
 /* progress */
-.myProgress {
+.progress {
     position: relative;
     width: 100%;
     height: 30px;
     background-color: grey;
 }
 
-.myBar {
+.bar {
     position: absolute;
     width: 0%;
     height: 100%;
@@ -115,9 +122,6 @@ body{
     overflow-x: hidden;
 }
 
-#configuration_container {
-    display:table;
-}
 
 .tabItem {
 	text-align: center;
@@ -132,9 +136,4 @@ body{
 .tabItem div {
 	overflow: hidden;
 	text-overflow: ellipsis;
-}
-
-body .heading_info {
-    display: flex;
-    align-items: center;
 }

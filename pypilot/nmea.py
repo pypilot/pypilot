@@ -141,8 +141,8 @@ def parse_nmea_wind(line):
     except Exception as e:
         print(_('nmea failed to parse wind'), line, e)
         return False
-        
-    return 'wind', msg
+
+    return ('wind', msg) if data[2] == 'R' else ('truewind', msg)
 
 def parse_nmea_rudder(line):
     if line[3:6] != 'RSA':
@@ -459,7 +459,7 @@ class Nmea(object):
 
             # limit output rate of wind and rudder
             t = time.monotonic()
-            for name in ['wind', 'rudder']:
+            for name in ['wind', 'truewind', 'rudder']:
                 source = self.sensors.sensors[name].source.value
                 # only output to tcp if we have a better source
                 if source_priority[source] >= source_priority['tcp']:
@@ -475,6 +475,9 @@ class Nmea(object):
                     if name == 'wind':
                         wind = self.sensors.wind
                         self.send_nmea('APMWV,%.3f,R,%.3f,N,A' % (wind.direction.value, wind.speed.value))
+                    elif name == 'truewind':
+                        wind = self.sensors.truewind
+                        self.send_nmea('APMWV,%.3f,T,%.3f,N,A' % (wind.direction.value, wind.speed.value))
                     elif name == 'rudder':
                         self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
                     period = 1/rate
@@ -485,8 +488,9 @@ class Nmea(object):
             self.nmea_bridge.poll()
         
         t6 = time.monotonic()
-        if t6 - t0 > .05 and t0-self.start_time > 1: # report times if processing takes more than 0.05 seconds
-            print('nmea poll times', t6-self.start_time, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t6-t0)
+        if t6 - t0 > .05 and t0-self.start_time > 10: # report times if processing takes more than 0.05 seconds
+            times = map(lambda t : round_value(t, '%.3f'), [t6-self.start_time, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t6-t0])
+            print('nmea poll times', *times)
             
     def probe_serial(self):
         # probe new nmea data devices
@@ -582,7 +586,8 @@ class nmeaBridge(object):
         self.client_socket_nmea_address = False
         self.nmea_client_connect_time = 0
         self.last_values = {}
-        keys = ['gps.source', 'wind.source', 'rudder.source', 'apb.source', 'water.source', 'gps.filtered.output']
+        keys = ['gps.source', 'wind.source', 'truewind.source', 'rudder.source',
+                'apb.source', 'water.source', 'gps.filtered.output']
         for k in keys:
             self.last_values[k] = 'none'                    
         for name in self.last_values:
@@ -604,7 +609,7 @@ class nmeaBridge(object):
         self.msgs = {}
 
     def setup_watches(self, watch=True):
-        watchlist = ['gps.source', 'wind.source', 'rudder.source', 'apb.source']
+        watchlist = ['gps.source', 'wind.source', 'truewind.source', 'rudder.source', 'apb.source']
         for name in watchlist:
             self.client.watch(name, watch)
 

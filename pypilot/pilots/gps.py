@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from pypilot.autopilot import HeadingOffset, resolv, compute_true_wind
+from pypilot.autopilot import HeadingOffset, resolv
 from pilot import AutopilotPilot, AutopilotGain
 from pypilot.values import *
 disabled = True
@@ -44,23 +44,14 @@ class GPSPilot(AutopilotPilot):
 
     # compute offset between wind and gps
     if sensors.wind.source.value != 'none':
-      d = .005
-      wind = ap.wind_direction.value
-      self.wind_gps_offset.update(wind_direction + gps_course, d)
+        offset = resolv(sensors.wind.wdirection + gps_course,
+                        self.wind_gps_offset.value)
+        self.wind_gps_offset.update(offset, sensors.wind.wfactor)
+    if sensors.truewind.source.value != 'none':
+        offset = resolv(sensors.truewind.wdirection + gps_course,
+                        self.true_wind_gps_offset.value)
+        self.true_wind_gps_offset.update(offset, sensors.truewind.wfactor)
 
-
-      if ap.true_wind_sensor.value == 'water':
-          boat_speed = sensors.water.speed
-      elif ap.true_wind_sensor.value == 'gps':
-          boat_speed = ap.gps_speed
-      else:
-          boat_speed = 0
-      true_wind = autopilot.compute_true_wind(boat_speed, ap.wind_speed,
-                                              ap.wind_direction.value)
-      offset = resolv(true_wind + gps_course, self.true_wind_gps_offset.value)
-      d = .05
-      self.true_wind_compass_offset.update(offset, d)
-      
     mode = ap.mode.value
     if mode == 'compass': # only if gps failed use compass
       compass = ap.boatimu.SensorValues['heading_lowpass'].value

@@ -1,3 +1,12 @@
+/*
+#   Copyright (C) 2023 Sean D'Epagnier
+#
+# This Program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.  
+*/
+
 /*============= Creating a canvas ======================*/
 var canvas = document.getElementById('canvas');
 gl = canvas.getContext('experimental-webgl');
@@ -346,7 +355,7 @@ $(document).ready(function() {
     socket.on('pypilot_values', function(msg) {
         //var list_values = JSON.parse(msg);
         $('#connection').text('Connected');
-        watches = ['.calibration', '.calibration.age'];
+        watches = ['.calibration', '.calibration.age', '.calibration.log'];
         for(var watch in watches)
             for(var plot in plots)
                 pypilot_watch('imu.' + plots[plot] + watches[watch]);
@@ -378,29 +387,36 @@ $(document).ready(function() {
     
     $('#accel').click(switch_plot);
     $('#compass').click(switch_plot);
-    
+
+    var calibration_log = {'accel': [], 'compass': []}
     socket.on('pypilot', function(msg) {
         data = JSON.parse(msg);
 
-        n = 'imu.accel.calibration';
-        if(n in data) {
-            accel_calibration = data[n][0];
-            $('#accel_calibration').text(data[n]);
-        }
+        for(s of ['accel', 'compass'])
+            for(n of ['', 'age', 'log']) {
+                name = 'imu.' + s + '.calibration';
+                id = '#'+s+'_calibration'
+                if(n) {
+                    name += '.' + n
+                    id += '_' + n
+                }
+                
+                if(name in data) {
+                    value = data[name];
+                    if(!n)
+                        value = value[0];
+                    if(n == 'log') {
+                        calibration_log[s].push(value);
+                        if(calibration_log.length > 4)
+                            calibration_log[s].shift();
+                        value = '';
+                        for(line of calibration_log[s])
+                            value += '<p>' + line + '</p>\n';
+                    }
+                    $(id).text(value);
+                }
+            }
 
-        n = 'imu.compass.calibration';
-        if(n in data) {
-            compass_calibration = data[n][0];
-            $('#compass_calibration').text(data[n]);
-        }
-
-        n = 'imu.accel.calibration.age';
-        if(n in data)
-            $('#accel_calibration_age').text(data[n]);
-
-        n = 'imu.compass.calibration.age';
-        if(n in data)
-            $('#compass_calibration_age').text(data[n]);
 
         if(current_plot == 'accel')
             calibration = accel_calibration;
