@@ -317,11 +317,6 @@ class Servo(object):
 
     def send_command(self):
         t = time.monotonic()
-
-        if not self.disengage_on_timeout.value:
-            self.disengaged = False
-
-        t = time.monotonic()
         dp = t - self.position_command.time
         dc = t - self.command.time
 

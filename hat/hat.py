@@ -404,7 +404,6 @@ class Hat(object):
             if name.startswith('pilot_'):
                 self.actions.append(ActionPypilot(self, name, 'ap.pilot', name.replace('pilot_', '', 1)))
 
-
         # useful to unassign a key
         self.actions.append(ActionNone())
 
