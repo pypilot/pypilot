@@ -263,11 +263,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 n = self.cProfile.FindString(profile)
                 if n >= 0:
                     self.cProfile.SetSelection(n)
-            if name == 'imu.warning':
+            elif name == 'imu.warning':
                 self.warning = value
                 if value:
                     self.stStatus.SetLabel(value)
-            if name == 'imu.compass.calibration.warning':
+            elif name == 'imu.compass.calibration.warning':
                 self.warning = value
                 if value:
                     self.stStatus.SetLabel(value)
