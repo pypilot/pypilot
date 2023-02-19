@@ -944,8 +944,6 @@ uint16_t TakeTemp(uint8_t index, uint8_t p)
         // R = 10k * v / (1024*16 - v)
 
         R = 10000 * v / (16384 - v);  // resistance in ohms
-
-        //  I accidentally put 100k resistors on board: R = 100000 * v / (16384 - v);  // resistance in ohms
     } else {
         // thermistors are 100k resistor to 5v, and 10k NTC to GND with 1.1v ref
         // V = 1.1 * v / 1024
@@ -1245,13 +1243,9 @@ void loop()
         WDTCSR = (1<<WDCE)|(1<<WDE);
         WDTCSR = (1<<WDIE) | (1<<WDP3) | (1<<WDP0);
         sei();
-#if 1 // power down not working because of noise?!?
         PCICR |= _BV(PCIE2); // pin change interrupt
         PCMSK2 = _BV(PD0); // rx
-        set_sleep_mode(SLEEP_MODE_PWR_DOWN);  // not working
-#else
-        set_sleep_mode(SLEEP_MODE_IDLE); // can wake from serial data
-#endif
+        set_sleep_mode(SLEEP_MODE_PWR_DOWN);
         sleep_enable();
         sleep_cpu();
         cli();
