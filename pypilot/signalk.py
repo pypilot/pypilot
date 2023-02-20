@@ -104,7 +104,6 @@ class ZeroConfProcess(multiprocessing.Process):
             last = p
 
 
-
 class signalk(object):
     def __init__(self, sensors=False):
         self.sensors = sensors
@@ -122,12 +121,15 @@ class signalk(object):
         self.last_access_request_time = 0
 
         self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('signalk pipe', self.multiprocessing)
+        self.zero_conf = ZeroConfProcess(self)
+        
         if self.multiprocessing:
             import multiprocessing
             self.process = multiprocessing.Process(target=self.process, daemon=True)
             self.process.start()
         else:
             self.process = False
+
 
     def setup(self):
         try:
@@ -162,7 +164,6 @@ class signalk(object):
         self.signalk_ws_url = False
         self.ws = False
 
-        self.zero_conf = ZeroConfProcess(self)
         self.initialized = True
         
 
@@ -307,7 +308,7 @@ class signalk(object):
             self.signalk_host_port = False
             self.disconnect_signalk()
         elif zc:
-            host_port = p
+            host_port = zc
             self.signalk_host_port = host_port
             print('signalk ' + _('server found'), host_port)
         
