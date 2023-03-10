@@ -23,10 +23,7 @@ class py_dep(dep):
         self.pip_only = pip_only
         super(py_dep, self).__init__(name)
 
-    def test(self, check=False):
-        if self.pip_only and not check:
-            return False
-
+    def test(self):
         remap = {'pil': 'PIL',
                  'gevent-websocket': 'geventwebsocket',
                  'flask-socketio': 'flask_socketio',
@@ -71,8 +68,13 @@ class sys_dep(dep):
     def __init__(self, name):
         super(sys_dep, self).__init__(name)
 
-    def test(self, check=False):
-        return not check # return true next time
+    def test(self):
+        try:
+            import apt
+            return apt.Cache()[self.name].is_installed
+        except Exception as e:
+            print("Failed to detect package", self.name, i)
+        return False
 
     def install(self):
         ret = os.system('sudo apt install -y ' + self.name)
@@ -153,7 +155,7 @@ class subsystem(object):
     def install(self):
         allok = True
         for dep in self.deps:
-            sys.stdout.write('checking for ' + dep.name + '...')
+            sys.stdout.write('checking for ' + dep.name + '... ')
             if dep.test():
                 print('done')
             else:
@@ -163,7 +165,7 @@ class subsystem(object):
                     print('failed to install', dep.name)
                     self.summary = 'failed to install ' + dep.name
                     success = False
-                elif dep.test(True):
+                elif dep.test():
                     print('install dependency', dep.name, 'success')
                 else:
                     print('dependency failed to install', dep.name)
@@ -208,7 +210,7 @@ ss('python_gui', 'python scripts for control and configuration',
    [sys_dep('python3-wxgtk4.0'), py_dep('opengl'), py_dep('pyglet'), py_dep('pywavefront')])
 
 ss('data', 'data files used by various pypilot components',
-   [data_dep()])
+   [data_dep(), sys_dep('gettext')])
 
 
 if os.path.basename(os.path.abspath(os.curdir)) != 'pypilot':

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2021 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -238,6 +238,7 @@ class Servo(object):
         # power usage
         self.voltage = self.register(SensorValue, 'voltage')
         self.current = self.register(SensorValue, 'current')
+        self.current.noise = self.register(SensorValue, 'current.noise')
         self.current.lasttime = time.monotonic()
         self.controller_temp = self.register(TimeoutSensorValue, 'controller_temp')
         self.motor_temp = self.register(TimeoutSensorValue, 'motor_temp')
@@ -256,6 +257,8 @@ class Servo(object):
 
         self.gain = self.register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
         self.clutch_pwm = self.register(RangeProperty, 'clutch_pwm', 100, 10, 100, persistent=True)
+        self.use_brake = self.register(BooleanProperty, 'use_brake', False, persistent=True)
+        self.brake_on = False
         
         self.period = self.register(RangeSetting, 'period', .4, .1, 3, 'sec')
         self.compensate_current = self.register(BooleanProperty, 'compensate_current', False, persistent=True)
@@ -349,12 +352,17 @@ class Servo(object):
     def do_command(self, speed):
         t = time.monotonic()
         dt = t - self.inttime
-        if not self.force_engaged:  # reset windup when not engaged
+        if self.force_engaged:  # reset windup when not engaged
+            self.disengaged = False
+        else:
             self.windup = 0
         self.inttime = t
 
         # if not moving or faulted stop
-        if not speed or self.fault():
+        if self.fault():
+            self.stop()
+
+        if not speed:
             #print('timeout', t - self.command_timeout)
             if self.disengage_on_timeout.value and \
                not self.force_engaged and \
@@ -367,10 +375,10 @@ class Servo(object):
         # prevent moving the wrong direction if flags set
         if self.flags.value & (ServoFlags.PORT_OVERCURRENT_FAULT | ServoFlags.MAX_RUDDER_FAULT) and speed > 0 or \
            self.flags.value & (ServoFlags.STARBOARD_OVERCURRENT_FAULT | ServoFlags.MIN_RUDDER_FAULT) and speed < 0:
-            self.raw_command(0)
+            self.stop()
             return # abort
 
-        # clear faults from overcurrent if moved sufficiently the other direction
+        # clear faults from over current if moved sufficiently the other direction
         rudder_range = self.sensors.rudder.range.value
         if self.position.value < .9*rudder_range:
             self.flags.clearbit(ServoFlags.PORT_OVERCURRENT_FAULT)
@@ -460,22 +468,36 @@ class Servo(object):
             command = -command
         self.raw_command(command)
 
-    def raw_command(self, command):
-        # compute duty cycle
-        lp = .001
-        self.duty.set(lp*int(not not command) + (1-lp)*self.duty.value)
+    def stop(self):
+        self.brake_on = False
+        self.do_raw_command(0)
+        self.lastdir = 0
+        self.state.update('stop')
 
-        self.rawcommand.set(command)
+    def raw_command(self, command):
+        # apply command before other calculations
+        self.brake_on = self.use_brake.value
+        self.do_raw_command(command)
+
         if command <= 0:
             if command < 0:
                 self.state.update('reverse')
                 self.lastdir = -1
             else:
                 self.speed.set(0)
-                self.state.update('idle')
+                if self.brake_on:
+                    self.state.update('brake')
+                else:
+                    self.state.update('idle')
         else:
             self.state.update('forward')
             self.lastdir = 1
+        
+    def do_raw_command(self, command):
+        self.rawcommand.set(command)
+        # compute duty cycle
+        lp = .001
+        self.duty.set(lp*int(not not command) + (1-lp)*self.duty.value)
 
         t = time.monotonic()
         if command == 0:
@@ -491,14 +513,14 @@ class Servo(object):
                 self.send_driver_params()
                 self.driver.disengage()
             else:
+                #print('servo write', command, time.monotonic())
+                self.driver.command(command)
+
                 mul = 1
                 if self.flags.value & ServoFlags.PORT_OVERCURRENT_FAULT or \
                    self.flags.value & ServoFlags.STARBOARD_OVERCURRENT_FAULT: # allow more current to "unstuck" ram
                     mul = 2
                 self.send_driver_params(mul)
-
-                #print('servo write', command, time.monotonic())
-                self.driver.command(command)
 
                 # detect driver timeout if commanded without measuring current
                 if self.current.value:
@@ -506,10 +528,10 @@ class Servo(object):
                     self.driver_timeout_start = 0
                 elif command:
                     if self.driver_timeout_start:
-                        if time.monotonic() - self.driver_timeout_start > 1:
+                        if t - self.driver_timeout_start > 1:
                             self.flags.setbit(ServoFlags.DRIVER_TIMEOUT)
                     else:
-                        self.driver_timeout_start = time.monotonic()
+                        self.driver_timeout_start = t
                         
     def reset(self):
         if self.driver:
@@ -552,7 +574,8 @@ class Servo(object):
                            self.speed.min.value,
                            self.speed.max.value,
                            self.gain.value,
-                           self.clutch_pwm.value)
+                           self.clutch_pwm.value,
+                           self.brake_on)
 
     def poll(self):
         if not self.driver:
@@ -626,6 +649,10 @@ class Servo(object):
                             'device': self.device.path}
                     self.sensors.write('rudder', data, 'servo')
         if result & ServoTelemetry.CURRENT:
+            if self.driver.current < self.current.noise.value*1.2:
+                self.driver.current = 0
+            elif self.driver.current and t - self.command_timeout > 3:
+                self.current.noise.update(min(max(self.current.noise.value, self.driver.current), 1))
             # apply correction
             corrected_current = self.current.factor.value*self.driver.current
             if self.driver.current:
@@ -772,7 +799,7 @@ def main():
     client = pypilotClient(server)
 
     from sensors import Sensors # for rudder feedback
-    sensors = Sensors(client)
+    sensors = Sensors(client, False)
     servo = Servo(client, sensors)
 
     period = .1

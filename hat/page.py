@@ -474,6 +474,8 @@ class controlbase(page):
         self.lcd = lcd
         self.batt = False
         self.wifi = False
+        self.pilot = False
+
         self.charging_blink = False
         self.charging_blink_time = 0
 
@@ -481,6 +483,7 @@ class controlbase(page):
         if refresh:
             self.box(rectangle(0, .92, 1, .1), black)
             self.wifi = False
+            self.pilot = False
             
         if self.lcd.battery_voltage:
             battrect = rectangle(0.03, .93, .25, .06)
@@ -501,16 +504,22 @@ class controlbase(page):
                     self.batt = 0
             else:
                 self.charging_blink = False
+
+        pilot = self.last_val('ap.pilot')
+        if self.pilot != pilot:
+            self.pilot = pilot
+            pilotrect = rectangle(0, .92, .6, .09)
+            self.fittext(pilotrect, pilot[:6])
                 
         wifi = test_wifi()
         if self.wifi == wifi and not refresh:
             return # done displaying
         self.wifi = wifi
-        wifirect = rectangle(.35, .92, .6, .09)
+        wifirect = rectangle(.65, .92, .3, .09)
         if wifi:
-            text = 'WIFI'
+            text = 'W'
             if self.lcd.host != 'localhost':
-                text += ' R'
+                text += 'R'
             self.fittext(wifirect, text)
         else:
             self.lcd.surface.box(*(self.convrect(wifirect) + [black]))
@@ -533,9 +542,13 @@ class control(controlbase):
         return self.last_val('ap.heading_command')
 
     def set_ap_heading_command(self, command):
-        while command < 0:
+        if 'wind' in self.control['mode']:
+            d = -180
+        else:
+            d = 0
+        while command < d:
             command += 360
-        while command >= 360:
+        while command >= d+360:
             command -= 360
         self.set('ap.heading_command', command)
         self.ap_heading_command = command
@@ -556,8 +569,8 @@ class control(controlbase):
         return self.last_val('wind.source') != 'none'
 
     def have_true_wind(self):
-        return self.have_gps() and self.have_wind()
-    
+        return self.last_val('truewind.source') != 'none'
+
     def display_mode(self):
         mode = self.last_val('ap.mode')
         modes = [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
@@ -665,12 +678,15 @@ class control(controlbase):
         # display warning about any servo faults
         flags = self.last_val('servo.flags').split()
         warning = ''
+        buzz = False
         for flag in flags:
             if flag.endswith('_FAULT'):
                 warning += flag[:-6].replace('_', ' ') + ' '
+                if 'OVER' in flag: # beep overtemp/overcurrent
+                    buzz = True
 
         if warning:
-            if self.lcd.config['buzzer'] > 1:
+            if buzz and self.lcd.config['buzzer'] > 0:
                 self.lcd.send('buzzer', (1, .1))
             warning = warning.lower()
             warning += 'fault'
@@ -682,7 +698,11 @@ class control(controlbase):
             if self.control['heading_command'] != 'no gps':
                 self.fittext(rectangle(0, .4, 1, .35), _('GPS not detected'), True, black)
                 self.control['heading_command'] = 'no gps'
-        elif (mode == 'wind' or mode == 'true wind') and not self.have_wind():
+        elif mode == 'wind' and not self.have_wind():
+            if self.control['heading_command'] != 'no wind':
+                self.fittext(rectangle(0, .4, 1, .35), _('WIND not detected'), True, black)
+                self.control['heading_command'] = 'no wind'
+        elif mode == 'true wind' and not self.have_true_wind():
             if self.control['heading_command'] != 'no wind':
                 self.fittext(rectangle(0, .4, 1, .35), _('WIND not detected'), True, black)
                 self.control['heading_command'] = 'no wind'
@@ -809,6 +829,9 @@ class control(controlbase):
                 if self.manualkeystate['change'] != change:
                     self.manualkeystate['change'] = change
                     sign = keys[key][1]
+                    if 'wind' in self.control['mode']:
+                        sign = -sign
+
                     change = float(change)
                     cmd = self.manualkeystate['command'] + sign*change
                     self.tack_hint = time.monotonic(), sign

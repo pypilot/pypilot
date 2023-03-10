@@ -457,6 +457,7 @@ void surface::box(int x1, int y1, int x2, int y2, uint32_t c)
 
     switch(bypp) {
     case 1:
+    if(x2 >= x1)
     {
         uint16_t t = c&0xff;
         for(int y = y1; y <= y2; y++)
@@ -797,7 +798,7 @@ public:
         unsigned char cmd[] = {
             0xe2, // Soft Reset
             0xc2, // Line scan sequence : from top to bottom
-            0x2c, // Boost 1
+//            0x2c, // Boost 1
             0x2e, // Boost 2
             0x2f, // Boost 3
             0xa2, // 1/9 bias ratio

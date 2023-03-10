@@ -68,6 +68,36 @@ class arduino(object):
         self.packetout_data = []
         self.packetin_data = []
 
+    def firmware(self):
+        if not self.hatconfig:
+            return
+
+        device = self.hatconfig['device']
+        if not device:
+            return
+
+        if device.startswith('/dev/spidev'):
+            # update flash if needed
+            filename = os.getenv('HOME') + '/.pypilot/hat.hex'
+            if not os.path.exists(filename):
+                print('hat firmware not in', filename)
+                print('skipping verification')
+            # try to verify twice because sometimes this fails
+            elif not self.verify(filename) and not self.verify(filename):
+                if not self.write(filename) or not self.verify(filename):
+                    print('failed to verify or upload', filename)
+                    #self.hatconfig['device'] = False # prevent retry
+                    #return
+            self.resetpin = self.hatconfig['resetpin']
+
+            try:
+                GPIO.setmode(GPIO.BCM)
+                GPIO.setup(int(self.resetpin), GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                pass
+            except Exception as e:
+                print('arduino failed to set reset pin high', e)
+                #return
+
     def open(self):
         if not self.hatconfig:
             return
@@ -77,45 +107,23 @@ class arduino(object):
             return
 
         try:
-            if device.startswith('/dev/spidev'):
-                # update flash if needed
-                filename = os.getenv('HOME') + '/.pypilot/hat.hex'
-                if not os.path.exists(filename):
-                    print('hat firmware not in', filename)
-                    print('skipping verification')
-                # try to verify twice because sometimes this fails
-                elif not self.verify(filename) and not self.verify(filename):
-                    if not self.write(filename) or not self.verify(filename):
-                        print('failed to verify or upload', filename)
-                        #self.hatconfig['device'] = False # prevent retry
-                        #return
-                self.resetpin = self.hatconfig['resetpin']
+            port, slave = int(device[11]), int(device[13])
+            print('arduino on spidev%d.%d' % (port, slave))
 
-                try:
-                    GPIO.setmode(GPIO.BCM)
-                    GPIO.setup(int(self.resetpin), GPIO.IN, pull_up_down=GPIO.PUD_UP)
-                    pass
-                except Exception as e:
-                    print('arduino failed to set reset pin high', e)
-                    #return
-                    
-                port, slave = int(device[11]), int(device[13])
-                print('arduino on spidev%d.%d' % (port, slave))
+            if False:
+                import spidev
+                self.spi = spidev.SpiDev()
+                self.spi.open(port, slave)
+                self.spi.max_speed_hz=100000
+            else:
+                from pypilot.hat.spireader import spireader
+                self.spi = spireader.spireader(10, 10)
+                if self.spi.open(port, slave, 100000) == -1:
+                    self.close()
 
-                if False:
-                    import spidev
-                    self.spi = spidev.SpiDev()
-                    self.spi.open(port, slave)
-                    self.spi.max_speed_hz=100000
-                else:
-                    from pypilot.hat.spireader import spireader
-                    self.spi = spireader.spireader(10, 10)
-                    if self.spi.open(port, slave, 100000) == -1:
-                        self.close()
-
-                if 'lcd' in self.config and 'backlight' in self.config['lcd']:
-                    self.set_backlight(self.config['lcd']['backlight'])
-                self.set_baud(self.config['arduino.nmea.baud'])
+            if 'lcd' in self.config and 'backlight' in self.config['lcd']:
+                self.set_backlight(self.config['lcd']['backlight'])
+            self.set_baud(self.config['arduino.nmea.baud'])
 
         except Exception as e:
             print('failed to communicate with arduino', device, e)

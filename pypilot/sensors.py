@@ -1,26 +1,32 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2022 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
+import math, datetime
+
 from client import *
 from values import *
 from resolv import resolv
 
 from gpsd import gpsd
+from gps_filter import *
 
-import math
+import quaternion
 
 # favor lower priority sources
-source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3, 'signalk' : 4, 'none' : 5}
+source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3,
+                   'signalk' : 4, 'gps+wind' : 5, 'water+wind' : 6, 'none' : 7}
 
 class Sensor(object):
     def __init__(self, client, name):
         self.source = client.register(StringValue(name + '.source', 'none'))
+        if name != 'apb':
+            self.rate = client.register(RangeProperty(name + '.rate', 4, 0, 50))
         self.lastupdate = 0
         self.device = None
         self.name = name
@@ -36,11 +42,10 @@ class Sensor(object):
            data['device'] != self.device:
             return False
 
-        #timestamp = data['timestamp'] if 'timestamp' in data else time.monotonic()-self.starttime
         self.update(data)
                 
         if self.source.value != source:
-            print(_('sensor found'), self.name, source, data['device'])
+            print(_('sensor found'), self.name, source, data['device'], time.asctime(time.localtime(time.time())))
             self.source.set(source)
             self.device = data['device']
         self.lastupdate = time.monotonic()
@@ -56,9 +61,9 @@ class Sensor(object):
     def register(self, _type, name, *args, **kwargs):
         return self.client.register(_type(*([self.name + '.' + name] + list(args)), **kwargs))
 
-class Wind(Sensor):
-    def __init__(self, client, boatimu):
-        super(Wind, self).__init__(client, 'wind')
+class BaseWind(Sensor):
+    def __init__(self, client, name, boatimu):
+        super(BaseWind, self).__init__(client, name)
 
         self.boatimu = boatimu
 
@@ -66,16 +71,19 @@ class Wind(Sensor):
         self.speed = self.register(SensorValue, 'speed')
         self.offset = self.register(RangeSetting, 'offset', 0, -180, 180, 'deg')
         self.compensation_height = self.register(RangeProperty, 'sensors_height', 0, 0, 100, persistent=True)
+        self.wspeed = 0
+        self.wdirection = 0
+        self.wfactor = 0
 
     def update(self, data):
         if 'direction' in data:
             data['direction'] += self.offset.value
 
-        if self.compensation_height.value and 'direction' in data and 'speed' in data:
+        if self.compensation_height.value and 'direction' in data and 'speed' in data and self.boatimu:
             # use imu boat motion to compensate wind reading
             # compute apparent wind at sensor height from pitch and roll rates
             # for this to work, the heading alighment must be correct
-            # for now just use roll an pitch, eventually also accelerations?
+            # for now just use roll and pitch, eventually also accelerations?
 
             # convert input data into rectangular with y along boat forward direction
             speed = data['speed']
@@ -84,8 +92,8 @@ class Wind(Sensor):
             dy = speed*math.cos(math.radians(direction))
 
             m = math.radians(self.compensation_height.value)
-            dx -= m * self.boatimu.SensorValues['rollrate'] # is this positive or negative?!?
-            dy -= m * self.boatimu.SensorValues['pitchrate']
+            dx -= m * self.boatimu.SensorValues['rollrate'].value # is this positive or negative?!?
+            dy -= m * self.boatimu.SensorValues['pitchrate'].value
 
             data['speed'] = math.hypot(dx, dy)
             data['direction'] = math.degrees(math.atan2(dx, dy))
@@ -95,10 +103,48 @@ class Wind(Sensor):
             self.direction.set(resolv(data['direction']))
         if 'speed' in data:
             self.speed.set(data['speed'])
+        self.weight()
 
     def reset(self):
         self.direction.set(False)
         self.speed.set(False)
+
+    def weight(self):
+        d = .005
+        wspeed = self.speed.value
+        self.wspeed = (1-d)*self.wspeed + d*wspeed
+        # weight wind direction more with higher wind speed
+        d = .05*math.log(wspeed/5.0 + 1.2)
+        wdirection = resolv(self.direction.value, self.wdirection)
+        wdirection = (1-d)*self.wdirection + d*wdirection
+        self.wdirection = resolv(wdirection)
+        self.wfactor = d
+
+class Wind(BaseWind):
+    def __init__(self, client, boatimu):
+        super(Wind, self).__init__(client, 'wind', boatimu)
+
+class TrueWind(BaseWind):
+    def __init__(self, client, boatimu):
+        super(TrueWind, self).__init__(client, 'truewind', boatimu)
+
+    def compute_true_wind(water_speed, wind_speed, wind_direction):
+        rd = math.radians(wind_direction)
+        windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd) - water_speed
+        return math.hypot(*windv)
+
+    @staticmethod
+    def compute_true_wind_speed(water_speed, wind_speed, wind_direction):
+        rd = math.radians(wind_direction)
+        windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd) - water_speed
+        return math.hypot(*windv)
+
+    def update_from_apparent(self, boat_speed, wind_speed, wind_direction):
+        if self.source.value == 'water+wind' or self.source.value == 'gps+wind':
+            self.direction.set(TrueWind.compute_true_wind(boat_speed, wind_speed, wind_direction))
+            self.wdirection = self.direction.value
+            self.wfactor = .05
+            self.lastupdate = time.monotonic()
 
 class APB(Sensor):
     def __init__(self, client):
@@ -151,20 +197,129 @@ class gps(Sensor):
         super(gps, self).__init__(client, 'gps')
         self.track = self.register(SensorValue, 'track', directional=True)
         self.speed = self.register(SensorValue, 'speed')
-        self.lat = self.register(SensorValue, 'lat', fmt='%.11f')
-        self.lon = self.register(SensorValue, 'lon', fmt='%.11f')
+        self.fix = self.register(JSONValue, 'fix', False)
+
+        self.leeway_ground = self.register(SensorValue, 'leeway_ground')
+        self.compass_error = self.register(SensorValue, 'compass_error')
+        
+        self.filtered = GPSFilterProcess(client)
+        self.lastpredictt = time.monotonic()
+
+        self.rate.set(1.0)
 
     def update(self, data):
+        if 'fix' in data: # flatten if needed
+            data.update(data['fix'])
+            del data['fix']
         self.speed.set(data['speed'])
         if 'track' in data:
             self.track.set(data['track'])
-        if 'lat' in data and 'lon' in data:
-            self.lat.set(data['lat'])
-            self.lon.set(data['lon'])
+        self.fix.set(data)
+        self.filtered.update(data, time.monotonic())
+
+    def predict(self, ap):
+        if self.source.value == 'none':
+            return
+
+        accel = ap.boatimu.SensorValues['accel'].value
+        fusionQPose = ap.boatimu.SensorValues['fusionQPose'].value
+        if accel and fusionQPose:
+            self.filtered.predict(accel, fusionQPose, time.monotonic())
 
     def reset(self):
         self.track.set(False)
         self.speed.set(False)
+
+
+# water speed and leeway sensor
+class Water(Sensor):
+    def __init__(self, client):
+        super(Water, self).__init__(client, 'water')
+
+        self.speed = self.register(SensorValue, 'speed')
+        self.leeway = self.register(SensorValue, 'leeway')
+        self.leeway.source = self.register(Value, 'leeway.source', 'none')
+
+        self.last_leeway_measurement = 0
+
+        self.current_speed = self.register(SensorValue, 'current.speed')
+        self.current_direction = self.register(SensorValue, 'current.direction')
+
+        self.water_wind_speed = self.register(SensorValue, 'wind.speed')
+        self.water_wind_direction = self.register(SensorValue, 'wind.direction')
+
+    def update(self, data):
+        t = time.monotonic()
+        if 'leeway' in data:
+            self.leeway.set(data['leeway'])
+            self.leeway_source.update('sensor')
+            self.last_leeway_measurement = t
+        if 'speed' in data:
+            self.speed.set(data['speed'])
+
+    def compute(self, ap):
+        if self.source.value == 'none':
+            self.leeway.source.update('none')
+            return
+
+        return # disable until further testing
+
+        t = time.monotonic()
+        if t-self.last_leeway_measurement > 3:
+            heel = ap.boatimu.heel
+            K = 5 # need to calibrate from gps when user indicates there are no currents
+            spd2 = self.speed.value**2
+            if spd2 > 2:
+                self.leeway.set(K*heel/spd2)
+            self.leeway.source.update('computed')
+
+        # estimate currents over ground
+        gps = ap.sensors.gps
+        if gps.source.value != 'none':
+            speed = gps.filtered.speed
+            rtrack = math.radians(gps.filtered.track)
+            vg_north = speed*math.cos(rtrack)
+            vg_east = speed*math.sin(rtrack)
+
+            heading = ap.boatimu.SensorValues['heading_lowpass'].value
+            declination = gps.filtered.declination.value
+            compass_error = gps.filtered.compass_error.value
+
+            direction_true = heading + declination + compass_error + self.leeway.value
+            rdirection = math.radians(direction_true)
+            water_speed = self.speed.value
+
+            vw_north = water_speed*math.cos(rdirection)
+            vw_east = water_speed*math.sin(rdirection)
+
+            c_north = vg_north - vw_north
+            c_east = vg_east - vw_east
+
+            self.current_speed.set(math.hypot(c_north, c_east))
+            self.current_direction.set(resolv(math.degrees(math.atan2(c_north, c_east)), 180))
+
+        # estimate relative true wind over water
+        wind = ap.sensors.wind
+        if wind.source.value != 'none':
+            awa = wind.direction.value
+            aws = wind.speed.value
+
+            heading = ap.boatimu.SensorValues['heading_lowpass'].value
+            declination = gps.filtered.declination.value
+            compass_error = gps.filtered.compass_error.value
+
+            ra = math.radians(awa - self.leeway.value)
+            vya = aws*math.cos(ra) - self.speed.value
+            vxa = aws*math.sin(ra)
+
+            self.water_wind_speed.set(math.hypot(vya, vxa))
+            self.water_wind_direction.set(math.degrees(math.atan2(vya, vxa)))
+            
+
+    def reset(self):
+        self.direction.set(False)
+        self.leeway.set(False)
+        
 
 class Sensors(object):
     def __init__(self, client, boatimu):
@@ -182,10 +337,13 @@ class Sensors(object):
         # actual sensors supported
         self.gps = gps(client)
         self.wind = Wind(client, boatimu)
+        self.truewind = TrueWind(client, boatimu)
         self.rudder = Rudder(client)
         self.apb = APB(client)
+        self.water = Water(client)
 
-        self.sensors = {'gps': self.gps, 'wind': self.wind, 'rudder': self.rudder, 'apb': self.apb}
+        self.sensors = {'gps': self.gps, 'wind': self.wind, 'truewind': self.truewind,
+                        'rudder': self.rudder, 'apb': self.apb, 'water': self.water}
 
     def poll(self):
         self.nmea.poll()
@@ -203,7 +361,7 @@ class Sensors(object):
                 self.lostsensor(sensor)
 
     def lostsensor(self, sensor):
-        print('sensor', sensor.name, 'lost', sensor.source.value, sensor.device)
+        print('sensor lost', sensor.name, sensor.source.value, sensor.device, time.asctime(time.localtime(time.time())))
         sensor.source.set('none')
         sensor.reset()
         sensor.device = None

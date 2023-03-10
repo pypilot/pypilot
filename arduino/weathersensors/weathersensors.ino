@@ -1,4 +1,4 @@
-/* Copyright (C) 2021 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2022 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -35,26 +35,41 @@ extern "C" {
   #include <twi.h>
 }
 
-#define NONE      0 
+#define NONE       0
 #define NOKIA5110L 1
-#define JLX12864G 2
+#define JLX12864G  2
 
 //#define LCD NONE
 //#define LCD NOKIA5110L
 #define LCD JLX12864G
 
-#if LCD == NOKIA5110L
-#include "PCD8544.h"
-static PCD8544 lcd(13, 11, 8, 7, 4);
-#elif LCD == JLX12864G
-#include "JLX12864.h"
-static JLX12864 lcd(13, 11, 8, 7, 4);
-#define LCD_BL_HIGH
+const int analogLightPin = A6;
+const int adcLightChannel = 6;
+const int analogWinddirPin = A7;
+const int adcWinddirChannel = 7;
+
+const int digitalWindspeedPin = 2;
+const int digitalKey0Pin = 5;
+const int digitalKey1Pin = 6;
+const int digitalLcdResetPin = 7;
+const int digitalLcdDcPin = 8;
+const int analogBacklightPin = 9;
+#if defined(__AVR_ATmega32__)
+const int analogWinddirPullupPin = A7;
+const int digitalLedsPin = 19;
+#else
+const int analogWinddirPullupPin = 3;
+const int digitalLedsPin = 17;
 #endif
 
-const int analogInPin = A7;  // Analog input pin that the potentiometer is attached to
-const int analogLightPin = A6;
-const int analogBacklightPin = 9;
+#if LCD == NOKIA5110L
+#include "PCD8544.h"
+static PCD8544 lcd(SCK, MOSI, digitalLcdDcPin, digitalLcdResetPin, 99);
+#elif LCD == JLX12864G
+#include "JLX12864.h"
+static JLX12864 lcd(SCK, MOSI, digitalLcdDcPin, digitalLcdResetPin, 99);
+#define LCD_BL_HIGH
+#endif
 
 int16_t cross_count = 0; // set to calibrate
 
@@ -108,7 +123,7 @@ const uint32_t plot_times[3] = {60000L*5/history_len, 60000L*60/history_len, 600
 
 void bmX280_setup()
 {
-    Serial.println(PSTR("bmX280 setup"));
+    Serial.println(F("bmX280 setup"));
 
     // NOTE:  local version of twi does not enable pullup as
     // bmX_280 device is 3.3v and arduino runs at 5v
@@ -129,10 +144,11 @@ void bmX280_setup()
 
     if(twi_writeTo(0x76, d, 1, 1, 1) == 0 &&
        twi_readFrom(0x76, d, 1, 1) == 1 &&
-       d[0] == 0x58)
+       d[0] == 0x58) {
         have_bmp280 = 1;
+    }
     else {
-        Serial.print(PSTR("bmp280 not found: "));
+        Serial.print(F("bmp280 not found: "));
         Serial.println(d[0]);
         // attempt reset command
         //d[0] = 0xe0;
@@ -143,12 +159,14 @@ void bmX280_setup()
     }
 
     d[0] = 0x88;
-    if(twi_writeTo(0x76, d, 1, 1, 1) != 0)
+    if(twi_writeTo(0x76, d, 1, 1, 1) != 0) {
+        Serial.println(F("bmp280 F1"));
         have_bmp280 = 0;
+    }
 
     uint8_t c = twi_readFrom(0x76, d, 24, 1);
     if(c != 24) {
-        Serial.println(PSTR("bmp280 failed to read calibration"));
+        Serial.println(F("bmp280 failed to read calibration"));
         have_bmp280 = 0;
     }
       
@@ -165,7 +183,7 @@ void bmX280_setup()
     dig_P8 = d[20] | d[21] << 8;
     dig_P9 = d[22] | d[23] << 8;
 
-  
+    
 #if 0
     Serial.println("bmp280 pressure compensation:");
     Serial.println(dig_T1);
@@ -185,8 +203,10 @@ void bmX280_setup()
     // b00011111  // configure
     d[0] = 0xf4;
     d[1] = 0xff;
-    if(twi_writeTo(0x76, d, 2, 1, 1) != 0)
+    if(twi_writeTo(0x76, d, 2, 1, 1) != 0) {
+        Serial.println(F("bmp280 F2"));
         have_bmp280 = 0;
+    }
 }
 
 volatile unsigned int rotation_count;
@@ -194,7 +214,7 @@ volatile uint16_t lastperiod;
 
 void isr_anemometer_count()
 {
-    uint8_t pin = digitalRead(2);
+    uint8_t pin = digitalRead(digitalWindspeedPin);
 //    Serial.print("read:  ");
 //      Serial.println(pin);
 
@@ -224,19 +244,21 @@ void isr_anemometer_count()
 void apply_settings()
 {
     if(eeprom_data.sensor_type)
-        pinMode(3, INPUT); // do not use pullup for potentiometer style
-    else // apply weak pullup to input wind direction to detect if wire is disconnected
-        pinMode(3, INPUT_PULLUP);
+        // do not use pullup for potentiometer style
+        pinMode(analogWinddirPullupPin, INPUT);
+    else
+        // apply weak pullup to input wind direction to detect if wire is disconnected
+        pinMode(analogWinddirPullupPin, INPUT_PULLUP);
 
 #if LCD
     lcd.flip = eeprom_data.display_orientation;
 #endif
     if(eeprom_data.leds_on) {
-        pinMode( A3, OUTPUT);
-        digitalWrite(A3, HIGH);
-    } else {        
-        digitalWrite(A3, LOW);
-        pinMode( A3, INPUT);
+        pinMode(digitalLedsPin, OUTPUT);
+        digitalWrite(digitalLedsPin, HIGH);
+    } else {
+        digitalWrite(digitalLedsPin, LOW);
+        pinMode(digitalLedsPin, INPUT);
     }
 }
         
@@ -246,7 +268,7 @@ volatile uint8_t calculated_clock = 0; // must be volatile to work correctly
 
 void setup()
 {
-#if 1
+#if !defined(__AVR_ATmega32__)
     cli();
     CLKPR = _BV(CLKPCE);
     CLKPR = _BV(CLKPS1); // divide clock by 4
@@ -267,26 +289,26 @@ void setup()
     uint8_t div = 1;
     if(clock_time < 2900)
         div=2; // xtal is 8mhz
-#endif
 
     cli();
     CLKPR = _BV(CLKPCE);
     CLKPR = 0; // divide by 1
     sei();
+#endif
     
     // set up watchdog again
     cli();
+#if !defined(__AVR_ATmega32__)
     WDTCSR = (1<<WDCE) | (1<<WDE);
     WDTCSR = (1<<WDIE) | (1<<WDP2) | (1<<WDP1); // interrupt in 1 second
-
+#else
+    WDTCR = (1<<WDE) | (1<<WDP2) | (1<<WDP1); // reset in 1 second
+#endif
     sei();
 
     Serial.begin(38400);  // start serial for output
 #if 0
-    Serial.print(PSTR("STARTUP\n"));
-    Serial.print(clock_time);
-    Serial.print(PSTR(" "));
-    Serial.println(div);
+    Serial.print(F("STARTUP\n"));
 #endif
     // default values
   
@@ -326,24 +348,24 @@ void setup()
     else
         Serial.println(F("pypilot"));
 
-    Serial.print(F("Wind Offset:"));
+    Serial.print(F("Wind Off:"));
     Serial.println(eeprom_data.wind_offset);
 
-    Serial.print(F("Barometer Offset:"));
+    Serial.print(F("Baro Off:"));
     Serial.println(eeprom_data.barometer_offset);
     
-    Serial.print(F("Temperature Offset:"));
+    Serial.print(F("Temp Off:"));
     Serial.println(eeprom_data.temperature_offset);
     
     if(eeprom_data.wind_min_reading > 0 && // ensure somewhat sane range
        eeprom_data.wind_max_reading < 1024 &&
        eeprom_data.wind_min_reading < eeprom_data.wind_max_reading-100) {
-        Serial.print(F("Calibration valid  "));
+        Serial.print(F("Cal valid  "));
         Serial.print(eeprom_data.wind_min_reading);
         Serial.print(F("  "));
         Serial.println(eeprom_data.wind_max_reading);
     } else {
-        Serial.print(F("Warning: calibration invalid, resetting it"));
+        Serial.println(F("Warning: cal invalid"));
         eeprom_data.wind_min_reading = 118;
         eeprom_data.wind_max_reading = 901;
     }
@@ -351,23 +373,33 @@ void setup()
     // read fuses, and report this as flag if they are wrong
     uint8_t lowBits      = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
     uint8_t highBits     = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
+#if defined(__AVR_ATmega32__)
+    if(lowBits != 0x3f || highBits != 0xc6)
+#else
     uint8_t extendedBits = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
     //uint8_t lockBits     = bcdoot_lock_fuse_bits_get(GET_LOCK_BITS);
     if(lowBits != 0xFF || highBits != 0xda ||
        (extendedBits != 0xFD && extendedBits != 0xFC)
-       //|| lockBits != 0xCF
-        )
-        Serial.print(F("Warning, fuses set wrong, flash may become corrupted"));
-
+       /*|| lockBits != 0xCF*/ )
+#endif
+    {
+        Serial.print(lowBits);
+        Serial.print(F(" "));
+        Serial.print(highBits);
+        Serial.print(F(" "));
+        //Serial.println(extendedBits);
+        Serial.println(F("Warning, fuses set wrong, flash may become corrupted"));
+    }
+    
     bmX280_setup();
-
+    
     attachInterrupt(0, isr_anemometer_count, CHANGE);
-    pinMode(analogInPin, INPUT);
-    pinMode(2, INPUT_PULLUP);
+    pinMode(analogWinddirPin, INPUT);
+    pinMode(digitalWindspeedPin, INPUT_PULLUP);
 
     apply_settings();
     
-    ADMUX = _BV(REFS0) | 6;
+    ADMUX = _BV(REFS0) | adcLightChannel;
     ADCSRA |= _BV(ADIE);
     ADCSRA |= _BV(ADSC);   // Set the Start Conversion flag.
 
@@ -378,10 +410,10 @@ void setup()
     lcd.begin();
 #endif
     
-    pinMode( analogLightPin, INPUT);
+    pinMode(analogLightPin, INPUT);
     // enable pullups on buttons
-    pinMode( 5, INPUT_PULLUP);
-    pinMode( 6, INPUT_PULLUP);
+    pinMode(digitalKey0Pin, INPUT_PULLUP);
+    pinMode(digitalKey1Pin, INPUT_PULLUP);
 
     for(int i=0; i<3; i++) {
         baro_history[i].data[history_len-1] = -127;
@@ -389,6 +421,7 @@ void setup()
     }
 }
 
+#if !defined(__AVR_ATmega32__)
 ISR(WDT_vect)
 {
     wdt_reset();
@@ -401,6 +434,7 @@ ISR(WDT_vect)
     delay(1);
     asm volatile ("ijmp" ::"z" (0x0000)); // soft reset
 }
+#endif
 
 static volatile uint8_t adcchannel;
 static volatile uint32_t adcval[4];
@@ -415,7 +449,7 @@ ISR(ADC_vect)
         // backlight sensor
         if(adcchannel == 0 && adccount[0] >= 1) {
             adcval[0] = adcw;
-            ADMUX = _BV(REFS0) | 7, adcchannel = 1;
+            ADMUX = _BV(REFS0) | adcWinddirChannel, adcchannel = 1;
         }
     } else {
         uint8_t b = adcw < 448 ? 1 : adcw < 576 ? 2 : 3;
@@ -477,8 +511,8 @@ void send_nmea(const char *buf)
     const char *fmt;
     uint8_t ck;
     if(eeprom_data.sensor_type == 0) {
-        fmt = PSTR("$PY%s*%02x\r\n");
-        ck = 0x09; // 'P' ^ 'Y'
+        fmt = PSTR("$QY%s*%02x\r\n");
+        ck = 0x08; // 'Q' ^ 'Y'
     } else {
         fmt = PSTR("$AR%s*%02x\r\n");
         ck = 0x13; // 'A' ^ 'R'
@@ -593,13 +627,11 @@ void read_anemometer()
         adcval[i] = 0;
         adccount[i] = -4;
     }
-
 #if LCD
     // read from backlight sense
-    adcchannel = 0;
-    ADMUX = _BV(REFS0) | 6;
+    ADMUX = _BV(REFS0) | adcLightChannel, adcchannel = 0;
 #else
-    ADMUX = _BV(REFS0) | 7, adcchannel = 1;
+    ADMUX = _BV(REFS0) | adcWinddirChannel, adcchannel = 1;
 #endif
     sei();
 
@@ -609,12 +641,14 @@ void read_anemometer()
     if(cross_count)
         calibrate_wind_direction(val, count);
     
-    int16_t sensorValue = -1;
-    if((count[0] > 0) + (count[1] > 0) + (count[2] > 0) != 1) {
+    int16_t sensorValue = -1, i;
+    if((count[0] > 0) && (count[2] > 0)) {
+        if(count[1] > 0) // invalid
+            return;
         // crossed zero
         sensorValue = eeprom_data.wind_min_reading;
     } else {
-        for(int i=0; i<3; i++)
+        for(i=0; i<3; i++)
             if(count[i] > 0) {
                 sensorValue = val[i] / count[i]; // average data                
                 break;
@@ -682,19 +716,25 @@ void read_anemometer()
     rotation_count = 0;
     lastperiod = 0;
     sei();
-        
+
     static uint16_t nowindcount;
     static float knots = 0, lastnewknots = 0;
     const int nowindtimeout = 30;
     if(rcount) {
         if(nowindcount!=nowindtimeout) {
-            float newknots = .868976 * 2.25 * 1000 * rcount / period;
+            float newknots;
+            if(eeprom_data.sensor_type)
+                newknots = .868976 * 2.25;
+            else
+                newknots = 2.8;  // TODO:  use non-linear calibration from recorded data
+
+            newknots *= 1000.0 * rcount / period;
 #if 0
-            Serial.print(lastnewknots);
-            Serial.print(F("   "));
             Serial.print(newknots);
             Serial.print("   ");
-            Serial.println(lastnewknots/newknots-1);
+            Serial.print(period);
+            Serial.print("   ");
+            Serial.println(rcount);
 #endif
             // if changing too fast, maybe bad reading
             if(lastnewknots == 0 || fabs(lastnewknots - newknots) < 5 || fabs(lastnewknots/newknots-1) <= .5)
@@ -787,15 +827,18 @@ void read_pressure_temperature()
     p = (int32_t)buf[0] << 16 | (int32_t)buf[1] << 8 | (int32_t)buf[2];
     t = (int32_t)buf[3] << 16 | (int32_t)buf[4] << 8 | (int32_t)buf[5];
     
-    if(t == 0 || p == 0)
+    if(t == 0 || p == 0) {
+        if(have_bmp280)
+            Serial.println(F("bmp280 zero read"));
         have_bmp280 = 0;
+    }
 
     pressure += p >> 2;
     temperature += t >> 2;
     bmp280_count++;
 
     if(!have_bmp280) {
-        if(bmp280_count == 256) {
+        if(bmp280_count == 512) {
             bmp280_count = 0;
             /* only re-run setup when count elapse */
             bmX280_setup();
@@ -860,8 +903,14 @@ void read_light()
 #ifndef LCD_BL_HIGH
     pwm = 255 - pwm;
 #endif
+
+#if defined(__AVR_ATmega32__)
+    digitalWrite(analogBacklightPin, pwm ? 1 : 0);
+#else
     analogWrite(analogBacklightPin, pwm);
+#endif
 }
+
 
 #if LCD
 static uint16_t last_lcd_updatetime = -1000, last_lcd_texttime;
@@ -1082,8 +1131,12 @@ void draw_barometer_graph()
     int v = 0;
     for(int i=0; i<history_len; i++) {
         int y = my/2 - v;
-        if(y >= 0 && y < my)
+        if(y >= 0 && y < my) {
             lcd.putpixel(history_len-i-1, y, 255);
+            lcd.putpixel(history_len-i-1, y-1, 255);
+            lcd.putpixel(history_len-i, y, 255);
+            lcd.putpixel(history_len-i, y-1, 255);
+	}
         int p = baro_history[index].pos - i - 1;
         if(p < 0)
             p += history_len;
@@ -1196,8 +1249,12 @@ void draw_wind_graph()
             p += history_len;
         uint8_t v = wind_history[index].data[p] >> shift;
         int y = my - v;
-        if(y >= 0 && y <= my)
+        if(y >= 0 && y <= my) {
             lcd.putpixel(history_len-i-1, y, 255);
+            lcd.putpixel(history_len-i-1, y-1, 255);
+            lcd.putpixel(history_len-i, y, 255);
+            lcd.putpixel(history_len-i, y-1, 255);
+	}
     }
 #if LCD == JLX12864G
     lcd.refresh(0);
@@ -1209,8 +1266,8 @@ void draw_wind_graph()
 
 void draw_setting(uint8_t &setting, const char* name, const char* first, const char* second, const char* third=0)
 {
-#if LCD    
-    uint8_t cursetting_key = digitalRead(5);
+#if LCD
+    uint8_t cursetting_key = digitalRead(digitalKey0Pin);
     static uint8_t setting_key;
 
     if(millis()-eeprom_write_timeout > 500)
@@ -1393,14 +1450,15 @@ void loop()
 #ifdef LCD
     read_light();
 
-    static uint8_t keys;
-    uint8_t key0 = digitalRead(5), key1 = digitalRead(6);
+    static uint8_t keys=3; // in case no touch sensors
+    uint8_t key0 = digitalRead(digitalKey0Pin), key1 = digitalRead(digitalKey1Pin);
+    
     uint8_t curkeys = key0 + 2*key1;
     uint32_t t = millis();
 
     if(keys == 3 && curkeys) // wait for both keys to release if both pressed
-        return;
-
+        ;
+    else
     if(curkeys == 3) { // enter/exit settings if both keys pressed
         if(display_page<3) {
             display_page = 3;
@@ -1463,14 +1521,18 @@ void loop()
         draw_setting(eeprom_data.direction_type, PSTR("direction"), PSTR("+-180"), PSTR("0-360"));
         break;
     case 4:
-        draw_setting(eeprom_data.temperature_units, PSTR("temperature"), PSTR("celcius"), PSTR("fahrenheit"));
+        draw_setting(eeprom_data.temperature_units, PSTR("temperature"), PSTR("celsius"), PSTR("fahrenheit"));
         break;
     case 5:
         draw_setting(eeprom_data.backlight_mode, PSTR("backlight"), PSTR("off"), PSTR("on"), PSTR("auto"));
         break;
     case 6:
+#if defined(__AVR_ATmega32__)
+        display_page++;
+#else
         draw_setting(eeprom_data.backlight_setting, PSTR("backlight"), PSTR("dim"), PSTR("normal"), PSTR("bright"));
         break;
+#endif
     case 7:
         draw_setting(eeprom_data.sensor_type, PSTR("sensor"), PSTR("pypilot"), PSTR("davis"));
         break;

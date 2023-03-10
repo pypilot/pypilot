@@ -57,16 +57,16 @@ def draw(surface, pos, text, size, bw, crop=False):
             src = None
             while size>1:
                 filename = fontpath + '%03d%03d' % (size, ord(c))
-                if bw:
-                    filename += 'b';
-                if crop:
-                    filename += 'c';
 
                 if micropython:
                     #print('try load', filename)
                     character.load(filename.encode('utf-8'), surface.bypp)
                     src = character
                 else:
+                    if bw:
+                        filename += 'b';
+                    if crop:
+                        filename += 'c';
                     src = ugfx.surface(filename.encode('utf-8'), surface.bypp)
             
                 if src.bypp == surface.bypp:
@@ -132,7 +132,7 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
         data = list(image.getdata())
         for i in range(len(data)):
             d = 255 / (1<<bpp)
-            v = int(round(data[i][0] / (255 / (1<<bpp))) * (255 / ((1<<bpp)-1)))
+            v = int(round(data[i][3] / (255 / (1<<bpp))) * (255 / ((1<<bpp)-1)))
             data[i] = (v,v,v,v)
         image.putdata(data)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2022 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -9,13 +9,10 @@
 
 import socket, select, sys, os, time
 
-import gettext
-locale_d = os.path.abspath(os.path.dirname(__file__)) + '/locale'
-gettext.translation('pypilot', locale_d, fallback=True).install()
-
 import heapq
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pyjson
+import gettext_loader
 from bufferedsocket import LineBufferedNonBlockingSocket
 from values import Value
 
@@ -123,7 +120,7 @@ class pypilotClient(object):
             host='127.0.0.1'
 
         if host and type(host) != type(''):
-            # host is the server object
+            # host is the server object for direct pipe connection
             self.server = host
             self.connection = host.pipe()
             self.poller = select.poll()
@@ -164,6 +161,7 @@ class pypilotClient(object):
                 config['port'] = host[i+1:]
             else:
                 config['host'] = host
+        
         if not 'host' in config:
             config['host'] = '127.0.0.1'
 
@@ -173,11 +171,13 @@ class pypilotClient(object):
             
         self.connection = False # connect later
         self.connection_in_progress = False
+        self.can_probe = not host
+        self.probed = False
 
     def onconnected(self):
         #print('connected to pypilot server', time.time())
         self.last_values_list = False
-        
+
         # write config if connection succeeds
         try:
             file = open(self.configfilename, 'w')
@@ -193,11 +193,54 @@ class pypilotClient(object):
         self.connection_in_progress = False
         self.poller = select.poll()
         self.poller.register(self.connection.socket, select.POLLIN)
+
+        if self.watches:
+            self.connection.write('watch=' + pyjson.dumps(self.watches) + '\n')
         self.wwatches = {}
-        for name, value in self.watches.items():
-            self.wwatches[name] = value # resend watches
 
         self.values.onconnected()
+
+    def probe(self):
+        if not self.can_probe:
+            return # do not search if host is specified by commandline, or again
+
+        try:
+            from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
+        except Exception as e:
+            print(_('failed to') + ' import zeroconf, ' + _('autodetecting pypilot server not possible'))
+            print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
+
+        class Listener:
+            def __init__(self, client):
+                self.client = client
+
+            def remove_service(self, zeroconf, type, name):
+                pass
+
+            def add_service(self, zeroconf, type, name):
+                #print('service', name)
+                self.name_type = name, type
+                info = zeroconf.get_service_info(type, name)
+                #print('info', info, info.parsed_addresses()[0])
+                if not info:
+                    return
+                try:
+                    #for name, value in info.properties.items():
+                    config = self.client.config
+                    #print('info', info.addresses)
+                    config['host'] = socket.inet_ntoa(info.addresses[0])
+                    config['port'] = info.port
+                    print('found pypilot', config['host'], config['port'])
+                    self.client.probed = True
+                    zeroconf.close()
+                except Exception as e:
+                    print('zeroconf service exception', e)
+                    
+
+        self.can_probe = False
+        zeroconf = Zeroconf()
+        listener = Listener(self)
+        browser = ServiceBrowser(zeroconf, "_pypilot._tcp.local.", listener)
 
     def poll(self, timeout=0):
         if not self.connection:
@@ -209,6 +252,7 @@ class pypilotClient(object):
                         # hung hup
                         self.connection_in_progress.close()
                         self.connection_in_progress = False
+                        self.probe()
                         return
 
                     self.onconnected()
@@ -221,7 +265,7 @@ class pypilotClient(object):
         # inform server of any watches we have changed
         if self.wwatches:
             self.connection.write('watch=' + pyjson.dumps(self.wwatches) + '\n')
-            #print('watch', watches, self.wwatches, self.watches)
+            #print('client watch', self.wwatches, self.watches)
             self.wwatches = {}
 
         # send any delayed watched values
@@ -230,12 +274,13 @@ class pypilotClient(object):
         if self.connection.fileno():
             # flush output
             self.connection.flush()
-            try:
-                events = self.poller.poll(int(1000 * timeout))
-            except Exception as e:
-                print('exception polling', e, os.getpid())
-                self.disconnect()
-                return
+            events = self.poller.poll(int(1000 * timeout))
+            #try:
+            #    events = self.poller.poll(int(1000 * timeout))
+            #except Exception as e:
+            #    print('exception polling', e, os.getpid())
+            #    self.disconnect()
+            #    return
 
             if not events:
                 # 3 seconds without data in either direction, send linefeed
@@ -268,7 +313,6 @@ class pypilotClient(object):
                 value = pyjson.loads(data)
             except ValueError as e:
                 print('client value error:', line, e)
-                #raise Exception
                 continue
 
             except Exception as e:
@@ -285,6 +329,14 @@ class pypilotClient(object):
         if self.connection:
             self.connection.close()
         self.connection = False
+
+    def probewait(self, timeout):
+        t0 = time.monotonic()
+        while time.monotonic() - t0 < timeout:
+            if self.probed:
+                return True
+            time.sleep(.1)
+        return False
 
     def connect(self, verbose=True):
         if self.connection:
@@ -309,6 +361,8 @@ class pypilotClient(object):
                 pass
             else:
                 print(_('connect failed to') + (' %s:%d' % host_port), e)
+
+            self.probe()
             #time.sleep(.25)
                 
             return False
@@ -371,6 +425,7 @@ class pypilotClient(object):
         for name in self.watches:
             self.wwatches[name] = False
         self.watches = {}
+        self.poll()
 
     def register(self, value):
         self.values.register(value)
@@ -399,9 +454,17 @@ class pypilotClient(object):
 
 def pypilotClientFromArgs(values, period=True, host=False):
     client = pypilotClient(host)
+    if host:
+        client.probed = True # dont probe
     if not client.connect(True):
         print(_('failed to connect to'), host)
-        exit(1)
+        if not host and client.probewait(5):
+            if not client.connect(True):
+                print(_('failed to connect to'), client.config['host'])
+                exit(1)
+        else:
+            print(_('no pypilot server found'))
+            exit(1)
 
     # set any value specified with path=value
     watches = {}
@@ -423,7 +486,6 @@ def pypilotClientFromArgs(values, period=True, host=False):
 
     if sets:
         client.poll(1)
-        #time.sleep(.2) # is this needed?
         
     for name in watches:
         client.watch(name, watches[name])
@@ -443,7 +505,7 @@ def nice_str(value):
         s += ']'
         return s
     if type(value) == type(1.0):
-        return '%.8g' % value
+        return '%.11g' % value
     return str(value)
 
 

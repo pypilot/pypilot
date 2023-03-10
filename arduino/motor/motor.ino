@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2021 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -204,6 +204,7 @@ uint8_t pwm_style = 2; // detected to 0 or 1 unless detection disabled, default 
 //#define clutch_on PORTB |= _BV(PB3)
 //#define clutch_off PORTB &= ~_BV(PB3)
 uint8_t clutch_pwm = 192, clutch_start_time;
+uint8_t use_brake = 0, brake_on = 0; // brake when stopped
 
 #define USE_ADC_ISR 0 // set to 1 to use interrupt (recommend 0)
 
@@ -223,7 +224,7 @@ void debug(const char *fmt, ... ){
     Serial.print(buf);
 }
 
-enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, RUDDER_MIN_CODE=0x2b, RUDDER_MAX_CODE=0x4d, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53, CLUTCH_PWM_CODE=0x36};
+enum commands {COMMAND_CODE=0xc7, RESET_CODE=0xe7, MAX_CURRENT_CODE=0x1e, MAX_CONTROLLER_TEMP_CODE=0xa4, MAX_MOTOR_TEMP_CODE=0x5a, RUDDER_RANGE_CODE=0xb6, RUDDER_MIN_CODE=0x2b, RUDDER_MAX_CODE=0x4d, REPROGRAM_CODE=0x19, DISENGAGE_CODE=0x68, MAX_SLEW_CODE=0x71, EEPROM_READ_CODE=0x91, EEPROM_WRITE_CODE=0x53, CLUTCH_PWM_AND_BRAKE_CODE=0x36};
 
 enum results {CURRENT_CODE=0x1c, VOLTAGE_CODE=0xb3, CONTROLLER_TEMP_CODE=0xf9, MOTOR_TEMP_CODE=0x48, RUDDER_SENSE_CODE=0xa7, FLAGS_CODE=0x8f, EEPROM_VALUE_CODE=0x9a};
 
@@ -361,7 +362,7 @@ void setup()
     // uint8_t lockBits     = boot_lock_fuse_bits_get(GET_LOCK_BITS); // too many clones don't set lock bits and there is no spm
     if((lowBits != 0xFF && lowBits != 0x7F) ||
        (highBits != 0xda && highBits != 0xde) ||
-       (extendedBits != 0xFD && extendedBits != 0xFC)
+       ((extendedBits&0xF6) != 0xF4)
        // || lockBits != 0xCF // too many clones don't set lock bits and there is no spm
         )
         flags |= BAD_FUSES;
@@ -513,7 +514,7 @@ void position(uint16_t value)
         } else if(value < 960) {
             b_bottom_off;
             a_bottom_on;
-        } else { // low, set pwm for brake
+        } else { // low, set pwm for brake (implement brake here?)
             a_bottom_off;
             b_bottom_off;
         }            
@@ -563,10 +564,13 @@ void position(uint16_t value)
             a_top_off;
             b_top_off;
             dead_time;
-//            a_bottom_on;  // set brake
-//            b_bottom_on;
-            a_bottom_off;
-            b_bottom_off;
+            if(brake_on) {
+                a_bottom_on;  // set brake
+                b_bottom_on;
+            } else {
+                a_bottom_off;
+                b_bottom_off;
+            }
         }
 
         if(TIMSK1) { // timer has interrupts, update registers
@@ -585,6 +589,7 @@ void position(uint16_t value)
 uint16_t command_value = 1000; // range is 0 to 2000 for forward and backward
 void stop()
 {
+    brake_on = 0;
     position(1000); // 1000 is stopped
     command_value = 1000;
 }
@@ -808,7 +813,7 @@ void adc_isr()
     if(adc_counter == CONTROLLER_TEMP)
         adc_counter+=2;
 #endif
-#ifdef DISABLE_RUDDER
+#ifdef DISABLE_RUDDER_SENSE
     if(adc_counter == RUDDER)
         adc_counter=0;
 #endif
@@ -1094,17 +1099,16 @@ void process_packet()
         if(serialin < 12)
             serialin+=4; // output at input rate
         if(value > 2000);
-            // unused range, invalid!!!
-            // ignored
+            // unused range, invalid!!!  ignored
         else if(flags & (OVERTEMP_FAULT | OVERCURRENT_FAULT | BADVOLTAGE_FAULT));
             // no command because of overtemp or overcurrent or badvoltage
         else if((flags & (PORT_PIN_FAULT | MAX_RUDDER_FAULT)) && value > 1000)
-            stop();
-            // no forward command if port fault
+            stop(); // no forward command if port fault
         else if((flags & (STARBOARD_PIN_FAULT | MIN_RUDDER_FAULT)) && value < 1000)
-            stop();
-            // no starboard command if port fault
+            stop(); // no starboard command if port fault
         else {
+            brake_on = use_brake;
+            //brake_on = 1; //TESTING (remove this line!)
             command_value = value;
             engage();
         }
@@ -1160,7 +1164,7 @@ void process_packet()
     case EEPROM_WRITE_CODE:
         eeprom_update_8(in_bytes[1], in_bytes[2]);
         break;
-    case CLUTCH_PWM_CODE:
+    case CLUTCH_PWM_AND_BRAKE_CODE:
     {
         uint8_t pwm = in_bytes[1];
         if(pwm < 30)
@@ -1168,6 +1172,7 @@ void process_packet()
         else if(pwm > 250)
             pwm = 255;
         clutch_pwm = in_bytes[1];
+        use_brake = in_bytes[2];
     } break;
     }
 }
@@ -1331,7 +1336,7 @@ void loop()
         } else
         /* voltage must be between 9 and max voltage */
         if(volts <= 900 || volts >= max_voltage) {
-            stop();
+            disengage();
             flags |= BADVOLTAGE_FAULT;
         } else
             flags &= ~BADVOLTAGE_FAULT;
@@ -1347,7 +1352,7 @@ void loop()
         uint16_t controller_temp = TakeTemp(CONTROLLER_TEMP, 1);
         uint16_t motor_temp = TakeTemp(MOTOR_TEMP, 1);
         if(controller_temp >= max_controller_temp || motor_temp > max_motor_temp) {
-            stop();
+            disengage();
             flags |= OVERTEMP_FAULT;
         } else
             flags &= ~OVERTEMP_FAULT;

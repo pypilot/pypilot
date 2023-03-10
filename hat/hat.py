@@ -68,13 +68,15 @@ class ActionHeading(Action):
             return
         if self.hat.last_msg['ap.enabled']:
             if not count:
+                if 'wind' in self.hat.last_msg['ap.mode']:
+                    sign = -sign
                 self.hat.client.set('ap.heading_command',
                                     self.hat.last_msg['ap.heading_command'] + self.offset)
         else: # manual mode
             self.servo_timeout = time.monotonic() + abs(self.offset)**.5/2
             self.hat.client.set('servo.command', 1 if self.offset > 0 else -1)
             self.hat.client.poll() # reduce lag
-            
+
 class ActionTack(ActionPypilot):
     def  __init__(self, hat, name, direction):
         super(ActionTack, self).__init__(hat, name, 'ap.tack.state', 'begin')
@@ -92,7 +94,7 @@ class Process():
     
     def send(self, value):
         if self.process:
-            self.pipe.send(value)
+            self.pipe.send(value, maxdt=.1)
 
     def create(self, process):
         import multiprocessing
@@ -119,7 +121,7 @@ class Web(Process):
                     print('warning, failed to make hat web process idle, trying renice')
                 if os.system("renice 20 %d" % os.getpid()):
                     print('warning, failed to renice hat web process')
-                if os.getenv('USER') == 'tc' and time.monotonic() < 300:
+                if os.getenv('USER') == 'tc' and time.monotonic() < 360:
                     time.sleep(30) # delay loading web and wait until modules are loaded
                 else:
                     time.sleep(5) # delay less on other platforms
@@ -265,12 +267,18 @@ class Hat(object):
         self.last_msg = {}
         self.last_msg['ap.enabled'] = False
         self.last_msg['ap.heading_command'] = 0
+        self.last_msg['ap.mode'] = ''
 
         if len(sys.argv) > 1:
             self.config['host'] = sys.argv[1]
             self.write_config()
 
         host = self.config['host']
+        print('host', host)
+
+        if 'arduino' in self.config['hat']:
+            import arduino
+            arduino.arduino(self.config).firmware()
 
         self.poller = select.poll()
         self.gpio = gpio.gpio()
@@ -278,7 +286,7 @@ class Hat(object):
         time.sleep(1)
         self.client = pypilotClient(host)
         self.client.registered = False
-        self.watchlist = ['ap.enabled', 'ap.heading_command']
+        self.watchlist = ['ap.enabled', 'ap.heading_command', 'ap.mode']
 
         for name in self.watchlist:
             self.client.watch(name)
@@ -295,6 +303,8 @@ class Hat(object):
         self.lirc.registered = False
         self.keytimes = {}
         self.keytimeouts = {}
+
+        self.inputs = [self.gpio, self.arduino, self.lirc]
 
         # keypad for lcd interface
         self.actions = []
@@ -358,13 +368,19 @@ class Hat(object):
                 except ProcessLookupError:
                     pass # ok, process is already terminated
                 #os.waitpid(pid, 0)
-                sys.stdout.flush()
+                try:
+                    sys.stdout.flush()
+                except Exception as e:
+                    print('failed to flush stdout', e)
             for process in processes:
                 if process:
                     process.process = False
 
             raise KeyboardInterrupt # to get backtrace on all processes
-            sys.stdout.flush()
+            try:
+                sys.stdout.flush()
+            except Exception as e:
+                print('failed to flush stdout2', e)
 
         for s in range(1, 16):
             if s != 9 and s != 13:
@@ -417,7 +433,7 @@ class Hat(object):
     def update_values(self):
         values = self.client.list_values()
         if values:
-            if 'ap.pilot' in values:
+            if 'ap.pilot' in values:                
                 pilots = values['ap.pilot']['choices']
                 update = False
                 for pilot in pilots:
@@ -440,16 +456,39 @@ class Hat(object):
 
     def poll(self):            
         t0 = time.monotonic()
-        for i in [self.gpio, self.arduino, self.lirc]:
+        keycounts = {}
+        for i in self.inputs:
             try:
                 if not i:
                     continue
                 events = i.poll()
                 for event in events:
                     #print('apply', event, time.monotonic())
-                    self.apply_code(*event)
+                    key, count = event
+                    keycounts[key] = count
+
             except Exception as e:
+                self.inputs.remove(i)
                 print('WARNING, failed to poll!!', e, i)
+                del i
+                return
+
+        key = ''
+        count = 0
+        for k, c in keycounts.items():
+            if c:
+                if key:
+                    key += '_' + k
+                    count = min(count, c)
+                else:
+                    key = k
+                    count = c
+        if count:
+            self.apply_code(key, count)
+
+        for k, c in keycounts.items():
+            if c == 0:
+                self.apply_code(k, 0)
 
         t1 = time.monotonic()
         msgs = self.client.receive()

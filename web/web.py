@@ -93,7 +93,6 @@ def wifi():
         except Exception as e:
             print('exception!', e)
 
-
     try:
         leases = '<table id="leases">'
         leases += '<tr><th>IP Address</th><th>Mac Address</th><th>Name</th><th>Static IP?</th><th>Lease ends on</th></tr>'
@@ -117,9 +116,10 @@ def wifi():
                 leases += '<td>' + ts + '</td>'
                 leases += '</tr>'
             leases += '</table>'
-    except:
+    except Exception as e:
+        print('lease fail', e)
         leases = ''
-    if wifi['mode'] != 'Master':
+    if not 'Master' in wifi['mode']:
         leases = ''
 
     return render_template('wifi.html', async_mode=socketio.async_mode, wifi=Markup(wifi), leases=Markup(leases))

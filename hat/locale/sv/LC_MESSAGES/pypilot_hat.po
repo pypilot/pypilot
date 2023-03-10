@@ -264,7 +264,7 @@ msgstr "VIND upptäcks inte"
 
 #: ../page.py:642
 msgid "WARNING no motor controller"
-msgstr "VARNING ingen motorstyrenhet"
+msgstr "VARNING ingen motor styrenhet"
 
 #: ../page.py:653
 msgid "standby"

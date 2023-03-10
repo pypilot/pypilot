@@ -617,7 +617,7 @@ def RegisterCalibration(client, name, default):
         
 def CalibrationProcess(cal_pipe, client):
     accel_points = SigmaPoints(.05**2, 12, 10)
-    compass_points = SigmaPoints(1.1**2, 24, 3)
+    compass_points = SigmaPoints(1.1**2, 28, 3)
 
     norm = [0, 0, 1]
 

@@ -17,8 +17,8 @@ upload: $(ALL)
 	ampy -p $(PORT) put boot.py
 
 upload-locale:
-	for f in `find locale -type d`; do echo $$f; ampy -p /dev/ttyUSB0 mkdir $$f; done
-	for f in `find locale | grep po$$`; do echo put $$f; ampy -p /dev/ttyUSB0 put $$f $$f; done
+	for f in `find locale -type d`; do echo $$f; ampy -p $(PORT) mkdir $$f; done
+	for f in `find locale | grep po$$`; do echo put $$f; ampy -p $(PORT) put $$f $$f; done
 
 clean:
 	rm -rf *mpy

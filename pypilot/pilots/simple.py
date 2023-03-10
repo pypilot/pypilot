@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from pilot import AutopilotPilot
-#disabled = True # IMPORTANT:  remove this line enable the simple pilot
+disabled = True # IMPORTANT:  remove this line enable the simple pilot
 
 class SimplePilot(AutopilotPilot):
   def __init__(self, ap):
@@ -22,7 +22,7 @@ class SimplePilot(AutopilotPilot):
 
   def process(self, reset):
     ap = self.ap
-    headingrate = ap.boatimu.SensorValues['headingrate'].value
+    headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     gain_values = {'P': ap.heading_error.value,
                    'I': ap.heading_error_int.value,
                    'D': headingrate}

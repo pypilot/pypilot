@@ -1,4 +1,4 @@
-/* Copyright (C) 2018 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2021 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -21,7 +21,7 @@ public:
     void reprogram();
     int poll();
     bool fault();
-    void params(double _raw_max_current, double _rudder_min, double _rudder_max, double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _rudder_nonlinearity, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_speed, double _max_speed, double _gain, double _clutch_pwm);
+    void params(double _raw_max_current, double _rudder_min, double _rudder_max, double _max_current, double _max_controller_temp, double _max_motor_temp, double _rudder_range, double _rudder_offset, double _rudder_scale, double _rudder_nonlinearity, double _max_slew_speed, double _max_slew_slow, double _current_factor, double _current_offset, double _voltage_factor, double _voltage_offset, double _min_speed, double _max_speed, double _gain, double _clutch_pwm, bool _brake);
 
     // sensors
     double voltage, current, controller_temp, motor_temp, rudder;
@@ -38,6 +38,7 @@ public:
 
     double min_speed, max_speed;
     double gain, clutch_pwm;
+    bool brake;
     
     int flags;
 

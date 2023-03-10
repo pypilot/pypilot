@@ -24,13 +24,25 @@
 #define DIR_PIN 4
 #define LED_PIN 8
 
+#define USE_RF
+#define USE_UART
+
+// enable IR reception only for 328p (it has enough memory)
+#ifdef __AVR_ATmega328P__
+#define USE_IR
+#endif
+
 // start byte $ followed by PACKET_LEN bytes, and a parity byte
 #define PACKET_LEN 6
 
 // of packet bytes, first byte defines message type 
 enum {RF=0x01, IR=0x02, GP=0x03, VOLTAGE=0x04, SET_BACKLIGHT=0x16, SET_BUZZER=0x17, SET_BAUD=0x18};
 
+#ifdef USE_RF
 RCSwitch rf = RCSwitch();
+#endif
+
+#ifdef USE_IR
 
 #include <IRLibRecvPCI.h> 
 #include <IRLibDecodeBase.h>
@@ -46,11 +58,14 @@ RCSwitch rf = RCSwitch();
 IRdecode myDecoder;   //create decoder
 IRrecvPCI ir(3);//pin number for the receiver
 
+#endif
+
 uint8_t backlight_value = 64; // determines when backlight turns on
 uint8_t backlight_polarity = 0;
 uint8_t backlight_value_ee EEMEM = 64; // determines when backlight turns on
 uint8_t backlight_polarity_ee EEMEM = 0;
 uint8_t serial_baud_ee EEMEM = 0;
+
 
 #define RB_CREATE(NAME, SIZE)                                           \
     uint8_t rb_##NAME[SIZE];                                            \
@@ -83,8 +98,8 @@ uint8_t serial_baud_ee EEMEM = 0;
 #define RB_EMPTY(NAME) (rb_##NAME##_head == rb_##NAME##_tail)
 
 RB_CREATE(serial_out, 124)
+#ifdef USE_UART
 RB_CREATE(serial_in, 124)
-RB_CREATE(data_in, 124)
 
 ISR(USART_RX_vect)
 {
@@ -105,6 +120,9 @@ ISR(USART_UDRE_vect)
     } else
         UCSR0B &= ~_BV(UDRIE0);
 }
+#endif
+
+RB_CREATE(data_in, 124)
 
 ISR (SPI_STC_vect) // SPI interrupt routine
 {
@@ -112,10 +130,12 @@ ISR (SPI_STC_vect) // SPI interrupt routine
     RB_GET(serial_out, SPDR);
     if(c>127)
         RB_PUT(data_in, c)
+#ifdef USE_UART
     else if(c) {
         RB_PUT(serial_in, c);
         UCSR0B |= _BV(UDRIE0);
     }
+#endif
 }
 
 /*
@@ -127,7 +147,7 @@ ISR(WDT_vect)
     asm volatile ("ijmp" ::"z" (0x0000)); // soft reset
 }
 */
-
+#ifdef USE_UART
 void Serial_begin(uint8_t baud)
 {
     UCSR0A = 0;//_BV(U2X0);
@@ -146,9 +166,19 @@ void Serial_begin(uint8_t baud)
     
     UCSR0B = _BV(TXEN0) | _BV(RXEN0) | _BV(RXCIE0);
 }
+#endif
 
 uint32_t buzzer_timeout;
 uint8_t buzzer_mode;
+void buzzer_off()
+{
+    TIMSK2 = 0;
+    pinMode(5, INPUT_PULLUP);
+    pinMode(6, INPUT_PULLUP);
+    PORTD &= ~_BV(PD5);
+    PORTD &= ~_BV(PD6);
+}
+
 void set_buzzer(uint8_t mode, uint8_t timeout)
 {
     buzzer_timeout = millis() + timeout*10; // duration
@@ -161,7 +191,7 @@ void set_buzzer(uint8_t mode, uint8_t timeout)
     uint8_t freq;
     switch(mode) {
     case 0: // buzzer off
-        TIMSK2 = 0;
+        buzzer_off();
         return;
     case 1: // steady
         freq = 200;
@@ -170,6 +200,8 @@ void set_buzzer(uint8_t mode, uint8_t timeout)
         freq = 60;
         break;
     }
+    pinMode(5, OUTPUT);
+    pinMode(6, OUTPUT);
     buzzer_mode = mode;
     OCR2A = freq;
     OCR2B = freq/2;
@@ -201,7 +233,9 @@ void setup()
         backlight_polarity = 0;
     uint8_t baud = eeprom_read_byte(&serial_baud_ee);
 
+#ifdef USE_UART
     Serial_begin(baud);
+#endif
     pinMode(0, INPUT_PULLUP);
     pinMode(1, INPUT_PULLUP);
 
@@ -216,16 +250,20 @@ void setup()
     pinMode(MISO, OUTPUT);
 
     // buzzer
-    pinMode(5, OUTPUT);
-    pinMode(6, OUTPUT);
+    pinMode(5, INPUT_PULLUP);
+    pinMode(6, INPUT_PULLUP);
     pinMode(7, INPUT_PULLUP);
 
     pinMode(DATA_PIN, INPUT);
     pinMode(3, INPUT);
     pinMode(DIR_PIN, INPUT);
 
+#ifdef USE_RF
     rf.enableReceive(0);  // Receiver on interrupt 0 => that is pin #2
+#endif
+#ifdef USE_IR
     ir.enableIRIn();
+#endif
 
     for(int i=0; i<6; i++)
         pinMode(A0+i, INPUT_PULLUP);
@@ -310,7 +348,9 @@ void read_data()
     case SET_BAUD:
     {
         eeprom_update_byte(&serial_baud_ee, d[0]);
+#ifdef USE_UART
         Serial_begin(d[0]);
+#endif
     } break;
     }
 }
@@ -350,7 +390,7 @@ void send_code(uint8_t source, uint32_t value)
         if(++codes[source].repeat_count > 127)
             codes[source].repeat_count = 1;
     } else {
-        // unfortunately IR has infrequent but soemtimes wrong value codes
+        // unfortunately IR has infrequent but sometimes wrong value codes
         // so sending keyup from previous key if a new down is not used here.
         if(source == IR && codes[source].lvalue && value)
             return;
@@ -482,14 +522,14 @@ void loop() {
         if(buzzer_timeout < t0) {
             buzzer_timeout = 0;
             buzzer_mode = 0;
-            TIMSK2 = 0;
+            buzzer_off();
         } else {
             if(buzzer_mode == 2) {
                 uint8_t pos = ((buzzer_timeout - t0) / 50)%16;
                 if(pos & 1 && pos != 7 && pos != 15)
                     TIMSK2 |= _BV(OCIE2B) | _BV(TOIE2);
                 else
-                    TIMSK2 = 0;
+                    buzzer_off();
             }
         }
     }
@@ -506,6 +546,7 @@ void loop() {
     }
     t = millis();
 
+#ifdef USE_IR
     // read from IR??
     if (ir.getResults()) {
         myDecoder.decode();
@@ -513,6 +554,8 @@ void loop() {
             send_code(IR, (myDecoder.value<<8) | myDecoder.protocolNum);
         ir.enableIRIn();      //Restart receiver
     }
+#endif
+#ifdef USE_RF
     if (rf.available()) {
         uint32_t value = rf.getReceivedValue();
         if(value && rf.getReceivedBitlength() == 24) {
@@ -522,6 +565,7 @@ void loop() {
         }
         rf.resetAvailable();
     }
+#endif
 
     // parse incoming data
     uint32_t dt = t - codes[GP].ltime;

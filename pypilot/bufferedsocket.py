@@ -94,7 +94,7 @@ try:
             #print('write', count, self.out_buffer, time.monotonic())
             t1 = time.monotonic()
 
-            if t1-t0 > .03:
+            if t1-t0 > .1:
                 print(_('socket send took too long!?!?'), self.address, t1-t0, len(self.out_buffer))
             if count < 0:
                 print(_('socket send error'), self.address, count)

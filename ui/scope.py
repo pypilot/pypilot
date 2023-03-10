@@ -406,7 +406,11 @@ class pypilotPlot():
 
 def main():
     plot = pypilotPlot()
-    client = pypilotClientFromArgs(sys.argv)
+
+    host, args = False, []
+    if len(sys.argv) > 1:
+        host, args = sys.argv[1], sys.argv[2:]
+    client = pypilotClientFromArgs(args, host=host)
     
     def idle():
         while True:

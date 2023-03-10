@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2022 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -10,17 +10,15 @@
 import select, socket, time
 import sys, os, heapq
 
-import gettext
-locale_d = os.path.abspath(os.path.dirname(__file__)) + '/locale'
-gettext.translation('pypilot', locale_d, fallback=True).install()
-
 import numbers
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import gettext_loader
 import pyjson
 from bufferedsocket import LineBufferedNonBlockingSocket
 from nonblockingpipe import NonBlockingPipe
 
 DEFAULT_PORT = 23322
+from zeroconf_service import zeroconf
 max_connections = 30
 configfilepath = os.getenv('HOME') + '/.pypilot/'
 server_persistent_period = 120 # store data every 120 seconds
@@ -208,10 +206,11 @@ class ServerValues(pypilotValue):
         self.internal = list(self.values)
         self.pipevalues = {}
         self.msg = 'new'
+        self.persistent_timeout = time.monotonic() + server_persistent_period
+        self.persistent_values = {}
         self.load()
         self.pqwatches = [] # priority queue of watches
         self.last_send_watches = 0
-        self.persistent_timeout = time.monotonic() + server_persistent_period
 
     def get_msg(self):
         if not self.msg or self.msg == 'new':
@@ -285,20 +284,16 @@ class ServerValues(pypilotValue):
                 if value.msg:
                     connection.write(value.get_msg()) # send value                
                 value.calculate_watch_period()
-                self.msg = 'new'
-                continue
+            else:
+                value = pypilotValue(self, name, info, connection)
+                self.values[name] = value
 
-            value = pypilotValue(self, name, info, connection)
             if 'persistent' in info and info['persistent']:
+                # when a persistant value is missing from pypilot.conf
                 value.calculate_watch_period()
-                if name in self.persistent_data:
-                    print('IS THIS POSSIBLE TO HIT?????')
-                    v = self.persistent_data[name]
-                    if isinstance(v, numbers.Number):
-                        v = float(v) # convert any numeric to floating point
-                    value.set(v, connection) # set persistent value
+                if not name in self.persistent_data:
+                    self.persistent_values[name] = value
 
-            self.values[name] = value
             self.msg = 'new'
 
         msg = False # inform watching clients of updated values
@@ -330,6 +325,7 @@ class ServerValues(pypilotValue):
                     connection.write(line)
                     
             self.values[name] = pypilotValue(self, name, msg=line)
+            self.persistent_values[name] = self.values[name]
             line = f.readline()
         f.close()
         
@@ -367,23 +363,22 @@ class ServerValues(pypilotValue):
     def store(self):
         self.persistent_timeout = time.monotonic() + server_persistent_period
         need_store = False
-        for name in self.values:
-            value = self.values[name]
+        for name in self.persistent_values:
+            value = self.persistent_values[name]
             if not 'persistent' in value.info or not value.info['persistent']:
                 continue
             if not name in self.persistent_data or value.msg != self.persistent_data[name]:
                 self.persistent_data[name] = value.msg
                 need_store = True
 
-        if not need_store:
-            return                
-        try:
-            file = open(configfilepath + 'pypilot.conf', 'w')
-            for name in self.persistent_data:
-                file.write(self.persistent_data[name])
-            file.close()
-        except Exception as e:
-            print(_('failed to write'), 'pypilot.conf', e)
+        if need_store:
+            try:
+                file = open(configfilepath + 'pypilot.conf', 'w')
+                for name in self.persistent_data:
+                    file.write(self.persistent_data[name])
+                file.close()
+            except Exception as e:
+                print(_('failed to write'), 'pypilot.conf', e)
 
 class pypilotServer(object):
     def __init__(self):
@@ -459,9 +454,10 @@ class pypilotServer(object):
                 self.fd_to_connection[fd] = pipe
                 self.fd_to_pipe[fd] = pipe
             pipe.cwatches = {'values': True} # server always watches client values
-
         self.initialized = True
-
+        self.zeroconf = zeroconf()
+        self.zeroconf.start()
+            
     def __del__(self):
         if not self.initialized:
             return

@@ -28,23 +28,22 @@ msgstr "oppsett av lcd og fjernkontroll"
 
 #: templates/index.html:17
 msgid "clear"
-msgstr "klar"
+msgstr "slett"
 
 #: templates/index.html:17
 msgid "default"
-msgstr "misligholde"
+msgstr "standard oppsett"
 
 #: templates/index.html:18
 msgid ""
 "press button(s) on the keypad or remote then assign a command with the "
 "button."
 msgstr ""
-"Trykk på knappene på tastaturet eller fjernkontrollen, og tilord en kommando"
-" med knappen."
+"Trykk på knapp(er) på fjernkontrollen, og velg tilhørende kommando"
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
-msgstr "Handlinger for LCD -grensesnitt"
+msgstr "Handlinger for LCD-grensesnitt"
 
 #: templates/index.html:21 templates/index.html:25
 msgid "key"

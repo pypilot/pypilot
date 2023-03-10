@@ -178,9 +178,10 @@ $(document).ready(function() {
     // update manual servo command
     setTimeout(poll_pypilot, 1000)
     function poll_pypilot() {
-        setTimeout(poll_pypilot, 1000)
+        setTimeout(poll_pypilot, 200)
         if(servo_command_timeout > 0) {
-            if(servo_command_timeout-- <= 0)
+            servo_command_timeout--;
+            if(servo_command_timeout <= 0)
                 servo_command = 0;
             pypilot_set('servo.command', servo_command);
         }
@@ -434,7 +435,7 @@ $(document).ready(function() {
             if(x != 0) {
                 sign = x > 0 ? 1 : -1;
                 servo_command = -sign;
-                servo_command_timeout = Math.abs(x) > 5 ? 3 : 1;
+                servo_command_timeout = Math.abs(x) > 5 ? 6 : 2;
             }
         }
     }
@@ -644,5 +645,5 @@ function setCookie(key, value, expiry=365) {
  */
 function getCookie(key) {
     var keyValue = document.cookie.match('(^|;) ?' + key + '=([^;]*)(;|$)');
-    return keyValue ? keyValue[2] : null;
+    return keyValue ? keyValue[2] : 'dark';  // dark by default
 }

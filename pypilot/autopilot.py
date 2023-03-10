@@ -28,13 +28,6 @@ import pilots
 def minmax(value, r):
     return min(max(value, -r), r)
 
-def compute_true_wind(gps_speed, wind_speed, wind_direction):
-    rd = math.radians(wind_direction)
-    windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd)
-    truewind = math.degrees(math.atan2(windv[0], windv[1] - gps_speed))
-    #print 'truewind', truewind
-    return truewind
-
 class ModeProperty(EnumProperty):
     def __init__(self, name):
         self.ap = False
@@ -129,11 +122,12 @@ class Autopilot(object):
         
         self.pilots = {}
         for pilot_type in pilots.default:
-            #try:
+            try:
                 pilot = pilot_type(self)
                 self.pilots[pilot.name] = pilot
-            #except Exception as e:
-            #    print(_('failed to load pilot'), pilot_type, e)
+
+            except Exception as e:
+                print(_('failed to load pilot'), pilot_type, e)
 
         pilot_names = list(self.pilots)
         print(_('Available Pilots') + ':', pilot_names)
@@ -146,9 +140,6 @@ class Autopilot(object):
 
         self.wind_compass_offset = HeadingOffset()
         self.true_wind_compass_offset = HeadingOffset()
-
-        self.wind_direction = self.register(SensorValue, 'wind_direction', directional=True)
-        self.wind_speed = 0
 
         self.runtime = self.register(TimeValue, 'runtime') #, persistent=True)
         self.timings = self.register(SensorValue, 'timings', False)
@@ -169,7 +160,7 @@ class Autopilot(object):
 
         # setup all processes to exit on any signal
         self.childprocesses = [self.boatimu.imu, self.boatimu.auto_cal,
-                               self.sensors.nmea, self.sensors.gpsd,
+                               self.sensors.nmea, self.sensors.gpsd, self.sensors.gps.filtered,
                                self.sensors.signalk, self.server]
         def cleanup(signal_number, frame=None):
             #print('got signal', signal_number, 'cleaning up')
@@ -243,23 +234,26 @@ class Autopilot(object):
                 self.gps_compass_offset.update(gps_track - compass, d)
 
         if self.sensors.wind.source.value != 'none':
-            d = .005
-            wind_speed = self.sensors.wind.speed.value
-            self.wind_speed = (1-d)*self.wind_speed + d*wind_speed
-            # weight wind direction more with higher wind speed
-            d = .05*math.log(wind_speed/5.0 + 1.2)
-            wind_direction = resolv(self.sensors.wind.direction.value, self.wind_direction.value)
-            wind_direction = (1-d)*self.wind_direction.value + d*wind_direction
-            self.wind_direction.set(resolv(wind_direction))
-            self.wind_compass_offset.update(wind_direction + compass, d)
+            offset = resolv(self.sensors.wind.wdirection + compass, self.wind_compass_offset.value)
+            self.wind_compass_offset.update(offset, self.sensors.wind.wfactor)
 
-            if self.sensors.gps.source.value != 'none':
-                true_wind = compute_true_wind(self.gps_speed, self.wind_speed,
-                                              self.wind_direction.value)
-                offset = resolv(true_wind + compass, self.true_wind_compass_offset.value)
-                d = .05
-                self.true_wind_compass_offset.update(offset, d)
-    
+            boat_speed = None
+            if self.sensors.water.source.value != 'none':
+                boat_speed = self.sensors.water.speed.value
+                if self.sensors.truewind.source.value == 'none':
+                    self.sensors.truewind.source.update('water+wind')
+            elif self.sensors.gps.source.value != 'none':
+                boat_speed = self.gps_speed
+                if self.sensors.truewind.source.value == 'none':
+                    self.sensors.truewind.source.update('gps+wind')
+            if boat_speed != None:
+                self.sensors.truewind.update_from_apparent(boat_speed, self.sensors.wind.wspeed,
+                                                           self.sensors.wind.wdirection)
+
+        if self.sensors.truewind.source.value != 'none':
+            offset = resolv(self.sensors.truewind.wdirection + compass, self.true_wind_compass_offset.value)
+            self.true_wind_compass_offset.update(offset, self.sensors.truewind.wfactor)
+
     def fix_compass_calibration_change(self, data, t0):
         headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
         dt = min(t0 - self.lasttime, .25) # maximum dt of .25 seconds
@@ -328,7 +322,9 @@ class Autopilot(object):
         for msg in msgs: # we aren't usually subscribed to anything
             print('autopilot main process received:', msg, msgs[msg])
 
-        if not self.enabled.value:
+        if not self.enabled.value: # in standby, command servo here for lower latency
+            if self.lastenabled: # if autopilot is disabled clear command
+                self.servo.command.set(0)
             self.servo.poll()
 
         t1 = time.monotonic()
@@ -356,7 +352,7 @@ class Autopilot(object):
             #print('autopilot failed to read imu at time:', time.monotonic(), period)
 
         t3 = time.monotonic()
-        if t3-t2 > period/2 and data:
+        if t3-t2 > period*2/3 and data:
             print('read imu running too _slowly_', t3-t2, period)
 
         self.fix_compass_calibration_change(data, t0)
@@ -422,6 +418,9 @@ class Autopilot(object):
         if self.enabled.value:
             self.servo.poll()
 
+        self.sensors.gps.predict(self) # make gps position/velocity prediction
+                                       # from inertial sensors
+        self.sensors.water.compute(self) # calculate leeway and currents
         self.boatimu.send_cal_data() # after critical loop is done
 
         t5 = time.monotonic()
@@ -433,7 +432,11 @@ class Autopilot(object):
           
         if self.watchdog_device:
             self.watchdog_device.write('c')
-            
+
+        t6 = time.monotonic()
+        if t6-t0 > period:
+            print(_('autopilot iteration running too slow'), t6-t0)
+
         while True: # sleep remainder of period
             dt = period - (time.monotonic() - t0) + sp
             if dt >= period or dt <= 0:
