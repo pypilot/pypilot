@@ -1,11 +1,13 @@
-#!/bin/bash
+#!/bin/sh
 
 function translate() {
     mkdir -p $1/LC_MESSAGES
-    cp -n pypilot_hat.pot $1/LC_MESSAGES/pypilot_hat.po
+    if [ ! -e $1/LC_MESSAGES/pypilot_hat.po ]; then
+        cp pypilot_hat.pot $1/LC_MESSAGES/pypilot_hat.po
+    fi
     msgmerge -N -U $1/LC_MESSAGES/pypilot_hat.po pypilot_hat.pot
     ./trans-po.py $1/LC_MESSAGES/pypilot_hat.po $1
-    /usr/bin/msgfmt --check -o $1/LC_MESSAGES/pypilot_hat.mo $1/LC_MESSAGES/pypilot_hat.po
+    msgfmt --check -o $1/LC_MESSAGES/pypilot_hat.mo $1/LC_MESSAGES/pypilot_hat.po
 }
 
 translate ca # Catalan
