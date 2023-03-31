@@ -559,7 +559,7 @@ class BacklightEdit(RangeEdit):
 class buzzer_menu(menu):
     super(display, self).__init__(_('buzzer'),
                                   [ConfigEdit(_('setting'), '', 'buzzer', 0, 2),
-                                   ConfigEdit(_('buzzer'), '', 'buzzer_volume', 1, 2)]
+                                   ConfigEdit(_('buzzer'), '', 'buzzer_volume', 1, 2)])
         
 class display(menu):
     def __init__(self):

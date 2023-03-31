@@ -55,10 +55,11 @@ $(document).ready(function() {
             id = $('#action_profile'+String(i))
             if(id.length == 0)
                 break;
-            if(i< profiles.length)
+            if(i< profiles.length) {
                 id.text('profile ' + profiles[i]);
-            else
-                id.text('profile ' + String(i));
+                id.css('display', 'block');
+            } else
+                id.css('display', 'none');
         }
     });
 
@@ -86,7 +87,7 @@ $(document).ready(function() {
     
     $('#arduino_nmea_in').click(function(event) {
         socket.emit('config', {'arduino.nmea.in': document.getElementById('arduino_nmea_in').checked});
-    });
+   });
     
     $('#arduino_nmea_out').click(function(event) {
         socket.emit('config', {'arduino.nmea.out': document.getElementById('arduino_nmea_out').checked});

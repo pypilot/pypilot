@@ -55,7 +55,7 @@ class AutopilotPilot(object):
         elif ap.mode.value == 'wind':
             wind = resolv(ap.wind_compass_offset.value - compass)
             ap.heading.set(wind)
-        elif ap.mode.value == 'gps':
+        elif ap.mode.value == 'gps' or ap.mode.value == 'nav':
             gps = resolv(compass + ap.gps_compass_offset.value, 180)
             ap.heading.set(gps)
         elif ap.mode.value == 'compass':
