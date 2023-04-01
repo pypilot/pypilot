@@ -15,6 +15,8 @@ from pypilot.client import pypilotClient
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gpio
 import lircd
+import lcd
+
 print('hat import done', time.monotonic())
 
 class Action(object):
@@ -62,6 +64,7 @@ class ActionMode(ActionEngage):
     def  __init__(self, hat, mode):
         super(ActionMode, self).__init__(hat)
         self.mode = mode
+        self.name = mode + ' mode'
 
     def trigger(self, count):
         if self.hat.client and not count:
@@ -361,6 +364,8 @@ class Hat(object):
         self.keytimes = {}
         self.keytimeouts = {}
 
+        self.keycounts = {}
+
         self.inputs = [self.gpio, self.arduino, self.lirc]
 
         # keypad for lcd interface
@@ -371,9 +376,7 @@ class Hat(object):
             self.actions.append(ActionKeypad(self.lcd, i, keypadnames[i]))
 
         # stateless actions for autopilot control
-        self.actions += [ActionEngage(self),
-                         ActionPypilot(self, 'standby', 'ap.enabled', False),
-                         ActionHeading(self,  1),
+        self.actions += [ActionHeading(self,  1),
                          ActionHeading(self, -1),
                          ActionHeading(self,  2),
                          ActionHeading(self, -2),
@@ -381,19 +384,21 @@ class Hat(object):
                          ActionHeading(self, -5),
                          ActionHeading(self,  10),
                          ActionHeading(self, -10),
-                         ActionMode(self, 'compass'),
-                         ActionMode(self, 'gps'),
-                         ActionMode(self, 'wind'),
-                         ActionMode(self, 'truewind'),                                    
                          ActionPypilot(self, 'center', 'servo.position', 0),
                          ActionTack(self, 'tack_port', 'port'),
                          ActionTack(self, 'tack_starboard', 'starboard'),
                          ActionDodge(self, 'dodge_port', -1),
-                         ActionDodge(self, 'dodge_starboard', 1)
+                         ActionDodge(self, 'dodge_starboard', 1),
+                         ActionPypilot(self, 'standby', 'ap.enabled', False),
+                         ActionEngage(self)
         ]
 
+        if 'modes' in self.config:
+            for mode in self.config['modes']:
+                self.actions.append(ActionMode(self, mode))
+
         # profiles
-        for i in range(5):
+        for i in range(8):
             self.actions.append(ActionProfile(self, i))
 
         self.actions += [ActionProfileRelative(self, 'profile+', 1),
@@ -459,6 +464,12 @@ class Hat(object):
         for name in list(actions):
             if not actions[name] and name[:6] != 'pilot_':
                 del actions[name]
+
+        if self.client and not 'modes' in self.config:
+            values = self.client.get_values()
+            if 'ap.mode' in values:
+                self.config['modes'] = values['ap.mode']['choices']
+            
         try:
             f = open(self.configfilename, 'w')
             f.write(pyjson.dumps(self.config) + '\n')
@@ -484,6 +495,7 @@ class Hat(object):
             if count == 0:
                 return # already applied count 0
         self.web.send({'key': key})
+
         actions = self.config['actions']
         for action in self.actions:
             if not action.name in actions:
@@ -525,18 +537,30 @@ class Hat(object):
                     print('shutting down since pilots updated')
                     exit(0) #respawn
 
+    def key(self):
+        key = ''
+        count = 0
+        for k, c in self.keycounts.items():
+            if key:
+                key += '_' + k
+                count = max(count, c)
+            else:
+                key, count = k, c
+        return key, count
+                    
     def poll(self):            
         t0 = time.monotonic()
-        keycounts = {}
         for i in self.inputs:
             try:
                 if not i:
                     continue
                 events = i.poll()
                 for event in events:
-                    #print('apply', event, time.monotonic())
                     key, count = event
-                    keycounts[key] = count
+                    self.keycounts[key] = count
+                    if not count:
+                        self.apply_code(*self.key())
+                        del self.keycounts[key]
 
             except Exception as e:
                 self.inputs.remove(i)
@@ -544,22 +568,9 @@ class Hat(object):
                 del i
                 return
 
-        key = ''
-        count = 0
-        for k, c in keycounts.items():
-            if c:
-                if key:
-                    key += '_' + k
-                    count = min(count, c)
-                else:
-                    key = k
-                    count = c
-        if count:
+        key, count = self.key()
+        if key:
             self.apply_code(key, count)
-
-        for k, c in keycounts.items():
-            if c == 0:
-                self.apply_code(k, 0)
 
         t1 = time.monotonic()
         msgs = self.client.receive()

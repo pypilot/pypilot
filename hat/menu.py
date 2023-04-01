@@ -556,17 +556,18 @@ class BacklightEdit(RangeEdit):
         super(BacklightEdit, self).move(delta)
         self.lcd.send('backlight', self.value)
 
-class buzzer_menu(menu):
-    super(display, self).__init__(_('buzzer'),
-                                  [ConfigEdit(_('setting'), '', 'buzzer', 0, 2),
-                                   ConfigEdit(_('buzzer'), '', 'buzzer_volume', 1, 2)]
+class BuzzerMenu(menu):
+    def __init__(self):
+        super(BuzzerMenu, self).__init__(_('buzzer'),
+                                         [ConfigEdit(_('setting'), '', 'buzzer', 0, 2),
+                                          ConfigEdit(_('buzzer'), '', 'buzzer_volume', 1, 2)])
         
 class display(menu):
     def __init__(self):
         if micropython:
             bl = [ConfigEdit(_('hue'), '', 'hue', 0, 255)]
         else:
-            bl = [BacklightEdit(), buzzer_menu]
+            bl = [BacklightEdit(), BuzzerMenu()]
         super(display, self).__init__(_('display'),
                                       [ConfigEdit(_('contrast'), '', 'contrast', 0, 120),
                                        invert(_('invert')), flip(_('flip'))] + bl)

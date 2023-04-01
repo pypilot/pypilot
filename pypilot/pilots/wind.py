@@ -55,7 +55,7 @@ class WindPilot(AutopilotPilot):
       # to follow wind shifts with an overall average compass course
       compass = resolv(ap.wind_compass_offset.value - wind, 180)
       ap.heading.set(compass)
-    elif mode == 'gps':
+    elif mode == 'gps' or mode == 'nav':
       gps = resolv(self.gps_wind_offset.value - wind, 180)
       ap.heading.set(gps)
     elif mode == 'true wind':

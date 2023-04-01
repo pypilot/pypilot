@@ -563,12 +563,13 @@ class control(controlbase):
         if not mode in modes:
             return
         index = modes.index(mode)
+        nmodes = len(modes)
 
         # flash the compass C if there are calibration warnings
         if self.last_val('imu.compass.calibration.warning', default=False):
             if int(time.monotonic()) % 2:
                 modes = list(modes)
-                for i in range(len(modes)):
+                for i in range(nmodes):
                     if modes[i] == 'compass':
                         modes[i] = ' '
 
@@ -579,9 +580,9 @@ class control(controlbase):
         if index < 2:
             rindex = index
             mindex = 0
-        elif index == len(modes)-1:
+        elif nmodes > 3 and index == nmodes-1:
             rindex = 3
-            mindex = len(modes)-4
+            mindex = nmodes-4
         else:
             rindex = 2
             mindex = index - 2
@@ -596,7 +597,7 @@ class control(controlbase):
         marg = 0.02
         for i in range(4):
             ind = mindex+i
-            if ind < len(modes):
+            if ind < nmodes:
                 ret=self.fittext(modes_r[i], modes[ind][0].upper())
 
         # draw rectangle around mode
@@ -699,7 +700,7 @@ class control(controlbase):
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:
-                self.fittext(rectangle(0, .4, 1, .4), _(warning), True, black)
+                self.fittext(rectangle(0, .4, 1, .5), _(warning), True, black)
                 self.control['heading_command'] = warning
                 self.control['mode'] = warning
         elif mode not in modes:
@@ -708,9 +709,8 @@ class control(controlbase):
                 self.fittext(rectangle(0, .4, 1, .35), mode.upper() + ' ' + _('not detected'), True, black)
                 self.control['heading_command'] = no_mode
         elif self.last_val('imu.warning'):
-            warning = self.last_val('imu.warning')
             if self.control['heading_command'] != 'imu warning':
-                self.fittext(rectangle(0, .4, 1, .35), warning, True, black)
+                self.fittext(rectangle(0, .4, 1, .35), self.last_val('imu.warning'), True, black)
                 self.control['heading_command'] = 'imu warning'
         elif self.last_val('servo.controller') == 'none':
             if self.control['heading_command'] != 'no controller':
@@ -719,16 +719,16 @@ class control(controlbase):
         elif self.lcd.check_voltage():
             msg = self.lcd.check_voltage()
             if self.control['heading_command'] != msg:
-                self.fittext(rectangle(0, .4, 1, .34), msg, True, black)
+                self.fittext(rectangle(0, .4, 1, .35), msg, True, black)
                 self.control['heading_command'] = msg
         elif self.last_val('ap.enabled') != True:
             # no warning, display the desired course or 'standby'
             if self.control['heading_command'] != 'standby':
-                r = rectangle(0, .4, 1, .34)
+                r = rectangle(0, .4, 1, .35)
                 self.fittext(r, _('standby'), False, black)
                 self.control['heading_command'] = 'standby'
         elif self.last_val('ap.tack.state') != 'none':
-            r = rectangle(0, .4, 1, .34)
+            r = rectangle(0, .4, 1, .35)
             d = self.last_val('ap.tack.direction')
             if self.last_val('ap.tack.state') == 'waiting':
                 msg = _('tack') + ' ' + str(self.last_val('ap.tack.timeout'))

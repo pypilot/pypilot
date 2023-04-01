@@ -714,7 +714,7 @@ def CalibrationProcess(cal_pipe, client):
                     d = 1
                 field_strength = compass_calibration.field_strength.value * (1-d) + gauss * d
                 compass_calibration.field_strength.set(field_strength)
-                if abs(field_strength - gauss) > 1:
+                if abs(field_strength - gauss) > 3:
                     warn = True
 
                 d = .001
@@ -727,12 +727,12 @@ def CalibrationProcess(cal_pipe, client):
                 inclination = compass_calibration.inclination.value * (1-d) + angle * d
                 compass_calibration.inclination.set(inclination)
 
-                if abs(inclination - angle) > 6:
+                if abs(inclination - angle) > 8:
                     warn = True
 
                 warning = compass_calibration.warning
                 if warn:
-                    warning.update(_('magnetic distortions or bad calibration'))
+                    warning.update(_('magnetic distortions'))
                 else:
                     warning.update('')
 

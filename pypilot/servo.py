@@ -547,6 +547,8 @@ class Servo(object):
             self.device.timeout=0
         except:
             pass
+
+        fcntl.ioctl(self.device.fileno(), TIOCNXCL) #exclusive
         self.device.close()
         self.driver = False
 

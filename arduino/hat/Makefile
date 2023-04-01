@@ -68,7 +68,8 @@ AVRDUDE = sudo avrdude
 BOOTLOADER = linuxspi
 BAUDRATE = 1000000
 #sudo avrdude -P /dev/spidev0.1 -u -p atmega328p -c linuxspi -U f:w:hat.cpp.hex -b 1000000
-upload: $(SKETCHNAME).cpp.hex
+# $(SKETCHNAME).cpp.hex
+upload: 
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -U f:w:$(SKETCHNAME).cpp.hex -b $(BAUDRATE)
 
 download:

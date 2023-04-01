@@ -30,7 +30,7 @@ except:
 driver = 'default'
 for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'tft', 'none']:
     if pdriver in sys.argv:
-        print('overriding driver', driver, 'to command line', pdriver)
+        print('overriding lcd driver "' + driver + '" to command line "' + pdriver + '"')
         driver = pdriver
         sys.argv.remove(driver)
         break
@@ -209,7 +209,7 @@ class LCD():
 
     def buzz(self, mode, duration, threshold):
         if self.config['buzzer'] > threshold:
-            self.send('buzzer', (2, .1, self.lcd.config['buzzer_volume']))
+            self.send('buzzer', (2, .1, self.config['buzzer_volume']))
             
     def write_config(self):
         if micropython:

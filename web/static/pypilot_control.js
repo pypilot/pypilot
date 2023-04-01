@@ -135,7 +135,7 @@ $(document).ready(function() {
 
         if(register)
             $('#mode').change(function(event) {
-                pypilot_set('mode', $('#mode').val());
+                pypilot_set('ap.mode', $('#mode').val());
             });
 
         // gain
@@ -171,13 +171,6 @@ $(document).ready(function() {
                 pypilot_set('profiles', new_profiles);
             });
         }
-        
-        
-        gains = [];
-        for (var name in list_values)
-            if('AutopilotGain' in list_values[name] && name.substr(0, 3) == 'ap.')
-                gains.push(name);
-
 
         $('#gain_container').text('');
 
@@ -610,9 +603,13 @@ $(document).ready(function() {
             }
         }
 <<<<<<< HEAD
+
+=======
+<<<<<<< HEAD
 =======
 
 >>>>>>> 85dfce4fb0f4e24302304eb65ed21618e52c160c
+>>>>>>> 156519b9cd057e9c99db2ce9ac313de7661f73dc
     };
     
     $('#port10').click(function(event) { move(-10); });
@@ -627,6 +624,8 @@ $(document).ready(function() {
     });
 
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
     $('body').on('click', '#reset_default_config', function() {
          confirm('Reset values to default, are you sure?');
          // TODO.. reset values from server side
@@ -635,6 +634,7 @@ $(document).ready(function() {
 
 =======
 >>>>>>> 85dfce4fb0f4e24302304eb65ed21618e52c160c
+>>>>>>> 156519b9cd057e9c99db2ce9ac313de7661f73dc
     // Gain
 
     // Calibration
@@ -735,8 +735,12 @@ $(document).ready(function() {
 <<<<<<< HEAD
         pypilot_watches(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'servo.engaged', 'ap.version'], tab == 'Statistics', 1);
 =======
+<<<<<<< HEAD
+        pypilot_watches(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'servo.engaged', 'ap.version'], tab == 'Statistics', 1);
+=======
         pypilot_watches(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'ap.version', 'servo.engaged'], tab == 'Statistics', 1);
 >>>>>>> 85dfce4fb0f4e24302304eb65ed21618e52c160c
+>>>>>>> 156519b9cd057e9c99db2ce9ac313de7661f73dc
     }
     setup_watches();
 

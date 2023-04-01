@@ -56,7 +56,7 @@ class GPSPilot(AutopilotPilot):
     if mode == 'compass': # only if gps failed use compass
       compass = ap.boatimu.SensorValues['heading_lowpass'].value
       ap.heading.set(compass)
-    if mode == 'gps':
+    if mode == 'gps' or mode == 'nav':
       ap.heading.set(gps_course) # no filter?
     elif mode == 'wind':
       wind = resolv(self.wind_gps_offset.value - gps_course, 180)  
@@ -66,14 +66,11 @@ class GPSPilot(AutopilotPilot):
       ap.heading.set(true_wind)
 
   def best_mode(self, mode):
-      sensors = self.ap.sensors
-      gps_speed = sensors.gps.speed.value
-      nogps = sensors.gps.source.value == 'none' or gps_speed < 1.2
-      nowind = sensors.wind.source.value == 'none'
-      if nogps:  # fallback to compass only if gps has failed boat speed < 1.2knots
-        return 'compass'
-      elif mode == 'compass' or nowind:
-        return 'gps' # force gps mode overriding compass mode
+      modes = self.ap.modes.value
+      if not mode in modes:  # fallback to compass
+          if 'gps' in modes:
+              return 'gps'
+          return 'compass'
       return mode
       
   def process(self):
