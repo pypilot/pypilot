@@ -74,7 +74,7 @@ class LCD():
             
         default = {'contrast': 60, 'invert': False, 'backlight': 20,
                    'hue': 214, 'flip': False, 'language': 'en', 'bigstep': 10,
-                   'smallstep': 1, 'buzzer': 2, 'buzzer_volume': 5};
+                   'smallstep': 1, 'buzzer_pitch': 2};
 
         for name in default:
             if not name in self.config:
@@ -172,6 +172,7 @@ class LCD():
         self.menu = False
         self.page = connecting(self)
         self.need_refresh = True
+        self.need_buzz = False
 
         self.keypad = []
         for i in range(NUM_KEYS):
@@ -207,9 +208,11 @@ class LCD():
         if self.pipe:
             self.pipe.send((key, code))
 
-    def buzz(self, mode, duration, threshold):
-        if self.config['buzzer'] > threshold:
-            self.send('buzzer', (2, .1, self.config['buzzer_volume']))
+    def buzz(self, pulse, duration):
+        self.send('buzzer', (round(self.config['buzzer_pitch']), pulse, duration))
+
+    def buzz_key(self):
+        self.need_buzz = True
             
     def write_config(self):
         if micropython:
@@ -387,6 +390,10 @@ class LCD():
         #        if dt >= frameperiod or dt < 0:
         self.display()
         self.update_watches()
+
+        if self.need_buzz:
+            self.need_buzz = False
+            self.buzz(0, .05)
         
         t3 = gettime()
 

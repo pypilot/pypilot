@@ -273,7 +273,7 @@ class page(object):
     def testkeydown(self, key):
         k = self.lcd.keypad[key]
         if k.down:
-            self.lcd.buzz(1, .1, 1)
+            self.lcd.buzz_key()
             k.down -= 1
             return True
         return False
@@ -693,10 +693,11 @@ class control(controlbase):
                 warning += flag[:-6].replace('_', ' ') + ' '
                 if 'OVER' in flag or 'BADVOLTAGE' in flag: # beep overtemp/overcurrent
                     buzz = True
+                pulse = 2
 
         if warning:
             if buzz:
-                self.lcd.buzz(2, .1, 0)
+                self.lcd.buzz(pulse, .1)
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:

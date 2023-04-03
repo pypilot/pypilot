@@ -351,14 +351,13 @@ class Hat(object):
         for name in self.watchlist:
             self.client.watch(name)
 
-        self.lcd.poll()
-
         if 'arduino' in self.config['hat']:
             self.arduino = Arduino(self)
             self.poller.register(self.arduino.pipe, select.POLLIN)
         else:
             self.arduino = False
 
+        self.lcd.poll()
         self.lirc = lircd.lirc(self.config)
         self.lirc.registered = False
         self.keytimes = {}

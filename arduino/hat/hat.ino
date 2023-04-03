@@ -169,7 +169,7 @@ void Serial_begin(uint8_t baud)
 #endif
 
 uint32_t buzzer_timeout;
-uint8_t buzzer_mode;
+uint8_t buzzer_pitch, buzzer_pulse;
 void buzzer_off()
 {
     TIMSK2 = 0;
@@ -181,33 +181,36 @@ void buzzer_off()
 
 void set_buzzer(uint8_t mode, uint8_t timeout)
 {
+    if(buzzer_timeout)
+        return;
     buzzer_timeout = millis() + timeout*10; // duration
     if(buzzer_timeout > 4294963200UL)
         buzzer_timeout = 1; // in case of 32 bit wrap.. needed???
         
     TCCR2A = _BV(WGM20) | _BV(WGM21);
-    TCCR2B = _BV(WGM22) | _BV(CS22); // divide by 128
-
+    TCCR2B = _BV(WGM22) | _BV(CS22) | _BV(CS21); // divide by 256
     uint8_t freq;
-    switch(mode&0xf) {
-    case 1: // steady
-        freq = 200;
-        break;
-    case 2: // ... ... ...
-        freq = 60;
-        break;
+    uint8_t pitch = mode&0x0f;
+    buzzer_pulse = (mode&0xf0)>>4;
+    switch(pitch) {
+    case 1:        freq = 180;        break;
+    case 2:        freq = 120;        break;
+    case 3:        freq = 80;         break;
+    case 4:        freq = 60;         break;
+    case 5:        freq = 40;         break;
+    case 6:        freq = 30;         break;
+    case 7:        freq = 20;         break;
+    case 8:        freq = 10;         break;
     default:
     case 0: // buzzer off
         buzzer_off();
         return;
     }
-    int volume = (mode & 0xf0)
-    if(!volume)
-        pinMode(5, OUTPUT);
+    pinMode(5, OUTPUT);
     pinMode(6, OUTPUT);
-    buzzer_mode = mode;
+
     OCR2A = freq;
-    OCR2B = freq/2;
+    OCR2B = freq>>1;
     
     TIMSK2 |= _BV(OCIE2B) | _BV(TOIE2);
 }
@@ -524,15 +527,28 @@ void loop() {
         uint32_t t0 = millis();
         if(buzzer_timeout < t0) {
             buzzer_timeout = 0;
-            buzzer_mode = 0;
             buzzer_off();
         } else {
-            if(buzzer_mode == 2) {
+            if(buzzer_pulse == 1) {
+                uint8_t pos = ((buzzer_timeout - t0) / 50)%16;
+                if(pos < 7)
+                    TIMSK2 = _BV(OCIE2B) | _BV(TOIE2);
+                else
+                    TIMSK2 = 0;
+            } else
+            if(buzzer_pulse == 2) {
                 uint8_t pos = ((buzzer_timeout - t0) / 50)%16;
                 if(pos & 1 && pos != 7 && pos != 15)
-                    TIMSK2 |= _BV(OCIE2B) | _BV(TOIE2);
+                    TIMSK2 = _BV(OCIE2B) | _BV(TOIE2);
                 else
-                    buzzer_off();
+                    TIMSK2 = 0;
+            } else
+            if(buzzer_pulse == 3) {
+                uint8_t pos = ((buzzer_timeout - t0) / 50)%16;
+                if(pos & 1 && pos < 9)
+                    TIMSK2 = _BV(OCIE2B) | _BV(TOIE2);
+                else
+                    TIMSK2 = 0;
             }
         }
     }
