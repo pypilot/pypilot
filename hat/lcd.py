@@ -152,6 +152,7 @@ class LCD():
             if not self.surface:
                 w, h = screen.width, screen.height
                 self.surface = ugfx.surface(w, h, screen.bypp, None)
+                self.surface.box(0, 0, w, h, 0) # clear it
 
                 # magnify to fill screen
                 self.mag = min(screen.width / self.surface.width, screen.height / self.surface.height)

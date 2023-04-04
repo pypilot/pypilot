@@ -274,8 +274,8 @@ class Autopilot(object):
 
         # if heading offset alignment changed, keep same course
         if self.last_heading_off != self.boatimu.heading_off.value:
-            self.last_heading_off = resolv(self.last_heading_off, self.boatimu.heading_off.value)
-            self.compass_change += self.boatimu.heading_off.value - self.last_heading_off
+            last_heading_off = resolv(self.last_heading_off, self.boatimu.heading_off.value)
+            self.compass_change += self.boatimu.heading_off.value - last_heading_off
             self.last_heading_off = self.boatimu.heading_off.value
             
         if self.compass_change:
