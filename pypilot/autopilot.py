@@ -270,6 +270,7 @@ class Autopilot(object):
                 # to prevent actual course change
                 last_heading = resolv(self.last_heading, data['heading'])
                 self.compass_change += data['heading'] - headingrate*dt - last_heading
+                #print('chage', data['heading'] , headingrate*dt , last_heading, self.compass_change)
             self.last_heading = data['heading']
 
         # if heading offset alignment changed, keep same course
@@ -282,7 +283,7 @@ class Autopilot(object):
             self.gps_compass_offset.value -= self.compass_change
             self.wind_compass_offset.value += self.compass_change
             self.true_wind_compass_offset.value += self.compass_change
-            if self.mode.value == 'compass':
+            if self.mode.value == 'compass' and self.enabled.value:
                 heading_command = self.heading_command.value + self.compass_change
                 self.heading_command.set(resolv(heading_command, 180))
           

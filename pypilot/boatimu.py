@@ -196,7 +196,7 @@ class IMU(object):
                 self.compass_calibration_updated = True
                 self.s.CompassCalEllipsoidValid = True
                 self.s.CompassCalEllipsoidOffset = tuple(value[0][:3])
-                #rtimu.resetFusion()
+                self.rtimu.resetFusion()
             elif name == 'imu.rate':
                 self.rate = value
                 print(_('imu rate set to rate'), value)
@@ -414,6 +414,7 @@ class BoatIMU(object):
 
         self.last_imuread = time.monotonic() + 4 # ignore failed readings at startup
         self.cal_data = False
+        self.reset_alignment = False
 
     def __del__(self):
         #print('terminate imu process')
@@ -430,6 +431,7 @@ class BoatIMU(object):
         off = self.heading_off.value - heading_offset
         o = quaternion.angvec2quat(off*math.pi/180, [0, 0, 1])
         self.alignmentQ.update(quaternion.normalize(quaternion.multiply(q, o)))
+        self.reset_alignment = True
 
     def IMUread(self):
         if self.imu.multiprocessing:
@@ -497,6 +499,9 @@ class BoatIMU(object):
   
         # lowpass heading and rate
         llp = self.heading_lowpass_constant.value
+        if self.reset_alignment or data.get('compass_calibration_updated'):
+            llp = 1
+            self.reset_alignment = False
         data['heading_lowpass'] = heading_filter(llp, data['heading'], self.SensorValues['heading_lowpass'].value)
 
         llp = self.headingrate_lowpass_constant.value
