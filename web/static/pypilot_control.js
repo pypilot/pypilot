@@ -26,7 +26,7 @@ function openTab(evt, tabName) {
     }
     
     currentTab = tabName;
-    setup_watches();
+    setup_watches()
 }
 
 var setup_watches = false;
@@ -142,6 +142,7 @@ $(document).ready(function() {
         pypilot_watch('profile');
         pypilot_watch('profiles');
         pypilot_watch('ap.pilot');
+        $('#gain_container').text('');
 
         if(register) {
             $('#profile').change(function(event) {
@@ -171,8 +172,12 @@ $(document).ready(function() {
                 pypilot_set('profiles', new_profiles);
             });
         }
-
-        $('#gain_container').text('');
+        
+        
+        gains = [];
+        for (var name in list_values)
+            if('AutopilotGain' in list_values[name] && name.substr(0, 3) == 'ap.')
+                gains.push(name);
 
         html = ''
         html += '<div style="display: table; border-collapse: collapse;">';
@@ -203,20 +208,22 @@ $(document).ready(function() {
             show_gains();
         });
 
-        $('#gain_container').append('<div id="Reset"><p><button id="reset_default_gain">Reset to default</button></p></div>');
-
         // calibration
         pypilot_watch('imu.heading_offset', .5);
         pypilot_watch('imu.alignmentQ', .5);
         pypilot_watch('imu.alignmentCounter', .25);
-
+        pypilot_watch('imu.compass.calibration.locked');
         pypilot_watch('imu.accel.calibration.locked');
+
+        if(register)
         $('#accel_calibration_locked').change(function(event) {
             check = $('#accel_calibration_locked').prop('checked');
             pypilot_set('imu.accel.calibration.locked', check);
         });
 
         pypilot_watch('imu.compass.calibration.locked');
+
+        if(register)
         $('#compass_calibration_locked').change(function(event) {
             check = $('#compass_calibration_locked').prop('checked');
             pypilot_set('imu.compass.calibration.locked', check);
@@ -229,7 +236,7 @@ $(document).ready(function() {
         pypilot_watch('rudder.range');
 
         // configuration
-        $('#configuration_container').text('');
+        $('#configuration_container').text('')
         conf_names = [];
         for (var name in list_values)
             if(list_values[name]['type'] == 'RangeSetting')
@@ -266,10 +273,10 @@ $(document).ready(function() {
 
         if(tinypilot) {
             $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>');
-            $('#configuration_container').append('<p><a href="/nmea">Configure NMEA</a>');
-            $('#configuration_container').append('<p><a href=":33333">Configure LCD Keypad and Remotes</a>');
-            $('#configuration_container').append('<div id="Reset"><p><button id="reset_default">Reset to default</button></p></div>');
+            $('#configuration_container').append('<p><a href="/logs">Logs Wifi</a>');
         }
+
+        $('#configuration_container').append('<p><a href=":33333">Configure LCD Keypad and Remotes</a>');
 
         pypilot_watch('nmea.client');
 
@@ -292,13 +299,13 @@ $(document).ready(function() {
     });
 
     socket.on('pypilot_disconnect', function() {
-        $('#connection').text(_('Disconnected'));
+        $('#connection').text(_('Disconnected'))
     });
 
     // update manual servo command
-    setTimeout(poll_pypilot, 1000);
+    setTimeout(poll_pypilot, 1000)
     function poll_pypilot() {
-        setTimeout(poll_pypilot, 200);
+        setTimeout(poll_pypilot, 200)
         if(servo_command_timeout > 0) {
             servo_command_timeout--;
             if(servo_command_timeout <= 0)
@@ -343,7 +350,7 @@ $(document).ready(function() {
             return "N/A";
 
         // round to 1 decimal place
-        heading = Math.round(10*heading)/10;
+        heading = Math.round(10*heading)/10
 
         if(current_mode == 'wind' || current_mode == 'true wind') {
             if(heading > 0)
@@ -558,13 +565,8 @@ $(document).ready(function() {
 
         if('servo.flags' in data)
             $('#servoflags').text(data['servo.flags']);
-
-        if('ap.version' in data) {
-            value = data['ap.version'];
-            $('#version').text(value);
-        }
     });
-
+    
     function pypilot_set(name, value) {
         socket.emit('pypilot', name + '=' + JSON.stringify(value));
     }
@@ -602,15 +604,7 @@ $(document).ready(function() {
                 servo_command_timeout = Math.abs(x) > 5 ? 6 : 2;
             }
         }
-<<<<<<< HEAD
-
-=======
-<<<<<<< HEAD
-=======
-
->>>>>>> 85dfce4fb0f4e24302304eb65ed21618e52c160c
->>>>>>> 156519b9cd057e9c99db2ce9ac313de7661f73dc
-    };
+    }
     
     $('#port10').click(function(event) { move(-10); });
     $('#port2').click(function(event) { move(-2); });
@@ -623,18 +617,6 @@ $(document).ready(function() {
             pypilot_set('ap.tack.state', 'none');
     });
 
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-    $('body').on('click', '#reset_default_config', function() {
-         confirm('Reset values to default, are you sure?');
-         // TODO.. reset values from server side
-    });
-
-
-=======
->>>>>>> 85dfce4fb0f4e24302304eb65ed21618e52c160c
->>>>>>> 156519b9cd057e9c99db2ce9ac313de7661f73dc
     // Gain
 
     // Calibration
@@ -732,15 +714,7 @@ $(document).ready(function() {
         pypilot_watches(gains, tab == 'Gain', 1);
         pypilot_watches(['imu.heading', 'imu.pitch', 'imu.roll', 'rudder.angle'], tab == 'Calibration', .5);
         pypilot_watches(conf_names, tab == 'Configuration', 1);
-<<<<<<< HEAD
-        pypilot_watches(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'servo.engaged', 'ap.version'], tab == 'Statistics', 1);
-=======
-<<<<<<< HEAD
-        pypilot_watches(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'servo.engaged', 'ap.version'], tab == 'Statistics', 1);
-=======
         pypilot_watches(['servo.amp_hours', 'servo.voltage', 'servo.controller_temp', 'ap.runtime', 'ap.version', 'servo.engaged'], tab == 'Statistics', 1);
->>>>>>> 85dfce4fb0f4e24302304eb65ed21618e52c160c
->>>>>>> 156519b9cd057e9c99db2ce9ac313de7661f73dc
     }
     setup_watches();
 
