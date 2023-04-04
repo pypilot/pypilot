@@ -385,7 +385,6 @@ class BoatIMU(object):
         self.last_alignmentCounter = False
 
         self.uptime = self.register(TimeValue, 'uptime')
-        self.warning = self.register(StringValue, 'warning', '')
         
         self.auto_cal = AutomaticCalibrationProcess(client.server)
 
