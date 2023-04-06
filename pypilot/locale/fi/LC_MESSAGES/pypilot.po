@@ -7,8 +7,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: pypilot 0.24\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-18 00:31-0400\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-04-06 17:25-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,226 +19,19 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: pypilot/autopilot.py:139
-msgid "Available Pilots"
-msgstr "Saatavilla olevat lentäjät"
+#: ../rudder.py:118
+msgid "bad rudder calibration"
+msgstr "huono peräsimen kalibrointi"
 
-#: pypilot/autopilot.py:161
-msgid "warning: failed to open special file"
-msgstr "varoitus: erikoistiedoston avaaminen epäonnistui"
+#: ../rudder.py:122
+msgid "bad servo rudder calibration"
+msgstr "huono servopyörän kalibrointi"
 
-#: pypilot/autopilot.py:161
-msgid "for writing"
-msgstr "kirjoittamista varten"
+#: ../rudder.py:193
+msgid "servo rudder autogain failed"
+msgstr "servo-peräsimen automaattinen vahvistus epäonnistui"
 
-#: pypilot/autopilot.py:162
-msgid "cannot stroke the watchdog"
-msgstr "ei voi silittää vahtikoiraa"
-
-#: pypilot/autopilot.py:166
-msgid "warning: failed to make autopilot process realtime"
-msgstr "varoitus: autopilotin prosessin tekeminen reaaliaikaiseksi epäonnistui"
-
-#: pypilot/autopilot.py:337
-msgid "server/client is running too _slowly_"
-msgstr "palvelin / asiakas toimii liian _hitaasti_"
-
-#: pypilot/autopilot.py:343
-msgid "sensors is running too _slowly_"
-msgstr "anturit käyvät liian hitaasti"
-
-#: pypilot/autopilot.py:420
-msgid "autopilot routine is running too _slowly_"
-msgstr "autopilotin rutiini toimii liian hitaasti"
-
-#: pypilot/autopilot.py:429
-msgid "servo is running too _slowly_"
-msgstr "servo toimii liian hitaasti"
-
-#: pypilot/boatimu.py:33
-msgid "RTIMU library not detected, please install it"
-msgstr "RTIMU-kirjastoa ei löydy, asenna se"
-
-#: pypilot/boatimu.py:56
-msgid "Using settings file"
-msgstr "Asetustiedoston käyttäminen"
-
-#: pypilot/boatimu.py:96
-msgid "ERROR: No IMU Detected"
-msgstr "VIRHE: IMU: ta ei havaittu"
-
-#: pypilot/boatimu.py:104
-msgid "ERROR: IMU Init Failed, no inertial data available"
-msgstr "VIRHE: IMU Init epäonnistui, inertiatietoja ei ole käytettävissä"
-
-#: pypilot/boatimu.py:126
-msgid "warning, failed to make imu process realtime"
-msgstr "varoitus, epäonnistui imu-prosessin tekeminen reaaliajassa"
-
-#: pypilot/boatimu.py:128
-msgid "made imu process realtime"
-msgstr "teki imuprosessista reaaliaikaisen"
-
-#: pypilot/boatimu.py:140
-msgid "setting initial gyro bias"
-msgstr "alkuperäisen gyro-biasin asettaminen"
-
-#: pypilot/boatimu.py:156
-msgid "imu process failed to keep time"
-msgstr "imu-prosessi ei onnistunut pitämään aikaa"
-
-#: pypilot/boatimu.py:164
-msgid "failed to read IMU!"
-msgstr "epäonnistui lukemaan IMU: ta!"
-
-#: pypilot/boatimu.py:196
-msgid "imu rate set to rate"
-msgstr "imu-kurssi asetettu koroksi"
-
-#: pypilot/boatimu.py:210
-msgid "too high standing gyro bias, resetting sensors"
-msgstr "liian korkea seisova gyro-bias, antureiden nollaaminen"
-
-#: pypilot/boatimu.py:215
-msgid "compass out of range, resetting"
-msgstr "kompassi kantaman ulkopuolella, nollaus"
-
-#: pypilot/boatimu.py:307
-msgid "warning, failed to make calibration process other"
-msgstr "varoitus, kalibrointiprosessia ei tehty muuksi"
-
-#: pypilot/boatimu.py:309
-msgid "warning, failed to make calibration process idle, trying renice"
-msgstr "varoitus, kalibrointiprosessin siirtäminen lepotilaan epäonnistui"
-
-#: pypilot/boatimu.py:311
-msgid "warning, failed to renice calibration process"
-msgstr "varoitus, kalibrointiprosessin muuttaminen epäonnistui"
-
-#: pypilot/boatimu.py:318
-msgid "calibration loaded, starting"
-msgstr "kalibrointi ladattu, alkaa"
-
-#: pypilot/boatimu.py:322
-msgid "failed import calibration fit"
-msgstr "epäonnistunut tuontikalibrointisovellus"
-
-#: pypilot/boatimu.py:439
-msgid "accel values invalid"
-msgstr "Accel-arvot ovat virheellisiä"
-
-#: pypilot/bufferedsocket.py:55
-msgid "overflow in pypilot udp socket"
-msgstr "ylivuoto pypilot udp -liitännässä"
-
-#: pypilot/bufferedsocket.py:60
-msgid "overflow in pypilot socket"
-msgstr "pypilot-pistorasian ylivuoto"
-
-#: pypilot/bufferedsocket.py:70
-msgid "failed to send udp packet"
-msgstr "udp-paketin lähettäminen epäonnistui"
-
-#: pypilot/bufferedsocket.py:79
-msgid "pypilot socket failed to send to"
-msgstr "pypilot-pistorasian lähettäminen epäonnistui"
-
-#: pypilot/bufferedsocket.py:93
-msgid "socket send took too long!?!?"
-msgstr "liittimen lähettäminen kesti liian kauan!?!?"
-
-#: pypilot/bufferedsocket.py:95
-msgid "socket send error"
-msgstr "pistorasian lähetysvirhe"
-
-#: pypilot/bufferedsocket.py:99
-msgid "pypilot socket exception"
-msgstr "pypilot-pistorasian poikkeus"
-
-#: pypilot/bufferedsocket.py:103
-msgid "falling back to python nonblocking socket, will consume more cpu"
-msgstr ""
-"palatessasi pythonin estämättömään pistorasiaan, kuluttaa enemmän prosessoria"
-
-#: pypilot/bufferedsocket.py:129
-msgid "socket send error in server flush"
-msgstr "pistorasian lähetysvirhe palvelimen huuhtelussa"
-
-#: pypilot/bufferedsocket.py:144
-msgid "error receiving data"
-msgstr "virhe tietojen vastaanottamisessa"
-
-#: pypilot/calibration_fit.py:38
-msgid "failed to load scientific library, cannot perform calibration update!"
-msgstr ""
-"tieteellisen kirjaston lataaminen epäonnistui, kalibrointipäivitystä ei voi "
-"suorittaa!"
-
-#: pypilot/client.py:96
-msgid "warning, registering existing value:"
-msgstr "varoitus, olemassa olevan arvon rekisteröinti:"
-
-#: pypilot/client.py:157
-msgid "failed to read config file:"
-msgstr "määritystiedoston lukeminen epäonnistui:"
-
-#: pypilot/client.py:188
-msgid "failed to write config file:"
-msgstr "määritystiedoston kirjoittaminen epäonnistui:"
-
-#: pypilot/client.py:190
-msgid "Exception writing config file:"
-msgstr "Poikkeuksen kirjoittava määritystiedosto:"
-
-#: pypilot/client.py:275
-msgid "invalid message from server:"
-msgstr "virheellinen viesti palvelimelta:"
-
-#: pypilot/client.py:291
-msgid "warning, pypilot client aleady has connection"
-msgstr "varoitus, pypilot-asiakkaalla on jo yhteys"
-
-#: pypilot/client.py:311
-msgid "connect failed to"
-msgstr "yhteyden muodostaminen epäonnistui"
-
-#: pypilot/client.py:403
-msgid "failed to connect to"
-msgstr "yhteyden muodostaminen epäonnistui"
-
-#: pypilot/client.py:460
-msgid "usage"
-msgstr "käyttö"
-
-#: pypilot/client.py:463
-msgid "set the host or ip address"
-msgstr "aseta isäntä- tai ip-osoite"
-
-#: pypilot/client.py:464
-msgid "print info about each value type"
-msgstr "tulosta tiedot jokaisesta arvotyypistä"
-
-#: pypilot/client.py:465
-msgid "continuous watch"
-msgstr "jatkuva katselu"
-
-#: pypilot/client.py:466
-msgid "show this message"
-msgstr "näytä tämä viesti"
-
-#: pypilot/client.py:493
-msgid "failed to retrieve value list!"
-msgstr "arvoluettelon noutaminen epäonnistui!"
-
-#: pypilot/client.py:504
-msgid "timeout retrieving"
-msgstr "aikakatkaisun haku"
-
-#: pypilot/client.py:507
-msgid "missing"
-msgstr "puuttuu"
-
-#: pypilot/failedimports.py:12
+#: ../failedimports.py:12
 msgid ""
 "pypilot failed to import required modules.  Did you forget to run sudo "
 "python3 setup.py install?"
@@ -246,753 +39,920 @@ msgstr ""
 "pypilot epäonnistui tarvittavien moduulien tuomisessa. Unohtuiko suorittaa "
 "sudo python3 setup.py install?"
 
-#: pypilot/gpsd.py:45
-msgid "gpsd connected"
-msgstr "gpsd kytketty"
-
-#: pypilot/gpsd.py:49
-msgid "gpsd failed to connect"
-msgstr "gpsd-yhteyden muodostaminen epäonnistui"
-
-#: pypilot/gpsd.py:55
-msgid "exception connecting to gps"
-msgstr "GPS: ään yhdistävä poikkeus"
-
-#: pypilot/gpsd.py:59
-msgid "gpsd disconnected"
-msgstr "gpsd katkaistu"
-
-#: pypilot/gpsd.py:73
-msgid "gpsd PROBE success"
-msgstr "gpsd PROBE menestys"
-
-#: pypilot/gpsd.py:81
-msgid "gpsd probe failed"
-msgstr "GPSD-koetin epäonnistui"
-
-#: pypilot/gpsd.py:104
-msgid "gpsd deactivated"
-msgstr "gpsd deaktivoitu"
-
-#: pypilot/gpsd.py:137
-msgid "gpsd failed to determine serial baud rate of device"
-msgstr "gpsd ei onnistunut määrittämään laitteen sarjasiirtonopeutta"
-
-#: pypilot/gpsd.py:154
-msgid "gpsd timeout from lack of data"
-msgstr "GPSD-aikakatkaisu tietojen puutteesta"
-
-#: pypilot/gpsd.py:169
-msgid "gpsd received invalid message"
-msgstr "gpsd vastaanotti virheellisen viestin"
-
-#: pypilot/gpsd.py:214
-msgid "gpsd got flag for pipe:"
-msgstr "gpsd sai lipun putkelle:"
-
-#: pypilot/gpsd.py:223
-msgid "gpsd serial probe"
-msgstr "gpsd-sarjakoetin"
-
-#: pypilot/nmea.py:86
-msgid "nmea failed to parse gps"
-msgstr "nmea ei pystynyt jäsentämään GPS: ää"
-
-#: pypilot/nmea.py:126
-msgid "nmea failed to parse wind"
-msgstr "nmea ei pystynyt jäsentämään tuulta"
-
-#: pypilot/nmea.py:188
-msgid "exception parsing apb"
-msgstr "poikkeus jäsentää apb"
-
-#: pypilot/nmea.py:276
-msgid "unhandled nmea pipe string"
-msgstr "käsittelemätön nmea-putkijono"
-
-#: pypilot/nmea.py:326
-msgid "lost serial"
-msgstr "kadonnut sarja"
-
-#: pypilot/nmea.py:349
-msgid "nmea got flag for process pipe:"
-msgstr "nmea sai lipun prosessiputkelle:"
-
-#: pypilot/nmea.py:370
-msgid "is another process accessing it?"
-msgstr "onko toinen prosessi pääsy siihen?"
-
-#: pypilot/nmea.py:372
-msgid "serial device timed out"
-msgstr "sarjalaite aikakatkaistiin"
-
-#: pypilot/nmea.py:428
-msgid "failed to open"
-msgstr "epäonnistui avaaminen"
-
-#: pypilot/nmea.py:484
-msgid "nmea server on port"
-msgstr "nmea-palvelin portissa"
-
-#: pypilot/nmea.py:484
-msgid "bind failed."
-msgstr "sidonta epäonnistui."
-
-#: pypilot/nmea.py:486
-msgid "listening on port"
-msgstr "kuuntelee satamassa"
-
-#: pypilot/nmea.py:486
-msgid "for nmea connections"
-msgstr "nmea-yhteyksille"
-
-#: pypilot/nmea.py:552
-msgid "nmea server has too many connections"
-msgstr "nmea-palvelimella on liian monta yhteyttä"
-
-#: pypilot/nmea.py:578
-msgid "nmea client lost connection"
-msgstr "nmea -asiakas katkaisi yhteyden"
-
-#: pypilot/nmea.py:583
-msgid "nmea sock not in sockets!"
-msgstr "nmea-sukka ei ole pistorasioissa!"
-
-#: pypilot/nmea.py:594
-msgid "nmea failed to unregister socket"
-msgstr "nmea ei onnistunut poistamaan pistorasian rekisteröintiä"
-
-#: pypilot/nmea.py:599
-msgid "nmea failed to remove fd"
-msgstr "nmea ei onnistunut poistamaan fd: tä"
-
-#: pypilot/nmea.py:604
-msgid "nmea failed to remove address"
-msgstr "nmea ei onnistunut poistamaan osoitetta"
-
-#: pypilot/nmea.py:629
-msgid "invalid value"
-msgstr "Kelpaamaton arvo"
-
-#: pypilot/nmea.py:639
-msgid "connect error"
-msgstr "yhteysvirhe"
-
-#: pypilot/nmea.py:668 pypilot/signalk.py:239
-msgid "failed to connect"
-msgstr "ei voida yhdistää"
-
-#: pypilot/nmea.py:676
-msgid "nmea client connected"
-msgstr "nmea -asiakas yhdistetty"
-
-#: pypilot/nmea.py:705
-msgid "poll took too long in nmea process!"
-msgstr "kysely kesti liian kauan nmea-prosessissa!"
-
-#: pypilot/nmea.py:712
-msgid "nmea bridge lost server connection"
-msgstr "nmea-silta katosi palvelinyhteyden"
-
-#: pypilot/nmea.py:715
-msgid "nmea bridge lost pipe to autopilot"
-msgstr "nmea-silta menetti putken autopilotille"
-
-#: pypilot/nmea.py:738
-msgid "nmea bridge unhandled poll flag"
-msgstr "nmea-silta käsittelemätön kyselylippu"
-
-#: pypilot/nmea.py:773
-msgid "nmea process loop too slow:"
-msgstr "nmea-prosessisilmukka liian hidas:"
-
-#: pypilot/nonblockingpipe.py:40
-msgid "error pipe block on recv!"
-msgstr "virhe putkilohko recv!"
-
-#: pypilot/nonblockingpipe.py:42
-msgid "failed to recv nonblocking pipe!"
-msgstr "epäonnistui rekvisiittaista putkea!"
-
-#: pypilot/nonblockingpipe.py:69
-msgid "pipe full"
-msgstr "putki täynnä"
-
-#: pypilot/nonblockingpipe.py:69
-msgid "cannot send"
-msgstr "ei voi lähettää"
-
-#: pypilot/nonblockingpipe.py:89 pypilot/nonblockingpipe.py:145
-msgid "failed to decode data socket!"
-msgstr "ei onnistunut purkamaan datapistoketta!"
-
-#: pypilot/nonblockingpipe.py:103
-msgid "failed to encode data socket!"
-msgstr "ei onnistunut koodaamaan datapistoketta!"
-
-#: pypilot/nonblockingpipe.py:155
-msgid "failed write"
-msgstr "epäonnistui kirjoittaminen"
-
-#: pypilot/pyjson.py:14
+#: ../pyjson.py:14
 msgid "WARNING: python ujson library failed, parsing will consume more cpu"
 msgstr ""
 "VAROITUS: python ujson -kirjasto epäonnistui, jäsentäminen kuluttaa enemmän "
 "prosessoria"
 
-#: pypilot/rudder.py:117
-msgid "bad rudder calibration"
-msgstr "huono peräsimen kalibrointi"
-
-#: pypilot/rudder.py:121
-msgid "bad servo rudder calibration"
-msgstr "huono servopyörän kalibrointi"
-
-#: pypilot/rudder.py:192
-msgid "servo rudder autogain failed"
-msgstr "servo-peräsimen automaattinen vahvistus epäonnistui"
-
-#: pypilot/sensors.py:41
-msgid "sensor found"
-msgstr "anturi löytyi"
-
-#: pypilot/sensors.py:190
-msgid "unknown data parsed!"
-msgstr "tuntemattomia tietoja on jäsennelty!"
-
-#: pypilot/serialprobe.py:30
-msgid "error reading"
-msgstr "virhe luettaessa"
-
-#: pypilot/serialprobe.py:86
-msgid "found more devices by path"
-msgstr "löysi lisää laitteita polun mukaan"
-
-#: pypilot/serialprobe.py:118
-msgid "removing gps device"
-msgstr "GPS-laitteen poistaminen"
-
-#: pypilot/serialprobe.py:194
-msgid "no pyudev module! will scan usb devices often!"
-msgstr "ei pyudev-moduulia! skannaa usb-laitteita usein!"
-
-#: pypilot/serialprobe.py:356
-msgid "success"
-msgstr "menestys"
-
-#: pypilot/serialprobe.py:364
-msgid "failed to record device"
-msgstr "laitteen tallennus epäonnistui"
-
-#: pypilot/server.py:96
-msgid "ERROR no connections in watch"
-msgstr "VIRHE ei yhteyttä kellossa"
-
-#: pypilot/server.py:199
-msgid "remove duplicate udp connection"
-msgstr "Poista päällekkäinen udp-yhteys"
-
-#: pypilot/server.py:340
-msgid "creating config directory: "
-msgstr "määrityshakemiston luominen:"
-
-#: pypilot/server.py:347 ui/boatplot.py:109
-msgid "failed to load"
-msgstr "lataus epäonnistui"
-
-#: pypilot/server.py:358
-msgid "backup data failed as well"
-msgstr "varmuuskopiointi epäonnistui"
-
-#: pypilot/server.py:386
-msgid "failed to write"
-msgstr "ei kirjoittanut"
-
-#: pypilot/server.py:443
-msgid "pypilot_server: bind failed; already running a server?"
-msgstr "pypilot_server: sidonta epäonnistui; jo palvelinta?"
-
-#: pypilot/server.py:505
-msgid "persistent store took too long!"
-msgstr "jatkuva myymälä kesti liian kauan!"
-
-#: pypilot/server.py:521
-msgid "max connections reached"
-msgstr "maksimiliitännät saavutettu"
-
-#: pypilot/server.py:524
-msgid "server add socket"
-msgstr "palvelimen lisäyspistoke"
-
-#: pypilot/server.py:534
-msgid "internal pipe closed, server exiting"
-msgstr "sisäinen putki suljettu, palvelin poistuu"
-
-#: pypilot/server.py:586
-msgid "server socket closed from flush!!"
-msgstr "palvelinpistoke suljettu huuhtelusta!"
-
-#: pypilot/servo.py:460
+#: ../servo.py:453
 msgid "servo calibration invalid"
 msgstr "servokalibrointi on virheellinen"
 
-#: pypilot/servo.py:589
+#: ../servo.py:588
 msgid "failed to open servo on:"
 msgstr "epäonnistui avaamasta servoa:"
 
-#: pypilot/servo.py:596
+#: ../servo.py:595
 msgid "failed set nonblocking/exclusive"
 msgstr "epäonnistunut asetettu esto / yksinoikeus"
 
-#: pypilot/servo.py:627 pypilot/signalk.py:159
+#: ../servo.py:626 ../signalk.py:189
 msgid "found"
 msgstr "löytyi"
 
-#: pypilot/servo.py:749
+#: ../servo.py:743
 msgid "loading servo calibration"
 msgstr "servokalibroinnin lataus"
 
-#: pypilot/servo.py:753
+#: ../servo.py:747
 msgid "WARNING: using default servo calibration!!"
 msgstr "VAROITUS: oletus servokalibrointi !!"
 
-#: pypilot/servo.py:762
+#: ../servo.py:756
 msgid "probing"
 msgstr "koettelemalla"
 
-#: pypilot/servo.py:778
+#: ../servo.py:772
 msgid "arduino servo detected"
 msgstr "arduino-servo havaittu"
 
-#: pypilot/servo.py:787
+#: ../servo.py:781
 msgid "device needed for option"
 msgstr "tarvittava laite"
 
-#: pypilot/signalk.py:66
-msgid "read token"
-msgstr "lukea tunnusta"
+#: ../nmea.py:109
+msgid "nmea failed to parse gps"
+msgstr "nmea ei pystynyt jäsentämään GPS: ää"
 
-#: pypilot/signalk.py:69
-msgid "failed to read token"
-msgstr "tunnuksen lukeminen epäonnistui"
+#: ../nmea.py:149
+msgid "nmea failed to parse wind"
+msgstr "nmea ei pystynyt jäsentämään tuulta"
 
-#: pypilot/signalk.py:76
-msgid "failed to"
-msgstr "epäonnistui"
+#: ../nmea.py:211
+msgid "exception parsing apb"
+msgstr "poikkeus jäsentää apb"
 
-#: pypilot/signalk.py:76
-msgid "autodetection not possible"
-msgstr "automaattinen tunnistus ei ole mahdollista"
+#: ../nmea.py:253 ../nmea.py:263
+msgid "exception parsing vhw"
+msgstr "poikkeus jäsentää vhw"
 
-#: pypilot/signalk.py:77 pypilot/signalk.py:146 pypilot/signalk.py:216
-msgid "try"
-msgstr "yrittää"
+#: ../nmea.py:352
+msgid "unhandled nmea pipe string"
+msgstr "käsittelemätön nmea-putkijono"
 
-#: pypilot/signalk.py:77 pypilot/signalk.py:146 pypilot/signalk.py:216
-msgid "or"
-msgstr "tai"
+#: ../nmea.py:405
+msgid "lost serial"
+msgstr "kadonnut sarja"
 
-#: pypilot/signalk.py:108
+#: ../nmea.py:428
+msgid "nmea got flag for process pipe:"
+msgstr "nmea sai lipun prosessiputkelle:"
+
+#: ../nmea.py:450
+msgid "is another process accessing it?"
+msgstr "onko toinen prosessi pääsy siihen?"
+
+#: ../nmea.py:452
+msgid "serial device timed out"
+msgstr "sarjalaite aikakatkaistiin"
+
+#: ../nmea.py:521
+msgid "failed to open"
+msgstr "epäonnistui avaaminen"
+
+#: ../nmea.py:587
+msgid "nmea server on port"
+msgstr "nmea-palvelin portissa"
+
+#: ../nmea.py:587
+msgid "bind failed."
+msgstr "sidonta epäonnistui."
+
+#: ../nmea.py:589
+msgid "listening on port"
+msgstr "kuuntelee satamassa"
+
+#: ../nmea.py:589
+msgid "for nmea connections"
+msgstr "nmea-yhteyksille"
+
+#: ../nmea.py:660
+msgid "nmea server has too many connections"
+msgstr "nmea-palvelimella on liian monta yhteyttä"
+
+#: ../nmea.py:686
+msgid "nmea client lost connection"
+msgstr "nmea -asiakas katkaisi yhteyden"
+
+#: ../nmea.py:691
+msgid "nmea sock not in sockets!"
+msgstr "nmea-sukka ei ole pistorasioissa!"
+
+#: ../nmea.py:702
+msgid "nmea failed to unregister socket"
+msgstr "nmea ei onnistunut poistamaan pistorasian rekisteröintiä"
+
+#: ../nmea.py:707
+msgid "nmea failed to remove fd"
+msgstr "nmea ei onnistunut poistamaan fd: tä"
+
+#: ../nmea.py:712
+msgid "nmea failed to remove address"
+msgstr "nmea ei onnistunut poistamaan osoitetta"
+
+#: ../nmea.py:737
+msgid "invalid value"
+msgstr "Kelpaamaton arvo"
+
+#: ../nmea.py:747
+msgid "connect error"
+msgstr "yhteysvirhe"
+
+#: ../nmea.py:776 ../signalk.py:269
+msgid "failed to connect"
+msgstr "ei voida yhdistää"
+
+#: ../nmea.py:784
+msgid "nmea client connected"
+msgstr "nmea -asiakas yhdistetty"
+
+#: ../nmea.py:813
+msgid "poll took too long in nmea process!"
+msgstr "kysely kesti liian kauan nmea-prosessissa!"
+
+#: ../nmea.py:820
+msgid "nmea bridge lost server connection"
+msgstr "nmea-silta katosi palvelinyhteyden"
+
+#: ../nmea.py:823
+msgid "nmea bridge lost pipe to autopilot"
+msgstr "nmea-silta menetti putken autopilotille"
+
+#: ../nmea.py:847
+msgid "nmea bridge unhandled poll flag"
+msgstr "nmea-silta käsittelemätön kyselylippu"
+
+#: ../nmea.py:907
+msgid "nmea process loop too slow:"
+msgstr "nmea-prosessisilmukka liian hidas:"
+
+#: ../nonblockingpipe.py:40
+msgid "error pipe block on recv!"
+msgstr "virhe putkilohko recv!"
+
+#: ../nonblockingpipe.py:42
+msgid "failed to recv nonblocking pipe!"
+msgstr "epäonnistui rekvisiittaista putkea!"
+
+#: ../nonblockingpipe.py:69
+msgid "pipe full"
+msgstr "putki täynnä"
+
+#: ../nonblockingpipe.py:69
+msgid "cannot send"
+msgstr "ei voi lähettää"
+
+#: ../nonblockingpipe.py:89 ../nonblockingpipe.py:145
+msgid "failed to decode data socket!"
+msgstr "ei onnistunut purkamaan datapistoketta!"
+
+#: ../nonblockingpipe.py:103
+msgid "failed to encode data socket!"
+msgstr "ei onnistunut koodaamaan datapistoketta!"
+
+#: ../nonblockingpipe.py:155
+msgid "failed write"
+msgstr "epäonnistui kirjoittaminen"
+
+#: ../server.py:106
+msgid "ERROR no connections in watch"
+msgstr "VIRHE ei yhteyttä kellossa"
+
+#: ../server.py:209
+msgid "remove duplicate udp connection"
+msgstr "Poista päällekkäinen udp-yhteys"
+
+#: ../server.py:486
+msgid "failed to monitor "
+msgstr "ei onnistunut valvomaan"
+
+#: ../server.py:490
+msgid "creating config directory: "
+msgstr "määrityshakemiston luominen:"
+
+#: ../server.py:497
+msgid "failed to load"
+msgstr "lataus epäonnistui"
+
+#: ../server.py:508
+msgid "backup data failed as well"
+msgstr "varmuuskopiointi epäonnistui"
+
+#: ../server.py:570
+msgid "failed to write"
+msgstr "ei kirjoittanut"
+
+#: ../server.py:625
+msgid "pypilot_server: bind failed; already running a server?"
+msgstr "pypilot_server: sidonta epäonnistui; jo palvelinta?"
+
+#: ../server.py:688
+msgid "persistent store took too long!"
+msgstr "jatkuva myymälä kesti liian kauan!"
+
+#: ../server.py:706
+msgid "max connections reached"
+msgstr "maksimiliitännät saavutettu"
+
+#: ../server.py:709
+msgid "server add socket"
+msgstr "palvelimen lisäyspistoke"
+
+#: ../server.py:719
+msgid "internal pipe closed, server exiting"
+msgstr "sisäinen putki suljettu, palvelin poistuu"
+
+#: ../server.py:771
+msgid "server socket closed from flush!!"
+msgstr "palvelinpistoke suljettu huuhtelusta!"
+
+#: ../signalk.py:52
 msgid "service removed"
 msgstr "palvelu poistettu"
 
-#: pypilot/signalk.py:112
+#: ../signalk.py:55
 msgid "server lost"
 msgstr "palvelin menetetty"
 
-#: pypilot/signalk.py:118
+#: ../signalk.py:61
 msgid "service add"
 msgstr "palvelu lisää"
 
-#: pypilot/signalk.py:132
-msgid "server found"
-msgstr "palvelin löydetty"
+#: ../signalk.py:86 ../client.py:210
+msgid "failed to"
+msgstr "epäonnistui"
 
-#: pypilot/signalk.py:141
+#: ../signalk.py:86
+msgid "autodetection not possible"
+msgstr "automaattinen tunnistus ei ole mahdollista"
+
+#: ../signalk.py:87 ../signalk.py:176 ../signalk.py:246 ../client.py:211
+msgid "try"
+msgstr "yrittää"
+
+#: ../signalk.py:87 ../signalk.py:176 ../signalk.py:246 ../client.py:211
+msgid "or"
+msgstr "tai"
+
+#: ../signalk.py:138
+msgid "read token"
+msgstr "lukea tunnusta"
+
+#: ../signalk.py:141
+msgid "failed to read token"
+msgstr "tunnuksen lukeminen epäonnistui"
+
+#: ../signalk.py:171
 msgid "probe"
 msgstr "koetin"
 
-#: pypilot/signalk.py:145
+#: ../signalk.py:175
 msgid "could not"
 msgstr "ei pystynyt"
 
-#: pypilot/signalk.py:155
+#: ../signalk.py:185
 msgid "failed to retrieve/parse data from"
 msgstr "epäonnistui tietojen noutamisesta / jäsentämisestä"
 
-#: pypilot/signalk.py:171
+#: ../signalk.py:201
 msgid "see if token is ready"
 msgstr "katso onko tunniste valmis"
 
-#: pypilot/signalk.py:177
+#: ../signalk.py:207
 msgid "received token"
 msgstr "saanut tunnuksen"
 
-#: pypilot/signalk.py:183
+#: ../signalk.py:213
 msgid "failed to store token"
 msgstr "tunnuksen tallentaminen epäonnistui"
 
-#: pypilot/signalk.py:187 pypilot/signalk.py:208
+#: ../signalk.py:217 ../signalk.py:238
 msgid "error requesting access"
 msgstr "virhe pyydettäessä käyttöoikeutta"
 
-#: pypilot/signalk.py:206
+#: ../signalk.py:236
 msgid "request access url"
 msgstr "pyydä käyttöoikeuden URL -osoitetta"
 
-#: pypilot/signalk.py:215
+#: ../signalk.py:245
 msgid "cannot create connection:"
 msgstr "ei voi luoda yhteyttä:"
 
-#: pypilot/signalk.py:230
+#: ../signalk.py:260
 msgid "bad status, rejecting token"
 msgstr "huono tila, hylkää merkki"
 
-#: pypilot/signalk.py:234
+#: ../signalk.py:264
 msgid "connection refused"
 msgstr "yhteys evätty"
 
-#: pypilot/signalk.py:284
+#: ../signalk.py:313
+msgid "server found"
+msgstr "palvelin löydetty"
+
+#: ../signalk.py:334
 msgid "connected to"
 msgstr "yhdistetty"
 
-#: pypilot/signalk.py:354
+#: ../signalk.py:416
 msgid "Exception converting signalk->pypilot"
 msgstr "Poikkeus muuntaa opasteet-> pypilot"
 
-#: pypilot/signalk.py:368
+#: ../signalk.py:430
 msgid "received"
 msgstr "sai"
 
-#: pypilot/signalk.py:414
+#: ../signalk.py:493
 msgid "failed to send updates"
 msgstr "päivitysten lähettäminen epäonnistui"
 
-#: pypilot/signalk.py:428
+#: ../signalk.py:507
 msgid "failed to parse msg:"
 msgstr "viestin jäsennys epäonnistui:"
 
-#: pypilot/values.py:130
-msgid "invalid initial value for range property"
-msgstr "alueen omaisuuden alkuarvo on virheellinen"
+#: ../sensors.py:49
+msgid "sensor found"
+msgstr "anturi löytyi"
 
-#: pypilot/values.py:179
-msgid "invalid set"
-msgstr "virheellinen sarja"
+#: ../sensors.py:413
+msgid "unknown data parsed!"
+msgstr "tuntemattomia tietoja on jäsennelty!"
 
-#: pypilot/pilots/__init__.py:23
+#: ../calibration_fit.py:38
+msgid "failed to load scientific library, cannot perform calibration update!"
+msgstr ""
+"tieteellisen kirjaston lataaminen epäonnistui, kalibrointipäivitystä ei voi "
+"suorittaa!"
+
+#: ../calibration_fit.py:701
+msgid "Bad Accelerometer Calibration"
+msgstr "Huono kiihtyvyysmittarin kalibrointi"
+
+#: ../calibration_fit.py:735
+msgid "magnetic distortions"
+msgstr "magneettisia vääristymiä"
+
+#: ../pilots/__init__.py:22
 msgid "ERROR loading"
 msgstr "Virhe ladattaessa"
 
-#: ui/autopilot_calibration.py:166
-msgid "exception in calibration:"
-msgstr "poikkeus kalibroinnissa:"
+#: ../autopilot.py:135
+msgid "failed to load pilot"
+msgstr "epäonnistui lataamaan pilottia"
 
-#: ui/autopilot_control.py:264
-msgid "warning: unhandled message"
-msgstr "varoitus: käsittelemätön viesti"
+#: ../autopilot.py:138
+msgid "Available Pilots"
+msgstr "Saatavilla olevat lentäjät"
 
-#: ui/autopilot_control_ui.py:24
-msgid "Autopilot Control"
-msgstr "Autopilottiohjaus"
+#: ../autopilot.py:157
+msgid "warning: failed to open special file"
+msgstr "varoitus: erikoistiedoston avaaminen epäonnistui"
 
-#: ui/autopilot_control_ui.py:39
-msgid "AP"
-msgstr "Sinä"
+#: ../autopilot.py:157
+msgid "for writing"
+msgstr "kirjoittamista varten"
 
-#: ui/autopilot_control_ui.py:57 ui/autopilot_control_ui.py:67
-#: ui/autopilot_control_ui.py:460 ui/autopilot_control_ui.py:737
-msgid "N/A"
-msgstr "N / A"
+#: ../autopilot.py:158
+msgid "cannot stroke the watchdog"
+msgstr "ei voi silittää vahtikoiraa"
 
-#: ui/autopilot_control_ui.py:62
-msgid "        N/A        "
-msgstr "N / A"
-
-#: ui/autopilot_control_ui.py:74
-msgid "----"
-msgstr "----"
-
-#: ui/autopilot_control_ui.py:89 ui/autopilot_control_ui.py:96
-msgid " N/A "
-msgstr "N / A"
-
-#: ui/autopilot_control_ui.py:121
-msgid "port"
-msgstr "satamaan"
-
-#: ui/autopilot_control_ui.py:121
-msgid "starboard"
-msgstr "oikealle"
-
-#: ui/autopilot_control_ui.py:136
-msgid "Pilot"
-msgstr "Lentäjä"
-
-#: ui/autopilot_control_ui.py:146 ui/autopilot_control_ui.py:425
-msgid "Compass"
-msgstr "Kompassi"
-
-#: ui/autopilot_control_ui.py:149
-msgid "GPS"
-msgstr "GPS"
-
-#: ui/autopilot_control_ui.py:154
-msgid "Wind"
-msgstr "Tuuli"
-
-#: ui/autopilot_control_ui.py:159
-msgid "True Wind"
-msgstr "Todellinen tuuli"
-
-#: ui/autopilot_control_ui.py:175 ui/scope_ui.py:76
-msgid "Center"
-msgstr "Keskusta"
-
-#: ui/autopilot_control_ui.py:199
-msgid "&Scope"
-msgstr "&Laajuus"
-
-#: ui/autopilot_control_ui.py:202
-msgid "&Client"
-msgstr "&Asiakas"
-
-#: ui/autopilot_control_ui.py:205
-msgid "C&alibration"
-msgstr "&Kalibrointi"
-
-#: ui/autopilot_control_ui.py:208 ui/scope_ui.py:108
-msgid "Close"
-msgstr "kiinni"
-
-#: ui/autopilot_control_ui.py:304 ui/autopilot_control_ui.py:534
-#: ui/autopilot_control_ui.py:654
-msgid "Calibration"
-msgstr "Kalibrointi"
-
-#: ui/autopilot_control_ui.py:354
-msgid "Boat is level"
-msgstr "Vene on vaakasuorassa"
-
-#: ui/autopilot_control_ui.py:361 ui/client_wx.py:158 ui/scope_ui.py:94
-msgid "Reset"
-msgstr "Nollaa"
-
-#: ui/autopilot_control_ui.py:382
-msgid "Alignment"
-msgstr "Kohdistus"
-
-#: ui/autopilot_control_ui.py:399
-msgid "Heading"
-msgstr "Otsikko"
-
-#: ui/autopilot_control_ui.py:404 ui/autopilot_control_ui.py:470
-#: ui/autopilot_control_ui.py:480
-msgid "     N/A     "
-msgstr "N / A"
-
-#: ui/autopilot_control_ui.py:409 ui/autopilot_control_ui.py:760
-msgid "Offset"
-msgstr "Offset"
-
-#: ui/autopilot_control_ui.py:423
-msgid "Coords"
-msgstr "Coords"
-
-#: ui/autopilot_control_ui.py:425
-msgid "Sea"
-msgstr "Meri"
-
-#: ui/autopilot_control_ui.py:425
-msgid "Boat"
-msgstr "Vene"
-
-#: ui/autopilot_control_ui.py:448 ui/client_wx.py:51
-msgid "Scope"
-msgstr "Soveltamisala"
-
-#: ui/autopilot_control_ui.py:455
-msgid "Pitch"
-msgstr "Piki"
-
-#: ui/autopilot_control_ui.py:465
-msgid "Roll"
-msgstr "Rullaa"
-
-#: ui/autopilot_control_ui.py:475
-msgid "Heel"
-msgstr "Kantapää"
-
-#: ui/autopilot_control_ui.py:502
-msgid "alignment"
-msgstr "kohdistus"
-
-#: ui/autopilot_control_ui.py:544 ui/autopilot_control_ui.py:664
-msgid "Calibration Age"
-msgstr "Kalibrointiaika"
-
-#: ui/autopilot_control_ui.py:561 ui/autopilot_control_ui.py:681
-msgid "Clear"
-msgstr "Asia selvä"
-
-#: ui/autopilot_control_ui.py:564 ui/autopilot_control_ui.py:684
-msgid "calibration locked"
-msgstr "kalibrointi lukittu"
-
-#: ui/autopilot_control_ui.py:587
-msgid "accel"
-msgstr "Accel"
-
-#: ui/autopilot_control_ui.py:618
-msgid "Sigma Points"
-msgstr "Sigma-pisteet"
-
-#: ui/autopilot_control_ui.py:625
-msgid "local history"
-msgstr "paikallista historiaa"
-
-#: ui/autopilot_control_ui.py:632
-msgid "current"
-msgstr "nykyinen"
-
-#: ui/autopilot_control_ui.py:639
-msgid "Calibration Points"
-msgstr "Kalibrointipisteet"
-
-#: ui/autopilot_control_ui.py:708
-msgid "compass"
-msgstr "kompassi"
-
-#: ui/autopilot_control_ui.py:718
-msgid ""
-"Press each button when the rudder is at the correct position to calibrate."
+#: ../autopilot.py:162
+msgid "warning: failed to make autopilot process realtime"
 msgstr ""
-"Paina kutakin painiketta, kun peräsin on oikeassa asennossa kalibrointia "
-"varten."
+"varoitus: autopilotin prosessin tekeminen reaaliaikaiseksi epäonnistui"
 
-#: ui/autopilot_control_ui.py:732
-msgid "Rudder"
-msgstr "Peräsin"
+#: ../autopilot.py:347
+msgid "server/client is running too _slowly_"
+msgstr "palvelin / asiakas toimii liian _hitaasti_"
 
-#: ui/autopilot_control_ui.py:747
-msgid "Reset Calibration"
-msgstr "Nollaa kalibrointi"
+#: ../autopilot.py:353
+msgid "sensors is running too _slowly_"
+msgstr "anturit käyvät liian hitaasti"
 
-#: ui/autopilot_control_ui.py:757
-msgid "Rudder Is Centered"
-msgstr "Peräsin on keskitetty"
+#: ../autopilot.py:453
+msgid "autopilot routine is running too _slowly_"
+msgstr "autopilotin rutiini toimii liian hitaasti"
 
-#: ui/autopilot_control_ui.py:765 ui/autopilot_control_ui.py:778
-#: ui/autopilot_control_ui.py:791
-msgid "------"
-msgstr "------"
+#: ../autopilot.py:465
+msgid "servo is running too _slowly_"
+msgstr "servo toimii liian hitaasti"
 
-#: ui/autopilot_control_ui.py:770
-msgid "Rudder is Starboard Range"
-msgstr "Peräsin on oikeanpuoleinen alue"
+#: ../autopilot.py:475
+msgid "autopilot iteration running too slow"
+msgstr "autopilotin iteraatio toimii liian hitaasti"
 
-#: ui/autopilot_control_ui.py:773
-msgid "Scale"
-msgstr "Mittakaava"
+#: ../autopilot.py:488
+msgid "WARNING: running autopilot as root!!"
+msgstr "VAROITUS: käytössä autopilotti root-käyttäjänä!!"
 
-#: ui/autopilot_control_ui.py:783
-msgid "Rudder is Port Range"
-msgstr "Peräsin on Port Range"
+#: ../autopilot.py:490
+msgid "init complete"
+msgstr "init valmis"
 
-#: ui/autopilot_control_ui.py:786
-msgid "Non Linearity"
-msgstr "Epälineaarisuus"
+#: ../boatimu.py:33
+msgid "RTIMU library not detected, please install it"
+msgstr "RTIMU-kirjastoa ei löydy, asenna se"
 
-#: ui/autopilot_control_ui.py:803
-msgid " range +-"
-msgstr "alue + -"
+#: ../boatimu.py:57
+msgid "Using settings file"
+msgstr "Asetustiedoston käyttäminen"
 
-#: ui/autopilot_control_ui.py:811
-msgid "degrees"
-msgstr "astetta"
+#: ../boatimu.py:97
+msgid "ERROR: No IMU Detected"
+msgstr "VIRHE: IMU: ta ei havaittu"
 
-#: ui/autopilot_control_ui.py:830
-msgid "rudder"
-msgstr "peräsin"
+#: ../boatimu.py:105
+msgid "ERROR: IMU Init Failed, no inertial data available"
+msgstr "VIRHE: IMU Init epäonnistui, inertiatietoja ei ole käytettävissä"
 
-#: ui/autopilot_control_ui.py:832
-msgid "settings"
-msgstr "asetukset"
+#: ../boatimu.py:131
+msgid "warning, failed to make imu process realtime"
+msgstr "varoitus, epäonnistui imu-prosessin tekeminen reaaliajassa"
 
-#: ui/boatplot.py:25
-msgid "failed to load pywavefront:"
-msgstr "pywavefrontin lataaminen epäonnistui:"
+#: ../boatimu.py:133
+msgid "made imu process realtime"
+msgstr "teki imuprosessista reaaliaikaisen"
 
-#: ui/boatplot.py:55
-msgid "invalid display dimensions"
-msgstr "virheelliset näytön mitat"
+#: ../boatimu.py:145
+msgid "setting initial gyro bias"
+msgstr "alkuperäisen gyro-biasin asettaminen"
 
-#: ui/boatplot.py:110
-msgid "Did you add the pypilot_data repository?"
-msgstr "Lisäsitkö pypilot_data-arkiston?"
+#: ../boatimu.py:161
+msgid "imu process failed to keep time"
+msgstr "imu-prosessi ei onnistunut pitämään aikaa"
 
-#: ui/boatplot.py:160
-msgid "not found, texture compass cannot be used"
-msgstr "ei löydy, tekstuurikompassia ei voida käyttää"
+#: ../boatimu.py:169
+msgid "failed to read IMU!"
+msgstr "epäonnistui lukemaan IMU: ta!"
 
-#: ui/client_wx.py:47
-msgid "Refresh"
-msgstr "virkistää"
+#: ../boatimu.py:202
+msgid "imu rate set to rate"
+msgstr "imu-kurssi asetettu koroksi"
 
-#: ui/client_wx.py:189
-msgid "Connected"
-msgstr "Yhdistetty"
+#: ../boatimu.py:230
+msgid "too high standing gyro bias, resetting sensors"
+msgstr "liian korkea seisova gyro-bias, antureiden nollaaminen"
 
-#: ui/client_wx.py:191
-msgid "Disconnected"
-msgstr "Yhteys katkaistu"
+#: ../boatimu.py:235
+msgid "compass out of range, resetting"
+msgstr "kompassi kantaman ulkopuolella, nollaus"
 
-#: ui/client_wx.py:218
-msgid "warning, invalid choice value specified"
-msgstr "varoitus, virheellinen valinnan arvo määritetty"
+#: ../boatimu.py:327
+msgid "warning, failed to make calibration process other"
+msgstr "varoitus, kalibrointiprosessia ei tehty muuksi"
 
-#: ui/scope_ui.py:24
-msgid "pypilot Scope"
-msgstr "pypilot-soveltamisala"
+#: ../boatimu.py:329
+msgid "warning, failed to make calibration process idle, trying renice"
+msgstr "varoitus, kalibrointiprosessin siirtäminen lepotilaan epäonnistui"
 
-#: ui/scope_ui.py:73
-msgid "Zero"
-msgstr "Nolla"
+#: ../boatimu.py:331
+msgid "warning, failed to renice calibration process"
+msgstr "varoitus, kalibrointiprosessin muuttaminen epäonnistui"
 
-#: ui/scope_ui.py:79
-msgid "Scale +"
-msgstr "Skaalaa +"
+#: ../boatimu.py:338
+msgid "calibration loaded, starting"
+msgstr "kalibrointi ladattu, alkaa"
 
-#: ui/scope_ui.py:82
-msgid "Scale -"
-msgstr "Asteikko -"
+#: ../boatimu.py:342
+msgid "failed import calibration fit"
+msgstr "epäonnistunut tuontikalibrointisovellus"
 
-#: ui/scope_ui.py:85
-msgid "Offset /\\"
-msgstr "Offset / \\"
+#: ../boatimu.py:460
+msgid "accel values invalid"
+msgstr "Accel-arvot ovat virheellisiä"
 
-#: ui/scope_ui.py:88
-msgid "Offset \\/"
-msgstr "Siirtymä \\ /"
+#: ../bufferedsocket.py:55
+msgid "overflow in pypilot udp socket"
+msgstr "ylivuoto pypilot udp -liitännässä"
 
-#: ui/scope_ui.py:91
-msgid "Freeze"
-msgstr "Jäätykää"
+#: ../bufferedsocket.py:60
+msgid "overflow in pypilot socket"
+msgstr "pypilot-pistorasian ylivuoto"
 
-#: ui/scope_ui.py:97
-msgid "fftw"
-msgstr "fftw"
+#: ../bufferedsocket.py:75
+msgid "failed to send udp packet"
+msgstr "udp-paketin lähettäminen epäonnistui"
 
-#: ui/scope_ui.py:100
-msgid "Time"
-msgstr "Aika"
+#: ../bufferedsocket.py:84
+msgid "pypilot socket failed to send to"
+msgstr "pypilot-pistorasian lähettäminen epäonnistui"
 
-#: ui/scope_wx.py:67
-msgid "values not found:"
-msgstr "arvoja ei löydy:"
+#: ../bufferedsocket.py:98
+msgid "socket send took too long!?!?"
+msgstr "liittimen lähettäminen kesti liian kauan!?!?"
 
-#~ msgid "failed to load pilot"
-#~ msgstr "epäonnistui lataamaan pilottia"
+#: ../bufferedsocket.py:100
+msgid "socket send error"
+msgstr "pistorasian lähetysvirhe"
+
+#: ../bufferedsocket.py:104
+msgid "pypilot socket exception"
+msgstr "pypilot-pistorasian poikkeus"
+
+#: ../bufferedsocket.py:108
+msgid "falling back to python nonblocking socket, will consume more cpu"
+msgstr ""
+"palatessasi pythonin estämättömään pistorasiaan, kuluttaa enemmän "
+"prosessoria"
+
+#: ../bufferedsocket.py:134
+msgid "socket send error in server flush"
+msgstr "pistorasian lähetysvirhe palvelimen huuhtelussa"
+
+#: ../bufferedsocket.py:149
+msgid "error receiving data"
+msgstr "virhe tietojen vastaanottamisessa"
+
+#: ../serialprobe.py:30
+msgid "error reading"
+msgstr "virhe luettaessa"
+
+#: ../serialprobe.py:86
+msgid "found more devices by path"
+msgstr "löysi lisää laitteita polun mukaan"
+
+#: ../serialprobe.py:118
+msgid "removing gps device"
+msgstr "GPS-laitteen poistaminen"
+
+#: ../serialprobe.py:197
+msgid "no pyudev module! will scan usb devices often!"
+msgstr "ei pyudev-moduulia! skannaa usb-laitteita usein!"
+
+#: ../serialprobe.py:359
+msgid "success"
+msgstr "menestys"
+
+#: ../serialprobe.py:367
+msgid "failed to record device"
+msgstr "laitteen tallennus epäonnistui"
+
+#: ../client.py:93
+msgid "warning, registering existing value:"
+msgstr "varoitus, olemassa olevan arvon rekisteröinti:"
+
+#: ../client.py:154
+msgid "failed to read config file:"
+msgstr "määritystiedoston lukeminen epäonnistui:"
+
+#: ../client.py:188
+msgid "failed to write config file:"
+msgstr "määritystiedoston kirjoittaminen epäonnistui:"
+
+#: ../client.py:190
+msgid "Exception writing config file:"
+msgstr "Poikkeuksen kirjoittava määritystiedosto:"
+
+#: ../client.py:210
+msgid "autodetecting pypilot server not possible"
+msgstr "Pypilot-palvelimen automaattinen tunnistus ei ole mahdollista"
+
+#: ../client.py:319
+msgid "invalid message from server:"
+msgstr "virheellinen viesti palvelimelta:"
+
+#: ../client.py:343
+msgid "warning, pypilot client aleady has connection"
+msgstr "varoitus, pypilot-asiakkaalla on jo yhteys"
+
+#: ../client.py:363
+msgid "connect failed to"
+msgstr "yhteyden muodostaminen epäonnistui"
+
+#: ../client.py:460 ../client.py:463
+msgid "failed to connect to"
+msgstr "yhteyden muodostaminen epäonnistui"
+
+#: ../client.py:466
+msgid "no pypilot server found"
+msgstr "pypilot-palvelinta ei löydy"
+
+#: ../client.py:522
+msgid "usage"
+msgstr "käyttö"
+
+#: ../client.py:525
+msgid "set the host or ip address"
+msgstr "aseta isäntä- tai ip-osoite"
+
+#: ../client.py:526
+msgid "print info about each value type"
+msgstr "tulosta tiedot jokaisesta arvotyypistä"
+
+#: ../client.py:527
+msgid "continuous watch"
+msgstr "jatkuva katselu"
+
+#: ../client.py:528
+msgid "show this message"
+msgstr "näytä tämä viesti"
+
+#: ../client.py:555
+msgid "failed to retrieve value list!"
+msgstr "arvoluettelon noutaminen epäonnistui!"
+
+#: ../client.py:566
+msgid "timeout retrieving"
+msgstr "aikakatkaisun haku"
+
+#: ../client.py:569
+msgid "missing"
+msgstr "puuttuu"
+
+#: ../values.py:135
+msgid "invalid initial value for range property"
+msgstr "alueen omaisuuden alkuarvo on virheellinen"
+
+#: ../values.py:184
+msgid "invalid set"
+msgstr "virheellinen sarja"
+
+#: ../gpsd.py:46
+msgid "gpsd connected"
+msgstr "gpsd kytketty"
+
+#: ../gpsd.py:50
+msgid "gpsd failed to connect"
+msgstr "gpsd-yhteyden muodostaminen epäonnistui"
+
+#: ../gpsd.py:56
+msgid "exception connecting to gps"
+msgstr "GPS: ään yhdistävä poikkeus"
+
+#: ../gpsd.py:60
+msgid "gpsd disconnected"
+msgstr "gpsd katkaistu"
+
+#: ../gpsd.py:74
+msgid "gpsd PROBE success"
+msgstr "gpsd PROBE menestys"
+
+#: ../gpsd.py:82
+msgid "gpsd probe failed"
+msgstr "GPSD-koetin epäonnistui"
+
+#: ../gpsd.py:105
+msgid "gpsd deactivated"
+msgstr "gpsd deaktivoitu"
+
+#: ../gpsd.py:147
+msgid "gpsd failed to determine serial baud rate of device"
+msgstr "gpsd ei onnistunut määrittämään laitteen sarjasiirtonopeutta"
+
+#: ../gpsd.py:164
+msgid "gpsd timeout from lack of data"
+msgstr "GPSD-aikakatkaisu tietojen puutteesta"
+
+#: ../gpsd.py:179
+msgid "gpsd received invalid message"
+msgstr "gpsd vastaanotti virheellisen viestin"
+
+#: ../gpsd.py:224
+msgid "gpsd got flag for pipe:"
+msgstr "gpsd sai lipun putkelle:"
+
+#: ../gpsd.py:233
+msgid "gpsd serial probe"
+msgstr "gpsd-sarjakoetin"
+
+#~ msgid "exception in calibration:"
+#~ msgstr "poikkeus kalibroinnissa:"
+
+#~ msgid "warning: unhandled message"
+#~ msgstr "varoitus: käsittelemätön viesti"
+
+#~ msgid "Autopilot Control"
+#~ msgstr "Autopilottiohjaus"
+
+#~ msgid "AP"
+#~ msgstr "Sinä"
+
+#~ msgid "N/A"
+#~ msgstr "N / A"
+
+#~ msgid "        N/A        "
+#~ msgstr "N / A"
+
+#~ msgid "----"
+#~ msgstr "----"
+
+#~ msgid " N/A "
+#~ msgstr "N / A"
+
+#~ msgid "port"
+#~ msgstr "satamaan"
+
+#~ msgid "starboard"
+#~ msgstr "oikealle"
+
+#~ msgid "Pilot"
+#~ msgstr "Lentäjä"
+
+#~ msgid "Compass"
+#~ msgstr "Kompassi"
+
+#~ msgid "GPS"
+#~ msgstr "GPS"
+
+#~ msgid "Wind"
+#~ msgstr "Tuuli"
+
+#~ msgid "True Wind"
+#~ msgstr "Todellinen tuuli"
+
+#~ msgid "Center"
+#~ msgstr "Keskusta"
+
+#~ msgid "&Scope"
+#~ msgstr "&Laajuus"
+
+#~ msgid "&Client"
+#~ msgstr "&Asiakas"
+
+#~ msgid "C&alibration"
+#~ msgstr "&Kalibrointi"
+
+#~ msgid "Close"
+#~ msgstr "kiinni"
+
+#~ msgid "Calibration"
+#~ msgstr "Kalibrointi"
+
+#~ msgid "Boat is level"
+#~ msgstr "Vene on vaakasuorassa"
+
+#~ msgid "Reset"
+#~ msgstr "Nollaa"
+
+#~ msgid "Alignment"
+#~ msgstr "Kohdistus"
+
+#~ msgid "Heading"
+#~ msgstr "Otsikko"
+
+#~ msgid "     N/A     "
+#~ msgstr "N / A"
+
+#~ msgid "Offset"
+#~ msgstr "Offset"
+
+#~ msgid "Coords"
+#~ msgstr "Coords"
+
+#~ msgid "Sea"
+#~ msgstr "Meri"
+
+#~ msgid "Boat"
+#~ msgstr "Vene"
+
+#~ msgid "Scope"
+#~ msgstr "Soveltamisala"
+
+#~ msgid "Pitch"
+#~ msgstr "Piki"
+
+#~ msgid "Roll"
+#~ msgstr "Rullaa"
+
+#~ msgid "Heel"
+#~ msgstr "Kantapää"
+
+#~ msgid "alignment"
+#~ msgstr "kohdistus"
+
+#~ msgid "Calibration Age"
+#~ msgstr "Kalibrointiaika"
+
+#~ msgid "Clear"
+#~ msgstr "Asia selvä"
+
+#~ msgid "calibration locked"
+#~ msgstr "kalibrointi lukittu"
+
+#~ msgid "accel"
+#~ msgstr "Accel"
+
+#~ msgid "Sigma Points"
+#~ msgstr "Sigma-pisteet"
+
+#~ msgid "local history"
+#~ msgstr "paikallista historiaa"
+
+#~ msgid "current"
+#~ msgstr "nykyinen"
+
+#~ msgid "Calibration Points"
+#~ msgstr "Kalibrointipisteet"
+
+#~ msgid "compass"
+#~ msgstr "kompassi"
+
+#~ msgid ""
+#~ "Press each button when the rudder is at the correct position to calibrate."
+#~ msgstr ""
+#~ "Paina kutakin painiketta, kun peräsin on oikeassa asennossa kalibrointia "
+#~ "varten."
+
+#~ msgid "Rudder"
+#~ msgstr "Peräsin"
+
+#~ msgid "Reset Calibration"
+#~ msgstr "Nollaa kalibrointi"
+
+#~ msgid "Rudder Is Centered"
+#~ msgstr "Peräsin on keskitetty"
+
+#~ msgid "------"
+#~ msgstr "------"
+
+#~ msgid "Rudder is Starboard Range"
+#~ msgstr "Peräsin on oikeanpuoleinen alue"
+
+#~ msgid "Scale"
+#~ msgstr "Mittakaava"
+
+#~ msgid "Rudder is Port Range"
+#~ msgstr "Peräsin on Port Range"
+
+#~ msgid "Non Linearity"
+#~ msgstr "Epälineaarisuus"
+
+#~ msgid " range +-"
+#~ msgstr "alue + -"
+
+#~ msgid "degrees"
+#~ msgstr "astetta"
+
+#~ msgid "rudder"
+#~ msgstr "peräsin"
+
+#~ msgid "settings"
+#~ msgstr "asetukset"
+
+#~ msgid "failed to load pywavefront:"
+#~ msgstr "pywavefrontin lataaminen epäonnistui:"
+
+#~ msgid "invalid display dimensions"
+#~ msgstr "virheelliset näytön mitat"
+
+#~ msgid "Did you add the pypilot_data repository?"
+#~ msgstr "Lisäsitkö pypilot_data-arkiston?"
+
+#~ msgid "not found, texture compass cannot be used"
+#~ msgstr "ei löydy, tekstuurikompassia ei voida käyttää"
+
+#~ msgid "Refresh"
+#~ msgstr "virkistää"
+
+#~ msgid "Connected"
+#~ msgstr "Yhdistetty"
+
+#~ msgid "Disconnected"
+#~ msgstr "Yhteys katkaistu"
+
+#~ msgid "warning, invalid choice value specified"
+#~ msgstr "varoitus, virheellinen valinnan arvo määritetty"
+
+#~ msgid "pypilot Scope"
+#~ msgstr "pypilot-soveltamisala"
+
+#~ msgid "Zero"
+#~ msgstr "Nolla"
+
+#~ msgid "Scale +"
+#~ msgstr "Skaalaa +"
+
+#~ msgid "Scale -"
+#~ msgstr "Asteikko -"
+
+#~ msgid "Offset /\\"
+#~ msgstr "Offset / \\"
+
+#~ msgid "Offset \\/"
+#~ msgstr "Siirtymä \\ /"
+
+#~ msgid "Freeze"
+#~ msgstr "Jäätykää"
+
+#~ msgid "fftw"
+#~ msgstr "fftw"
+
+#~ msgid "Time"
+#~ msgstr "Aika"
+
+#~ msgid "values not found:"
+#~ msgstr "arvoja ei löydy:"
 
 #~ msgid "in"
 #~ msgstr "sisään"

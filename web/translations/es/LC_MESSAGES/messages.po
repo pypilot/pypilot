@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-25 21:11-0400\n"
+"POT-Creation-Date: 2023-04-06 17:34-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -17,236 +17,6 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.6.0\n"
-
-#: static/pypilot_control.js:37
-msgid "Not Connected"
-msgstr "No conectado"
-
-#: static/pypilot_control.js:68
-msgid "Connected"
-msgstr "Conectado"
-
-#: static/pypilot_control.js:175
-msgid "Disconnected"
-msgstr "Desconectado"
-
-#: static/pypilot_control.js:245
-msgid "compass or gyro failure!"
-msgstr "falla de la brújula o del giróscopo!"
-
-#: static/pypilot_control.js:258
-msgid "Tack"
-msgstr "Virar"
-
-#: static/pypilot_control.js:261
-msgid "Cancel"
-msgstr "Cancelar"
-
-#: static/pypilot_control.js:320
-msgid "Engaged"
-msgstr "Comprometido"
-
-#: static/pypilot_control.js:322
-msgid "Disengaged"
-msgstr "Desacoplado"
-
-#: static/pypilot_control.js:394
-msgid "no motor controller!"
-msgstr "sin controlador de motor!"
-
-#: templates/calibrationplot.html:4
-msgid "Calibration Plot"
-msgstr "Gráfico de calibración"
-
-#: templates/calibrationplot.html:21
-msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age"
-" will reset when the calibration updates."
-msgstr ""
-"Las lecturas del sensor sin procesar deben caer en una esfera cuando se "
-"calibran. La edad se restablecerá cuando se actualice la calibración."
-
-#: templates/calibrationplot.html:28
-msgid "Connection"
-msgstr "Conexión"
-
-#: templates/index.html:30
-msgid "Control"
-msgstr "Control"
-
-#: templates/index.html:33
-msgid "Gain"
-msgstr "Ganar"
-
-#: templates/index.html:36
-msgid "Calibration"
-msgstr "Calibración"
-
-#: templates/index.html:39
-msgid "Configuration"
-msgstr "Configuración"
-
-#: templates/index.html:42
-msgid "Statistics"
-msgstr "Estadísticas"
-
-#: templates/index.html:51
-msgid "Heading"
-msgstr "Bóveda"
-
-#: templates/index.html:53
-msgid "Command"
-msgstr "Mando"
-
-#: templates/index.html:96
-msgid "Magnetic Heading"
-msgstr "Rumbo magnético"
-
-#: templates/index.html:97
-msgid "Pitch"
-msgstr "Terreno de juego"
-
-#: templates/index.html:98
-msgid "Roll"
-msgstr "Rodar"
-
-#: templates/index.html:99
-msgid "Press"
-msgstr "prensa"
-
-#: templates/index.html:99
-msgid "here"
-msgstr "aquí"
-
-#: templates/index.html:100
-msgid "when the boat is level to align the inertial sensors."
-msgstr "cuando el barco está nivelado para alinear los sensores de inercia."
-
-#: templates/index.html:105
-msgid "Magnetic Heading Offset"
-msgstr "Desplazamiento de rumbo magnético"
-
-#: templates/index.html:107
-msgid "Lock Calibration"
-msgstr "Bloqueo de calibración"
-
-#: templates/index.html:109
-msgid "calibration plot"
-msgstr "gráfico de calibración"
-
-#: templates/index.html:111
-msgid "Rudder"
-msgstr "Timón"
-
-#: templates/index.html:113
-msgid "centered"
-msgstr "centrado"
-
-#: templates/index.html:114
-msgid "port range"
-msgstr "rango de puertos"
-
-#: templates/index.html:115
-msgid "starboard range"
-msgstr "rango de estribor"
-
-#: templates/index.html:116 templates/index.html:140
-msgid "reset"
-msgstr "Reiniciar"
-
-#: templates/index.html:119
-msgid "Rudder Range"
-msgstr "Alcance del timón"
-
-#: templates/index.html:120
-msgid "Degrees"
-msgstr "Grados"
-
-#: templates/index.html:126
-msgid "Display"
-msgstr "Monitor"
-
-#: templates/index.html:127
-msgid "Clear"
-msgstr "Claro"
-
-#: templates/index.html:128
-msgid "Dark"
-msgstr "Oscuro"
-
-#: templates/index.html:131
-msgid "Configure LCD Keypad and Remotes"
-msgstr "Configurar el teclado LCD y los controles remotos"
-
-#: templates/index.html:133
-msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
-msgstr ""
-"Host del cliente NMEA: puerto (déjelo en blanco por defecto) p. Ej .: "
-"192.168.0.1:10110"
-
-#: templates/index.html:138
-msgid "Amp Hours"
-msgstr "Amperios horas"
-
-#: templates/index.html:141
-msgid "Voltage"
-msgstr "Voltaje"
-
-#: templates/index.html:142
-msgid "Controller temperature"
-msgstr "Temperatura del controlador"
-
-#: templates/index.html:143
-msgid "Runtime"
-msgstr "Tiempo de ejecución"
-
-#: templates/index.html:144
-msgid "Servo"
-msgstr "Servo"
-
-#: templates/index.html:148
-msgid "Server"
-msgstr "Servidor"
-
-#: templates/index.html:150
-msgid "Errors"
-msgstr "Errores"
-
-#: templates/index.html:151
-msgid "Web Server Latency"
-msgstr "Latencia del servidor web"
-
-#: templates/wifi.html:4
-msgid "setup"
-msgstr "configuración"
-
-#: templates/wifi.html:8
-msgid "Wireless Configuration"
-msgstr "Configuracion inalambrica"
-
-#: templates/wifi.html:16 templates/wifi.html:17
-msgid "Access Point"
-msgstr "Punto de acceso"
-
-#: templates/wifi.html:17 templates/wifi.html:22
-msgid "Key (leave blank for no encryption)"
-msgstr "Clave (déjela en blanco para no cifrar)"
-
-#: templates/wifi.html:21 templates/wifi.html:22
-msgid "Client"
-msgstr "Cliente"
-
-#: templates/wifi.html:24
-msgid "Client Mode Address (leave blank for dhcp)"
-msgstr "Dirección del modo de cliente (déjela en blanco para dhcp)"
-
-#: templates/wifi.html:28
-msgid "If there is a problem, edit the file"
-msgstr "Si hay algún problema, edite el archivo"
-
-#: templates/wifi.html:33
-msgid "back"
-msgstr "espalda"
 
 #~ msgid "Wireless Configuration"
 #~ msgstr "Configuracion inalambrica"
@@ -259,4 +29,171 @@ msgstr "espalda"
 
 #~ msgid "If there is a problem, edit the file"
 #~ msgstr "Si hay algún problema, edite el archivo"
+
+#~ msgid "Not Connected"
+#~ msgstr "No conectado"
+
+#~ msgid "Connected"
+#~ msgstr "Conectado"
+
+#~ msgid "Disconnected"
+#~ msgstr "Desconectado"
+
+#~ msgid "compass or gyro failure!"
+#~ msgstr "falla de la brújula o del giróscopo!"
+
+#~ msgid "Tack"
+#~ msgstr "Virar"
+
+#~ msgid "Cancel"
+#~ msgstr "Cancelar"
+
+#~ msgid "Engaged"
+#~ msgstr "Comprometido"
+
+#~ msgid "Disengaged"
+#~ msgstr "Desacoplado"
+
+#~ msgid "no motor controller!"
+#~ msgstr "sin controlador de motor!"
+
+#~ msgid "Calibration Plot"
+#~ msgstr "Gráfico de calibración"
+
+#~ msgid ""
+#~ "The raw sensor readings should fall "
+#~ "on a sphere when calibrated.  The "
+#~ "age will reset when the calibration "
+#~ "updates."
+#~ msgstr ""
+#~ "Las lecturas del sensor sin procesar "
+#~ "deben caer en una esfera cuando se"
+#~ " calibran. La edad se restablecerá "
+#~ "cuando se actualice la calibración."
+
+#~ msgid "Connection"
+#~ msgstr "Conexión"
+
+#~ msgid "Control"
+#~ msgstr "Control"
+
+#~ msgid "Gain"
+#~ msgstr "Ganar"
+
+#~ msgid "Calibration"
+#~ msgstr "Calibración"
+
+#~ msgid "Configuration"
+#~ msgstr "Configuración"
+
+#~ msgid "Statistics"
+#~ msgstr "Estadísticas"
+
+#~ msgid "Heading"
+#~ msgstr "Bóveda"
+
+#~ msgid "Command"
+#~ msgstr "Mando"
+
+#~ msgid "Magnetic Heading"
+#~ msgstr "Rumbo magnético"
+
+#~ msgid "Pitch"
+#~ msgstr "Terreno de juego"
+
+#~ msgid "Roll"
+#~ msgstr "Rodar"
+
+#~ msgid "Press"
+#~ msgstr "prensa"
+
+#~ msgid "here"
+#~ msgstr "aquí"
+
+#~ msgid "when the boat is level to align the inertial sensors."
+#~ msgstr "cuando el barco está nivelado para alinear los sensores de inercia."
+
+#~ msgid "Magnetic Heading Offset"
+#~ msgstr "Desplazamiento de rumbo magnético"
+
+#~ msgid "Lock Calibration"
+#~ msgstr "Bloqueo de calibración"
+
+#~ msgid "calibration plot"
+#~ msgstr "gráfico de calibración"
+
+#~ msgid "Rudder"
+#~ msgstr "Timón"
+
+#~ msgid "centered"
+#~ msgstr "centrado"
+
+#~ msgid "port range"
+#~ msgstr "rango de puertos"
+
+#~ msgid "starboard range"
+#~ msgstr "rango de estribor"
+
+#~ msgid "reset"
+#~ msgstr "Reiniciar"
+
+#~ msgid "Rudder Range"
+#~ msgstr "Alcance del timón"
+
+#~ msgid "Degrees"
+#~ msgstr "Grados"
+
+#~ msgid "Display"
+#~ msgstr "Monitor"
+
+#~ msgid "Clear"
+#~ msgstr "Claro"
+
+#~ msgid "Dark"
+#~ msgstr "Oscuro"
+
+#~ msgid "Configure LCD Keypad and Remotes"
+#~ msgstr "Configurar el teclado LCD y los controles remotos"
+
+#~ msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
+#~ msgstr ""
+#~ "Host del cliente NMEA: puerto (déjelo"
+#~ " en blanco por defecto) p. Ej "
+#~ ".: 192.168.0.1:10110"
+
+#~ msgid "Amp Hours"
+#~ msgstr "Amperios horas"
+
+#~ msgid "Voltage"
+#~ msgstr "Voltaje"
+
+#~ msgid "Controller temperature"
+#~ msgstr "Temperatura del controlador"
+
+#~ msgid "Runtime"
+#~ msgstr "Tiempo de ejecución"
+
+#~ msgid "Servo"
+#~ msgstr "Servo"
+
+#~ msgid "Server"
+#~ msgstr "Servidor"
+
+#~ msgid "Errors"
+#~ msgstr "Errores"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Latencia del servidor web"
+
+#~ msgid "setup"
+#~ msgstr "configuración"
+
+#~ msgid "Access Point"
+#~ msgstr "Punto de acceso"
+
+#~ msgid "Client"
+#~ msgstr "Cliente"
+
+#~ msgid "back"
+#~ msgstr "espalda"
 

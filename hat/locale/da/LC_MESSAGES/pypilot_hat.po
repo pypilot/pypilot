@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pypilot_hat\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-05-05 23:30-0400\n"
+"POT-Creation-Date: 2023-04-06 17:30-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,269 +18,298 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 
-#: ../menu.py:278
+#: ../menu.py:340
+msgid "profile"
+msgstr "profil"
+
+#: ../menu.py:341
 msgid "gain"
 msgstr "gevinst"
 
-#: ../menu.py:311
-msgid "rudder"
-msgstr "ror"
+#: ../menu.py:387
+msgid "range"
+msgstr "rækkevidde"
 
-#: ../menu.py:331
-msgid "calibrate"
-msgstr "kalibrering"
-
-#: ../menu.py:332
-msgid "level"
-msgstr "niveau"
-
-#: ../menu.py:333
-msgid "heading"
-msgstr "overskrift"
-
-#: ../menu.py:334
-msgid "lock"
-msgstr "låse"
-
-#: ../menu.py:363
-msgid "motor"
-msgstr "motor"
-
-#: ../menu.py:364
-msgid "min speed"
-msgstr "min hastighed"
-
-#: ../menu.py:364 ../menu.py:365
-msgid "relative"
-msgstr "i forhold"
-
-#: ../menu.py:365
-msgid "max speed"
-msgstr "højeste hast."
-
-#: ../menu.py:366
-msgid "max current"
-msgstr "maks. strøm"
-
-#: ../menu.py:366
-msgid "amps"
-msgstr "ampere"
-
-#: ../menu.py:367
-msgid "period"
-msgstr "periode"
-
-#: ../menu.py:367
-msgid "seconds"
-msgstr "sekunder"
-
-#: ../menu.py:368
-msgid "clutch pwm"
-msgstr "kobling pwm"
-
-#: ../menu.py:368
-msgid "percent"
-msgstr "procent"
-
-#: ../menu.py:419
-msgid "defaults"
-msgstr "defaults"
-
-#: ../menu.py:429
-msgid "Wifi not managed"
-msgstr "Wifi blev ikke administreret"
-
-#: ../menu.py:435
-msgid "No Connetion"
-msgstr "Ingen forbindelse"
-
-#: ../menu.py:463
-msgid "control"
-msgstr "styring"
-
-#: ../menu.py:465
-msgid "small step"
-msgstr "lille trin"
-
-#: ../menu.py:465 ../menu.py:466
+#: ../menu.py:387 ../menu.py:558 ../menu.py:559
 msgid "degrees"
 msgstr "grader"
 
-#: ../menu.py:466
+#: ../menu.py:388
+msgid "rudder"
+msgstr "ror"
+
+#: ../menu.py:407
+msgid "calibrate"
+msgstr "kalibrering"
+
+#: ../menu.py:408
+msgid "level"
+msgstr "niveau"
+
+#: ../menu.py:409
+msgid "heading"
+msgstr "overskrift"
+
+#: ../menu.py:410
+msgid "lock"
+msgstr "låse"
+
+#: ../menu.py:438
+msgid "motor"
+msgstr "motor"
+
+#: ../menu.py:439
+msgid "min speed"
+msgstr "min hastighed"
+
+#: ../menu.py:439 ../menu.py:440
+msgid "relative"
+msgstr "i forhold"
+
+#: ../menu.py:440
+msgid "max speed"
+msgstr "højeste hast."
+
+#: ../menu.py:441
+msgid "max current"
+msgstr "maks. strøm"
+
+#: ../menu.py:441
+msgid "amps"
+msgstr "ampere"
+
+#: ../menu.py:442
+msgid "period"
+msgstr "periode"
+
+#: ../menu.py:442
+msgid "seconds"
+msgstr "sekunder"
+
+#: ../menu.py:443
+msgid "clutch pwm"
+msgstr "kobling pwm"
+
+#: ../menu.py:443
+msgid "percent"
+msgstr "procent"
+
+#: ../menu.py:485
+msgid "defaults"
+msgstr "defaults"
+
+#: ../menu.py:515
+msgid "Wifi not managed"
+msgstr "Wifi blev ikke administreret"
+
+#: ../menu.py:521
+msgid "No Connetion"
+msgstr "Ingen forbindelse"
+
+#: ../menu.py:556
+msgid "control"
+msgstr "styring"
+
+#: ../menu.py:558
+msgid "small step"
+msgstr "lille trin"
+
+#: ../menu.py:559
 msgid "big step"
 msgstr "stort skridt"
 
-#: ../menu.py:482
-msgid "hue"
-msgstr "nuance"
-
-#: ../menu.py:484
+#: ../menu.py:574
 msgid "backlight"
 msgstr "belysning"
 
-#: ../menu.py:485
+#: ../menu.py:583
+msgid "hue"
+msgstr "nuance"
+
+#: ../menu.py:585
+msgid "buzzer"
+msgstr "summer"
+
+#: ../menu.py:586
 msgid "display"
 msgstr "Skærm"
 
-#: ../menu.py:486
+#: ../menu.py:587
 msgid "contrast"
 msgstr "kontrast"
 
-#: ../menu.py:487
+#: ../menu.py:588
 msgid "invert"
 msgstr "invertsukker"
 
-#: ../menu.py:487
+#: ../menu.py:588
 msgid "flip"
 msgstr "flip"
 
-#: ../menu.py:515
+#: ../menu.py:617
 msgid "language"
 msgstr "Sprog"
 
-#: ../menu.py:534
+#: ../menu.py:636
 msgid "settings"
 msgstr "indstillinger"
 
-#: ../menu.py:535
+#: ../menu.py:637
 msgid "mode"
 msgstr "mode"
 
-#: ../menu.py:536
+#: ../menu.py:638
 msgid "pilot"
 msgstr "pilot"
 
-#: ../menu.py:541
+#: ../menu.py:643
 msgid "Menu"
 msgstr "Menu"
 
-#: ../menu.py:559
+#: ../menu.py:661
 msgid "Loading"
 msgstr "Indlæser"
 
-#: ../menu.py:568
+#: ../menu.py:670
 msgid "timeout"
 msgstr "tiden er gået"
 
-#: ../page.py:286
+#: ../page.py:330
 msgid "info"
 msgstr "info"
 
-#: ../page.py:300
+#: ../page.py:344
 msgid "Info"
 msgstr "Info"
 
-#: ../page.py:308
+#: ../page.py:352
 msgid "Watts"
 msgstr "Watts"
 
-#: ../page.py:308
+#: ../page.py:352
 msgid "Amp Hours"
 msgstr "Amp timer"
 
-#: ../page.py:308
+#: ../page.py:352
 msgid "runtime"
 msgstr "runtime"
 
-#: ../page.py:314
+#: ../page.py:358
 msgid "voltage"
 msgstr "spænding"
 
-#: ../page.py:314
+#: ../page.py:358
 msgid "rate"
 msgstr "sats"
 
-#: ../page.py:314
+#: ../page.py:358
 msgid "uptime"
 msgstr "oppetid"
 
-#: ../page.py:320
+#: ../page.py:363
 msgid "cont temp"
 msgstr "fortsat temp"
 
-#: ../page.py:320
+#: ../page.py:363
 msgid "motor temp"
 msgstr "motortemp"
 
-#: ../page.py:320
+#: ../page.py:365
+msgid "battery"
+msgstr "batteri"
+
+#: ../page.py:367
 msgid "faults"
 msgstr "fejl"
 
-#: ../page.py:325
+#: ../page.py:372
 msgid "version"
 msgstr "version"
 
-#: ../page.py:325
+#: ../page.py:372
 msgid "author"
 msgstr "forfatter"
 
-#: ../page.py:347
+#: ../page.py:394
 msgid "Calibrate Info"
 msgstr "Kalibrer Info"
 
-#: ../page.py:358
+#: ../page.py:405
 msgid "incomplete"
 msgstr "ufuldstændig"
 
-#: ../page.py:358
+#: ../page.py:405
 msgid "excellent"
 msgstr "fremragende"
 
-#: ../page.py:358
+#: ../page.py:405
 msgid "good"
 msgstr "godt"
 
-#: ../page.py:359
+#: ../page.py:406
 msgid "fair"
 msgstr "retfærdig"
 
-#: ../page.py:359
+#: ../page.py:406
 msgid "poor"
 msgstr "fattige"
 
-#: ../page.py:359
+#: ../page.py:406
 msgid "bad"
 msgstr "dårlig"
 
-#: ../page.py:367
+#: ../page.py:414
 msgid "compass"
 msgstr "kompas"
 
-#: ../page.py:598
+#: ../page.py:669
 msgid "ERROR"
 msgstr "FEJL"
 
-#: ../page.py:598
+#: ../page.py:669
 msgid "compass or gyro failure!"
 msgstr "kompas- eller gyrofejl!"
 
-#: ../page.py:634
-msgid "GPS not detected"
-msgstr "GPS blev ikke fundet"
+#: ../page.py:712
+msgid "not detected"
+msgstr "ikke fundet"
 
-#: ../page.py:638
-msgid "WIND not detected"
-msgstr "VIND ikke fundet"
-
-#: ../page.py:642
+#: ../page.py:720
 msgid "WARNING no motor controller"
 msgstr "ADVARSEL ingen motorstyring"
 
-#: ../page.py:653
+#: ../page.py:732
 msgid "standby"
 msgstr "stå ved"
 
-#: ../page.py:674
+#: ../page.py:738
+msgid "tack"
+msgstr "tack"
+
+#: ../page.py:740
+msgid "tacking"
+msgstr "tacking"
+
+#: ../page.py:763
 msgid "No Cal"
 msgstr "Ingen kal"
 
-#: ../page.py:677
+#: ../page.py:766
 msgid "Bad Cal"
 msgstr "Dårlig Cal"
 
-#: ../page.py:767
+#: ../page.py:865
 msgid "connect to server"
 msgstr "oprette forbindelse til serveren"
+
+#~ msgid "rudder.calibration_state"
+#~ msgstr "rudder.calibration_state"
+
+#~ msgid "GPS not detected"
+#~ msgstr "GPS blev ikke fundet"
+
+#~ msgid "WIND not detected"
+#~ msgstr "VIND ikke fundet"
 
 #~ msgid "remote"
 #~ msgstr "fjern"

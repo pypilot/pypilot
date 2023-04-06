@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-25 21:11-0400\n"
+"POT-Creation-Date: 2023-04-06 17:34-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ca\n"
@@ -17,236 +17,6 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.6.0\n"
-
-#: static/pypilot_control.js:37
-msgid "Not Connected"
-msgstr "No connectat"
-
-#: static/pypilot_control.js:68
-msgid "Connected"
-msgstr "Connectat"
-
-#: static/pypilot_control.js:175
-msgid "Disconnected"
-msgstr "Desconnectat"
-
-#: static/pypilot_control.js:245
-msgid "compass or gyro failure!"
-msgstr "fallada de la brúixola o del giroscopi!"
-
-#: static/pypilot_control.js:258
-msgid "Tack"
-msgstr "Tack"
-
-#: static/pypilot_control.js:261
-msgid "Cancel"
-msgstr "Cancel · lar"
-
-#: static/pypilot_control.js:320
-msgid "Engaged"
-msgstr "Compromès"
-
-#: static/pypilot_control.js:322
-msgid "Disengaged"
-msgstr "Desactivat"
-
-#: static/pypilot_control.js:394
-msgid "no motor controller!"
-msgstr "cap controlador de motor!"
-
-#: templates/calibrationplot.html:4
-msgid "Calibration Plot"
-msgstr "Parcel·la de calibració"
-
-#: templates/calibrationplot.html:21
-msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age"
-" will reset when the calibration updates."
-msgstr ""
-"Les lectures del sensor en brut haurien de caure sobre una esfera quan es"
-" calibrin. L'edat es restablirà quan s'actualitzi el calibratge."
-
-#: templates/calibrationplot.html:28
-msgid "Connection"
-msgstr "Connexió"
-
-#: templates/index.html:30
-msgid "Control"
-msgstr "Control"
-
-#: templates/index.html:33
-msgid "Gain"
-msgstr "Guany"
-
-#: templates/index.html:36
-msgid "Calibration"
-msgstr "Calibratge"
-
-#: templates/index.html:39
-msgid "Configuration"
-msgstr "Configuració"
-
-#: templates/index.html:42
-msgid "Statistics"
-msgstr "Estadístiques"
-
-#: templates/index.html:51
-msgid "Heading"
-msgstr "Encapçalament"
-
-#: templates/index.html:53
-msgid "Command"
-msgstr "Comandament"
-
-#: templates/index.html:96
-msgid "Magnetic Heading"
-msgstr "Encapçalament magnètic"
-
-#: templates/index.html:97
-msgid "Pitch"
-msgstr "Brea"
-
-#: templates/index.html:98
-msgid "Roll"
-msgstr "Rodar"
-
-#: templates/index.html:99
-msgid "Press"
-msgstr "Premeu"
-
-#: templates/index.html:99
-msgid "here"
-msgstr "aquí"
-
-#: templates/index.html:100
-msgid "when the boat is level to align the inertial sensors."
-msgstr "quan la barca està anivellada per alinear els sensors inercials."
-
-#: templates/index.html:105
-msgid "Magnetic Heading Offset"
-msgstr "Offset magnètic de capçalera"
-
-#: templates/index.html:107
-msgid "Lock Calibration"
-msgstr "Calibratge de bloqueig"
-
-#: templates/index.html:109
-msgid "calibration plot"
-msgstr "gràfic de calibratge"
-
-#: templates/index.html:111
-msgid "Rudder"
-msgstr "Timó"
-
-#: templates/index.html:113
-msgid "centered"
-msgstr "centrat"
-
-#: templates/index.html:114
-msgid "port range"
-msgstr "abast de ports"
-
-#: templates/index.html:115
-msgid "starboard range"
-msgstr "gamma estribord"
-
-#: templates/index.html:116 templates/index.html:140
-msgid "reset"
-msgstr "restableix"
-
-#: templates/index.html:119
-msgid "Rudder Range"
-msgstr "Gamma del timó"
-
-#: templates/index.html:120
-msgid "Degrees"
-msgstr "Titulacions"
-
-#: templates/index.html:126
-msgid "Display"
-msgstr "Visualització"
-
-#: templates/index.html:127
-msgid "Clear"
-msgstr "Clar"
-
-#: templates/index.html:128
-msgid "Dark"
-msgstr "Fosc"
-
-#: templates/index.html:131
-msgid "Configure LCD Keypad and Remotes"
-msgstr "Configureu el teclat i els comandaments a distància LCD"
-
-#: templates/index.html:133
-msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
-msgstr ""
-"Amfitrió del client NMEA: port (deixeu-ho en blanc per defecte), per "
-"exemple: 192.168.0.1:10110"
-
-#: templates/index.html:138
-msgid "Amp Hours"
-msgstr "Amp Hours"
-
-#: templates/index.html:141
-msgid "Voltage"
-msgstr "Voltatge"
-
-#: templates/index.html:142
-msgid "Controller temperature"
-msgstr "Temperatura del controlador"
-
-#: templates/index.html:143
-msgid "Runtime"
-msgstr "Temps d'execució"
-
-#: templates/index.html:144
-msgid "Servo"
-msgstr "Servo"
-
-#: templates/index.html:148
-msgid "Server"
-msgstr "Servidor"
-
-#: templates/index.html:150
-msgid "Errors"
-msgstr "Errors"
-
-#: templates/index.html:151
-msgid "Web Server Latency"
-msgstr "Latència del servidor web"
-
-#: templates/wifi.html:4
-msgid "setup"
-msgstr "configuració"
-
-#: templates/wifi.html:8
-msgid "Wireless Configuration"
-msgstr "Configuració sense fils"
-
-#: templates/wifi.html:16 templates/wifi.html:17
-msgid "Access Point"
-msgstr "Punt d'accés"
-
-#: templates/wifi.html:17 templates/wifi.html:22
-msgid "Key (leave blank for no encryption)"
-msgstr "Clau (deixeu-la en blanc si no hi ha xifratge)"
-
-#: templates/wifi.html:21 templates/wifi.html:22
-msgid "Client"
-msgstr "Client"
-
-#: templates/wifi.html:24
-msgid "Client Mode Address (leave blank for dhcp)"
-msgstr "Adreça del mode client (deixeu-ho en blanc per a dhcp)"
-
-#: templates/wifi.html:28
-msgid "If there is a problem, edit the file"
-msgstr "Si hi ha un problema, editeu el fitxer"
-
-#: templates/wifi.html:33
-msgid "back"
-msgstr "esquena"
 
 #~ msgid "Wireless Configuration"
 #~ msgstr "Configuració sense fils"
@@ -259,4 +29,171 @@ msgstr "esquena"
 
 #~ msgid "If there is a problem, edit the file"
 #~ msgstr "Si hi ha un problema, editeu el fitxer"
+
+#~ msgid "Not Connected"
+#~ msgstr "No connectat"
+
+#~ msgid "Connected"
+#~ msgstr "Connectat"
+
+#~ msgid "Disconnected"
+#~ msgstr "Desconnectat"
+
+#~ msgid "compass or gyro failure!"
+#~ msgstr "fallada de la brúixola o del giroscopi!"
+
+#~ msgid "Tack"
+#~ msgstr "Tack"
+
+#~ msgid "Cancel"
+#~ msgstr "Cancel · lar"
+
+#~ msgid "Engaged"
+#~ msgstr "Compromès"
+
+#~ msgid "Disengaged"
+#~ msgstr "Desactivat"
+
+#~ msgid "no motor controller!"
+#~ msgstr "cap controlador de motor!"
+
+#~ msgid "Calibration Plot"
+#~ msgstr "Parcel·la de calibració"
+
+#~ msgid ""
+#~ "The raw sensor readings should fall "
+#~ "on a sphere when calibrated.  The "
+#~ "age will reset when the calibration "
+#~ "updates."
+#~ msgstr ""
+#~ "Les lectures del sensor en brut "
+#~ "haurien de caure sobre una esfera "
+#~ "quan es calibrin. L'edat es restablirà"
+#~ " quan s'actualitzi el calibratge."
+
+#~ msgid "Connection"
+#~ msgstr "Connexió"
+
+#~ msgid "Control"
+#~ msgstr "Control"
+
+#~ msgid "Gain"
+#~ msgstr "Guany"
+
+#~ msgid "Calibration"
+#~ msgstr "Calibratge"
+
+#~ msgid "Configuration"
+#~ msgstr "Configuració"
+
+#~ msgid "Statistics"
+#~ msgstr "Estadístiques"
+
+#~ msgid "Heading"
+#~ msgstr "Encapçalament"
+
+#~ msgid "Command"
+#~ msgstr "Comandament"
+
+#~ msgid "Magnetic Heading"
+#~ msgstr "Encapçalament magnètic"
+
+#~ msgid "Pitch"
+#~ msgstr "Brea"
+
+#~ msgid "Roll"
+#~ msgstr "Rodar"
+
+#~ msgid "Press"
+#~ msgstr "Premeu"
+
+#~ msgid "here"
+#~ msgstr "aquí"
+
+#~ msgid "when the boat is level to align the inertial sensors."
+#~ msgstr "quan la barca està anivellada per alinear els sensors inercials."
+
+#~ msgid "Magnetic Heading Offset"
+#~ msgstr "Offset magnètic de capçalera"
+
+#~ msgid "Lock Calibration"
+#~ msgstr "Calibratge de bloqueig"
+
+#~ msgid "calibration plot"
+#~ msgstr "gràfic de calibratge"
+
+#~ msgid "Rudder"
+#~ msgstr "Timó"
+
+#~ msgid "centered"
+#~ msgstr "centrat"
+
+#~ msgid "port range"
+#~ msgstr "abast de ports"
+
+#~ msgid "starboard range"
+#~ msgstr "gamma estribord"
+
+#~ msgid "reset"
+#~ msgstr "restableix"
+
+#~ msgid "Rudder Range"
+#~ msgstr "Gamma del timó"
+
+#~ msgid "Degrees"
+#~ msgstr "Titulacions"
+
+#~ msgid "Display"
+#~ msgstr "Visualització"
+
+#~ msgid "Clear"
+#~ msgstr "Clar"
+
+#~ msgid "Dark"
+#~ msgstr "Fosc"
+
+#~ msgid "Configure LCD Keypad and Remotes"
+#~ msgstr "Configureu el teclat i els comandaments a distància LCD"
+
+#~ msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
+#~ msgstr ""
+#~ "Amfitrió del client NMEA: port "
+#~ "(deixeu-ho en blanc per defecte), per"
+#~ " exemple: 192.168.0.1:10110"
+
+#~ msgid "Amp Hours"
+#~ msgstr "Amp Hours"
+
+#~ msgid "Voltage"
+#~ msgstr "Voltatge"
+
+#~ msgid "Controller temperature"
+#~ msgstr "Temperatura del controlador"
+
+#~ msgid "Runtime"
+#~ msgstr "Temps d'execució"
+
+#~ msgid "Servo"
+#~ msgstr "Servo"
+
+#~ msgid "Server"
+#~ msgstr "Servidor"
+
+#~ msgid "Errors"
+#~ msgstr "Errors"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Latència del servidor web"
+
+#~ msgid "setup"
+#~ msgstr "configuració"
+
+#~ msgid "Access Point"
+#~ msgstr "Punt d'accés"
+
+#~ msgid "Client"
+#~ msgstr "Client"
+
+#~ msgid "back"
+#~ msgstr "esquena"
 

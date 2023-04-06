@@ -7,99 +7,93 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-06 17:32-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: nl <LL@li.org>\n"
 "Language: nl\n"
+"Language-Team: nl <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: templates/index.html:4
-msgid "pypilot hat configuration"
-msgstr "pypilot-hoedconfiguratie"
+#~ msgid "pypilot hat configuration"
+#~ msgstr "pypilot-hoedconfiguratie"
 
-#: templates/index.html:16
-msgid "lcd and remote control setup"
-msgstr "lcd en afstandsbediening instellen"
+#~ msgid "lcd and remote control setup"
+#~ msgstr "lcd en afstandsbediening instellen"
 
-#: templates/index.html:17
-msgid "clear"
-msgstr "Doorzichtig"
+#~ msgid "clear"
+#~ msgstr "Doorzichtig"
 
-#: templates/index.html:17
-msgid "default"
-msgstr "standaard"
+#~ msgid "default"
+#~ msgstr "standaard"
 
-#: templates/index.html:18
-msgid ""
-"press button(s) on the keypad or remote then assign a command with the "
-"button."
-msgstr ""
-"druk op de knop(pen) op het toetsenbord of de afstandsbediening en wijs "
-"vervolgens een commando toe met de knop."
+#~ msgid ""
+#~ "press button(s) on the keypad or "
+#~ "remote then assign a command with "
+#~ "the button."
+#~ msgstr ""
+#~ "druk op de knop(pen) op het "
+#~ "toetsenbord of de afstandsbediening en "
+#~ "wijs vervolgens een commando toe met "
+#~ "de knop."
 
-#: templates/index.html:19
-msgid "Actions for LCD interface"
-msgstr "Acties voor LCD-interface"
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Acties voor LCD-interface"
 
-#: templates/index.html:21 templates/index.html:25
-msgid "key"
-msgstr "toets"
+#~ msgid "key"
+#~ msgstr "toets"
 
-#: templates/index.html:22 templates/index.html:26
-msgid "action"
-msgstr "actie"
+#~ msgid "action"
+#~ msgstr "actie"
 
-#: templates/index.html:23
-msgid ""
-"These actions do not depend on the state of the display and can be used by "
-"wireless remotes."
-msgstr ""
-"Deze acties zijn niet afhankelijk van de status van het scherm en kunnen "
-"worden gebruikt door draadloze afstandsbedieningen."
+#~ msgid ""
+#~ "These actions do not depend on the"
+#~ " state of the display and can "
+#~ "be used by wireless remotes."
+#~ msgstr ""
+#~ "Deze acties zijn niet afhankelijk van"
+#~ " de status van het scherm en "
+#~ "kunnen worden gebruikt door draadloze "
+#~ "afstandsbedieningen."
 
-#: templates/index.html:28
-msgid "infared receiver port"
-msgstr "infrarood ontvanger poort"
+#~ msgid "infared receiver port"
+#~ msgstr "infrarood ontvanger poort"
 
-#: templates/index.html:29
-msgid ""
-"The ir port can be handled direcly from the pi or the arduino.  Using the "
-"arduino can receive from many different remotes without special calibration "
-"recordings."
-msgstr ""
-"De ir-poort kan rechtstreeks vanaf de pi of de arduino worden afgehandeld. "
-"Met behulp van de arduino kan van veel verschillende afstandsbedieningen "
-"worden ontvangen zonder speciale kalibratie-opnames."
+#~ msgid ""
+#~ "The ir port can be handled direcly"
+#~ " from the pi or the arduino.  "
+#~ "Using the arduino can receive from "
+#~ "many different remotes without special "
+#~ "calibration recordings."
+#~ msgstr ""
+#~ "De ir-poort kan rechtstreeks vanaf "
+#~ "de pi of de arduino worden "
+#~ "afgehandeld. Met behulp van de arduino"
+#~ " kan van veel verschillende "
+#~ "afstandsbedieningen worden ontvangen zonder "
+#~ "speciale kalibratie-opnames."
 
-#: templates/index.html:36
-msgid "remote mode"
-msgstr "externe modus:"
+#~ msgid "remote mode"
+#~ msgstr "externe modus:"
 
-#: templates/index.html:37
-msgid "remote"
-msgstr "op afstand"
+#~ msgid "remote"
+#~ msgstr "op afstand"
 
-#: templates/index.html:41
-msgid "nmea current baud rate"
-msgstr "nmea huidige baudrate"
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea huidige baudrate"
 
-#: templates/index.html:42
-msgid "voltages"
-msgstr "spanningen"
+#~ msgid "voltages"
+#~ msgstr "spanningen"
 
-#: templates/index.html:43
-msgid "status"
-msgstr "toestand"
+#~ msgid "status"
+#~ msgstr "toestand"
 
-#: templates/index.html:44
-msgid "connection"
-msgstr "verbinding"
+#~ msgid "connection"
+#~ msgstr "verbinding"
 
-#: templates/index.html:45
-msgid "Web Server Latency"
-msgstr "Latentie webserver"
+#~ msgid "Web Server Latency"
+#~ msgstr "Latentie webserver"
+

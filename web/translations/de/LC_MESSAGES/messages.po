@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-25 21:11-0400\n"
+"POT-Creation-Date: 2023-04-06 17:34-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -18,243 +18,179 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: static/pypilot_control.js:37
-msgid "Not Connected"
-msgstr "Nicht verbunden"
-
-#: static/pypilot_control.js:68
-msgid "Connected"
-msgstr "Verbunden"
-
-#: static/pypilot_control.js:175
-msgid "Disconnected"
-msgstr "Getrennt"
-
-#: static/pypilot_control.js:245
-msgid "compass or gyro failure!"
-msgstr "Kompass- oder Kreiselfehler!"
-
-#: static/pypilot_control.js:258
-msgid "Tack"
-msgstr "Wende"
-
-#: static/pypilot_control.js:261
-msgid "Cancel"
-msgstr "Abbrechen"
-
-#: static/pypilot_control.js:320
-msgid "Engaged"
-msgstr "Eingeschaltet"
-
-#: static/pypilot_control.js:322
-msgid "Disengaged"
-msgstr "Ausgeschaltet"
-
-#: static/pypilot_control.js:394
-msgid "no motor controller!"
-msgstr "kein Motorregler!"
-
-#: templates/calibrationplot.html:4
-msgid "Calibration Plot"
-msgstr "Kalibrierungsdiagramm"
-
-#: templates/calibrationplot.html:21
-msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age"
-" will reset when the calibration updates."
-msgstr ""
-"Die rohen Sensorwerte sollten bei der Kalibrierung auf einer Kugel liegen."
-" Das Alter wird zurückgesetzt, wenn die Kalibrierung aktualisiert wird."
-
-#: templates/calibrationplot.html:28
-msgid "Connection"
-msgstr "Verbindung"
-
-#: templates/index.html:30
-msgid "Control"
-msgstr "Steuerung"
-
-#: templates/index.html:33
-msgid "Gain"
-msgstr "Verstärkung"
-
-#: templates/index.html:36
-msgid "Calibration"
-msgstr "Kalibrierung"
-
-#: templates/index.html:39
-msgid "Configuration"
-msgstr "Einstellungen"
-
-#: templates/index.html:42
-msgid "Statistics"
-msgstr "Statistiken"
-
-#: templates/index.html:51
-msgid "Heading"
-msgstr "Kurs"
-
-#: templates/index.html:53
-msgid "Command"
-msgstr "Befehl"
-
-#: templates/index.html:96
-msgid "Magnetic Heading"
-msgstr "Magnetische Kurs"
-
-#: templates/index.html:97
-msgid "Pitch"
-msgstr "Nicken"
-
-#: templates/index.html:98
-msgid "Roll"
-msgstr "Rollen"
-
-#: templates/index.html:99
-msgid "Press"
-msgstr "Drücken Sie"
-
-#: templates/index.html:99
-msgid "here"
-msgstr "hier"
-
-#: templates/index.html:100
-msgid "when the boat is level to align the inertial sensors."
-msgstr "wenn das Boot waagerecht ist, um die Trägheitssensoren auszurichten."
-
-#: templates/index.html:105
-msgid "Magnetic Heading Offset"
-msgstr "Magnetischer Kursversatz"
-
-#: templates/index.html:107
-msgid "Lock Calibration"
-msgstr "Sperren Sie die Kalibrierung"
-
-#: templates/index.html:109
-msgid "calibration plot"
-msgstr "Kalibrierungsdiagramm"
-
-#: templates/index.html:111
-msgid "Rudder"
-msgstr "Ruder"
-
-#: templates/index.html:113
-msgid "centered"
-msgstr "zentriert"
-
-#: templates/index.html:114
-msgid "port range"
-msgstr "Backbord Ausschlagbereich"
-
-#: templates/index.html:115
-msgid "starboard range"
-msgstr "Steuerbord Ausschlagbereich"
-
-#: templates/index.html:116 templates/index.html:140
-msgid "reset"
-msgstr "zurücksetzen"
-
-#: templates/index.html:119
-msgid "Rudder Range"
-msgstr "Ruderausschlagbereich"
-
-#: templates/index.html:120
-msgid "Degrees"
-msgstr "Grad"
-
-#: templates/index.html:126
-msgid "Display"
-msgstr "Anzeige"
-
-#: templates/index.html:127
-msgid "Clear"
-msgstr "Hell"
-
-#: templates/index.html:128
-msgid "Dark"
-msgstr "Dunkel"
-
-#: templates/index.html:131
-msgid "Configure LCD Keypad and Remotes"
-msgstr "LCD-Tastatur und Fernbedienungen konfigurieren"
-
-#: templates/index.html:133
-msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
-msgstr "NMEA-Client-Host: Port (für Standard leer lassen) zB: 192.168.0.1:10110"
-
-#: templates/index.html:138
-msgid "Amp Hours"
-msgstr "Ampere Stunden"
-
-#: templates/index.html:141
-msgid "Voltage"
-msgstr "Spannung"
-
-#: templates/index.html:142
-msgid "Controller temperature"
-msgstr "Reglertemperatur"
-
-#: templates/index.html:143
-msgid "Runtime"
-msgstr "Laufzeit"
-
-#: templates/index.html:144
-msgid "Servo"
-msgstr "Servo"
-
-#: templates/index.html:148
-msgid "Server"
-msgstr "Server"
-
-#: templates/index.html:150
-msgid "Errors"
-msgstr "Fehler"
-
-#: templates/index.html:151
-msgid "Web Server Latency"
-msgstr "Webserver-Latenz"
-
-#: templates/wifi.html:4
-msgid "setup"
-msgstr "einstellen"
-
-#: templates/wifi.html:8
-msgid "Wireless Configuration"
-msgstr "WLAN Konfiguration"
-
-#: templates/wifi.html:16 templates/wifi.html:17
-msgid "Access Point"
-msgstr "Zugangspunkt"
-
-#: templates/wifi.html:17 templates/wifi.html:22
-msgid "Key (leave blank for no encryption)"
-msgstr "Schlüssel (für keine Verschlüsselung leer lassen)"
-
-#: templates/wifi.html:21 templates/wifi.html:22
-msgid "Client"
-msgstr "Client"
-
-#: templates/wifi.html:24
-msgid "Client Mode Address (leave blank for dhcp)"
-msgstr "Client-Modus-Adresse (für DHCP leer lassen)"
-
-#: templates/wifi.html:28
-msgid "If there is a problem, edit the file"
-msgstr "Wenn ein Problem auftritt, bearbeiten Sie die Datei"
-
-#: templates/wifi.html:33
-msgid "back"
-msgstr "zurück"
-
 #~ msgid "Wireless Configuration"
 #~ msgstr "WLAN Konfiguration"
 
 #~ msgid "Key (leave blank for no encryption)"
-#~ msgstr "Schlüssel (leer lassen für keine Verschlüsselung)"
+#~ msgstr "Schlüssel (für keine Verschlüsselung leer lassen)"
 
 #~ msgid "Client Mode Address (leave blank for dhcp)"
 #~ msgstr "Client-Modus-Adresse (für DHCP leer lassen)"
 
 #~ msgid "If there is a problem, edit the file"
 #~ msgstr "Wenn ein Problem auftritt, bearbeiten Sie die Datei"
+
+#~ msgid "Not Connected"
+#~ msgstr "Nicht verbunden"
+
+#~ msgid "Connected"
+#~ msgstr "Verbunden"
+
+#~ msgid "Disconnected"
+#~ msgstr "Getrennt"
+
+#~ msgid "compass or gyro failure!"
+#~ msgstr "Kompass- oder Kreiselfehler!"
+
+#~ msgid "Tack"
+#~ msgstr "Wende"
+
+#~ msgid "Cancel"
+#~ msgstr "Abbrechen"
+
+#~ msgid "Engaged"
+#~ msgstr "Eingeschaltet"
+
+#~ msgid "Disengaged"
+#~ msgstr "Ausgeschaltet"
+
+#~ msgid "no motor controller!"
+#~ msgstr "kein Motorregler!"
+
+#~ msgid "Calibration Plot"
+#~ msgstr "Kalibrierungsdiagramm"
+
+#~ msgid ""
+#~ "The raw sensor readings should fall "
+#~ "on a sphere when calibrated.  The "
+#~ "age will reset when the calibration "
+#~ "updates."
+#~ msgstr ""
+#~ "Die rohen Sensorwerte sollten bei der"
+#~ " Kalibrierung auf einer Kugel liegen. "
+#~ "Das Alter wird zurückgesetzt, wenn die"
+#~ " Kalibrierung aktualisiert wird."
+
+#~ msgid "Connection"
+#~ msgstr "Verbindung"
+
+#~ msgid "Control"
+#~ msgstr "Steuerung"
+
+#~ msgid "Gain"
+#~ msgstr "Verstärkung"
+
+#~ msgid "Calibration"
+#~ msgstr "Kalibrierung"
+
+#~ msgid "Configuration"
+#~ msgstr "Einstellungen"
+
+#~ msgid "Statistics"
+#~ msgstr "Statistiken"
+
+#~ msgid "Heading"
+#~ msgstr "Kurs"
+
+#~ msgid "Command"
+#~ msgstr "Befehl"
+
+#~ msgid "Magnetic Heading"
+#~ msgstr "Magnetische Kurs"
+
+#~ msgid "Pitch"
+#~ msgstr "Nicken"
+
+#~ msgid "Roll"
+#~ msgstr "Rollen"
+
+#~ msgid "Press"
+#~ msgstr "Drücken Sie"
+
+#~ msgid "here"
+#~ msgstr "hier"
+
+#~ msgid "when the boat is level to align the inertial sensors."
+#~ msgstr "wenn das Boot waagerecht ist, um die Trägheitssensoren auszurichten."
+
+#~ msgid "Magnetic Heading Offset"
+#~ msgstr "Magnetischer Kursversatz"
+
+#~ msgid "Lock Calibration"
+#~ msgstr "Sperren Sie die Kalibrierung"
+
+#~ msgid "calibration plot"
+#~ msgstr "Kalibrierungsdiagramm"
+
+#~ msgid "Rudder"
+#~ msgstr "Ruder"
+
+#~ msgid "centered"
+#~ msgstr "zentriert"
+
+#~ msgid "port range"
+#~ msgstr "Backbord Ausschlagbereich"
+
+#~ msgid "starboard range"
+#~ msgstr "Steuerbord Ausschlagbereich"
+
+#~ msgid "reset"
+#~ msgstr "zurücksetzen"
+
+#~ msgid "Rudder Range"
+#~ msgstr "Ruderausschlagbereich"
+
+#~ msgid "Degrees"
+#~ msgstr "Grad"
+
+#~ msgid "Display"
+#~ msgstr "Anzeige"
+
+#~ msgid "Clear"
+#~ msgstr "Hell"
+
+#~ msgid "Dark"
+#~ msgstr "Dunkel"
+
+#~ msgid "Configure LCD Keypad and Remotes"
+#~ msgstr "LCD-Tastatur und Fernbedienungen konfigurieren"
+
+#~ msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
+#~ msgstr "NMEA-Client-Host: Port (für Standard leer lassen) zB: 192.168.0.1:10110"
+
+#~ msgid "Amp Hours"
+#~ msgstr "Ampere Stunden"
+
+#~ msgid "Voltage"
+#~ msgstr "Spannung"
+
+#~ msgid "Controller temperature"
+#~ msgstr "Reglertemperatur"
+
+#~ msgid "Runtime"
+#~ msgstr "Laufzeit"
+
+#~ msgid "Servo"
+#~ msgstr "Servo"
+
+#~ msgid "Server"
+#~ msgstr "Server"
+
+#~ msgid "Errors"
+#~ msgstr "Fehler"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Webserver-Latenz"
+
+#~ msgid "setup"
+#~ msgstr "einstellen"
+
+#~ msgid "Access Point"
+#~ msgstr "Zugangspunkt"
+
+#~ msgid "Client"
+#~ msgstr "Client"
+
+#~ msgid "back"
+#~ msgstr "zurück"
 

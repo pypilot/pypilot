@@ -8,99 +8,90 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-06 17:32-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: pt <LL@li.org>\n"
 "Language: pt\n"
+"Language-Team: pt <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: templates/index.html:4
-msgid "pypilot hat configuration"
-msgstr "configuração do chapéu pypilot"
+#~ msgid "pypilot hat configuration"
+#~ msgstr "configuração do chapéu pypilot"
 
-#: templates/index.html:16
-msgid "lcd and remote control setup"
-msgstr "configuração de lcd e controle remoto"
+#~ msgid "lcd and remote control setup"
+#~ msgstr "configuração de lcd e controle remoto"
 
-#: templates/index.html:17
-msgid "clear"
-msgstr "Claro"
+#~ msgid "clear"
+#~ msgstr "Claro"
 
-#: templates/index.html:17
-msgid "default"
-msgstr "predefinição"
+#~ msgid "default"
+#~ msgstr "predefinição"
 
-#: templates/index.html:18
-msgid ""
-"press button(s) on the keypad or remote then assign a command with the "
-"button."
-msgstr ""
-"pressione o (s) botão (ões) no teclado ou no controle remoto e atribua um "
-"comando com o botão."
+#~ msgid ""
+#~ "press button(s) on the keypad or "
+#~ "remote then assign a command with "
+#~ "the button."
+#~ msgstr ""
+#~ "pressione o (s) botão (ões) no "
+#~ "teclado ou no controle remoto e "
+#~ "atribua um comando com o botão."
 
-#: templates/index.html:19
-msgid "Actions for LCD interface"
-msgstr "Ações para interface LCD"
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Ações para interface LCD"
 
-#: templates/index.html:21 templates/index.html:25
-msgid "key"
-msgstr "chave"
+#~ msgid "key"
+#~ msgstr "chave"
 
-#: templates/index.html:22 templates/index.html:26
-msgid "action"
-msgstr "açao"
+#~ msgid "action"
+#~ msgstr "açao"
 
-#: templates/index.html:23
-msgid ""
-"These actions do not depend on the state of the display and can be used by "
-"wireless remotes."
-msgstr ""
-"Essas ações não dependem do estado da tela e podem ser usadas por controles "
-"remotos sem fio."
+#~ msgid ""
+#~ "These actions do not depend on the"
+#~ " state of the display and can "
+#~ "be used by wireless remotes."
+#~ msgstr ""
+#~ "Essas ações não dependem do estado "
+#~ "da tela e podem ser usadas por "
+#~ "controles remotos sem fio."
 
-#: templates/index.html:28
-msgid "infared receiver port"
-msgstr "porta do receptor infravermelho"
+#~ msgid "infared receiver port"
+#~ msgstr "porta do receptor infravermelho"
 
-#: templates/index.html:29
-msgid ""
-"The ir port can be handled direcly from the pi or the arduino.  Using the "
-"arduino can receive from many different remotes without special calibration "
-"recordings."
-msgstr ""
-"A porta ir pode ser controlada diretamente do pi ou do arduino. Usando o "
-"arduino pode receber de muitos controles remotos diferentes sem gravações de"
-" calibração especiais."
+#~ msgid ""
+#~ "The ir port can be handled direcly"
+#~ " from the pi or the arduino.  "
+#~ "Using the arduino can receive from "
+#~ "many different remotes without special "
+#~ "calibration recordings."
+#~ msgstr ""
+#~ "A porta ir pode ser controlada "
+#~ "diretamente do pi ou do arduino. "
+#~ "Usando o arduino pode receber de "
+#~ "muitos controles remotos diferentes sem "
+#~ "gravações de calibração especiais."
 
-#: templates/index.html:36
-msgid "remote mode"
-msgstr "modo remoto"
+#~ msgid "remote mode"
+#~ msgstr "modo remoto"
 
-#: templates/index.html:37
-msgid "remote"
-msgstr "controlo remoto"
+#~ msgid "remote"
+#~ msgstr "controlo remoto"
 
-#: templates/index.html:41
-msgid "nmea current baud rate"
-msgstr "nmea taxa de transmissão atual"
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea taxa de transmissão atual"
 
-#: templates/index.html:42
-msgid "voltages"
-msgstr "tensões"
+#~ msgid "voltages"
+#~ msgstr "tensões"
 
-#: templates/index.html:43
-msgid "status"
-msgstr "status"
+#~ msgid "status"
+#~ msgstr "status"
 
-#: templates/index.html:44
-msgid "connection"
-msgstr "conexão"
+#~ msgid "connection"
+#~ msgstr "conexão"
 
-#: templates/index.html:45
-msgid "Web Server Latency"
-msgstr "Latência do servidor web"
+#~ msgid "Web Server Latency"
+#~ msgstr "Latência do servidor web"
+

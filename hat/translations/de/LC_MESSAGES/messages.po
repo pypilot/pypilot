@@ -7,99 +7,90 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-06 17:32-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: de <LL@li.org>\n"
 "Language: de\n"
+"Language-Team: de <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: templates/index.html:4
-msgid "pypilot hat configuration"
-msgstr "pypilot-Hutkonfiguration"
+#~ msgid "pypilot hat configuration"
+#~ msgstr "pypilot-Hutkonfiguration"
 
-#: templates/index.html:16
-msgid "lcd and remote control setup"
-msgstr "lcd und fernbedienung einrichten"
+#~ msgid "lcd and remote control setup"
+#~ msgstr "lcd und fernbedienung einrichten"
 
-#: templates/index.html:17
-msgid "clear"
-msgstr "klar"
+#~ msgid "clear"
+#~ msgstr "klar"
 
-#: templates/index.html:17
-msgid "default"
-msgstr "Ursprünglich"
+#~ msgid "default"
+#~ msgstr "Ursprünglich"
 
-#: templates/index.html:18
-msgid ""
-"press button(s) on the keypad or remote then assign a command with the "
-"button."
-msgstr ""
-"Taste(n) auf der Tastatur oder Fernbedienung drücken und dann einen Befehl "
-"mit der Taste zuweisen."
+#~ msgid ""
+#~ "press button(s) on the keypad or "
+#~ "remote then assign a command with "
+#~ "the button."
+#~ msgstr ""
+#~ "Taste(n) auf der Tastatur oder "
+#~ "Fernbedienung drücken und dann einen "
+#~ "Befehl mit der Taste zuweisen."
 
-#: templates/index.html:19
-msgid "Actions for LCD interface"
-msgstr "Aktionen für LCD-Schnittstelle"
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Aktionen für LCD-Schnittstelle"
 
-#: templates/index.html:21 templates/index.html:25
-msgid "key"
-msgstr "Schlüssel"
+#~ msgid "key"
+#~ msgstr "Schlüssel"
 
-#: templates/index.html:22 templates/index.html:26
-msgid "action"
-msgstr "Handlung"
+#~ msgid "action"
+#~ msgstr "Handlung"
 
-#: templates/index.html:23
-msgid ""
-"These actions do not depend on the state of the display and can be used by "
-"wireless remotes."
-msgstr ""
-"Diese Aktionen hängen nicht vom Status des Displays ab und können von "
-"drahtlosen Fernbedienungen verwendet werden."
+#~ msgid ""
+#~ "These actions do not depend on the"
+#~ " state of the display and can "
+#~ "be used by wireless remotes."
+#~ msgstr ""
+#~ "Diese Aktionen hängen nicht vom Status"
+#~ " des Displays ab und können von "
+#~ "drahtlosen Fernbedienungen verwendet werden."
 
-#: templates/index.html:28
-msgid "infared receiver port"
-msgstr "Infrarot-Empfängeranschluss"
+#~ msgid "infared receiver port"
+#~ msgstr "Infrarot-Empfängeranschluss"
 
-#: templates/index.html:29
-msgid ""
-"The ir port can be handled direcly from the pi or the arduino.  Using the "
-"arduino can receive from many different remotes without special calibration "
-"recordings."
-msgstr ""
-"Der ir-Port kann direkt vom pi oder arduino gehandhabt werden. Mit dem "
-"Arduino können Sie von vielen verschiedenen Fernbedienungen ohne spezielle "
-"Kalibrierungsaufnahmen empfangen."
+#~ msgid ""
+#~ "The ir port can be handled direcly"
+#~ " from the pi or the arduino.  "
+#~ "Using the arduino can receive from "
+#~ "many different remotes without special "
+#~ "calibration recordings."
+#~ msgstr ""
+#~ "Der ir-Port kann direkt vom pi "
+#~ "oder arduino gehandhabt werden. Mit dem"
+#~ " Arduino können Sie von vielen "
+#~ "verschiedenen Fernbedienungen ohne spezielle "
+#~ "Kalibrierungsaufnahmen empfangen."
 
-#: templates/index.html:36
-msgid "remote mode"
-msgstr "Remote-Modus"
+#~ msgid "remote mode"
+#~ msgstr "Remote-Modus"
 
-#: templates/index.html:37
-msgid "remote"
-msgstr "Fernbedienung"
+#~ msgid "remote"
+#~ msgstr "Fernbedienung"
 
-#: templates/index.html:41
-msgid "nmea current baud rate"
-msgstr "nmea aktuelle Baudrate"
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea aktuelle Baudrate"
 
-#: templates/index.html:42
-msgid "voltages"
-msgstr "Spannungen"
+#~ msgid "voltages"
+#~ msgstr "Spannungen"
 
-#: templates/index.html:43
-msgid "status"
-msgstr "Status"
+#~ msgid "status"
+#~ msgstr "Status"
 
-#: templates/index.html:44
-msgid "connection"
-msgstr "Verbindung"
+#~ msgid "connection"
+#~ msgstr "Verbindung"
 
-#: templates/index.html:45
-msgid "Web Server Latency"
-msgstr "Webserver-Latenz"
+#~ msgid "Web Server Latency"
+#~ msgstr "Webserver-Latenz"
+

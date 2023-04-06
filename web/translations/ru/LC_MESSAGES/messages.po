@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-25 21:11-0400\n"
+"POT-Creation-Date: 2023-04-06 17:34-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ru\n"
@@ -17,236 +17,6 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.6.0\n"
-
-#: static/pypilot_control.js:37
-msgid "Not Connected"
-msgstr "Не подключен"
-
-#: static/pypilot_control.js:68
-msgid "Connected"
-msgstr "Связанный"
-
-#: static/pypilot_control.js:175
-msgid "Disconnected"
-msgstr "Отключен"
-
-#: static/pypilot_control.js:245
-msgid "compass or gyro failure!"
-msgstr "отказ компаса или гироскопа!"
-
-#: static/pypilot_control.js:258
-msgid "Tack"
-msgstr "Tack"
-
-#: static/pypilot_control.js:261
-msgid "Cancel"
-msgstr "Отмена"
-
-#: static/pypilot_control.js:320
-msgid "Engaged"
-msgstr "Увлеченный"
-
-#: static/pypilot_control.js:322
-msgid "Disengaged"
-msgstr "Отключен"
-
-#: static/pypilot_control.js:394
-msgid "no motor controller!"
-msgstr "нет контроллера мотора!"
-
-#: templates/calibrationplot.html:4
-msgid "Calibration Plot"
-msgstr "График калибровки"
-
-#: templates/calibrationplot.html:21
-msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age"
-" will reset when the calibration updates."
-msgstr ""
-"Необработанные показания датчика при калибровке должны попадать на сферу."
-" Возраст будет сброшен при обновлении калибровки."
-
-#: templates/calibrationplot.html:28
-msgid "Connection"
-msgstr "Связь"
-
-#: templates/index.html:30
-msgid "Control"
-msgstr "Контроль"
-
-#: templates/index.html:33
-msgid "Gain"
-msgstr "Прирост"
-
-#: templates/index.html:36
-msgid "Calibration"
-msgstr "Калибровка"
-
-#: templates/index.html:39
-msgid "Configuration"
-msgstr "Конфигурация"
-
-#: templates/index.html:42
-msgid "Statistics"
-msgstr "Статистика"
-
-#: templates/index.html:51
-msgid "Heading"
-msgstr "Заголовок"
-
-#: templates/index.html:53
-msgid "Command"
-msgstr "Командование"
-
-#: templates/index.html:96
-msgid "Magnetic Heading"
-msgstr "Магнитный заголовок"
-
-#: templates/index.html:97
-msgid "Pitch"
-msgstr "Подача"
-
-#: templates/index.html:98
-msgid "Roll"
-msgstr "Рулон"
-
-#: templates/index.html:99
-msgid "Press"
-msgstr "Нажмите"
-
-#: templates/index.html:99
-msgid "here"
-msgstr "здесь"
-
-#: templates/index.html:100
-msgid "when the boat is level to align the inertial sensors."
-msgstr "когда лодка выровнена, необходимо выровнять инерционные датчики."
-
-#: templates/index.html:105
-msgid "Magnetic Heading Offset"
-msgstr "Магнитное смещение курса"
-
-#: templates/index.html:107
-msgid "Lock Calibration"
-msgstr "Блокировка калибровки"
-
-#: templates/index.html:109
-msgid "calibration plot"
-msgstr "калибровочный график"
-
-#: templates/index.html:111
-msgid "Rudder"
-msgstr "Руль"
-
-#: templates/index.html:113
-msgid "centered"
-msgstr "по центру"
-
-#: templates/index.html:114
-msgid "port range"
-msgstr "диапазон портов"
-
-#: templates/index.html:115
-msgid "starboard range"
-msgstr "диапазон правого борта"
-
-#: templates/index.html:116 templates/index.html:140
-msgid "reset"
-msgstr "сброс настроек"
-
-#: templates/index.html:119
-msgid "Rudder Range"
-msgstr "Диапазон руля"
-
-#: templates/index.html:120
-msgid "Degrees"
-msgstr "Градусы"
-
-#: templates/index.html:126
-msgid "Display"
-msgstr "Отображать"
-
-#: templates/index.html:127
-msgid "Clear"
-msgstr "ясно"
-
-#: templates/index.html:128
-msgid "Dark"
-msgstr "Темный"
-
-#: templates/index.html:131
-msgid "Configure LCD Keypad and Remotes"
-msgstr "Настройка ЖК-клавиатуры и пультов дистанционного управления"
-
-#: templates/index.html:133
-msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
-msgstr ""
-"Хост клиента NMEA: порт (оставьте поле пустым по умолчанию), например: "
-"192.168.0.1:10110"
-
-#: templates/index.html:138
-msgid "Amp Hours"
-msgstr "Ампер-часы"
-
-#: templates/index.html:141
-msgid "Voltage"
-msgstr "Напряжение"
-
-#: templates/index.html:142
-msgid "Controller temperature"
-msgstr "Температура регулятора"
-
-#: templates/index.html:143
-msgid "Runtime"
-msgstr "Время выполнения"
-
-#: templates/index.html:144
-msgid "Servo"
-msgstr "Сервопривод"
-
-#: templates/index.html:148
-msgid "Server"
-msgstr "Сервер"
-
-#: templates/index.html:150
-msgid "Errors"
-msgstr "Ошибки"
-
-#: templates/index.html:151
-msgid "Web Server Latency"
-msgstr "Задержка веб-сервера"
-
-#: templates/wifi.html:4
-msgid "setup"
-msgstr "настраивать"
-
-#: templates/wifi.html:8
-msgid "Wireless Configuration"
-msgstr "Конфигурация беспроводной сети"
-
-#: templates/wifi.html:16 templates/wifi.html:17
-msgid "Access Point"
-msgstr "Точка доступа"
-
-#: templates/wifi.html:17 templates/wifi.html:22
-msgid "Key (leave blank for no encryption)"
-msgstr "Ключ (оставьте поле пустым, чтобы не шифровать)"
-
-#: templates/wifi.html:21 templates/wifi.html:22
-msgid "Client"
-msgstr "Клиент"
-
-#: templates/wifi.html:24
-msgid "Client Mode Address (leave blank for dhcp)"
-msgstr "Адрес режима клиента (оставьте поле пустым для DHCP)"
-
-#: templates/wifi.html:28
-msgid "If there is a problem, edit the file"
-msgstr "Если есть проблема, отредактируйте файл"
-
-#: templates/wifi.html:33
-msgid "back"
-msgstr "назад"
 
 #~ msgid "Wireless Configuration"
 #~ msgstr "Конфигурация беспроводной сети"
@@ -259,4 +29,171 @@ msgstr "назад"
 
 #~ msgid "If there is a problem, edit the file"
 #~ msgstr "Если есть проблема, отредактируйте файл"
+
+#~ msgid "Not Connected"
+#~ msgstr "Не подключен"
+
+#~ msgid "Connected"
+#~ msgstr "Связанный"
+
+#~ msgid "Disconnected"
+#~ msgstr "Отключен"
+
+#~ msgid "compass or gyro failure!"
+#~ msgstr "отказ компаса или гироскопа!"
+
+#~ msgid "Tack"
+#~ msgstr "Tack"
+
+#~ msgid "Cancel"
+#~ msgstr "Отмена"
+
+#~ msgid "Engaged"
+#~ msgstr "Увлеченный"
+
+#~ msgid "Disengaged"
+#~ msgstr "Отключен"
+
+#~ msgid "no motor controller!"
+#~ msgstr "нет контроллера мотора!"
+
+#~ msgid "Calibration Plot"
+#~ msgstr "График калибровки"
+
+#~ msgid ""
+#~ "The raw sensor readings should fall "
+#~ "on a sphere when calibrated.  The "
+#~ "age will reset when the calibration "
+#~ "updates."
+#~ msgstr ""
+#~ "Необработанные показания датчика при "
+#~ "калибровке должны попадать на сферу. "
+#~ "Возраст будет сброшен при обновлении "
+#~ "калибровки."
+
+#~ msgid "Connection"
+#~ msgstr "Связь"
+
+#~ msgid "Control"
+#~ msgstr "Контроль"
+
+#~ msgid "Gain"
+#~ msgstr "Прирост"
+
+#~ msgid "Calibration"
+#~ msgstr "Калибровка"
+
+#~ msgid "Configuration"
+#~ msgstr "Конфигурация"
+
+#~ msgid "Statistics"
+#~ msgstr "Статистика"
+
+#~ msgid "Heading"
+#~ msgstr "Заголовок"
+
+#~ msgid "Command"
+#~ msgstr "Командование"
+
+#~ msgid "Magnetic Heading"
+#~ msgstr "Магнитный заголовок"
+
+#~ msgid "Pitch"
+#~ msgstr "Подача"
+
+#~ msgid "Roll"
+#~ msgstr "Рулон"
+
+#~ msgid "Press"
+#~ msgstr "Нажмите"
+
+#~ msgid "here"
+#~ msgstr "здесь"
+
+#~ msgid "when the boat is level to align the inertial sensors."
+#~ msgstr "когда лодка выровнена, необходимо выровнять инерционные датчики."
+
+#~ msgid "Magnetic Heading Offset"
+#~ msgstr "Магнитное смещение курса"
+
+#~ msgid "Lock Calibration"
+#~ msgstr "Блокировка калибровки"
+
+#~ msgid "calibration plot"
+#~ msgstr "калибровочный график"
+
+#~ msgid "Rudder"
+#~ msgstr "Руль"
+
+#~ msgid "centered"
+#~ msgstr "по центру"
+
+#~ msgid "port range"
+#~ msgstr "диапазон портов"
+
+#~ msgid "starboard range"
+#~ msgstr "диапазон правого борта"
+
+#~ msgid "reset"
+#~ msgstr "сброс настроек"
+
+#~ msgid "Rudder Range"
+#~ msgstr "Диапазон руля"
+
+#~ msgid "Degrees"
+#~ msgstr "Градусы"
+
+#~ msgid "Display"
+#~ msgstr "Отображать"
+
+#~ msgid "Clear"
+#~ msgstr "ясно"
+
+#~ msgid "Dark"
+#~ msgstr "Темный"
+
+#~ msgid "Configure LCD Keypad and Remotes"
+#~ msgstr "Настройка ЖК-клавиатуры и пультов дистанционного управления"
+
+#~ msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
+#~ msgstr ""
+#~ "Хост клиента NMEA: порт (оставьте поле"
+#~ " пустым по умолчанию), например: "
+#~ "192.168.0.1:10110"
+
+#~ msgid "Amp Hours"
+#~ msgstr "Ампер-часы"
+
+#~ msgid "Voltage"
+#~ msgstr "Напряжение"
+
+#~ msgid "Controller temperature"
+#~ msgstr "Температура регулятора"
+
+#~ msgid "Runtime"
+#~ msgstr "Время выполнения"
+
+#~ msgid "Servo"
+#~ msgstr "Сервопривод"
+
+#~ msgid "Server"
+#~ msgstr "Сервер"
+
+#~ msgid "Errors"
+#~ msgstr "Ошибки"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Задержка веб-сервера"
+
+#~ msgid "setup"
+#~ msgstr "настраивать"
+
+#~ msgid "Access Point"
+#~ msgstr "Точка доступа"
+
+#~ msgid "Client"
+#~ msgstr "Клиент"
+
+#~ msgid "back"
+#~ msgstr "назад"
 

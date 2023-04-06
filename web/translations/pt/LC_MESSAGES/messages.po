@@ -7,243 +7,193 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-25 21:11-0400\n"
+"POT-Creation-Date: 2023-04-06 17:34-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: pt <LL@li.org>\n"
 "Language: pt\n"
+"Language-Team: pt <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: static/pypilot_control.js:37
-msgid "Not Connected"
-msgstr "Não conectado"
+#~ msgid "Not Connected"
+#~ msgstr "Não conectado"
 
-#: static/pypilot_control.js:68
-msgid "Connected"
-msgstr "Conectado"
+#~ msgid "Connected"
+#~ msgstr "Conectado"
 
-#: static/pypilot_control.js:175
-msgid "Disconnected"
-msgstr "Desconectado"
+#~ msgid "Disconnected"
+#~ msgstr "Desconectado"
 
-#: static/pypilot_control.js:245
-msgid "compass or gyro failure!"
-msgstr "falha da bússola ou do giroscópio!"
+#~ msgid "compass or gyro failure!"
+#~ msgstr "falha da bússola ou do giroscópio!"
 
-#: static/pypilot_control.js:258
-msgid "Tack"
-msgstr "Tack"
+#~ msgid "Tack"
+#~ msgstr "Tack"
 
-#: static/pypilot_control.js:261
-msgid "Cancel"
-msgstr "Cancelar"
+#~ msgid "Cancel"
+#~ msgstr "Cancelar"
 
-#: static/pypilot_control.js:320
-msgid "Engaged"
-msgstr "Acionado"
+#~ msgid "Engaged"
+#~ msgstr "Acionado"
 
-#: static/pypilot_control.js:322
-msgid "Disengaged"
-msgstr "Desengatado"
+#~ msgid "Disengaged"
+#~ msgstr "Desengatado"
 
-#: static/pypilot_control.js:394
-msgid "no motor controller!"
-msgstr "nenhum controlador de motor!"
+#~ msgid "no motor controller!"
+#~ msgstr "nenhum controlador de motor!"
 
-#: templates/calibrationplot.html:4
-msgid "Calibration Plot"
-msgstr "Gráfico de calibração"
+#~ msgid "Calibration Plot"
+#~ msgstr "Gráfico de calibração"
 
-#: templates/calibrationplot.html:21
-msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age "
-"will reset when the calibration updates."
-msgstr ""
-"As leituras brutas do sensor devem cair em uma esfera quando calibradas. A "
-"idade será redefinida quando a calibração for atualizada."
+#~ msgid ""
+#~ "The raw sensor readings should fall "
+#~ "on a sphere when calibrated.  The "
+#~ "age will reset when the calibration "
+#~ "updates."
+#~ msgstr ""
+#~ "As leituras brutas do sensor devem "
+#~ "cair em uma esfera quando calibradas."
+#~ " A idade será redefinida quando a "
+#~ "calibração for atualizada."
 
-#: templates/calibrationplot.html:28
-msgid "Connection"
-msgstr "Conexão"
+#~ msgid "Connection"
+#~ msgstr "Conexão"
 
-#: templates/index.html:30
-msgid "Control"
-msgstr "Ao controle"
+#~ msgid "Control"
+#~ msgstr "Ao controle"
 
-#: templates/index.html:33
-msgid "Gain"
-msgstr "Ganho"
+#~ msgid "Gain"
+#~ msgstr "Ganho"
 
-#: templates/index.html:36
-msgid "Calibration"
-msgstr "Calibration"
+#~ msgid "Calibration"
+#~ msgstr "Calibration"
 
-#: templates/index.html:39
-msgid "Configuration"
-msgstr "Configuração"
+#~ msgid "Configuration"
+#~ msgstr "Configuração"
 
-#: templates/index.html:42
-msgid "Statistics"
-msgstr "Estatisticas"
+#~ msgid "Statistics"
+#~ msgstr "Estatisticas"
 
-#: templates/index.html:51
-msgid "Heading"
-msgstr "Cabeçalho"
+#~ msgid "Heading"
+#~ msgstr "Cabeçalho"
 
-#: templates/index.html:53
-msgid "Command"
-msgstr "Comando"
+#~ msgid "Command"
+#~ msgstr "Comando"
 
-#: templates/index.html:96
-msgid "Magnetic Heading"
-msgstr "Rumo Magnético"
+#~ msgid "Magnetic Heading"
+#~ msgstr "Rumo Magnético"
 
-#: templates/index.html:97
-msgid "Pitch"
-msgstr "Tom"
+#~ msgid "Pitch"
+#~ msgstr "Tom"
 
-#: templates/index.html:98
-msgid "Roll"
-msgstr "Lista"
+#~ msgid "Roll"
+#~ msgstr "Lista"
 
-#: templates/index.html:99
-msgid "Press"
-msgstr "pressione"
+#~ msgid "Press"
+#~ msgstr "pressione"
 
-#: templates/index.html:99
-msgid "here"
-msgstr "aqui"
+#~ msgid "here"
+#~ msgstr "aqui"
 
-#: templates/index.html:100
-msgid "when the boat is level to align the inertial sensors."
-msgstr "quando o barco está nivelado para alinhar os sensores inerciais."
+#~ msgid "when the boat is level to align the inertial sensors."
+#~ msgstr "quando o barco está nivelado para alinhar os sensores inerciais."
 
-#: templates/index.html:105
-msgid "Magnetic Heading Offset"
-msgstr "Deslocamento de rumo magnético"
+#~ msgid "Magnetic Heading Offset"
+#~ msgstr "Deslocamento de rumo magnético"
 
-#: templates/index.html:107
-msgid "Lock Calibration"
-msgstr "Calibração de bloqueio"
+#~ msgid "Lock Calibration"
+#~ msgstr "Calibração de bloqueio"
 
-#: templates/index.html:109
-msgid "calibration plot"
-msgstr "gráfico de calibração"
+#~ msgid "calibration plot"
+#~ msgstr "gráfico de calibração"
 
-#: templates/index.html:111
-msgid "Rudder"
-msgstr "Leme"
+#~ msgid "Rudder"
+#~ msgstr "Leme"
 
-#: templates/index.html:113
-msgid "centered"
-msgstr "centrado"
+#~ msgid "centered"
+#~ msgstr "centrado"
 
-#: templates/index.html:114
-msgid "port range"
-msgstr "alcance da porta"
+#~ msgid "port range"
+#~ msgstr "alcance da porta"
 
-#: templates/index.html:115
-msgid "starboard range"
-msgstr "alcance de estibordo"
+#~ msgid "starboard range"
+#~ msgstr "alcance de estibordo"
 
-#: templates/index.html:116 templates/index.html:140
-msgid "reset"
-msgstr "Redefinir"
+#~ msgid "reset"
+#~ msgstr "Redefinir"
 
-#: templates/index.html:119
-msgid "Rudder Range"
-msgstr "Cordilheira do leme"
+#~ msgid "Rudder Range"
+#~ msgstr "Cordilheira do leme"
 
-#: templates/index.html:120
-msgid "Degrees"
-msgstr "Graus"
+#~ msgid "Degrees"
+#~ msgstr "Graus"
 
-#: templates/index.html:126
-msgid "Display"
-msgstr "Exibição"
+#~ msgid "Display"
+#~ msgstr "Exibição"
 
-#: templates/index.html:127
-msgid "Clear"
-msgstr "Claro"
+#~ msgid "Clear"
+#~ msgstr "Claro"
 
-#: templates/index.html:128
-msgid "Dark"
-msgstr "Escuro"
+#~ msgid "Dark"
+#~ msgstr "Escuro"
 
-#: templates/index.html:131
-msgid "Configure LCD Keypad and Remotes"
-msgstr "Configurar teclado LCD e controles remotos"
+#~ msgid "Configure LCD Keypad and Remotes"
+#~ msgstr "Configurar teclado LCD e controles remotos"
 
-#: templates/index.html:133
-msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
-msgstr ""
-"Host do cliente NMEA: porta (deixe em branco para o padrão), por exemplo: "
-"192.168.0.1:10110"
+#~ msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
+#~ msgstr ""
+#~ "Host do cliente NMEA: porta (deixe "
+#~ "em branco para o padrão), por "
+#~ "exemplo: 192.168.0.1:10110"
 
-#: templates/index.html:138
-msgid "Amp Hours"
-msgstr "Amp-hora"
+#~ msgid "Amp Hours"
+#~ msgstr "Amp-hora"
 
-#: templates/index.html:141
-msgid "Voltage"
-msgstr "Voltagem"
+#~ msgid "Voltage"
+#~ msgstr "Voltagem"
 
-#: templates/index.html:142
-msgid "Controller temperature"
-msgstr "Temperatura do controlador"
+#~ msgid "Controller temperature"
+#~ msgstr "Temperatura do controlador"
 
-#: templates/index.html:143
-msgid "Runtime"
-msgstr "Tempo de execução"
+#~ msgid "Runtime"
+#~ msgstr "Tempo de execução"
 
-#: templates/index.html:144
-msgid "Servo"
-msgstr "Servo"
+#~ msgid "Servo"
+#~ msgstr "Servo"
 
-#: templates/index.html:148
-msgid "Server"
-msgstr "Servidor"
+#~ msgid "Server"
+#~ msgstr "Servidor"
 
-#: templates/index.html:150
-msgid "Errors"
-msgstr "Erros"
+#~ msgid "Errors"
+#~ msgstr "Erros"
 
-#: templates/index.html:151
-msgid "Web Server Latency"
-msgstr "Latência do servidor web"
+#~ msgid "Web Server Latency"
+#~ msgstr "Latência do servidor web"
 
-#: templates/wifi.html:4
-msgid "setup"
-msgstr "configurar"
+#~ msgid "setup"
+#~ msgstr "configurar"
 
-#: templates/wifi.html:8
-msgid "Wireless Configuration"
-msgstr "Configuração sem fio"
+#~ msgid "Wireless Configuration"
+#~ msgstr "Configuração sem fio"
 
-#: templates/wifi.html:16 templates/wifi.html:17
-msgid "Access Point"
-msgstr "Ponto de acesso"
+#~ msgid "Access Point"
+#~ msgstr "Ponto de acesso"
 
-#: templates/wifi.html:17 templates/wifi.html:22
-msgid "Key (leave blank for no encryption)"
-msgstr "Chave (deixe em branco para não criptografar)"
+#~ msgid "Key (leave blank for no encryption)"
+#~ msgstr "Chave (deixe em branco para não criptografar)"
 
-#: templates/wifi.html:21 templates/wifi.html:22
-msgid "Client"
-msgstr "Cliente"
+#~ msgid "Client"
+#~ msgstr "Cliente"
 
-#: templates/wifi.html:24
-msgid "Client Mode Address (leave blank for dhcp)"
-msgstr "Endereço do modo cliente (deixe em branco para dhcp)"
+#~ msgid "Client Mode Address (leave blank for dhcp)"
+#~ msgstr "Endereço do modo cliente (deixe em branco para dhcp)"
 
-#: templates/wifi.html:28
-msgid "If there is a problem, edit the file"
-msgstr "Se houver um problema, edite o arquivo"
+#~ msgid "If there is a problem, edit the file"
+#~ msgstr "Se houver um problema, edite o arquivo"
 
-#: templates/wifi.html:33
-msgid "back"
-msgstr "de volta"
+#~ msgid "back"
+#~ msgstr "de volta"
+

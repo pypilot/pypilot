@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-25 21:11-0400\n"
+"POT-Creation-Date: 2023-04-06 17:34-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: nl\n"
@@ -18,243 +18,181 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: static/pypilot_control.js:37
-msgid "Not Connected"
-msgstr "Niet verbonden"
-
-#: static/pypilot_control.js:68
-msgid "Connected"
-msgstr "Verbonden"
-
-#: static/pypilot_control.js:175
-msgid "Disconnected"
-msgstr "Verbinding verbroken"
-
-#: static/pypilot_control.js:245
-msgid "compass or gyro failure!"
-msgstr "kompas of gyro storing!"
-
-#: static/pypilot_control.js:258
-msgid "Tack"
-msgstr "overstag"
-
-#: static/pypilot_control.js:261
-msgid "Cancel"
-msgstr "annuleren"
-
-#: static/pypilot_control.js:320
-msgid "Engaged"
-msgstr "verloofd"
-
-#: static/pypilot_control.js:322
-msgid "Disengaged"
-msgstr "uitgeschakeld"
-
-#: static/pypilot_control.js:394
-msgid "no motor controller!"
-msgstr "geen motorcontroller!"
-
-#: templates/calibrationplot.html:4
-msgid "Calibration Plot"
-msgstr "Kalibratieplot"
-
-#: templates/calibrationplot.html:21
-msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age"
-" will reset when the calibration updates."
-msgstr ""
-"De ruwe sensormetingen moeten bij kalibratie op een bol vallen. De "
-"leeftijd wordt gereset wanneer de kalibratie wordt bijgewerkt."
-
-#: templates/calibrationplot.html:28
-msgid "Connection"
-msgstr "Verbinding"
-
-#: templates/index.html:30
-msgid "Control"
-msgstr "Controle"
-
-#: templates/index.html:33
-msgid "Gain"
-msgstr "Krijgen"
-
-#: templates/index.html:36
-msgid "Calibration"
-msgstr "Kalibratie"
-
-#: templates/index.html:39
-msgid "Configuration"
-msgstr "Configuratie"
-
-#: templates/index.html:42
-msgid "Statistics"
-msgstr "Statistieken"
-
-#: templates/index.html:51
-msgid "Heading"
-msgstr "Rubriek"
-
-#: templates/index.html:53
-msgid "Command"
-msgstr "Opdracht"
-
-#: templates/index.html:96
-msgid "Magnetic Heading"
-msgstr "Magnetische koers"
-
-#: templates/index.html:97
-msgid "Pitch"
-msgstr "Staanplaats"
-
-#: templates/index.html:98
-msgid "Roll"
-msgstr "Rollen"
-
-#: templates/index.html:99
-msgid "Press"
-msgstr "druk op"
-
-#: templates/index.html:99
-msgid "here"
-msgstr "hier"
-
-#: templates/index.html:100
-msgid "when the boat is level to align the inertial sensors."
-msgstr "wanneer de boot waterpas is om de traagheidssensoren uit te lijnen."
-
-#: templates/index.html:105
-msgid "Magnetic Heading Offset"
-msgstr "Magnetische koerscompensatie"
-
-#: templates/index.html:107
-msgid "Lock Calibration"
-msgstr "Vergrendel kalibratie"
-
-#: templates/index.html:109
-msgid "calibration plot"
-msgstr "kalibratiegrafiek"
-
-#: templates/index.html:111
-msgid "Rudder"
-msgstr "Roer"
-
-#: templates/index.html:113
-msgid "centered"
-msgstr "gecentreerd"
-
-#: templates/index.html:114
-msgid "port range"
-msgstr "poort bereik"
-
-#: templates/index.html:115
-msgid "starboard range"
-msgstr "stuurboord bereik"
-
-#: templates/index.html:116 templates/index.html:140
-msgid "reset"
-msgstr "resetten"
-
-#: templates/index.html:119
-msgid "Rudder Range"
-msgstr "Roerbereik"
-
-#: templates/index.html:120
-msgid "Degrees"
-msgstr "Graden"
-
-#: templates/index.html:126
-msgid "Display"
-msgstr "Scherm"
-
-#: templates/index.html:127
-msgid "Clear"
-msgstr "Doorzichtig"
-
-#: templates/index.html:128
-msgid "Dark"
-msgstr "Donker"
-
-#: templates/index.html:131
-msgid "Configure LCD Keypad and Remotes"
-msgstr "LCD-toetsenbord en afstandsbedieningen configureren"
-
-#: templates/index.html:133
-msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
-msgstr "NMEA Client host:poort (leeg laten als standaard) bijv.: 192.168.0.1:10110"
-
-#: templates/index.html:138
-msgid "Amp Hours"
-msgstr "Ampère-uren"
-
-#: templates/index.html:141
-msgid "Voltage"
-msgstr "Spanning"
-
-#: templates/index.html:142
-msgid "Controller temperature"
-msgstr "Controller temperatuur"
-
-#: templates/index.html:143
-msgid "Runtime"
-msgstr "Looptijd"
-
-#: templates/index.html:144
-msgid "Servo"
-msgstr "Servo"
-
-#: templates/index.html:148
-msgid "Server"
-msgstr "Server"
-
-#: templates/index.html:150
-msgid "Errors"
-msgstr "fouten"
-
-#: templates/index.html:151
-msgid "Web Server Latency"
-msgstr "Latentie webserver"
-
-#: templates/wifi.html:4
-msgid "setup"
-msgstr "opstelling"
-
-#: templates/wifi.html:8
-msgid "Wireless Configuration"
-msgstr "Draadloze configuratie"
-
-#: templates/wifi.html:16 templates/wifi.html:17
-msgid "Access Point"
-msgstr "Toegangspunt"
-
-#: templates/wifi.html:17 templates/wifi.html:22
-msgid "Key (leave blank for no encryption)"
-msgstr "Sleutel (leeg laten voor geen codering)"
-
-#: templates/wifi.html:21 templates/wifi.html:22
-msgid "Client"
-msgstr "Cliënt"
-
-#: templates/wifi.html:24
-msgid "Client Mode Address (leave blank for dhcp)"
-msgstr "Adres clientmodus (leeg laten voor dhcp)"
-
-#: templates/wifi.html:28
-msgid "If there is a problem, edit the file"
-msgstr "Als er een probleem is, bewerk het bestand"
-
-#: templates/wifi.html:33
-msgid "back"
-msgstr "rug"
-
 #~ msgid "Wireless Configuration"
 #~ msgstr "Draadloze configuratie"
 
 #~ msgid "Key (leave blank for no encryption)"
-#~ msgstr "Sleutel (blanco laten voor geen versleuteling)"
+#~ msgstr "Sleutel (leeg laten voor geen codering)"
 
 #~ msgid "Client Mode Address (leave blank for dhcp)"
-#~ msgstr "Client Mode Address (leeg laten voor dhcp)"
+#~ msgstr "Adres clientmodus (leeg laten voor dhcp)"
 
 #~ msgid "If there is a problem, edit the file"
-#~ msgstr "Bewerk het bestand als er een probleem is"
+#~ msgstr "Als er een probleem is, bewerk het bestand"
+
+#~ msgid "Not Connected"
+#~ msgstr "Niet verbonden"
+
+#~ msgid "Connected"
+#~ msgstr "Verbonden"
+
+#~ msgid "Disconnected"
+#~ msgstr "Verbinding verbroken"
+
+#~ msgid "compass or gyro failure!"
+#~ msgstr "kompas of gyro storing!"
+
+#~ msgid "Tack"
+#~ msgstr "overstag"
+
+#~ msgid "Cancel"
+#~ msgstr "annuleren"
+
+#~ msgid "Engaged"
+#~ msgstr "verloofd"
+
+#~ msgid "Disengaged"
+#~ msgstr "uitgeschakeld"
+
+#~ msgid "no motor controller!"
+#~ msgstr "geen motorcontroller!"
+
+#~ msgid "Calibration Plot"
+#~ msgstr "Kalibratieplot"
+
+#~ msgid ""
+#~ "The raw sensor readings should fall "
+#~ "on a sphere when calibrated.  The "
+#~ "age will reset when the calibration "
+#~ "updates."
+#~ msgstr ""
+#~ "De ruwe sensormetingen moeten bij "
+#~ "kalibratie op een bol vallen. De "
+#~ "leeftijd wordt gereset wanneer de "
+#~ "kalibratie wordt bijgewerkt."
+
+#~ msgid "Connection"
+#~ msgstr "Verbinding"
+
+#~ msgid "Control"
+#~ msgstr "Controle"
+
+#~ msgid "Gain"
+#~ msgstr "Krijgen"
+
+#~ msgid "Calibration"
+#~ msgstr "Kalibratie"
+
+#~ msgid "Configuration"
+#~ msgstr "Configuratie"
+
+#~ msgid "Statistics"
+#~ msgstr "Statistieken"
+
+#~ msgid "Heading"
+#~ msgstr "Rubriek"
+
+#~ msgid "Command"
+#~ msgstr "Opdracht"
+
+#~ msgid "Magnetic Heading"
+#~ msgstr "Magnetische koers"
+
+#~ msgid "Pitch"
+#~ msgstr "Staanplaats"
+
+#~ msgid "Roll"
+#~ msgstr "Rollen"
+
+#~ msgid "Press"
+#~ msgstr "druk op"
+
+#~ msgid "here"
+#~ msgstr "hier"
+
+#~ msgid "when the boat is level to align the inertial sensors."
+#~ msgstr "wanneer de boot waterpas is om de traagheidssensoren uit te lijnen."
+
+#~ msgid "Magnetic Heading Offset"
+#~ msgstr "Magnetische koerscompensatie"
+
+#~ msgid "Lock Calibration"
+#~ msgstr "Vergrendel kalibratie"
+
+#~ msgid "calibration plot"
+#~ msgstr "kalibratiegrafiek"
+
+#~ msgid "Rudder"
+#~ msgstr "Roer"
+
+#~ msgid "centered"
+#~ msgstr "gecentreerd"
+
+#~ msgid "port range"
+#~ msgstr "poort bereik"
+
+#~ msgid "starboard range"
+#~ msgstr "stuurboord bereik"
+
+#~ msgid "reset"
+#~ msgstr "resetten"
+
+#~ msgid "Rudder Range"
+#~ msgstr "Roerbereik"
+
+#~ msgid "Degrees"
+#~ msgstr "Graden"
+
+#~ msgid "Display"
+#~ msgstr "Scherm"
+
+#~ msgid "Clear"
+#~ msgstr "Doorzichtig"
+
+#~ msgid "Dark"
+#~ msgstr "Donker"
+
+#~ msgid "Configure LCD Keypad and Remotes"
+#~ msgstr "LCD-toetsenbord en afstandsbedieningen configureren"
+
+#~ msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
+#~ msgstr ""
+#~ "NMEA Client host:poort (leeg laten als"
+#~ " standaard) bijv.: 192.168.0.1:10110"
+
+#~ msgid "Amp Hours"
+#~ msgstr "Ampère-uren"
+
+#~ msgid "Voltage"
+#~ msgstr "Spanning"
+
+#~ msgid "Controller temperature"
+#~ msgstr "Controller temperatuur"
+
+#~ msgid "Runtime"
+#~ msgstr "Looptijd"
+
+#~ msgid "Servo"
+#~ msgstr "Servo"
+
+#~ msgid "Server"
+#~ msgstr "Server"
+
+#~ msgid "Errors"
+#~ msgstr "fouten"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Latentie webserver"
+
+#~ msgid "setup"
+#~ msgstr "opstelling"
+
+#~ msgid "Access Point"
+#~ msgstr "Toegangspunt"
+
+#~ msgid "Client"
+#~ msgstr "Cliënt"
+
+#~ msgid "back"
+#~ msgstr "rug"
 

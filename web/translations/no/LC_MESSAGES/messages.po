@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-25 21:11-0400\n"
+"POT-Creation-Date: 2023-04-06 17:34-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: nb_NO\n"
@@ -18,245 +18,182 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.6.0\n"
 
-#: static/pypilot_control.js:37
-msgid "Not Connected"
-msgstr "Ikke tilkoblet"
-
-#: static/pypilot_control.js:68
-msgid "Connected"
-msgstr "Tilkoblet"
-
-#: static/pypilot_control.js:175
-msgid "Disconnected"
-msgstr "Frakoblet"
-
-#: static/pypilot_control.js:245
-msgid "compass or gyro failure!"
-msgstr "kompass eller gyrofeil!"
-
-#: static/pypilot_control.js:258
-msgid "Tack"
-msgstr "Stift"
-
-#: static/pypilot_control.js:261
-msgid "Cancel"
-msgstr "Avbryt"
-
-#: static/pypilot_control.js:320
-msgid "Engaged"
-msgstr "Engasjert"
-
-#: static/pypilot_control.js:322
-msgid "Disengaged"
-msgstr "Frikoblet"
-
-#: static/pypilot_control.js:394
-msgid "no motor controller!"
-msgstr "ingen motorregulator!"
-
-#: templates/calibrationplot.html:4
-msgid "Calibration Plot"
-msgstr "Kalibreringsplott"
-
-#: templates/calibrationplot.html:21
-msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age"
-" will reset when the calibration updates."
-msgstr ""
-"De rå sensoravlesningene skal falle på en kule når de kalibreres. Alderen"
-" vil tilbakestilles når kalibreringen oppdateres."
-
-#: templates/calibrationplot.html:28
-msgid "Connection"
-msgstr "Forbindelse"
-
-#: templates/index.html:30
-msgid "Control"
-msgstr "Kontroll"
-
-#: templates/index.html:33
-msgid "Gain"
-msgstr "Gevinst"
-
-#: templates/index.html:36
-msgid "Calibration"
-msgstr "Kalibrering"
-
-#: templates/index.html:39
-msgid "Configuration"
-msgstr "Konfigurasjon"
-
-#: templates/index.html:42
-msgid "Statistics"
-msgstr "Statistikk"
-
-#: templates/index.html:51
-msgid "Heading"
-msgstr "Overskrift"
-
-#: templates/index.html:53
-msgid "Command"
-msgstr "Kommando"
-
-#: templates/index.html:96
-msgid "Magnetic Heading"
-msgstr "Magnetisk overskrift"
-
-#: templates/index.html:97
-msgid "Pitch"
-msgstr "Tonehøyde"
-
-#: templates/index.html:98
-msgid "Roll"
-msgstr "Rull"
-
-#: templates/index.html:99
-msgid "Press"
-msgstr "trykk"
-
-#: templates/index.html:99
-msgid "here"
-msgstr "her"
-
-#: templates/index.html:100
-msgid "when the boat is level to align the inertial sensors."
-msgstr "når båten er i vater for å justere treghetssensorene."
-
-#: templates/index.html:105
-msgid "Magnetic Heading Offset"
-msgstr "Magnetisk forskyvning"
-
-#: templates/index.html:107
-msgid "Lock Calibration"
-msgstr "Lås kalibrering"
-
-#: templates/index.html:109
-msgid "calibration plot"
-msgstr "kalibreringsplott"
-
-#: templates/index.html:111
-msgid "Rudder"
-msgstr "Ror"
-
-#: templates/index.html:113
-msgid "centered"
-msgstr "sentrert"
-
-#: templates/index.html:114
-msgid "port range"
-msgstr "havneområde"
-
-#: templates/index.html:115
-msgid "starboard range"
-msgstr "styrbord rekkevidde"
-
-#: templates/index.html:116 templates/index.html:140
-msgid "reset"
-msgstr "nullstille"
-
-#: templates/index.html:119
-msgid "Rudder Range"
-msgstr "Rorrekkevidde"
-
-#: templates/index.html:120
-msgid "Degrees"
-msgstr "Grader"
-
-#: templates/index.html:126
-msgid "Display"
-msgstr "Vise"
-
-#: templates/index.html:127
-msgid "Clear"
-msgstr "Klar"
-
-#: templates/index.html:128
-msgid "Dark"
-msgstr "Mørk"
-
-#: templates/index.html:131
-msgid "Configure LCD Keypad and Remotes"
-msgstr "Konfigurer LCD -tastatur og fjernkontroller"
-
-#: templates/index.html:133
-msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
-msgstr ""
-"NMEA Client host: port (la stå tomt som standard) f.eks .: "
-"192.168.0.1:10110"
-
-#: templates/index.html:138
-msgid "Amp Hours"
-msgstr "Forsterker timer"
-
-#: templates/index.html:141
-msgid "Voltage"
-msgstr "Spenning"
-
-#: templates/index.html:142
-msgid "Controller temperature"
-msgstr "Kontrolltemperatur"
-
-#: templates/index.html:143
-msgid "Runtime"
-msgstr "Kjøretid"
-
-#: templates/index.html:144
-msgid "Servo"
-msgstr "Servo"
-
-#: templates/index.html:148
-msgid "Server"
-msgstr "Server"
-
-#: templates/index.html:150
-msgid "Errors"
-msgstr "Feil"
-
-#: templates/index.html:151
-msgid "Web Server Latency"
-msgstr "Latens for webserver"
-
-#: templates/wifi.html:4
-msgid "setup"
-msgstr "oppsett"
-
-#: templates/wifi.html:8
-msgid "Wireless Configuration"
-msgstr "Trådløs konfigurasjon"
-
-#: templates/wifi.html:16 templates/wifi.html:17
-msgid "Access Point"
-msgstr "Tilgangspunkt"
-
-#: templates/wifi.html:17 templates/wifi.html:22
-msgid "Key (leave blank for no encryption)"
-msgstr "Nøkkel (la det stå tomt uten kryptering)"
-
-#: templates/wifi.html:21 templates/wifi.html:22
-msgid "Client"
-msgstr "Klient"
-
-#: templates/wifi.html:24
-msgid "Client Mode Address (leave blank for dhcp)"
-msgstr "Klientmodusadresse (la det stå tomt for dhcp)"
-
-#: templates/wifi.html:28
-msgid "If there is a problem, edit the file"
-msgstr "Hvis det er et problem, rediger filen"
-
-#: templates/wifi.html:33
-msgid "back"
-msgstr "tilbake"
-
 #~ msgid "Wireless Configuration"
 #~ msgstr "Trådløs konfigurasjon"
 
 #~ msgid "Key (leave blank for no encryption)"
-#~ msgstr "Nøkkel (la stå tom uten kryptering)"
+#~ msgstr "Nøkkel (la det stå tomt uten kryptering)"
 
 #~ msgid "Client Mode Address (leave blank for dhcp)"
-#~ msgstr "Klientmodusadresse (la være tom for dhcp)"
+#~ msgstr "Klientmodusadresse (la det stå tomt for dhcp)"
 
 #~ msgid "If there is a problem, edit the file"
-#~ msgstr "Hvis det er et problem, kan du redigere filen"
+#~ msgstr "Hvis det er et problem, rediger filen"
+
+#~ msgid "Not Connected"
+#~ msgstr "Ikke tilkoblet"
+
+#~ msgid "Connected"
+#~ msgstr "Tilkoblet"
+
+#~ msgid "Disconnected"
+#~ msgstr "Frakoblet"
+
+#~ msgid "compass or gyro failure!"
+#~ msgstr "kompass eller gyrofeil!"
+
+#~ msgid "Tack"
+#~ msgstr "Stift"
+
+#~ msgid "Cancel"
+#~ msgstr "Avbryt"
+
+#~ msgid "Engaged"
+#~ msgstr "Engasjert"
+
+#~ msgid "Disengaged"
+#~ msgstr "Frikoblet"
+
+#~ msgid "no motor controller!"
+#~ msgstr "ingen motorregulator!"
+
+#~ msgid "Calibration Plot"
+#~ msgstr "Kalibreringsplott"
+
+#~ msgid ""
+#~ "The raw sensor readings should fall "
+#~ "on a sphere when calibrated.  The "
+#~ "age will reset when the calibration "
+#~ "updates."
+#~ msgstr ""
+#~ "De rå sensoravlesningene skal falle på"
+#~ " en kule når de kalibreres. Alderen"
+#~ " vil tilbakestilles når kalibreringen "
+#~ "oppdateres."
+
+#~ msgid "Connection"
+#~ msgstr "Forbindelse"
+
+#~ msgid "Control"
+#~ msgstr "Kontroll"
+
+#~ msgid "Gain"
+#~ msgstr "Gevinst"
+
+#~ msgid "Calibration"
+#~ msgstr "Kalibrering"
+
+#~ msgid "Configuration"
+#~ msgstr "Konfigurasjon"
+
+#~ msgid "Statistics"
+#~ msgstr "Statistikk"
+
+#~ msgid "Heading"
+#~ msgstr "Overskrift"
+
+#~ msgid "Command"
+#~ msgstr "Kommando"
+
+#~ msgid "Magnetic Heading"
+#~ msgstr "Magnetisk overskrift"
+
+#~ msgid "Pitch"
+#~ msgstr "Tonehøyde"
+
+#~ msgid "Roll"
+#~ msgstr "Rull"
+
+#~ msgid "Press"
+#~ msgstr "trykk"
+
+#~ msgid "here"
+#~ msgstr "her"
+
+#~ msgid "when the boat is level to align the inertial sensors."
+#~ msgstr "når båten er i vater for å justere treghetssensorene."
+
+#~ msgid "Magnetic Heading Offset"
+#~ msgstr "Magnetisk forskyvning"
+
+#~ msgid "Lock Calibration"
+#~ msgstr "Lås kalibrering"
+
+#~ msgid "calibration plot"
+#~ msgstr "kalibreringsplott"
+
+#~ msgid "Rudder"
+#~ msgstr "Ror"
+
+#~ msgid "centered"
+#~ msgstr "sentrert"
+
+#~ msgid "port range"
+#~ msgstr "havneområde"
+
+#~ msgid "starboard range"
+#~ msgstr "styrbord rekkevidde"
+
+#~ msgid "reset"
+#~ msgstr "nullstille"
+
+#~ msgid "Rudder Range"
+#~ msgstr "Rorrekkevidde"
+
+#~ msgid "Degrees"
+#~ msgstr "Grader"
+
+#~ msgid "Display"
+#~ msgstr "Vise"
+
+#~ msgid "Clear"
+#~ msgstr "Klar"
+
+#~ msgid "Dark"
+#~ msgstr "Mørk"
+
+#~ msgid "Configure LCD Keypad and Remotes"
+#~ msgstr "Konfigurer LCD -tastatur og fjernkontroller"
+
+#~ msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
+#~ msgstr ""
+#~ "NMEA Client host: port (la stå "
+#~ "tomt som standard) f.eks .: "
+#~ "192.168.0.1:10110"
+
+#~ msgid "Amp Hours"
+#~ msgstr "Forsterker timer"
+
+#~ msgid "Voltage"
+#~ msgstr "Spenning"
+
+#~ msgid "Controller temperature"
+#~ msgstr "Kontrolltemperatur"
+
+#~ msgid "Runtime"
+#~ msgstr "Kjøretid"
+
+#~ msgid "Servo"
+#~ msgstr "Servo"
+
+#~ msgid "Server"
+#~ msgstr "Server"
+
+#~ msgid "Errors"
+#~ msgstr "Feil"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Latens for webserver"
+
+#~ msgid "setup"
+#~ msgstr "oppsett"
+
+#~ msgid "Access Point"
+#~ msgstr "Tilgangspunkt"
+
+#~ msgid "Client"
+#~ msgstr "Klient"
+
+#~ msgid "back"
+#~ msgstr "tilbake"
 
