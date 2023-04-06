@@ -78,7 +78,7 @@ class IMU(object):
         s.KalmanRk, s.KalmanQ = .002, .001
         self.s = s
         self.imu_detect_time = 0
-        self.rtimu = True
+        self.rtimu = None
         self.init()
         self.lastdata = False
         self.rate = 10
@@ -97,7 +97,6 @@ class IMU(object):
                 print(_('ERROR: No IMU Detected'), t0)
                 self.warning.set('No IMU')
             self.s.IMUType = 0
-            self.rtimu = False
             return
 
         print('IMU Name: ' + rtimu.IMUName())
@@ -196,7 +195,8 @@ class IMU(object):
                 self.compass_calibration_updated = True
                 self.s.CompassCalEllipsoidValid = True
                 self.s.CompassCalEllipsoidOffset = tuple(value[0][:3])
-                self.rtimu.resetFusion()
+                if self.rtimu:
+                    self.rtimu.resetFusion()
             elif name == 'imu.rate':
                 self.rate = value
                 print(_('imu rate set to rate'), value)
