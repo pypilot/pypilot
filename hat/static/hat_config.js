@@ -52,11 +52,11 @@ $(document).ready(function() {
 
     socket.on('profiles', function(profiles) {
         for(var i =0; ; i++) {
-            id = $('#action_profile'+String(i))
+            id = $('#action_profile_'+String(i))
             if(id.length == 0)
                 break;
             if(i< profiles.length) {
-                id.text('profile ' + profiles[i]);
+                id.text('profile: ' + profiles[i]);
                 id.css('display', 'block');
             } else
                 id.css('display', 'none');
