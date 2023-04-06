@@ -64,7 +64,7 @@ class ActionMode(ActionEngage):
     def  __init__(self, hat, mode):
         super(ActionMode, self).__init__(hat)
         self.mode = mode
-        self.name = mode + ' mode'
+        self.name = mode.replace(' ', '_') + '_mode'
 
     def trigger(self, count):
         if self.hat.client and not count:
@@ -120,7 +120,7 @@ class ActionDodge(ActionPypilot):
 
 class ActionProfile(ActionPypilot):
     def __init__(self, hat, index):
-        super(ActionProfile, self).__init__(hat, 'profile '+str(index), 'profile')
+        super(ActionProfile, self).__init__(hat, 'profile_'+str(index), 'profile')
         self.index = index
 
     def trigger(self, count):
@@ -139,7 +139,7 @@ class ActionProfileRelative(ActionPypilot):
         profiles = self.hat.last_msg['profiles']
 
         if profile in profiles:
-            index = (profiles.index(profile) + offset) % len(profiles)
+            index = (profiles.index(profile) + self.offset) % len(profiles)
             self.value = profiles[index]
             super(ActionProfileRelative, self).trigger(count)
         
@@ -400,8 +400,8 @@ class Hat(object):
         for i in range(8):
             self.actions.append(ActionProfile(self, i))
 
-        self.actions += [ActionProfileRelative(self, 'profile+', 1),
-                         ActionProfileRelative(self, 'profile-', -1)]
+        self.actions += [ActionProfileRelative(self, 'profile_up', 1),
+                         ActionProfileRelative(self, 'profile_down', -1)]
 
         # actions determined by the server (different pilots) not yet populated here
         for name in self.config['actions']:
@@ -411,9 +411,14 @@ class Hat(object):
         # useful to unassign a key
         self.actions.append(ActionNone())
 
+        # config['actions'] must be kept in order as web interface depends on it...
+        cfg = self.config['actions']
+        self.config['actions'] = {}
         for action in self.actions:
-            if not action.name in self.config['actions']:
+            if not action.name in cfg:
                 self.config['actions'][action.name] = []
+            else:
+                self.config['actions'][action.name] = cfg[action.name]
 
         self.web = Web(self)
 
