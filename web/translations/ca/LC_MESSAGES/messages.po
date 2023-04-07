@@ -7,16 +7,300 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2023-04-06 17:34-0400\n"
+"POT-Creation-Date: 2023-04-07 14:58-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ca\n"
 "Language-Team: ca <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: web.py:84
+msgid "failed to read log file"
+msgstr "no s'ha pogut llegir el fitxer de registre"
+
+#: static/pypilot_control.js:40
+msgid "Not Connected"
+msgstr "No connectat"
+
+#: static/pypilot_control.js:122
+msgid "Connected"
+msgstr "Connectat"
+
+#: static/pypilot_control.js:153
+msgid "Enter profile name."
+msgstr "Introduïu el nom del perfil."
+
+#: static/pypilot_control.js:166
+msgid "Remove current profile?"
+msgstr "Vols suprimir el perfil actual?"
+
+#: static/pypilot_control.js:267
+msgid "The following settings are captured by the current profile"
+msgstr "Els paràmetres següents són capturats pel perfil actual"
+
+#: static/pypilot_control.js:303
+msgid "Disconnected"
+msgstr "Desconnectat"
+
+#: static/pypilot_control.js:382
+msgid "compass or gyro failure!"
+msgstr "fallada de la brúixola o del giroscopi!"
+
+#: static/pypilot_control.js:395 templates/index.html:161
+#: templates/index.html:163
+msgid "Tack"
+msgstr "Tack"
+
+#: static/pypilot_control.js:398 templates/index.html:162
+msgid "Cancel"
+msgstr "Cancel · lar"
+
+#: static/pypilot_control.js:468
+msgid "Engaged"
+msgstr "Compromesos"
+
+#: static/pypilot_control.js:470
+msgid "Disengaged"
+msgstr "Desenganxat"
+
+#: static/pypilot_control.js:546
+msgid "Motor temperature"
+msgstr "Temperatura del motor"
+
+#: static/pypilot_control.js:562
+msgid "no motor controller!"
+msgstr "sense controlador de motor!"
+
+#: templates/calibrationplot.html:4
+msgid "Calibration Plot"
+msgstr "Trama de calibratge"
+
+#: templates/calibrationplot.html:25
+msgid ""
+"The raw sensor readings should fall on a sphere when calibrated.  The age"
+" will reset when the calibration updates."
+msgstr ""
+"Les lectures del sensor en brut haurien de caure en una esfera quan es "
+"calibra. L'edat es restablirà quan s'actualitzi el calibratge."
+
+#: templates/calibrationplot.html:32
+msgid "Connection"
+msgstr "Connexió"
+
+#: templates/index.html:30
+msgid "Control"
+msgstr "Control"
+
+#: templates/index.html:33
+msgid "Gain"
+msgstr "Guany"
+
+#: templates/index.html:36
+msgid "Calibration"
+msgstr "Calibració"
+
+#: templates/index.html:39
+msgid "Configuration"
+msgstr "Configuració"
+
+#: templates/index.html:42
+msgid "Statistics"
+msgstr "Estadístiques"
+
+#: templates/index.html:49
+msgid "Heading"
+msgstr "Encapçalament"
+
+#: templates/index.html:52
+msgid "Command"
+msgstr "Comandament"
+
+#: templates/index.html:89
+msgid "Add"
+msgstr "Afegeix"
+
+#: templates/index.html:90
+msgid "Remove"
+msgstr "Eliminar"
+
+#: templates/index.html:96
+msgid "Magnetic Heading"
+msgstr "Encapçalament magnètic"
+
+#: templates/index.html:97
+msgid "Pitch"
+msgstr "Brea"
+
+#: templates/index.html:98
+msgid "Roll"
+msgstr "Rotlla"
+
+#: templates/index.html:99 templates/index.html:105
+msgid "Press"
+msgstr "Premeu"
+
+#: templates/index.html:99 templates/index.html:105
+msgid "here"
+msgstr "aquí"
+
+#: templates/index.html:100
+msgid "when the boat is level to align the inertial sensors."
+msgstr "quan el vaixell estigui a nivell per alinear els sensors inercials."
+
+#: templates/index.html:106
+msgid ""
+"when the boat is traveling straight with no leeway, no currents, and gps "
+"to align the compass, or manually enter the compass offset"
+msgstr ""
+"quan el vaixell viatja recte sense marge de maniobra, sense corrents i "
+"GPS per alinear la brúixola o introduir manualment el desplaçament de la "
+"brúixola"
+
+#: templates/index.html:111
+msgid "Magnetic Heading Offset"
+msgstr "Desplaçament de rumb magnètic"
+
+#: templates/index.html:113
+msgid "Lock Accelerometer Calibration"
+msgstr "Bloquejar la calibració de l'acceleròmetre"
+
+#: templates/index.html:114
+msgid "Lock Compass Calibration"
+msgstr "Bloquejar la calibració de la brúixola"
+
+#: templates/index.html:116
+msgid "calibration plot"
+msgstr "gràfic de calibratge"
+
+#: templates/index.html:118
+msgid "Rudder Sensor"
+msgstr "Sensor del timó"
+
+#: templates/index.html:120
+msgid "centered"
+msgstr "centrat"
+
+#: templates/index.html:121
+msgid "port range"
+msgstr "rang de ports"
+
+#: templates/index.html:122
+msgid "starboard range"
+msgstr "rang d'estribord"
+
+#: templates/index.html:123 templates/index.html:146
+msgid "reset"
+msgstr "restablir"
+
+#: templates/index.html:126
+msgid "Rudder Range"
+msgstr "Gamma del timó"
+
+#: templates/index.html:127
+msgid "Degrees"
+msgstr "Graus"
+
+#: templates/index.html:133
+msgid "Display"
+msgstr "Mostra"
+
+#: templates/index.html:134
+msgid "Clear"
+msgstr "Clar"
+
+#: templates/index.html:135
+msgid "Dark"
+msgstr "Fosc"
+
+#: templates/index.html:139
+msgid "NMEA Client host:port (leave blank for none) eg: 192.168.0.1:10110"
+msgstr ""
+"Amfitrió del client NMEA:port (deixeu-ne en blanc per a cap) per exemple:"
+" 192.168.0.1:10110"
+
+#: templates/index.html:144
+msgid "Amp Hours"
+msgstr "Amp Hores"
+
+#: templates/index.html:147
+msgid "Voltage"
+msgstr "Voltatge"
+
+#: templates/index.html:148
+msgid "Controller temperature"
+msgstr "Controlador de temperatura"
+
+#: templates/index.html:150
+msgid "Runtime"
+msgstr "Temps d'execució"
+
+#: templates/index.html:151 templates/index.html:153
+msgid "Version"
+msgstr "Versió"
+
+#: templates/index.html:152
+msgid "Servo"
+msgstr "Servo"
+
+#: templates/index.html:155 templates/logs.html:9
+msgid "Logs"
+msgstr "Registres"
+
+#: templates/index.html:161
+msgid "Port"
+msgstr "Port"
+
+#: templates/index.html:163
+msgid "Starboard"
+msgstr "Estribord"
+
+#: templates/index.html:170
+msgid "Server"
+msgstr "Servidor"
+
+#: templates/index.html:172
+msgid "Errors"
+msgstr "Errors"
+
+#: templates/index.html:173
+msgid "Web Server Latency"
+msgstr "Latència del servidor web"
+
+#: templates/wifi.html:4
+msgid "setup"
+msgstr "configuració"
+
+#: templates/wifi.html:8
+msgid "Wireless Configuration"
+msgstr "Configuració sense fil"
+
+#: templates/wifi.html:16 templates/wifi.html:17
+msgid "Access Point"
+msgstr "Punt d'accés"
+
+#: templates/wifi.html:17 templates/wifi.html:22
+msgid "Key (leave blank for no encryption)"
+msgstr "Clau (deixeu en blanc per no xifrar)"
+
+#: templates/wifi.html:21 templates/wifi.html:22
+msgid "Client"
+msgstr "Client"
+
+#: templates/wifi.html:24
+msgid "Client Mode Address (leave blank for dhcp)"
+msgstr "Adreça del mode de client (deixeu en blanc per a dhcp)"
+
+#: templates/wifi.html:28
+msgid "If there is a problem, edit the file"
+msgstr "Si hi ha un problema, editeu el fitxer"
+
+#: templates/wifi.html:33
+msgid "back"
+msgstr "esquena"
 
 #~ msgid "Wireless Configuration"
 #~ msgstr "Configuració sense fils"

@@ -7,16 +7,300 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2023-04-06 17:34-0400\n"
+"POT-Creation-Date: 2023-04-07 14:58-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: fr\n"
 "Language-Team: fr <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.6.0\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: web.py:84
+msgid "failed to read log file"
+msgstr "impossible de lire le fichier journal"
+
+#: static/pypilot_control.js:40
+msgid "Not Connected"
+msgstr "Pas connecté"
+
+#: static/pypilot_control.js:122
+msgid "Connected"
+msgstr "Connecté"
+
+#: static/pypilot_control.js:153
+msgid "Enter profile name."
+msgstr "Entrez le nom du profil."
+
+#: static/pypilot_control.js:166
+msgid "Remove current profile?"
+msgstr "Supprimer le profil actuel ?"
+
+#: static/pypilot_control.js:267
+msgid "The following settings are captured by the current profile"
+msgstr "Les paramètres suivants sont capturés par le profil actuel"
+
+#: static/pypilot_control.js:303
+msgid "Disconnected"
+msgstr "Débranché"
+
+#: static/pypilot_control.js:382
+msgid "compass or gyro failure!"
+msgstr "panne de boussole ou de gyroscope !"
+
+#: static/pypilot_control.js:395 templates/index.html:161
+#: templates/index.html:163
+msgid "Tack"
+msgstr "Clouer"
+
+#: static/pypilot_control.js:398 templates/index.html:162
+msgid "Cancel"
+msgstr "Annuler"
+
+#: static/pypilot_control.js:468
+msgid "Engaged"
+msgstr "Engagé"
+
+#: static/pypilot_control.js:470
+msgid "Disengaged"
+msgstr "Désengagé"
+
+#: static/pypilot_control.js:546
+msgid "Motor temperature"
+msgstr "Température du moteur"
+
+#: static/pypilot_control.js:562
+msgid "no motor controller!"
+msgstr "pas de contrôleur de moteur !"
+
+#: templates/calibrationplot.html:4
+msgid "Calibration Plot"
+msgstr "Tracé d'étalonnage"
+
+#: templates/calibrationplot.html:25
+msgid ""
+"The raw sensor readings should fall on a sphere when calibrated.  The age "
+"will reset when the calibration updates."
+msgstr ""
+"Les lectures brutes du capteur doivent tomber sur une sphère lors de "
+"l'étalonnage. L'âge sera réinitialisé lorsque l'étalonnage sera mis à jour."
+
+#: templates/calibrationplot.html:32
+msgid "Connection"
+msgstr "Connexion"
+
+#: templates/index.html:30
+msgid "Control"
+msgstr "Contrôle"
+
+#: templates/index.html:33
+msgid "Gain"
+msgstr "Gagner"
+
+#: templates/index.html:36
+msgid "Calibration"
+msgstr "Étalonnage"
+
+#: templates/index.html:39
+msgid "Configuration"
+msgstr "Configuration"
+
+#: templates/index.html:42
+msgid "Statistics"
+msgstr "Statistiques"
+
+#: templates/index.html:49
+msgid "Heading"
+msgstr "Titre"
+
+#: templates/index.html:52
+msgid "Command"
+msgstr "Commande"
+
+#: templates/index.html:89
+msgid "Add"
+msgstr "Ajouter"
+
+#: templates/index.html:90
+msgid "Remove"
+msgstr "Retirer"
+
+#: templates/index.html:96
+msgid "Magnetic Heading"
+msgstr "Cap magnétique"
+
+#: templates/index.html:97
+msgid "Pitch"
+msgstr "Terrain"
+
+#: templates/index.html:98
+msgid "Roll"
+msgstr "Rouleau"
+
+#: templates/index.html:99 templates/index.html:105
+msgid "Press"
+msgstr "Presse"
+
+#: templates/index.html:99 templates/index.html:105
+msgid "here"
+msgstr "ici"
+
+#: templates/index.html:100
+msgid "when the boat is level to align the inertial sensors."
+msgstr "lorsque le bateau est de niveau pour aligner les capteurs inertiels."
+
+#: templates/index.html:106
+msgid ""
+"when the boat is traveling straight with no leeway, no currents, and gps to "
+"align the compass, or manually enter the compass offset"
+msgstr ""
+"lorsque le bateau se déplace en ligne droite sans dérive, sans courant, et "
+"le GPS pour aligner la boussole, ou entrez manuellement le décalage de la "
+"boussole"
+
+#: templates/index.html:111
+msgid "Magnetic Heading Offset"
+msgstr "Décalage de cap magnétique"
+
+#: templates/index.html:113
+msgid "Lock Accelerometer Calibration"
+msgstr "Verrouiller l'étalonnage de l'accéléromètre"
+
+#: templates/index.html:114
+msgid "Lock Compass Calibration"
+msgstr "Verrouiller l'étalonnage de la boussole"
+
+#: templates/index.html:116
+msgid "calibration plot"
+msgstr "tracé d'étalonnage"
+
+#: templates/index.html:118
+msgid "Rudder Sensor"
+msgstr "Capteur de gouvernail"
+
+#: templates/index.html:120
+msgid "centered"
+msgstr "centré"
+
+#: templates/index.html:121
+msgid "port range"
+msgstr "plage de ports"
+
+#: templates/index.html:122
+msgid "starboard range"
+msgstr "gamme tribord"
+
+#: templates/index.html:123 templates/index.html:146
+msgid "reset"
+msgstr "réinitialiser"
+
+#: templates/index.html:126
+msgid "Rudder Range"
+msgstr "Gamme de gouvernail"
+
+#: templates/index.html:127
+msgid "Degrees"
+msgstr "Degrés"
+
+#: templates/index.html:133
+msgid "Display"
+msgstr "Afficher"
+
+#: templates/index.html:134
+msgid "Clear"
+msgstr "Clair"
+
+#: templates/index.html:135
+msgid "Dark"
+msgstr "Sombre"
+
+#: templates/index.html:139
+msgid "NMEA Client host:port (leave blank for none) eg: 192.168.0.1:10110"
+msgstr ""
+"Hôte client NMEA : port (laisser vide pour aucun), par exemple : "
+"192.168.0.1:10110"
+
+#: templates/index.html:144
+msgid "Amp Hours"
+msgstr "Heures d'ampli"
+
+#: templates/index.html:147
+msgid "Voltage"
+msgstr "Tension"
+
+#: templates/index.html:148
+msgid "Controller temperature"
+msgstr "Température du contrôleur"
+
+#: templates/index.html:150
+msgid "Runtime"
+msgstr "Durée"
+
+#: templates/index.html:151 templates/index.html:153
+msgid "Version"
+msgstr "Version"
+
+#: templates/index.html:152
+msgid "Servo"
+msgstr "Servomoteur"
+
+#: templates/index.html:155 templates/logs.html:9
+msgid "Logs"
+msgstr "Journaux"
+
+#: templates/index.html:161
+msgid "Port"
+msgstr "Port"
+
+#: templates/index.html:163
+msgid "Starboard"
+msgstr "Tribord"
+
+#: templates/index.html:170
+msgid "Server"
+msgstr "Serveur"
+
+#: templates/index.html:172
+msgid "Errors"
+msgstr "les erreurs"
+
+#: templates/index.html:173
+msgid "Web Server Latency"
+msgstr "Latence du serveur Web"
+
+#: templates/wifi.html:4
+msgid "setup"
+msgstr "installation"
+
+#: templates/wifi.html:8
+msgid "Wireless Configuration"
+msgstr "Configuration sans fil"
+
+#: templates/wifi.html:16 templates/wifi.html:17
+msgid "Access Point"
+msgstr "Point d'accès"
+
+#: templates/wifi.html:17 templates/wifi.html:22
+msgid "Key (leave blank for no encryption)"
+msgstr "Clé (laisser vide pour aucun cryptage)"
+
+#: templates/wifi.html:21 templates/wifi.html:22
+msgid "Client"
+msgstr "Client"
+
+#: templates/wifi.html:24
+msgid "Client Mode Address (leave blank for dhcp)"
+msgstr "Adresse du mode client (laisser vide pour dhcp)"
+
+#: templates/wifi.html:28
+msgid "If there is a problem, edit the file"
+msgstr "En cas de problème, modifiez le fichier"
+
+#: templates/wifi.html:33
+msgid "back"
+msgstr "dos"
 
 #~ msgid "Wireless Configuration"
 #~ msgstr "Configuration sans fil"
@@ -61,15 +345,11 @@ msgstr ""
 #~ msgstr "Tracé d'étalonnage"
 
 #~ msgid ""
-#~ "The raw sensor readings should fall "
-#~ "on a sphere when calibrated.  The "
-#~ "age will reset when the calibration "
-#~ "updates."
+#~ "The raw sensor readings should fall on a sphere when calibrated.  The age "
+#~ "will reset when the calibration updates."
 #~ msgstr ""
-#~ "Les lectures brutes du capteur doivent"
-#~ " tomber sur une sphère une fois "
-#~ "étalonnées. L'âge sera réinitialisé lors "
-#~ "de la mise à jour de l'étalonnage."
+#~ "Les lectures brutes du capteur doivent tomber sur une sphère une fois "
+#~ "étalonnées. L'âge sera réinitialisé lors de la mise à jour de l'étalonnage."
 
 #~ msgid "Connection"
 #~ msgstr "Connexion"
@@ -157,8 +437,7 @@ msgstr ""
 
 #~ msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
 #~ msgstr ""
-#~ "Hôte client NMEA : port (laisser "
-#~ "vide par défaut) par exemple : "
+#~ "Hôte client NMEA : port (laisser vide par défaut) par exemple : "
 #~ "192.168.0.1:10110"
 
 #~ msgid "Amp Hours"
@@ -196,4 +475,3 @@ msgstr ""
 
 #~ msgid "back"
 #~ msgstr "arrière"
-
