@@ -296,7 +296,7 @@ class Autopilot(object):
         # keep same heading if mode changes
         if self.mode.value != self.lastmode:
             if self.mode.value == self.preferred_mode.value:
-                self.heading_command.set(self.preferred_heading_command.value)
+                self.heading_command.set(self.preferred_heading_command)
             else:
                 error = self.heading_error.value
                 if windmode:
