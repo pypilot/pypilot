@@ -7,16 +7,102 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2023-04-06 17:32-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: ca\n"
 "Language-Team: ca <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Language: ca\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.6.0\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: templates/index.html:4
+msgid "pypilot hat configuration"
+msgstr "configuració del barret pypilot"
+
+#: templates/index.html:16
+msgid "lcd and remote control setup"
+msgstr "Configuració de lcd i control remot"
+
+#: templates/index.html:17
+msgid "clear"
+msgstr "clar"
+
+#: templates/index.html:17
+msgid "default"
+msgstr "per defecte"
+
+#: templates/index.html:18
+msgid ""
+"press button(s) on the keypad or remote then assign a command with the "
+"button."
+msgstr ""
+"premeu els botons del teclat o del comandament a distància i després "
+"assigneu una ordre amb el botó."
+
+#: templates/index.html:19
+msgid "Actions for LCD interface"
+msgstr "Accions per a la interfície LCD"
+
+#: templates/index.html:21 templates/index.html:25
+msgid "key"
+msgstr "clau"
+
+#: templates/index.html:22 templates/index.html:26
+msgid "action"
+msgstr "acció"
+
+#: templates/index.html:23
+msgid ""
+"These actions do not depend on the state of the display and can be used by "
+"wireless remotes."
+msgstr ""
+"Aquestes accions no depenen de l'estat de la pantalla i es poden utilitzar "
+"amb comandaments a distància sense fil."
+
+#: templates/index.html:28
+msgid "infared receiver port"
+msgstr "port del receptor d'infrarojos"
+
+#: templates/index.html:29
+msgid ""
+"The ir port can be handled direcly from the pi or the arduino.  Using the "
+"arduino can receive from many different remotes without special calibration "
+"recordings."
+msgstr ""
+"El port ir es pot manejar directament des del pi o l'arduino. L'ús de "
+"l'arduino es pot rebre de molts comandaments a distància diferents sense "
+"enregistraments de calibratge especials."
+
+#: templates/index.html:36
+msgid "remote mode"
+msgstr "mode remot"
+
+#: templates/index.html:37
+msgid "remote"
+msgstr "remot"
+
+#: templates/index.html:41
+msgid "nmea current baud rate"
+msgstr "nmea velocitat de transmissió actual"
+
+#: templates/index.html:42
+msgid "voltages"
+msgstr "voltatges"
+
+#: templates/index.html:43
+msgid "status"
+msgstr "estat"
+
+#: templates/index.html:44
+msgid "connection"
+msgstr "connexió"
+
+#: templates/index.html:45
+msgid "Web Server Latency"
+msgstr "Latència del servidor web"
 
 #~ msgid "pypilot hat configuration"
 #~ msgstr "configuració de barret de pilot"
@@ -31,13 +117,11 @@ msgstr ""
 #~ msgstr "per defecte"
 
 #~ msgid ""
-#~ "press button(s) on the keypad or "
-#~ "remote then assign a command with "
-#~ "the button."
+#~ "press button(s) on the keypad or remote then assign a command with the "
+#~ "button."
 #~ msgstr ""
-#~ "premeu els botons del teclat o del"
-#~ " comandament a distància i assigneu "
-#~ "una ordre amb el botó."
+#~ "premeu els botons del teclat o del comandament a distància i assigneu una "
+#~ "ordre amb el botó."
 
 #~ msgid "Actions for LCD interface"
 #~ msgstr "Accions per a la interfície LCD"
@@ -49,30 +133,23 @@ msgstr ""
 #~ msgstr "acció"
 
 #~ msgid ""
-#~ "These actions do not depend on the"
-#~ " state of the display and can "
-#~ "be used by wireless remotes."
+#~ "These actions do not depend on the state of the display and can be used by "
+#~ "wireless remotes."
 #~ msgstr ""
-#~ "Aquestes accions no depenen de l'estat"
-#~ " de la pantalla i poden ser "
-#~ "utilitzades per comandaments a distància "
-#~ "sense fils."
+#~ "Aquestes accions no depenen de l'estat de la pantalla i poden ser "
+#~ "utilitzades per comandaments a distància sense fils."
 
 #~ msgid "infared receiver port"
 #~ msgstr "port receptor d'infrarojos"
 
 #~ msgid ""
-#~ "The ir port can be handled direcly"
-#~ " from the pi or the arduino.  "
-#~ "Using the arduino can receive from "
-#~ "many different remotes without special "
-#~ "calibration recordings."
+#~ "The ir port can be handled direcly from the pi or the arduino.  Using the "
+#~ "arduino can receive from many different remotes without special calibration "
+#~ "recordings."
 #~ msgstr ""
-#~ "El port ir es pot gestionar "
-#~ "directament des del pi o l’arduino. "
-#~ "L’ús de l’arduino pot rebre de "
-#~ "molts comandaments a distància diferents "
-#~ "sense enregistraments de calibratge especials."
+#~ "El port ir es pot gestionar directament des del pi o l’arduino. L’ús de "
+#~ "l’arduino pot rebre de molts comandaments a distància diferents sense "
+#~ "enregistraments de calibratge especials."
 
 #~ msgid "remote mode"
 #~ msgstr "mode remot"
@@ -94,4 +171,3 @@ msgstr ""
 
 #~ msgid "Web Server Latency"
 #~ msgstr "Latència del servidor web"
-

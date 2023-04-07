@@ -7,16 +7,102 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2023-04-06 17:32-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: fi\n"
 "Language-Team: fi <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Language: fi\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.6.0\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: templates/index.html:4
+msgid "pypilot hat configuration"
+msgstr "pypilot-hattukokoonpano"
+
+#: templates/index.html:16
+msgid "lcd and remote control setup"
+msgstr "LCD- ja kaukosäätimen asetukset"
+
+#: templates/index.html:17
+msgid "clear"
+msgstr "asia selvä"
+
+#: templates/index.html:17
+msgid "default"
+msgstr "oletuksena"
+
+#: templates/index.html:18
+msgid ""
+"press button(s) on the keypad or remote then assign a command with the "
+"button."
+msgstr ""
+"paina näppäimistön tai kaukosäätimen painikkeita ja määritä sitten komento "
+"painikkeella."
+
+#: templates/index.html:19
+msgid "Actions for LCD interface"
+msgstr "Toiminnot LCD-liittymälle"
+
+#: templates/index.html:21 templates/index.html:25
+msgid "key"
+msgstr "avain"
+
+#: templates/index.html:22 templates/index.html:26
+msgid "action"
+msgstr "toiminta"
+
+#: templates/index.html:23
+msgid ""
+"These actions do not depend on the state of the display and can be used by "
+"wireless remotes."
+msgstr ""
+"Nämä toiminnot eivät riipu näytön tilasta, ja niitä voidaan käyttää "
+"langattomilla kaukosäätimillä."
+
+#: templates/index.html:28
+msgid "infared receiver port"
+msgstr "infrapunavastaanottimen portti"
+
+#: templates/index.html:29
+msgid ""
+"The ir port can be handled direcly from the pi or the arduino.  Using the "
+"arduino can receive from many different remotes without special calibration "
+"recordings."
+msgstr ""
+"Ir-porttia voidaan käsitellä suoraan pi:stä tai arduinosta. Arduinoa "
+"käyttämällä voidaan vastaanottaa useista eri kaukosäätimistä ilman erityisiä"
+" kalibrointitallenteita."
+
+#: templates/index.html:36
+msgid "remote mode"
+msgstr "etätila"
+
+#: templates/index.html:37
+msgid "remote"
+msgstr "etä"
+
+#: templates/index.html:41
+msgid "nmea current baud rate"
+msgstr "nmea nykyinen tiedonsiirtonopeus"
+
+#: templates/index.html:42
+msgid "voltages"
+msgstr "jännitteet"
+
+#: templates/index.html:43
+msgid "status"
+msgstr "Tila"
+
+#: templates/index.html:44
+msgid "connection"
+msgstr "yhteys"
+
+#: templates/index.html:45
+msgid "Web Server Latency"
+msgstr "Verkkopalvelimen viive"
 
 #~ msgid "pypilot hat configuration"
 #~ msgstr "pypilot -hatun kokoonpano"
@@ -31,13 +117,11 @@ msgstr ""
 #~ msgstr "oletusarvo"
 
 #~ msgid ""
-#~ "press button(s) on the keypad or "
-#~ "remote then assign a command with "
-#~ "the button."
+#~ "press button(s) on the keypad or remote then assign a command with the "
+#~ "button."
 #~ msgstr ""
-#~ "paina näppäimistön tai kaukosäätimen "
-#~ "painiketta (painikkeita) ja anna sitten "
-#~ "komento painikkeella."
+#~ "paina näppäimistön tai kaukosäätimen painiketta (painikkeita) ja anna sitten"
+#~ " komento painikkeella."
 
 #~ msgid "Actions for LCD interface"
 #~ msgstr "LCD -käyttöliittymän toiminnot"
@@ -49,28 +133,23 @@ msgstr ""
 #~ msgstr "toiminta"
 
 #~ msgid ""
-#~ "These actions do not depend on the"
-#~ " state of the display and can "
-#~ "be used by wireless remotes."
+#~ "These actions do not depend on the state of the display and can be used by "
+#~ "wireless remotes."
 #~ msgstr ""
-#~ "Nämä toiminnot eivät riipu näytön "
-#~ "tilasta, ja langattomat kaukosäätimet voivat"
-#~ " käyttää niitä."
+#~ "Nämä toiminnot eivät riipu näytön tilasta, ja langattomat kaukosäätimet "
+#~ "voivat käyttää niitä."
 
 #~ msgid "infared receiver port"
 #~ msgstr "infrapunavastaanottimen portti"
 
 #~ msgid ""
-#~ "The ir port can be handled direcly"
-#~ " from the pi or the arduino.  "
-#~ "Using the arduino can receive from "
-#~ "many different remotes without special "
-#~ "calibration recordings."
+#~ "The ir port can be handled direcly from the pi or the arduino.  Using the "
+#~ "arduino can receive from many different remotes without special calibration "
+#~ "recordings."
 #~ msgstr ""
-#~ "Ir -porttia voidaan käsitellä suoraan "
-#~ "pi: stä tai arduinosta. Arduinoa voi "
-#~ "vastaanottaa monista eri kaukosäätimistä ilman"
-#~ " erityisiä kalibrointitallenteita."
+#~ "Ir -porttia voidaan käsitellä suoraan pi: stä tai arduinosta. Arduinoa voi "
+#~ "vastaanottaa monista eri kaukosäätimistä ilman erityisiä "
+#~ "kalibrointitallenteita."
 
 #~ msgid "remote mode"
 #~ msgstr "kauko -tila"
@@ -92,4 +171,3 @@ msgstr ""
 
 #~ msgid "Web Server Latency"
 #~ msgstr "Verkkopalvelimen viive"
-
