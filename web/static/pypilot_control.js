@@ -272,12 +272,12 @@ $(document).ready(function() {
         $('#configuration_container').append('</div>');
 
         if(tinypilot)
-            $('#configuration_container').append('<p><a href="/wifi">Configure Wifi</a>');
+            $('#configuration_container').append('<p><a href="/wifi">' + _('Configure Wifi') + '</a>');
 
         url = window.location.href.split('://')
         url = url.length > 1 ? url[1] : url[0];
         
-        $('#configuration_container').append('<p><a href="http://' + url.split(':')[0].split('/')[0] + ':33333">Configure LCD Keypad and Remotes</a>');
+        $('#configuration_container').append('<p><a href="http://' + url.split(':')[0].split('/')[0] + ':33333">' + _('Configure LCD Keypad and Remotes') + '</a>');
 
         pypilot_watch('nmea.client');
 
