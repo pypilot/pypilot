@@ -28,7 +28,7 @@ msgstr "gain"
 
 #: ../menu.py:387
 msgid "range"
-msgstr "gamme"
+msgstr "plage"
 
 #: ../menu.py:387 ../menu.py:558 ../menu.py:559
 msgid "degrees"
@@ -36,7 +36,7 @@ msgstr "degrés"
 
 #: ../menu.py:388
 msgid "rudder"
-msgstr "gouvernail"
+msgstr "barre"
 
 #: ../menu.py:407
 msgid "calibrate"
@@ -92,7 +92,7 @@ msgstr "embrayage pwm"
 
 #: ../menu.py:443
 msgid "percent"
-msgstr "pour cent"
+msgstr "pourcent"
 
 #: ../menu.py:485
 msgid "defaults"
@@ -132,7 +132,7 @@ msgstr "avertisseur sonore"
 
 #: ../menu.py:586
 msgid "display"
-msgstr "afficher"
+msgstr "écran"
 
 #: ../menu.py:587
 msgid "contrast"
@@ -172,11 +172,11 @@ msgstr "Chargement"
 
 #: ../menu.py:670
 msgid "timeout"
-msgstr "dépassement du délais d'attente"
+msgstr "délai expiré"
 
 #: ../page.py:330
 msgid "info"
-msgstr "Info"
+msgstr "info"
 
 #: ../page.py:344
 msgid "Info"
@@ -188,15 +188,15 @@ msgstr "Watts"
 
 #: ../page.py:352
 msgid "Amp Hours"
-msgstr "Ampères-heures"
+msgstr "A h"
 
 #: ../page.py:352
 msgid "runtime"
-msgstr "Durée de fonctionnement"
+msgstr "temps fct."
 
 #: ../page.py:358
 msgid "voltage"
-msgstr "Tension"
+msgstr "tension"
 
 #: ../page.py:358
 msgid "rate"
@@ -204,7 +204,7 @@ msgstr "taux"
 
 #: ../page.py:358
 msgid "uptime"
-msgstr "temps de fonctionnement"
+msgstr "temps dém."
 
 #: ../page.py:363
 msgid "cont temp"
@@ -232,7 +232,7 @@ msgstr "auteur"
 
 #: ../page.py:394
 msgid "Calibrate Info"
-msgstr "Calibrer les informations"
+msgstr "Info calibration"
 
 #: ../page.py:405
 msgid "incomplete"
@@ -260,7 +260,7 @@ msgstr "mauvais"
 
 #: ../page.py:414
 msgid "compass"
-msgstr "boussole"
+msgstr "compas"
 
 #: ../page.py:669
 msgid "ERROR"
@@ -268,7 +268,7 @@ msgstr "ERREUR"
 
 #: ../page.py:669
 msgid "compass or gyro failure!"
-msgstr "défaillance de la boussole ou du gyroscope!"
+msgstr "défaillance du compas ou du gyroscope!"
 
 #: ../page.py:712
 msgid "not detected"
@@ -284,11 +284,11 @@ msgstr "veille"
 
 #: ../page.py:738
 msgid "tack"
-msgstr "clouer"
+msgstr "virer"
 
 #: ../page.py:740
 msgid "tacking"
-msgstr "virer"
+msgstr "virement"
 
 #: ../page.py:763
 msgid "No Cal"
@@ -300,7 +300,7 @@ msgstr "Mauvaise Cal."
 
 #: ../page.py:865
 msgid "connect to server"
-msgstr "connecter au serveur"
+msgstr "connection au serveur"
 
 #~ msgid "GPS not detected"
 #~ msgstr "GPS non détecté"
@@ -309,7 +309,7 @@ msgstr "connecter au serveur"
 #~ msgstr "WIND non détecté"
 
 #~ msgid "remote"
-#~ msgstr "éloigné"
+#~ msgstr "distant"
 
 #~ msgid "No Wifi detected"
 #~ msgstr "Aucun Wifi détecté"
