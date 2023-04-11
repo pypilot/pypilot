@@ -162,7 +162,7 @@ with open(os.path.dirname(os.path.abspath(__file__)) + '/pypilot_web.pot') as f:
     for line in f:
         if line.startswith('#: static'):
             static = True
-        elif line.startswith('#:'):
+        elif len(line.strip()) == 0:
             static = False
         elif static and line.startswith('msgid'):
             s = line[7:-2]
