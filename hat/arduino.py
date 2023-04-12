@@ -130,7 +130,7 @@ class arduino(object):
         self.get_version_time = time.monotonic()
 
         self.control_socket = False
-        self.actions(config['actions'])
+        self.set_actions(config['actions'])
 
     def open(self):
         if not self.hatconfig:
@@ -155,15 +155,19 @@ class arduino(object):
                 if self.spi.open(port, slave, 100000) == -1:
                     self.close()
 
-            if 'lcd' in self.config and 'backlight' in self.config['lcd']:
-                self.set_backlight(self.config['lcd']['backlight'])
-            self.set_baud(self.config['arduino.nmea.baud'])
-            self.set_adc_channels(self.config['arduino.adc_channels'])
-
         except Exception as e:
             print('failed to communicate with arduino', device, e)
             self.hatconfig = False
             self.spi = False
+            return
+
+        if 'lcd' in self.config and 'backlight' in self.config['lcd']:
+            self.set_backlight(self.config['lcd']['backlight'])
+        self.set_baud(self.config['arduino.nmea.baud'])
+        try:
+            self.set_adc_channels(len(self.config['arduino.adc_channels']))
+        except:
+            pass
 
     def close(self, e):
         print('failed to read spi:', e)
@@ -208,7 +212,7 @@ class arduino(object):
         self.send(SET_BAUD, d)
 
     def set_adc_channels(self, value):
-        value = min(max(int(value), 0), 3)
+        value = min(len(value), 3)
         self.send(SET_ADC_CHANNELS, [value])
 
     def set_buzzer(self, pitch, pulse, duration):
@@ -359,9 +363,9 @@ class arduino(object):
         #print('times', t1-t0, t2-t1, t3-t2, t4-t3)
         return events
 
-    def actions(self, actions):
-        manual_keys = {'_+1':  .5,
-                       '_-1': -.5}
+    def set_actions(self, actions):
+        manual_keys = {'+1':  .5,
+                       '-1': -.5}
         self.manual_control_keys = {}
         for action, keys in actions.items():
             if action in manual_keys:
@@ -479,6 +483,7 @@ def main():
     print('initializing arduino')
     config = {'host':'localhost','hat':{'arduino':{'device':'/dev/spidev0.1',
                                                    'resetpin':'26'}},
+              'actions': {},
               'arduino.nmea.baud': 4800,
               'arduino.nmea.in': False,
               'arduino.nmea.out': False,

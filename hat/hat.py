@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2023 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -185,6 +185,8 @@ class Web(Process):
                     time.sleep(30) # delay loading web and wait until modules are loaded
                 else:
                     time.sleep(5) # delay less on other platforms
+                import web
+                web.web_process(pipe, config)
                 try:
                     import web
                     web.web_process(pipe, config)
@@ -214,10 +216,6 @@ class Arduino(Process):
         self.voltage = {'vcc': 5, 'vin': 3.3}
         self.status = 'Not Connected'
 
-    def config(self, name, value):
-        self.send((name, value))
-        self.config[name] = value
-
     def create(self):
         def process(pipe, config):
             print('arduino process on', os.getpid())
@@ -242,7 +240,7 @@ class Arduino(Process):
                     self.hat.web.send({'voltage': '5v = %.3f, 3.3v = %.3f' % (code['vcc'], code['vin'])})
                     self.hat.lcd.send(msg)
                 elif key == 'analog':
-                    config = self.config('adc_channels')
+                    config = self.hat.config['arduino.adc_channels']
                     adc_count = len(config)
                     for i in range(adc_count):
                         if i >= len(config):
@@ -309,7 +307,7 @@ class Hat(object):
     def __init__(self):
         # default config
         self.config = {'host': 'localhost', 'actions': {},
-                       'arduino.adc_channels': 0,
+                       'arduino.adc_channels': [],
                        'pi.ir': True, 'arduino.ir': False,
                        'arduino.nmea.in': False, 'arduino.nmea.out': False,
                        'arduino.nmea.baud': 4800,
@@ -515,7 +513,7 @@ class Hat(object):
         
         if self.arduino:
             if name == 'actions' or name.startswith('arduino.'):
-                self.arduino.config(name, value)
+                self.arduino.send((name, value))
 
         self.config[name] = value
 
@@ -633,7 +631,6 @@ class Hat(object):
                 self.apply_code(key, 0)
                 self.keytime = False
                 self.keycounts = {}
-                break
 
         # receive heading once per second if autopilot is not enabled
         self.client.watch('ap.heading', False if self.last_msg['ap.enabled'] else 1)

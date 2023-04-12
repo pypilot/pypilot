@@ -18,19 +18,27 @@ socketio = SocketIO(app, async_mode=None)
 web_port = 33333
 
 default_actions = \
-    {'-10_': ['ir03111800','ir03111000','KEY_LEFT'  ,'gpio6' ,'rf3F402C50','rf3F403C50'],
-     '-1_':  ['ir03201800','ir03201000','KEY_UP'    ,'gpio27','rf77082C50','rf77083C50'],
-     '+1_':  ['ir03211800','ir03211000','KEY_DOWN'  ,'gpio22','rf7B042C50','rf7B043C50'],
-     '+10_': ['ir03101800','ir03101000','KEY_RIGHT' ,'gpio5' ,'rf5F202C50','rf5F203C50'],
-     'auto_':['ir030C1000','ir030C1800','KEY_POWER' ,'gpio17','rf7E012C50','rf7E013C50'],
-     'menu_':['ir030D1000','ir030D1800','KEY_MUTE'  ,'gpio23','rf7D022C50','rf7D023C50'],
-     'mode_':['ir030B1000','ir030B1800','KEY_SELECT','gpio18','rf6F102C50','rf6F103C50'],
+    {'-10_': ['ir03111800','ir03111000','KEY_LEFT'  ,'gpio6' ,'rf3F402350','rf3F405350'],
+     '-1_':  ['ir03201800','ir03201000','KEY_UP'    ,'gpio27','rf77082350','rf77085350'],
+     '+1_':  ['ir03211800','ir03211000','KEY_DOWN'  ,'gpio22','rf7B042350','rf7B045350'],
+     '+10_': ['ir03101800','ir03101000','KEY_RIGHT' ,'gpio5' ,'rf5F202350','rf5F205350'],
+     'auto_':['ir030C1000','ir030C1800','KEY_POWER' ,'gpio17','rf7E012350','rf7E015350'],
+     'menu_':['ir030D1000','ir030D1800','KEY_MUTE'  ,'gpio23','rf7D022350','rf7D025350'],
+     'mode_':['ir030B1000','ir030B1800','KEY_SELECT','gpio18','rf6F102350','rf6F105350'],
 
-     '-10': ['rf3F402950', 'rf3F403950'],
-     '-1':  ['rf77082950', 'rf77083950'],
-     '+1':  ['rf7B042950', 'rf7B043950'],
-     '+10': ['rf5F202950', 'rf5F203950'],
-     'standby': ['rf7E012950', 'rf7E013950']
+     'tack port': ['rf37482350', 'rf37485350', 'rf37482950', 'rf37485950'],
+     'tack starboard': ['rf5B242350', 'rf5B245350', 'rf5B242950', 'rf5B245950'],
+
+     '-10': ['rf3F402950', 'rf3F405950'],
+     '-1':  ['rf77082950', 'rf77085950'],
+     '+1':  ['rf7B042950', 'rf7B045950'],
+     '+10': ['rf5F202950', 'rf5F205950'],
+     'standby': ['rf7E012950', 'rf7E015950'],
+     'compass mode': ['rf7D022950', 'rf7D025950'],
+     'gps mode': ['rf6F102950', 'rf6F105950'],
+     'nav mode': ['rf6D122950', 'rf6D125950'],
+     'wind mode': ['rf7F002930', 'rf7F005930'],
+     'true wind mode': ['rf6F102930', 'rf6F105930']
     }
 
 try:
@@ -84,8 +92,8 @@ class WebConfig(Namespace):
             if col == 0:
                 acts[ind] += Markup('<tr>')
             acts[ind] += Markup('<td><button id="action_' + n + '">' +
-                           name + '</button></td><td><span id="action' +
-                           n + 'keys"></span></td>')
+                                name + '</button></td><td><span id="action' +
+                                n + 'keys"></span></td>')
             if col == cols-1:
                 acts[ind] += Markup('</tr>')
                 col = 0
@@ -94,8 +102,6 @@ class WebConfig(Namespace):
             names += Markup('"' + n + '", ')
 
         acts[ind] += Markup('</table>')
-
-        
         names += Markup('""]')
 
         adc_channels = Markup('<select id="adc_channels">')
@@ -108,14 +114,14 @@ class WebConfig(Namespace):
             adc_channels += Markup('>' + str(i) + '</option>');
         adc_channels += Markup('</select>')
         for i in range(3):
-            adc_channels += Markup('<br>')
-            adc_channels += Markup('<div id="adc_channel_' + str(i) + '>')
-            adc_channels += Markup('Channel + str(i)')
-            adc_channels += Markup('<select id="adc_channel_' + str(i) + '_select>')
+            #adc_channels += Markup('<br>')
+            adc_channels += Markup('<div id="adc_channel_' + str(i) + '">')
+            adc_channels += Markup('Channel ' + str(i))
+            adc_channels += Markup('<select id="adc_channel_' + str(i) + '_select">')
             options = ['none', 'steering', 'custom']
             for option in options:
                 adc_channels += Markup('<option value="' + option + '"')
-                if cadc[i] == option:
+                if i < len(cadc) and cadc[i] == option:
                     adc_channels += Markup(' selected')
                 adc_channels += Markup('>' + option + '</option>')
             adc_channels += Markup('</select>')
@@ -193,7 +199,6 @@ class WebConfig(Namespace):
         if command != 'none':
             if not command in actions:
                 actions[command] = []
-            
             actions[command].append(self.last_key)
         self.emit_keys()
 
@@ -203,14 +208,13 @@ class WebConfig(Namespace):
     def emit_keys(self):
         actions = self.config['actions']
         for name, keys in actions.items():
-            keys = {'name': name, 'keys': keys}
+            keys = {'name': name.replace(' ', '_'), 'keys': keys}
             socketio.emit('action_keys', keys)
         self.pipe.send({'actions': actions})
 
     def on_connect(self):
         if self.profiles:
             socketio.emit('profiles', self.profiles)
-        socketio.emit('adc_channels', self.config['arduino.adc_channels'])
         self.emit_keys()
 
         print('web client connected', request.sid)
