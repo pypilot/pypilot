@@ -7,9 +7,12 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from PIL import Image
 
+import sys, os
+sys.path.insert(0,os.path.abspath(os.path.dirname(os.path.abspath(__file__))+'/../..'))
 import pypilot.version
+
+from PIL import Image
 
 from PIL import Image
 from PIL import ImageDraw

@@ -305,18 +305,6 @@ $(document).ready(function() {
     socket.on('pypilot_disconnect', function() {
         $('#connection').text(_('Disconnected'))
     });
-
-    // update manual servo command
-    setTimeout(poll_pypilot, 1000)
-    function poll_pypilot() {
-        setTimeout(poll_pypilot, 200)
-        if(servo_command_timeout > 0) {
-            servo_command_timeout--;
-            if(servo_command_timeout <= 0)
-                servo_command = 0;
-            pypilot_set('servo.command', servo_command);
-        }
-    }
     
     // Event handler for server sent data.
     socket.on('log', function(msg) {
@@ -413,11 +401,12 @@ $(document).ready(function() {
             } else {
                 $('#tb_engaged button').css('left', "0px");
                 $('#tb_engaged').removeClass('toggle-button-selected');
-
+                
                 $('#port10').text('<<');
                 $('#port1').text('<');
                 $('#star1').text('>');
                 $('#star10').text('>>');
+
                 $('#tack_button').hide();
             }
         }
@@ -609,17 +598,60 @@ $(document).ready(function() {
             pypilot_set('ap.heading_command', heading_local_command);
         } else {
             if(x != 0) {
-                sign = x > 0 ? 1 : -1;
-                servo_command = -sign;
-                servo_command_timeout = Math.abs(x) > 5 ? 6 : 2;
+     //           sign = x > 0 ? 1 : -1;
+                //servo_command = -sign;
+       //         servo_command_timeout = Math.abs(x) > 5 ? 6 : 2;
             }
         }
     }
-    
-    $('#port10').click(function(event) { move(-10); });
-    $('#port1').click(function(event) { move(-1); });
-    $('#star1').click(function(event) { move(1); });
-    $('#star10').click(function(event) { move(10); });
+
+    // update manual servo command
+    function poll_pypilot() {
+        if(servo_command_timeout > 0) {
+            servo_command_timeout--;
+            if(servo_command_timeout > 0)
+                setTimeout(poll_pypilot, 50)
+            else    
+                servo_command = 0;
+            pypilot_set('servo.command', servo_command);
+        }
+    }
+
+    function mousedown(amount) {
+        servo_command = amount;
+        servo_command_timeout = 120;
+        pypilot_set('servo.command', servo_command);
+        setTimeout(poll_pypilot, 50)
+    }
+
+    function mouseup(event) {
+        servo_command_timeout -= 116;
+        if(servo_command_timeout <= 0) {
+            servo_command_timeout = 0;
+            servo_command = 0;
+            pypilot_set('servo.command', 0);
+        }
+    }
+
+    function nocontext(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        return false;
+    }
+
+    buttons = {'#port1': -.6, '#star1': .6, '#port10': -1, '#star10': 1};
+    for (var name in buttons) {
+        $(name).on('touchstart', nocontext);
+        $(name).on('touchmove', nocontext);
+        $(name).on('touchend', nocontext);
+        $(name).on('touchcancel', nocontext);
+        $(name).on('contextmenu', nocontext);
+        $(name).on('pointerup', mouseup);
+        $(name).on('pointerdown', function(event) {
+            mousedown(buttons['#'+event.target.id]);
+        });
+    }
+
     $('#tack_button').click(function(event) {
         if($('#tack_button').attr('state') == 'tack')
             openTab(event, 'Tack');
