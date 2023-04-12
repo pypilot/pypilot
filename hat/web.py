@@ -95,6 +95,7 @@ class WebConfig(Namespace):
 
         acts[ind] += Markup('</table>')
 
+        
         names += Markup('""]')
 
         ir = Markup('<input type="radio" id="pi_ir" name="ir"')
@@ -123,7 +124,7 @@ class WebConfig(Namespace):
         remote = Markup('<input type="checkbox" id="remote"')
         if config['host'] != 'localhost':
             remote += Markup(' checked')
-        remote += Markup('/><input type="text" id="host" value="' + config['host'] + '">')
+        remote += Markup(' /><input type="text" id="host" value="' + config['host'] + '" />')
 
         @app.route('/')
         def index():

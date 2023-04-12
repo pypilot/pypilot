@@ -135,7 +135,14 @@ class ActionProfileRelative(ActionPypilot):
             index = (profiles.index(profile) + self.offset) % len(profiles)
             self.value = profiles[index]
             super(ActionProfileRelative, self).trigger(count)
-        
+
+class ActionCommand(Action):
+    def __init__(self, name, command):
+        super(ActionCommand, self).__init__(None, name)
+        self.command = command
+
+    def trigger(self, count):
+        os.system(self.command)
 
 class Process():
     def __init__(self, hat):
@@ -398,6 +405,9 @@ class Hat(object):
             if name.startswith('pilot '):
                 self.actions.append(ActionPypilot(self, name, 'ap.pilot', name.replace('pilot ', '', 1)))
 
+        # execute an arbitrary command, eg: shutdown
+        self.actions.append(ActionCommand('shutdown', 'shutdown -h now'))
+                
         # useful to unassign a key
         self.actions.append(ActionNone())
 

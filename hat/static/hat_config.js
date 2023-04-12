@@ -115,6 +115,10 @@ $(document).ready(function() {
             document.getElementById('host').value = 'localhost'
         socket.emit('config', {'host': document.getElementById('host').value});
     });
+
+    $('#command').change(function(event) {
+        socket.emit('config', {'command': document.getElementById('command').value});
+    });
     
     // Interval function that tests message latency by sending a "ping"
     var ping_pong_times = [];
