@@ -658,7 +658,7 @@ def CalibrationProcess(cal_pipe, client):
 
         if value:
             warnings[sensor] = warning
-        else
+        else:
             if sensor in warnings:
                 del warnings[sensor]
 

@@ -365,8 +365,8 @@ class AutomaticCalibrationProcess():
             return True
         return False
 
-    def warnings(self):
-        warnings = cal_pipe.recv()
+    def get_warnings(self):
+        warnings = self.cal_pipe.recv()
         if warnings:
             self.warnings = warnings
         return self.warnings
@@ -393,7 +393,7 @@ class BoatIMU(object):
         self.last_alignmentCounter = False
 
         self.uptime = self.register(TimeValue, 'uptime')
-        self.warning = self.register(StringValue('warning', ''))
+        self.warning = self.register(StringValue, 'warning', '')
         
         self.auto_cal = AutomaticCalibrationProcess(client.server)
 
@@ -561,9 +561,9 @@ class BoatIMU(object):
         if self.auto_cal.calibration_ready() and self.cal_data:
             self.auto_cal.cal_pipe.send(self.cal_data)
 
-        warnings = self.auto_cal.warnings()
-        if abs(self.SensorValues['pitch'].value) > 35 || \
-           abs(self.SensorValues['roll'].value) > 35):
+        warnings = self.auto_cal.get_warnings()
+        if abs(self.SensorValues['pitch'].value) > 35 or \
+           abs(self.SensorValues['roll'].value) > 35:
             warnings += ' ' + 'aligment warning'
         self.warning.update(warnings)
 
