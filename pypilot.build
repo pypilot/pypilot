@@ -118,6 +118,7 @@ cd $INITIALDIR
 if [ -e /opt/splash ]; then
    cd hat/ugfx
    make install
+   filetool.sh -b
 fi
    
 cd $INITIALDIR
