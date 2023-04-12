@@ -2,7 +2,7 @@ all: splash
 
 install: splash
 	strip splash
-	sudo cp splash /opt/pypilot_splash
+	sudo cp splash /opt/splash
 
 .PHONY: pypilot_version.h
 
