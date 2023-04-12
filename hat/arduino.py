@@ -18,10 +18,12 @@ RF=0x01
 IR=0x02
 GP=0x03
 VOLTAGE=0x04
+ANALOG=0x05
 
 SET_BACKLIGHT=0x16
 SET_BUZZER=0x17
 SET_BAUD=0x18
+SET_ADC_COUNT=0x19
 
 PACKET_LEN=6
 
@@ -172,6 +174,10 @@ class arduino(object):
         self.debug('nmea set baud', d)
         self.send(SET_BAUD, d)
 
+    def set_adc_count(self, value):        
+        value = min(max(int(value), 0), 3)
+        self.send(SET_ADC_COUNT, [value])
+
     def set_buzzer(self, pitch, pulse, duration):
         duration = int(round(min(max(duration, 0), 2)*100))
         mode = pitch | (pulse << 4)
@@ -281,6 +287,11 @@ class arduino(object):
                 vin = (d[2] + (d[3]<<7))/1000.0
                 events.append(['voltage', {'vcc': vcc, 'vin': vin}])
                 continue
+            elif cmd == ANALOG:
+                adc = []
+                for i in range(3):
+                    adc.append(d[2*i] + (d[2*i+1]<<7))
+                events.append(['analog', adc])
             else:
                 print('unknown message', cmd, d)
                 continue
@@ -416,6 +427,9 @@ def arduino_process(pipe, config):
                 a.set_buzzer(*value)
             elif name == 'arduino.nmea.baud':
                 a.set_baud(value)
+            elif name == 'adc_count':
+                a.set_adc_count(value)
+
         t2 = time.monotonic()
         # max period to handle 38400 with 192 byte buffers is (192*10) / 38400 = 0.05
         # for now use 0.025, eventually dynamic depending on baud?
@@ -427,12 +441,13 @@ def arduino_process(pipe, config):
 def main():
     print('initializing arduino')
     config = {'host':'localhost','hat':{'arduino':{'device':'/dev/spidev0.1',
-                                                   'resetpin':'16'}},
+                                                   'resetpin':'26'}},
               'arduino.nmea.baud': 4800,
               'arduino.nmea.in': False,
               'arduino.nmea.out': False,
               'arduino.ir': True,
-              'arduino.debug': True}
+              'arduino.debug': True,
+              'adc_count': 0}
 
     a = arduino(config)
     dt = 0

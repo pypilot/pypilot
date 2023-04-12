@@ -36,7 +36,7 @@
 #define PACKET_LEN 6
 
 // of packet bytes, first byte defines message type 
-enum {RF=0x01, IR=0x02, GP=0x03, VOLTAGE=0x04, SET_BACKLIGHT=0x16, SET_BUZZER=0x17, SET_BAUD=0x18};
+enum {RF=0x01, IR=0x02, GP=0x03, VOLTAGE=0x04, ANALOG=0x05, SET_BACKLIGHT=0x16, SET_BUZZER=0x17, SET_BAUD=0x18, SET_ADC_COUNT=0x19};
 
 #ifdef USE_RF
 RCSwitch rf = RCSwitch();
@@ -66,6 +66,7 @@ uint8_t backlight_value_ee EEMEM = 64; // determines when backlight turns on
 uint8_t backlight_polarity_ee EEMEM = 0;
 uint8_t serial_baud_ee EEMEM = 0;
 
+uint8_t adc_count = 0;
 
 #define RB_CREATE(NAME, SIZE)                                           \
     uint8_t rb_##NAME[SIZE];                                            \
@@ -307,7 +308,7 @@ struct codes_type {
 };
 
 static struct codes_type codes[4] = {0};
-static uint16_t adc_avg[3], adc_count, adc_cycles=64;
+static uint16_t adc_avg[5], adc_count, adc_cycles=64;
 static uint32_t adc_a;
 
 void read_data()
@@ -358,6 +359,10 @@ void read_data()
         Serial_begin(d[0]);
 #endif
     } break;
+    case SET_ADC_COUNT:
+    {
+        adc_count = d[0];
+    }
     }
 }
 
@@ -367,7 +372,7 @@ void send(uint8_t id, uint8_t d[PACKET_LEN])
     cli();
     RB_PUT(serial_out, st);
     sei();
-    id |= 0x80;
+    id |= 0x80; // nmea does not use codes below 127, so this bit indicates data
     cli();
     RB_PUT(serial_out, id);
     sei();
@@ -391,17 +396,25 @@ void send_code(uint8_t source, uint32_t value)
     uint32_t cvalue = value & 0x7f7f7f7f;
     uint8_t *pvalue = (uint8_t*)&cvalue;
     pvalue[3] = ((p1value[0]&0x80) >> 1) | ((p1value[1]&0x80) >> 2) | ((p1value[2]&0x80)) >> 3;
-        
+   
     if(cvalue == codes[source].lvalue) {
         if(++codes[source].repeat_count > 127)
             codes[source].repeat_count = 1;
     } else {
+#if 0        
         // unfortunately IR has infrequent but sometimes wrong value codes
         // so sending keyup from previous key if a new down is not used here.
         if(source == IR && codes[source].lvalue && value)
             return;
         // send code up for last key if key changed
         if(codes[source].lvalue) {
+            uint8_t *plvalue = (uint8_t*)&codes[source].lvalue;
+            uint8_t d[PACKET_LEN] = {plvalue[0], plvalue[1], plvalue[2], plvalue[3], 0, 0};
+            send(source, d);
+        }
+#endif
+        // send code up if not value
+        if(codes[source].lvalue && !value) {
             uint8_t *plvalue = (uint8_t*)&codes[source].lvalue;
             uint8_t d[PACKET_LEN] = {plvalue[0], plvalue[1], plvalue[2], plvalue[3], 0, 0};
             send(source, d);
@@ -423,7 +436,11 @@ void read_analog() {
     static uint8_t channel;
     const uint8_t channels[] = {_BV(MUX1) | _BV(MUX2),              // 5v through divider
                                 _BV(MUX0) | _BV(MUX1) | _BV(MUX2),  // ambient light sensor
-                                _BV(MUX1) | _BV(MUX2) | _BV(MUX3)}; // reference voltage
+                                _BV(MUX1) | _BV(MUX2) | _BV(MUX3),  // reference voltage
+                                0,         // ADC0
+                                _BV(MUX0), // ADC1
+                                _BV(MUX1)  // ADC2
+    };
     if(ADCSRA & _BV(ADSC))
         return; // not ready yet
 
@@ -435,15 +452,33 @@ void read_analog() {
     adc_avg[channel] = adc_a >> 4;
     adc_count = 0;
     adc_a = 0;
-    
-    if(++channel == sizeof channels)
+
+    if(++channel == (sizeof channels) - 3 + adc_count)
         channel = 0;
 
     ADMUX = _BV(REFS0) | channels[channel]; // select channel at 5 volts
     ADCSRA |= _BV(ADSC);
 
-    uint16_t ambient = adc_avg[1];
+    bool send_packet = false;
+    for(int i=0; i<adc_count; i++) {
+        static uint16_t last_adc[3];
+        if(abs(adc_avg[3+i] - last_adc[i]) > 25) {
+            last_adc[i] = adc_avg[3+i];           
+            send_packet = true;
+            break;
+        }
+    }
+    if(send_adc_packet) {
+        uint8_t d[PACKET_LEN] = {0};
+        for(int i=0; i<adc_count; i++) {
+            d[2*i+0] = adc_avg[i]&0x7f;
+            d[2*i+1] = (adc_avg[i]>>7)&0x7f;
+        }
+        send(ANALOG, d);
+    }
 
+
+    uint16_t ambient = adc_avg[1];
     //Configure TIMER1 to drive backlight variable pwm
     static uint8_t last_backlight = 0;
     uint8_t backlight = 0;
@@ -501,6 +536,7 @@ void read_analog() {
     d[2] = vin&0x7f;
     d[3] = (vin>>7)&0x7f;
     d[4] = 0;
+    d[5] = 0;
     send(VOLTAGE, d);
 }
 
