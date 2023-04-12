@@ -113,3 +113,11 @@ sudo cp -f $EXTNAM.tcz* /mnt/mmcblk0p2/tce/optional
 rm -rf *
 
 cd $INITIALDIR
+
+# install splash
+if [ -e /opt/splash ]; then
+   cd hat/ugfx
+   make install
+fi
+   
+cd $INITIALDIR
