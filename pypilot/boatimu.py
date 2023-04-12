@@ -472,6 +472,10 @@ class BoatIMU(object):
         self.last_imuread = time.monotonic()
         self.frequency.strobe()
   
+        # apply alignment calibration                                       
+        aligned = quaternion.multiply(data['fusionQPose'], self.alignmentQ.value)
+        aligned = quaternion.normalize(aligned) # floating point precision errors
+
         # count down to alignment
         if self.alignmentCounter.value > 0:
             if self.alignmentCounter.value != self.last_alignmentCounter:
@@ -499,10 +503,6 @@ class BoatIMU(object):
             self.heading_off.last = self.heading_off.value
             self.alignmentQ.last = self.alignmentQ.value
 
-
-        # apply alignment calibration                                       
-        aligned = quaternion.multiply(data['fusionQPose'], self.alignmentQ.value)
-        aligned = quaternion.normalize(aligned) # floating point precision errors
     
         data['roll'], data['pitch'], data['heading'] = map(math.degrees, quaternion.toeuler(aligned))
         if data['heading'] < 0:
