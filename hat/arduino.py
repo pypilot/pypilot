@@ -504,10 +504,8 @@ def main():
     while True:
         t0 = time.monotonic()
         events = a.poll()
-    
         if events:
-            if len(events) > 1:
-                print(events, t0, t0-lt)
+            print(events, t0, t0-lt)
             lt = t0
         baud_rate = a.get_baud_rate()
         if baud_rate:

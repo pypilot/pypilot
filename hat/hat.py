@@ -55,10 +55,10 @@ class ActionEngage(ActionPypilot):
         super(ActionEngage, self).__init__(hat, 'engage', 'ap.enabled', True)
 
     def trigger(self, count):
-        super(ActionEngage, self).trigger(count)
         # set heading to current heading
         if self.hat.client and not count and 'ap.heading' in self.hat.last_msg:
             self.hat.client.set('ap.heading_command', self.hat.last_msg['ap.heading'])
+        super(ActionEngage, self).trigger(count)
 
 class ActionMode(ActionEngage):
     def  __init__(self, hat, mode):
