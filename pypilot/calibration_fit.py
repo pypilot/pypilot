@@ -33,7 +33,9 @@ def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
 
     t0 = time.monotonic()
     leastsq = scipy.optimize.leastsq(f, beta0, zpoints)
-    print('scipy.optimize.leastsq took ', time.monotonic() - t0)
+    #print('scipy.optimize.leastsq took ', time.monotonic() - t0, leastsq)
+    if not leastsq[1] in [1, 2, 3, 4]:
+        return False
     return list(leastsq[0])
 
 def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
@@ -277,7 +279,7 @@ def FitPointsCompass(debug, points, current, norm):
     new_sphere2d_fit = [new_sphere2d_fit, ComputeDeviation(points, new_sphere2d_fit), 2]
 
     if plane_max_dev < 1.2:
-        plane_fit1 = vector.norm(plane_fit[1])
+        plane_fit1 = vector.normalize(plane_fit[1])
         ang = safedegasin(vector.norm(vector.cross(plane_fit1, norm)))
         
         debug('plane fit found, 2D fit only', ang, plane_fit, plane_dev, plane_max_dev)
@@ -793,6 +795,8 @@ def CalibrationProcess(cal_pipe, client):
         else:
             last_compass_coverage = 0 # reset
       except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         print('Warning: Calibration process unhandled exception', e)
           
 
