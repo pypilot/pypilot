@@ -76,10 +76,11 @@ class Tack(object):
         self.state = self.register(TackState, 'state')
         self.timeout = self.register(Value, 'timeout', 0)
 
-        self.delay = self.register(RangeSetting, 'delay', 0, 0, 60, 'sec')
-        self.angle = self.register(RangeSetting, 'angle', 100, 10, 180, 'deg')
-        self.rate = self.register(RangeSetting, 'rate', 15, 1, 100, 'deg/s')
-        self.threshold = self.register(RangeSetting, 'threshold', 50, 10, 100, '%')
+        self.delay = self.register(RangeSetting, 'delay', 0, 0, 60, 'sec', profiled=True)
+        self.angle = self.register(RangeSetting, 'angle', 100, 10, 180, 'deg', profiled=True)
+        self.rate = self.register(RangeSetting, 'rate', 15, 1, 100, 'deg/s', profiled=True)
+        self.threshold = self.register(RangeSetting, 'threshold', 50, 10, 100, '%', profiled=True)
+
         self.count = self.register(ResettableValue, 'count', 0, persistent=True)
 
         self.direction = self.register(EnumProperty, 'direction', 'none', ['none', 'port', 'starboard'])
@@ -112,6 +113,7 @@ class Tack(object):
         # disengage cancels any tacking
         if not ap.enabled.value:
             self.state.update('none')
+            self.direction.update('none')
 
         if self.state.value == 'none':  # not tacking
             return # done
@@ -160,6 +162,7 @@ class Tack(object):
                 self.state.update('none')
                 self.direction.set('none')
                 ap.heading_command.set(tack_heading)
+                self.count.set(self.count.value + 1)
                 return
 
             # for now very simple filter based on turn rate for tacking

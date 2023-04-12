@@ -57,8 +57,11 @@ class HeadingProperty(RangeProperty):
 
     # +-180 for wind modes 0-360 for compass and gps modes
     def set(self, value):
-        value = resolv(value, 0 if 'wind' in self.mode.value else 180)
-        super(HeadingProperty, self).set(value)
+        try:
+            value = resolv(float(value), 0 if 'wind' in self.mode.value else 180)
+            super(HeadingProperty, self).set(value)
+        except Exception as e:
+            pass # ignore for now
 
 class TimeStamp(SensorValue):
     def __init__(self):
