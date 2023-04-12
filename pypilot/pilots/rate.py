@@ -10,6 +10,7 @@
 from pilot import AutopilotPilot
 from resolv import resolv
 from pypilot.values import *
+disabled = True
 
 class RatePilot(AutopilotPilot):
   def __init__(self, ap, name='rate'):

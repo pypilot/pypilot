@@ -11,6 +11,8 @@ from pypilot.autopilot import HeadingOffset, resolv
 from pilot import AutopilotPilot, AutopilotGain
 from pypilot.values import *
 
+disabled = True
+
 # the wind pilot does not require a compass but does require a wind sensor.
 # it does not rely on the compass or calibration (unless in compass mode)
 # and is not affected by magnetic changes.   Even in compass mode this pilot
