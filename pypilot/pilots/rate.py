@@ -40,7 +40,7 @@ class RatePilot(AutopilotPilot):
 
     rateerror = headingrate - rate
     gain_values = {'D': rateerror,
-                   'DD': headingraterate
+                   'DD': headingraterate,
                    'FF': ap.heading_command_rate.value}
 
     command = self.Compute(gain_values)

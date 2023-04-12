@@ -74,6 +74,7 @@ $(document).ready(function() {
     var profile="default", profiles = [profile];
     var touch = is_touch_enabled();
     var register = true;
+    var rudder_source = 'none';
 
     socket.on('pypilot_values', function(msg) {
         watches = {};
@@ -130,6 +131,7 @@ $(document).ready(function() {
         pypilot_watch('ap.tack.direction');
 
         pypilot_watch('ap.heading_command', .5);
+        pypilot_watch('rudder.source');
 
         if(register)
             $('#mode').change(function(event) {
@@ -372,6 +374,14 @@ $(document).ready(function() {
             $('#heading').text(heading_str(heading));
         }
 
+        if('rudder.source' in data) {
+            if(data['rudder.source'] == 'none')
+                $('#center_button').hide();
+            else
+                $('#center_button').show();
+        }
+
+        
         if('ap.tack.timeout' in data)
             $('#tack_timeout').text(Math.round(10*data['ap.tack.timeout'])/10);
 
@@ -397,6 +407,8 @@ $(document).ready(function() {
                 $('#port1').text('1');
                 $('#star1').text('1');
                 $('#star10').text('10');
+
+                $('#center_span').hide();
                 $('#tack_button').show();
             } else {
                 $('#tb_engaged button').css('left', "0px");
@@ -407,6 +419,7 @@ $(document).ready(function() {
                 $('#star1').text('>');
                 $('#star10').text('>>');
 
+                $('#center_span').show();
                 $('#tack_button').hide();
             }
         }
@@ -586,23 +599,22 @@ $(document).ready(function() {
             pypilot_set('ap.enabled', true);
         }
     });
+
+    $('#center_button').click(function(event) {
+        pypilot_set('servo.position', 0);
+    });
     
-    move = function(x) {
+    function move(x) {
         var engaged = $('#tb_engaged').hasClass('toggle-button-selected');
-        if(engaged) {
-            time = new Date().getTime();
-            if(time - heading_set_time > 1000)
-                heading_local_command = heading_command;
-            heading_set_time = time;
-            heading_local_command += x;
-            pypilot_set('ap.heading_command', heading_local_command);
-        } else {
-            if(x != 0) {
-     //           sign = x > 0 ? 1 : -1;
-                //servo_command = -sign;
-       //         servo_command_timeout = Math.abs(x) > 5 ? 6 : 2;
-            }
-        }
+        if(!engaged)
+            return;
+        
+        time = new Date().getTime();
+        if(time - heading_set_time > 1000)
+            heading_local_command = heading_command;
+        heading_set_time = time;
+        heading_local_command += x;
+        pypilot_set('ap.heading_command', heading_local_command);
     }
 
     // update manual servo command
@@ -618,6 +630,11 @@ $(document).ready(function() {
     }
 
     function mousedown(amount) {
+        var engaged = $('#tb_engaged').hasClass('toggle-button-selected');
+        if(engaged) {
+            servo_command_timeout = 0;            
+            return;
+        }
         servo_command = amount;
         servo_command_timeout = 120;
         pypilot_set('servo.command', servo_command);
@@ -625,6 +642,12 @@ $(document).ready(function() {
     }
 
     function mouseup(event) {
+        var engaged = $('#tb_engaged').hasClass('toggle-button-selected');
+        if(engaged) {
+            servo_command_timeout = 0;            
+            return;
+        }
+        
         servo_command_timeout -= 116;
         if(servo_command_timeout <= 0) {
             servo_command_timeout = 0;
@@ -651,6 +674,11 @@ $(document).ready(function() {
             mousedown(buttons['#'+event.target.id]);
         });
     }
+
+    $('#port10').click(function(event) { move(-10); });
+    $('#port1').click(function(event) { move(-1); });
+    $('#star1').click(function(event) { move(1); });
+    $('#star10').click(function(event) { move(10); });
 
     $('#tack_button').click(function(event) {
         if($('#tack_button').attr('state') == 'tack')
@@ -752,7 +780,7 @@ $(document).ready(function() {
     // should be called if tab changes
     setup_watches = function() {
         var tab = currentTab;
-        pypilot_watches(['ap.heading'], tab == 'Control', 0.5);
+        pypilot_watches(['ap.heading', 'rudder.source'], tab == 'Control', 0.5);
         pypilot_watches(gains, tab == 'Gain', 1);
         pypilot_watches(['imu.heading', 'imu.pitch', 'imu.roll', 'rudder.angle'], tab == 'Calibration', .5);
         pypilot_watches(conf_names, tab == 'Configuration', 1);

@@ -25,10 +25,12 @@ for module in os.listdir(os.path.dirname(__file__)):
         if mod.disabled:
             continue
     except Exception as e:
-        #print(e)
+        #print('e1', e)
         pass
 
     try:
+        #print('append')
         default.append(mod.pilot)
-    except:
+    except Exception as e:
+        #print('e2', e)
         pass
