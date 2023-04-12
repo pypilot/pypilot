@@ -209,6 +209,7 @@ class pypilotClient(object):
         except Exception as e:
             print(_('failed to') + ' import zeroconf, ' + _('autodetecting pypilot server not possible'))
             print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
+            return
 
         class Listener:
             def __init__(self, client):
