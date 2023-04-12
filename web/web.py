@@ -142,12 +142,15 @@ def wifi():
 
     try:
         leases = '<table id="leases">'
-        leases += '<tr><th>IP Address</th><th>Mac Address</th><th>Name</th><th>Static IP?</th><th>Lease ends on</th></tr>'
+        leases += '<tr><th>IP Address</th><th>Mac Address</th><th>Name</th><th>Lease ends on</th></tr>'
         DNSMASQ_LEASES_FILE = "/var/lib/misc/dnsmasq.leases"
         f = open(DNSMASQ_LEASES_FILE)
         for line in f:
             elements = line.split()
             if len(elements) == 5:
+                if elements[3] == "*":
+                    continue
+                
                 from datetime import datetime
                 ts = int(elements[0])
                 if ts:
@@ -159,10 +162,9 @@ def wifi():
                 leases += '<td>' + elements[2] + '</td>'
                 leases += '<td>' + elements[1] + '</td>'
                 leases += '<td>' + elements[3] + '</td>'
-                leases += '<td>' + ( 'Yes' if elements[4] != '*' else 'No' ) + '</td>'
                 leases += '<td>' + ts + '</td>'
                 leases += '</tr>'
-            leases += '</table>'
+        leases += '</table>'
     except Exception as e:
         print('lease fail', e)
         leases = ''
