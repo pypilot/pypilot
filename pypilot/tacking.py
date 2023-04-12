@@ -10,7 +10,6 @@
 from values import *
 from resolv import *
 
-
 class TackSensorLog(object):
     def __init__(self, threshold):
         self.log = []
@@ -102,7 +101,7 @@ class Tack(object):
                 r = self.heel_log.update(ap.boatimu.heel)
 
             if r:
-                self.direction.auto_update(r)
+                self.direction.update(r)
             return # done
 
         # tacking initiated, enter waiting state
