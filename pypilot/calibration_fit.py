@@ -274,7 +274,8 @@ def FitPointsCompass(debug, points, current, norm):
     new_sphere2d_fit = [new_sphere2d_fit, ComputeDeviation(points, new_sphere2d_fit), 2]
 
     if plane_max_dev < 1.2:
-        ang = math.degrees(math.asin(vector.norm(vector.cross(plane_fit[1], norm))))
+        plane_fit1 = vector.norm(plane_fit[1])
+        ang = math.degrees(math.asin(vector.norm(vector.cross(plane_fit1, norm))))
         
         debug('plane fit found, 2D fit only', ang, plane_fit, plane_dev, plane_max_dev)
         if ang > 30:
@@ -651,7 +652,6 @@ def CalibrationProcess(cal_pipe, client):
 
     last_compass_coverage = 0
 
-
     warnings = {}
     def warnings_update(sensor, warning, value):
         if value:
@@ -678,12 +678,12 @@ def CalibrationProcess(cal_pipe, client):
             for name in msg:
                 value = msg[name]
                 if name == 'imu.alignmentQ' and value:
+                    value = quaternion.normalize(value)
                     norm = quaternion.rotvecquat([0, 0, 1], value)
                     compass_points.Reset()
                 elif name == 'imu.accel':
                     if value:
                         accel_points.AddPoint(value)
-
                     addedpoint = True
                 elif name == 'imu.compass' and down:
                     if value and down:
@@ -691,6 +691,7 @@ def CalibrationProcess(cal_pipe, client):
                     addedpoint = True
                 elif name == 'imu.fusionQPose':
                     if value:
+                        value = quaternion.normalize(value)
                         down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(value))
 
             # receive calibration data
@@ -701,7 +702,8 @@ def CalibrationProcess(cal_pipe, client):
                         accel_points.AddPoint(p['accel'])
                         addedpoint = True
                     if 'compass' in p:
-                        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(p['fusionQPose']))
+                        fusionQPose = quaternion.normalize(p['fusionQPose'])
+                        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(fusionQPose))
                         compass_points.AddPoint(p['compass'], down)
                         addedpoint = True
                     p = cal_pipe.recv()

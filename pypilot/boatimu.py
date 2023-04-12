@@ -416,7 +416,7 @@ class BoatIMU(object):
 
         # quaternion needs to report many more decimal places than other sensors
         #sensornames += ['fusionQPose']
-        self.SensorValues['fusionQPose'] = self.register(SensorValue, 'fusionQPose', fmt='%.8f')
+        self.SensorValues['fusionQPose'] = self.register(SensorValue, 'fusionQPose', fmt='%.10f')
     
         self.imu = IMU(client.server)
 

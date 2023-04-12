@@ -248,7 +248,7 @@ class Servo(object):
         self.speed_gain = self.register(RangeProperty, 'speed_gain', 0, 0, 1)
         self.duty = self.register(SensorValue, 'duty')
 
-        self.faults = self.register(ResettableValue, 'faults', 0, persistent=True)
+        self.faults = self.register(ResettableValue, 'faults', 0, fmt='%.0f', persistent=True)
 
         # power usage
         self.voltage = self.register(SensorValue, 'voltage')
@@ -278,7 +278,7 @@ class Servo(object):
         self.period = self.register(RangeSetting, 'period', .4, .1, 3, 'sec', profiled=True)
         self.compensate_current = self.register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.register(BooleanProperty, 'compensate_voltage', False, persistent=True)
-        self.amphours = self.register(ResettableValue, 'amp_hours', 0, persistent=True)
+        self.amphours = self.register(ResettableValue, 'amp_hours', 0, fmt='%.2f', persistent=True)
 
         self.watts = self.register(SensorValue, 'watts')
 
