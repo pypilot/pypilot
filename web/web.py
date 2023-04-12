@@ -20,18 +20,16 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import tinypilot
 
+config = {'port': 8000, 'language': 'default'}
 configfilename = os.getenv('HOME')+'/.pypilot/web.conf'
-
-pypilot_web_port=8000
 
 try:
     file = open(configfilename, 'r')
-    config = pyjson.loads(file.readline())
+    config.update(pyjson.loads(file.readline()))
     file.close()
-    return config
+
 except:
     print('failed to read config', configfilename)
-    return {}
 
 def write_config():
     try:
@@ -44,8 +42,7 @@ def write_config():
 if len(sys.argv) > 1:
     pypilot_web_port=int(sys.argv[1])
 else:
-    if 'port' in config:
-        pypilot_web_port = config['port']
+    pypilot_web_port = config['port']
 
 print('using port', pypilot_web_port)
         
@@ -193,7 +190,7 @@ with open(os.path.dirname(os.path.abspath(__file__)) + '/pypilot_web.pot') as f:
 
 @app.route('/')
 def index():
-    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot.tinypilot, translations=translations, language=config['language'], languages=LANGUAGES)
+    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot.tinypilot, translations=translations, language=config['language'], languages=Markup(LANGUAGES))
 
 class pypilotWeb(Namespace):
     def __init__(self, name):
@@ -242,7 +239,7 @@ class pypilotWeb(Namespace):
         client.disconnect()
         del self.clients[request.sid]
 
-    def on_language(self, l):
+    def on_language(self, language):
         config['language'] = language
         write_config()
 

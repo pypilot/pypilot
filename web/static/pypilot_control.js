@@ -96,7 +96,6 @@ $(document).ready(function() {
                         cur = Number($('#' + event.data.iname + 'label').text())
                         pypilot_set(event.data.name, cur + event.data.step);
                     }};
-
                 }
                 button('1', '<<', -10);
                 button('2', '<', -1);

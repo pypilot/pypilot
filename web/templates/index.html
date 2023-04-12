@@ -21,6 +21,8 @@
               return translations[msg];
           return msg;
       }
+      var language = '{{language}}';
+      var languages = {{languages}};
     </script>
 </head>
 <body>
@@ -133,13 +135,12 @@
           <span class="value_name">{{_('Display')}}:</span>
           <label for="theme_clear" class="theme_name">{{_('Clear')}}&nbsp;</label><input type="radio" name="theme" class="theme_option" id="theme_clear" value="clear">
           <label for="theme_dark"  class="theme_name">{{_('Dark')}}&nbsp;</label><input type="radio" name="theme" class="theme_option" id="theme_dark"  value="dark" >
-      </div>
+      </div>      
+      <div id="configuration_container" ></div>
       <div id='language_selector'>
           <span ="value_name">{{_('Language')}}:</span>
           <select id="language">'<option value="default">default</option></select>
       </div>
-      
-      <div id="configuration_container" ></div>
       <p>
       {{_('NMEA Client host:port (leave blank for none) eg: 192.168.0.1:10110')}}
       <p><input type="text" id="nmea_client"></input>
