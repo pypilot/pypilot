@@ -51,6 +51,17 @@ class TackSensorLog(object):
         if port:
             return 'port'
 
+class TackState(EnumProperty):
+    def __init__(self, name):
+        super(TackState, self).__init__(name, 'none', ['none', 'begin', 'waiting', 'tacking'])
+        def set_internal(self, value):
+            super(TackState, self).set(value)
+
+        def set(self, value):
+            # only allow tack state to be set to begin or none
+            if value in ['none', 'begin']:
+                set_internal(value)
+    
 
 class Tack(object):
     def __init__(self, ap):
@@ -62,7 +73,7 @@ class Tack(object):
         # waiting - waiting delay seconds before beginning to tack
         # tacking - rudder is moving at tack rate until threshold
 
-        self.state = self.register(EnumProperty, 'state', 'none', ['none', 'begin', 'waiting', 'tacking'])
+        self.state = self.register(TackState, 'state')
         self.timeout = self.register(Value, 'timeout', 0)
 
         self.delay = self.register(RangeSetting, 'delay', 0, 0, 60, 'sec')
@@ -73,38 +84,40 @@ class Tack(object):
 
         self.direction = self.register(EnumProperty, 'direction', 'none', ['none', 'port', 'starboard'])
         self.use_heel = self.register(BooleanProperty, 'use_heel', False, persistent=True)
+        self.use_wind_direction = self.register(BooleanProperty, 'use_wind_direction', True, persistent=True)
         self.current_direction = 'port'  # so user can't change while tacking
         self.time = time.monotonic()
 
-        self.wind_log = TackSensorLog(12)
-        self.heel_log = TackSensorLog(5)
+        self.wind_log = TackSensorLog(20)
+        self.heel_log = TackSensorLog(7)
         self.tack_angle = self.angle.value
 
     def register(self, _type, name, *args, **kwargs):
         return self.ap.client.register(_type(*(['ap.tack.' + name] + list(args)), **kwargs))
 
-    def process(self):
-        t = time.monotonic()
-        ap = self.ap
+    def poll(self):
+        # if we have wind data, use it to determine the tacking direction
+        r = False
+        if self.use_wind_direction and self.ap.sensors.wind.source.value != 'none':
+            d = resolv(self.ap.sensors.wind.direction.value)
+            r = self.wind_log.update(d)
+        elif self.use_heel and time.monotonic() - self.time > 30:
+            r = self.heel_log.update(self.ap.boatimu.heel)
 
+        if r:
+            self.direction.update(r)                                   
+
+    def process(self):
+        ap = self.ap
         # disengage cancels any tacking
         if not ap.enabled.value:
             self.state.update('none')
 
         if self.state.value == 'none':  # not tacking
-            # if we have wind data, use it to determine the tacking direction
-            r = False
-            if ap.sensors.wind.source.value != 'none':
-                d = resolv(ap.sensors.wind.direction.value)
-                r = self.wind_log.update(d)
-            elif self.use_heel and t - self.time > 30:
-                r = self.heel_log.update(ap.boatimu.heel)
-
-            if r:
-                self.direction.update(r)
             return # done
 
         # tacking initiated, enter waiting state
+        t = time.monotonic()
         if self.state.value == 'begin':
             self.time = t
             if self.direction.value == 'none':
@@ -133,7 +146,7 @@ class Tack(object):
             headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
             headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
 
-            if 'wind' in ap.mode.value:
+            if 'wind' in ap.mode.value:  #  Prevents jibing with wind instr?
                 d = .5 - 2*heading / command
                 tack_heading = -command
                 direction = 1 if command < 0 else -1

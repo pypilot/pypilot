@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2021 Sean D'Epagnier
+#   Copyright (C) 2023 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -9,7 +9,7 @@
 
 # autopilot base handles reading from the imu (boatimu)
 
-import sys, os, math, time
+import sys, os, math, time, socket
 print('autopilot start', time.monotonic())
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
@@ -24,8 +24,6 @@ import tacking, servo
 from version import strversion
 from sensors import Sensors
 import pilots
-
-udp_control_port = 43822
 
 def minmax(value, r):
     return min(max(value, -r), r)
@@ -91,7 +89,7 @@ class Autopilot(object):
         self.watchdog_device = False
 
         self.server = pypilotServer()
-        self.client = pypilotClient(self.server)
+        self.client = pypilotClient(self.server, use_udp=True)
         self.boatimu = BoatIMU(self.client)
         self.sensors = Sensors(self.client, self.boatimu)
         self.servo = servo.Servo(self.client, self.sensors)
@@ -107,7 +105,6 @@ class Autopilot(object):
         self.gps_and_nav_modes = self.register(BooleanProperty, 'gps_and_nav_modes', True, persistent=True)
 
         self.lastmode = False    
-        self.dt = 0
         
         self.heading_command = self.register(HeadingProperty, 'heading_command', self.mode)
         self.enabled = self.register(BooleanProperty, 'enabled', False)
@@ -150,17 +147,6 @@ class Autopilot(object):
         self.runtime = self.register(TimeValue, 'runtime') #, persistent=True)
         self.timings = self.register(SensorValue, 'timings', False)
         self.last_heading_mode = False
-
-        try:
-            self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.udp_socket.bind(('127.0.0.1', udp_control_port))
-            self.udp_socket.settimeout(0)
-            self.control = select.poll()
-            self.control.register(self.udp_socket, select.POLLIN)
-            
-        except Exception as e:
-            print('failed to initialize udp socket, this may affect manual control performance')
-            self.udp_socket = False
             
         device = '/dev/watchdog0'
         try:
@@ -347,24 +333,11 @@ class Autopilot(object):
 
         self.server.poll() # needed if not multiprocessed
 
-        if self.udp_socket:
-            events = self.control.poll()
-            while events:
-                event = events.pop()
-                fd, flag = event
-                if flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
-                    print(_('lost udp_socket'))
-                    self.udp_socket = False
-                    break
-                if flag & select.POLLIN:
-                    try:
-                        line = self.udp_socket.recvfrom(128)
-                        if line:
-                            self.servo.command.set(int(line))
-                    except Exception as e:
-                        print("failed pollin udp??\n", line)
-                        
-        msgs = self.client.receive(self.dt)
+        # do waiting in client if not enabled to reduce lag
+        period = 1/self.boatimu.rate.value
+        rdt = 0 if self.enabled.value else period# dt*.8
+
+        msgs = self.client.receive(rdt)
         for msg in msgs: # we aren't usually subscribed to anything
             print('autopilot main process received:', msg, msgs[msg])
 
@@ -375,8 +348,7 @@ class Autopilot(object):
             self.servo.poll()
 
         t1 = time.monotonic()
-        period = 1/self.boatimu.rate.value
-        if t1 - t0 > period/2 + self.dt:
+        if t1 - t0 > period/2 + rdt:
             print(_('server/client is running too _slowly_'), t1-t0)
 
         self.sensors.poll()
@@ -388,6 +360,7 @@ class Autopilot(object):
         sp = 0
         for tries in range(14): # try 14 times to read from imu
             timu = time.monotonic()
+            t2 = time.monotonic()
             data = self.boatimu.read()
             if data:
                 break
@@ -494,6 +467,7 @@ class Autopilot(object):
                                        # from inertial sensors
         self.sensors.water.compute(self) # calculate leeway and currents
         self.boatimu.poll() # after critical loop is done
+        self.tack.poll()
 
         if heading_command_diff:
             # decay integral with heading command changes
@@ -512,18 +486,18 @@ class Autopilot(object):
         #    self.watchdog_device.write('c')
 
         t6 = time.monotonic()
-        if t6-t0 > period and t0-self.starttime > 5:
+        if t6-t0 > period and t0-self.starttime > 5 and self.enabled.value:
             print(_('autopilot iteration running too slow'), t6-t0)
 
-        while True: # sleep remainder of period
+        while self.enabled.value:  # sleep remainder of period
             dt = period - (time.monotonic() - t0) + sp
             if dt >= period or dt <= 0:
                 break
 
             time.sleep(dt)
 
-            # do waiting in client if not enabled to reduce lag
-            self.dt = 0 if self.enabled.value else dt*.8
+
+        #print("times", t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
 
 def main():
     if os.geteuid() == 0:

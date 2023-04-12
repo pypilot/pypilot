@@ -514,7 +514,9 @@ class Servo(object):
                 self.send_driver_params()
                 self.driver.disengage()
             else:
-                #print('servo write', command, time.monotonic())
+                #if command:
+                 #   print('servo write', command,time.time()-1681305360)
+
                 self.driver.command(command)
 
                 mul = 1

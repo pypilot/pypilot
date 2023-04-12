@@ -119,6 +119,9 @@ class ResettableValue(Property):
         self.initial = initial
         super(ResettableValue, self).__init__(name, initial, **kwargs)
 
+    def get_msg(self):
+        return round_value(self.value, '%.2f')
+        
     def type(self):
         return {'type': 'ResettableValue'}
 

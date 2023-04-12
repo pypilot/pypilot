@@ -165,7 +165,8 @@ class PipeNonBlockingPipeEnd(object):
                 if not self.sendfailok:
                     print('failed poll send', self.name)
         t0 = time.monotonic()
-        try:
+        #try:
+        if 1:
             data = pyjson.dumps(value) + '\n'
             data = data.encode()
             t1 = time.monotonic()
@@ -174,6 +175,8 @@ class PipeNonBlockingPipeEnd(object):
             if t2-t0 > maxdt:
                 print('too long send nonblocking pipe', t1-t0, t2-t1, self.name, len(data))
             return True
+        try:
+            pass
         except Exception as e:
             print("failed send ex", t0, time.monotonic(), self.name, e)
             if not self.sendfailok:

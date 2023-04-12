@@ -79,21 +79,25 @@ class ActionHeading(Action):
         self.offset = offset
 
     def trigger(self, count):
-        if not self.hat.client or count:
+        if not self.hat.client:
             return
 
         if self.hat.last_msg['ap.enabled']:
-            if not count:
+            if not count: # only do something if a key is released
                 if 'wind' in self.hat.last_msg['ap.mode']:
                     sign = -sign
                 self.hat.client.set('ap.heading_command',
                                     self.hat.last_msg['ap.heading_command'] + self.offset)
         else: # manual mode
-            if not self.hat.servo_timeout:
-                self.hat.servo_timeout = time.monotonic() + abs(self.offset)**.5/4
+            if count:
+                self.hat.servo_timeout = time.monotonic() + .5
                 self.hat.servo_command = -1 if self.offset > 0 else 1
-                self.hat.client.set('servo.command', self.hat.servo_command)
-                self.hat.client.poll() # reduce lag
+            else:
+                self.hat.servo_timeout = 0
+                self.hat.servo_command = 0
+                
+            self.hat.client.set('servo.command', self.hat.servo_command)
+            self.hat.client.poll() # reduce lag
 
 class ActionTack(ActionPypilot):
     def  __init__(self, hat, name, direction):
@@ -389,6 +393,7 @@ class Hat(object):
         self.lirc.registered = False
         self.keytime = False
         self.keycounts = {}
+        self.lastkeycount = '', 0
 
         self.inputs = [self.gpio, self.arduino, self.lirc]
 
@@ -571,7 +576,11 @@ class Hat(object):
                 count = max(count, c)
             else:
                 key, count = k, c
-        return key, count
+
+        if (key, count) == self.lastkeycount:
+            return '', 0
+        self.lastkeycount = key, count
+        return self.lastkeycount
                     
     def poll(self):            
         t0 = time.monotonic()
@@ -605,6 +614,10 @@ class Hat(object):
         for name, value in msgs.items():
             self.last_msg[name] = value
 
+        ena = 'ap.enabled' #need to know if we are enabled for udp control
+        if self.arduino and ena in msgs:
+            self.arduino.send((ena, msgs[ena]))
+
         if 'profiles' in msgs:
             profiles = msgs['profiles']
             self.web.send({'profiles': profiles + ['prev', 'next']})
@@ -626,7 +639,7 @@ class Hat(object):
         if self.keytime:
             key, t = self.keytime
             dt = t3 - t
-            if dt > .6:
+            if dt > .4:
                 print('keyup event lost, releasing key from timeout', key, t3, dt)
                 self.apply_code(key, 0)
                 self.keytime = False
@@ -641,8 +654,8 @@ class Hat(object):
                 if self.client:
                     self.client.set('servo.command', 0) # stop
                 self.servo_timeout = 0
-            else:
-                self.client.set('servo.command', self.servo_command) # continue
+            #else:
+             #   self.client.set('servo.command', self.servo_command) # continue
             self.client.poll() # reduce lag
 
         # set web status

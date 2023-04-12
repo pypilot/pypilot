@@ -13,7 +13,7 @@
 # spi port.
 
 import os, sys, time, socket, errno, select
-from pypilot.autopilot import udp_control_port
+from pypilot.client import udp_control_port
 
 RF=0x01
 IR=0x02
@@ -97,6 +97,7 @@ class arduino(object):
         self.nmea_connect_time = time.monotonic()
         self.pollt0 = [0, time.monotonic()]
         self.config = config
+        self.enabled = False
 
         if 'arduino.debug' in config and config['arduino.debug']:
             self.debug = print
@@ -123,6 +124,7 @@ class arduino(object):
         self.serial_in_count = 0
         self.serial_out_count = 0
         self.serial_time = self.sent_start + 2
+        self.udp_socket = None
 
         self.packetout_data = []
         self.packetin_data = []
@@ -151,8 +153,8 @@ class arduino(object):
                 self.spi.max_speed_hz=100000
             else:
                 from pypilot.hat.spireader import spireader
-                self.spi = spireader.spireader(10, 10)
-                if self.spi.open(port, slave, 100000) == -1:
+                self.spi = spireader.spireader(10, 5)
+                if self.spi.open(port, slave, 500000) == -1:
                     self.close()
 
         except Exception as e:
@@ -173,9 +175,6 @@ class arduino(object):
         print('failed to read spi:', e)
         self.spi.close()
         self.spi = False
-
-    def xfer(self, x):
-        return self.spi.xfer([x])[0]
 
     def send(self, id, data=[]):
         p = id
@@ -279,7 +278,10 @@ class arduino(object):
                 #print('send %c %x' %(i,i))
                 self.packetout_data = self.packetout_data[1:]
 
+            ta = time.monotonic()
             o = self.spi.xfer(i, not i and len(self.packetin_data) < PACKET_LEN+3)
+            tb = time.monotonic()
+            
             if not i and not o:
                 break
 
@@ -316,6 +318,7 @@ class arduino(object):
 
             if cmd == RF:
                 key = 'rf' + key
+                #print("key", key, count, time.time()-1681305360)
             elif cmd == IR:
                 if not self.config['arduino.ir']:
                     continue
@@ -342,7 +345,7 @@ class arduino(object):
                 print('unknown message', cmd, d)
                 continue
 
-            if key in self.manual_control_keys:
+            if not self.enabled and key in self.manual_control_keys:
                 self.send_manual(self.manual_control_keys[key], count)
             else:
                 events.append([key, count])
@@ -364,8 +367,8 @@ class arduino(object):
         return events
 
     def set_actions(self, actions):
-        manual_keys = {'+1':  .5,
-                       '-1': -.5}
+        manual_keys = {'+1': -1,
+                       '-1':  1}
         self.manual_control_keys = {}
         for action, keys in actions.items():
             if action in manual_keys:
@@ -373,15 +376,19 @@ class arduino(object):
                     self.manual_control_keys[key] = manual_keys[action]
 
     def send_manual(self, command, count):
-        command = str(command)+'\n' if count else 0
+        command = str(command)+'\n' if count else "0\n"
         try:
             if not self.udp_socket:
                 self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             count = self.udp_socket.sendto(command.encode(), ('127.0.0.1', udp_control_port))
         except Exception as e:
+            print('udp socket failed to send', e)
+            if self.udp_socket:
+                self.udp_socket.close()
+                self.udp_socket = None
             count = 0
         if count != len(command):
-            print('udp socket failed to send', e)            
+            print('udp socket failed count', count, len(command))
 
     def open_nmea(self):
         c = self.config
@@ -441,13 +448,12 @@ def arduino_process(pipe, config):
                 events.append(['baudrate', 'ERROR: no connection to server for nmea'])
 
         if events and t0 - start > 2:
-            #print('events', events, time.monotonic())
             pipe.send(events)
-            period = .05
-            periodtime = t0
-        elif periodtime - t0 > 5:
-            period = .2
-        period = .01
+            if events[0][0] != 'voltage':
+                period = 0
+                periodtime = t0
+        elif t0 - periodtime > 5:
+            period = .1
 
         while True:
             try:
@@ -460,7 +466,9 @@ def arduino_process(pipe, config):
                 return
 
             config[name] = value
-            if name == 'backlight':
+            if name == 'ap.enabled':
+                a.enabled = value
+            elif name == 'backlight':
                 a.set_backlight(value)
             elif name == 'buzzer':
                 a.set_buzzer(*value)
@@ -475,7 +483,7 @@ def arduino_process(pipe, config):
         # max period to handle 38400 with 192 byte buffers is (192*10) / 38400 = 0.05
         # for now use 0.025, eventually dynamic depending on baud?
         dt = period - (t2-t0)
-        #print('arduino times', period, dt, t1-t0, t2-t1)
+        #print('arduino times', period, dt, t1-t0, t2-t1, events)
         if dt > 0:
             time.sleep(dt)
     
@@ -492,14 +500,14 @@ def main():
               'arduino.adc_channels': []}
 
     a = arduino(config)
-    dt = 0
     lt = 0
     while True:
         t0 = time.monotonic()
         events = a.poll()
     
         if events:
-            print(events, dt, t0-lt)
+            if len(events) > 1:
+                print(events, t0, t0-lt)
             lt = t0
         baud_rate = a.get_baud_rate()
         if baud_rate:
