@@ -463,9 +463,11 @@ class Autopilot(object):
         if self.enabled.value:
             self.servo.poll()
 
-        self.sensors.gps.predict(self) # make gps position/velocity prediction
-                                       # from inertial sensors
-        self.sensors.water.compute(self) # calculate leeway and currents
+        if self.starttime > 30:
+            # make gps position/velocity prediction from inertial sensors            
+            self.sensors.gps.predict(self)
+            self.sensors.water.compute(self) # calculate leeway and currents
+
         self.boatimu.poll() # after critical loop is done
         self.tack.poll()
 
