@@ -222,6 +222,7 @@ class Arduino(Process):
             print('arduino process on', os.getpid())
             if os.system("renice -5 %d" % os.getpid()):
                 print('warning, failed to renice hat arduino process')
+            time.sleep(3)
             while True:
                 arduino.arduino_process(pipe, config)
                 time.sleep(15)
@@ -332,7 +333,7 @@ class Hat(object):
             f = open(configfile)
             hat_config = pyjson.loads(f.read())
             f.close()
-            print('loaded device tree hat config')
+            print('loaded device tree hat config', time.monotonic())
             if not 'hat' in self.config or hat_config != self.config['hat']:
                 self.config['hat'] = hat_config
                 print('writing device tree hat to hat.conf')
@@ -363,7 +364,7 @@ class Hat(object):
             self.write_config()
 
         host = self.config['host']
-        print('host', host)
+        print('host', host, time.monotonic())
 
         self.poller = select.poll()        
         self.gpio = gpio.gpio()
