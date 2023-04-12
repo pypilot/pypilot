@@ -406,8 +406,8 @@ $(document).ready(function() {
                 $('#tb_engaged').addClass('toggle-button-selected');
 
                 $('#port10').text('10');
-                $('#port2').text('2');
-                $('#star2').text('2');
+                $('#port1').text('1');
+                $('#star1').text('1');
                 $('#star10').text('10');
                 $('#tack_button').show();
             } else {
@@ -415,8 +415,8 @@ $(document).ready(function() {
                 $('#tb_engaged').removeClass('toggle-button-selected');
 
                 $('#port10').text('<<');
-                $('#port2').text('<');
-                $('#star2').text('>');
+                $('#port1').text('<');
+                $('#star1').text('>');
                 $('#star10').text('>>');
                 $('#tack_button').hide();
             }
@@ -617,8 +617,8 @@ $(document).ready(function() {
     }
     
     $('#port10').click(function(event) { move(-10); });
-    $('#port2').click(function(event) { move(-2); });
-    $('#star2').click(function(event) { move(2); });
+    $('#port1').click(function(event) { move(-1); });
+    $('#star1').click(function(event) { move(1); });
     $('#star10').click(function(event) { move(10); });
     $('#tack_button').click(function(event) {
         if($('#tack_button').attr('state') == 'tack')
