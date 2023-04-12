@@ -652,15 +652,15 @@ def CalibrationProcess(cal_pipe, client):
 
 
     warnings = {}
-    def warning_update(sensor, warning, value):
-        if sensor in warnings and warnings[sensor] == warning:
-            return
-
+    def warnings_update(sensor, warning, value):
         if value:
+            if sensor in warnings and warnings[sensor] == warning:
+                return
             warnings[sensor] = warning
         else:
-            if sensor in warnings:
-                del warnings[sensor]
+            if not sensor in warnings:
+                return
+            del warnings[sensor]
 
         str_warnings = ''
         for sensor, warning in warnings.items():
@@ -713,6 +713,7 @@ def CalibrationProcess(cal_pipe, client):
                 value = vector.sub(sensor, cal[0][:3])
                 g = vector.norm(value)
                 # check that calibration points are near magnitude of 1
+                print("warning update", g)
                 warnings_update('accel', 'warning', abs(g-1) > .1)
 
             if compass_points.last_sample:

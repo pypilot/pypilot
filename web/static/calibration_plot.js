@@ -394,9 +394,11 @@ $(document).ready(function() {
     var calibration_log = {'accel': [], 'compass': []}
     socket.on('pypilot', function(msg) {
         data = JSON.parse(msg);
-        for(s of ['error', 'warning'])
-            if('imu.'+s in data)
-                $('#imu_'+s).text(value)
+        for(s of ['error', 'warning']) {
+            name = 'imu.'+s;
+            if(name in data)
+                $('#imu_'+s).text(data[name])
+        }
 
         for(s of ['accel', 'compass'])
             for(n of ['', 'age', 'log']) {
