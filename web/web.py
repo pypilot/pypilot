@@ -223,6 +223,7 @@ class pypilotWeb(Namespace):
                 msgs = client.receive()
                 if msgs:
                     # convert back to json (format is nicer)
+                    #print('msgs', msgs, sid)
                     socketio.emit('pypilot', pyjson.dumps(msgs), room=sid)
 
     def on_pypilot(self, message):

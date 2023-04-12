@@ -409,7 +409,7 @@ $(document).ready(function() {
                 $('#port2').text('2');
                 $('#star2').text('2');
                 $('#star10').text('10');
-                $('#tack_button').enable(true);
+                $('#tack_button').show();
             } else {
                 $('#tb_engaged button').css('left', "0px");
                 $('#tb_engaged').removeClass('toggle-button-selected');
@@ -418,8 +418,13 @@ $(document).ready(function() {
                 $('#port2').text('<');
                 $('#star2').text('>');
                 $('#star10').text('>>');
-                $('#tack_button').enable(false);
+                $('#tack_button').hide();
             }
+        }
+
+        if('ap.heading_command' in data) {
+            heading_command = data['ap.heading_command'];
+            $('#heading_command').text(heading_str(heading_command));
         }
 
         if('ap.pilot' in data) {
@@ -441,6 +446,7 @@ $(document).ready(function() {
             $('#profile').val(profile);
         }
 
+        
         for (var i = 0; i<gains.length; i++)
             if(gains[i] in data) {
                 value = data[gains[i]];
@@ -459,10 +465,6 @@ $(document).ready(function() {
                     $('#' + iname + 'label').text(value);
                 }
             }
-        if('ap.heading_command' in data) {
-            heading_command = data['ap.heading_command'];
-            $('#heading_command').text(heading_str(heading_command));
-        }
 
         if('servo.engaged' in data) {
             if(data['servo.engaged'])
