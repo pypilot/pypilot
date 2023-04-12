@@ -269,6 +269,9 @@ $(document).ready(function() {
         $('#configuration_container').append(phtml);
         $('#configuration_container').append('</div>');
 
+
+        $('#configuration_container').append('<p>Configure more settings with <a href="/client">pypilot client</a>');
+
         if(tinypilot)
             $('#configuration_container').append('<p><a href="/wifi">' + _('Configure Wifi') + '</a>');
 
@@ -406,6 +409,7 @@ $(document).ready(function() {
                 $('#port2').text('2');
                 $('#star2').text('2');
                 $('#star10').text('10');
+                $('#tack_button').enable(true);
             } else {
                 $('#tb_engaged button').css('left', "0px");
                 $('#tb_engaged').removeClass('toggle-button-selected');
@@ -414,6 +418,7 @@ $(document).ready(function() {
                 $('#port2').text('<');
                 $('#star2').text('>');
                 $('#star10').text('>>');
+                $('#tack_button').enable(false);
             }
         }
 
