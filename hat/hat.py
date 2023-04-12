@@ -535,7 +535,7 @@ class Hat(object):
                 if count <= 0:
                     self.web.send({'action': action.name})
                     if not self.keytime:
-                        break # do not apply keyup if already applied
+                        return # do not apply keyup if already applied
                     self.keytime = False
                 else:
                     self.keytime = key, time.monotonic()

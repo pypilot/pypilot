@@ -74,7 +74,6 @@ $(document).ready(function() {
     var profile="default", profiles = [profile];
     var touch = is_touch_enabled();
 
-    var register = true;
     var rudder_source = 'none';
 
     socket.on('pypilot_values', function(msg) {
@@ -134,10 +133,10 @@ $(document).ready(function() {
         pypilot_watch('ap.heading_command', .5);
         pypilot_watch('rudder.source');
 
-        if(register)
-            $('#mode').change(function(event) {
-                pypilot_set('ap.mode', $('#mode').val());
-            });
+        $('#mode').off('change');
+        $('#mode').change(function(event) {
+            pypilot_set('ap.mode', $('#mode').val());
+        });
 
         // gain
         pypilot_watch('profile');
@@ -145,36 +144,36 @@ $(document).ready(function() {
         pypilot_watch('ap.pilot');
         $('#gain_container').text('');
 
-        if(register) {
-            $('#profile').change(function(event) {
-                pypilot_set('profile', $('#profile').val());
-            });
-            
-            $('#add_profile').click(function(event) {
-                profile = prompt(_("Enter profile name."));
-                if(profile != null) {
-                    if(profiles.includes(profile))
-                        alert("Already have profile " + profile);
-                    else {
-                        profiles.push(profile);
-                        //pypilot_set('profiles', profiles);
-                        pypilot_set('profile', profile);
-                    }
-                }
-            });
+        $('#profile').off('change');
+        $('#profile').change(function(event) {
+            pypilot_set('profile', $('#profile').val());
+        });
 
-            $('#remove_profile').click(function(event) {
-                if(!confirm(_("Remove current profile?")))
-                    return;
-                new_profiles = []
-                for(var p of profiles)
-                    if(p != profile)
-                        new_profiles.push(p);
-                pypilot_set('profiles', new_profiles);
-            });
-        }
+        $('#add_profile').off('click');
+        $('#add_profile').click(function(event) {
+            profile = prompt(_("Enter profile name."));
+            if(profile != null) {
+                if(profiles.includes(profile))
+                    alert("Already have profile " + profile);
+                else {
+                    profiles.push(profile);
+                    //pypilot_set('profiles', profiles);
+                    pypilot_set('profile', profile);
+                }
+            }
+        });
         
-        
+        $('#remove_profile').off('click');
+        $('#remove_profile').click(function(event) {
+            if(!confirm(_("Remove current profile?")))
+                return;
+            new_profiles = []
+            for(var p of profiles)
+                if(p != profile)
+                    new_profiles.push(p);
+            pypilot_set('profiles', new_profiles);
+        });
+              
         gains = [];
         for (var name in list_values)
             if('AutopilotGain' in list_values[name] && name.substr(0, 3) == 'ap.')
@@ -201,9 +200,9 @@ $(document).ready(function() {
                 $('#pilot').append('<option value="' + pilots[pilot] + '">' + pilots[pilot] + '</option>');
         }
 
-        $('#gain_container').append('</select></div>')
+        $('#gain_container').append('</select></div>');
 
-        if(register)
+        $('#pilot').off('change');
         $('#pilot').change(function(event) {
             pypilot_set('ap.pilot', $('#pilot').val());
             show_gains();
@@ -216,7 +215,8 @@ $(document).ready(function() {
         pypilot_watch('imu.compass.calibration.locked');
         pypilot_watch('imu.accel.calibration.locked');
 
-        if(register)
+
+        $('#accel_calibration_locked').off('change');
         $('#accel_calibration_locked').change(function(event) {
             check = $('#accel_calibration_locked').prop('checked');
             pypilot_set('imu.accel.calibration.locked', check);
@@ -224,7 +224,7 @@ $(document).ready(function() {
 
         pypilot_watch('imu.compass.calibration.locked');
 
-        if(register)
+        $('#compass_calibration_locked').off('change');
         $('#compass_calibration_locked').change(function(event) {
             check = $('#compass_calibration_locked').prop('checked');
             pypilot_set('imu.compass.calibration.locked', check);
@@ -291,17 +291,16 @@ $(document).ready(function() {
         pypilot_watch('servo.flags');
 
         // install function handlers for configuration sliders/buttons
-        if(register) {
-            for (var handler in handlers)
-                if(touch)
-                    $('#' + handler).click(handlers[handler], handlers[handler]['func']);
-                else
-                    $('#' + handler).change(handlers[handler], handlers[handler]['func']);
-        }
-        register=false;
+        for (var handler in handlers)
+            if(touch) {
+                $('#' + handler).off('click');
+                $('#' + handler).click(handlers[handler], handlers[handler]['func']);
+            } else {
+                $('#' + handler).off('change');
+                $('#' + handler).change(handlers[handler], handlers[handler]['func']);
+            }
 
         window_resize();        
-            
         setup_watches();
     });
 
@@ -317,11 +316,17 @@ $(document).ready(function() {
     // Interval function that tests message latency by sending a "ping"
     var ping_pong_times = [];
     var start_time;
-    window.setInterval(function() {
-        start_time = (new Date).getTime();
-        socket.emit('ping');
-    }, 5000);
-    
+    socket.on('connect', () => {
+        window.setInterval(function() {
+            start_time = (new Date).getTime();
+            try {
+                socket.emit('ping');
+            } catch (error) {
+                location.reload();
+            }
+        }, 5000);
+    });
+
     // Handler for the "pong" message. When the pong is received, the
     socket.on('pong', function() {
         var latency = (new Date).getTime() - start_time;
@@ -776,7 +781,7 @@ $(document).ready(function() {
     document.getElementById(currentTab).style.display = "block";
 
     function pypilot_watches(names, watch, period) {
-        for(var i=0; i< names.length; i++)
+        for(var i=0; i<names.length; i++)
             pypilot_watch(names[i], watch ? period : false);
     }
     
