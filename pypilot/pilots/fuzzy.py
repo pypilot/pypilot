@@ -112,9 +112,6 @@ class FuzzyPilot(AutopilotPilot):
         super(FuzzyPilot, self).__init__('fuzzy', ap)
 
         # create simple pid filter
-
-        self.gains = {}
-        
         self.learningP = self.register(RangeProperty, 'learningP', .003, 0, .02)
         self.learningD = self.register(RangeProperty, 'learningD', .09, 0, 1)
         
