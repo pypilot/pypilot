@@ -87,7 +87,7 @@ class ZeroConfProcess(multiprocessing.Process):
                     print('signalk:' + _('succeeded') + ' import zeroconf')
                 break
             except Exception as e:
-                if not self.missingzeroconfwarned:
+                if not warned:
                     print('signalk: ' + _('failed to') + ' import zeroconf, ' + _('autodetection not possible'))
                     print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
                     warned = True
