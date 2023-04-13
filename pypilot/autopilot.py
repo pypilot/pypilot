@@ -29,18 +29,19 @@ def minmax(value, r):
     return min(max(value, -r), r)
 
 class ModeProperty(EnumProperty):
-    def __init__(self, name):
-        self.ap = False
+    def __init__(self, name, ap):
+        self.ap = ap
         super(ModeProperty, self).__init__(name, 'compass', ['compass', 'gps', 'nav', 'wind', 'true wind'], persistent=True)
 
     def set(self, value):
         # update the preferred mode when the mode changes from user
-        if self.ap:
-            self.ap.preferred_heading_command = self.ap.heading_command.value
-            self.ap.preferred_mode.update(value)
-        self.set_internal(value)
+        self.ap.preferred_heading_command = None
+        self.ap.preferred_mode.update(value)
+        print('ap mode set', value)
+        super(ModeProperty, self).set(value)
 
     def set_internal(self, value):
+        print('ap mode set_internal', value)
         super(ModeProperty, self).set(value)
 
 class HeadingOffset(object):
@@ -97,15 +98,14 @@ class Autopilot(object):
         self.version = self.register(Value, 'version', 'pypilot' + ' ' + strversion)
         self.timestamp = self.client.register(TimeStamp())
         self.starttime = time.monotonic()
-        self.mode = self.register(ModeProperty, 'mode')
+        self.preferred_mode = self.register(Value, 'preferred_mode', 'compass')
+        self.preferred_heading_command = None
+        self.mode = self.register(ModeProperty, 'mode', self)
         self.modes = self.register(JSONValue, 'modes', [])
         self.modes.sensors = {}
         self.gps_and_nav_modes = self.register(BooleanProperty, 'gps_and_nav_modes', True, persistent=True)
 
-        self.preferred_mode = self.register(Value, 'preferred_mode', 'compass')
-        self.preferred_heading_command = 0
         self.lastmode = False    
-        self.mode.ap = self
         self.dt = 0
         
         self.heading_command = self.register(HeadingProperty, 'heading_command', self.mode)
@@ -223,6 +223,9 @@ class Autopilot(object):
         # if the mode must change
         newmode = pilot.best_mode(self.preferred_mode.value)
         if self.mode.value != newmode:
+            # remember the command on the preferred mode so it can be restored
+            if self.mode.value == self.preferred_mode.value:
+                self.preferred_heading_command = self.heading_command.value
             self.mode.set_internal(newmode)
 
     def compute_offsets(self):
@@ -295,7 +298,8 @@ class Autopilot(object):
 
         # keep same heading if mode changes
         if self.mode.value != self.lastmode:
-            if self.mode.value == self.preferred_mode.value:
+            if self.mode.value == self.preferred_mode.value and \
+               self.preferred_heading_command is not None:
                 self.heading_command.set(self.preferred_heading_command)
             else:
                 error = self.heading_error.value
@@ -303,9 +307,6 @@ class Autopilot(object):
                     error = -error # wind error is reversed
                 self.heading_command.set(heading - error)
             self.lastmode = self.mode.value
-
-        if self.mode.value == self.preferred_mode.value:
-            self.preferred_heading_command = self.heading_command.value
       
         # compute heading error
         heading_command = self.heading_command.value
