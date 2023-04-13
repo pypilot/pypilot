@@ -482,7 +482,7 @@ class Servo(object):
 
         if command <= 0:
             if command < 0:
-                self.state.update('port')
+                self.state.update('starboard')
                 self.lastdir = -1
             else:
                 self.speed.set(0)
@@ -491,7 +491,7 @@ class Servo(object):
                 else:
                     self.state.update('idle')
         else:
-            self.state.update('starboard')
+            self.state.update('port')
             self.lastdir = 1
         
     def do_raw_command(self, command):
