@@ -71,7 +71,7 @@ class pypilotValue(object):
                 self.pwatches = []
 
         elif self.connection: # inform owner of change if we are not owner
-            if 'writable' in self.info and self.info['writable']:
+            if not connection or 'writable' in self.info and self.info['writable']:
                 name, data = msg.rstrip().split('=', 1)
                 try:
                     pyjson.loads(data) # validate data
@@ -80,12 +80,7 @@ class pypilotValue(object):
                     print('failed to load ', msg)
                 self.msg = None
             else: # inform key can not be set arbitrarily
-                if connection:
-                    connection.write('error='+self.name+' is not writable\n')
-                else:
-                    #print("ERROR!  ", self.name, "not writable")
-                    # ignore dynamic changes to non writable persistent values
-                    pass
+                connection.write('error='+self.name+' is not writable\n')
 
     def remove_watches(self, connection):
         for watch in self.awatches:
@@ -433,7 +428,7 @@ class ServerValues(pypilotValue):
     def load_file(self, filename):
         profile = None
         self.persistent_data = {None : {}, 'default' : {}}
-        #print("load file",filename)
+        print("load file",filename)
         f = open(filename)
         linei=0
         while True:
