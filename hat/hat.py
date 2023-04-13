@@ -523,7 +523,8 @@ class Hat(object):
         self.config[name] = value
 
     def apply_code(self, key, count):
-        self.web.send({'key': key})
+        if count == 1:
+            self.web.send({'key': key})
 
         actions = self.config['actions']
         for action in self.actions:

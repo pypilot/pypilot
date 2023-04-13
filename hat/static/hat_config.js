@@ -42,6 +42,7 @@ $(document).ready(function() {
         $('#key1').text(key);
     });
 
+
     socket.on('action', function(action) {
         $('#action0').text(action);
         $('#action1').text(action);
@@ -54,16 +55,16 @@ $(document).ready(function() {
     });
 
     shown_found_rf = false;
-    socket.on('found_rf', function(channel_keys) {
+    socket.on('found_rf_codes', function(channel) {
         if(shown_found_rf)
             return
         shown_found_rf = true;
-        channel, all_rf_keys = keys
-        if(messagebox(yesno)) {
+        if(1/*messagebox(yesno)*/) {
             // remove any rf keys
             // program this channel
+            socket.emit('program_rf_codes', channel);
         }
-    }
+    });
 
     function program_button(event) {
         if($('#action0').text().length == 0) {

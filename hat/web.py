@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2021 Sean D'Epagnier
+#   Copyright (C) 2023 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -17,21 +17,13 @@ socketio = SocketIO(app, async_mode=None)
 
 web_port = 33333
 
+# strap pins for remotes give different codes depending on if the remote is intended to be used with the display or not
 REMOTE = 0x5
 PANEL =  0xF
 
-def powers(count):
-    x = 1
-    l = []
-    while count:
-        l.append(x)
-        x *= 2
-        count -= 1
-    return l
-
-
-STANDBY, COMPASS, PLUS1, MINUS1, GPS, PLUS10, MINUS10, WIND = powers(8)
-AUTO, MENU, PLUS1, MINUS1, MODE, PLUS10, MINUS10 = powers(7)
+# both types of remotes
+STANDBY, COMPASS, PLUS1, MINUS1, GPS, PLUS10, MINUS10, WIND = list(map(lambda x : 2 ** x, range(8)))
+AUTO, MENU, PLUS1, MINUS1, MODE, PLUS10, MINUS10            = list(map(lambda x : 2 ** x, range(7)))
 
 # definitions for multiple keys pressed
 TACK_PORT = MINUS10 | MINUS1 
@@ -52,8 +44,8 @@ def rf_code(pinc, pind):
 def generate_codes(channel):
     pins = {'-10_': (PANEL, MINUS10), '-1_': (PANEL, MINUS1),
             '+10_': (PANEL, PLUS10), '+1_': (PANEL, PLUS1),
-            'auto': (PANEL, AUTO), 'menu': (PANEL, MENU),
-            'mode': (PANEL, MODE),
+            'auto_': (PANEL, AUTO), 'menu_': (PANEL, MENU),
+            'mode_': (PANEL, MODE),
 
             '-10': (REMOTE, MINUS10), '-1': (REMOTE, MINUS1),
             '+10': (REMOTE, PLUS10), '+1': (REMOTE, PLUS1),
@@ -73,14 +65,13 @@ def generate_codes(channel):
             codes[name] = lmap(rf_code(pinc, pind), [0xac, 0xdc])
     return codes
 
-all_rf_keys = map(generate_codes, range(7))
 
-def find_channel(code):
-    for channel in all_rf_keys:
-        for name, codes in all_rf_keys[channel].items():
-            if code in codes:
-                return channel
-    return -1
+all_code_channels = {}
+for channel in range(8):
+    for name, codes in generate_codes(channel).items():
+        for code in codes:
+            all_code_channels[code] = channel
+
 
 default_actions = \
     {'-10_': ['ir03111800','ir03111000','KEY_LEFT'  ,'gpio6' ],
@@ -226,10 +217,14 @@ class WebConfig(Namespace):
                 actions[name] = []
 
             for name, keys in default_actions.items():
-                actions[name] = keys.copy()
+                if not name in actions:
+                    actions[name] = []
+                actions[name] += keys.copy()
 
-            for name, keys in generate_codes(0):
-                actions[name] = keys.copy()
+            for name, keys in generate_codes(0).items():
+                if not name in actions:
+                    actions[name] = []
+                actions[name] += keys.copy()
 
             self.emit_keys()
             return
@@ -273,6 +268,27 @@ class WebConfig(Namespace):
 
         print('web client connected', request.sid)
 
+    def on_program_rf_codes(self, channel):
+        print('program rf', channel)
+        if not channel in range(8):
+            return
+        actions = self.config['actions']
+
+        # remove any programming for any of these codes
+        rf_codes = generate_codes(channel)
+        for name, keys in rf_codes.items():
+            for key in keys:
+                for name, keys in actions.items():
+                    while key in keys:
+                        keys.remove(key)
+
+        # add programming for this code
+        for name, keys in rf_codes.items():
+            if not name in actions:
+                actions[name] = []
+            actions[name] += keys
+        self.emit_keys()
+
 
     def on_disconnect(self):
         print('web client disconnected', request.sid)
@@ -301,13 +317,15 @@ class WebConfig(Namespace):
                     break
 
                 if 'key' in msg:
-                    self.last_key = msg['key']
-
-                    channel = find_channel(self.last_key)
-                    if channel >= 0:
-                        socketio.emit('found_rf', [channel, all_rf_keys])
-                    
+                    self.last_key = msg['key']                    
                     last_key_time = time.monotonic()
+
+                if msg.get('action') == 'none': # if we have a known remote c
+                    if self.last_key in all_code_channels:
+                        channel = all_code_channels[self.last_key]
+                        print('found rf codes', channel)
+                        socketio.emit('found_rf_codes', channel)
+                    
                 for name in msg:
                     d = msg[name]
                     if name != 'profiles':
@@ -315,7 +333,7 @@ class WebConfig(Namespace):
                     socketio.emit(name, d)
                 if 'status' in msg:
                     self.status = msg['status']
-                    #socketio.emit('status', self.status)
+                    socketio.emit('status', self.status)
                 if 'profiles' in msg:
                     self.profiles = msg['profiles']
                     self.emit_keys()
