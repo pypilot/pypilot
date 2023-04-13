@@ -47,27 +47,40 @@ $(document).ready(function() {
     });
     
     socket.on('action_keys', function(keys) {
-        $('#action'+keys['name']+'keys').text(keys['keys'])
+        n = keys['name'].replace(' ', '_')
+        n = n.replace('+', 'plus')
+        $('#action'+n+'keys').text(keys['keys'])
     });
+
+
+    function program_button(event) {
+        if($('#action0').text().length == 0) {
+            if(confirm('clear all codes for' + ' "' + event.target.innerText + '" ?'))
+                socket.emit('keys', 'clearcodes'+event.target.innerText);
+        } else
+            socket.emit('keys', event.target.innerText);
+    }
 
     socket.on('profiles', function(profiles) {
-        for(var i =0; ; i++) {
-            id = $('#action_profile_'+String(i))
-            if(id.length == 0)
-                break;
-            if(i< profiles.length) {
-                id.text('profile: ' + profiles[i]);
-                id.css('display', 'block');
-            } else
-                id.css('display', 'none');
+        html = '<table>';
+        for(var profile of profiles) {
+            p = profile.replace(' ', '_')
+            html += '<tr><td><button id="action_profile_' +
+                p + '">profile ' +
+                profile + '</button></td><td><span id="actionprofile_' + p + 'keys"></span></td></tr>';
+        }
+        html += '</table>';
+        $('#action_profiles').html(html);
+
+        for(var profile of profiles) {
+            p = profile.replace(' ', '_')
+            //$('#action_profile_'+p).unbind('click')
+            $('#action_profile_'+p).click(program_button);
         }
     });
-
-    for (var i = 0; i < action_names.length; i++) {
-        $('#action_'+action_names[i]).click(function(event) {
-            socket.emit('keys', event.target.innerText);
-        });
-    }
+    
+    for (var i = 0; i < action_names.length; i++)
+        $('#action_'+action_names[i]).click(program_button);
 
     $('#clear').click(function(event) {
         socket.emit('keys', 'clear');

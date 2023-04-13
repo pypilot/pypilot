@@ -64,7 +64,7 @@ class ActionMode(ActionEngage):
     def  __init__(self, hat, mode):
         super(ActionMode, self).__init__(hat)
         self.mode = mode
-        self.name = mode.replace(' ', '_') + '_mode'
+        self.name = mode + ' mode'
 
     def trigger(self, count):
         if self.hat.client and not count:
@@ -119,15 +119,8 @@ class ActionDodge(ActionPypilot):
             self.hat.client.set(self.pypilot_name, value)
 
 class ActionProfile(ActionPypilot):
-    def __init__(self, hat, index):
-        super(ActionProfile, self).__init__(hat, 'profile_'+str(index), 'profile')
-        self.index = index
-
-    def trigger(self, count):
-        profiles = self.hat.last_msg['profiles']
-        if len(profiles) > self.index:
-            self.value = profiles[self.index]
-            super(ActionProfile, self).trigger(count)
+    def __init__(self, hat, profile):
+        super(ActionProfile, self).__init__(hat, 'profile ' + profile, 'profile', profile)
         
 class ActionProfileRelative(ActionPypilot):
     def __init__(self, hat, name, offset):
@@ -369,6 +362,7 @@ class Hat(object):
 
         # keypad for lcd interface
         self.actions = []
+        self.profile_actions = []
 
         keypadnames = ['-10_', '-1_', '+1_', '+10_', 'auto_', 'menu_', 'mode_']
         for i in range(len(keypadnames)):
@@ -384,10 +378,10 @@ class Hat(object):
                          ActionHeading(self,  10),
                          ActionHeading(self, -10),
                          ActionPypilot(self, 'center', 'servo.position', 0),
-                         ActionTack(self, 'tack_port', 'port'),
-                         ActionTack(self, 'tack_starboard', 'starboard'),
-                         ActionDodge(self, 'dodge_port', -1),
-                         ActionDodge(self, 'dodge_starboard', 1),
+                         ActionTack(self, 'tack port', 'port'),
+                         ActionTack(self, 'tack starboard', 'starboard'),
+                         ActionDodge(self, 'dodge port', -1),
+                         ActionDodge(self, 'dodge starboard', 1),
                          ActionPypilot(self, 'standby', 'ap.enabled', False),
                          ActionEngage(self)
         ]
@@ -396,17 +390,13 @@ class Hat(object):
             for mode in self.config['modes']:
                 self.actions.append(ActionMode(self, mode))
 
-        # profiles
-        for i in range(8):
-            self.actions.append(ActionProfile(self, i))
-
-        self.actions += [ActionProfileRelative(self, 'profile_up', 1),
-                         ActionProfileRelative(self, 'profile_down', -1)]
+        self.actions += [ActionProfileRelative(self, 'profile prev', 1),
+                         ActionProfileRelative(self, 'profile next', -1)]
 
         # actions determined by the server (different pilots) not yet populated here
         for name in self.config['actions']:
-            if name.startswith('pilot_'):
-                self.actions.append(ActionPypilot(self, name, 'ap.pilot', name.replace('pilot_', '', 1)))
+            if name.startswith('pilot '):
+                self.actions.append(ActionPypilot(self, name, 'ap.pilot', name.replace('pilot ', '', 1)))
 
         # useful to unassign a key
         self.actions.append(ActionNone())
@@ -419,6 +409,10 @@ class Hat(object):
                 self.config['actions'][action.name] = []
             else:
                 self.config['actions'][action.name] = cfg[action.name]
+
+        for name in cfg:
+            if name.startswith('profile '):
+                self.config['actions'][name] = cfg[name]
 
         self.web = Web(self)
 
@@ -466,7 +460,7 @@ class Hat(object):
     def write_config(self):
         actions = self.config['actions']
         for name in list(actions):
-            if not actions[name] and name[:6] != 'pilot_':
+            if not actions[name] and name[:6] != 'pilot ':
                 del actions[name]
 
         if self.client and not 'modes' in self.config:
@@ -524,14 +518,14 @@ class Hat(object):
                 pilots = values['ap.pilot']['choices']
                 update = False
                 for pilot in pilots:
-                    name = 'pilot_'+pilot
+                    name = 'pilot '+pilot
                     if not name in self.config['actions']:
                         print('adding pilot', pilot)
                         self.config['actions'][name] = []
                         update = True
                 for name in list(self.config['actions']):
-                    if name.startswith('pilot_'):
-                        pilot = name.replace('pilot_', '', 1)
+                    if name.startswith('pilot '):
+                        pilot = name.replace('pilot ', '', 1)
                         if not pilot in pilots:
                             print('removing pilot', pilot)
                             del self.config['actions'][name]
@@ -583,7 +577,15 @@ class Hat(object):
             self.last_msg[name] = value
 
         if 'profiles' in msgs:
-            self.web.send({'profiles': msgs['profiles']})
+            profiles = msgs['profiles']
+            self.web.send({'profiles': profiles})
+            for action in self.profile_actions:
+                self.actions.remove(action)
+            self.profile_actions = []
+            for profile in profiles:
+                action = ActionProfile(self, profile)
+                self.profile_actions.append(action)
+                self.actions.append(action)
 
         for i in [self.lcd, self.web]:
             i.poll()
