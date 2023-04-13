@@ -52,7 +52,6 @@ $(document).ready(function() {
         $('#action'+n+'keys').text(keys['keys'])
     });
 
-
     function program_button(event) {
         if($('#action0').text().length == 0) {
             if(confirm('clear all codes for' + ' "' + event.target.innerText + '" ?'))
@@ -89,6 +88,22 @@ $(document).ready(function() {
     $('#default').click(function(event) {
         socket.emit('keys', 'default');
     });
+
+    $('#adc_channels_').change(send_adc_channels);
+    for (var i = 0; i<3; i++)
+    $('#adc_channel_' + i + '_select').change(send_adc_channels);
+
+    function send_adc_channels(event) {
+        adc_channels = []
+        $('#adc_channels').val()
+        for (var i = 0; i<3; i++)
+            if(i < count) {
+                adc_channels.push($('#adc_channels_'+i+'_select').val())
+                $('#adc_channels_'+i+'_select').show();
+            } else
+                $('#adc_channels_'+i+'_select').hide();
+        socket.emit('config', {'adc_channels': })
+    }        
 
     function config_ir() {
         socket.emit('config', {'pi.ir': document.getElementById('pi_ir').checked});

@@ -53,24 +53,6 @@ class TackSensorLog(object):
             return 'port'
 
 
-class TackDirection(EnumProperty):
-    def __init__(self, name):
-        super(TackDirection, self).__init__(name, 'port', ['port', 'starboard'])
-        self.auto = True
-
-    def set(self, value):
-        super(TackDirection, self).set(value)
-        self.auto = False
-
-    def auto_update(self, value):
-        if self.auto and self.value != value:
-            super(TackDirection, self).set(value)
-
-    def toggle(self):
-        super(TackDirection, self).set('port' if self.value == 'starboard' else 'starboard')
-        self.auto = True # allow automatic tack direction again
-
-
 class Tack(object):
     def __init__(self, ap):
         self.ap = ap
@@ -90,7 +72,8 @@ class Tack(object):
         self.threshold = self.register(RangeSetting, 'threshold', 50, 10, 100, '%')
         self.count = self.register(ResettableValue, 'count', 0, persistent=True)
 
-        self.direction = self.register(TackDirection, 'direction')
+        self.direction = self.register(EnumProperty, 'direction', 'none', ['none', 'port', 'starboard'])
+        self.use_heel = self.register(BooleanProperty, 'use_heel', False, persistent=True)
         self.current_direction = 'port'  # so user can't change while tacking
         self.time = time.monotonic()
 
@@ -109,12 +92,13 @@ class Tack(object):
         if not ap.enabled.value:
             self.state.update('none')
 
+        if self.state.value == 'none':  # not tacking
             # if we have wind data, use it to determine the tacking direction
             r = False
             if ap.sensors.wind.source.value != 'none':
                 d = resolv(ap.sensors.wind.direction.value)
                 r = self.wind_log.update(d)
-            elif t - self.time > 30:
+            elif self.use_heel and t - self.time > 30:
                 r = self.heel_log.update(ap.boatimu.heel)
 
             if r:
@@ -124,8 +108,11 @@ class Tack(object):
         # tacking initiated, enter waiting state
         if self.state.value == 'begin':
             self.time = t
-            self.current_direction = self.direction.value
-            self.state.update('waiting')
+            if self.direction.value == 'none':
+                self.state.update('none') # cannot tack without knowing direction
+            else:
+                self.current_direction = self.direction.value
+                self.state.update('waiting')
 
         # waiting to tack, update timeout
         if self.state.value == 'waiting':
@@ -159,7 +146,7 @@ class Tack(object):
             # see if we passed the tack user defined tack threshold
             if 100*d > self.threshold.value:
                 self.state.update('none')
-                self.direction.toggle()
+                self.direction.set('none')
                 ap.heading_command.set(tack_heading)
                 return
 

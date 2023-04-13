@@ -82,16 +82,21 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.enumerated = False
 
         watchlist = ['profile', 'profiles',
-                     'imu.warning', 'imu.compass.calibration.warning',
-                     'ap.enabled', 'ap.mode', 'ap.modes', 'ap.heading_command',
+                     'imu.error', 'imu.warning',
+                     'ap.enabled', 'ap.mode', 'ap.modes',
+                     'ap.heading_command',
                      'ap.tack.state', 'ap.tack.timeout',
-                     'ap.heading', 'ap.pilot',
+                     ('ap.heading', .2), 'ap.pilot',
                      'servo.controller', 'servo.engaged', 'servo.flags',
-                     'rudder.angle']
+                     ('rudder.angle', .5)]
 
+        self.error = False
         self.warning = False
-        for name in watchlist:
-            self.client.watch(name)
+        for watch in watchlist:
+            if type(watch) == type (()):
+                self.client.watch(*watch)
+            else:
+                self.client.watch(watch)
 
         self.tackdialog = TackDialog(self)
         self.mode = None
@@ -133,7 +138,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 sizer.SetFlexibleDirection( wx.VERTICAL )
         
                 self.client.watch(name)
-                self.client.watch(name+'gain')
+                self.client.watch(name+'gain', 0.2)
 
                 lname = name
                 sname = name.split('.')
@@ -228,14 +233,15 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 elif name == gain_name + 'gain':
                     v = abs(value) * 1000.0
                     if v < gain['gauge'].GetRange():
-                        gain['gauge'].SetValue(int(v))
-                        if value > 0:
-                            gain['gauge'].SetBackgroundColour(wx.RED)
-                        elif value < 0:
-                            gain['gauge'].SetBackgroundColour(wx.GREEN)
-                        else:
-                            gain['gauge'].SetBackgroundColour(wx.LIGHT_GREY)
-                    else:
+                        if gain['gauge'].GetValue() != int(v):
+                            gain['gauge'].SetValue(int(v))
+                            if value > 0:
+                                gain['gauge'].SetBackgroundColour(wx.RED)
+                            elif value < 0:
+                                gain['gauge'].SetBackgroundColour(wx.GREEN)
+                            else:
+                                gain['gauge'].SetBackgroundColour(wx.LIGHT_GREY)
+                    elif gain['gauge'].GetValue():
                         gain['gauge'].SetValue(0)
                         gain['gauge'].SetBackgroundColour(wx.BLUE)
 
@@ -243,9 +249,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
             if found:
                 pass
-#            elif name == 'servo.raw_command':
-#                self.tbAP.SetValue(False)
-#                self.tbAP.SetForegroundColour(wx.RED)
 
             if self.tackdialog.receive(name, value):
                 pass
@@ -263,11 +266,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 n = self.cProfile.FindString(profile)
                 if n >= 0:
                     self.cProfile.SetSelection(n)
-            elif name == 'imu.warning':
-                self.warning = value
+            elif name == 'imu.error':
                 if value:
-                    self.stStatus.SetLabel(value)
-            elif name == 'imu.compass.calibration.warning':
+                    self.stEngaged.SetLabel(value)
+                self.error = value
+            elif name == 'imu.warning':
                 self.warning = value
                 if value:
                     self.stStatus.SetLabel(value)
@@ -310,7 +313,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.stHeading.SetLabel('%.1f' % value)
                 self.heading = value
             elif name == 'servo.engaged':
-                self.stEngaged.SetLabel('Engaged' if value else 'Disengaged')                
+                if not self.error:
+                    self.stEngaged.SetLabel('Engaged' if value else 'Disengaged')
             elif name == 'servo.flags':
                 if not self.warning:
                     self.stStatus.SetLabel(value)

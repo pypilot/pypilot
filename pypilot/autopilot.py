@@ -25,6 +25,8 @@ from version import strversion
 from sensors import Sensors
 import pilots
 
+udp_control_port = 43822
+
 def minmax(value, r):
     return min(max(value, -r), r)
 
@@ -35,13 +37,11 @@ class ModeProperty(EnumProperty):
 
     def set(self, value):
         # update the preferred mode when the mode changes from user
-        self.ap.preferred_heading_command = None
         self.ap.preferred_mode.update(value)
-        print('ap mode set', value)
+        self.ap.preferred_mode.command = None
         super(ModeProperty, self).set(value)
 
     def set_internal(self, value):
-        print('ap mode set_internal', value)
         super(ModeProperty, self).set(value)
 
 class HeadingOffset(object):
@@ -99,7 +99,8 @@ class Autopilot(object):
         self.timestamp = self.client.register(TimeStamp())
         self.starttime = time.monotonic()
         self.preferred_mode = self.register(Value, 'preferred_mode', 'compass')
-        self.preferred_heading_command = None
+        self.preferred_mode.command = None
+
         self.mode = self.register(ModeProperty, 'mode', self)
         self.modes = self.register(JSONValue, 'modes', [])
         self.modes.sensors = {}
@@ -150,6 +151,17 @@ class Autopilot(object):
         self.timings = self.register(SensorValue, 'timings', False)
         self.last_heading_mode = False
 
+        try:
+            self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.udp_socket.bind(('127.0.0.1', udp_control_port))
+            self.udp_socket.settimeout(0)
+            self.control = select.poll()
+            self.control.register(self.udp_socket, select.POLLIN)
+            
+        except Exception as e:
+            print('failed to initialize udp socket, this may affect manual control performance')
+            self.udp_socket = False
+            
         device = '/dev/watchdog0'
         try:
             self.watchdog_device = open(device, 'w')
@@ -225,7 +237,8 @@ class Autopilot(object):
         if self.mode.value != newmode:
             # remember the command on the preferred mode so it can be restored
             if self.mode.value == self.preferred_mode.value:
-                self.preferred_heading_command = self.heading_command.value
+                self.preferred_mode.command = self.heading_command.value
+                self.preferred_mode.time = time.monotonic()
             self.mode.set_internal(newmode)
 
     def compute_offsets(self):
@@ -299,13 +312,14 @@ class Autopilot(object):
         # keep same heading if mode changes
         if self.mode.value != self.lastmode:
             if self.mode.value == self.preferred_mode.value and \
-               self.preferred_heading_command is not None:
-                self.heading_command.set(self.preferred_heading_command)
+               self.preferred_mode.command is not None and t-self.preferred_mode.time < 30:
+                self.heading_command.set(self.preferred_mode.command)
             else:
                 error = self.heading_error.value
                 if windmode:
                     error = -error # wind error is reversed
                 self.heading_command.set(heading - error)
+
             self.lastmode = self.mode.value
       
         # compute heading error
@@ -325,13 +339,31 @@ class Autopilot(object):
         self.heading_error_int_time = t
         # int error +- 1, from 0 to 1500 deg/s
         self.heading_error_int.set(minmax(self.heading_error_int.value + \
-                                          (self.heading_error.value/1500)*dt, 1))
+                                          (self.heading_error.value/1500)*dt, 5))
 
     def iteration(self):
         data = False
         t0 = time.monotonic()
 
         self.server.poll() # needed if not multiprocessed
+
+        if self.udp_socket:
+            events = self.control.poll()
+            while events:
+                event = events.pop()
+                fd, flag = event
+                if flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
+                    print(_('lost udp_socket'))
+                    self.udp_socket = False
+                    break
+                if flag & select.POLLIN:
+                    try:
+                        line = self.udp_socket.recvfrom(128)
+                        if line:
+                            self.servo.command.set(int(line))
+                    except Exception as e:
+                        print("failed pollin udp??\n", line)
+                        
         msgs = self.client.receive(self.dt)
         for msg in msgs: # we aren't usually subscribed to anything
             print('autopilot main process received:', msg, msgs[msg])
@@ -411,13 +443,17 @@ class Autopilot(object):
         if self.enabled.value != self.lastenabled:
             self.lastenabled = self.enabled.value
             if self.enabled.value:
-                self.heading_error_int.set(0) # reset integral
+                # reset feed-forward gain and integral gains
                 self.heading_command_rate.set(0)
-                # reset feed-forward gain
                 self.last_heading_mode = False
 
+        newmode = self.last_heading_mode != self.mode.value
+        self.last_heading_mode = self.mode.value
+        if newmode:
+            self.heading_error_int.set(0) # reset integral
+                
         # reset feed-forward error if mode changed, or last command is older than 1 second
-        if self.last_heading_mode != self.mode.value or t0 - self.heading_command_rate.time > 1:
+        if newmode or t0 - self.heading_command_rate.time > 1:
             self.last_heading_command = self.heading_command.value
 
         # filter the heading command to compute feed-forward gain
@@ -430,9 +466,7 @@ class Autopilot(object):
         lp = .1
         command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
         self.heading_command_rate.update(command_rate)
-            
-        self.last_heading_mode = self.mode.value
-                
+                            
         # perform tacking or pilot specific calculation
         if not self.tack.process():
             # if disabled, only compute if a client cares
@@ -461,6 +495,12 @@ class Autopilot(object):
         self.sensors.water.compute(self) # calculate leeway and currents
         self.boatimu.poll() # after critical loop is done
 
+        if heading_command_diff:
+            # decay integral with heading command changes
+            e = self.heading_error_int.value
+            sign = 1 if e > 0 else -1
+            self.heading_error_int.set(sign*(abs(e)-heading_command_diff/3))
+
         t5 = time.monotonic()
         if t5-t4 > period/2 and self.servo.driver:
             print(_('servo is running too _slowly_'), t5-t4)
@@ -481,6 +521,7 @@ class Autopilot(object):
                 break
 
             time.sleep(dt)
+
             # do waiting in client if not enabled to reduce lag
             self.dt = 0 if self.enabled.value else dt*.8
 

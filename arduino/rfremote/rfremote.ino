@@ -71,6 +71,16 @@ void setup() {
 
 // the loop routine runs over and over again forever:
 static uint32_t code, timeout;
+static uint8_t key_count;
+
+
+uint8_t count_bits (uint8_t byte)
+{
+    static const uint8_t nl [16] =  {4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0};
+    return nl[byte >> 4] + nl[byte & 0xf];
+}
+
+  
 void loop() {
     // test keys
     uint32_t t0 = millis();
@@ -84,15 +94,20 @@ void loop() {
             flag = 0;
         }
 
-        // construct output using PC0-PC3 to give unique codes for different remote types
-        uint32_t pinc = (PINC & 0xf) ^ 0xc;
-        uint32_t keys = (pinc << 16) | (0xff00 & (~pind << 8)) | pind;
-        if(wd)
-            code = 0xa00000 | keys;
-        else
-            code = 0xd00000 | keys;
-        timeout = t0;
-    }
+        uint8_t count = count_bits(pind);
+        if(count <= 2 && count > key_count) {
+            // construct output using PC0-PC3 to give unique codes for different remote types
+            uint32_t pinc = (PINC & 0xf) ^ 0xc;
+            uint32_t keys = (pinc << 16) | (0xff00 & (~pind << 8)) | pind;
+            if(wd)
+                code = 0xa00000 | keys;
+            else
+                code = 0xd00000 | keys;
+            key_count = count;
+            timeout = t0;
+        }
+    } else
+        key_count = 0
 
     if(code) {
         if(t0 - timeout < 200UL) {

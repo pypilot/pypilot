@@ -66,8 +66,7 @@ class WindPilot(AutopilotPilot):
       else:
           boat_speed = 0
         
-      true_wind = autopilot.compute_true_wind(boat_speed,
-                                              sensors.wind.speed, wind)
+      true_wind = TrueWind.compute_true_wind_direction(boat_speed, sensors.wind.speed, wind)
       ap.heading.set(true_wind)
 
     elif mode == 'wind':

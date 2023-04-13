@@ -590,6 +590,7 @@ def main():
         server.poll()
         client.poll()
         data = boatimu.read()
+        boatimu.poll() # after critical loop is done
         if data and not quiet:
             if t0-lastprint > .25:
                 printline('pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading'])

@@ -541,7 +541,7 @@ def FitCompass(debug, compass_points, compass_calibration, norm):
 
     # make sure the magnitude is sane
     mag = c[0][3]
-    if mag < 7 or mag > 120:
+    if mag < 12 or mag > 120:
         debug('fit found field outside of normal earth field strength', mag)
         return
 
@@ -608,7 +608,7 @@ class AgeValue(StringValue):
         t = time.monotonic()
         if self.value:
             return '"' + boatimu.readable_timespan(t - self.value) + '"'
-        return 'N/A'
+        return '"N/A"'
 
 def RegisterCalibration(client, name, default):
     calibration = client.register(CalibrationProperty(name, default))

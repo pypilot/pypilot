@@ -98,6 +98,29 @@ class WebConfig(Namespace):
         
         names += Markup('""]')
 
+        adc_channels = Markup('<select id="adc_channels">')
+        cadc = config.get('adc_channels', [])
+
+        for i in range(4):
+            adc_channels += Markup('<option value="' + str(i) + '"');
+            if i == len(cadc):
+                adc_channels += Markup(' selected')
+            adc_channels += Markup('>' + str(i) + '</option>');
+        adc_channels += Markup('</select>')
+        for i in range(3):
+            adc_channels += Markup('<br>')
+            adc_channels += Markup('<div id="adc_channel_' + str(i) + '>')
+            adc_channels += Markup('Channel + str(i)')
+            adc_channels += Markup('<select id="adc_channel_' + str(i) + '_select>')
+            options = ['none', 'steering', 'custom']
+            for option in options:
+                adc_channels += Markup('<option value="' + option + '"')
+                if cadc[i] == option:
+                    adc_channels += Markup(' selected')
+                adc_channels += Markup('>' + option + '</option>')
+            adc_channels += Markup('</select>')
+            adc_channels += Markup('</div>')
+        
         ir = Markup('<input type="radio" id="pi_ir" name="ir"')
         if config['pi.ir']:
             ir += Markup(' checked')
@@ -128,7 +151,7 @@ class WebConfig(Namespace):
 
         @app.route('/')
         def index():
-            return render_template('index.html', async_mode=socketio.async_mode, web_port=web_port, actionkeys = acts, action_names = names, ir_settings = ir, nmea_settings = nmea, remote_settings = remote)
+            return render_template('index.html', async_mode=socketio.async_mode, web_port=web_port, actionkeys = acts, action_names = names, adc_channels = adc_channels, ir_settings = ir, nmea_settings = nmea, remote_settings = remote)
 
     def on_ping(self):
         emit('pong')
@@ -187,6 +210,7 @@ class WebConfig(Namespace):
     def on_connect(self):
         if self.profiles:
             socketio.emit('profiles', self.profiles)
+        socketio.emit('adc_channels', self.config['arduino.adc_channels'])
         self.emit_keys()
 
         print('web client connected', request.sid)
