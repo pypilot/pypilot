@@ -645,6 +645,7 @@ def CalibrationProcess(cal_pipe, client):
                 except Exception as e:
                     pass
                 s += str(a) + ' '
+                #print("debug", name, s)
             client.set('imu.'+name+'.calibration.log', s)
         return debug_by_name
 
@@ -713,7 +714,6 @@ def CalibrationProcess(cal_pipe, client):
                 value = vector.sub(sensor, cal[0][:3])
                 g = vector.norm(value)
                 # check that calibration points are near magnitude of 1
-                print("warning update", g)
                 warnings_update('accel', 'warning', abs(g-1) > .1)
 
             if compass_points.last_sample:
@@ -747,6 +747,8 @@ def CalibrationProcess(cal_pipe, client):
                     warn = True
 
                 warnings_update('compass', 'distortions', warn)
+                #if warn:
+                #print('mag distortions debug', field_strength, gauss, inclination, angle)
 
 
             cals = [(accel_calibration, accel_points), (compass_calibration, compass_points)]
