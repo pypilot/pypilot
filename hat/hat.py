@@ -124,7 +124,7 @@ class ActionProfile(ActionPypilot):
         
 class ActionProfileRelative(ActionPypilot):
     def __init__(self, hat, name, offset):
-        super(ActionProfileRelative, self).__init__(hat, name, 'profile')
+        super(ActionProfileRelative, self).__init__(hat, 'profile ' + name, 'profile')
         self.offset = offset
 
     def trigger(self, count):
@@ -390,9 +390,6 @@ class Hat(object):
             for mode in self.config['modes']:
                 self.actions.append(ActionMode(self, mode))
 
-        self.actions += [ActionProfileRelative(self, 'profile prev', 1),
-                         ActionProfileRelative(self, 'profile next', -1)]
-
         # actions determined by the server (different pilots) not yet populated here
         for name in self.config['actions']:
             if name.startswith('pilot '):
@@ -578,12 +575,16 @@ class Hat(object):
 
         if 'profiles' in msgs:
             profiles = msgs['profiles']
-            self.web.send({'profiles': profiles})
+            self.web.send({'profiles': profiles + ['prev', 'next']})
             for action in self.profile_actions:
                 self.actions.remove(action)
             self.profile_actions = []
             for profile in profiles:
                 action = ActionProfile(self, profile)
+                self.profile_actions.append(action)
+                self.actions.append(action)
+            for action in ActionProfileRelative(self, 'prev', -1), \
+                          ActionProfileRelative(self, 'next', 1):
                 self.profile_actions.append(action)
                 self.actions.append(action)
 
