@@ -342,7 +342,6 @@ $(document).ready(function() {
     $('#connection').text("N/A");
     $('#calibration').text("N/A");
 
-
     // Connect to the Socket.IO server.
     var port = location.port;
     port = pypilot_web_port;
@@ -355,6 +354,10 @@ $(document).ready(function() {
     socket.on('pypilot_values', function(msg) {
         //var list_values = JSON.parse(msg);
         $('#connection').text('Connected');
+
+        for(s of ['error', 'warning'])
+            pypilot_watch('imu.' + s)
+        
         watches = ['', '.age', '.log', '.warning'].map(function (e) { return '.calibration'+e; });
         for(var watch in watches)
             for(var plot in plots)
@@ -391,9 +394,12 @@ $(document).ready(function() {
     var calibration_log = {'accel': [], 'compass': []}
     socket.on('pypilot', function(msg) {
         data = JSON.parse(msg);
+        for(s of ['error', 'warning'])
+            if('imu.'+s in data)
+                $('#imu_'+s).text(value)
 
         for(s of ['accel', 'compass'])
-            for(n of ['', 'age', 'log', 'warning']) {
+            for(n of ['', 'age', 'log']) {
                 name = 'imu.' + s + '.calibration';
                 id = '#'+s+'_calibration'
                 if(n) {

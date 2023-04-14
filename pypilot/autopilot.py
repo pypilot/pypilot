@@ -459,7 +459,7 @@ class Autopilot(object):
         self.sensors.gps.predict(self) # make gps position/velocity prediction
                                        # from inertial sensors
         self.sensors.water.compute(self) # calculate leeway and currents
-        self.boatimu.send_cal_data() # after critical loop is done
+        self.boatimu.poll() # after critical loop is done
 
         t5 = time.monotonic()
         if t5-t4 > period/2 and self.servo.driver:

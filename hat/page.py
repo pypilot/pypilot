@@ -566,8 +566,8 @@ class control(controlbase):
         index = modes.index(mode)
         nmodes = len(modes)
 
-        # flash the compass C if there are calibration warnings
-        if self.last_val('imu.compass.calibration.warning', default=False):
+        # flash the compass C if there are imu warnings
+        if self.last_val('imu.warning', default=False):
             if int(time.monotonic()) % 2:
                 modes = list(modes)
                 for i in range(nmodes):
@@ -711,10 +711,10 @@ class control(controlbase):
             if self.control['heading_command'] != no_mode:
                 self.fittext(rectangle(0, .4, 1, .35), mode.upper() + ' ' + _('not detected'), True, black)
                 self.control['heading_command'] = no_mode
-        elif self.last_val('imu.warning', default=None):
-            if self.control['heading_command'] != 'imu warning':
-                self.fittext(rectangle(0, .4, 1, .35), self.last_val('imu.warning'), True, black)
-                self.control['heading_command'] = 'imu warning'
+        elif self.last_val('imu.error', default=None):
+            if self.control['heading_command'] != 'imu error':
+                self.fittext(rectangle(0, .4, 1, .35), self.last_val('imu.error'), True, black)
+                self.control['heading_command'] = 'imu error'
         elif self.last_val('servo.controller') == 'none':
             if self.control['heading_command'] != 'no controller':
                 self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)

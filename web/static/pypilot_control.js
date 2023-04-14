@@ -281,6 +281,8 @@ $(document).ready(function() {
 
         pypilot_watch('nmea.client');
 
+        pypilot_watch('imu.error');
+        pypilot_watch('imu.warning');
         pypilot_watch('servo.controller');
         pypilot_watch('servo.flags');
 
@@ -378,10 +380,6 @@ $(document).ready(function() {
 
         if('ap.heading' in data) {
             heading = data['ap.heading'];
-            if(heading.toString()=="false")
-                $('#aperrors0').text(_('compass or gyro failure!'));
-            else
-                $('#aperrors0').text('');
             $('#heading').text(heading_str(heading));
         }
 
@@ -555,6 +553,12 @@ $(document).ready(function() {
             value = data['ap.version'];
             $('#version').text(value);
         }
+
+        if('imu.error' in data)
+            $('#aperrors0').text(data['imu.error']);
+        
+        if('imu.warning' in data)
+            $('#imu_warning').text(data['imu.warning']);
 
         if('servo.controller' in data) {
             value = data['servo.controller'];

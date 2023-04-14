@@ -617,7 +617,6 @@ def RegisterCalibration(client, name, default):
     calibration.sigmapoints = client.register(RoundedValue(name+'.calibration.sigmapoints', False))
     calibration.points = client.register(RoundedValue(name+'.calibration.points', False, persistent=True))
     calibration.log = client.register(Property(name+'.calibration.log', ''))
-    calibration.warning = client.register(StringValue(name+'.calibration.warning', ''))
     return calibration
         
 def CalibrationProcess(cal_pipe, client):
@@ -650,6 +649,24 @@ def CalibrationProcess(cal_pipe, client):
         return debug_by_name
 
     last_compass_coverage = 0
+
+
+    warnings = {}
+    def warning_update(sensor, warning, value):
+        if sensor in warnings and warnings[sensor] == warning:
+            return
+
+        if value:
+            warnings[sensor] = warning
+        else
+            if sensor in warnings:
+                del warnings[sensor]
+
+        str_warnings = ''
+        for sensor, warning in warnings.items():
+            str_warnings += sensor + ' ' + warning
+        cal_pipe.send(str_warnings)
+    
     while True:
         t = time.monotonic()
         addedpoint = False
@@ -696,9 +713,7 @@ def CalibrationProcess(cal_pipe, client):
                 value = vector.sub(sensor, cal[0][:3])
                 g = vector.norm(value)
                 # check that calibration points are near magnitude of 1
-                warning = accel_calibration.warning
-                if abs(g-1) > .1:
-                    warning.update(_('Bad Accelerometer Calibration'))
+                warnings_update('accel', 'warning', abs(g-1) > .1)
 
             if compass_points.last_sample:
                 sensor, down = compass_points.last_sample
@@ -730,11 +745,8 @@ def CalibrationProcess(cal_pipe, client):
                 if abs(inclination - angle) > 8:
                     warn = True
 
-                warning = compass_calibration.warning
-                if warn:
-                    warning.update(_('magnetic distortions'))
-                else:
-                    warning.update('')
+                warnings_update('compass', 'distortions', warn)
+
 
             cals = [(accel_calibration, accel_points), (compass_calibration, compass_points)]
             for calibration, points in cals:

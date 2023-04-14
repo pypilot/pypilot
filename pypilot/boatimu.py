@@ -50,7 +50,7 @@ class IMU(object):
         self.client.watch('imu.rate')
 
         self.gyrobias = self.client.register(SensorValue('imu.gyrobias', persistent=True))
-        self.warning = self.client.register(StringValue('imu.warning', ''))
+        self.error = self.client.register(StringValue('imu.error', ''))
         self.lastgyrobiastime = time.monotonic()
 
         SETTINGS_FILE = "RTIMULib"
@@ -95,7 +95,7 @@ class IMU(object):
         if rtimu.IMUName() == 'Null IMU':
             if self.rtimu:
                 print(_('ERROR: No IMU Detected'), t0)
-                self.warning.set('No IMU')
+                self.error.set('No IMU')
             self.s.IMUType = 0
             return
 
@@ -103,7 +103,7 @@ class IMU(object):
 
         if not rtimu.IMUInit():
             print(_('ERROR: IMU Init Failed, no inertial data available'), t0)
-            self.warning.set('IMU Failed')
+            self.error.set('IMU Failed')
             self.s.IMUType = 0
             return
 
@@ -119,7 +119,7 @@ class IMU(object):
         self.compass_calibration_updated = False
         self.axes_test = [False]*9
         self.last_axes = False
-        self.warning.set('IMU not initialized')
+        self.error.set('IMU not initialized')
 
     def process(self, pipe):
         print('imu process', os.getpid())
@@ -214,10 +214,10 @@ class IMU(object):
             self.last_axes = axes
 
             if not all(self.axes_test):
-                self.warning.set('IMU waiting on axes')
+                self.error.set('IMU waiting on axes')
             else:
                 print('IMU all sensor axes verified')
-                self.warning.set('')
+                self.error.set('')
                 self.axes_test = False
                 
         # see if gyro is out of range, sometimes the sensors read
@@ -355,6 +355,7 @@ class AutomaticCalibrationProcess():
         self.process = multiprocessing.Process(target=CalibrationProcess, args=(self.cal_pipe_process, self.client), daemon=True)
         self.process.start()
         self.cal_ready = False
+        self.warnings = ''
 
     def calibration_ready(self):
         if self.cal_ready:
@@ -363,6 +364,12 @@ class AutomaticCalibrationProcess():
             self.cal_ready = True
             return True
         return False
+
+    def warnings(self):
+        warnings = cal_pipe.recv()
+        if warnings:
+            self.warnings = warnings
+        return self.warnings
 
     def __del__(self):
         #print(_('terminate calibration process'))
@@ -378,6 +385,7 @@ class BoatIMU(object):
         self.frequency = self.register(FrequencyValue, 'frequency')
         self.alignmentQ = self.register(QuaternionValue, 'alignmentQ', [1, 0, 0, 0], persistent=True)
         self.alignmentQ.last = False
+        
         self.heading_off = self.register(RangeProperty, 'heading_offset', 0, -180, 180, persistent=True)
         self.heading_off.last = 3000 # invalid
 
@@ -385,6 +393,7 @@ class BoatIMU(object):
         self.last_alignmentCounter = False
 
         self.uptime = self.register(TimeValue, 'uptime')
+        self.warning = self.register(StringValue('warning', ''))
         
         self.auto_cal = AutomaticCalibrationProcess(client.server)
 
@@ -492,8 +501,6 @@ class BoatIMU(object):
         self.headingrate = data['headingrate']
   
         data['heel'] = self.heel = data['roll']*.03 + self.heel*.97
-        #data['roll'] -= data['heel']
-  
         data['gyro'] = list(map(math.degrees, data['gyro']))
   
         # lowpass heading and rate
@@ -550,9 +557,15 @@ class BoatIMU(object):
                          'fusionQPose': data['fusionQPose']}
         return data
 
-    def send_cal_data(self):
+    def poll(self):
         if self.auto_cal.calibration_ready() and self.cal_data:
             self.auto_cal.cal_pipe.send(self.cal_data)
+
+        warnings = self.auto_cal.warnings()
+        if abs(self.SensorValues['pitch'].value) > 35 || \
+           abs(self.SensorValues['roll'].value) > 35):
+            warnings += ' ' + 'aligment warning'
+        self.warning.update(warnings)
 
 
 # print line without newline
