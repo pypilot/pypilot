@@ -20,19 +20,35 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import tinypilot
 
+configfilename = os.getenv('HOME')+'/.pypilot/web.conf'
+
 pypilot_web_port=8000
+
+try:
+    file = open(configfilename, 'r')
+    config = pyjson.loads(file.readline())
+    file.close()
+    return config
+except:
+    print('failed to read config', configfilename)
+    return {}
+
+def write_config():
+    try:
+        file = open(configfilename, 'w')
+        file.write(pyjson.dumps(config) + '\n')
+        file.close()
+    except:
+        print('failed to write config')
+
 if len(sys.argv) > 1:
     pypilot_web_port=int(sys.argv[1])
 else:
-    filename = os.getenv('HOME')+'/.pypilot/web.conf'
-    try:
-        file = open(filename, 'r')
-        config = pyjson.loads(file.readline())
-        if 'port' in config:
-            pypilot_web_port = config['port']
-        file.close()
-    except:
-        print('using default port of', pypilot_web_port)
+    if 'port' in config:
+        pypilot_web_port = config['port']
+
+print('using port', pypilot_web_port)
+        
 
 # Set this variable to 'threading', 'eventlet' or 'gevent' to test the
 # different async modes, or leave it set to None for the application to choose
@@ -51,7 +67,13 @@ try:
 
     @babel.localeselector
     def get_locale():
-        return request.accept_languages.best_match(LANGUAGES)
+        if 'language' in config:
+            language = config['language']
+        else:
+            language = 'default'
+        if language == 'default' or not language in LANGUAGES:
+            return request.accept_languages.best_match(LANGUAGES)
+        return language
     
 except Exception as e:
     print('failed to import flask_babel, translations not possible!!', e)
@@ -171,7 +193,7 @@ with open(os.path.dirname(os.path.abspath(__file__)) + '/pypilot_web.pot') as f:
 
 @app.route('/')
 def index():
-    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot.tinypilot, translations=translations)
+    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot.tinypilot, translations=translations, language=config['language'], languages=LANGUAGES)
 
 class pypilotWeb(Namespace):
     def __init__(self, name):
@@ -219,6 +241,10 @@ class pypilotWeb(Namespace):
         client = self.clients[request.sid]
         client.disconnect()
         del self.clients[request.sid]
+
+    def on_language(self, l):
+        config['language'] = language
+        write_config()
 
 socketio.on_namespace(pypilotWeb(''))
 

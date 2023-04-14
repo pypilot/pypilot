@@ -50,7 +50,6 @@ $(document).ready(function() {
     port = pypilot_web_port;
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + port + namespace);
 
-
     function is_touch_enabled() {
         return ( 'ontouchstart' in window ) ||
             ( navigator.maxTouchPoints > 0 ) ||
@@ -72,7 +71,7 @@ $(document).ready(function() {
     var servo_command = 0, servo_command_timeout=0;
     var gains = [];
     var conf_names = [];
-    var profile="0", profiles = [profile];
+    var profile="default", profiles = [profile];
     var touch = is_touch_enabled();
     var register = true;
 
@@ -767,6 +766,15 @@ $(document).ready(function() {
     // Bind setTheme action when the user change the theme via the radio buttons
     $('.theme_option').on('click', function(){ setTheme() })
 
+
+    for (let l of languages)
+        $('#language').append('<option value="' + l + '">' + l + '</option>');
+    $('#language').val(language);
+
+    $('#language').change(function(event) {
+        socket.emit('language', $('#language').val());
+    });
+    
     $(window).resize(window_resize);
     window_resize();
 });
