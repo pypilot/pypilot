@@ -59,7 +59,7 @@ $(document).ready(function() {
         if(shown_found_rf)
             return
         shown_found_rf = true;
-        if(1/*messagebox(yesno)*/) {
+        if(confirm('detected remote on channel ' + channel + ' program default codes?')) {
             // remove any rf keys
             // program this channel
             socket.emit('program_rf_codes', channel);
