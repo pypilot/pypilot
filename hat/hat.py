@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gpio
 import lircd
 import lcd
+import arduino
 
 print('hat import done', time.monotonic())
 
@@ -213,7 +214,6 @@ class Arduino(Process):
 
     def create(self):
         def process(pipe, config):
-            import arduino
             print('arduino process on', os.getpid())
             if os.system("renice -5 %d" % os.getpid()):
                 print('warning, failed to renice hat arduino process')
@@ -235,6 +235,12 @@ class Arduino(Process):
                 elif key == 'voltage': # statistics
                     self.hat.web.send({'voltage': '5v = %.3f, 3.3v = %.3f' % (code['vcc'], code['vin'])})
                     self.hat.lcd.send(msg)
+                elif key == 'version':
+                    if self.hat.config.get('version') != code:
+                        print('update version, restart may update firmware')
+                        self.hat.config['version'] = code;
+                        self.hat.write_config()
+                        exit(1)
                 else:
                     ret.append(msg)
         return ret
@@ -319,8 +325,11 @@ class Hat(object):
                                   'lirc':'gpio4'}
             self.write_config()
 
+        # update firmware
+        arduino.update_firmware(config)
+
         self.servo_timeout = time.monotonic() + 1
-        
+                
         self.last_msg = {'ap.enabled': False,
                          'ap.heading_command': 0,
                          'ap.mode': '',
@@ -334,14 +343,11 @@ class Hat(object):
         host = self.config['host']
         print('host', host)
 
-        if 'arduino' in self.config['hat']:
-            import arduino
-            arduino.arduino(self.config).firmware()
-
-        self.poller = select.poll()
+        self.poller = select.poll()        
         self.gpio = gpio.gpio()
         self.lcd = LCD(self)
         time.sleep(1)
+
         self.client = pypilotClient(host)
         self.client.registered = False
         self.watchlist = ['ap.enabled', 'ap.heading_command', 'ap.mode']
@@ -350,7 +356,7 @@ class Hat(object):
 
         for name in self.watchlist:
             self.client.watch(name)
-
+            
         if 'arduino' in self.config['hat']:
             self.arduino = Arduino(self)
             self.poller.register(self.arduino.pipe, select.POLLIN)
@@ -646,7 +652,7 @@ class Hat(object):
         #print('hattime', time.monotonic(), e)
         #print('hat times', t1-t0, t2-t1, t3-t2, t4-t3, period, dt)
 
-def main():
+def main():    
     hat = Hat()
     print('hat init complete', time.monotonic())
     while True:
