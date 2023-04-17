@@ -1378,8 +1378,10 @@ void loop()
                 flags |= MAX_RUDDER_FAULT;
             } else
                 flags &= ~MAX_RUDDER_FAULT;
-            if(v < 1024+1024 || v > 65472 - 1024)
+            if(v < 1024+1024 || v > 65472 - 1024) {
                 rudder_sense = 0;
+                flags &= ~(MIN_RUDDER_FAULT | MAX_RUDDER_FAULT);
+            }
         } else {
             if(v > 1024+1536 && v < 65472 - 1536)
                 rudder_sense = 1;
