@@ -28,11 +28,11 @@ msgstr "configuration écran et télécommande"
 
 #: templates/index.html:17
 msgid "clear"
-msgstr "clair"
+msgstr "effacer"
 
 #: templates/index.html:17
 msgid "default"
-msgstr "défaut"
+msgstr "par défaut"
 
 #: templates/index.html:18
 msgid ""
