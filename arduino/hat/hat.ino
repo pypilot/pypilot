@@ -7,8 +7,7 @@
  */
 
 /* this program reads rf on pin2, and ir on pin3 and outputs
-   received remote presses as a spi slave
-*/
+   received remote presses as a spi slave */
 
 #include <Arduino.h>
 #include <stdint.h>
@@ -312,7 +311,7 @@ struct codes_type {
 };
 
 static struct codes_type codes[4] = {0};
-static uint16_t adc_avg[5], adc_count, adc_cycles=64;
+static uint16_t adc_avg[6], adc_count, adc_cycles;
 static uint32_t adc_a;
 
 void send(uint8_t id, uint8_t d[PACKET_LEN])
@@ -389,6 +388,8 @@ void read_data()
     case SET_ADC_CHANNELS:
     {
         adc_channels = d[0];
+        if(adc_channels > 3)
+            adc_channels = 3;
     } break;
     case GET_VERSION:
     {
@@ -437,6 +438,7 @@ void send_code(uint8_t source, uint32_t value)
         digitalWrite(LED_PIN, HIGH); // turn on led to indicate remote received
     } else
         digitalWrite(LED_PIN, LOW);
+
     codes[source].lvalue = cvalue;
     codes[source].ltime = millis();
 }
@@ -481,8 +483,8 @@ void read_analog() {
     if(send_packet) {
         uint8_t d[PACKET_LEN] = {0};
         for(int i=0; i<adc_channels; i++) {
-            d[2*i+0] = adc_avg[i]&0x7f;
-            d[2*i+1] = (adc_avg[i]>>7)&0x7f;
+            d[2*i+0] = adc_avg[3+i]&0x7f;
+            d[2*i+1] = (adc_avg[3+i]>>7)&0x7f;
         }
         send(ANALOG, d);
     }
@@ -631,7 +633,7 @@ void loop() {
     // parse incoming data
     uint32_t dt = t - codes[GP].ltime;
     if(dt > 40) { // do not send faster than 40 ms
-        for(int i=0; i<6; i++)
+        for(int i=adc_channels; i<6; i++)
             if(!digitalRead(A0+i))
                 send_code(GP, i+1);
         if(!digitalRead(7))
