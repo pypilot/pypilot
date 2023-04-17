@@ -52,7 +52,6 @@ $(document).ready(function() {
         $('#action'+n+'keys').text(keys['keys'])
     });
 
-
     function program_button(event) {
         if($('#action0').text().length == 0) {
             if(confirm('clear all codes for' + ' "' + event.target.innerText + '" ?'))
@@ -88,6 +87,10 @@ $(document).ready(function() {
 
     $('#default').click(function(event) {
         socket.emit('keys', 'default');
+    });
+
+    $('#adc_channels').change(function(event) {
+        socket.emit('config', {'adc_channels': $('#adc_channels').val()})
     });
 
     function config_ir() {

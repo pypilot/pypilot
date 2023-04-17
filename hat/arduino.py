@@ -24,7 +24,7 @@ VERSION=0x0a
 SET_BACKLIGHT=0x16
 SET_BUZZER=0x17
 SET_BAUD=0x18
-SET_ADC_COUNT=0x19
+SET_ADC_CHANNELS=0x19
 GET_VERSION=0x1b
 
 PACKET_LEN=6
@@ -154,6 +154,7 @@ class arduino(object):
             if 'lcd' in self.config and 'backlight' in self.config['lcd']:
                 self.set_backlight(self.config['lcd']['backlight'])
             self.set_baud(self.config['arduino.nmea.baud'])
+            self.set_adc_channels(self.config['arduino.adc_channels'])
 
         except Exception as e:
             print('failed to communicate with arduino', device, e)
@@ -202,9 +203,9 @@ class arduino(object):
         self.debug('nmea set baud', d)
         self.send(SET_BAUD, d)
 
-    def set_adc_count(self, value):        
+    def set_adc_channels(self, value):
         value = min(max(int(value), 0), 3)
-        self.send(SET_ADC_COUNT, [value])
+        self.send(SET_ADC_CHANNELS, [value])
 
     def set_buzzer(self, pitch, pulse, duration):
         duration = int(round(min(max(duration, 0), 2)*100))
@@ -230,7 +231,7 @@ class arduino(object):
 
         if not self.version and t0-self.get_version_time > 10:
             self.send(GET_VERSION)
-            self.get_version_time = t0
+            self.get_version_time = t0+170
         
         events = []
         serial_data =  []
@@ -423,7 +424,7 @@ def arduino_process(pipe, config):
                     break
                 name, value = msg
             except Exception as e:
-                print('pipe recv failed!!\n')
+                print('pipe recv failed!!', e, msg)
                 return
 
             config[name] = value
@@ -433,8 +434,8 @@ def arduino_process(pipe, config):
                 a.set_buzzer(*value)
             elif name == 'arduino.nmea.baud':
                 a.set_baud(value)
-            elif name == 'adc_count':
-                a.set_adc_count(value)
+            elif name == 'arduino.adc_channels':
+                a.set_adc_channels(value)
 
         t2 = time.monotonic()
         # max period to handle 38400 with 192 byte buffers is (192*10) / 38400 = 0.05
@@ -453,7 +454,7 @@ def main():
               'arduino.nmea.out': False,
               'arduino.ir': True,
               'arduino.debug': True,
-              'adc_count': 0}
+              'arduino.adc_channels': 1}
 
     a = arduino(config)
     dt = 0
