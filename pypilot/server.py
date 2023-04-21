@@ -479,7 +479,6 @@ class ServerValues(pypilotValue):
         except Exception as e:
             self.inotify = None
             print(_('failed to monitor '), configfilepath, e)
-        self.load_file(configfilepath + configfilename)
         try:
             if not os.path.exists(configfilepath):
                 print(_('creating config directory: ') + configfilepath)
