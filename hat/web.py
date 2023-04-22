@@ -62,7 +62,7 @@ def generate_codes(channel):
             pins = [pins]
         for (pinc, pind) in pins:
             pinc ^= channel<<2
-            codes[name] = lmap(rf_code(pinc, pind), [0xac, 0xdc])
+            codes[name] = codes.get(name, []) + lmap(rf_code(pinc, pind), [0xac, 0xdc])
     return codes
 
 
@@ -74,13 +74,16 @@ for channel in range(8):
 
 
 default_actions = \
-    {'-10_': ['ir03111800','ir03111000','KEY_LEFT'  ,'gpio6' ],
+    {'-10_': ['ir03111800','ir03111000','KEY_LEFT'  ,'gpio06'],
      '-1_':  ['ir03201800','ir03201000','KEY_UP'    ,'gpio27'],
      '+1_':  ['ir03211800','ir03211000','KEY_DOWN'  ,'gpio22'],
-     '+10_': ['ir03101800','ir03101000','KEY_RIGHT' ,'gpio5' ],
+     '+10_': ['ir03101800','ir03101000','KEY_RIGHT' ,'gpio05'],
      'auto_':['ir030C1000','ir030C1800','KEY_POWER' ,'gpio17'],
      'menu_':['ir030D1000','ir030D1800','KEY_MUTE'  ,'gpio23'],
      'mode_':['ir030B1000','ir030B1800','KEY_SELECT','gpio18'],
+
+     'tack port':      ['gpio27_06'],
+     'tack starboard': ['gpio22_05'],
     }
 
 try:

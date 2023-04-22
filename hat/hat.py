@@ -87,7 +87,7 @@ class ActionHeading(Action):
                     sign = -sign
                 self.hat.client.set('ap.heading_command',
                                     self.hat.last_msg['ap.heading_command'] + self.offset)
-        else: # manual mode
+        elif count >= 0: # manual mode
             if count:
                 self.hat.servo_timeout = time.monotonic() + .5
                 self.hat.servo_command = -1 if self.offset > 0 else 1
@@ -356,7 +356,7 @@ class Hat(object):
         # update firmware
         arduino.update_firmware(self.config)
 
-        self.servo_timeout = time.monotonic() + 1
+        self.servo_timeout = 0
         self.servo_command = 0
         self.last_msg = {'ap.enabled': False,
                          'ap.heading_command': 0,
@@ -370,6 +370,8 @@ class Hat(object):
 
         self.poller = select.poll()        
         self.gpio = gpio.gpio()
+        self.poller.register(self.gpio.pipe[1], select.POLLIN)
+        
         self.lcd = LCD(self)
         #time.sleep(1)
 
@@ -392,8 +394,6 @@ class Hat(object):
         self.lirc = lircd.lirc(self.config)
         self.lirc.registered = False
         self.keytime = False
-        self.keycounts = {}
-        self.lastkeycount = '', 0
 
         self.inputs = [self.gpio, self.arduino, self.lirc]
 
@@ -523,7 +523,7 @@ class Hat(object):
         self.config[name] = value
 
     def apply_code(self, key, count):
-        if count == 1:
+        if count == 1 or count == -1:
             self.web.send({'key': key})
 
         actions = self.config['actions']
@@ -532,14 +532,16 @@ class Hat(object):
                 actions[action.name] = []
             keys = actions[action.name]
             if key in keys:
-                if not count:
+                if count <= 0:
                     self.web.send({'action': action.name})
                     if not self.keytime:
                         break # do not apply keyup if already applied
                     self.keytime = False
                 else:
                     self.keytime = key, time.monotonic()
-                action.trigger(count)
+
+                if count >= 0:
+                    action.trigger(count)
                 return
 
         self.web.send({'action': 'none'})
@@ -568,46 +570,34 @@ class Hat(object):
                     print('shutting down since pilots updated')
                     exit(0) #respawn
 
-    def key(self):
-        key = ''
-        count = 0
-        for k, c in self.keycounts.items():
-            if key:
-                key += '_' + k
-                count = max(count, c)
-            else:
-                key, count = k, c
-
-        if (key, count) == self.lastkeycount:
-            return '', 0
-        self.lastkeycount = key, count
-        return self.lastkeycount
-                    
     def poll(self):            
         t0 = time.monotonic()
         for i in self.inputs:
             try:
                 if not i:
                     continue
+
+                keycount = False
                 events = i.poll()
                 for event in events:
                     key, count = event
-                    self.keycounts[key] = count
-                    if not count: # if key is released
+                    if count: # if key is released
+                        keycount = key, count
+                    else:
+                        if keycount:
+                            self.apply_code(*keycount)
+                            keycount = False
                         if self.keytime:
                             self.apply_code(self.keytime[0], 0)
                             self.keytime = False
-                        self.keycounts = {}
+                if keycount:
+                    self.apply_code(*keycount)
 
             except Exception as e:
                 self.inputs.remove(i)
                 print('WARNING, failed to poll!!', e, i)
                 del i
                 return
-
-        key, count = self.key()
-        if key:
-            self.apply_code(key, count)
 
         t1 = time.monotonic()
         msgs = self.client.receive()
@@ -673,7 +663,7 @@ class Hat(object):
 
         t4 = time.monotonic()
         dt = t3-t0
-        period = .01 if self.servo_timeout else max(1 - dt, .01)
+        period = .01 if self.servo_timeout else .05 if self.gpio.keypin else max(1 - dt, .01)
 
         if not self.lirc.registered:
             fileno = self.lirc.fileno()
