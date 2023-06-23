@@ -19,11 +19,13 @@ IR=0x02
 GP=0x03
 VOLTAGE=0x04
 ANALOG=0x05
+VERSION=0x0a
 
 SET_BACKLIGHT=0x16
 SET_BUZZER=0x17
 SET_BAUD=0x18
-SET_ADC_COUNT=0x19
+SET_ADC_CHANNELS=0x19
+GET_VERSION=0x1b
 
 PACKET_LEN=6
 
@@ -31,6 +33,61 @@ try:
     import RPi.GPIO as GPIO
 except:
     GPIO = False
+
+def update_firmware(config):
+    if not 'version' in config:
+        print('cannot update firmware until version is known')
+        return
+    
+    if not 'hat' in config:
+        return
+
+    hatconfig = config['hat']
+    if not 'arduino' in hatconfig:
+        return
+
+    arduinoconfig = hatconfig['arduino']
+
+    device = arduinoconfig.get('device')
+    if not device:
+        return
+
+    if device.startswith('/dev/spidev'):
+        # update flash if needed
+        path = os.getenv('HOME') + '/.pypilot/firmware'
+        firmware = False
+        for filename in os.listdir(path):
+            if not filename.startswith('hat_') or not filename.endswith('.hex'):
+                continue
+
+            version = filename[4:-4]
+            if version and float(version) > float(config['version']):
+                firmware = path+os.path.sep + filename
+
+        if not firmware:
+            print('did not find firmware to update')
+            return
+
+        print('found firmware update', firmware)
+        time.sleep(1)
+
+        def flash(filename, c):
+            command = 'sudo avrdude -P ' + device + ':' + '/dev/gpiochip0:' + str(arduinoconfig['resetpin']) + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 1000000'
+            print('flash cmd', command)
+            ret = os.system(command)
+            return not ret
+    
+        def verify(filename):
+            return flash(filename, 'v')
+    
+        def write(filename):
+            return flash(filename, 'w')
+
+        # try to verify twice because sometimes this fails
+        if not verify(firmware) and not verify(firmware):
+            if not write(firmware) or not verify(firmware):
+                print('failed to verify or upload', firmware)
+    
     
 class arduino(object):    
     def __init__(self, config):
@@ -38,7 +95,6 @@ class arduino(object):
         self.nmea_socket = False
         self.nmea_connect_time = time.monotonic()
         self.pollt0 = [0, time.monotonic()]
-
         self.config = config
 
         if 'arduino.debug' in config and config['arduino.debug']:
@@ -69,36 +125,8 @@ class arduino(object):
 
         self.packetout_data = []
         self.packetin_data = []
-
-    def firmware(self):
-        if not self.hatconfig:
-            return
-
-        device = self.hatconfig['device']
-        if not device:
-            return
-
-        if device.startswith('/dev/spidev'):
-            # update flash if needed
-            filename = os.getenv('HOME') + '/.pypilot/hat.hex'
-            if not os.path.exists(filename):
-                print('hat firmware not in', filename)
-                print('skipping verification')
-            # try to verify twice because sometimes this fails
-            elif not self.verify(filename) and not self.verify(filename):
-                if not self.write(filename) or not self.verify(filename):
-                    print('failed to verify or upload', filename)
-                    #self.hatconfig['device'] = False # prevent retry
-                    #return
-            self.resetpin = self.hatconfig['resetpin']
-
-            try:
-                GPIO.setmode(GPIO.BCM)
-                GPIO.setup(int(self.resetpin), GPIO.IN, pull_up_down=GPIO.PUD_UP)
-                pass
-            except Exception as e:
-                print('arduino failed to set reset pin high', e)
-                #return
+        self.version = False
+        self.get_version_time = time.monotonic()
 
     def open(self):
         if not self.hatconfig:
@@ -126,6 +154,7 @@ class arduino(object):
             if 'lcd' in self.config and 'backlight' in self.config['lcd']:
                 self.set_backlight(self.config['lcd']['backlight'])
             self.set_baud(self.config['arduino.nmea.baud'])
+            self.set_adc_channels(self.config['arduino.adc_channels'])
 
         except Exception as e:
             print('failed to communicate with arduino', device, e)
@@ -140,7 +169,7 @@ class arduino(object):
     def xfer(self, x):
         return self.spi.xfer([x])[0]
 
-    def send(self, id, data):
+    def send(self, id, data=[]):
         p = id
         self.packetout_data += bytes([ord('$') | 0x80, id | 0x80])
         for i in range(PACKET_LEN-1):
@@ -174,9 +203,9 @@ class arduino(object):
         self.debug('nmea set baud', d)
         self.send(SET_BAUD, d)
 
-    def set_adc_count(self, value):        
+    def set_adc_channels(self, value):
         value = min(max(int(value), 0), 3)
-        self.send(SET_ADC_COUNT, [value])
+        self.send(SET_ADC_CHANNELS, [value])
 
     def set_buzzer(self, pitch, pulse, duration):
         duration = int(round(min(max(duration, 0), 2)*100))
@@ -200,6 +229,10 @@ class arduino(object):
             self.open()
             return []
 
+        if not self.version and t0-self.get_version_time > 10:
+            self.send(GET_VERSION)
+            self.get_version_time = t0+170
+        
         events = []
         serial_data =  []
         self.open_nmea()
@@ -260,7 +293,6 @@ class arduino(object):
             p = 0
             for x in d:
                 p ^= x
-
             # spi interrupt collides with pin change interrupt, so sometimes
             # (maybe even impossible at 100khz and below)
             # bytes are lost when rf is receiving causing parity failure
@@ -292,6 +324,12 @@ class arduino(object):
                 for i in range(3):
                     adc.append(d[2*i] + (d[2*i+1]<<7))
                 events.append(['analog', adc])
+                continue
+            elif cmd == VERSION:
+                self.version = '%d.%d' % (d[0], d[1])
+                print('hat firmware version', self.version)
+                events.append(['version', self.version])
+                continue
             else:
                 print('unknown message', cmd, d)
                 continue
@@ -311,9 +349,7 @@ class arduino(object):
 
             self.serial_out_count += len(serial_data)
         t4 = time.monotonic()
-
         #print('times', t1-t0, t2-t1, t3-t2, t4-t3)
-            
         return events
 
     def open_nmea(self):
@@ -354,35 +390,6 @@ class arduino(object):
         except:
             print('MOOOOOOOOOOOOOOORE')
 
-    def flash(self, filename, c):
-        global GPIO
-        if not GPIO:
-            return False
-
-        self.resetpin = self.hatconfig['resetpin']
-
-        try:
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(int(self.resetpin), GPIO.OUT)
-            GPIO.output(int(self.resetpin), 0)
-        except Exception as e:
-            print('failed to setup gpio reset pin for arduino', e)
-            GPIO = False # prevent further tries
-            return False
-
-        command = 'avrdude -P ' + self.hatconfig['device'] + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 500000'
-        print('cmd', command)
-        ret = os.system(command)
-        GPIO.output(int(self.resetpin), 1)
-        GPIO.setup(int(self.resetpin), GPIO.IN)
-        return not ret
-
-    def verify(self, filename):
-        return self.flash(filename, 'v')
-
-    def write(self, filename):
-        return self.flash(filename, 'w')
-
 def arduino_process(pipe, config):
     start = time.monotonic()
     a = arduino(config)
@@ -417,7 +424,7 @@ def arduino_process(pipe, config):
                     break
                 name, value = msg
             except Exception as e:
-                print('pipe recv failed!!\n')
+                print('pipe recv failed!!', e, msg)
                 return
 
             config[name] = value
@@ -427,8 +434,8 @@ def arduino_process(pipe, config):
                 a.set_buzzer(*value)
             elif name == 'arduino.nmea.baud':
                 a.set_baud(value)
-            elif name == 'adc_count':
-                a.set_adc_count(value)
+            elif name == 'arduino.adc_channels':
+                a.set_adc_channels(value)
 
         t2 = time.monotonic()
         # max period to handle 38400 with 192 byte buffers is (192*10) / 38400 = 0.05
@@ -447,7 +454,7 @@ def main():
               'arduino.nmea.out': False,
               'arduino.ir': True,
               'arduino.debug': True,
-              'adc_count': 0}
+              'arduino.adc_channels': 1}
 
     a = arduino(config)
     dt = 0

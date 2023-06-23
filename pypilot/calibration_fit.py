@@ -608,7 +608,7 @@ class AgeValue(StringValue):
         t = time.monotonic()
         if self.value:
             return '"' + boatimu.readable_timespan(t - self.value) + '"'
-        return 'N/A'
+        return '"N/A"'
 
 def RegisterCalibration(client, name, default):
     calibration = client.register(CalibrationProperty(name, default))
@@ -713,7 +713,7 @@ def CalibrationProcess(cal_pipe, client):
                 value = vector.sub(sensor, cal[0][:3])
                 g = vector.norm(value)
                 # check that calibration points are near magnitude of 1
-                print("warning update", g)
+                #print("warning update", g)
                 warnings_update('accel', 'warning', abs(g-1) > .1)
 
             if compass_points.last_sample:
