@@ -246,10 +246,6 @@ void setup()
     pinMode(0, INPUT_PULLUP);
     pinMode(1, INPUT_PULLUP);
 
-    // enable adc with 128 division
-    ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
-    ADCSRA |= _BV(ADSC);
-
     // turn on SPI in slave mode
     SPCR |= _BV(SPE);
     // turn on interrupts
@@ -432,7 +428,19 @@ void send_code(uint8_t source, uint32_t value)
     codes[source].ltime = millis();
 }
 
-void read_analog() {
+void read_analog()
+{
+    static uint8_t startup = 1;
+    if(startup) {
+        // 3 second delay to delay power draw of backlight
+        if(millis() < 3000)
+            return;
+        // enable adc with 128 division
+        ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
+        ADCSRA |= _BV(ADSC);
+        startup = 0;
+    }
+    
     static uint8_t channel;
     const uint8_t channels[] = {_BV(MUX1) | _BV(MUX2),              // 5v through divider
                                 _BV(MUX0) | _BV(MUX1) | _BV(MUX2),  // ambient light sensor
