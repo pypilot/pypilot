@@ -79,7 +79,7 @@ class ActionHeading(Action):
         self.offset = offset
 
     def trigger(self, count):
-        if not self.hat.client:
+        if not self.hat.client or count:
             return
 
         if self.hat.last_msg['ap.enabled']:
@@ -89,9 +89,11 @@ class ActionHeading(Action):
                 self.hat.client.set('ap.heading_command',
                                     self.hat.last_msg['ap.heading_command'] + self.offset)
         else: # manual mode
-            self.servo_timeout = time.monotonic() + abs(self.offset)**.5/2
-            self.hat.client.set('servo.command', 1 if self.offset > 0 else -1)
-            self.hat.client.poll() # reduce lag
+            if not self.hat.servo_timeout:
+                self.hat.servo_timeout = time.monotonic() + abs(self.offset)**.5/4
+                self.hat.servo_command = -1 if self.offset > 0 else 1
+                self.hat.client.set('servo.command', self.hat.servo_command)
+                self.hat.client.poll() # reduce lag
 
 class ActionTack(ActionPypilot):
     def  __init__(self, hat, name, direction):
@@ -314,7 +316,7 @@ class Hat(object):
         try:
             configfile = '/proc/device-tree/hat/custom_0'
             f = open(configfile)
-            hat_config = pyjson.loads(f.read())
+v            hat_config = pyjson.loads(f.read())
             f.close()
             print('loaded device tree hat config')
             if not 'hat' in self.config or hat_config != self.config['hat']:
@@ -335,7 +337,7 @@ class Hat(object):
         arduino.update_firmware(config)
 
         self.servo_timeout = time.monotonic() + 1
-                
+        self.servo_command = 0
         self.last_msg = {'ap.enabled': False,
                          'ap.heading_command': 0,
                          'ap.mode': '',
@@ -626,6 +628,9 @@ class Hat(object):
                 if self.client:
                     self.client.set('servo.command', 0) # stop
                 self.servo_timeout = 0
+            else:
+                self.client.set('servo.command', self.servo_command) # continue
+            self.client.poll() # reduce lag
 
         # set web status
         if self.client.connection:
@@ -641,7 +646,7 @@ class Hat(object):
 
         t4 = time.monotonic()
         dt = t3-t0
-        period = max(1 - dt, .01)
+        period = .01 if self.servo_timeout else max(1 - dt, .01)
 
         if not self.lirc.registered:
             fileno = self.lirc.fileno()
