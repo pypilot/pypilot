@@ -241,7 +241,7 @@ class Arduino(Process):
                     self.hat.web.send({'voltage': '5v = %.3f, 3.3v = %.3f' % (code['vcc'], code['vin'])})
                     self.hat.lcd.send(msg)
                 elif key == 'analog':
-                    
+                    pass
                 elif key == 'version':
                     if self.hat.config.get('version') != code:
                         print('update version, restart may update firmware')
@@ -316,7 +316,7 @@ class Hat(object):
         try:
             configfile = '/proc/device-tree/hat/custom_0'
             f = open(configfile)
-v            hat_config = pyjson.loads(f.read())
+            hat_config = pyjson.loads(f.read())
             f.close()
             print('loaded device tree hat config')
             if not 'hat' in self.config or hat_config != self.config['hat']:
