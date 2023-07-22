@@ -541,7 +541,7 @@ def FitCompass(debug, compass_points, compass_calibration, norm):
 
     # make sure the magnitude is sane
     mag = c[0][3]
-    if mag < 7 or mag > 120:
+    if mag < 12 or mag > 120:
         debug('fit found field outside of normal earth field strength', mag)
         return
 

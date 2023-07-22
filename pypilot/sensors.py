@@ -130,11 +130,14 @@ class TrueWind(BaseWind):
     def __init__(self, client, boatimu):
         super(TrueWind, self).__init__(client, 'truewind', boatimu)
 
-    def compute_true_wind(water_speed, wind_speed, wind_direction):
+    @staticmethod
+    def compute_true_wind_direction(water_speed, wind_speed, wind_direction):
         rd = math.radians(wind_direction)
         windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd) - water_speed
-        return math.hypot(*windv)
-
+        truewind = math.degrees(math.atan2(*windv))
+        #print( 'truewind', truewind, math.hypot(*windv))
+        return truewind
+        
     @staticmethod
     def compute_true_wind_speed(water_speed, wind_speed, wind_direction):
         rd = math.radians(wind_direction)
@@ -143,7 +146,7 @@ class TrueWind(BaseWind):
 
     def update_from_apparent(self, boat_speed, wind_speed, wind_direction):
         if self.source.value == 'water+wind' or self.source.value == 'gps+wind':
-            self.direction.set(TrueWind.compute_true_wind(boat_speed, wind_speed, wind_direction))
+            self.direction.set(TrueWind.compute_true_wind_direction(boat_speed, wind_speed, wind_direction))
             self.wdirection = self.direction.value
             self.wfactor = .05
             self.lastupdate = time.monotonic()
