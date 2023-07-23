@@ -83,16 +83,20 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         watchlist = ['profile', 'profiles',
                      'imu.error', 'imu.warning',
-                     'ap.enabled', 'ap.mode', 'ap.modes', 'ap.heading_command',
+                     'ap.enabled', 'ap.mode', 'ap.modes',
+                     'ap.heading_command',
                      'ap.tack.state', 'ap.tack.timeout',
-                     'ap.heading', 'ap.pilot',
+                     ('ap.heading', .2), 'ap.pilot',
                      'servo.controller', 'servo.engaged', 'servo.flags',
-                     'rudder.angle']
+                     ('rudder.angle', .5)]
 
         self.error = False
         self.warning = False
-        for name in watchlist:
-            self.client.watch(name)
+        for watch in watchlist:
+            if type(watch) == type (()):
+                self.client.watch(*watch)
+            else:
+                self.client.watch(watch)
 
         self.tackdialog = TackDialog(self)
         self.mode = None
@@ -134,7 +138,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 sizer.SetFlexibleDirection( wx.VERTICAL )
         
                 self.client.watch(name)
-                self.client.watch(name+'gain')
+                self.client.watch(name+'gain', 0.2)
 
                 lname = name
                 sname = name.split('.')
@@ -229,14 +233,15 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 elif name == gain_name + 'gain':
                     v = abs(value) * 1000.0
                     if v < gain['gauge'].GetRange():
-                        gain['gauge'].SetValue(int(v))
-                        if value > 0:
-                            gain['gauge'].SetBackgroundColour(wx.RED)
-                        elif value < 0:
-                            gain['gauge'].SetBackgroundColour(wx.GREEN)
-                        else:
-                            gain['gauge'].SetBackgroundColour(wx.LIGHT_GREY)
-                    else:
+                        if gain['gauge'].GetValue() != int(v):
+                            gain['gauge'].SetValue(int(v))
+                            if value > 0:
+                                gain['gauge'].SetBackgroundColour(wx.RED)
+                            elif value < 0:
+                                gain['gauge'].SetBackgroundColour(wx.GREEN)
+                            else:
+                                gain['gauge'].SetBackgroundColour(wx.LIGHT_GREY)
+                    elif gain['gauge'].GetValue():
                         gain['gauge'].SetValue(0)
                         gain['gauge'].SetBackgroundColour(wx.BLUE)
 
@@ -244,9 +249,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
             if found:
                 pass
-#            elif name == 'servo.raw_command':
-#                self.tbAP.SetValue(False)
-#                self.tbAP.SetForegroundColour(wx.RED)
 
             if self.tackdialog.receive(name, value):
                 pass
