@@ -20,7 +20,7 @@ import quaternion
 
 # favor lower priority sources
 source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3,
-                   'signalk' : 4, 'gps+wind' : 5, 'water+wind' : 6, 'none' : 7}
+                   'signalk' : 4, 'water+wind' : 5, 'gps+wind' : 6, 'none' : 7}
 
 class Sensor(object):
     def __init__(self, client, name):
