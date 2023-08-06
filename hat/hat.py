@@ -206,7 +206,7 @@ class Web(Process):
                 exit(0) # respawn
             elif 'adc_channels' in msg:
                 if self.hat.arduino:
-                    self.hat.arduino.send(('arduino.adc_channels', msg['adc_channels']))
+                    self.hat.arduino.config('arduino.adc_channels', msg['adc_channels'])
 
 class Arduino(Process):
     def __init__(self, hat):
@@ -216,6 +216,7 @@ class Arduino(Process):
 
     def config(self, name, value):
         self.send((name, value))
+        self.config[name] = value
 
     def create(self):
         def process(pipe, config):
@@ -241,6 +242,20 @@ class Arduino(Process):
                     self.hat.web.send({'voltage': '5v = %.3f, 3.3v = %.3f' % (code['vcc'], code['vin'])})
                     self.hat.lcd.send(msg)
                 elif key == 'analog':
+                    config = self.config('adc_channels')
+                    adc_count = len(config)
+                    for i in range(adc_count):
+                        if i >= len(config):
+                            break
+                        adc = code[i]
+                        if config[i] == 'none':
+                            break
+                        elif config[i] == 'control':
+                            self.hat.client.send('servo.command', (adc-512)/512)
+                            break
+                        elif config[i] == 'user':
+                            print("GOT USER ADC", adc)
+                            break
                     pass
                 elif key == 'version':
                     if self.hat.config.get('version') != code:

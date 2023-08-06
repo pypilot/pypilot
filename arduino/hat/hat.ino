@@ -385,7 +385,7 @@ void read_data()
     {
         adc_channels = d[0];
         if(adc_channels > 3)
-            adc_channels = 3;
+            adc_channels = 0;
     } break;
     case GET_VERSION:
     {

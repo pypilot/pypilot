@@ -454,7 +454,7 @@ def main():
               'arduino.nmea.out': False,
               'arduino.ir': True,
               'arduino.debug': True,
-              'arduino.adc_channels': 1}
+              'arduino.adc_channels': []}
 
     a = arduino(config)
     dt = 0
