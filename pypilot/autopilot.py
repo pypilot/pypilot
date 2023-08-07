@@ -325,7 +325,7 @@ class Autopilot(object):
         self.heading_error_int_time = t
         # int error +- 1, from 0 to 1500 deg/s
         self.heading_error_int.set(minmax(self.heading_error_int.value + \
-                                          (self.heading_error.value/1500)*dt, 1))
+                                          (self.heading_error.value/1500)*dt, 5))
 
     def iteration(self):
         data = False
@@ -411,13 +411,17 @@ class Autopilot(object):
         if self.enabled.value != self.lastenabled:
             self.lastenabled = self.enabled.value
             if self.enabled.value:
-                self.heading_error_int.set(0) # reset integral
+                # reset feed-forward gain and integral gains
                 self.heading_command_rate.set(0)
-                # reset feed-forward gain
                 self.last_heading_mode = False
 
+        newmode = self.last_heading_mode != self.mode.value
+        self.last_heading_mode = self.mode.value
+        if newmode:
+            self.heading_error_int.set(0) # reset integral
+                
         # reset feed-forward error if mode changed, or last command is older than 1 second
-        if self.last_heading_mode != self.mode.value or t0 - self.heading_command_rate.time > 1:
+        if newmode or t0 - self.heading_command_rate.time > 1:
             self.last_heading_command = self.heading_command.value
 
         # filter the heading command to compute feed-forward gain
@@ -430,9 +434,7 @@ class Autopilot(object):
         lp = .1
         command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
         self.heading_command_rate.update(command_rate)
-            
-        self.last_heading_mode = self.mode.value
-                
+                            
         # perform tacking or pilot specific calculation
         if not self.tack.process():
             # if disabled, only compute if a client cares
@@ -460,6 +462,12 @@ class Autopilot(object):
                                        # from inertial sensors
         self.sensors.water.compute(self) # calculate leeway and currents
         self.boatimu.poll() # after critical loop is done
+
+        if heading_command_diff:
+            # decay integral with heading command changes
+            e = self.heading_error_int.value
+            sign = 1 if e > 0 else -1
+            self.heading_error_int.set(sign*(abs(e)-heading_command_diff/3))
 
         t5 = time.monotonic()
         if t5-t4 > period/2 and self.servo.driver:
