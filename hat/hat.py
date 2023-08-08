@@ -513,8 +513,9 @@ class Hat(object):
         if name in self.config and self.config[name] == value:
             return
         
-        if name.startswith('arduino.') and self.arduino:
-            self.arduino.config(name, value)
+        if self.arduino:
+            if name == 'actions' or name.startswith('arduino.'):
+                self.arduino.config(name, value)
 
         self.config[name] = value
 

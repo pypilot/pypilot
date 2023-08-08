@@ -25,6 +25,8 @@ from version import strversion
 from sensors import Sensors
 import pilots
 
+udp_control_port = 43822
+
 def minmax(value, r):
     return min(max(value, -r), r)
 
@@ -150,6 +152,17 @@ class Autopilot(object):
         self.timings = self.register(SensorValue, 'timings', False)
         self.last_heading_mode = False
 
+        try:
+            self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.udp_socket.bind(('127.0.0.1', udp_control_port))
+            self.udp_socket.settimeout(0)
+            self.control = select.poll()
+            self.control.register(self.udp_socket, select.POLLIN)
+            
+        except Exception as e:
+            print('failed to initialize udp socket, this may affect manual control performance')
+            self.udp_socket = False
+            
         device = '/dev/watchdog0'
         try:
             self.watchdog_device = open(device, 'w')
@@ -332,6 +345,24 @@ class Autopilot(object):
         t0 = time.monotonic()
 
         self.server.poll() # needed if not multiprocessed
+
+        if self.udp_socket:
+            events = self.control.poll()
+            while events:
+                event = events.pop()
+                fd, flag = event
+                if flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
+                    print(_('lost udp_socket'))
+                    self.udp_socket = False
+                    break
+                if flag & select.POLLIN:
+                    try:
+                        line = self.udp_socket.recvfrom(128)
+                        if line:
+                            self.servo.command.set(int(line))
+                    except Exception as e:
+                        print("failed pollin udp??\n", line)
+                        
         msgs = self.client.receive(self.dt)
         for msg in msgs: # we aren't usually subscribed to anything
             print('autopilot main process received:', msg, msgs[msg])
@@ -489,6 +520,7 @@ class Autopilot(object):
                 break
 
             time.sleep(dt)
+
             # do waiting in client if not enabled to reduce lag
             self.dt = 0 if self.enabled.value else dt*.8
 

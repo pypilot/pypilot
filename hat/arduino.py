@@ -13,6 +13,7 @@
 # spi port.
 
 import os, sys, time, socket, errno, select
+from pypilot.autopilot import udp_control_port
 
 RF=0x01
 IR=0x02
@@ -127,6 +128,9 @@ class arduino(object):
         self.packetin_data = []
         self.version = False
         self.get_version_time = time.monotonic()
+
+        self.control_socket = False
+        self.actions(config['actions'])
 
     def open(self):
         if not self.hatconfig:
@@ -334,7 +338,10 @@ class arduino(object):
                 print('unknown message', cmd, d)
                 continue
 
-            events.append([key, count])
+            if key in self.manual_control_keys:
+                self.send_manual(self.manual_control_keys[key], count)
+            else:
+                events.append([key, count])
 
         t3 = time.monotonic()
         if serial_data:
@@ -351,6 +358,26 @@ class arduino(object):
         t4 = time.monotonic()
         #print('times', t1-t0, t2-t1, t3-t2, t4-t3)
         return events
+
+    def actions(self, actions):
+        manual_keys = {'_+1':  .5,
+                       '_-1': -.5}
+        self.manual_control_keys = {}
+        for action, keys in actions.items():
+            if action in manual_keys:
+                for key in keys:
+                    self.manual_control_keys[key] = manual_keys[action]
+
+    def send_manual(self, command, count):
+        command = str(command)+'\n' if count else 0
+        try:
+            if not self.udp_socket:
+                self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            count = self.udp_socket.sendto(command.encode(), ('127.0.0.1', udp_control_port))
+        except Exception as e:
+            count = 0
+        if count != len(command):
+            print('udp socket failed to send', e)            
 
     def open_nmea(self):
         c = self.config
@@ -376,6 +403,8 @@ class arduino(object):
                 self.nmea_socket_poller = select.poll()
                 self.nmea_socket_poller.register(self.nmea_socket, select.POLLIN)
                 try:
+                    # send a "special" pypilot nmea message to
+                    # enable rebroadcasting from this socket connection
                     self.nmea_socket.send(bytes('$PYPBS*48\r\n', 'utf-8'))
                 except Exception as e:
                     print('nmea socket exception sending', e)
@@ -388,7 +417,7 @@ class arduino(object):
             print('exception', e)
             self.nmea_socket = False
         except:
-            print('MOOOOOOOOOOOOOOORE')
+            print('exception? 975m33')
 
 def arduino_process(pipe, config):
     start = time.monotonic()
@@ -414,7 +443,6 @@ def arduino_process(pipe, config):
             periodtime = t0
         elif periodtime - t0 > 5:
             period = .2
-
         period = .01
 
         while True:
@@ -436,6 +464,8 @@ def arduino_process(pipe, config):
                 a.set_baud(value)
             elif name == 'arduino.adc_channels':
                 a.set_adc_channels(value)
+            elif name == 'actions':
+                a.set_actions(value)
 
         t2 = time.monotonic()
         # max period to handle 38400 with 192 byte buffers is (192*10) / 38400 = 0.05
