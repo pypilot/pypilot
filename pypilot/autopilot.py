@@ -37,13 +37,11 @@ class ModeProperty(EnumProperty):
 
     def set(self, value):
         # update the preferred mode when the mode changes from user
-        self.ap.preferred_heading_command = None
         self.ap.preferred_mode.update(value)
-        print('ap mode set', value)
+        self.ap.preferred_mode.command = None
         super(ModeProperty, self).set(value)
 
     def set_internal(self, value):
-        print('ap mode set_internal', value)
         super(ModeProperty, self).set(value)
 
 class HeadingOffset(object):
@@ -101,7 +99,8 @@ class Autopilot(object):
         self.timestamp = self.client.register(TimeStamp())
         self.starttime = time.monotonic()
         self.preferred_mode = self.register(Value, 'preferred_mode', 'compass')
-        self.preferred_heading_command = None
+        self.preferred_mode.command = None
+
         self.mode = self.register(ModeProperty, 'mode', self)
         self.modes = self.register(JSONValue, 'modes', [])
         self.modes.sensors = {}
@@ -238,7 +237,8 @@ class Autopilot(object):
         if self.mode.value != newmode:
             # remember the command on the preferred mode so it can be restored
             if self.mode.value == self.preferred_mode.value:
-                self.preferred_heading_command = self.heading_command.value
+                self.preferred_mode.command = self.heading_command.value
+                self.preferred_mode.time = time.monotonic()
             self.mode.set_internal(newmode)
 
     def compute_offsets(self):
@@ -312,13 +312,14 @@ class Autopilot(object):
         # keep same heading if mode changes
         if self.mode.value != self.lastmode:
             if self.mode.value == self.preferred_mode.value and \
-               self.preferred_heading_command is not None:
-                self.heading_command.set(self.preferred_heading_command)
+               self.preferred_mode.command is not None and t-self.preferred_mode.time < 30:
+                self.heading_command.set(self.preferred_mode.command)
             else:
                 error = self.heading_error.value
                 if windmode:
                     error = -error # wind error is reversed
                 self.heading_command.set(heading - error)
+
             self.lastmode = self.mode.value
       
         # compute heading error
