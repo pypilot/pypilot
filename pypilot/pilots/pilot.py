@@ -20,6 +20,7 @@ class AutopilotPilot(object):
         super(AutopilotPilot, self).__init__()
         self.name = name
         self.ap = ap
+        self.gains = {}
 
     def register(self, _type, name, *args, **kwargs):
         return self.ap.client.register(_type(*(['ap.pilot.' + self.name + '.' + name] + list(args)), **kwargs))

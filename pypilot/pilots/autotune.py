@@ -16,7 +16,6 @@ class AutotunePilot(AutopilotPilot):
     super(AutotunePilot, self).__init__('autotune', ap)
 
     # create simple pid filter
-    self.gains = {}
     self.PosGain('P', .003, .025)
     self.PosGain('D', .09, .5)
     self.PosGain('FF',  .6, 3.0) # feed forward

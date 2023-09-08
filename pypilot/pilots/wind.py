@@ -26,8 +26,6 @@ class WindPilot(AutopilotPilot):
     self.last_wind_speed = 0
     
     # create simple pid filter
-    self.gains = {}
-        
     self.PosGain('P', .003, .02) # position (heading error)
     self.PosGain('I', 0, .1)     # integral
     self.PosGain('D', .1, 1.0)   # derivative (gyro)

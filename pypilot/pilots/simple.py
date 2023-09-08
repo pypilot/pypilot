@@ -15,8 +15,7 @@ class SimplePilot(AutopilotPilot):
         super(SimplePilot, self).__init__('simple', ap)
 
         # create simple pid filter
-        self.gains = {}
-        self.Gainn('P', .005, 0, .025)
+        self.Gain('P', .005, 0, .025)
         self.Gain('I', 0, 0, .05)
         self.Gain('D', .15, 0, .5)
 

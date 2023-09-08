@@ -98,8 +98,6 @@ class VMGPilot(AutopilotPilot):
         super(VMGPilot, self).__init__(name, ap)
 
         # create extended pid filter
-        self.gains = {}
-        
         self.PosGain('P', .003, .02)   # position (heading error)
         self.PosGain('D',  .09, .8)   # derivative (gyro)
         self.PosGain('DD',  .075, 0.8) # rate of derivative
