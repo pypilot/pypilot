@@ -16,12 +16,12 @@ class BasicPilot(AutopilotPilot):
     super(BasicPilot, self).__init__(name, ap)
 
     # create extended pid filter
-    self.PosGain('P',  .003, .15)   # position (heading error)
-    self.PosGain('I',   0, .15)       # integral
-    self.PosGain('D',  .09, .3)    # derivative (gyro)
-    self.PosGain('DD', .075, 0.3) # rate of derivative
+    self.PosGain('P',  .003, .1)   # position (heading error)
+    self.PosGain('I',   0, .1)       # integral
+    self.PosGain('D',  .09, 0.24)    # derivative (gyro)
+    self.PosGain('DD', .075, 0.24) # rate of derivative
     self.PosGain('PR', .005, .02) # position root
-    self.PosGain('FF', .6, 3.0)   # feed forward
+    self.PosGain('FF', .6, 2.4)   # feed forward
     #self.PosGain('R',  0.0, 1.0)  # reactive
     #self.reactive_time = self.register(RangeProperty, 'Rtime', 1, 0, 3)
 

@@ -14,7 +14,6 @@ from pypilot import pyjson
 from pypilot.client import pypilotClient
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gpio
-import lircd
 import lcd
 import arduino
 
@@ -189,8 +188,6 @@ class Web(Process):
                     time.sleep(30) # delay loading web and wait until modules are loaded
                 else:
                     time.sleep(5) # delay less on other platforms
-                import web
-                web.web_process(pipe, config)
                 try:
                     import web
                     web.web_process(pipe, config)
@@ -371,7 +368,7 @@ class Hat(object):
         self.poller = select.poll()        
         self.gpio = gpio.gpio()
         self.lcd = LCD(self)
-        time.sleep(1)
+        #time.sleep(1)
 
         self.client = pypilotClient(host)
         self.client.registered = False
@@ -389,6 +386,8 @@ class Hat(object):
             self.arduino = False
 
         self.lcd.poll()
+
+        import lircd
         self.lirc = lircd.lirc(self.config)
         self.lirc.registered = False
         self.keytime = False

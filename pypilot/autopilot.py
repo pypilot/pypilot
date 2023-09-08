@@ -57,8 +57,11 @@ class HeadingProperty(RangeProperty):
 
     # +-180 for wind modes 0-360 for compass and gps modes
     def set(self, value):
-        value = resolv(value, 0 if 'wind' in self.mode.value else 180)
-        super(HeadingProperty, self).set(value)
+        try:
+            value = resolv(float(value), 0 if 'wind' in self.mode.value else 180)
+            super(HeadingProperty, self).set(value)
+        except Exception as e:
+            pass # ignore for now
 
 class TimeStamp(SensorValue):
     def __init__(self):
@@ -463,9 +466,11 @@ class Autopilot(object):
         if self.enabled.value:
             self.servo.poll()
 
-        self.sensors.gps.predict(self) # make gps position/velocity prediction
-                                       # from inertial sensors
-        self.sensors.water.compute(self) # calculate leeway and currents
+        if self.starttime > 30:
+            # make gps position/velocity prediction from inertial sensors            
+            self.sensors.gps.predict(self)
+            self.sensors.water.compute(self) # calculate leeway and currents
+
         self.boatimu.poll() # after critical loop is done
         self.tack.poll()
 

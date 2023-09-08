@@ -352,7 +352,6 @@ $(document).ready(function() {
     }
     
     socket.on('pypilot_values', function(msg) {
-        //var list_values = JSON.parse(msg);
         $('#connection').text('Connected');
 
         for(s of ['error', 'warning'])

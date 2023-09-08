@@ -86,7 +86,7 @@ def logs():
         logdirs = os.listdir('/var/log')
         for name in logdirs:
             if os.path.exists(os.path.join('/var/log', name, 'current')):
-                log_links+='<br><p><a href="log/'+name+'">'+name+'</a></p>';
+                log_links+='<br><a href="log/'+name+'">'+name+'</a>';
     except Exception as e:
         print('failed to enumerate log directory', e)
 
@@ -174,6 +174,10 @@ def wifi():
 @app.route('/calibrationplot')
 def calibrationplot():
     return render_template('calibrationplot.html', async_mode=socketio.async_mode,pypilot_web_port=pypilot_web_port)
+
+@app.route('/client')
+def client():
+    return render_template('client.html', async_mode=socketio.async_mode,pypilot_web_port=pypilot_web_port)
 
 translations = []
 static = False
