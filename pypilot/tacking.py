@@ -146,9 +146,11 @@ class Tack(object):
             heading = ap.boatimu.SensorValues['heading_lowpass'].value
             headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
             headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
+            winddir = resolv(ap.sensors.wind.direction.value)
 
             if 'wind' in ap.mode.value:
-                d = .5 - 2*heading / command
+                #d = .5 - 2*heading / command
+                d = 0.5 * ( 1 - winddir / command)
                 tack_heading = -command
                 direction = 1 if command < 0 else -1
             else:
@@ -161,10 +163,16 @@ class Tack(object):
                 self.state.update('none')
                 self.direction.toggle()
                 ap.heading_command.set(tack_heading)
+                print("Tack Completed, ap.heading_command = " + str(tack_heading))
                 return
 
             # for now very simple filter based on turn rate for tacking
             command = (headingrate + headingraterate/2)/self.rate.value + direction
+            print("winddir: " + str(winddir) + \
+            ", ap.heading_command.value: " + str(ap.heading_command.value) + \
+            ", Command: " + str(command) + \
+            ", d: " + str(d) + \
+            ", self.tack_angle = " + str(self.tack_angle))
             
             command = min(max(command, -1), 1) # do not cause integrator windup
             ap.servo.command.set(command)
