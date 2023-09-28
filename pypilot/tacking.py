@@ -146,17 +146,18 @@ class Tack(object):
             command = ap.heading_command.value
             heading = ap.boatimu.SensorValues['heading_lowpass'].value
             headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
-            headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
-
+            headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value        
+ 
             if 'wind' in ap.mode.value:  #  Prevents jibing with wind instr?
+                winddir = resolv(ap.sensors.wind.direction.value)                
                 tack_heading = -command
                 if abs(command) < 90: # tacking
                     direction = 1 if command < 0 else -1
-                    d = (1 - heading / command) / 2
+                    d = (1 - winddir / command) / 2
                 else: # jibing
                     direction = 1 if command > 0 else -1
                     pcommand = resolv(command, 180)
-                    d = ((resolv(heading, 180) - pcommand) / (180 - pcommand) / 2
+                    d = ((resolv(winddir, 180) - pcommand) / (180 - pcommand) / 2
             else:
                 direction = 1 if self.current_direction == 'port' else -1
                 tack_heading = command - direction * self.tack_angle
