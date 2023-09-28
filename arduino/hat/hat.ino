@@ -535,6 +535,11 @@ void read_analog()
     if(!RB_EMPTY(serial_out)) // don't report volts if other data is being sent
         return;
 
+    uint32_t t = millis();
+    for(uint8_t source=1; source<4; source++)
+        if(t - codes[source].ltime < 500)
+            return;
+    
     adc_cycles = 0;
     uint16_t reference = adc_avg[2];
     
