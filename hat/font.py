@@ -128,13 +128,17 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
         if bbox:
             image = image.crop(bbox)
 
+    data = list(image.getdata())
     if bpp:
-        data = list(image.getdata())
         for i in range(len(data)):
             d = 255 / (1<<bpp)
             v = int(round(data[i][3] / (255 / (1<<bpp))) * (255 / ((1<<bpp)-1)))
             data[i] = (v,v,v,v)
-        image.putdata(data)
+    else:
+        for i in range(len(data)):
+            v = data[i][3]
+            data[i] = (v,v,v,v)
+    image.putdata(data)
 
     return ugfx.surface(image.size[0], image.size[1], bypp, image.tobytes())
     

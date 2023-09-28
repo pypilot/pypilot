@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: nl <LL@li.org>\n"
@@ -16,11 +16,11 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
-msgstr "pypilot-hoedconfiguratie"
+msgstr "pypilot hat-configuratie"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
@@ -28,7 +28,7 @@ msgstr "lcd en afstandsbediening instellen"
 
 #: templates/index.html:17
 msgid "clear"
-msgstr "Doorzichtig"
+msgstr "duidelijk"
 
 #: templates/index.html:17
 msgid "default"
@@ -40,7 +40,7 @@ msgid ""
 "button."
 msgstr ""
 "druk op de knop(pen) op het toetsenbord of de afstandsbediening en wijs "
-"vervolgens een commando toe met de knop."
+"vervolgens een opdracht toe met de knop."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
@@ -48,7 +48,7 @@ msgstr "Acties voor LCD-interface"
 
 #: templates/index.html:21 templates/index.html:25
 msgid "key"
-msgstr "toets"
+msgstr "sleutel"
 
 #: templates/index.html:22 templates/index.html:26
 msgid "action"
@@ -59,7 +59,7 @@ msgid ""
 "These actions do not depend on the state of the display and can be used by "
 "wireless remotes."
 msgstr ""
-"Deze acties zijn niet afhankelijk van de status van het scherm en kunnen "
+"Deze acties zijn niet afhankelijk van de status van het display en kunnen "
 "worden gebruikt door draadloze afstandsbedieningen."
 
 #: templates/index.html:28
@@ -73,12 +73,12 @@ msgid ""
 "recordings."
 msgstr ""
 "De ir-poort kan rechtstreeks vanaf de pi of de arduino worden afgehandeld. "
-"Met behulp van de arduino kan van veel verschillende afstandsbedieningen "
-"worden ontvangen zonder speciale kalibratie-opnames."
+"Met behulp van de arduino kunt u van veel verschillende afstandsbedieningen "
+"ontvangen zonder speciale kalibratie-opnames."
 
 #: templates/index.html:36
 msgid "remote mode"
-msgstr "externe modus:"
+msgstr "externe modus"
 
 #: templates/index.html:37
 msgid "remote"
@@ -86,7 +86,7 @@ msgstr "op afstand"
 
 #: templates/index.html:41
 msgid "nmea current baud rate"
-msgstr "nmea huidige baudrate"
+msgstr "nmea huidige baudsnelheid"
 
 #: templates/index.html:42
 msgid "voltages"
@@ -102,4 +102,72 @@ msgstr "verbinding"
 
 #: templates/index.html:45
 msgid "Web Server Latency"
-msgstr "Latentie webserver"
+msgstr "Latentie van de webserver"
+
+#~ msgid "pypilot hat configuration"
+#~ msgstr "pypilot-hoedconfiguratie"
+
+#~ msgid "lcd and remote control setup"
+#~ msgstr "lcd en afstandsbediening instellen"
+
+#~ msgid "clear"
+#~ msgstr "Doorzichtig"
+
+#~ msgid "default"
+#~ msgstr "standaard"
+
+#~ msgid ""
+#~ "press button(s) on the keypad or remote then assign a command with the "
+#~ "button."
+#~ msgstr ""
+#~ "druk op de knop(pen) op het toetsenbord of de afstandsbediening en wijs "
+#~ "vervolgens een commando toe met de knop."
+
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Acties voor LCD-interface"
+
+#~ msgid "key"
+#~ msgstr "toets"
+
+#~ msgid "action"
+#~ msgstr "actie"
+
+#~ msgid ""
+#~ "These actions do not depend on the state of the display and can be used by "
+#~ "wireless remotes."
+#~ msgstr ""
+#~ "Deze acties zijn niet afhankelijk van de status van het scherm en kunnen "
+#~ "worden gebruikt door draadloze afstandsbedieningen."
+
+#~ msgid "infared receiver port"
+#~ msgstr "infrarood ontvanger poort"
+
+#~ msgid ""
+#~ "The ir port can be handled direcly from the pi or the arduino.  Using the "
+#~ "arduino can receive from many different remotes without special calibration "
+#~ "recordings."
+#~ msgstr ""
+#~ "De ir-poort kan rechtstreeks vanaf de pi of de arduino worden afgehandeld. "
+#~ "Met behulp van de arduino kan van veel verschillende afstandsbedieningen "
+#~ "worden ontvangen zonder speciale kalibratie-opnames."
+
+#~ msgid "remote mode"
+#~ msgstr "externe modus:"
+
+#~ msgid "remote"
+#~ msgstr "op afstand"
+
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea huidige baudrate"
+
+#~ msgid "voltages"
+#~ msgstr "spanningen"
+
+#~ msgid "status"
+#~ msgstr "toestand"
+
+#~ msgid "connection"
+#~ msgstr "verbinding"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Latentie webserver"

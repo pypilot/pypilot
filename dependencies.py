@@ -190,7 +190,7 @@ ss('autopilot', 'core autopilot or imu-only mode',
 
 # dependencies not required but reduce cpu usage considerably
 ss('optimize', '(recommended) core autopilot operations',
-   [py_dep('ujson'), py_dep('pyudev')])
+   [py_dep('ujson'), py_dep('pyudev'), py_dep('inotify')])
 
 # signalk dependencies: python3-zerconf python3-requests python3-websocket
 ss('signalk', 'communicate with signalk-node-server distributed with openploter',

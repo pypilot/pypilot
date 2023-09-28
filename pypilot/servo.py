@@ -175,9 +175,24 @@ class TimedProperty(Property):
     def __init__(self, name):
         super(TimedProperty, self).__init__(name, 0)
         self.time = 0
+        self.set_time = 0
+        self.use_period = True
 
+    # record time whenever externally set (manual override or control)
     def set(self, value):
         self.time = time.monotonic()
+        self.set_time = self.time
+        self.use_period = False # manual control is not delayed by period
+        return super(TimedProperty, self).set(value)
+
+    # internal command set, normal autopilot uses a period
+    # to avoid short movements, but this can be overriden by some pilots
+    def command(self, value):
+        t = time.monotonic()
+        if t - self.set_time < .8:
+            return # ignore pilot command if recent manual override
+        self.time = t
+        self.use_period = True
         return super(TimedProperty, self).set(value)
 
 class TimeoutSensorValue(SensorValue):
@@ -260,22 +275,21 @@ class Servo(object):
         self.use_brake = self.register(BooleanProperty, 'use_brake', False, persistent=True)
         self.brake_on = False
         
-        self.period = self.register(RangeSetting, 'period', .4, .1, 3, 'sec')
+        self.period = self.register(RangeSetting, 'period', .4, .1, 3, 'sec', profiled=True)
         self.compensate_current = self.register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.register(BooleanProperty, 'compensate_voltage', False, persistent=True)
         self.amphours = self.register(ResettableValue, 'amp_hours', 0, persistent=True)
+
         self.watts = self.register(SensorValue, 'watts')
 
-        self.hardover_time = self.register(RangeProperty, 'hardover_time', 10, .1, 60, persistent=True)
-        self.hardover_calculation_valid = 0
-
         self.speed = self.register(SensorValue, 'speed')
-        self.speed.min = self.register(MaxRangeSetting, 'speed.min', 100, 0, 100, '%')
-        self.speed.max = self.register(MinRangeSetting, 'speed.max', 100, 0, 100, '%', self.speed.min)
+        self.speed.min = self.register(MaxRangeSetting, 'speed.min', 100, 0, 100, '%', profiled=True)
+        self.speed.max = self.register(MinRangeSetting, 'speed.max', 100, 0, 100, '%', self.speed.min, profiled=True)
 
         self.position = self.register(SensorValue, 'position')
         self.position.elp = 0
         self.position.set(0)
+
         self.position.p = self.register(RangeProperty, 'position.p', .15, .01, 1, persistent=True)
         self.position.i = self.register(RangeProperty, 'position.i', 0, 0, .1, persistent=True)
         self.position.d = self.register(RangeProperty, 'position.d', .02, 0, .1, persistent=True)
@@ -285,13 +299,11 @@ class Servo(object):
         self.use_eeprom = self.register(BooleanValue, 'use_eeprom', True, persistent=True)
 
         self.inttime = 0
-        self.position.amphours = 0
 
         self.windup = 0
         self.windup_change = 0
 
         self.disengaged = True
-        self.disengage_on_timeout = self.register(BooleanValue, 'disengage_on_timeout', True, persistent=True)
         self.force_engaged = False
 
         self.last_zero_command_time = self.command_timeout = time.monotonic()
@@ -310,27 +322,19 @@ class Servo(object):
 
     def send_command(self):
         t = time.monotonic()
-
-        if not self.disengage_on_timeout.value:
-            self.disengaged = False
-
-        t = time.monotonic()
         dp = t - self.position_command.time
         dc = t - self.command.time
 
         if dp < dc and not self.sensors.rudder.invalid():
-            timeout = 10 # position command will expire after 10 seconds
             self.disengaged = False
-            if abs(self.position.value - self.command.value) < 1:
-                self.command.set(0)
+            if abs(self.position.value - self.position_command.value) < 1:
+                self.command.command(0)
             else:
                 self.do_position_command(self.position_command.value)
                 return
         elif self.command.value and not self.fault():
-            timeout = 1 # command will expire after 1 second
-            if time.monotonic() - self.command.time > timeout:
-                #print('servo command timeout', time.monotonic() - self.command.time)
-                self.command.set(0)
+            if dc > 1:
+                self.command.command(0)
             self.disengaged = False
         self.do_command(self.command.value)
         
@@ -364,9 +368,7 @@ class Servo(object):
 
         if not speed:
             #print('timeout', t - self.command_timeout)
-            if self.disengage_on_timeout.value and \
-               not self.force_engaged and \
-               time.monotonic() - self.command_timeout > self.period.value*3:
+            if not self.force_engaged and time.monotonic() - self.command.time > 1:
                 self.disengaged = True
             self.raw_command(0)
             return
@@ -398,7 +400,7 @@ class Servo(object):
         # ensure it is in range
         min_speed = min(min_speed, max_speed)
         
-        if self.force_engaged:  # use servo period when autopilot is in control
+        if self.command.use_period:  # use servo period when autopilot is in control
             # rarely: if the rate is slow and period set low windup overflows easily
             period = max(self.period.value, 2*dt)
             
@@ -441,14 +443,6 @@ class Servo(object):
         speed = min(max(speed, -max_speed), max_speed)
         self.speed.set(speed)
 
-        # estimate position
-        if self.sensors.rudder.invalid():
-            # crude integration of position from speed without rudder feedback
-            position = self.position.value + speed*dt*2*rudder_range/self.hardover_time.value
-            self.position.set(min(max(position, -2*rudder_range), 2*rudder_range))
-            if self.hardover_calculation_valid * speed > 0:
-                self.hardover_calculation_valid = 0
-
         try:
             if speed > 0:
                 cal = self.calibration.value['port']
@@ -466,6 +460,14 @@ class Servo(object):
 
         if speed < 0:
             command = -command
+
+        # estimate position
+        if self.sensors.rudder.invalid():
+            # crude integration of position from speed without rudder feedback to reset
+            # overcurrent end stops with sufficient movement in the other direction
+            position = self.position.value + command*dt*rudder_range
+            self.position.set(min(max(position, -rudder_range), rudder_range))
+            
         self.raw_command(command)
 
     def stop(self):
@@ -481,7 +483,7 @@ class Servo(object):
 
         if command <= 0:
             if command < 0:
-                self.state.update('reverse')
+                self.state.update('starboard')
                 self.lastdir = -1
             else:
                 self.speed.set(0)
@@ -490,7 +492,7 @@ class Servo(object):
                 else:
                     self.state.update('idle')
         else:
-            self.state.update('forward')
+            self.state.update('port')
             self.lastdir = 1
         
     def do_raw_command(self, command):
@@ -513,7 +515,9 @@ class Servo(object):
                 self.send_driver_params()
                 self.driver.disengage()
             else:
-                #print('servo write', command, time.monotonic())
+                #if command:
+                 #   print('servo write', command,time.time()-1681305360)
+
                 self.driver.command(command)
 
                 mul = 1
@@ -549,6 +553,8 @@ class Servo(object):
             self.device.timeout=0
         except:
             pass
+
+        fcntl.ioctl(self.device.fileno(), TIOCNXCL) #exclusive
         self.device.close()
         self.driver = False
 
@@ -719,16 +725,7 @@ class Servo(object):
                     self.flags.starboard_overcurrent_fault()
                 if self.sensors.rudder.invalid() and self.lastdir:
                     rudder_range = self.sensors.rudder.range.value
-                    new_position = self.lastdir*rudder_range
-                    if self.hardover_calculation_valid * self.lastdir < 0:
-                        # estimate hardover time if possible, this helps with
-                        # clearing the overcurrent conditions at reasonable positions
-                        d = (new_position + self.position.value) / (2*rudder_range)
-                        hardover_time = self.hardover_time.value*abs(d)
-                        hardover_time = min(max(hardover_time, 1), 30)
-                        self.hardover_time.set(hardover_time)
-                    self.hardover_calculation_valid = self.lastdir
-                    self.position.set(new_position)
+                    self.position.set(self.lastdir*rudder_range)
 
             self.reset() # clear fault condition
 

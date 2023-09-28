@@ -7,66 +7,87 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-25 21:11-0400\n"
+"POT-Creation-Date: 2023-04-07 14:58-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: da\n"
 "Language-Team: da <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
 
-#: static/pypilot_control.js:37
+#: web.py:84
+msgid "failed to read log file"
+msgstr "kunne ikke læse logfilen"
+
+#: static/pypilot_control.js:40
 msgid "Not Connected"
 msgstr "Ikke forbundet"
 
-#: static/pypilot_control.js:68
+#: static/pypilot_control.js:122
 msgid "Connected"
 msgstr "Forbundet"
 
-#: static/pypilot_control.js:175
+#: static/pypilot_control.js:153
+msgid "Enter profile name."
+msgstr "Indtast profilnavn."
+
+#: static/pypilot_control.js:166
+msgid "Remove current profile?"
+msgstr "Vil du fjerne den nuværende profil?"
+
+#: static/pypilot_control.js:267
+msgid "The following settings are captured by the current profile"
+msgstr "Følgende indstillinger er fanget af den aktuelle profil"
+
+#: static/pypilot_control.js:303
 msgid "Disconnected"
 msgstr "Afbrudt"
 
-#: static/pypilot_control.js:245
+#: static/pypilot_control.js:382
 msgid "compass or gyro failure!"
 msgstr "kompas eller gyrofejl!"
 
-#: static/pypilot_control.js:258
+#: static/pypilot_control.js:395 templates/index.html:161
+#: templates/index.html:163
 msgid "Tack"
 msgstr "Tack"
 
-#: static/pypilot_control.js:261
+#: static/pypilot_control.js:398 templates/index.html:162
 msgid "Cancel"
 msgstr "Afbestille"
 
-#: static/pypilot_control.js:320
+#: static/pypilot_control.js:468
 msgid "Engaged"
 msgstr "Beskæftiget"
 
-#: static/pypilot_control.js:322
+#: static/pypilot_control.js:470
 msgid "Disengaged"
 msgstr "Frakoblet"
 
-#: static/pypilot_control.js:394
+#: static/pypilot_control.js:546
+msgid "Motor temperature"
+msgstr "Motortemperatur"
+
+#: static/pypilot_control.js:562
 msgid "no motor controller!"
-msgstr "ingen motor controller!"
+msgstr "ingen motorstyring!"
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
-msgstr "Kalibreringsdiagram"
+msgstr "Kalibreringsplot"
 
-#: templates/calibrationplot.html:21
+#: templates/calibrationplot.html:25
 msgid ""
 "The raw sensor readings should fall on a sphere when calibrated.  The age"
 " will reset when the calibration updates."
 msgstr ""
-"De rå sensoraflæsninger skal falde på en kugle, når de kalibreres. "
+"De rå sensoraflæsninger bør falde på en kugle, når de er kalibreret. "
 "Alderen nulstilles, når kalibreringen opdateres."
 
-#: templates/calibrationplot.html:28
+#: templates/calibrationplot.html:32
 msgid "Connection"
 msgstr "Forbindelse"
 
@@ -90,13 +111,21 @@ msgstr "Konfiguration"
 msgid "Statistics"
 msgstr "Statistikker"
 
-#: templates/index.html:51
+#: templates/index.html:49
 msgid "Heading"
 msgstr "Overskrift"
 
-#: templates/index.html:53
+#: templates/index.html:52
 msgid "Command"
 msgstr "Kommando"
+
+#: templates/index.html:89
+msgid "Add"
+msgstr "Tilføje"
+
+#: templates/index.html:90
+msgid "Remove"
+msgstr "Fjerne"
 
 #: templates/index.html:96
 msgid "Magnetic Heading"
@@ -110,111 +139,133 @@ msgstr "Tonehøjde"
 msgid "Roll"
 msgstr "Rulle"
 
-#: templates/index.html:99
+#: templates/index.html:99 templates/index.html:105
 msgid "Press"
 msgstr "Trykke"
 
-#: templates/index.html:99
+#: templates/index.html:99 templates/index.html:105
 msgid "here"
 msgstr "her"
 
 #: templates/index.html:100
 msgid "when the boat is level to align the inertial sensors."
-msgstr "når båden er plan for at justere inertisensorerne."
+msgstr "når båden er vandret for at justere inertisensorerne."
 
-#: templates/index.html:105
+#: templates/index.html:106
+msgid ""
+"when the boat is traveling straight with no leeway, no currents, and gps "
+"to align the compass, or manually enter the compass offset"
+msgstr ""
+"når båden sejler ligeud uden spillerum, ingen strømme og gps for at "
+"justere kompasset eller manuelt indtaste kompasforskydningen"
+
+#: templates/index.html:111
 msgid "Magnetic Heading Offset"
 msgstr "Magnetisk kursforskydning"
 
-#: templates/index.html:107
-msgid "Lock Calibration"
-msgstr "Lås kalibrering"
+#: templates/index.html:113
+msgid "Lock Accelerometer Calibration"
+msgstr "Lås Accelerometer Kalibrering"
 
-#: templates/index.html:109
+#: templates/index.html:114
+msgid "Lock Compass Calibration"
+msgstr "Lås kompaskalibrering"
+
+#: templates/index.html:116
 msgid "calibration plot"
 msgstr "kalibreringsplot"
 
-#: templates/index.html:111
-msgid "Rudder"
-msgstr "Ror"
+#: templates/index.html:118
+msgid "Rudder Sensor"
+msgstr "Rorsensor"
 
-#: templates/index.html:113
+#: templates/index.html:120
 msgid "centered"
 msgstr "centreret"
 
-#: templates/index.html:114
+#: templates/index.html:121
 msgid "port range"
-msgstr "port rækkevidde"
+msgstr "portrækkevidde"
 
-#: templates/index.html:115
+#: templates/index.html:122
 msgid "starboard range"
-msgstr "styrbord rækkevidde"
+msgstr "styrbords rækkevidde"
 
-#: templates/index.html:116 templates/index.html:140
+#: templates/index.html:123 templates/index.html:146
 msgid "reset"
 msgstr "Nulstil"
 
-#: templates/index.html:119
-msgid "Rudder Range"
-msgstr "Ror rækkevidde"
-
-#: templates/index.html:120
-msgid "Degrees"
-msgstr "Grader"
-
 #: templates/index.html:126
+msgid "Rudder Range"
+msgstr "Rorrækkevidde"
+
+#: templates/index.html:127
+msgid "Degrees"
+msgstr "grader"
+
+#: templates/index.html:133
 msgid "Display"
 msgstr "Skærm"
 
-#: templates/index.html:127
+#: templates/index.html:134
 msgid "Clear"
 msgstr "Klar"
 
-#: templates/index.html:128
+#: templates/index.html:135
 msgid "Dark"
 msgstr "Mørk"
 
-#: templates/index.html:131
-msgid "Configure LCD Keypad and Remotes"
-msgstr "Konfigurer LCD -tastatur og fjernbetjeninger"
+#: templates/index.html:139
+msgid "NMEA Client host:port (leave blank for none) eg: 192.168.0.1:10110"
+msgstr "NMEA Client host:port (lad tom for ingen) f.eks.: 192.168.0.1:10110"
 
-#: templates/index.html:133
-msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
-msgstr ""
-"NMEA -klientvært: port (lad være tomt som standard) f.eks .: "
-"192.168.0.1:10110"
-
-#: templates/index.html:138
+#: templates/index.html:144
 msgid "Amp Hours"
-msgstr "Forstærker timer"
+msgstr "Amp timer"
 
-#: templates/index.html:141
+#: templates/index.html:147
 msgid "Voltage"
 msgstr "Spænding"
 
-#: templates/index.html:142
+#: templates/index.html:148
 msgid "Controller temperature"
-msgstr "Regulatorens temperatur"
+msgstr "Controller temperatur"
 
-#: templates/index.html:143
+#: templates/index.html:150
 msgid "Runtime"
-msgstr "Kørselstid"
+msgstr "Runtime"
 
-#: templates/index.html:144
+#: templates/index.html:151 templates/index.html:153
+msgid "Version"
+msgstr "Version"
+
+#: templates/index.html:152
 msgid "Servo"
 msgstr "Servo"
 
-#: templates/index.html:148
+#: templates/index.html:155 templates/logs.html:9
+msgid "Logs"
+msgstr "Logs"
+
+#: templates/index.html:161
+msgid "Port"
+msgstr "Havn"
+
+#: templates/index.html:163
+msgid "Starboard"
+msgstr "Styrbord"
+
+#: templates/index.html:170
 msgid "Server"
 msgstr "Server"
 
-#: templates/index.html:150
+#: templates/index.html:172
 msgid "Errors"
 msgstr "Fejl"
 
-#: templates/index.html:151
+#: templates/index.html:173
 msgid "Web Server Latency"
-msgstr "Webservers forsinkelse"
+msgstr "Webserverforsinkelse"
 
 #: templates/wifi.html:4
 msgid "setup"
@@ -230,7 +281,7 @@ msgstr "Adgangspunkt"
 
 #: templates/wifi.html:17 templates/wifi.html:22
 msgid "Key (leave blank for no encryption)"
-msgstr "Nøgle (lad være tom for ingen kryptering)"
+msgstr "Nøgle (lad tom for ingen kryptering)"
 
 #: templates/wifi.html:21 templates/wifi.html:22
 msgid "Client"
@@ -252,11 +303,176 @@ msgstr "tilbage"
 #~ msgstr "Trådløs konfiguration"
 
 #~ msgid "Key (leave blank for no encryption)"
-#~ msgstr "Nøgle (lad tomt være uden kryptering)"
+#~ msgstr "Nøgle (lad være tom for ingen kryptering)"
 
 #~ msgid "Client Mode Address (leave blank for dhcp)"
-#~ msgstr "Klienttilstandsadresse (efterlad tom for dhcp)"
+#~ msgstr "Klienttilstandsadresse (lad tom for dhcp)"
 
 #~ msgid "If there is a problem, edit the file"
 #~ msgstr "Hvis der er et problem, skal du redigere filen"
+
+#~ msgid "Not Connected"
+#~ msgstr "Ikke forbundet"
+
+#~ msgid "Connected"
+#~ msgstr "Forbundet"
+
+#~ msgid "Disconnected"
+#~ msgstr "Afbrudt"
+
+#~ msgid "compass or gyro failure!"
+#~ msgstr "kompas eller gyrofejl!"
+
+#~ msgid "Tack"
+#~ msgstr "Tack"
+
+#~ msgid "Cancel"
+#~ msgstr "Afbestille"
+
+#~ msgid "Engaged"
+#~ msgstr "Beskæftiget"
+
+#~ msgid "Disengaged"
+#~ msgstr "Frakoblet"
+
+#~ msgid "no motor controller!"
+#~ msgstr "ingen motor controller!"
+
+#~ msgid "Calibration Plot"
+#~ msgstr "Kalibreringsdiagram"
+
+#~ msgid ""
+#~ "The raw sensor readings should fall "
+#~ "on a sphere when calibrated.  The "
+#~ "age will reset when the calibration "
+#~ "updates."
+#~ msgstr ""
+#~ "De rå sensoraflæsninger skal falde på"
+#~ " en kugle, når de kalibreres. Alderen"
+#~ " nulstilles, når kalibreringen opdateres."
+
+#~ msgid "Connection"
+#~ msgstr "Forbindelse"
+
+#~ msgid "Control"
+#~ msgstr "Styring"
+
+#~ msgid "Gain"
+#~ msgstr "Gevinst"
+
+#~ msgid "Calibration"
+#~ msgstr "Kalibrering"
+
+#~ msgid "Configuration"
+#~ msgstr "Konfiguration"
+
+#~ msgid "Statistics"
+#~ msgstr "Statistikker"
+
+#~ msgid "Heading"
+#~ msgstr "Overskrift"
+
+#~ msgid "Command"
+#~ msgstr "Kommando"
+
+#~ msgid "Magnetic Heading"
+#~ msgstr "Magnetisk overskrift"
+
+#~ msgid "Pitch"
+#~ msgstr "Tonehøjde"
+
+#~ msgid "Roll"
+#~ msgstr "Rulle"
+
+#~ msgid "Press"
+#~ msgstr "Trykke"
+
+#~ msgid "here"
+#~ msgstr "her"
+
+#~ msgid "when the boat is level to align the inertial sensors."
+#~ msgstr "når båden er plan for at justere inertisensorerne."
+
+#~ msgid "Magnetic Heading Offset"
+#~ msgstr "Magnetisk kursforskydning"
+
+#~ msgid "Lock Calibration"
+#~ msgstr "Lås kalibrering"
+
+#~ msgid "calibration plot"
+#~ msgstr "kalibreringsplot"
+
+#~ msgid "Rudder"
+#~ msgstr "Ror"
+
+#~ msgid "centered"
+#~ msgstr "centreret"
+
+#~ msgid "port range"
+#~ msgstr "port rækkevidde"
+
+#~ msgid "starboard range"
+#~ msgstr "styrbord rækkevidde"
+
+#~ msgid "reset"
+#~ msgstr "Nulstil"
+
+#~ msgid "Rudder Range"
+#~ msgstr "Ror rækkevidde"
+
+#~ msgid "Degrees"
+#~ msgstr "Grader"
+
+#~ msgid "Display"
+#~ msgstr "Skærm"
+
+#~ msgid "Clear"
+#~ msgstr "Klar"
+
+#~ msgid "Dark"
+#~ msgstr "Mørk"
+
+#~ msgid "Configure LCD Keypad and Remotes"
+#~ msgstr "Konfigurer LCD -tastatur og fjernbetjeninger"
+
+#~ msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
+#~ msgstr ""
+#~ "NMEA -klientvært: port (lad være tomt"
+#~ " som standard) f.eks .: 192.168.0.1:10110"
+
+#~ msgid "Amp Hours"
+#~ msgstr "Forstærker timer"
+
+#~ msgid "Voltage"
+#~ msgstr "Spænding"
+
+#~ msgid "Controller temperature"
+#~ msgstr "Regulatorens temperatur"
+
+#~ msgid "Runtime"
+#~ msgstr "Kørselstid"
+
+#~ msgid "Servo"
+#~ msgstr "Servo"
+
+#~ msgid "Server"
+#~ msgstr "Server"
+
+#~ msgid "Errors"
+#~ msgstr "Fejl"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Webservers forsinkelse"
+
+#~ msgid "setup"
+#~ msgstr "Opsætning"
+
+#~ msgid "Access Point"
+#~ msgstr "Adgangspunkt"
+
+#~ msgid "Client"
+#~ msgstr "Klient"
+
+#~ msgid "back"
+#~ msgstr "tilbage"
 

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: no <LL@li.org>\n"
@@ -16,30 +16,31 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
-msgstr "pypilot hatt konfigurasjon"
+msgstr "pypilot lue konfigurasjon"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
-msgstr "oppsett av lcd og fjernkontroll"
+msgstr "lcd og fjernkontrolloppsett"
 
 #: templates/index.html:17
 msgid "clear"
-msgstr "slett"
+msgstr "klar"
 
 #: templates/index.html:17
 msgid "default"
-msgstr "standard oppsett"
+msgstr "misligholde"
 
 #: templates/index.html:18
 msgid ""
 "press button(s) on the keypad or remote then assign a command with the "
 "button."
 msgstr ""
-"Trykk på knapp(er) på fjernkontrollen, og velg tilhørende kommando"
+"trykk på knappen(e) på tastaturet eller fjernkontrollen og tilordne deretter"
+" en kommando med knappen."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
@@ -58,7 +59,7 @@ msgid ""
 "These actions do not depend on the state of the display and can be used by "
 "wireless remotes."
 msgstr ""
-"Disse handlingene er ikke avhengig av displayets tilstand og kan brukes av "
+"Disse handlingene avhenger ikke av tilstanden til skjermen og kan brukes av "
 "trådløse fjernkontroller."
 
 #: templates/index.html:28
@@ -71,8 +72,8 @@ msgid ""
 "arduino can receive from many different remotes without special calibration "
 "recordings."
 msgstr ""
-"IR -porten kan håndteres direkte fra pi eller arduino. Bruk av arduino kan "
-"motta fra mange forskjellige fjernkontroller uten spesielle "
+"IR-porten kan håndteres direkte fra pi-en eller arduinoen. Ved å bruke "
+"arduino kan du motta fra mange forskjellige fjernkontroller uten spesielle "
 "kalibreringsopptak."
 
 #: templates/index.html:36
@@ -85,7 +86,7 @@ msgstr "fjernkontroll"
 
 #: templates/index.html:41
 msgid "nmea current baud rate"
-msgstr "nmea nåværende overføringshastighet"
+msgstr "nmea gjeldende overføringshastighet"
 
 #: templates/index.html:42
 msgid "voltages"
@@ -101,4 +102,70 @@ msgstr "forbindelse"
 
 #: templates/index.html:45
 msgid "Web Server Latency"
-msgstr "Latens for webserver"
+msgstr "Webserverforsinkelse"
+
+#~ msgid "pypilot hat configuration"
+#~ msgstr "pypilot hatt konfigurasjon"
+
+#~ msgid "lcd and remote control setup"
+#~ msgstr "oppsett av lcd og fjernkontroll"
+
+#~ msgid "clear"
+#~ msgstr "slett"
+
+#~ msgid "default"
+#~ msgstr "standard oppsett"
+
+#~ msgid ""
+#~ "press button(s) on the keypad or remote then assign a command with the "
+#~ "button."
+#~ msgstr "Trykk på knapp(er) på fjernkontrollen, og velg tilhørende kommando"
+
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Handlinger for LCD-grensesnitt"
+
+#~ msgid "key"
+#~ msgstr "nøkkel"
+
+#~ msgid "action"
+#~ msgstr "handling"
+
+#~ msgid ""
+#~ "These actions do not depend on the state of the display and can be used by "
+#~ "wireless remotes."
+#~ msgstr ""
+#~ "Disse handlingene er ikke avhengig av displayets tilstand og kan brukes av "
+#~ "trådløse fjernkontroller."
+
+#~ msgid "infared receiver port"
+#~ msgstr "infrarød mottakerport"
+
+#~ msgid ""
+#~ "The ir port can be handled direcly from the pi or the arduino.  Using the "
+#~ "arduino can receive from many different remotes without special calibration "
+#~ "recordings."
+#~ msgstr ""
+#~ "IR -porten kan håndteres direkte fra pi eller arduino. Bruk av arduino kan "
+#~ "motta fra mange forskjellige fjernkontroller uten spesielle "
+#~ "kalibreringsopptak."
+
+#~ msgid "remote mode"
+#~ msgstr "ekstern modus"
+
+#~ msgid "remote"
+#~ msgstr "fjernkontroll"
+
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea nåværende overføringshastighet"
+
+#~ msgid "voltages"
+#~ msgstr "spenninger"
+
+#~ msgid "status"
+#~ msgstr "status"
+
+#~ msgid "connection"
+#~ msgstr "forbindelse"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Latens for webserver"

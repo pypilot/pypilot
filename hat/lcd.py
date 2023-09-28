@@ -30,7 +30,7 @@ except:
 driver = 'default'
 for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'tft', 'none']:
     if pdriver in sys.argv:
-        print('overriding driver', driver, 'to command line', pdriver)
+        print('overriding lcd driver "' + driver + '" to command line "' + pdriver + '"')
         driver = pdriver
         sys.argv.remove(driver)
         break
@@ -74,7 +74,7 @@ class LCD():
             
         default = {'contrast': 60, 'invert': False, 'backlight': 20,
                    'hue': 214, 'flip': False, 'language': 'en', 'bigstep': 10,
-                   'smallstep': 1, 'buzzer': 2};
+                   'smallstep': 1, 'buzzer_pitch': 2};
 
         for name in default:
             if not name in self.config:
@@ -97,7 +97,7 @@ class LCD():
         self.surface = None
 
         self.use_glut = False
-        print('lcd driver', driver, use_tft, use_glut)
+        print('lcd driver', driver, use_tft, use_glut, time.monotonic())
         if driver == 'none':
             page = None
             screen = None
@@ -119,13 +119,18 @@ class LCD():
             import glut
             # emulate which screen resolution?
             #screen = glut.screen((240, 320))
-            screen = glut.screen((136, 240))
+            #screen = glut.screen((136, 240))
+            screen = glut.screen((64, 128))
             #screen = glut.screen((48, 84))
             #screen = glut.screen((96, 168))
             
             from OpenGL.GLUT import glutKeyboardFunc, glutKeyboardUpFunc
             from OpenGL.GLUT import glutSpecialFunc, glutSpecialUpFunc
-            
+
+            from OpenGL.GLUT import glutLeaveMainLoop
+            self.leave = glutLeaveMainLoop
+
+
             glutKeyboardFunc(self.glutkeydown)
             glutKeyboardUpFunc(self.glutkeyup)
             glutSpecialFunc(self.glutspecialdown)
@@ -134,7 +139,7 @@ class LCD():
             #        glutIgnoreKeyRepeat(True)
         elif driver == 'framebuffer':
             print('using framebuffer')
-            screen = ugfx.screen("/dev/fb0")
+            screen = ugfx.screen(bytes('/dev/fb0', 'utf-8'))
             if screen.width > 480:
                 print('warning huge width')
                 #screen.width = 480
@@ -147,6 +152,7 @@ class LCD():
             if not self.surface:
                 w, h = screen.width, screen.height
                 self.surface = ugfx.surface(w, h, screen.bypp, None)
+                self.surface.box(0, 0, w, h, 0) # clear it
 
                 # magnify to fill screen
                 self.mag = min(screen.width / self.surface.width, screen.height / self.surface.height)
@@ -167,6 +173,7 @@ class LCD():
         self.menu = False
         self.page = connecting(self)
         self.need_refresh = True
+        self.need_buzz = False
 
         self.keypad = []
         for i in range(NUM_KEYS):
@@ -202,6 +209,12 @@ class LCD():
         if self.pipe:
             self.pipe.send((key, code))
 
+    def buzz(self, pulse, duration):
+        self.send('buzzer', (round(self.config['buzzer_pitch']), pulse, duration))
+
+    def buzz_key(self):
+        self.need_buzz = True
+            
     def write_config(self):
         if micropython:
             from config_esp32 import write_config
@@ -228,13 +241,13 @@ class LCD():
     def glutkey(self, k, down=True):
         k = k.decode()
         if k == 'q' or ord(k) == 27:
-            exit(0)
+            self.leave()
         if k == ' ':
             key = AUTO
         elif k == '\n':
             key = MENU
         elif k == '\t':
-            key = SELECT
+            key = MODE
         else:
             key = ord(k) - ord('1')
 
@@ -378,6 +391,10 @@ class LCD():
         #        if dt >= frameperiod or dt < 0:
         self.display()
         self.update_watches()
+
+        if self.need_buzz:
+            self.need_buzz = False
+            self.buzz(0, .05)
         
         t3 = gettime()
 

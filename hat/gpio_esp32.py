@@ -11,12 +11,12 @@ import gc
 import time
 from time import sleep
 if gc.mem_free() > 1e6:  # larger ttgo display
-    keypad_pin_numbers = [34, 36, 26, 33, 0, 35, 39, -1, 37, 38] #AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, NUDGE_PORT, NUDGE_STARBOARD
+    keypad_pin_numbers = [34, 36, 26, 33, 0, 35, 39, -1, 37, 38] #AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, DODGE_PORT, DODGE_STARBOARD
     keypad_pullup = [37, 38, 39]                                 #add the pins that have pullups(LOW activ) ALL other will have pulldowns(HIGH active)
     keypad_touch = []                                            #add the pins that are esp32 touchpins and are used without pushbuttons
     power_down_pin_number = None
 else:
-    keypad_pin_numbers = [33, 25, 12, 13, 27, 15, 32, -1, 0, 35] #AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, NUDGE_PORT, NUDGE_STARBOARD
+    keypad_pin_numbers = [33, 25, 12, 13, 27, 15, 32, -1, 0, 35] #AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, DODGE_PORT, DODGE_STARBOARD
     keypad_pullup = [0, 35]                                     #add the pins that have pullups(LOW activ) ALL other will have pulldowns(HIGH active)
     keypad_touch = []                                      #add the pins that are esp32 touchpins and are used without pushbuttons
     power_down_pin_number = 26
@@ -36,7 +36,7 @@ def make_pin(pin, i, lcd):
 
     if not noisr:
         try:
-            pin.irq(handler = cbr, trigger=Pin.IRQ_FALLING | Pin.IRQ_RISING)
+            pin.irq(handler=cbr, trigger=Pin.IRQ_FALLING | Pin.IRQ_RISING)
         except:
             print('no Pin.irq!! keypresses will lag')
             noisr = True

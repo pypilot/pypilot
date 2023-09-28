@@ -24,7 +24,10 @@
         {{ actionkeys[1] }}
       <p><br>{{_('key')}}: <b><span id="key1"></span></b>
          <br>{{_('action')}}: <b><span id="action1"></span></b>
-    <p>
+      <p><span id="action_profiles"></span>
+      <p>
+        <h2>{{_('analog inputs')}}</h2>
+        {{ adc_channels }}
       <h2>IR ({{_('infared receiver port')}})</h2>
       {{_('The ir port can be handled direcly from the pi or the arduino.  Using the arduino can receive from many different remotes without special calibration recordings.')}}
     <p>
@@ -32,10 +35,8 @@
     <p>
       <h2>hat NMEA port</h2>
       {{ nmea_settings }}
-
       <h2>{{_('remote mode')}}</h2>
       {{_('remote')}}{{ remote_settings }}
-
       <br>
       <p>
       <br>{{_('nmea current baud rate')}}: <b><span id="baudrate"></span></b>

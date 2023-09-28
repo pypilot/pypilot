@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2023 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -50,6 +50,7 @@ class IMU(object):
         self.client.watch('imu.rate')
 
         self.gyrobias = self.client.register(SensorValue('imu.gyrobias', persistent=True))
+        self.error = self.client.register(StringValue('imu.error', ''))
         self.lastgyrobiastime = time.monotonic()
 
         SETTINGS_FILE = "RTIMULib"
@@ -77,7 +78,7 @@ class IMU(object):
         s.KalmanRk, s.KalmanQ = .002, .001
         self.s = s
         self.imu_detect_time = 0
-        self.rtimu = True
+        self.rtimu = None
         self.init()
         self.lastdata = False
         self.rate = 10
@@ -94,14 +95,15 @@ class IMU(object):
         if rtimu.IMUName() == 'Null IMU':
             if self.rtimu:
                 print(_('ERROR: No IMU Detected'), t0)
+                self.error.set('No IMU')
             self.s.IMUType = 0
-            self.rtimu = False
             return
 
         print('IMU Name: ' + rtimu.IMUName())
 
         if not rtimu.IMUInit():
             print(_('ERROR: IMU Init Failed, no inertial data available'), t0)
+            self.error.set('IMU Failed')
             self.s.IMUType = 0
             return
 
@@ -115,6 +117,9 @@ class IMU(object):
 
         self.avggyro = [0, 0, 0]
         self.compass_calibration_updated = False
+        self.axes_test = [False]*9
+        self.last_axes = False
+        self.error.set('IMU not initialized')
 
     def process(self, pipe):
         print('imu process', os.getpid())
@@ -174,7 +179,7 @@ class IMU(object):
             data['compass_calibration_updated'] = True
             self.compass_calibration_updated = False
 
-        self.lastdata = list(data['gyro']), list(data['compass'])
+        self.lastdata = list(data['accel']), list(data['gyro']), list(data['compass'])
         return data
 
     def poll(self):
@@ -190,16 +195,31 @@ class IMU(object):
                 self.compass_calibration_updated = True
                 self.s.CompassCalEllipsoidValid = True
                 self.s.CompassCalEllipsoidOffset = tuple(value[0][:3])
-                #rtimu.resetFusion()
+                if self.rtimu:
+                    self.rtimu.resetFusion()
             elif name == 'imu.rate':
                 self.rate = value
                 print(_('imu rate set to rate'), value)
 
         if not self.lastdata:
             return
-        gyro, compass = self.lastdata
+
+        accel, gyro, compass = self.lastdata
         self.lastdata = False
 
+        if self.axes_test: # test to see if all axes are producing changing outputs
+            axes = accel + gyro + compass
+            if self.last_axes:
+                self.axes_test = map(lambda a, b, p: p or (a != b), axes, self.last_axes, self.axes_test)
+            self.last_axes = axes
+
+            if not all(self.axes_test):
+                self.error.set('IMU waiting on axes')
+            else:
+                print('IMU all sensor axes verified')
+                self.error.set('')
+                self.axes_test = False
+                
         # see if gyro is out of range, sometimes the sensors read
         # very high gyro readings and the sensors need to be reset by software
         # this is probably a bug in the underlying driver with fifo misalignment
@@ -335,6 +355,7 @@ class AutomaticCalibrationProcess():
         self.process = multiprocessing.Process(target=CalibrationProcess, args=(self.cal_pipe_process, self.client), daemon=True)
         self.process.start()
         self.cal_ready = False
+        self.warnings = ''
 
     def calibration_ready(self):
         if self.cal_ready:
@@ -343,6 +364,12 @@ class AutomaticCalibrationProcess():
             self.cal_ready = True
             return True
         return False
+
+    def get_warnings(self):
+        warnings = self.cal_pipe.recv()
+        if warnings:
+            self.warnings = warnings
+        return self.warnings
 
     def __del__(self):
         #print(_('terminate calibration process'))
@@ -358,6 +385,7 @@ class BoatIMU(object):
         self.frequency = self.register(FrequencyValue, 'frequency')
         self.alignmentQ = self.register(QuaternionValue, 'alignmentQ', [1, 0, 0, 0], persistent=True)
         self.alignmentQ.last = False
+        
         self.heading_off = self.register(RangeProperty, 'heading_offset', 0, -180, 180, persistent=True)
         self.heading_off.last = 3000 # invalid
 
@@ -365,7 +393,8 @@ class BoatIMU(object):
         self.last_alignmentCounter = False
 
         self.uptime = self.register(TimeValue, 'uptime')
-    
+        self.warning = self.register(StringValue, 'warning', '')
+        
         self.auto_cal = AutomaticCalibrationProcess(client.server)
 
         self.lasttimestamp = 0
@@ -393,6 +422,7 @@ class BoatIMU(object):
 
         self.last_imuread = time.monotonic() + 4 # ignore failed readings at startup
         self.cal_data = False
+        self.reset_alignment = False
 
     def __del__(self):
         #print('terminate imu process')
@@ -409,6 +439,7 @@ class BoatIMU(object):
         off = self.heading_off.value - heading_offset
         o = quaternion.angvec2quat(off*math.pi/180, [0, 0, 1])
         self.alignmentQ.update(quaternion.normalize(quaternion.multiply(q, o)))
+        self.reset_alignment = True
 
     def IMUread(self):
         if self.imu.multiprocessing:
@@ -420,11 +451,10 @@ class BoatIMU(object):
                 lastdata = data
         return self.imu.read()
 
-    def poll(self):
+    def read(self):
         if not self.imu.multiprocessing:
             self.imu.poll()
 
-    def read(self):
         data = self.IMUread()
         if not data:
             if time.monotonic() - self.last_imuread > 1 and self.frequency.value:
@@ -471,12 +501,13 @@ class BoatIMU(object):
         self.headingrate = data['headingrate']
   
         data['heel'] = self.heel = data['roll']*.03 + self.heel*.97
-        #data['roll'] -= data['heel']
-  
         data['gyro'] = list(map(math.degrees, data['gyro']))
   
         # lowpass heading and rate
         llp = self.heading_lowpass_constant.value
+        if self.reset_alignment or data.get('compass_calibration_updated'):
+            llp = 1
+            self.reset_alignment = False
         data['heading_lowpass'] = heading_filter(llp, data['heading'], self.SensorValues['heading_lowpass'].value)
 
         llp = self.headingrate_lowpass_constant.value
@@ -492,10 +523,9 @@ class BoatIMU(object):
         self.uptime.update()
 
         # count down to alignment
-        if self.alignmentCounter.value != self.last_alignmentCounter:
-            self.alignmentPose = [0, 0, 0, 0]
-
         if self.alignmentCounter.value > 0:
+            if self.alignmentCounter.value != self.last_alignmentCounter:
+                self.alignmentPose = [0, 0, 0, 0]
             self.alignmentPose = list(map(lambda x, y : x + y, self.alignmentPose, aligned))
             self.alignmentCounter.set(self.alignmentCounter.value-1)
 
@@ -527,9 +557,18 @@ class BoatIMU(object):
                          'fusionQPose': data['fusionQPose']}
         return data
 
-    def send_cal_data(self):
+    def poll(self):
         if self.auto_cal.calibration_ready() and self.cal_data:
-            self.auto_cal.cal_pipe.send(self.cal_data)
+            try:
+                self.auto_cal.cal_pipe.send(self.cal_data)
+            except Exception as e:
+                print('failed to send cal data', e)
+
+        warnings = self.auto_cal.get_warnings()
+        if abs(self.SensorValues['pitch'].value) > 35 or \
+           abs(self.SensorValues['roll'].value) > 35:
+            warnings += ' ' + 'aligment warning'
+        self.warning.update(warnings)
 
 
 # print line without newline
@@ -554,11 +593,11 @@ def main():
         server.poll()
         client.poll()
         data = boatimu.read()
+        boatimu.poll() # after critical loop is done
         if data and not quiet:
             if t0-lastprint > .25:
                 printline('pitch', data['pitch'], 'roll', data['roll'], 'heading', data['heading'])
                 lastprint = t0
-        boatimu.poll()
         while True:
             dt = 1/boatimu.rate.value - (time.monotonic() - t0)
             if dt < 0:

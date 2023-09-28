@@ -15,7 +15,7 @@ black = 0x00
 #white = ugfx.color(255, 255, 255)
 #black = ugfx.color(0, 0, 0)
 
-AUTO, MENU, SMALL_PORT, SMALL_STARBOARD, SELECT, BIG_PORT, BIG_STARBOARD, TACK, NUDGE_PORT, NUDGE_STARBOARD, NUM_KEYS = range(11)
+BIG_PORT, SMALL_PORT, SMALL_STARBOARD, BIG_STARBOARD, AUTO, MENU, MODE, NUM_KEYS = range(8)
 
 class rectangle():
     def __init__(self, x, y, width, height):
@@ -273,9 +273,7 @@ class page(object):
     def testkeydown(self, key):
         k = self.lcd.keypad[key]
         if k.down:
-            if self.lcd.config['buzzer'] > 1:
-                self.lcd.send('buzzer', (1, .1))
-
+            self.lcd.buzz_key()
             k.down -= 1
             return True
         return False
@@ -322,19 +320,10 @@ class page(object):
             return control(self.lcd)
         if self.testkeydown(MENU):
             return self.lcd.getmenu()
-        if self.testkeydown(SELECT):
+        if self.testkeydown(MODE):
             if self.prev:
                 return self.prev
             return control(self.lcd)
-
-        # these work from any page (even menu) to dodge
-        lcd = self.lcd
-        if lcd.keypad[NUDGE_PORT].dt():
-            lcd.client.set('servo.command', -1)
-        elif lcd.keypad[NUDGE_STARBOARD].dt():
-            lcd.client.set('servo.command', 1)           
-        elif self.testkeyup(NUDGE_PORT) or self.testkeyup(NUDGE_STARBOARD):
-            lcd.client.set('servo.command', 0)           
 
 class info(page):
     def __init__(self, num_pages=4):
@@ -475,6 +464,7 @@ class controlbase(page):
         self.batt = False
         self.wifi = False
         self.pilot = False
+        self.profile = False
 
         self.charging_blink = False
         self.charging_blink_time = 0
@@ -482,8 +472,9 @@ class controlbase(page):
     def display(self, refresh):
         if refresh:
             self.box(rectangle(0, .92, 1, .1), black)
-            self.wifi = False
+            self.profile = ''
             self.pilot = False
+            self.wifi = False
             
         if self.lcd.battery_voltage:
             battrect = rectangle(0.03, .93, .25, .06)
@@ -505,19 +496,28 @@ class controlbase(page):
             else:
                 self.charging_blink = False
 
+        profile = str(self.last_val('profile'))
+        if self.profile != profile:
+            self.profile = profile
+            profilerect = rectangle(0, .92, .32, .09)
+            self.lcd.surface.box(*(self.convrect(profilerect) + [black]))
+            self.fittext(profilerect, 'P'+profile[:2])
+
+        '''
         pilot = self.last_val('ap.pilot')
         if self.pilot != pilot:
             self.pilot = pilot
-            pilotrect = rectangle(0, .92, .6, .09)
+            pilotrect = rectangle(.2, .92, .5, .09)
             self.fittext(pilotrect, pilot[:6])
+        '''
                 
         wifi = test_wifi()
         if self.wifi == wifi and not refresh:
             return # done displaying
         self.wifi = wifi
-        wifirect = rectangle(.65, .92, .3, .09)
+        wifirect = rectangle(.4, .92, .35, .1)
         if wifi:
-            text = 'W'
+            text = 'WIFI'
             if self.lcd.host != 'localhost':
                 text += 'R'
             self.fittext(wifirect, text)
@@ -527,7 +527,6 @@ class controlbase(page):
 class control(controlbase):
     def __init__(self, lcd):
         super(control, self).__init__(lcd, .25)
-        self.modes_list = ['compass', 'gps', 'wind', 'true wind'] # in order
         self.control = {} # used to keep track of what is drawn on screen to avoid redrawing it
         self.lastspeed = 0
         self.lasttime = 0
@@ -539,7 +538,7 @@ class control(controlbase):
     def get_ap_heading_command(self):
         if gettime() - self.ap_heading_command_time < 5:
             return self.ap_heading_command
-        return self.last_val('ap.heading_command')
+        return self.last_val('ap.heading_command', default='   ')
 
     def set_ap_heading_command(self, command):
         if 'wind' in self.control['mode']:
@@ -559,42 +558,52 @@ class control(controlbase):
                                'command': self.get_ap_heading_command(),
                                'change': 0}
 
-    def have_compass(self):
-        return True
-
-    def have_gps(self):
-        return self.last_val('gps.source') != 'none'
-
-    def have_wind(self):
-        return self.last_val('wind.source') != 'none'
-
-    def have_true_wind(self):
-        return self.last_val('truewind.source') != 'none'
-
     def display_mode(self):
         mode = self.last_val('ap.mode')
-        modes = [self.have_compass(), self.have_gps(), self.have_wind(), self.have_true_wind()]
+        modes = self.last_val('ap.modes', default=[])
+        if not mode in modes:
+            return
+        index = modes.index(mode)
+        nmodes = len(modes)
+
+        # flash the compass C if there are imu warnings
+        if self.last_val('imu.warning', default=False):
+            if int(time.monotonic()) % 2:
+                modes = list(modes)
+                for i in range(nmodes):
+                    if modes[i] == 'compass':
+                        modes[i] = ' '
+
         if self.control['mode'] == mode and self.control['modes'] == modes:
             return # no need to refresh
         self.control['mode'] = mode
         self.control['modes'] = modes
-
+        if index < 2:
+            rindex = index
+            mindex = 0
+        elif nmodes > 3 and index == nmodes-1:
+            rindex = 3
+            mindex = nmodes-4
+        else:
+            rindex = 2
+            mindex = index - 2
+        
         #print('mode', self.last_val('ap.mode'))
-        modes = {'compass':   ('C', self.have_compass,   rectangle(  0, .74, .22, .16)),
-                 'gps':       ('G', self.have_gps,       rectangle(.22, .74, .25, .16)),
-                 'wind':      ('W', self.have_wind,      rectangle(.47, .74, .3,  .16)),
-                 'true wind': ('T', self.have_true_wind, rectangle(.77, .74, .23, .16))}
+        modes_r = [rectangle(  0, .74, .22, .16), rectangle(.22, .74, .25, .16),
+                   rectangle(.47, .74, .3,  .16), rectangle(.77, .74, .23, .16)]
 
         marg = 0.02
         self.lcd.surface.box(*(self.convrect(rectangle(0, .74, 1, .16+marg)) + [black]))
-        for mode in modes:
-            if modes[mode][1]():
-                ret=self.fittext(modes[mode][2], modes[mode][0])
 
-        for mode in modes:
-            if self.last_val('ap.mode') == mode:
-                r = modes[mode][2]
-                self.rectangle(rectangle(r.x, r.y+marg, r.width, r.height), .015)
+        marg = 0.02
+        for i in range(4):
+            ind = mindex+i
+            if ind < nmodes:
+                ret=self.fittext(modes_r[i], modes[ind][0].upper())
+
+        # draw rectangle around mode
+        r = modes_r[rindex]
+        self.rectangle(rectangle(r.x, r.y+marg, r.width, r.height), .015)
 
     def display(self, refresh):
         if not self.control:
@@ -654,7 +663,8 @@ class control(controlbase):
                 elif heading < 0:
                     self.box(rectangle(0, pos+.3, .3, .025), white)
 
-        if self.last_val('imu.frequency', 1) is False:
+        frequency = self.last_val('imu.frequency', 1, None)
+        if frequency is False:
             r = rectangle(0, 0, 1, .8)
             self.fittext(r, _('ERROR') + '\n' + _('compass or gyro failure!'), True, black)
             self.control['heading'] = 'no imu'
@@ -664,7 +674,8 @@ class control(controlbase):
 
         t0 = gettime()
         mode = self.last_val('ap.mode')
-        ap_heading = self.last_val('ap.heading')
+        modes = self.last_val('ap.modes')
+        ap_heading = self.last_val('ap.heading', default='   ')
         ap_heading_command = self.get_ap_heading_command()
         heading = ap_heading, mode, nr(ap_heading)
         if self.control['heading'] and heading == self.control['heading'] and \
@@ -682,30 +693,28 @@ class control(controlbase):
         for flag in flags:
             if flag.endswith('_FAULT'):
                 warning += flag[:-6].replace('_', ' ') + ' '
-                if 'OVER' in flag: # beep overtemp/overcurrent
+                if 'OVER' in flag or 'BADVOLTAGE' in flag: # beep overtemp/overcurrent
                     buzz = True
+                pulse = 2
 
         if warning:
-            if buzz and self.lcd.config['buzzer'] > 0:
-                self.lcd.send('buzzer', (1, .1))
+            if buzz:
+                self.lcd.buzz(pulse, .1)
             warning = warning.lower()
             warning += 'fault'
             if self.control['heading_command'] != warning:
-                self.fittext(rectangle(0, .4, 1, .4), _(warning), True, black)
+                self.fittext(rectangle(0, .4, 1, .5), _(warning), True, black)
                 self.control['heading_command'] = warning
                 self.control['mode'] = warning
-        elif mode == 'gps' and not self.have_gps():
-            if self.control['heading_command'] != 'no gps':
-                self.fittext(rectangle(0, .4, 1, .35), _('GPS not detected'), True, black)
-                self.control['heading_command'] = 'no gps'
-        elif mode == 'wind' and not self.have_wind():
-            if self.control['heading_command'] != 'no wind':
-                self.fittext(rectangle(0, .4, 1, .35), _('WIND not detected'), True, black)
-                self.control['heading_command'] = 'no wind'
-        elif mode == 'true wind' and not self.have_true_wind():
-            if self.control['heading_command'] != 'no wind':
-                self.fittext(rectangle(0, .4, 1, .35), _('WIND not detected'), True, black)
-                self.control['heading_command'] = 'no wind'
+        elif mode not in modes:
+            no_mode = 'no ' + mode
+            if self.control['heading_command'] != no_mode:
+                self.fittext(rectangle(0, .4, 1, .35), mode.upper() + ' ' + _('not detected'), True, black)
+                self.control['heading_command'] = no_mode
+        elif self.last_val('imu.error', default=None):
+            if self.control['heading_command'] != 'imu error':
+                self.fittext(rectangle(0, .4, 1, .35), self.last_val('imu.error'), True, black)
+                self.control['heading_command'] = 'imu error'
         elif self.last_val('servo.controller') == 'none':
             if self.control['heading_command'] != 'no controller':
                 self.fittext(rectangle(0, .4, 1, .35), _('WARNING no motor controller'), True, black)
@@ -713,16 +722,17 @@ class control(controlbase):
         elif self.lcd.check_voltage():
             msg = self.lcd.check_voltage()
             if self.control['heading_command'] != msg:
-                self.fittext(rectangle(0, .4, 1, .34), msg, True, black)
+                self.fittext(rectangle(0, .4, 1, .35), msg, True, black)
                 self.control['heading_command'] = msg
-        elif self.last_val('ap.enabled') != True:
+        elif self.last_val('ap.enabled') != True and \
+             self.last_val('servo.controller', default=None):
             # no warning, display the desired course or 'standby'
             if self.control['heading_command'] != 'standby':
-                r = rectangle(0, .4, 1, .34)
+                r = rectangle(0, .4, 1, .35)
                 self.fittext(r, _('standby'), False, black)
                 self.control['heading_command'] = 'standby'
-        elif self.last_val('ap.tack.state') != 'none':
-            r = rectangle(0, .4, 1, .34)
+        elif self.last_val('ap.tack.state', default='none') != 'none':
+            r = rectangle(0, .4, 1, .35)
             d = self.last_val('ap.tack.direction')
             if self.last_val('ap.tack.state') == 'waiting':
                 msg = _('tack') + ' ' + str(self.last_val('ap.tack.timeout'))
@@ -734,7 +744,7 @@ class control(controlbase):
         elif self.control['heading_command'] != ap_heading_command:
             heading_command = ap_heading_command, mode, nr(ap_heading_command)
             draw_heading(.4, heading_command, self.control['heading_command'])
-            self.control['heading_command'] = heading_command
+            self.control['heading_command'] = ap_heading_command
             self.control['mode'] = False # refresh mode
 
         #warning = False
@@ -773,33 +783,30 @@ class control(controlbase):
                 self.set('servo.command', 0) # stop
                 self.set('ap.enabled', False)
 
-        if self.testkeydown(SELECT):
-            have_mode = {'compass': self.have_compass, 'gps': self.have_gps,
-                          'wind': self.have_wind, 'true wind': self.have_true_wind}
+
+        if self.testkeydown(MODE):
             # change mode
-            for t in range(len(self.modes_list)):
-                self.modes_list = self.modes_list[1:] + [self.modes_list[0]]
-                next_mode = self.modes_list[0]
-                if next_mode != self.last_val('ap.mode') and have_mode[next_mode]():
-                    self.set('ap.mode', next_mode)
-                    break
+            modes = self.last_val('ap.modes')
+            mode = self.last_val('ap.mode')
+            if mode in modes:
+                ind = modes.index(mode) + 1
+                if ind == len(modes):
+                    ind = 0
+                next_mode = modes[ind]
+            else:
+                next_mode = modes[0]
+
+            self.set('ap.mode', next_mode)
             return
 
-        if self.testkeydown(TACK):
-            if self.last_val('ap.tack.state') == 'none':
-                t, direction = self.tack_hint
-                if time.monotonic() - t < 3:
-                    self.set('ap.tack.direction', 'starboard' if direction > 0 else 'port')
-                self.set('ap.tack.state', 'begin')
-            else:
-                self.set('ap.tack.state', 'none')
-            return
-                        
         if self.last_val('ap.enabled'):
             keys = {SMALL_STARBOARD : (0, 1),
                     SMALL_PORT      : (0, -1),
                     BIG_PORT        : (1, -1),
                     BIG_STARBOARD   : (1, 1)}
+            if self.last_val('ap.tack.state') != 'none':
+                
+                return
             key = None
             dt = 0
             for k in keys:

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: pl <LL@li.org>\n"
@@ -16,15 +16,15 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
-msgstr "Konfiguracja kapelusza pypilota"
+msgstr "konfiguracja kapelusza pypilota"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
-msgstr "konfiguracja lcd i zdalnego sterowania"
+msgstr "konfiguracja wyświetlacza LCD i pilota"
 
 #: templates/index.html:17
 msgid "clear"
@@ -40,11 +40,11 @@ msgid ""
 "button."
 msgstr ""
 "naciśnij przycisk(i) na klawiaturze lub pilocie, a następnie przypisz "
-"polecenie za pomocą przycisku."
+"polecenie do przycisku."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
-msgstr "Działania dla interfejsu LCD"
+msgstr "Akcje dla interfejsu LCD"
 
 #: templates/index.html:21 templates/index.html:25
 msgid "key"
@@ -52,7 +52,7 @@ msgstr "klucz"
 
 #: templates/index.html:22 templates/index.html:26
 msgid "action"
-msgstr "akcja"
+msgstr "działanie"
 
 #: templates/index.html:23
 msgid ""
@@ -60,7 +60,7 @@ msgid ""
 "wireless remotes."
 msgstr ""
 "Czynności te nie zależą od stanu wyświetlacza i mogą być używane przez "
-"bezprzewodowe piloty."
+"piloty bezprzewodowe."
 
 #: templates/index.html:28
 msgid "infared receiver port"
@@ -72,7 +72,7 @@ msgid ""
 "arduino can receive from many different remotes without special calibration "
 "recordings."
 msgstr ""
-"Port ir może być obsługiwany bezpośrednio z pi lub arduino. Za pomocą "
+"Port IR może być obsługiwany bezpośrednio z pi lub arduino. Za pomocą "
 "arduino można odbierać z wielu różnych pilotów bez specjalnych nagrań "
 "kalibracyjnych."
 
@@ -86,7 +86,7 @@ msgstr "zdalny"
 
 #: templates/index.html:41
 msgid "nmea current baud rate"
-msgstr "nmea aktualna szybkość transmisji"
+msgstr "nmea bieżąca szybkość transmisji"
 
 #: templates/index.html:42
 msgid "voltages"
@@ -103,3 +103,71 @@ msgstr "połączenie"
 #: templates/index.html:45
 msgid "Web Server Latency"
 msgstr "Opóźnienie serwera WWW"
+
+#~ msgid "pypilot hat configuration"
+#~ msgstr "Konfiguracja kapelusza pypilota"
+
+#~ msgid "lcd and remote control setup"
+#~ msgstr "konfiguracja lcd i zdalnego sterowania"
+
+#~ msgid "clear"
+#~ msgstr "jasne"
+
+#~ msgid "default"
+#~ msgstr "domyślny"
+
+#~ msgid ""
+#~ "press button(s) on the keypad or remote then assign a command with the "
+#~ "button."
+#~ msgstr ""
+#~ "naciśnij przycisk(i) na klawiaturze lub pilocie, a następnie przypisz "
+#~ "polecenie za pomocą przycisku."
+
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Działania dla interfejsu LCD"
+
+#~ msgid "key"
+#~ msgstr "klucz"
+
+#~ msgid "action"
+#~ msgstr "akcja"
+
+#~ msgid ""
+#~ "These actions do not depend on the state of the display and can be used by "
+#~ "wireless remotes."
+#~ msgstr ""
+#~ "Czynności te nie zależą od stanu wyświetlacza i mogą być używane przez "
+#~ "bezprzewodowe piloty."
+
+#~ msgid "infared receiver port"
+#~ msgstr "port odbiornika podczerwieni"
+
+#~ msgid ""
+#~ "The ir port can be handled direcly from the pi or the arduino.  Using the "
+#~ "arduino can receive from many different remotes without special calibration "
+#~ "recordings."
+#~ msgstr ""
+#~ "Port ir może być obsługiwany bezpośrednio z pi lub arduino. Za pomocą "
+#~ "arduino można odbierać z wielu różnych pilotów bez specjalnych nagrań "
+#~ "kalibracyjnych."
+
+#~ msgid "remote mode"
+#~ msgstr "tryb zdalny"
+
+#~ msgid "remote"
+#~ msgstr "zdalny"
+
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea aktualna szybkość transmisji"
+
+#~ msgid "voltages"
+#~ msgstr "napięcia"
+
+#~ msgid "status"
+#~ msgstr "status"
+
+#~ msgid "connection"
+#~ msgstr "połączenie"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Opóźnienie serwera WWW"

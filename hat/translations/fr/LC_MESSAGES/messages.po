@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr <LL@li.org>\n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
@@ -24,7 +24,7 @@ msgstr "configuration du hat pypilot"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
-msgstr "Configuration de l'écran LCD et de la télécommande"
+msgstr "configuration écran et télécommande"
 
 #: templates/index.html:17
 msgid "clear"
@@ -32,19 +32,19 @@ msgstr "effacer"
 
 #: templates/index.html:17
 msgid "default"
-msgstr "défaut"
+msgstr "par défaut"
 
 #: templates/index.html:18
 msgid ""
 "press button(s) on the keypad or remote then assign a command with the "
 "button."
 msgstr ""
-"appuyez sur le(s) bouton(s) du clavier ou de la télécommande puis attribuez "
-"une commande au bouton."
+"appuyez sur le(s) bouton(s) du clavier ou de la télécommande, puis attribuez "
+"une commande avec le bouton."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
-msgstr "Actions pour l'interface LCD"
+msgstr "Actions pour l'interface écran"
 
 #: templates/index.html:21 templates/index.html:25
 msgid "key"
@@ -59,12 +59,12 @@ msgid ""
 "These actions do not depend on the state of the display and can be used by "
 "wireless remotes."
 msgstr ""
-"Ces actions ne dépendent pas de l'état de l'écran et peuvent être utilisées "
-"par des télécommandes sans fil."
+"Ces actions ne dépendent pas de l'état de l'écran et peuvent être "
+"utilisées par des télécommandes sans fil."
 
 #: templates/index.html:28
 msgid "infared receiver port"
-msgstr "port récepteur infrarouge"
+msgstr "port du récepteur infrarouge"
 
 #: templates/index.html:29
 msgid ""
@@ -72,9 +72,9 @@ msgid ""
 "arduino can receive from many different remotes without special calibration "
 "recordings."
 msgstr ""
-"Le port ir peut être géré directement depuis le pi ou l'arduino. "
-"L'utilisation de l'arduino peut recevoir de nombreuses télécommandes "
-"différentes sans étalonnage spécial."
+"Le port IR peut être géré directement depuis le pi ou l'arduino. "
+"L'utilisation de l'arduino permet recevoir deupis de nombreuses télécommandes "
+"différentes sans devoir faire des enregistrements d'étalonnage spéciaux."
 
 #: templates/index.html:36
 msgid "remote mode"
@@ -82,11 +82,11 @@ msgstr "mode à distance"
 
 #: templates/index.html:37
 msgid "remote"
-msgstr "à distance"
+msgstr "télécommande"
 
 #: templates/index.html:41
 msgid "nmea current baud rate"
-msgstr "débit en bauds actuel nmea"
+msgstr "débit en bauds actuel NMEA"
 
 #: templates/index.html:42
 msgid "voltages"
@@ -98,7 +98,7 @@ msgstr "statut"
 
 #: templates/index.html:44
 msgid "connection"
-msgstr "lien"
+msgstr "connexion"
 
 #: templates/index.html:45
 msgid "Web Server Latency"

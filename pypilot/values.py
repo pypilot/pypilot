@@ -17,6 +17,9 @@ class Value(object):
         self.set(initial)
 
         self.info = {'type': 'Value'}
+        if 'profiled' in kwargs and kwargs['profiled']:
+            self.info['profiled'] = True
+            self.info['persistent'] = True
         # if persistent argument make the server store/load this value regularly
         if 'persistent' in kwargs and kwargs['persistent']:
             self.info['persistent'] = True
@@ -93,7 +96,7 @@ class SensorValue(Value):
     def __init__(self, name, initial=False, fmt='%.3f', **kwargs):
         super(SensorValue, self).__init__(name, initial, **kwargs)
         self.directional = 'directional' in kwargs and kwargs['directional']
-        self.fmt = fmt # round to 3 places unless overrideen
+        self.fmt = fmt # round to 3 places unless overridden
 
         self.info['type'] = 'SensorValue'
         if self.directional:
@@ -115,10 +118,11 @@ class ResettableValue(Property):
     def __init__(self, name, initial, **kwargs):
         self.initial = initial
         super(ResettableValue, self).__init__(name, initial, **kwargs)
+        self.info['type'] = 'ResettableValue'
 
-    def type(self):
-        return {'type': 'ResettableValue'}
-
+    def get_msg(self):
+        return round_value(self.value, '%.2f')
+        
     def set(self, value):
         if not value:
             value = self.initial # override value
@@ -154,9 +158,9 @@ class RangeProperty(Property):
 
 # a range property that is persistent and specifies the units
 class RangeSetting(RangeProperty):
-    def __init__(self, name, initial, min_value, max_value, units):
+    def __init__(self, name, initial, min_value, max_value, units, **kwargs):
         self.units = units
-        super(RangeSetting, self).__init__(name, initial, min_value, max_value, persistent=True)
+        super(RangeSetting, self).__init__(name, initial, min_value, max_value, persistent=True, **kwargs)
 
         self.info['type'] = 'RangeSetting'
         self.info['units'] = self.units

@@ -7,8 +7,7 @@
  */
 
 /* this program reads rf on pin2, and ir on pin3 and outputs
-   received remote presses as a spi slave
-*/
+   received remote presses as a spi slave */
 
 #include <Arduino.h>
 #include <stdint.h>
@@ -35,8 +34,12 @@
 // start byte $ followed by PACKET_LEN bytes, and a parity byte
 #define PACKET_LEN 6
 
+#define VERSION_MAJOR  1
+#define VERSION_MINOR  0
+
 // of packet bytes, first byte defines message type 
-enum {RF=0x01, IR=0x02, GP=0x03, VOLTAGE=0x04, SET_BACKLIGHT=0x16, SET_BUZZER=0x17, SET_BAUD=0x18};
+enum {RF=0x01, IR=0x02, GP=0x03, VOLTAGE=0x04, ANALOG=0x05, VERSION=0x0a,
+    SET_BACKLIGHT=0x16, SET_BUZZER=0x17, SET_BAUD=0x18, SET_ADC_CHANNELS=0x19, GET_VERSION=0x1b};
 
 #ifdef USE_RF
 RCSwitch rf = RCSwitch();
@@ -66,6 +69,7 @@ uint8_t backlight_value_ee EEMEM = 64; // determines when backlight turns on
 uint8_t backlight_polarity_ee EEMEM = 0;
 uint8_t serial_baud_ee EEMEM = 0;
 
+uint8_t adc_channels = 0;
 
 #define RB_CREATE(NAME, SIZE)                                           \
     uint8_t rb_##NAME[SIZE];                                            \
@@ -169,7 +173,7 @@ void Serial_begin(uint8_t baud)
 #endif
 
 uint32_t buzzer_timeout;
-uint8_t buzzer_mode;
+uint8_t buzzer_pitch, buzzer_pulse;
 void buzzer_off()
 {
     TIMSK2 = 0;
@@ -181,30 +185,36 @@ void buzzer_off()
 
 void set_buzzer(uint8_t mode, uint8_t timeout)
 {
+    if(buzzer_timeout)
+        return;
     buzzer_timeout = millis() + timeout*10; // duration
     if(buzzer_timeout > 4294963200UL)
         buzzer_timeout = 1; // in case of 32 bit wrap.. needed???
         
     TCCR2A = _BV(WGM20) | _BV(WGM21);
-    TCCR2B = _BV(WGM22) | _BV(CS22); // divide by 128
-
+    TCCR2B = _BV(WGM22) | _BV(CS22) | _BV(CS21); // divide by 256
     uint8_t freq;
-    switch(mode) {
+    uint8_t pitch = mode&0x0f;
+    buzzer_pulse = (mode&0xf0)>>4;
+    switch(pitch) {
+    case 1:        freq = 180;        break;
+    case 2:        freq = 120;        break;
+    case 3:        freq = 80;         break;
+    case 4:        freq = 60;         break;
+    case 5:        freq = 40;         break;
+    case 6:        freq = 30;         break;
+    case 7:        freq = 20;         break;
+    case 8:        freq = 10;         break;
+    default:
     case 0: // buzzer off
         buzzer_off();
         return;
-    case 1: // steady
-        freq = 200;
-        break;
-    case 2: // ... ... ...
-        freq = 60;
-        break;
     }
     pinMode(5, OUTPUT);
     pinMode(6, OUTPUT);
-    buzzer_mode = mode;
+
     OCR2A = freq;
-    OCR2B = freq/2;
+    OCR2B = freq>>1;
     
     TIMSK2 |= _BV(OCIE2B) | _BV(TOIE2);
 }
@@ -238,10 +248,6 @@ void setup()
 #endif
     pinMode(0, INPUT_PULLUP);
     pinMode(1, INPUT_PULLUP);
-
-    // enable adc with 128 division
-    ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
-    ADCSRA |= _BV(ADSC);
 
     // turn on SPI in slave mode
     SPCR |= _BV(SPE);
@@ -301,8 +307,31 @@ struct codes_type {
 };
 
 static struct codes_type codes[4] = {0};
-static uint16_t adc_avg[3], adc_count, adc_cycles=64;
+static uint16_t adc_avg[6], adc_count, adc_cycles;
 static uint32_t adc_a;
+
+void send(uint8_t id, uint8_t d[PACKET_LEN])
+{
+    uint8_t st = '$'|0x80;
+    cli();
+    RB_PUT(serial_out, st);
+    sei();
+    id |= 0x80; // nmea does not use codes below 127, so this bit indicates data
+    cli();
+    RB_PUT(serial_out, id);
+    sei();
+    uint8_t parity = 0;
+    for(int i = 0; i < PACKET_LEN; i++) {
+        uint8_t v = d[i] | 0x80;
+        parity ^= d[i];
+        cli();
+        RB_PUT(serial_out, v);
+        sei();
+    }
+    cli();
+    RB_PUT(serial_out, parity | 0x80);
+    sei();
+}
 
 void read_data()
 {
@@ -352,30 +381,18 @@ void read_data()
         Serial_begin(d[0]);
 #endif
     } break;
+    case SET_ADC_CHANNELS:
+    {
+        adc_channels = d[0];
+        if(adc_channels > 3)
+            adc_channels = 0;
+    } break;
+    case GET_VERSION:
+    {
+        uint8_t d[PACKET_LEN] = {VERSION_MAJOR, VERSION_MINOR};
+        send(VERSION, d);
     }
-}
-
-void send(uint8_t id, uint8_t d[PACKET_LEN])
-{
-    uint8_t st = '$'|0x80;
-    cli();
-    RB_PUT(serial_out, st);
-    sei();
-    id |= 0x80;
-    cli();
-    RB_PUT(serial_out, id);
-    sei();
-    uint8_t parity = 0;
-    for(int i = 0; i < PACKET_LEN; i++) {
-        uint8_t v = d[i] | 0x80;
-        parity ^= d[i];
-        cli();
-        RB_PUT(serial_out, v);
-        sei();
     }
-    cli();
-    RB_PUT(serial_out, parity | 0x80);
-    sei();
 }
 
 void send_code(uint8_t source, uint32_t value)
@@ -385,17 +402,25 @@ void send_code(uint8_t source, uint32_t value)
     uint32_t cvalue = value & 0x7f7f7f7f;
     uint8_t *pvalue = (uint8_t*)&cvalue;
     pvalue[3] = ((p1value[0]&0x80) >> 1) | ((p1value[1]&0x80) >> 2) | ((p1value[2]&0x80)) >> 3;
-        
+   
     if(cvalue == codes[source].lvalue) {
         if(++codes[source].repeat_count > 127)
             codes[source].repeat_count = 1;
     } else {
+#if 0        
         // unfortunately IR has infrequent but sometimes wrong value codes
         // so sending keyup from previous key if a new down is not used here.
         if(source == IR && codes[source].lvalue && value)
             return;
         // send code up for last key if key changed
         if(codes[source].lvalue) {
+            uint8_t *plvalue = (uint8_t*)&codes[source].lvalue;
+            uint8_t d[PACKET_LEN] = {plvalue[0], plvalue[1], plvalue[2], plvalue[3], 0, 0};
+            send(source, d);
+        }
+#endif
+        // send code up if not value
+        if(codes[source].lvalue && !value) {
             uint8_t *plvalue = (uint8_t*)&codes[source].lvalue;
             uint8_t d[PACKET_LEN] = {plvalue[0], plvalue[1], plvalue[2], plvalue[3], 0, 0};
             send(source, d);
@@ -409,15 +434,32 @@ void send_code(uint8_t source, uint32_t value)
         digitalWrite(LED_PIN, HIGH); // turn on led to indicate remote received
     } else
         digitalWrite(LED_PIN, LOW);
+
     codes[source].lvalue = cvalue;
     codes[source].ltime = millis();
 }
 
-void read_analog() {
+void read_analog()
+{
+    static uint8_t startup = 1;
+    if(startup) {
+        // 3 second delay to delay power draw of backlight
+        if(millis() < 3000)
+            return;
+        // enable adc with 128 division
+        ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
+        ADCSRA |= _BV(ADSC);
+        startup = 0;
+    }
+    
     static uint8_t channel;
     const uint8_t channels[] = {_BV(MUX1) | _BV(MUX2),              // 5v through divider
                                 _BV(MUX0) | _BV(MUX1) | _BV(MUX2),  // ambient light sensor
-                                _BV(MUX1) | _BV(MUX2) | _BV(MUX3)}; // reference voltage
+                                _BV(MUX1) | _BV(MUX2) | _BV(MUX3),  // reference voltage
+                                0,         // ADC0
+                                _BV(MUX0), // ADC1
+                                _BV(MUX1)  // ADC2
+    };
     if(ADCSRA & _BV(ADSC))
         return; // not ready yet
 
@@ -429,15 +471,33 @@ void read_analog() {
     adc_avg[channel] = adc_a >> 4;
     adc_count = 0;
     adc_a = 0;
-    
-    if(++channel == sizeof channels)
+
+    if(++channel == (sizeof channels) - 3 + adc_channels)
         channel = 0;
 
     ADMUX = _BV(REFS0) | channels[channel]; // select channel at 5 volts
     ADCSRA |= _BV(ADSC);
 
-    uint16_t ambient = adc_avg[1];
+    bool send_packet = false;
+    for(int i=0; i<adc_channels; i++) {
+        static uint16_t last_adc[3];
+        if(abs(adc_avg[3+i] - last_adc[i]) > 25) {
+            last_adc[i] = adc_avg[3+i];           
+            send_packet = true;
+            break;
+        }
+    }
 
+    if(send_packet) {
+        uint8_t d[PACKET_LEN] = {0};
+        for(int i=0; i<adc_channels; i++) {
+            d[2*i+0] = adc_avg[3+i]&0x7f;
+            d[2*i+1] = (adc_avg[3+i]>>7)&0x7f;
+        }
+        send(ANALOG, d);
+    }
+
+    uint16_t ambient = adc_avg[1];
     //Configure TIMER1 to drive backlight variable pwm
     static uint8_t last_backlight = 0;
     uint8_t backlight = 0;
@@ -455,7 +515,6 @@ void read_analog() {
                 ocr1a = 0;
             if(ocr1a > 1000)
                 ocr1a = 1000;
-       
             if(backlight_polarity)
                 ocr1a = 1000 - ocr1a;
 
@@ -476,6 +535,11 @@ void read_analog() {
     if(!RB_EMPTY(serial_out)) // don't report volts if other data is being sent
         return;
 
+    uint32_t t = millis();
+    for(uint8_t source=1; source<4; source++)
+        if(t - codes[source].ltime < 500)
+            return;
+    
     adc_cycles = 0;
     uint16_t reference = adc_avg[2];
     
@@ -487,7 +551,7 @@ void read_analog() {
     // calculate input power voltage through input divider
     // Vcc = 2*power/4/1023*vin
     uint16_t vcc = adc_avg[0];
-//      uint16_t vcc = 6200 * 2;
+    //      uint16_t vcc = 6200 * 2;
     vcc = ((uint32_t)vin*vcc)>>13;
     uint8_t d[PACKET_LEN];
     d[0] = vcc&0x7f;
@@ -495,13 +559,13 @@ void read_analog() {
     d[2] = vin&0x7f;
     d[3] = (vin>>7)&0x7f;
     d[4] = 0;
+    d[5] = 0;
     send(VOLTAGE, d);
 }
 
 void loop() {
     wdt_reset();
     read_data();
-
 #if 0
     if(UCSR0A & _BV(UDRE0) && !RB_EMPTY(serial_in)) {
         cli();
@@ -521,15 +585,28 @@ void loop() {
         uint32_t t0 = millis();
         if(buzzer_timeout < t0) {
             buzzer_timeout = 0;
-            buzzer_mode = 0;
             buzzer_off();
         } else {
-            if(buzzer_mode == 2) {
+            if(buzzer_pulse == 1) {
+                uint8_t pos = ((buzzer_timeout - t0) / 50)%16;
+                if(pos < 7)
+                    TIMSK2 = _BV(OCIE2B) | _BV(TOIE2);
+                else
+                    TIMSK2 = 0;
+            } else
+            if(buzzer_pulse == 2) {
                 uint8_t pos = ((buzzer_timeout - t0) / 50)%16;
                 if(pos & 1 && pos != 7 && pos != 15)
-                    TIMSK2 |= _BV(OCIE2B) | _BV(TOIE2);
+                    TIMSK2 = _BV(OCIE2B) | _BV(TOIE2);
                 else
-                    buzzer_off();
+                    TIMSK2 = 0;
+            } else
+            if(buzzer_pulse == 3) {
+                uint8_t pos = ((buzzer_timeout - t0) / 50)%16;
+                if(pos & 1 && pos < 9)
+                    TIMSK2 = _BV(OCIE2B) | _BV(TOIE2);
+                else
+                    TIMSK2 = 0;
             }
         }
     }
@@ -540,9 +617,8 @@ void loop() {
     uint32_t timeout[] = {0, 300, 350, 100};
     for(uint8_t source=1; source<4; source++) {
         uint32_t dt = t - codes[source].ltime;
-        if(codes[source].lvalue && (dt > timeout[source] && dt < 10000)) {
+        if(codes[source].lvalue && (dt > timeout[source] && dt < 10000))
             send_code(source, 0);
-        }
     }
     t = millis();
 
@@ -570,7 +646,7 @@ void loop() {
     // parse incoming data
     uint32_t dt = t - codes[GP].ltime;
     if(dt > 40) { // do not send faster than 40 ms
-        for(int i=0; i<6; i++)
+        for(int i=adc_channels; i<6; i++)
             if(!digitalRead(A0+i))
                 send_code(GP, i+1);
         if(!digitalRead(7))

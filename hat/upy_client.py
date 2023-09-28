@@ -250,8 +250,7 @@ class pypilotClient(object):
                 print('upy_client: timeout on socket', dt, 'reset wifi')
                 from wifi_esp32 import connect
                 connect()
-                self.disconnect()
-                
+                self.disconnect()                
         return msgs
 
     def list_values(self):
@@ -308,4 +307,3 @@ def main():
             
 if __name__ == '__main__':
     main() 
-

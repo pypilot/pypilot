@@ -1,3 +1,12 @@
+/*
+#   Copyright (C) 2023 Sean D'Epagnier
+#
+# This Program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.  
+*/
+
 /*============= Creating a canvas ======================*/
 var canvas = document.getElementById('canvas');
 gl = canvas.getContext('experimental-webgl');
@@ -333,7 +342,6 @@ $(document).ready(function() {
     $('#connection').text("N/A");
     $('#calibration').text("N/A");
 
-
     // Connect to the Socket.IO server.
     var port = location.port;
     port = pypilot_web_port;
@@ -344,9 +352,12 @@ $(document).ready(function() {
     }
     
     socket.on('pypilot_values', function(msg) {
-        //var list_values = JSON.parse(msg);
         $('#connection').text('Connected');
-        watches = ['.calibration', '.calibration.age'];
+
+        for(s of ['error', 'warning'])
+            pypilot_watch('imu.' + s)
+        
+        watches = ['', '.age', '.log', '.warning'].map(function (e) { return '.calibration'+e; });
         for(var watch in watches)
             for(var plot in plots)
                 pypilot_watch('imu.' + plots[plot] + watches[watch]);
@@ -378,29 +389,45 @@ $(document).ready(function() {
     
     $('#accel').click(switch_plot);
     $('#compass').click(switch_plot);
-    
+
+    var calibration_log = {'accel': [], 'compass': []}
     socket.on('pypilot', function(msg) {
         data = JSON.parse(msg);
-
-        n = 'imu.accel.calibration';
-        if(n in data) {
-            accel_calibration = data[n][0];
-            $('#accel_calibration').text(data[n]);
+        for(s of ['error', 'warning']) {
+            name = 'imu.'+s;
+            if(name in data)
+                $('#imu_'+s).text(data[name])
         }
 
-        n = 'imu.compass.calibration';
-        if(n in data) {
-            compass_calibration = data[n][0];
-            $('#compass_calibration').text(data[n]);
-        }
-
-        n = 'imu.accel.calibration.age';
-        if(n in data)
-            $('#accel_calibration_age').text(data[n]);
-
-        n = 'imu.compass.calibration.age';
-        if(n in data)
-            $('#compass_calibration_age').text(data[n]);
+        for(s of ['accel', 'compass'])
+            for(n of ['', 'age', 'log']) {
+                name = 'imu.' + s + '.calibration';
+                id = '#'+s+'_calibration'
+                if(n) {
+                    name += '.' + n
+                    id += '_' + n
+                }
+                
+                if(name in data) {
+                    value = data[name];
+                    if(!n) {
+                        value = value[0];
+                        if(s == 'accel')
+                            accel_calibration = value;
+                        else
+                            compass_calibration = value;
+                    }
+                    if(n == 'log') {
+                        calibration_log[s].push(value);
+                        if(calibration_log[s].length > 4)
+                            calibration_log[s].shift();
+                        value = '';
+                        for(line of calibration_log[s])
+                            value += line + '\n';
+                    }
+                    $(id).text(value);
+                }
+            }
 
         if(current_plot == 'accel')
             calibration = accel_calibration;
@@ -432,5 +459,5 @@ $(document).ready(function() {
             gl.bindBuffer(gl.ARRAY_BUFFER, points_buffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points_points), gl.STATIC_DRAW);   
         }
-    });    
+    });
 });

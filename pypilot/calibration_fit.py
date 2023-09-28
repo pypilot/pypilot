@@ -349,6 +349,7 @@ class SigmaPoints(object):
         self.min_count = min_count
         self.Reset()
         self.updated = False
+        self.last_sample = False
 
     def Updated(self):
         if self.updated:
@@ -386,6 +387,7 @@ class SigmaPoints(object):
 
         # use lastpoint as better sample
         sensor, down = self.lastpoint.sensor, self.lastpoint.down
+        self.last_sample = sensor, down
         self.lastpoint = False
 
         ind = 0
@@ -479,10 +481,10 @@ def FitAccel(debug, accel_cal):
     maxa = lmap(max, *p)
     diff = vector.sub(maxa[:3], mina[:3])
     if min(*diff) < 1.2:
-        debug('need more range', min(*diff))
+        debug('need more range', '%.4f' % min(*diff))
         return # require sufficient range on all axes
     if sum(diff) < 4.5:
-        debug('need more spread', sum(diff))
+        debug('need more spread', '%.4f' % sum(diff))
         return # require more spread
     fit = FitPointsAccel(debug, p)
     if not fit:
@@ -539,7 +541,7 @@ def FitCompass(debug, compass_points, compass_calibration, norm):
 
     # make sure the magnitude is sane
     mag = c[0][3]
-    if mag < 7 or mag > 120:
+    if mag < 12 or mag > 120:
         debug('fit found field outside of normal earth field strength', mag)
         return
 
@@ -590,7 +592,7 @@ class CalibrationProperty(RoundedValue):
 
 class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
-        super(AgeValue, self).__init__(name, time.monotonic(), **kwargs)
+        super(AgeValue, self).__init__(name, 0, **kwargs)
         self.lastreadable = 0
 
     def reset(self):
@@ -604,7 +606,9 @@ class AgeValue(StringValue):
 
     def get_msg(self):
         t = time.monotonic()
-        return '"' + boatimu.readable_timespan(t - self.value) + '"'
+        if self.value:
+            return '"' + boatimu.readable_timespan(t - self.value) + '"'
+        return '"N/A"'
 
 def RegisterCalibration(client, name, default):
     calibration = client.register(CalibrationProperty(name, default))
@@ -623,6 +627,8 @@ def CalibrationProcess(cal_pipe, client):
 
     accel_calibration = RegisterCalibration(client, 'imu.accel', [[0, 0, 0, 1], 1])
     compass_calibration = RegisterCalibration(client, 'imu.compass', [[0, 0, 0, 30, 0], [1, 1], 0])
+    compass_calibration.field_strength = client.register(SensorValue('imu.compass.calibration.field_strength'))
+    compass_calibration.inclination = client.register(SensorValue('imu.compass.calibration.inclination'))
     
     client.watch('imu.alignmentQ')
     if not cal_pipe: # get these through client rather than direct pipe
@@ -634,11 +640,34 @@ def CalibrationProcess(cal_pipe, client):
         def debug_by_name(*args):
             s = ''
             for a in args:
+                try:
+                    s = '%.5f' % value
+                except Exception as e:
+                    pass
                 s += str(a) + ' '
+                #print("debug", name, s)
             client.set('imu.'+name+'.calibration.log', s)
         return debug_by_name
 
     last_compass_coverage = 0
+
+
+    warnings = {}
+    def warnings_update(sensor, warning, value):
+        if value:
+            if sensor in warnings and warnings[sensor] == warning:
+                return
+            warnings[sensor] = warning
+        else:
+            if not sensor in warnings:
+                return
+            del warnings[sensor]
+
+        str_warnings = ''
+        for sensor, warning in warnings.items():
+            str_warnings += sensor + ' ' + warning
+        cal_pipe.send(str_warnings)
+    
     while True:
         t = time.monotonic()
         addedpoint = False
@@ -654,10 +683,11 @@ def CalibrationProcess(cal_pipe, client):
                 elif name == 'imu.accel':
                     if value:
                         accel_points.AddPoint(value)
+
                     addedpoint = True
                 elif name == 'imu.compass' and down:
                     if value and down:
-                        compass_points.AddPoint(value, down)
+                         compass_points.AddPoint(value, down)                            
                     addedpoint = True
                 elif name == 'imu.fusionQPose':
                     if value:
@@ -676,10 +706,55 @@ def CalibrationProcess(cal_pipe, client):
                         addedpoint = True
                     p = cal_pipe.recv()
 
+            if accel_points.last_sample:
+                sensor, down = accel_points.last_sample
+                accel_points.last_sample = False
+                cal = accel_calibration.value
+                # apply calibration
+                value = vector.sub(sensor, cal[0][:3])
+                g = vector.norm(value)
+                # check that calibration points are near magnitude of 1
+                warnings_update('accel', 'warning', abs(g-1) > .1)
+
+            if compass_points.last_sample:
+                sensor, down = compass_points.last_sample
+                accel_points.last_sample = False
+                cal = compass_calibration.value
+                # apply calibration
+                value = vector.sub(sensor, cal[0][:3])
+                # check that rate of change of compass magnitude and inclination is not too high
+                warn = False
+                gauss = vector.norm(value)
+                d = .0001
+                if compass_calibration.field_strength.value is False:
+                    d = 1
+                field_strength = compass_calibration.field_strength.value * (1-d) + gauss * d
+                compass_calibration.field_strength.set(field_strength)
+                if abs(field_strength - gauss) > 3:
+                    warn = True
+
+                d = .001
+                if compass_calibration.inclination.value is False:
+                    d = 1
+
+                c = vector.dot(value, down) / vector.norm(value)
+                c = min(max(-1, c), 1)
+                angle = math.degrees(math.asin(c))
+                inclination = compass_calibration.inclination.value * (1-d) + angle * d
+                compass_calibration.inclination.set(inclination)
+
+                if abs(inclination - angle) > 8:
+                    warn = True
+
+                warnings_update('compass', 'distortions', warn)
+                #if warn:
+                #print('mag distortions debug', field_strength, gauss, inclination, angle)
+
+
             cals = [(accel_calibration, accel_points), (compass_calibration, compass_points)]
             for calibration, points in cals:
                 calibration.age.update()
-                if points.Updated():
+                if points.Updated():                    
                     calibration.sigmapoints.set(points.Points())
 
         if not addedpoint: # don't bother to run fit if no new data
@@ -708,6 +783,9 @@ def CalibrationProcess(cal_pipe, client):
             else:
                 compass_calibration.set(fit)
                 compass_calibration.points.set(compass_points.Points())
+
+                compass_calibration.field_strength.set(False)
+                compass_calibration.inclination.set(False)
         else:
             last_compass_coverage = 0 # reset
 

@@ -94,10 +94,17 @@ def parse_nmea_gps(line):
             lon = -lon
 
         speed = float(data[6]) if data[6] else 0
+
         gps = {'timestamp': ts, 'speed': speed, 'lat': lat, 'lon': lon}
         if data[7]:
             gps['track'] = float(data[7])
 
+        if data[9]:
+            decl = float(data[9])
+            if data[10] == 'W':
+                decl = -decl
+            gps['declination'] = decl
+            
     except Exception as e:
         print(_('nmea failed to parse gps'), line, e)
         return False
@@ -488,8 +495,9 @@ class Nmea(object):
             self.nmea_bridge.poll()
         
         t6 = time.monotonic()
-        if t6 - t0 > .05 and t0-self.start_time > 1: # report times if processing takes more than 0.05 seconds
-            print('nmea poll times', t6-self.start_time, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t6-t0)
+        if t6 - t0 > .05 and t0-self.start_time > 10: # report times if processing takes more than 0.05 seconds
+            times = map(lambda t : round_value(t, '%.3f'), [t6-self.start_time, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t6-t0])
+            print('nmea poll times', *times)
             
     def probe_serial(self):
         # probe new nmea data devices
@@ -791,7 +799,7 @@ class nmeaBridge(object):
             msg = self.pipe.recv()
             if not msg:
                 return
-            if msg[0] != '$': # perform checksum in this subprocess
+            if msg[0] != '$' and msg[0] != '!': # perform checksum in this subprocess
                 msg = '$' + msg + ('*%02X' % nmea_cksum(msg))
             # relay nmea message from server to all tcp sockets
             for sock in self.sockets:

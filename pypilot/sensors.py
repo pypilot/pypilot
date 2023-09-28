@@ -20,7 +20,7 @@ import quaternion
 
 # favor lower priority sources
 source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3,
-                   'signalk' : 4, 'gps+wind' : 5, 'water+wind' : 6, 'none' : 7}
+                   'signalk' : 4, 'water+wind' : 5, 'gps+wind' : 6, 'none' : 7}
 
 class Sensor(object):
     def __init__(self, client, name):
@@ -42,7 +42,8 @@ class Sensor(object):
            data['device'] != self.device:
             return False
 
-        self.update(data)
+        if not self.update(data):
+            return False
                 
         if self.source.value != source:
             print(_('sensor found'), self.name, source, data['device'], time.asctime(time.localtime(time.time())))
@@ -104,6 +105,7 @@ class BaseWind(Sensor):
         if 'speed' in data:
             self.speed.set(data['speed'])
         self.weight()
+        return True
 
     def reset(self):
         self.direction.set(False)
@@ -128,11 +130,14 @@ class TrueWind(BaseWind):
     def __init__(self, client, boatimu):
         super(TrueWind, self).__init__(client, 'truewind', boatimu)
 
-    def compute_true_wind(water_speed, wind_speed, wind_direction):
+    @staticmethod
+    def compute_true_wind_direction(water_speed, wind_speed, wind_direction):
         rd = math.radians(wind_direction)
         windv = wind_speed*math.sin(rd), wind_speed*math.cos(rd) - water_speed
-        return math.hypot(*windv)
-
+        truewind = math.degrees(math.atan2(*windv))
+        #print( 'truewind', truewind, math.hypot(*windv))
+        return truewind
+        
     @staticmethod
     def compute_true_wind_speed(water_speed, wind_speed, wind_direction):
         rd = math.radians(wind_direction)
@@ -141,7 +146,7 @@ class TrueWind(BaseWind):
 
     def update_from_apparent(self, boat_speed, wind_speed, wind_direction):
         if self.source.value == 'water+wind' or self.source.value == 'gps+wind':
-            self.direction.set(TrueWind.compute_true_wind(boat_speed, wind_speed, wind_direction))
+            self.direction.set(TrueWind.compute_true_wind_direction(boat_speed, wind_speed, wind_direction))
             self.wdirection = self.direction.value
             self.wfactor = .05
             self.lastupdate = time.monotonic()
@@ -161,7 +166,7 @@ class APB(Sensor):
     def update(self, data):
         t = time.monotonic()
         if t - self.last_time < .5: # only accept apb update at 2hz
-            return
+            return False
 
         self.last_time = t
         self.track.update(data['track'])
@@ -171,26 +176,22 @@ class APB(Sensor):
         else:
             xte = 0
 
-        # ignore message if autopilot is not enabled
-        if not self.client.values.values['ap.enabled'].value:
-            return
-
         data_mode = data['mode'] if 'mode' in data else 'gps'
-        mode = self.client.values.values['ap.mode']
-        if mode.value != data_mode:
-            # for GPAPB, ignore message on wrong mode
-            if 'senderid' in data and data['senderid'] != 'GP':
-                mode.set(data_mode)
-            else:
-                return 
-                # APB is from GP with no gps mode selected so exit
+        if data_mode != 'gps':
+            return False
 
+        mode = self.client.values.values['ap.mode']
+        # do not apply heading change message if not enabled in nav mod
+        if mode.value != 'nav' or not self.client.values.values['ap.enabled'].value:
+            return True
+        
         command = data['track'] + self.gain.value*xte
         #print('apb command', command, data)
 
         heading_command = self.client.values.values['ap.heading_command']
         if abs(heading_command.value - command) > .1:
             heading_command.set(command)
+        return True
 
 class gps(Sensor):
     def __init__(self, client):
@@ -201,6 +202,10 @@ class gps(Sensor):
 
         self.leeway_ground = self.register(SensorValue, 'leeway_ground')
         self.compass_error = self.register(SensorValue, 'compass_error')
+
+        self.declination = self.register(SensorValue, 'declination')
+        self.alignmentCounter = self.register(Property, 'alignmentCounter', 0)
+        self.last_alignmentCounter = False
         
         self.filtered = GPSFilterProcess(client)
         self.lastpredictt = time.monotonic()
@@ -214,8 +219,41 @@ class gps(Sensor):
         self.speed.set(data['speed'])
         if 'track' in data:
             self.track.set(data['track'])
+        if 'declination' in data:
+            self.declination.set(data['declination'])
+
         self.fix.set(data)
         self.filtered.update(data, time.monotonic())
+
+        if self.alignmentCounter.value > 0:
+            # initiated,  reset average
+            t0 = time.monotonic()
+            if self.alignmentCounter.value != last:
+                x, y, last = 0, 0, self.alignmentCounter.value, t0
+            else:
+                x, y, last, t = self.gps_alignment_track
+
+            if t0 - t > 20: # too long without gps
+                self.alignmentCounter.set(0)
+            else:
+                x+=math.sin(math.radians(self.track.value))
+                y+=math.cos(math.radians(self.track.value))
+                last -= 1
+                self.gps_alignment_track = x, y, last, t0
+                self.alignmentCounter.set(last)
+
+                if self.alignmentCounter.value == 0:  # alignment complete
+                    if x or y:
+                        avg_track = math.degrees(math.atan2(y, x))
+                        mag_track = avg_track
+                        if self.declination.value:
+                            mag_track -= self.declination
+                        heading = self.client.values.values['imu.heading']
+                        self.client.values.values['imu.heading_offset'].set(heading - mag_track)
+                    
+                self.gps_alignment_track = total, count, self.alignmentCounter.value
+            
+        return True
 
     def predict(self, ap):
         if self.source.value == 'none':
@@ -250,12 +288,15 @@ class Water(Sensor):
 
     def update(self, data):
         t = time.monotonic()
+        if not 'speed' in data:
+            return False
+
+        self.speed.set(data['speed'])
         if 'leeway' in data:
             self.leeway.set(data['leeway'])
             self.leeway_source.update('sensor')
             self.last_leeway_measurement = t
-        if 'speed' in data:
-            self.speed.set(data['speed'])
+        return True
 
     def compute(self, ap):
         if self.source.value == 'none':

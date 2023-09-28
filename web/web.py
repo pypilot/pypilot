@@ -20,19 +20,32 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import tinypilot
 
-pypilot_web_port=8000
+config = {'port': 8000, 'language': 'default'}
+configfilename = os.getenv('HOME')+'/.pypilot/web.conf'
+
+try:
+    file = open(configfilename, 'r')
+    config.update(pyjson.loads(file.readline()))
+    file.close()
+
+except:
+    print('failed to read config', configfilename)
+
+def write_config():
+    try:
+        file = open(configfilename, 'w')
+        file.write(pyjson.dumps(config) + '\n')
+        file.close()
+    except:
+        print('failed to write config')
+
 if len(sys.argv) > 1:
     pypilot_web_port=int(sys.argv[1])
 else:
-    filename = os.getenv('HOME')+'/.pypilot/web.conf'
-    try:
-        file = open(filename, 'r')
-        config = pyjson.loads(file.readline())
-        if 'port' in config:
-            pypilot_web_port = config['port']
-        file.close()
-    except:
-        print('using default port of', pypilot_web_port)
+    pypilot_web_port = config['port']
+
+print('using port', pypilot_web_port)
+        
 
 # Set this variable to 'threading', 'eventlet' or 'gevent' to test the
 # different async modes, or leave it set to None for the application to choose
@@ -51,7 +64,13 @@ try:
 
     @babel.localeselector
     def get_locale():
-        return request.accept_languages.best_match(LANGUAGES)
+        if 'language' in config:
+            language = config['language']
+        else:
+            language = 'default'
+        if language == 'default' or not language in LANGUAGES:
+            return request.accept_languages.best_match(LANGUAGES)
+        return language
     
 except Exception as e:
     print('failed to import flask_babel, translations not possible!!', e)
@@ -59,6 +78,34 @@ except Exception as e:
     app.jinja_env.globals.update(_=_)
     babel = None
 
+
+@app.route('/logs')
+def logs():
+    log_links = ''
+    try:
+        logdirs = os.listdir('/var/log')
+        for name in logdirs:
+            if os.path.exists(os.path.join('/var/log', name, 'current')):
+                log_links+='<br><a href="log/'+name+'">'+name+'</a>';
+    except Exception as e:
+        print('failed to enumerate log directory', e)
+
+    return render_template('logs.html', async_mode=socketio.async_mode, log_links=Markup(log_links))
+
+@app.route('/log/<name>')
+def log(name):
+    log = ''
+    try:
+        f = open('/var/log/' + name + '/current')
+        log = f.read()
+        f.close()
+    except Exception as e:
+        log = _('failed to read log file') + ' "' + name + '": ' + str(e)
+    r = app.make_response(log)
+    r.mimetype = 'text/plain'
+    return r
+
+    
 @app.route('/wifi', methods=['GET', 'POST'])
 def wifi():
     networking = '/home/tc/.pypilot/networking.txt'
@@ -128,13 +175,17 @@ def wifi():
 def calibrationplot():
     return render_template('calibrationplot.html', async_mode=socketio.async_mode,pypilot_web_port=pypilot_web_port)
 
+@app.route('/client')
+def client():
+    return render_template('client.html', async_mode=socketio.async_mode,pypilot_web_port=pypilot_web_port)
+
 translations = []
 static = False
 with open(os.path.dirname(os.path.abspath(__file__)) + '/pypilot_web.pot') as f:
     for line in f:
         if line.startswith('#: static'):
             static = True
-        elif line.startswith('#:'):
+        elif len(line.strip()) == 0:
             static = False
         elif static and line.startswith('msgid'):
             s = line[7:-2]
@@ -143,7 +194,7 @@ with open(os.path.dirname(os.path.abspath(__file__)) + '/pypilot_web.pot') as f:
 
 @app.route('/')
 def index():
-    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot.tinypilot, translations=translations)
+    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot.tinypilot, translations=translations, language=config['language'], languages=Markup(LANGUAGES))
 
 class pypilotWeb(Namespace):
     def __init__(self, name):
@@ -191,6 +242,10 @@ class pypilotWeb(Namespace):
         client = self.clients[request.sid]
         client.disconnect()
         del self.clients[request.sid]
+
+    def on_language(self, language):
+        config['language'] = language
+        write_config()
 
 socketio.on_namespace(pypilotWeb(''))
 

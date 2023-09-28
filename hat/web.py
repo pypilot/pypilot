@@ -18,15 +18,28 @@ socketio = SocketIO(app, async_mode=None)
 web_port = 33333
 
 default_actions = \
-    {'auto':['ir030C1000','ir030C1800','KEY_POWER','gpio17','rf7E1C2950','rf7E0C2950'],
-     'menu':['ir030D1000','ir030D1800','KEY_MUTE','gpio23','rf7D1C2950','rf7D0C2950'],
-     'port1':['ir03201800','ir03201000','KEY_UP','gpio27','rf771C2950','rf770C2950'],
-     'starboard1':['ir03211800','ir03211000','KEY_DOWN','gpio22','rf7B1C2950','rf7B0C2950'],
-     'select':['ir030B1000','ir030B1800','KEY_SELECT','gpio18','rf6F1C2950','rf6F0C2950'],
-     'port10':['ir03111800','ir03111000','KEY_LEFT','gpio6','rf3F1C2950','rf3F0C2950'],
-     'starboard10':['ir03101800','ir03101000','KEY_RIGHT','gpio5','rf5F1C2950','rf5F0C2950'],
-     'tack':['gpio26','rf7F1C2910','rf7F0C2910']}
+    {'-10_': ['ir03111800','ir03111000','KEY_LEFT'  ,'gpio6' ,'rf3F402350','rf3F405350'],
+     '-1_':  ['ir03201800','ir03201000','KEY_UP'    ,'gpio27','rf77082350','rf77085350'],
+     '+1_':  ['ir03211800','ir03211000','KEY_DOWN'  ,'gpio22','rf7B042350','rf7B045350'],
+     '+10_': ['ir03101800','ir03101000','KEY_RIGHT' ,'gpio5' ,'rf5F202350','rf5F205350'],
+     'auto_':['ir030C1000','ir030C1800','KEY_POWER' ,'gpio17','rf7E012350','rf7E015350'],
+     'menu_':['ir030D1000','ir030D1800','KEY_MUTE'  ,'gpio23','rf7D022350','rf7D025350'],
+     'mode_':['ir030B1000','ir030B1800','KEY_SELECT','gpio18','rf6F102350','rf6F105350'],
 
+     'tack port': ['rf37482350', 'rf37485350', 'rf37482950', 'rf37485950'],
+     'tack starboard': ['rf5B242350', 'rf5B245350', 'rf5B242950', 'rf5B245950'],
+
+     '-10': ['rf3F402950', 'rf3F405950'],
+     '-1':  ['rf77082950', 'rf77085950'],
+     '+1':  ['rf7B042950', 'rf7B045950'],
+     '+10': ['rf5F202950', 'rf5F205950'],
+     'standby': ['rf7E012950', 'rf7E015950'],
+     'compass mode': ['rf7D022950', 'rf7D025950'],
+     'gps mode': ['rf6F102950', 'rf6F105950'],
+     'nav mode': ['rf6D122950', 'rf6D125950'],
+     'wind mode': ['rf7F002930', 'rf7F005930'],
+     'true wind mode': ['rf6F102930', 'rf6F105930']
+    }
 
 try:
     from flask_babel import Babel, gettext
@@ -51,6 +64,7 @@ class WebConfig(Namespace):
         self.pipe = pipe
         self.config = config
         self.status = 'N/A'
+        self.profiles = False
 
         self.last_key = False
 
@@ -63,7 +77,12 @@ class WebConfig(Namespace):
         i = 0
         actions = config['actions']
         for name in actions:
-            if i == 8:
+            if name.startswith('profile '):
+                continue
+
+            n = name.replace(' ', '_')
+            n = n.replace('+', 'plus')
+            if i == 7:
                 acts[ind] += Markup('</tr></table>')
                 ind = 1
                 acts[ind] += Markup('<table border=0>')
@@ -72,20 +91,42 @@ class WebConfig(Namespace):
     
             if col == 0:
                 acts[ind] += Markup('<tr>')
-            acts[ind] += Markup('<td><button id="action_' + name + '">' +
-                           name + '</button></td><td><span id="action' +
-                           name + 'keys"></span></td>')
+            acts[ind] += Markup('<td><button id="action_' + n + '">' +
+                                name + '</button></td><td><span id="action' +
+                                n + 'keys"></span></td>')
             if col == cols-1:
                 acts[ind] += Markup('</tr>')
                 col = 0
             else:
                 col += 1
-            names += Markup('"' + name + '", ')
+            names += Markup('"' + n + '", ')
 
         acts[ind] += Markup('</table>')
-
         names += Markup('""]')
 
+        adc_channels = Markup('<select id="adc_channels">')
+        cadc = config.get('adc_channels', [])
+
+        for i in range(4):
+            adc_channels += Markup('<option value="' + str(i) + '"');
+            if i == len(cadc):
+                adc_channels += Markup(' selected')
+            adc_channels += Markup('>' + str(i) + '</option>');
+        adc_channels += Markup('</select>')
+        for i in range(3):
+            #adc_channels += Markup('<br>')
+            adc_channels += Markup('<div id="adc_channel_' + str(i) + '">')
+            adc_channels += Markup('Channel ' + str(i))
+            adc_channels += Markup('<select id="adc_channel_' + str(i) + '_select">')
+            options = ['none', 'steering', 'custom']
+            for option in options:
+                adc_channels += Markup('<option value="' + option + '"')
+                if i < len(cadc) and cadc[i] == option:
+                    adc_channels += Markup(' selected')
+                adc_channels += Markup('>' + option + '</option>')
+            adc_channels += Markup('</select>')
+            adc_channels += Markup('</div>')
+        
         ir = Markup('<input type="radio" id="pi_ir" name="ir"')
         if config['pi.ir']:
             ir += Markup(' checked')
@@ -112,11 +153,11 @@ class WebConfig(Namespace):
         remote = Markup('<input type="checkbox" id="remote"')
         if config['host'] != 'localhost':
             remote += Markup(' checked')
-        remote += Markup('/><input type="text" id="host" value="' + config['host'] + '">')
+        remote += Markup(' /><input type="text" id="host" value="' + config['host'] + '" />')
 
         @app.route('/')
         def index():
-            return render_template('index.html', async_mode=socketio.async_mode, web_port=web_port, actionkeys = acts, action_names = names, ir_settings = ir, nmea_settings = nmea, remote_settings = remote)
+            return render_template('index.html', async_mode=socketio.async_mode, web_port=web_port, actionkeys = acts, action_names = names, adc_channels = adc_channels, ir_settings = ir, nmea_settings = nmea, remote_settings = remote)
 
     def on_ping(self):
         emit('pong')
@@ -139,16 +180,26 @@ class WebConfig(Namespace):
             self.emit_keys()
             return
 
+        if command.startswith('clearcodes'):
+            command = command[10:]
+            if command in actions:
+                actions[command] = []
+            self.emit_keys()
+            return
+
         if not self.last_key:
             return
-        
+
         # remove this key from any actions
         for name, keys in actions.items():
             while self.last_key in keys:
                 keys.remove(self.last_key)
 
         # add the last key to the action
-        actions[command].append(self.last_key)
+        if command != 'none':
+            if not command in actions:
+                actions[command] = []
+            actions[command].append(self.last_key)
         self.emit_keys()
 
     def on_config(self, config):
@@ -157,14 +208,17 @@ class WebConfig(Namespace):
     def emit_keys(self):
         actions = self.config['actions']
         for name, keys in actions.items():
-            keys = {'name': name, 'keys': keys}
+            keys = {'name': name.replace(' ', '_'), 'keys': keys}
             socketio.emit('action_keys', keys)
         self.pipe.send({'actions': actions})
-        
+
     def on_connect(self):
+        if self.profiles:
+            socketio.emit('profiles', self.profiles)
         self.emit_keys()
+
         print('web client connected', request.sid)
-        socketio.emit('status', self.status)
+
 
     def on_disconnect(self):
         print('web client disconnected', request.sid)
@@ -196,10 +250,16 @@ class WebConfig(Namespace):
                     self.last_key = msg['key']
                     last_key_time = time.monotonic()
                 for name in msg:
-                    socketio.emit(name, str(msg[name]))
+                    d = msg[name]
+                    if name != 'profiles':
+                        d = str(d)
+                    socketio.emit(name, d)
                 if 'status' in msg:
                     self.status = msg['status']
-                    socketio.emit('status', self.status)
+                    #socketio.emit('status', self.status)
+                if 'profiles' in msg:
+                    self.profiles = msg['profiles']
+                    self.emit_keys()
 
 def web_process(pipe, config):
     print('web process', os.getpid())
