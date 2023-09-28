@@ -27,6 +27,8 @@ RCSwitch rf = RCSwitch();
 #define BOOST_ON  PORTB |= _BV(BOOST)
 #define BOOST_OFF PORTB &= ~_BV(BOOST)
 
+#define MIN_PACKETS 3
+
 uint8_t flag;
 
 ISR(PCINT2_vect) {
@@ -63,7 +65,6 @@ void setup() {
 }
 
 // the loop routine runs over and over again forever:
-static uint32_t code, timeout;
 static uint8_t key_count;
 
 uint8_t count_bits (uint8_t byte)
@@ -72,13 +73,27 @@ uint8_t count_bits (uint8_t byte)
     return nl[byte >> 4] + nl[byte & 0xf];
 }
 
+struct event {
+    uint32_t code;
+    uint8_t sent, released;
+} events[10];
+
+#define MAX_EVENTS (int)((sizeof events) / (sizeof *events))
+static uint8_t event_head, event_tail;
+
+event *event_get()
+{
+    if(event_head == event_tail)
+        return NULL;
+
+    return events + event_tail;
+}
+
 void loop() {
     // test keys
-    uint32_t t0 = millis();
+    //uint32_t t0 = millis();
     uint8_t pind = PIND;
     if(pind != 0xff) {
-        LED2_ON;
-        BOOST_ON;
         static uint8_t wd;
         if(flag) {
             wd = !wd;
@@ -90,30 +105,71 @@ void loop() {
             // construct output using PC0-PC3 to give unique codes for different remote types
             uint32_t pinc = (PINC & 0xf) ^ 0xc;
             uint32_t keys = (pinc << 16) | (0xff00 & (~pind << 8)) | pind;
+            uint32_t code;
             if(wd)
                 code = 0xa00000 | keys;
             else
                 code = 0xd00000 | keys;
             key_count = count;
-        }
-        timeout = t0;
-    } else
-        key_count = 0;
 
-    if(code) {
-        if(key_count)
-            rf.send(code, 24);
-        else if(t0 - timeout < 200UL) {
+            event *evt = event_get();
+            if(evt && !evt->released) {
+                evt->code = code;
+                evt->sent = 0;
+            } else {
+                int count = event_head - event_tail;
+                if(count < 0)
+                    count += MAX_EVENTS;
+                if(count < MAX_EVENTS - 1) {
+                    evt = events + event_head;
+    
+                    evt->code = code;
+                    evt->sent = 0;
+                    evt->released = 0;
+
+                    event_head++;
+                    if(event_head >= MAX_EVENTS)
+                        event_head = 0;
+                }
+            }
+        }
+    } else {
+        event *evt = event_get();
+        if(evt)
+            evt->released = 1;
+        key_count = 0;
+    }
+
+    // process events
+    event *evt = event_get();
+    if(evt) {
+        BOOST_ON;
+        if(evt->code) {
+            LED1_OFF;
+            LED2_ON;
+            rf.send(evt->code, 24);
+            evt->sent++;
+            if(evt->released && evt->sent >= MIN_PACKETS) {
+                evt->code = 0;
+                evt->sent = 0;
+            }
+        } else {
             LED1_ON;
             LED2_OFF;
             rf.send(0x7c2933UL, 24); // release code
-        } else {
-            LED1_OFF;
-            LED2_OFF;
-            code = 0;
-            BOOST_OFF;
+            evt->sent++;
+
+            if(evt->sent >= MIN_PACKETS) {
+                event_tail++;
+                if(event_tail >= MAX_EVENTS)
+                    event_tail = 0;
+            }
         }
     } else {
+        LED1_OFF;
+        LED2_OFF;
+        BOOST_OFF;
+        
         // if all settings are correct (no BOD), deep sleep is 4uA
         // wrong settings will drain battery
         //    power_all_disable (); // needed?
