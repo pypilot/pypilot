@@ -27,9 +27,17 @@ RCSwitch rf = RCSwitch();
 #define BOOST_ON  PORTB |= _BV(BOOST)
 #define BOOST_OFF PORTB &= ~_BV(BOOST)
 
-#define MIN_PACKETS 3
+uint8_t flag, key_count;
 
-uint8_t flag;
+#define MIN_PACKETS 2
+
+#define MAX_EVENTS 10
+struct event {
+    uint32_t code;
+    uint8_t sent, released;
+} events[MAX_EVENTS];
+
+int8_t event_head=-1, event_tail=-1;
 
 ISR(PCINT2_vect) {
     if(PIND==0xff)
@@ -64,29 +72,10 @@ void setup() {
     PORTC = PINC; // enable pullups only on pins without pulldown straps
 }
 
-// the loop routine runs over and over again forever:
-static uint8_t key_count;
-
 uint8_t count_bits (uint8_t byte)
 {
     static const uint8_t nl[16] =  {4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0};
     return nl[byte >> 4] + nl[byte & 0xf];
-}
-
-struct event {
-    uint32_t code;
-    uint8_t sent, released;
-} events[10];
-
-#define MAX_EVENTS (int)((sizeof events) / (sizeof *events))
-static uint8_t event_head, event_tail;
-
-event *event_get()
-{
-    if(event_head == event_tail)
-        return NULL;
-
-    return events + event_tail;
 }
 
 void loop() {
@@ -112,44 +101,43 @@ void loop() {
                 code = 0xd00000 | keys;
             key_count = count;
 
-            event *evt = event_get();
-            if(evt && !evt->released) {
-                evt->code = code;
-                evt->sent = 0;
+            // if more keys are pressed
+            // replace the code and dont send a release code
+            if(event_head != -1 && !events[event_head].released) {
+                events[event_head].code = code;
+                events[event_head].sent = 0;
             } else {
-                int count = event_head - event_tail;
-                if(count < 0)
-                    count += MAX_EVENTS;
-                if(count < MAX_EVENTS - 1) {
-                    evt = events + event_head;
-    
-                    evt->code = code;
-                    evt->sent = 0;
-                    evt->released = 0;
-
+                if(event_head == -1)
+                    event_head = event_tail = 0;
+                else {
+                    events[event_head].released = 1;
                     event_head++;
                     if(event_head >= MAX_EVENTS)
                         event_head = 0;
                 }
-            }
+                event *evt = events + event_head;
+                evt->code = code;
+                evt->sent = 0;
+                evt->released = 0;
+           }
         }
     } else {
-        event *evt = event_get();
-        if(evt)
-            evt->released = 1;
+        if(event_head >= 0)
+            events[event_head].released = 1;
         key_count = 0;
     }
 
     // process events
-    event *evt = event_get();
-    if(evt) {
+    if(event_tail >= 0) {
+        event *evt = events + event_tail;
         BOOST_ON;
         if(evt->code) {
             LED1_OFF;
             LED2_ON;
             rf.send(evt->code, 24);
-            evt->sent++;
-            if(evt->released && evt->sent >= MIN_PACKETS) {
+            if(evt->sent < MIN_PACKETS)
+                evt->sent++;
+            else if(evt->released) {
                 evt->code = 0;
                 evt->sent = 0;
             }
@@ -157,12 +145,17 @@ void loop() {
             LED1_ON;
             LED2_OFF;
             rf.send(0x7c2933UL, 24); // release code
-            evt->sent++;
-
-            if(evt->sent >= MIN_PACKETS) {
-                event_tail++;
-                if(event_tail >= MAX_EVENTS)
-                    event_tail = 0;
+            if(evt->sent < MIN_PACKETS)
+                evt->sent++;
+            else {
+                // if the queue is empty
+                if(event_tail == event_head)
+                    event_tail = event_head = -1;
+                else {
+                    event_tail++;
+                    if(event_tail >= MAX_EVENTS)
+                        event_tail = 0;
+                }
             }
         }
     } else {
@@ -172,7 +165,6 @@ void loop() {
         
         // if all settings are correct (no BOD), deep sleep is 4uA
         // wrong settings will drain battery
-        //    power_all_disable (); // needed?
         
         //DIDR0 = 0x3f; // disable digital io on all
         set_sleep_mode(SLEEP_MODE_PWR_DOWN);
