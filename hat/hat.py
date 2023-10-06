@@ -348,7 +348,7 @@ class Hat(object):
             self.write_config()
 
         # update firmware
-        arduino.update_firmware(config)
+        arduino.update_firmware(self.config)
 
         self.servo_timeout = time.monotonic() + 1
         self.servo_command = 0
