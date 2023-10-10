@@ -55,15 +55,19 @@ def update_firmware(config):
 
     if device.startswith('/dev/spidev'):
         # update flash if needed
-        path = os.getenv('HOME') + '/.pypilot/firmware'
         firmware = False
-        for filename in os.listdir(path):
-            if not filename.startswith('hat_') or not filename.endswith('.hex'):
-                continue
+        try:
+            path = os.getenv('HOME') + '/.pypilot/firmware'
+            for filename in os.listdir(path):
+                if not filename.startswith('hat_') or not filename.endswith('.hex'):
+                    continue
 
-            version = filename[4:-4]
-            if version and float(version) > float(config['version']):
-                firmware = path+os.path.sep + filename
+                version = filename[4:-4]
+                if version and float(version) > float(config['version']):
+                    firmware = path+os.path.sep + filename
+        except Exception as e:
+            print('failed to find firmware', e)
+            return
 
         if not firmware:
             print('did not find firmware to update')
