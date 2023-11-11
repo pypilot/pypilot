@@ -161,7 +161,7 @@ def parse_nmea_rudder(line):
     except:
         angle = False
 
-    return 'rudder', {'angle': angle}
+    return 'rudder', {'angle': -angle}
 
 
 def parse_nmea_apb(line):
@@ -486,7 +486,7 @@ class Nmea(object):
                         wind = self.sensors.truewind
                         self.send_nmea('APMWV,%.3f,T,%.3f,N,A' % (wind.direction.value, wind.speed.value))
                     elif name == 'rudder':
-                        self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
+                        self.send_nmea('APRSA,%.3f,A,,' % -self.sensors.rudder.angle.value)
                     period = 1/rate
                     self.nmea_times[name] = max(min(self.nmea_times[name] + period, t+period), t)
 
