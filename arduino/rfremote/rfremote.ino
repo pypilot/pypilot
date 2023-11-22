@@ -7,6 +7,8 @@
  */
 
 #include <RCSwitch.h>
+#include <avr/eeprom.h>
+
 
 RCSwitch rf = RCSwitch();
 
@@ -39,6 +41,9 @@ struct event {
 
 int8_t event_head=-1, event_tail=-1;
 
+uint8_t uid_code_ee EEMEM;
+uint8_t uid_code;
+
 ISR(PCINT2_vect) {
     if(PIND==0xff)
         flag = 1; // toggle flag
@@ -70,6 +75,8 @@ void setup() {
     DDRB|=_BV(LED1) | _BV(LED2) | _BV(BOOST);
 
     PORTC = PINC; // enable pullups only on pins without pulldown straps
+
+    uid_code = eeprom_read_byte((uint8_t*)&uid_code_ee);
 }
 
 uint8_t count_bits (uint8_t byte)
@@ -78,11 +85,89 @@ uint8_t count_bits (uint8_t byte)
     return nl[byte >> 4] + nl[byte & 0xf];
 }
 
+uint8_t bit_index(uint8_t byte) {
+    uint8_t i;
+    for(i=0; i<8 && (byte & 1); i++)
+        byte >>= 1;
+    return i;
+}
+
+static uint32_t program_time;
+void do_programming()
+{
+    uint32_t t0 = millis();
+    if(!program_time) {
+        program_time = t0;
+        return;
+    }
+    
+    if(t0-program_time < 3000)
+        return;
+        
+    // enter programming, flash leds 3 times
+    for(int i=0; i<3; i++) {
+        delay(300);
+        LED1_ON;
+        LED2_ON;
+        delay(500);
+        LED1_OFF;
+        LED2_OFF;
+    }
+            
+    uid_code = 0;
+    for(int count=0; count<3; count++) {
+        // wait for keys to be released
+        while(PIND != 0xff)
+            if(millis() - t0 > 8000)
+                goto flash_timeout;
+        
+        // wait for key to be pressed
+        while(PIND == 0xff)
+            if(millis() - t0 > 8000)
+                goto flash_timeout;
+        
+        // record keys pressed
+        uid_code <<= 3;
+        uid_code |= bit_index(PIND);
+        delay(200);
+    }
+            
+    uid_code = ~uid_code;
+    eeprom_update_byte((uint8_t*)&uid_code_ee, uid_code);
+            
+            
+    // done programming, flash green led 3 times
+    for(int i=0; i<3; i++) {
+        delay(300);
+        LED2_ON;
+        delay(500);
+        LED2_OFF;
+    }
+    return;
+            
+flash_timeout:
+    // timeout 
+    for(int i=0; i<2; i++) {
+        delay(500);
+        LED1_ON;
+        delay(700);
+        LED1_OFF;
+    }
+}    
+
 void loop() {
     // test keys
-    //uint32_t t0 = millis();
     uint8_t pind = PIND;
     if(pind != 0xff) {
+        if(!(pind & _BV(PD5)) && !(pind & _BV(PD6))) {
+            LED1_OFF;
+            LED2_OFF;
+            event_head = event_tail = -1;
+            do_programming();
+            return;
+        } else
+            program_time = 0;
+        
         static uint8_t wd;
         if(flag) {
             wd = !wd;
@@ -93,7 +178,7 @@ void loop() {
         if(count <= 2 && count > key_count) {
             // construct output using PC0-PC3 to give unique codes for different remote types
             uint32_t pinc = (PINC & 0xf) ^ 0xc;
-            uint32_t keys = (pinc << 16) | (0xff00 & (~pind << 8)) | pind;
+            uint32_t keys = (pinc << 16) | (0xff00 & (~pind << 8)) | (0xff & (pind ^ (~uid_code)));
             uint32_t code;
             if(wd)
                 code = 0xa00000 | keys;
@@ -125,6 +210,7 @@ void loop() {
         if(event_head >= 0)
             events[event_head].released = 1;
         key_count = 0;
+        program_time = 0;
     }
 
     // process events
