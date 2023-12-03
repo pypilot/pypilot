@@ -53,6 +53,18 @@ $(document).ready(function() {
         $('#action'+n+'keys').text(keys['keys'])
     });
 
+    shown_found_rf = false;
+    socket.on('found_rf', function(channel_keys) {
+        if(shown_found_rf)
+            return
+        shown_found_rf = true;
+        channel, all_rf_keys = keys
+        if(messagebox(yesno)) {
+            // remove any rf keys
+            // program this channel
+        }
+    }
+
     function program_button(event) {
         if($('#action0').text().length == 0) {
             if(confirm('clear all codes for' + ' "' + event.target.innerText + '" ?'))

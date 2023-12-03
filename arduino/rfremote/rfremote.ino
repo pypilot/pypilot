@@ -115,7 +115,7 @@ void do_programming()
     }
             
     uid_code = 0;
-    for(int count=0; count<3; count++) {
+    for(int count=0; count<1; count++) {
         // wait for keys to be released
         while(PIND != 0xff)
             if(millis() - t0 > 8000)
@@ -177,13 +177,14 @@ void loop() {
         uint8_t count = count_bits(pind);
         if(count <= 2 && count > key_count) {
             // construct output using PC0-PC3 to give unique codes for different remote types
-            uint32_t pinc = (PINC & 0xf) ^ 0xc;
-            uint32_t keys = (pinc << 16) | (0xff00 & (~pind << 8)) | (0xff & (pind ^ (~uid_code)));
-            uint32_t code;
+            uint32_t pinc = (PINC & 0xf);
+            pinc ^= ((uid_code&7) << 2);
             if(wd)
-                code = 0xa00000 | keys;
+                pinc ^= 0xac; //  1011 1111
             else
-                code = 0xd00000 | keys;
+                pinc ^= 0xdc; //  1110
+
+            uint32_t code = (pinc << 16) | (0xff00 & (~pind << 8)) | (0xff & pind));
             key_count = count;
 
             // if more keys are pressed
