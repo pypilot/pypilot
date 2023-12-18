@@ -18,7 +18,6 @@ from client_wx import round3
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
-from OpenGL.GLUT import *
 
 
 class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
@@ -423,10 +422,10 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.client.set('rudder.range', self.sRudderRange.GetValue())
 
 def main():
-    glutInit(sys.argv)
     app = wx.App()
     
     CalibrationDialog().ShowModal()
 
 if __name__ == "__main__":
     main()
+pyt
