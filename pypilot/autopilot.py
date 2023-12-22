@@ -464,7 +464,7 @@ class Autopilot(object):
                 pilot.process() # implementation specific process
 
         # servo can only disengage under manual control
-        self.servo.force_engaged = self.enabled.value
+        self.servo.ap_enabled = self.enabled.value
 
         t4 = time.monotonic()
         if t4-t3 > period/2:
