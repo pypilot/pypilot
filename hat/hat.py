@@ -327,6 +327,11 @@ class Hat(object):
         except Exception as e:
             print('config failed:', e)
 
+        host = self.config['host']
+        print('host', host, time.monotonic())
+        self.client = pypilotClient(host)
+        self.client.registered = False
+            
         # read hardware config
         try:
             configfile = '/proc/device-tree/hat/custom_0'
@@ -363,16 +368,11 @@ class Hat(object):
             self.config['host'] = sys.argv[1]
             self.write_config()
 
-        host = self.config['host']
-        print('host', host, time.monotonic())
-
         self.poller = select.poll()        
         self.gpio = gpio.gpio()
         self.lcd = LCD(self)
         #time.sleep(1)
 
-        self.client = pypilotClient(host)
-        self.client.registered = False
         self.watchlist = ['ap.enabled', 'ap.heading_command', 'ap.mode']
         self.watchlist += ['profile', 'profiles']
         self.watchlist += ['ap.tack.state', 'ap.tack.direction']
