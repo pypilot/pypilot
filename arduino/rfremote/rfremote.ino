@@ -76,7 +76,7 @@ void setup() {
 
     PORTC = PINC; // enable pullups only on pins without pulldown straps
 
-    uid_code = eeprom_read_byte((uint8_t*)&uid_code_ee);
+    uid_code = ~eeprom_read_byte((uint8_t*)&uid_code_ee);
 }
 
 uint8_t count_bits (uint8_t byte)
@@ -131,11 +131,8 @@ void do_programming()
         uid_code |= bit_index(PIND);
         delay(200);
     }
-            
-    uid_code = ~uid_code;
-    eeprom_update_byte((uint8_t*)&uid_code_ee, uid_code);
-            
-            
+    eeprom_update_byte((uint8_t*)&uid_code_ee, ~uid_code);
+
     // done programming, flash green led 3 times
     for(int i=0; i<3; i++) {
         delay(300);
@@ -184,7 +181,7 @@ void loop() {
             else
                 pinc ^= 0xdc; //  1110
 
-            uint32_t code = (pinc << 16) | (0xff00 & (~pind << 8)) | (0xff & pind));
+            uint32_t code = (pinc << 16) | (0xff00 & (~pind << 8)) | (0xff & pind);
             key_count = count;
 
             // if more keys are pressed
