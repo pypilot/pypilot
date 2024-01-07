@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2021 Sean D'Epagnier
+#   Copyright (C) 2023 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -17,28 +17,73 @@ socketio = SocketIO(app, async_mode=None)
 
 web_port = 33333
 
+# strap pins for remotes give different codes depending on if the remote is intended to be used with the display or not
+REMOTE = 0x5
+PANEL =  0xF
+
+# both types of remotes
+STANDBY, COMPASS, PLUS1, MINUS1, GPS, PLUS10, MINUS10, WIND = list(map(lambda x : 2 ** x, range(8)))
+AUTO, MENU, PLUS1, MINUS1, MODE, PLUS10, MINUS10            = list(map(lambda x : 2 ** x, range(7)))
+
+# definitions for multiple keys pressed
+TACK_PORT = MINUS10 | MINUS1 
+TACK_STARBOARD = PLUS10 | PLUS1
+NAV_MODE = COMPASS | GPS
+TRUE_WIND_MODE = GPS | WIND
+
+def lmap(*cargs):
+    return list(map(*cargs))
+
+def rf_code(pinc, pind):
+    def wd_code(wd):
+        code = ~pind, pind, (pinc ^ wd)
+        code4 = code[0] & 0x7f, code[1] & 0x7f, code[2] & 0x7f, (code[0]&0x80)>>1 | (code[1]&0x80)>>2 | (code[2]&0x80)>>3
+        return 'rf%02X%02X%02X%02X' % (code4[0], code4[1], code4[2], code4[3])
+    return wd_code
+
+def generate_codes(channel):
+    pins = {'-10_': (PANEL, MINUS10), '-1_': (PANEL, MINUS1),
+            '+10_': (PANEL, PLUS10), '+1_': (PANEL, PLUS1),
+            'auto_': (PANEL, AUTO), 'menu_': (PANEL, MENU),
+            'mode_': (PANEL, MODE),
+
+            '-10': (REMOTE, MINUS10), '-1': (REMOTE, MINUS1),
+            '+10': (REMOTE, PLUS10), '+1': (REMOTE, PLUS1),
+            'standby': (REMOTE, STANDBY), 'compass mode': (REMOTE, COMPASS),
+            'gps mode': (REMOTE, GPS), 'wind mode': (REMOTE, WIND),
+
+            'tack port': [(REMOTE, TACK_PORT), (PANEL, TACK_PORT)],
+            'tack starboard': [(REMOTE, TACK_STARBOARD), (PANEL, TACK_STARBOARD)],
+            'nav mode': (REMOTE, NAV_MODE),
+            'true wind mode': (REMOTE, TRUE_WIND_MODE)}
+    codes = {}
+    for name, pins in pins.items():        
+        if type(pins) != type([]):
+            pins = [pins]
+        for (pinc, pind) in pins:
+            pinc ^= channel<<2
+            codes[name] = codes.get(name, []) + lmap(rf_code(pinc, pind), [0xac, 0xdc])
+    return codes
+
+
+all_code_channels = {}
+for channel in range(8):
+    for name, codes in generate_codes(channel).items():
+        for code in codes:
+            all_code_channels[code] = channel
+
+
 default_actions = \
-    {'-10_': ['ir03111800','ir03111000','KEY_LEFT'  ,'gpio6' ,'rf3F402350','rf3F405350'],
-     '-1_':  ['ir03201800','ir03201000','KEY_UP'    ,'gpio27','rf77082350','rf77085350'],
-     '+1_':  ['ir03211800','ir03211000','KEY_DOWN'  ,'gpio22','rf7B042350','rf7B045350'],
-     '+10_': ['ir03101800','ir03101000','KEY_RIGHT' ,'gpio5' ,'rf5F202350','rf5F205350'],
-     'auto_':['ir030C1000','ir030C1800','KEY_POWER' ,'gpio17','rf7E012350','rf7E015350'],
-     'menu_':['ir030D1000','ir030D1800','KEY_MUTE'  ,'gpio23','rf7D022350','rf7D025350'],
-     'mode_':['ir030B1000','ir030B1800','KEY_SELECT','gpio18','rf6F102350','rf6F105350'],
+    {'-10_': ['ir03111800','ir03111000','KEY_LEFT'  ,'gpio06'],
+     '-1_':  ['ir03201800','ir03201000','KEY_UP'    ,'gpio27'],
+     '+1_':  ['ir03211800','ir03211000','KEY_DOWN'  ,'gpio22'],
+     '+10_': ['ir03101800','ir03101000','KEY_RIGHT' ,'gpio05'],
+     'auto_':['ir030C1000','ir030C1800','KEY_POWER' ,'gpio17'],
+     'menu_':['ir030D1000','ir030D1800','KEY_MUTE'  ,'gpio23'],
+     'mode_':['ir030B1000','ir030B1800','KEY_SELECT','gpio18'],
 
-     'tack port': ['rf37482350', 'rf37485350', 'rf37482950', 'rf37485950'],
-     'tack starboard': ['rf5B242350', 'rf5B245350', 'rf5B242950', 'rf5B245950'],
-
-     '-10': ['rf3F402950', 'rf3F405950'],
-     '-1':  ['rf77082950', 'rf77085950'],
-     '+1':  ['rf7B042950', 'rf7B045950'],
-     '+10': ['rf5F202950', 'rf5F205950'],
-     'standby': ['rf7E012950', 'rf7E015950'],
-     'compass mode': ['rf7D022950', 'rf7D025950'],
-     'gps mode': ['rf6F102950', 'rf6F105950'],
-     'nav mode': ['rf6D122950', 'rf6D125950'],
-     'wind mode': ['rf7F002930', 'rf7F005930'],
-     'true wind mode': ['rf6F102930', 'rf6F105930']
+     'tack port':      ['gpio27_06'],
+     'tack starboard': ['gpio22_05'],
     }
 
 try:
@@ -175,7 +220,14 @@ class WebConfig(Namespace):
                 actions[name] = []
 
             for name, keys in default_actions.items():
-                actions[name] = keys.copy()
+                if not name in actions:
+                    actions[name] = []
+                actions[name] += keys.copy()
+
+            for name, keys in generate_codes(0).items():
+                if not name in actions:
+                    actions[name] = []
+                actions[name] += keys.copy()
 
             self.emit_keys()
             return
@@ -219,6 +271,27 @@ class WebConfig(Namespace):
 
         print('web client connected', request.sid)
 
+    def on_program_rf_codes(self, channel):
+        print('program rf', channel)
+        if not channel in range(8):
+            return
+        actions = self.config['actions']
+
+        # remove any programming for any of these codes
+        rf_codes = generate_codes(channel)
+        for name, keys in rf_codes.items():
+            for key in keys:
+                for name, keys in actions.items():
+                    while key in keys:
+                        keys.remove(key)
+
+        # add programming for this code
+        for name, keys in rf_codes.items():
+            if not name in actions:
+                actions[name] = []
+            actions[name] += keys
+        self.emit_keys()
+
 
     def on_disconnect(self):
         print('web client disconnected', request.sid)
@@ -247,8 +320,15 @@ class WebConfig(Namespace):
                     break
 
                 if 'key' in msg:
-                    self.last_key = msg['key']
+                    self.last_key = msg['key']                    
                     last_key_time = time.monotonic()
+
+                if msg.get('action') == 'none': # if we have a known remote c
+                    if self.last_key in all_code_channels:
+                        channel = all_code_channels[self.last_key]
+                        print('found rf codes', channel)
+                        socketio.emit('found_rf_codes', channel)
+                    
                 for name in msg:
                     d = msg[name]
                     if name != 'profiles':
@@ -256,7 +336,7 @@ class WebConfig(Namespace):
                     socketio.emit(name, d)
                 if 'status' in msg:
                     self.status = msg['status']
-                    #socketio.emit('status', self.status)
+                    socketio.emit('status', self.status)
                 if 'profiles' in msg:
                     self.profiles = msg['profiles']
                     self.emit_keys()

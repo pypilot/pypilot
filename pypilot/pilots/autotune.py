@@ -9,7 +9,7 @@
 
 from pilot import AutopilotPilot
 from pypilot.resolv import resolv
-disabled = True
+#disabled = True
 
 class AutotunePilot(AutopilotPilot):
   def __init__(self, ap):

@@ -42,6 +42,7 @@ $(document).ready(function() {
         $('#key1').text(key);
     });
 
+
     socket.on('action', function(action) {
         $('#action0').text(action);
         $('#action1').text(action);
@@ -51,6 +52,18 @@ $(document).ready(function() {
         n = keys['name'].replace(' ', '_')
         n = n.replace('+', 'plus')
         $('#action'+n+'keys').text(keys['keys'])
+    });
+
+    shown_found_rf = false;
+    socket.on('found_rf_codes', function(channel) {
+        if(shown_found_rf)
+            return
+        shown_found_rf = true;
+        if(confirm('detected remote on channel ' + channel + ' program default codes?')) {
+            // remove any rf keys
+            // program this channel
+            socket.emit('program_rf_codes', channel);
+        }
     });
 
     function program_button(event) {

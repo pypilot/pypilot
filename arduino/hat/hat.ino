@@ -35,7 +35,7 @@
 #define PACKET_LEN 6
 
 #define VERSION_MAJOR  1
-#define VERSION_MINOR  0
+#define VERSION_MINOR  1
 
 // of packet bytes, first byte defines message type 
 enum {RF=0x01, IR=0x02, GP=0x03, VOLTAGE=0x04, ANALOG=0x05, VERSION=0x0a,
@@ -646,10 +646,14 @@ void loop() {
     // parse incoming data
     uint32_t dt = t - codes[GP].ltime;
     if(dt > 40) { // do not send faster than 40 ms
+        uint8_t code = 0;
         for(int i=adc_channels; i<6; i++)
             if(!digitalRead(A0+i))
-                send_code(GP, i+1);
+                code |= 1<<i;
         if(!digitalRead(7))
-            send_code(GP, 7);
+            code |= 1<<6;
+
+        if(code)
+            send_code(GP, code);
     }
 }

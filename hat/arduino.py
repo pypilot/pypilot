@@ -328,7 +328,7 @@ class arduino(object):
                     continue
                 key = 'ir' + key
             elif cmd == GP:
-                key = 'gpio_ext' + key
+                key = 'gpio_ext%02X' % d[0]
             elif cmd == VOLTAGE:
                 vcc = (d[0] + (d[1]<<7))/1000.0
                 vin = (d[2] + (d[3]<<7))/1000.0
@@ -351,8 +351,10 @@ class arduino(object):
 
             if not self.enabled and key in self.manual_control_keys:
                 self.send_manual(self.manual_control_keys[key], count)
-            else:
-                events.append([key, count])
+                if count != 1:
+                    continue
+                count = -1 # report press for programming
+            events.append([key, count])
 
         t3 = time.monotonic()
         if serial_data:
@@ -371,9 +373,10 @@ class arduino(object):
         return events
 
     def set_actions(self, actions):
+        self.manual_control_keys = {}
+
         manual_keys = {'+1': -1,
                        '-1':  1}
-        self.manual_control_keys = {}
         for action, keys in actions.items():
             if action in manual_keys:
                 for key in keys:
@@ -442,6 +445,7 @@ def arduino_process(pipe, config):
     while True:
         t0 = time.monotonic()
         events = a.poll()
+        #print('events', events)
         t1 = time.monotonic()
         baud_rate = a.get_baud_rate()
         if baud_rate:
