@@ -28,7 +28,7 @@ msgstr "Nicht verbunden"
 
 #: static/pypilot_control.js:122
 msgid "Connected"
-msgstr "In Verbindung gebracht"
+msgstr "Verbunden"
 
 #: static/pypilot_control.js:153
 msgid "Enter profile name."
@@ -48,24 +48,24 @@ msgstr "Getrennt"
 
 #: static/pypilot_control.js:382
 msgid "compass or gyro failure!"
-msgstr "Kompass- oder Kreiselfehler!"
+msgstr "Kompass- oder Gyrofehler!"
 
 #: static/pypilot_control.js:395 templates/index.html:161
 #: templates/index.html:163
 msgid "Tack"
-msgstr "Heftzwecke"
+msgstr "Wende"
 
 #: static/pypilot_control.js:398 templates/index.html:162
 msgid "Cancel"
-msgstr "Stornieren"
+msgstr "Abbrechen"
 
 #: static/pypilot_control.js:468
 msgid "Engaged"
-msgstr "Engagiert"
+msgstr "Eingeschaltet"
 
 #: static/pypilot_control.js:470
 msgid "Disengaged"
-msgstr "Ausgekuppelt"
+msgstr "Ausgeschaltet"
 
 #: static/pypilot_control.js:546
 msgid "Motor temperature"
@@ -73,7 +73,7 @@ msgstr "Motortemperatur"
 
 #: static/pypilot_control.js:562
 msgid "no motor controller!"
-msgstr "keine Motorsteuerung!"
+msgstr "kein Motorregler!"
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
@@ -84,7 +84,7 @@ msgid ""
 "The raw sensor readings should fall on a sphere when calibrated.  The age "
 "will reset when the calibration updates."
 msgstr ""
-"Die Rohsensormesswerte sollten nach der Kalibrierung auf eine Kugel fallen. "
+"Die rohen Sensorwerte sollten bei der Kalibrierung auf einer Kugel liegen. "
 "Das Alter wird zurückgesetzt, wenn die Kalibrierung aktualisiert wird."
 
 #: templates/calibrationplot.html:32
@@ -93,11 +93,11 @@ msgstr "Verbindung"
 
 #: templates/index.html:30
 msgid "Control"
-msgstr "Kontrolle"
+msgstr "Steuerung"
 
 #: templates/index.html:33
 msgid "Gain"
-msgstr "Gewinnen"
+msgstr "Verstärkung"
 
 #: templates/index.html:36
 msgid "Calibration"
@@ -105,7 +105,7 @@ msgstr "Kalibrierung"
 
 #: templates/index.html:39
 msgid "Configuration"
-msgstr "Aufbau"
+msgstr "Einstellungen"
 
 #: templates/index.html:42
 msgid "Statistics"
@@ -113,7 +113,7 @@ msgstr "Statistiken"
 
 #: templates/index.html:49
 msgid "Heading"
-msgstr "Überschrift"
+msgstr "Kurs"
 
 #: templates/index.html:52
 msgid "Command"
@@ -133,40 +133,40 @@ msgstr "Magnetischer Kurs"
 
 #: templates/index.html:97
 msgid "Pitch"
-msgstr "Tonhöhe"
+msgstr "Neigung"
 
 #: templates/index.html:98
 msgid "Roll"
-msgstr "Rollen"
+msgstr "Drehung"
 
 #: templates/index.html:99 templates/index.html:105
 msgid "Press"
-msgstr "Drücken Sie"
+msgstr "Klicken Sie"
 
 #: templates/index.html:99 templates/index.html:105
 msgid "here"
-msgstr "Hier"
+msgstr "hier"
 
 #: templates/index.html:100
 msgid "when the boat is level to align the inertial sensors."
 msgstr ""
-"wenn das Boot waagerecht liegt, um die Trägheitssensoren auszurichten."
+"wenn das Boot waagerecht ist, um die Beschleunigungssensors auszurichten."
 
 #: templates/index.html:106
 msgid ""
 "when the boat is traveling straight with no leeway, no currents, and gps to "
 "align the compass, or manually enter the compass offset"
 msgstr ""
-"wenn das Boot ohne Abdrift, ohne Strömung und GPS geradeaus fährt, um den "
-"Kompass auszurichten, oder geben Sie den Kompass-Offset manuell ein"
+"wenn das Boot ohne Abdrift und ohne Strömung geradeaus fährt, um den Kompass "
+"nach GPS auszurichten, oder geben Sie den Kompass-Offset manuell ein"
 
 #: templates/index.html:111
 msgid "Magnetic Heading Offset"
-msgstr "Magnetischer Steuerkurs-Offset"
+msgstr "Magnetischer Kursversatz"
 
 #: templates/index.html:113
 msgid "Lock Accelerometer Calibration"
-msgstr "Kalibrierung des Beschleunigungsmessers sperren"
+msgstr "Kalibrierung des Beschleunigungssensors sperren"
 
 #: templates/index.html:114
 msgid "Lock Compass Calibration"
@@ -186,11 +186,11 @@ msgstr "zentriert"
 
 #: templates/index.html:121
 msgid "port range"
-msgstr "Hafenbereich"
+msgstr "Ruder hart backbord"
 
 #: templates/index.html:122
 msgid "starboard range"
-msgstr "Steuerbordbereich"
+msgstr "Ruder hart steuerbord"
 
 #: templates/index.html:123 templates/index.html:146
 msgid "reset"
@@ -198,7 +198,7 @@ msgstr "zurücksetzen"
 
 #: templates/index.html:126
 msgid "Rudder Range"
-msgstr "Ruderbereich"
+msgstr "Ruderausschlag"
 
 #: templates/index.html:127
 msgid "Degrees"
@@ -227,7 +227,7 @@ msgstr "Amperestunden"
 
 #: templates/index.html:147
 msgid "Voltage"
-msgstr "Stromspannung"
+msgstr "Spannung"
 
 #: templates/index.html:148
 msgid "Controller temperature"
@@ -239,7 +239,7 @@ msgstr "Laufzeit"
 
 #: templates/index.html:151 templates/index.html:153
 msgid "Version"
-msgstr "Ausführung"
+msgstr "Version"
 
 #: templates/index.html:152
 msgid "Servo"
@@ -251,7 +251,7 @@ msgstr "Protokolle"
 
 #: templates/index.html:161
 msgid "Port"
-msgstr "Hafen"
+msgstr "Backbord"
 
 #: templates/index.html:163
 msgid "Starboard"
@@ -271,11 +271,11 @@ msgstr "Webserver-Latenz"
 
 #: templates/wifi.html:4
 msgid "setup"
-msgstr "aufstellen"
+msgstr "Konfiguration"
 
 #: templates/wifi.html:8
 msgid "Wireless Configuration"
-msgstr "Wireless-Konfiguration"
+msgstr "WLAN-Konfiguration"
 
 #: templates/wifi.html:16 templates/wifi.html:17
 msgid "Access Point"
@@ -287,7 +287,7 @@ msgstr "Schlüssel (leer lassen für keine Verschlüsselung)"
 
 #: templates/wifi.html:21 templates/wifi.html:22
 msgid "Client"
-msgstr "Klient"
+msgstr "Client"
 
 #: templates/wifi.html:24
 msgid "Client Mode Address (leave blank for dhcp)"
@@ -302,7 +302,7 @@ msgid "back"
 msgstr "zurück"
 
 #~ msgid "Wireless Configuration"
-#~ msgstr "WLAN Konfiguration"
+#~ msgstr "WLAN-Konfiguration"
 
 #~ msgid "Key (leave blank for no encryption)"
 #~ msgstr "Schlüssel (für keine Verschlüsselung leer lassen)"
@@ -323,7 +323,7 @@ msgstr "zurück"
 #~ msgstr "Getrennt"
 
 #~ msgid "compass or gyro failure!"
-#~ msgstr "Kompass- oder Kreiselfehler!"
+#~ msgstr "Kompass- oder Gyrofehler!"
 
 #~ msgid "Tack"
 #~ msgstr "Wende"
@@ -384,13 +384,13 @@ msgstr "zurück"
 #~ msgstr "Rollen"
 
 #~ msgid "Press"
-#~ msgstr "Drücken Sie"
+#~ msgstr "Klicken Sie"
 
 #~ msgid "here"
 #~ msgstr "hier"
 
 #~ msgid "when the boat is level to align the inertial sensors."
-#~ msgstr "wenn das Boot waagerecht ist, um die Trägheitssensoren auszurichten."
+#~ msgstr "wenn das Boot waagerecht ist, um die Beschleunigungssensors auszurichten."
 
 #~ msgid "Magnetic Heading Offset"
 #~ msgstr "Magnetischer Kursversatz"
@@ -408,16 +408,16 @@ msgstr "zurück"
 #~ msgstr "zentriert"
 
 #~ msgid "port range"
-#~ msgstr "Backbord Ausschlagbereich"
+#~ msgstr "Ruder hart backbord"
 
 #~ msgid "starboard range"
-#~ msgstr "Steuerbord Ausschlagbereich"
+#~ msgstr "Ruder hart steuerbord"
 
 #~ msgid "reset"
 #~ msgstr "zurücksetzen"
 
 #~ msgid "Rudder Range"
-#~ msgstr "Ruderausschlagbereich"
+#~ msgstr "Ruderausschlag"
 
 #~ msgid "Degrees"
 #~ msgstr "Grad"
@@ -439,13 +439,13 @@ msgstr "zurück"
 #~ "NMEA-Client-Host: Port (für Standard leer lassen) zB: 192.168.0.1:10110"
 
 #~ msgid "Amp Hours"
-#~ msgstr "Ampere Stunden"
+#~ msgstr "Amperestunden"
 
 #~ msgid "Voltage"
 #~ msgstr "Spannung"
 
 #~ msgid "Controller temperature"
-#~ msgstr "Reglertemperatur"
+#~ msgstr "Motorreglertemperatur"
 
 #~ msgid "Runtime"
 #~ msgstr "Laufzeit"
