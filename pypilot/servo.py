@@ -557,6 +557,7 @@ class Servo(object):
 
         fcntl.ioctl(self.device.fileno(), TIOCNXCL) #exclusive
         self.device.close()
+        self.flags.update(0)
         self.driver = False
 
     def send_driver_params(self, mul=1):

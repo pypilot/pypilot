@@ -73,6 +73,7 @@ $(document).ready(function() {
     var conf_names = [];
     var profile="default", profiles = [profile];
     var touch = is_touch_enabled();
+
     var register = true;
     var rudder_source = 'none';
 
@@ -94,7 +95,7 @@ $(document).ready(function() {
                     range = max - min;
                     step = per * range / 100;
                     handlers[iname + bname] = {step: step, iname: iname, name: name, func: function(event) {
-                        cur = Number($('#' + event.data.iname + 'label').text())
+                        cur = Number($('#' + event.data.iname + 'label').text());
                         pypilot_set(event.data.name, cur + event.data.step);
                     }};
                 }
@@ -632,10 +633,11 @@ $(document).ready(function() {
     function mousedown(amount) {
         var engaged = $('#tb_engaged').hasClass('toggle-button-selected');
         if(engaged) {
-            servo_command_timeout = 0;            
+            servo_command_timeout = 0;
+	    move(amount[1]);
             return;
         }
-        servo_command = amount;
+        servo_command = amount[0];
         servo_command_timeout = 120;
         pypilot_set('servo.command', servo_command);
         setTimeout(poll_pypilot, 50)
@@ -648,7 +650,7 @@ $(document).ready(function() {
             return;
         }
         
-        servo_command_timeout -= 116;
+        servo_command_timeout -= 112;
         if(servo_command_timeout <= 0) {
             servo_command_timeout = 0;
             servo_command = 0;
@@ -662,7 +664,7 @@ $(document).ready(function() {
         return false;
     }
 
-    buttons = {'#port1': -.6, '#star1': .6, '#port10': -1, '#star10': 1};
+    buttons = {'#port1': [-.6, -1], '#star1': [.6, 1], '#port10': [-1, -10], '#star10': [1, 10]};
     for (var name in buttons) {
         $(name).on('touchstart', nocontext);
         $(name).on('touchmove', nocontext);
@@ -674,11 +676,12 @@ $(document).ready(function() {
             mousedown(buttons['#'+event.target.id]);
         });
     }
-
+/*
     $('#port10').click(function(event) { move(-10); });
     $('#port1').click(function(event) { move(-1); });
     $('#star1').click(function(event) { move(1); });
     $('#star10').click(function(event) { move(10); });
+*/
 
     $('#tack_button').click(function(event) {
         if($('#tack_button').attr('state') == 'tack')
