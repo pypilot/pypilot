@@ -480,6 +480,7 @@ class wifi(menu):
         self.have_wifi = False
         self.mtime = False
         self.wifi_updatetime = gettime()
+        self.wifi_settings = {}
         if self.read_networking():
             items = [select_wifi_ap_toggle('AP/Client', self.wifi_settings),
                      select_wifi_defaults(_('defaults'), self.wifi_settings)]
@@ -493,7 +494,9 @@ class wifi(menu):
             mtime = os.path.getmtime(networking)
             if mtime == self.mtime:
                 return False
-            self.wifi_settings = default_network.copy()
+            self.mtime = mtime
+            for name, value in default_network.items():
+                self.wifi_settings[name] = value
             f = open(networking, 'r')
             while True:
                 l = f.readline()
@@ -518,7 +521,7 @@ class wifi(menu):
         super(wifi, self).display(refresh)
         self.have_wifi = test_wifi()
         if not self.have_wifi:
-            info = _('No Connetion')
+            info = _('No Connection')
             self.fittext(rectangle(0, 0, 1, .20), info)
             
         if self.wifi_settings['mode'] == 'Master':
