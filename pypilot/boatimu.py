@@ -341,7 +341,13 @@ def CalibrationProcess(cal_pipe, client):
         except Exception as e:
             print(_('failed import calibration fit'), e)
             time.sleep(30) # maybe numpy or scipy isn't ready yet
-    calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
+
+    try:
+        calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
+    except Exception as e:
+        print('ERROR: Calibration process raised an exception', e)
+        while True:
+            time.sleep(1e9)  # just sleep forever
 
 class AutomaticCalibrationProcess():
     def __init__(self, server):

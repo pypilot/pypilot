@@ -20,6 +20,9 @@ calibration_fit_period = 30  # run every 30 seconds
 def lmap(*cargs):
     return list(map(*cargs))
 
+def safedegasin(x):
+    return math.degrees(math.asin(min(max(x, -1), 1)))
+
 def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
     try:
         import scipy.optimize
@@ -55,11 +58,9 @@ def ComputeDeviation(points, fit):
 
         if len(fit) > 4:
             n = vector.dot(v, p[3:]) / vector.norm(v)
-            if abs(n) <= 1:
-                ang = math.degrees(math.asin(n))
-                d += (fit[4] - ang)**2
-            else:
-                d += 1e111
+            ang = safedegasin(n)
+            d += (fit[4] - ang)**2
+
     m /= len(points)
     d /= len(points)
     return [m**.5, d**.5]
@@ -218,7 +219,7 @@ def FitPointsCompass(debug, points, current, norm):
         debug('FitLeastSq new_sphere1 failed!!!! ', len(points), new_sphere1d_fit)
         new_sphere1d_fit = current
     else:
-        new_sphere1d_fit = lmap(lambda x, a: x + new_sphere1d_fit[0]*a, initial[:3], norm) + [new_sphere1d_fit[1], math.degrees(math.asin(new_sphere1d_fit[2]))]
+        new_sphere1d_fit = lmap(lambda x, a: x + new_sphere1d_fit[0]*a, initial[:3], norm) + [new_sphere1d_fit[1], safedegasin(new_sphere1d_fit[2])]
     new_sphere1d_fit = [new_sphere1d_fit, ComputeDeviation(points, new_sphere1d_fit), 1]
         #print('new sphere1 fit', new_sphere1d_fit)
 
@@ -270,11 +271,11 @@ def FitPointsCompass(debug, points, current, norm):
     if not new_sphere2d_fit or new_sphere2d_fit[2] < 0 or abs(new_sphere2d_fit[3]) >= 1:
         debug('FitLeastSq sphere2 failed!!!! ', len(points), new_sphere2d_fit)
         return False
-    new_sphere2d_fit = lmap(lambda x, a, b: x + new_sphere2d_fit[0]*a + new_sphere2d_fit[1]*b, initial[:3], u, v) + [new_sphere2d_fit[2], math.degrees(math.asin(new_sphere2d_fit[3]))]
+    new_sphere2d_fit = lmap(lambda x, a, b: x + new_sphere2d_fit[0]*a + new_sphere2d_fit[1]*b, initial[:3], u, v) + [new_sphere2d_fit[2], safedegasin(new_sphere2d_fit[3])]
     new_sphere2d_fit = [new_sphere2d_fit, ComputeDeviation(points, new_sphere2d_fit), 2]
 
     if plane_max_dev < 1.2:
-        ang = math.degrees(math.asin(vector.norm(vector.cross(plane_fit[1], norm))))
+        ang = safedegasin(vector.norm(vector.cross(plane_fit[1], norm)))
         
         debug('plane fit found, 2D fit only', ang, plane_fit, plane_dev, plane_max_dev)
         if ang > 30:
@@ -315,7 +316,7 @@ def FitPointsCompass(debug, points, current, norm):
     if not new_sphere3d_fit or new_sphere3d_fit[3] < 0 or abs(new_sphere3d_fit[4]) >= 1:
         debug('FitLeastSq sphere3 failed!!!! ', len(points))
         return False
-    new_sphere3d_fit[4] = math.degrees(math.asin(new_sphere3d_fit[4]))
+    new_sphere3d_fit[4] = safedegasin(new_sphere3d_fit[4])
     new_sphere3d_fit = [new_sphere3d_fit, ComputeDeviation(points, new_sphere3d_fit), 3]
     #debug('new sphere3 fit', new_sphere3d_fit)
     
@@ -460,7 +461,6 @@ def ComputeCoverage(p, bias, norm):
         v = quaternion.rotvecquat(c, quaternion.vec2vec2quat(d, [0, 0, 1]))
         v = vector.normalize(v)
         return math.degrees(math.atan2(v[1], v[0]))
-    #, abs(math.degrees(math.acos(v[2])))
 
     spacing = 20 # 20 degree segments
     angles = [False] * int(360 / spacing)
@@ -738,8 +738,7 @@ def CalibrationProcess(cal_pipe, client):
                     d = 1
 
                 c = vector.dot(value, down) / vector.norm(value)
-                c = min(max(-1, c), 1)
-                angle = math.degrees(math.asin(c))
+                angle = safedegasin(c)
                 inclination = compass_calibration.inclination.value * (1-d) + angle * d
                 compass_calibration.inclination.set(inclination)
 
@@ -917,7 +916,7 @@ def ExtraFit():
     #    q = [1 - vector.norm(quat_fit[:3])] + list(quat_fit[:3])
     q = angvec2quat(vector.norm(quat_fit[:3]), quat_fit[:3])
 
-    print('quat fit', q, math.degrees(angle(q)), math.degrees(math.asin(quat_fit[3])))
+    print('quat fit', q, math.degrees(angle(q)), safedegasin(quat_fit[3]))
     
     def f_rot(beta, x, sphere_fit):
         sphere_fit = numpy.array(sphere_fit)
@@ -929,7 +928,7 @@ def ExtraFit():
         return beta[3] - d
 
     rot_fit = FitLeastSq([0, 0, 0, 0], f_rot, (zpoints, sphere_fit))
-    print('rot fit', rot_fit, math.degrees(rot_fit[0]), math.degrees(rot_fit[1]), math.degrees(rot_fit[2]), math.degrees(math.asin(min(1, max(-1, rot_fit[3])))))
+    print('rot fit', rot_fit, math.degrees(rot_fit[0]), math.degrees(rot_fit[1]), math.degrees(rot_fit[2]), safedegasin(min(1, max(-1, rot_fit[3]))))
     
 
 def main():
