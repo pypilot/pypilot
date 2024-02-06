@@ -258,11 +258,12 @@ class Arduino(Process):
                             break
                     pass
                 elif key == 'version':
-                    if self.hat.config.get('version') != code:
-                        print('update version, restart may update firmware')
+                    old_version = self.hat.config.get('version')
+                    if old_version != code:
+                        print('update version from ', old_version, ' to ', code, ' restart may update firmware')
                         self.hat.config['version'] = code;
                         self.hat.write_config()
-                        exit(1)
+                        #exit(1)
                 else:
                     ret.append(msg)
         return ret
