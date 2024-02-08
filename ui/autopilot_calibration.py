@@ -174,7 +174,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.UpdateControl(label, lambda : label.SetLabel(str(value)))
 
     def UpdatedSpin(self, dspin, value):
-        self.UpdateControl(dspin, lambda : dspin.SetValue(value))
+        self.UpdateControl(dspin, lambda : dspin.SetValue(int(value)))
                 
     def receive_message(self, msg):
         name, value = msg
