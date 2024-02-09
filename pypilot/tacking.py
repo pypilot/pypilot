@@ -81,7 +81,7 @@ class Tack(object):
         self.rate = self.register(RangeSetting, 'rate', 15, 1, 100, 'deg/s', profiled=True)
         self.threshold = self.register(RangeSetting, 'threshold', 50, 10, 100, '%', profiled=True)
 
-        self.count = self.register(ResettableValue, 'count', 0, persistent=True)
+        self.count = self.register(ResettableValue, 'count', 0, fmt='%.0f', persistent=True)
 
         self.direction = self.register(EnumProperty, 'direction', 'none', ['none', 'port', 'starboard'])
         self.use_heel = self.register(BooleanProperty, 'use_heel', False, persistent=True)
