@@ -105,7 +105,11 @@ class CalibrationPlot(object):
 
         q = quaternion.multiply(self.fusionQPose, self.alignmentQ)
         down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(q))
-        glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
+        try:
+            glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
+        except:
+            print('couldnt do q angle', q)
+            
         return down
 
     def draw_points(self):
@@ -158,9 +162,9 @@ class CalibrationPlot(object):
             RotateAfter(step, 0, 0, 1)
         else:
             return
-        glutPostRedisplay()
 
     def key(self, k, x, y):
+        k = k.decode()
         step = 5
         if k == '\b':
             RotateAfter(step, 0, 0, -1)
@@ -332,8 +336,8 @@ if __name__ == '__main__':
 
     glutIdleFunc(idle)
     glutReshapeFunc( plot.reshape )
-    glutKeyboardFunc( lambda *a: apply(plot.key, a), glutPostRedisplay() )
-    glutSpecialFunc( lambda *a : apply(plot.special, a), glutPostRedisplay() )
+    glutKeyboardFunc( lambda *a: plot.key(*a), glutPostRedisplay() )
+    glutSpecialFunc( lambda *a : plot.special(*a), glutPostRedisplay() )
     glutDisplayFunc( display )
 
     glutMouseFunc( mouse )

@@ -1992,7 +1992,7 @@
             <property name="minimum_size"></property>
             <property name="name">CalibrationDialogBase</property>
             <property name="pos"></property>
-            <property name="size">617,432</property>
+            <property name="size">1024,768</property>
             <property name="style">wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER</property>
             <property name="subclass"></property>
             <property name="title">Calibration</property>
@@ -4455,6 +4455,7 @@
                                             <event name="OnLeftDown">onMouseEventsCompass</event>
                                             <event name="OnLeftUp">onMouseEventsCompass</event>
                                             <event name="OnMotion">onMouseEventsCompass</event>
+                                            <event name="OnMouseWheel">onMouseEventsCompass</event>
                                             <event name="OnPaint">onPaintGLCompass</event>
                                             <event name="OnSize">onSizeGLCompass</event>
                                         </object>
