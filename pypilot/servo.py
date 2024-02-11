@@ -369,7 +369,7 @@ class Servo(object):
 
         if not speed:
             #print('timeout', t - self.command_timeout)
-            if not self.ap_enabled and time.monotonic() - self.command.time > 1:
+            if not self.ap_enabled and time.monotonic() - self.command.set_time > 1:
                 self.disengaged = True
             self.raw_command(0)
             return
