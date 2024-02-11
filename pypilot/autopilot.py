@@ -152,13 +152,15 @@ class Autopilot(object):
         self.runtime = self.register(TimeValue, 'runtime') #, persistent=True)
         self.timings = self.register(SensorValue, 'timings', False)
         self.last_heading_mode = False
-            
+
+        '''
         device = '/dev/watchdog0'
         try:
             self.watchdog_device = open(device, 'w')
         except:
             print(_('warning: failed to open special file'), device, _('for writing'))
             print('         ' + _('cannot stroke the watchdog'))
+        '''
 
         self.server.poll() # setup process before we switch main process to realtime
         if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):

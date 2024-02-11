@@ -31,7 +31,9 @@ def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
         debug('cannot perform calibration update!')
         return False
 
+    t0 = time.monotonic()
     leastsq = scipy.optimize.leastsq(f, beta0, zpoints)
+    print('scipy.optimize.leastsq took ', time.monotonic() - t0)
     return list(leastsq[0])
 
 def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
@@ -669,6 +671,7 @@ def CalibrationProcess(cal_pipe, client):
         cal_pipe.send(str_warnings)
     
     while True:
+      try:
         t = time.monotonic()
         addedpoint = False
         down = False
@@ -789,6 +792,9 @@ def CalibrationProcess(cal_pipe, client):
                 compass_calibration.inclination.set(False)
         else:
             last_compass_coverage = 0 # reset
+      except Exception as e:
+        print('Warning: Calibration process unhandled exception', e)
+          
 
 def ExtraFit():
     ellipsoid_fit = False

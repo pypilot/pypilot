@@ -49,7 +49,7 @@ class IMU(object):
         self.client.watch('imu.compass.calibration')
         self.client.watch('imu.rate')
 
-        self.gyrobias = self.client.register(SensorValue('imu.gyrobias', persistent=True))
+        self.gyrobias = self.client.register(SensorValue('imu.gyrobias', fmt='%.2f', persistent=True))
         self.error = self.client.register(StringValue('imu.error', ''))
         self.lastgyrobiastime = time.monotonic()
 
@@ -145,7 +145,7 @@ class IMU(object):
                     print(_('setting initial gyro bias'), self.gyrobias.value)
                     self.s.GyroBias = tuple(map(math.radians, self.gyrobias.value))
                     self.s.GyroBiasValid = True
-            if t0-self.lastgyrobiastime > 30:
+            if t0-self.lastgyrobiastime > 60:
                 self.gyrobias.set(list(map(math.degrees, self.s.GyroBias)))
                 self.lastgyrobiastime = t0
                 self.s.GyroBiasValid = True
@@ -342,12 +342,8 @@ def CalibrationProcess(cal_pipe, client):
             print(_('failed import calibration fit'), e)
             time.sleep(30) # maybe numpy or scipy isn't ready yet
 
-    try:
-        calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
-    except Exception as e:
-        print('ERROR: Calibration process raised an exception', e)
-        while True:
-            time.sleep(1e9)  # just sleep forever
+    calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
+
 
 class AutomaticCalibrationProcess():
     def __init__(self, server):
