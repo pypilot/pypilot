@@ -62,8 +62,9 @@ def update_firmware(config):
     try:
         path = os.getenv('HOME') + '/.pypilot/firmware'
         for filename in os.listdir(path):
+            print("FILE", filename)
             if filename.startswith('hat_') and filename.endswith('.hex'):
-                config['firmware_version'] = filename[4:-4]
+                config['arduino_firmware_version_available'] = filename[4:-4]
                 firmware = path+os.path.sep + filename
                 break
         else:
@@ -74,11 +75,11 @@ def update_firmware(config):
         print('failed to find firmware', e)
         return
 
-    if not 'version' in config:
+    if not 'arduino_firmware_version' in config:
         print('cannot update firmware until version is known')
         return
 
-    if float(config['firmware_version']) <= float(config['version']):
+    if float(config['arduino_firmware_version_available']) <= float(config['arduino_firmware_version']):
         print('firmware up to date')
         return
 
@@ -89,32 +90,56 @@ def update_firmware(config):
     print('found firmware update', firmware)
     time.sleep(1) # needed?
 
+    resetpin = str(arduinoconfig['resetpin'])
+    import tempfile, subprocess
+    temp = tempfile.mkstemp()
+    p=subprocess.Popen(['avrdude', '-?'], stderr=temp[0], close_fds=True)
+    p.wait()
+
+    f = os.fdopen(temp[0], 'r')
+    f.seek(0)
+    release = ''
+    while not 'version' in release:
+        release = f.readline().rstrip()
+    f.close()
+    avrdude_version = release.split('version')[1]
+    print("avrdude version", avrdude_version)
+    old_avrdude = avrdude_version[1].split()[0].startswith('6')
+    if old_avrdude:
+        print('detected old avrdude')
+        os.system('echo ' + resetpin + ' > /sys/class/gpio/export')
+        os.system('echo out > /sys/class/gpio/gpio' + resetpin + '/direction')
+    
     def flash(filename, c):
-        command = 'sudo avrdude -P ' + device + ':' + '/dev/gpiochip0:' + str(arduinoconfig['resetpin']) + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 1000000'
+        if old_avrdude:
+            command = 'sudo avrdude -P ' + device + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 1000000'
+        else:
+            command = 'sudo avrdude -P ' + device + ':' + '/dev/gpiochip0:' + resetpin + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 1000000'
         print('flash cmd', command)
-        ret = os.system(command)
+        ret = os.system(command)             
         return not ret
     
     def verify(filename):
+        print('verifying', filename)
         return flash(filename, 'v')
     
     def write(filename):
+        print('writing', filename)
         return flash(filename, 'w')
 
     # try to verify twice because sometimes this fails
     if verify(firmware) or verify(firmware):
         print('firmware already up to date!', firmware)
-        return
-    
-    if not write(firmware):
+        config['arduino_firmware_version'] = config['arduino_firmware_version_available']
+    elif not write(firmware):
         print('failed to write firmware', firmware)
-        return
-
-    if not verify(firmware):
+    elif not verify(firmware):
         print('failed to verify or upload', firmware)
-        return
+    else:
+        print('success updating hat firmware!', firmware)
 
-    print('success updating hat firmware!', firmware)
+    if old_avrdude:
+        os.system('echo in > /sys/class/gpio/gpio' + resetpin + '/direction')
     
     
 class arduino(object):    

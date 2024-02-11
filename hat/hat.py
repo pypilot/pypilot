@@ -268,14 +268,15 @@ class Arduino(Process):
                             break
                     pass
                 elif key == 'version':
-                    old_version = self.hat.config.get('version')
+                    old_version = self.hat.config.get('arduino_firmware_version')
                     if old_version != code: 
                         print('actual hat version update from ', old_version, ' to ', code)
-                        self.hat.config['version'] = code;
+                        self.hat.config['arduino_firmware_version'] = code;
                         self.hat.write_config()
-                    if self.hat.config.get('firmware_version', 0) > code:
+                    available_version = self.hat.config.get('arduino_firmware_version_available', 0)
+                    if available_version > code:
                         print('new firmware version ',
-                              self.hat.config.get('firmware_version', 0),
+                              available_version,
                               ' available to update current version ', code)
                         # restart once avrdude is available
                         self.need_restart = time.monotonic()
