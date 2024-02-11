@@ -226,6 +226,12 @@ class signalk(object):
                     self.signalk_access_url = False
             except Exception as e:
                 print('signalk ' + _('error requesting access'), e)
+                import traceback
+                print(traceback.format_exc())
+                try:
+                    print('content', r.content)
+                except Exception as e:
+                    print('no content', e)
                 self.signalk_access_url = False
             return
 
@@ -241,12 +247,18 @@ class signalk(object):
             r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":self.uid.value, "description": "pypilot"})
             
             contents = pyjson.loads(r.content)
-            debug('signalk post', contents)
+            print('signalk post', contents)
             if contents['statusCode'] == 202 or contents['statusCode'] == 400:
                 self.signalk_access_url = 'http://' + self.signalk_host_port + contents['href']
-                debug('signalk ' + _('request access url'), self.signalk_access_url)
+                print('signalk ' + _('request access url'), self.signalk_access_url)
         except Exception as e:
-            print('signalk ' + _('error requesting access'), e)
+            print('signalk ' + _('error posting access'), e)
+            import traceback
+            print(traceback.format_exc())
+            try:
+                print('content', r.content)
+            except Exception as e:
+                print('no content', e)
             self.signalk_ws_url = False
 
     def invalid_token(self):
