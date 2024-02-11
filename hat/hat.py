@@ -319,6 +319,7 @@ class Hat(object):
         self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf'
 
         # read config
+        self.client = False
         if self.read_config(self.configfilename):
             self.write_config('.bak')
         else:
