@@ -31,6 +31,7 @@ function openTab(evt, tabName) {
 
 var setup_watches = false;
 var watches = {};
+var socket;
 
 currentTab="Control";
 
@@ -48,7 +49,7 @@ $(document).ready(function() {
     // Connect to the Socket.IO server.
     var port = location.port;
     port = pypilot_web_port;
-    var socket = io.connect(location.protocol + '//' + document.domain + ':' + port + namespace);
+    socket = io.connect(location.protocol + '//' + document.domain + ':' + port + namespace);
 
     function is_touch_enabled() {
         return ( 'ontouchstart' in window ) ||
@@ -316,13 +317,20 @@ $(document).ready(function() {
     // Interval function that tests message latency by sending a "ping"
     var ping_pong_times = [];
     var start_time;
+    var loc = window.location.origin;
+    window.onbeforeunload = function() {
+        ;//      socket.close();
+//        socket.disconnect();
+    }
+    
     socket.on('connect', () => {
         window.setInterval(function() {
             start_time = (new Date).getTime();
             try {
                 socket.emit('ping');
             } catch (error) {
-                location.reload();
+//                if(window.location.origin == loc) // worked??
+//                    location.reload();
             }
         }, 5000);
     });
@@ -586,14 +594,22 @@ $(document).ready(function() {
     });
     
     function pypilot_set(name, value) {
-        socket.emit('pypilot', name + '=' + JSON.stringify(value));
+        try {
+            socket.emit('pypilot', name + '=' + JSON.stringify(value));
+        } catch (error) {
+            location.reload();
+        }
     }
 
     function pypilot_watch(name, period=true) {
         if(period === false && !(name in watches && watches[name]))
             return; // already not watching, no need to inform server
         watches[name] = period;
-        socket.emit('pypilot', 'watch={"' + name + '":' + JSON.stringify(period) + '}')
+        try {
+            socket.emit('pypilot', 'watch={"' + name + '":' + JSON.stringify(period) + '}')
+        } catch (error) {
+            location.reload();
+        }
     }
 
     // Control
@@ -763,7 +779,7 @@ $(document).ready(function() {
                 target.href = window.location.origin;
                 target.port = 33333;
             }
-
+            
         }
     }, false);
 
