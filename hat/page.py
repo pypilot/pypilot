@@ -840,7 +840,7 @@ class control(controlbase):
                         sign = -sign
 
                     change = float(change)
-                    cmd = self.manualkeystate['command'] + sign*change
+                    cmd = int(self.manualkeystate['command']) + sign*change
                     self.tack_hint = time.monotonic(), sign
                     self.set_ap_heading_command(cmd)
 

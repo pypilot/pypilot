@@ -86,7 +86,7 @@ class ActionHeading(Action):
                 if 'wind' in self.hat.last_msg['ap.mode']:
                     sign = -sign
                 self.hat.client.set('ap.heading_command',
-                                    self.hat.last_msg['ap.heading_command'] + self.offset)
+                                    int(self.hat.last_msg['ap.heading_command']) + self.offset)
         elif count >= 0: # manual mode
             if count:
                 self.hat.servo_timeout = time.monotonic() + .5
@@ -382,6 +382,9 @@ class Hat(object):
 
         for name in self.watchlist:
             self.client.watch(name)
+
+        # receive heading once per second for mode changes
+        self.client.watch('ap.heading', 1)
             
         if 'arduino' in self.config['hat']:
             self.arduino = Arduino(self)
@@ -636,9 +639,6 @@ class Hat(object):
                 self.apply_code(key, 0)
                 self.keytime = False
                 self.keycounts = {}
-
-        # receive heading once per second if autopilot is not enabled
-        self.client.watch('ap.heading', False if self.last_msg['ap.enabled'] else 1)
 
         # timeout manual move
         if self.servo_timeout:
