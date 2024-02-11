@@ -368,9 +368,10 @@ class AutomaticCalibrationProcess():
         return False
 
     def get_warnings(self):
-        warnings = self.cal_pipe.recv()
-        if warnings:
-            self.warnings = warnings
+        value = self.cal_pipe.recv()
+        wstr = 'warnings='
+        if value and value.startswith(wstr):
+            self.warnings = value[len(wstr):]
         return self.warnings
 
     def __del__(self):

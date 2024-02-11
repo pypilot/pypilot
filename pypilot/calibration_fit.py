@@ -667,7 +667,7 @@ def CalibrationProcess(cal_pipe, client):
                 return
             del warnings[sensor]
 
-        str_warnings = ''
+        str_warnings = 'warnings='
         for sensor, warning in warnings.items():
             str_warnings += sensor + ' ' + warning
         cal_pipe.send(str_warnings)
@@ -737,7 +737,7 @@ def CalibrationProcess(cal_pipe, client):
                     d = 1
                 field_strength = compass_calibration.field_strength.value * (1-d) + gauss * d
                 compass_calibration.field_strength.set(field_strength)
-                if abs(field_strength - gauss) > 3:
+                if abs(field_strength - gauss) > 5:
                     warn = True
 
                 d = .001
@@ -749,13 +749,11 @@ def CalibrationProcess(cal_pipe, client):
                 inclination = compass_calibration.inclination.value * (1-d) + angle * d
                 compass_calibration.inclination.set(inclination)
 
-                if abs(inclination - angle) > 8:
+                if abs(inclination - angle) > 2:
                     warn = True
 
                 warnings_update('compass', 'distortions', warn)
-                #if warn:
-                #print('mag distortions debug', field_strength, gauss, inclination, angle)
-
+                #print('mag distortions debug', warn, field_strength, gauss, inclination, angle)
 
             cals = [(accel_calibration, accel_points), (compass_calibration, compass_points)]
             for calibration, points in cals:
