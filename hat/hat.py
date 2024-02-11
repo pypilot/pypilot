@@ -516,6 +516,7 @@ class Hat(object):
         return False
         
     def write_config(self, suffix=''):
+        print('write config', suffix)
         actions = self.config['actions']
         for name in list(actions):
             if not actions[name] and name[:6] != 'pilot ':
