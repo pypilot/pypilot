@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2023 Sean D'Epagnier
+#   Copyright (C) 2024 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -9,8 +9,13 @@
 
 # autopilot base handles reading from the imu (boatimu)
 
-import sys, os, math, time, socket
+import time
 print('autopilot start', time.monotonic())
+import sys, os, math, socket, io
+
+# use line buffering so the log files are sensible
+sys.stdout = io.TextIOWrapper(sys.stdout.detach(), line_buffering=True)
+sys.stderr = io.TextIOWrapper(sys.stderr.detach(), line_buffering=True)
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -41,14 +46,6 @@ class ModeProperty(EnumProperty):
 
     def set_internal(self, value):
         super(ModeProperty, self).set(value)
-
-class HeadingOffset(object):
-    def __init__(self):
-        self.value = 0
-
-    def update(self, offset, d):
-        offset = resolv(offset, self.value)
-        self.value = resolv(d*offset + (1-d)*self.value)
 
 class HeadingProperty(RangeProperty):
     def __init__(self, name, mode):

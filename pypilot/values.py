@@ -108,6 +108,14 @@ class SensorValue(Value):
             value = list(value)
         return round_value(value, self.fmt)
 
+class HeadingOffset(object):
+    def __init__(self):
+        self.value = 0
+
+    def update(self, offset, d):
+        offset = resolv(offset, self.value)
+        self.value = resolv(d*offset + (1-d)*self.value)
+    
 # a value that may be modified by external clients
 class Property(Value):
     def __init__(self, name, initial, **kwargs):
