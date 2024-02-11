@@ -407,14 +407,14 @@ class Hat(object):
             self.actions.append(ActionKeypad(self.lcd, i, keypadnames[i]))
 
         # stateless actions for autopilot control
-        self.actions += [ActionHeading(self,  1),
-                         ActionHeading(self, -1),
-                         ActionHeading(self,  2),
+        self.actions += [ActionHeading(self, -1),
+                         ActionHeading(self,  1),
                          ActionHeading(self, -2),
-                         ActionHeading(self,  5),
+                         ActionHeading(self,  2),
                          ActionHeading(self, -5),
-                         ActionHeading(self,  10),
+                         ActionHeading(self,  5),
                          ActionHeading(self, -10),
+                         ActionHeading(self,  10),
                          ActionPypilot(self, 'center', 'servo.position', 0),
                          ActionTack(self, 'tack port', 'port'),
                          ActionTack(self, 'tack starboard', 'starboard'),
