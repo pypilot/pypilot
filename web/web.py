@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-#
 #   Copyright (C) 2021 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
@@ -12,6 +11,9 @@ from flask import Flask, render_template, session, request, Markup
 
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
+
+from engineio.payload import Payload
+Payload.max_decode_packets = 500
 
 from pypilot.client import pypilotClient
 from pypilot import pyjson
