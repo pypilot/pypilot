@@ -402,7 +402,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer22.SetFlexibleDirection( wx.BOTH )
 		fgSizer22.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.BoatPlot = wx.glcanvas.GLCanvas(self.m_panel3, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])
+		self.BoatPlot = wx.glcanvas.GLCanvas(self.m_panel4, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])
 		self.BoatPlot.SetMinSize( wx.Size( -1,100 ) )
 		self.BoatPlot.SetMaxSize( wx.Size( -1,500 ) )
 
