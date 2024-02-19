@@ -9,6 +9,7 @@
 
 import os, time, math
 import pyjson
+from resolv import resolv
 
 class Value(object):
     def __init__(self, name, initial, **kwargs):
