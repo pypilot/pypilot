@@ -245,10 +245,13 @@ class CompassCalibrationPlot(CalibrationPlot):
         elif name == 'imu.compass.calibration' and value:
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
-            self.mag_cal_sphere = value[0]
-            self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  32, 16);
-            self.mag_fit_cone = Conical(self.mag_cal_sphere, 32, 16);
-        
+            try:
+                self.mag_cal_sphere = value[0]
+                self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  32, 16);
+                self.mag_fit_cone = Conical(self.mag_cal_sphere, 32, 16);
+            except Exception as e:
+                print("Exception", e)
+                
     def display(self):
         down = self.display_setup()
         cal_new_bias = self.mag_cal_new_bias
