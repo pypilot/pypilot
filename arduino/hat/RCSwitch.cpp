@@ -13,6 +13,7 @@
   - Robert ter Vehn / <first name>.<last name>(at)gmail(dot)com
   - Johann Richard / <first name>.<last name>(at)gmail(dot)com
   - Vlad Gheorghe / <first name>.<last name>(at)gmail(dot)com https://github.com/vgheo
+  - Matias Cuenca-Acuna 
   
   Project home: https://github.com/sui77/rc-switch/
 
@@ -40,17 +41,22 @@
     #define memcpy_P(dest, src, num) memcpy((dest), (src), (num))
 #endif
 
-#ifdef ESP8266
+#if defined(ESP8266)
     // interrupt handler and related code must be in RAM on ESP8266,
     // according to issue #46.
     #define RECEIVE_ATTR ICACHE_RAM_ATTR
+    #define VAR_ISR_ATTR
+#elif defined(ESP32)
+    #define RECEIVE_ATTR IRAM_ATTR
+    #define VAR_ISR_ATTR DRAM_ATTR
 #else
     #define RECEIVE_ATTR
+    #define VAR_ISR_ATTR
 #endif
 
 
 /* Format for protocol definitions:
- * {pulselength, Sync bit, "0" bit, "1" bit}
+ * {pulselength, Sync bit, "0" bit, "1" bit, invertedSignal}
  * 
  * pulselength: pulse length in microseconds, e.g. 350
  * Sync bit: {1, 31} means 1 high pulse and 31 low pulses
@@ -68,17 +74,23 @@
  *
  * These are combined to form Tri-State bits when sending or receiving codes.
  */
-#ifdef ESP8266
-static const RCSwitch::Protocol proto[] = {
+#if defined(ESP8266) || defined(ESP32)
+static const VAR_ISR_ATTR RCSwitch::Protocol proto[] = {
 #else
 static const RCSwitch::Protocol PROGMEM proto[] = {
 #endif
-    { 350, {  1, 31 }, {  1,  3 }, {  3,  1 } },    // protocol 1
-    { 650, {  1, 10 }, {  1,  2 }, {  2,  1 } },    // protocol 2
-    { 100, { 30, 71 }, {  4, 11 }, {  9,  6 } },    // protocol 3
-    { 380, {  1,  6 }, {  1,  3 }, {  3,  1 } },    // protocol 4
-    { 500, {  6, 14 }, {  1,  2 }, {  2,  1 } },    // protocol 5
-    { 350, {  1, 27 }, {  1,  3 }, {  3,  1 } },    // protocol 6
+  { 350, {  1, 31 }, {  1,  3 }, {  3,  1 }, false },    // protocol 1
+  { 650, {  1, 10 }, {  1,  2 }, {  2,  1 }, false },    // protocol 2
+  { 100, { 30, 71 }, {  4, 11 }, {  9,  6 }, false },    // protocol 3
+  { 380, {  1,  6 }, {  1,  3 }, {  3,  1 }, false },    // protocol 4
+  { 500, {  6, 14 }, {  1,  2 }, {  2,  1 }, false },    // protocol 5
+  { 450, { 23,  1 }, {  1,  2 }, {  2,  1 }, true },     // protocol 6 (HT6P20B)
+  { 150, {  2, 62 }, {  1,  6 }, {  6,  1 }, false },    // protocol 7 (HS2303-PT, i. e. used in AUKEY Remote)
+  { 200, {  3, 130}, {  7, 16 }, {  3,  16}, false},     // protocol 8 Conrad RS-200 RX
+  { 200, { 130, 7 }, {  16, 7 }, { 16,  3 }, true},      // protocol 9 Conrad RS-200 TX
+  { 365, { 18,  1 }, {  3,  1 }, {  1,  3 }, true },     // protocol 10 (1ByOne Doorbell)
+  { 270, { 36,  1 }, {  1,  2 }, {  2,  1 }, true },     // protocol 11 (HT12E)
+  { 320, { 36,  1 }, {  1,  2 }, {  2,  1 }, true }      // protocol 12 (SM5212)
 };
 
 enum {
@@ -86,12 +98,12 @@ enum {
 };
 
 #if not defined( RCSwitchDisableReceiving )
-unsigned long RCSwitch::nReceivedValue = 0;
-unsigned int RCSwitch::nReceivedBitlength = 0;
-unsigned int RCSwitch::nReceivedDelay = 0;
-unsigned int RCSwitch::nReceivedProtocol = 0;
-uint8_t RCSwitch::nReceiveTolerance = 200; // 200 out of 256
-const unsigned int RCSwitch::nSeparationLimit = 4600;
+volatile unsigned long RCSwitch::nReceivedValue = 0;
+volatile unsigned int RCSwitch::nReceivedBitlength = 0;
+volatile unsigned int RCSwitch::nReceivedDelay = 0;
+volatile unsigned int RCSwitch::nReceivedProtocol = 0;
+int RCSwitch::nReceiveTolerance = 60;
+const unsigned int VAR_ISR_ATTR RCSwitch::nSeparationLimit = 4300;
 // separationLimit: minimum microseconds between received codes, closer codes are ignored.
 // according to discussion on issue #14 it might be more suitable to set the separation
 // limit to the same time as the 'low' part of the sync signal for the current protocol.
@@ -104,7 +116,7 @@ RCSwitch::RCSwitch() {
   this->setProtocol(1);
   #if not defined( RCSwitchDisableReceiving )
   this->nReceiverInterrupt = -1;
-  this->setReceiveTolerance(150);
+  this->setReceiveTolerance(60);
   RCSwitch::nReceivedValue = 0;
   #endif
 }
@@ -123,7 +135,7 @@ void RCSwitch::setProtocol(int nProtocol) {
   if (nProtocol < 1 || nProtocol > numProto) {
     nProtocol = 1;  // TODO: trigger an error, e.g. "bad protocol" ???
   }
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
   this->protocol = proto[nProtocol-1];
 #else
   memcpy_P(&this->protocol, &proto[nProtocol-1], sizeof(Protocol));
@@ -157,8 +169,8 @@ void RCSwitch::setRepeatTransmit(int nRepeatTransmit) {
  * Set Receiving Tolerance
  */
 #if not defined( RCSwitchDisableReceiving )
-void RCSwitch::setReceiveTolerance(uint8_t nPercent256) {
-  RCSwitch::nReceiveTolerance = nPercent256;
+void RCSwitch::setReceiveTolerance(int nPercent) {
+  RCSwitch::nReceiveTolerance = nPercent;
 }
 #endif
   
@@ -505,6 +517,9 @@ void RCSwitch::send(unsigned long code, unsigned int length) {
     this->transmit(protocol.syncFactor);
   }
 
+  // Disable transmit after sending (i.e., for inverted protocols)
+  digitalWrite(this->nTransmitterPin, LOW);
+
 #if not defined( RCSwitchDisableReceiving )
   // enable receiver again if we just disabled it
   if (nReceiverInterrupt_backup != -1) {
@@ -517,9 +532,12 @@ void RCSwitch::send(unsigned long code, unsigned int length) {
  * Transmit a single high-low pulse.
  */
 void RCSwitch::transmit(HighLow pulses) {
-  digitalWrite(this->nTransmitterPin, HIGH);
+  uint8_t firstLogicLevel = (this->protocol.invertedSignal) ? LOW : HIGH;
+  uint8_t secondLogicLevel = (this->protocol.invertedSignal) ? HIGH : LOW;
+  
+  digitalWrite(this->nTransmitterPin, firstLogicLevel);
   delayMicroseconds( this->protocol.pulseLength * pulses.high);
-  digitalWrite(this->nTransmitterPin, LOW);
+  digitalWrite(this->nTransmitterPin, secondLogicLevel);
   delayMicroseconds( this->protocol.pulseLength * pulses.low);
 }
 
@@ -592,7 +610,7 @@ static inline unsigned int diff(int A, int B) {
  *
  */
 bool RECEIVE_ATTR RCSwitch::receiveProtocol(const int p, unsigned int changeCount) {
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
     const Protocol &pro = proto[p-1];
 #else
     Protocol pro;
@@ -600,26 +618,37 @@ bool RECEIVE_ATTR RCSwitch::receiveProtocol(const int p, unsigned int changeCoun
 #endif
 
     unsigned long code = 0;
-
-    // division is slow!!!!
-    const unsigned int delay = RCSwitch::timings[0] / pro.syncFactor.low;
-
-    //const unsigned int delay=600;//pro.pulseLength;
-    const unsigned int delayTolerance = delay - (delay>>2); // 75%
-//    const unsigned int delayTolerance = (delay * 80)/100;
-
-    int zh = delay * pro.zero.high;
-    int zl = delay * pro.zero.low;
-    int oh = delay * pro.one.high;
-    int ol = delay * pro.one.low;
+    //Assuming the longer pulse length is the pulse captured in timings[0]
+    const unsigned int syncLengthInPulses =  ((pro.syncFactor.low) > (pro.syncFactor.high)) ? (pro.syncFactor.low) : (pro.syncFactor.high);
+    const unsigned int delay = RCSwitch::timings[0] / syncLengthInPulses;
+    const unsigned int delayTolerance = delay * RCSwitch::nReceiveTolerance / 100;
     
-    for (unsigned int i = 1; i < changeCount - 1; i += 2) {
+    /* For protocols that start low, the sync period looks like
+     *               _________
+     * _____________|         |XXXXXXXXXXXX|
+     *
+     * |--1st dur--|-2nd dur-|-Start data-|
+     *
+     * The 3rd saved duration starts the data.
+     *
+     * For protocols that start high, the sync period looks like
+     *
+     *  ______________
+     * |              |____________|XXXXXXXXXXXXX|
+     *
+     * |-filtered out-|--1st dur--|--Start data--|
+     *
+     * The 2nd saved duration starts the data
+     */
+    const unsigned int firstDataTiming = (pro.invertedSignal) ? (2) : (1);
+
+    for (unsigned int i = firstDataTiming; i < changeCount - 1; i += 2) {
         code <<= 1;
-        if (diff(RCSwitch::timings[i], zh) < delayTolerance &&
-            diff(RCSwitch::timings[i + 1], zl) < delayTolerance) {
+        if (diff(RCSwitch::timings[i], delay * pro.zero.high) < delayTolerance &&
+            diff(RCSwitch::timings[i + 1], delay * pro.zero.low) < delayTolerance) {
             // zero
-        } else if (diff(RCSwitch::timings[i], oh) < delayTolerance &&
-                   diff(RCSwitch::timings[i + 1], ol) < delayTolerance) {
+        } else if (diff(RCSwitch::timings[i], delay * pro.one.high) < delayTolerance &&
+                   diff(RCSwitch::timings[i + 1], delay * pro.one.low) < delayTolerance) {
             // one
             code |= 1;
         } else {
@@ -633,34 +662,39 @@ bool RECEIVE_ATTR RCSwitch::receiveProtocol(const int p, unsigned int changeCoun
         RCSwitch::nReceivedBitlength = (changeCount - 1) / 2;
         RCSwitch::nReceivedDelay = delay;
         RCSwitch::nReceivedProtocol = p;
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 void RECEIVE_ATTR RCSwitch::handleInterrupt() {
+
   static unsigned int changeCount = 0;
   static unsigned long lastTime = 0;
+  static unsigned int repeatCount = 0;
 
   const long time = micros();
   const unsigned int duration = time - lastTime;
-  static uint8_t lastProtocol = 1, nextProtocol = 2;
 
   if (duration > RCSwitch::nSeparationLimit) {
     // A long stretch without signal level change occurred. This could
     // be the gap between two transmission.
-    if (duration > RCSwitch::timings[0] - 1200 && changeCount>42) {
+    if ((repeatCount==0) || (diff(duration, RCSwitch::timings[0]) < 200)) {
       // This long signal is close in length to the long signal which
       // started the previously recorded timings; this suggests that
       // it may indeed by a a gap between two transmissions (we assume
       // here that a sender will send the signal multiple times,
       // with roughly the same gap between them).
-      if (!receiveProtocol(lastProtocol, changeCount)) {
-          if (receiveProtocol(nextProtocol, changeCount))
-              lastProtocol = nextProtocol;
-          nextProtocol++;
-          if(nextProtocol > numProto)
-              nextProtocol = 1;
+      repeatCount++;
+      if (repeatCount == 2) {
+        for(unsigned int i = 1; i <= numProto; i++) {
+          if (receiveProtocol(i, changeCount)) {
+            // receive succeeded for protocol i
+            break;
+          }
+        }
+        repeatCount = 0;
       }
     }
     changeCount = 0;
@@ -669,6 +703,7 @@ void RECEIVE_ATTR RCSwitch::handleInterrupt() {
   // detect overflow
   if (changeCount >= RCSWITCH_MAX_CHANGES) {
     changeCount = 0;
+    repeatCount = 0;
   }
 
   RCSwitch::timings[changeCount++] = duration;
