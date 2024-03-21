@@ -1974,7 +1974,7 @@
                 </object>
             </object>
         </object>
-        <object class="Dialog" expanded="0">
+        <object class="Dialog" expanded="1">
             <property name="aui_managed">0</property>
             <property name="aui_manager_style">wxAUI_MGR_DEFAULT</property>
             <property name="bg"></property>
@@ -1992,7 +1992,7 @@
             <property name="minimum_size"></property>
             <property name="name">CalibrationDialogBase</property>
             <property name="pos"></property>
-            <property name="size">617,432</property>
+            <property name="size">1024,768</property>
             <property name="style">wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER</property>
             <property name="subclass"></property>
             <property name="title">Calibration</property>
@@ -2000,7 +2000,7 @@
             <property name="window_extra_style"></property>
             <property name="window_name"></property>
             <property name="window_style"></property>
-            <object class="wxFlexGridSizer" expanded="0">
+            <object class="wxFlexGridSizer" expanded="1">
                 <property name="cols">1</property>
                 <property name="flexible_direction">wxBOTH</property>
                 <property name="growablecols">0</property>
@@ -2012,11 +2012,11 @@
                 <property name="permission">none</property>
                 <property name="rows">0</property>
                 <property name="vgap">0</property>
-                <object class="sizeritem" expanded="0">
+                <object class="sizeritem" expanded="1">
                     <property name="border">5</property>
                     <property name="flag">wxEXPAND | wxALL</property>
                     <property name="proportion">1</property>
-                    <object class="wxNotebook" expanded="0">
+                    <object class="wxNotebook" expanded="1">
                         <property name="BottomDockable">1</property>
                         <property name="LeftDockable">1</property>
                         <property name="RightDockable">1</property>
@@ -2070,10 +2070,10 @@
                         <property name="window_name"></property>
                         <property name="window_style"></property>
                         <event name="OnNotebookPageChanged">PageChanged</event>
-                        <object class="notebookpage" expanded="0">
+                        <object class="notebookpage" expanded="1">
                             <property name="bitmap"></property>
                             <property name="label">alignment</property>
-                            <property name="select">0</property>
+                            <property name="select">1</property>
                             <object class="wxPanel" expanded="0">
                                 <property name="BottomDockable">1</property>
                                 <property name="LeftDockable">1</property>
@@ -2282,7 +2282,7 @@
                                                                 <property name="center_pane">0</property>
                                                                 <property name="class">glCanvas</property>
                                                                 <property name="close_button">1</property>
-                                                                <property name="construction">self.BoatPlot = wx.glcanvas.GLCanvas(self.m_panel3, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])</property>
+                                                                <property name="construction">self.BoatPlot = wx.glcanvas.GLCanvas(self.m_panel4, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])</property>
                                                                 <property name="context_help"></property>
                                                                 <property name="context_menu">1</property>
                                                                 <property name="declaration"></property>
@@ -3649,7 +3649,7 @@
                                 </object>
                             </object>
                         </object>
-                        <object class="notebookpage" expanded="0">
+                        <object class="notebookpage" expanded="1">
                             <property name="bitmap"></property>
                             <property name="label">accel</property>
                             <property name="select">0</property>
@@ -4324,10 +4324,10 @@
                                 </object>
                             </object>
                         </object>
-                        <object class="notebookpage" expanded="0">
+                        <object class="notebookpage" expanded="1">
                             <property name="bitmap"></property>
                             <property name="label">compass</property>
-                            <property name="select">1</property>
+                            <property name="select">0</property>
                             <object class="wxPanel" expanded="0">
                                 <property name="BottomDockable">1</property>
                                 <property name="LeftDockable">1</property>
@@ -4455,6 +4455,7 @@
                                             <event name="OnLeftDown">onMouseEventsCompass</event>
                                             <event name="OnLeftUp">onMouseEventsCompass</event>
                                             <event name="OnMotion">onMouseEventsCompass</event>
+                                            <event name="OnMouseWheel">onMouseEventsCompass</event>
                                             <event name="OnPaint">onPaintGLCompass</event>
                                             <event name="OnSize">onSizeGLCompass</event>
                                         </object>
@@ -5261,7 +5262,7 @@
                                 </object>
                             </object>
                         </object>
-                        <object class="notebookpage" expanded="0">
+                        <object class="notebookpage" expanded="1">
                             <property name="bitmap"></property>
                             <property name="label">rudder</property>
                             <property name="select">0</property>

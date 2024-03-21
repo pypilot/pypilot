@@ -174,7 +174,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.UpdateControl(label, lambda : label.SetLabel(str(value)))
 
     def UpdatedSpin(self, dspin, value):
-        self.UpdateControl(dspin, lambda : dspin.SetValue(value))
+        self.UpdateControl(dspin, lambda : dspin.SetValue(int(value)))
                 
     def receive_message(self, msg):
         name, value = msg
@@ -182,7 +182,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         if 1:
         #if self.m_notebook.GetSelection() == 0:
             if name == 'imu.alignmentQ':
-                self.stAlignment.SetLabel(str(round3(value)) + ' ' + str(math.degrees(quaternion.angle(value))))
+                self.stAlignment.SetLabel(str(value) + ' ' + str(round3(math.degrees(quaternion.angle(value)))))
                 self.alignmentQ = value
             elif name == 'imu.fusionQPose':                
                 if not value:
@@ -321,6 +321,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             while rotation < 0:
                 plot.userscale *= .9
                 rotation += 1
+            plot.userscale = min(max(plot.userscale, .001), 1)
         
     def onPaintGLAccel( self, event ):
         self.onPaintGL( self.AccelCalibration, self.accel_calibration_plot, self.accel_calibration_glContext )

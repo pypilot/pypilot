@@ -93,8 +93,8 @@
         Profile&emsp;
         <select id="profile"></select>
         &emsp;&emsp;
-          <button class="button button-resizable2 font-resizable2" id="add_profile">{{_('Add')}}</button>
-          <button class="button button-resizable2 font-resizable2" id="remove_profile">{{_('Remove')}}</button>
+          <button class="button button-resizable2 font-resizable3" id="add_profile">{{_('Add')}}</button>
+          <button class="button button-resizable2 font-resizable3" id="remove_profile">{{_('Remove')}}</button>
       </div>
       <div id="gain_container"></div>
     </div>
@@ -109,12 +109,14 @@
       <div class="progress">
         <div id="levelprogress" class="bar"> </div>
       </div>
+      <!--   for now hide this
       <p>{{_('Press')}} <button id="align_compass" class="button">{{_('here')}}</button>
         {{_('when the boat is traveling straight with no leeway, no currents, and gps to align the compass, or manually enter the compass offset')}}
       </p>
       <div class="progress">
         <div id="align_compassprogress" class="bar"> </div>
       </div>
+      -->
       {{_('Magnetic Heading Offset')}}
       <input type="spin" id="imu_heading_offset" min=-180 max=180 value=0>Degrees</input>
       <p><input type="checkbox" id="accel_calibration_locked">{{_('Lock Accelerometer Calibration')}}</input>

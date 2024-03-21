@@ -375,8 +375,8 @@ class arduino(object):
     def set_actions(self, actions):
         self.manual_control_keys = {}
 
-        manual_keys = {'+1': -1,
-                       '-1':  1}
+        manual_keys = {'+1': -.8,
+                       '-1':  .8}
         for action, keys in actions.items():
             if action in manual_keys:
                 for key in keys:

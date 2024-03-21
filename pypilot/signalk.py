@@ -149,9 +149,8 @@ class signalk(object):
             f.close()
         except Exception as e:
             print('signalk ' + _('failed to read token'), token_path)
-            self.token = False
+            self.invalid_token()
 
-            
         self.last_values = {}
         self.last_sources = {}
         self.signalk_last_msg_time = {}
@@ -221,10 +220,18 @@ class signalk(object):
                                 f.close()
                             except Exception as e:
                                 print('signalk ' + _('failed to store token'), token_path)
+                    else:
+                        self.uid.set('pypilot') # re-enumerate a new ID
                         # if permission == DENIED should we try other servers??
                     self.signalk_access_url = False
             except Exception as e:
                 print('signalk ' + _('error requesting access'), e)
+                import traceback
+                print(traceback.format_exc())
+                try:
+                    print('content', r.content)
+                except Exception as e:
+                    print('no content', e)
                 self.signalk_access_url = False
             return
 
@@ -240,13 +247,26 @@ class signalk(object):
             r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":self.uid.value, "description": "pypilot"})
             
             contents = pyjson.loads(r.content)
-            debug('signalk post', contents)
+            print('signalk post', contents)
             if contents['statusCode'] == 202 or contents['statusCode'] == 400:
                 self.signalk_access_url = 'http://' + self.signalk_host_port + contents['href']
-                debug('signalk ' + _('request access url'), self.signalk_access_url)
+                print('signalk ' + _('request access url'), self.signalk_access_url)
         except Exception as e:
-            print('signalk ' + _('error requesting access'), e)
+            print('signalk ' + _('error posting access'), e)
+            import traceback
+            print(traceback.format_exc())
+            try:
+                print('content', r.content)
+            except Exception as e:
+                print('no content', e)
             self.signalk_ws_url = False
+
+    def invalid_token(self):
+        self.token = False
+        try:
+            os.unlink(token_path)
+        except:
+            pass # ignore
         
     def connect_signalk(self):
         try:
@@ -266,9 +286,9 @@ class signalk(object):
         try:
             self.ws = create_connection(self.signalk_ws_url, header={'Authorization': 'JWT ' + self.token})
             self.ws.settimeout(0) # nonblocking
-        except WebSocketBadStatusException:
-            print('signalk ' + _('bad status, rejecting token'))
-            self.token = False
+        except WebSocketBadStatusException as e:
+            print('signalk ' + _('bad status, rejecting token'), e)
+            self.invalid_token()
             self.ws = False
         except ConnectionRefusedError:
             print('signalk ' + _('connection refused'))
@@ -388,8 +408,8 @@ class signalk(object):
             if not msg:
                 print('signalk server closed connection')
                 if not self.keep_token:
-                    print('signalk invalidating token')
-                    self.token = False
+                    debug('signalk invalidating token')
+                    self.invalid_token()
                 self.disconnect_signalk()
                 return
 

@@ -86,7 +86,7 @@ class ActionHeading(Action):
                 if 'wind' in self.hat.last_msg['ap.mode']:
                     sign = -sign
                 self.hat.client.set('ap.heading_command',
-                                    self.hat.last_msg['ap.heading_command'] + self.offset)
+                                    int(self.hat.last_msg['ap.heading_command']) + self.offset)
         elif count >= 0: # manual mode
             if count:
                 self.hat.servo_timeout = time.monotonic() + .5
@@ -258,11 +258,12 @@ class Arduino(Process):
                             break
                     pass
                 elif key == 'version':
-                    if self.hat.config.get('version') != code:
-                        print('update version, restart may update firmware')
+                    old_version = self.hat.config.get('version')
+                    if old_version != code:
+                        print('update version from ', old_version, ' to ', code, ' restart may update firmware')
                         self.hat.config['version'] = code;
                         self.hat.write_config()
-                        exit(1)
+                        #exit(1)
                 else:
                     ret.append(msg)
         return ret
@@ -381,6 +382,9 @@ class Hat(object):
 
         for name in self.watchlist:
             self.client.watch(name)
+
+        # receive heading once per second for mode changes
+        self.client.watch('ap.heading', 1)
             
         if 'arduino' in self.config['hat']:
             self.arduino = Arduino(self)
@@ -406,14 +410,14 @@ class Hat(object):
             self.actions.append(ActionKeypad(self.lcd, i, keypadnames[i]))
 
         # stateless actions for autopilot control
-        self.actions += [ActionHeading(self,  1),
-                         ActionHeading(self, -1),
-                         ActionHeading(self,  2),
+        self.actions += [ActionHeading(self, -1),
+                         ActionHeading(self,  1),
                          ActionHeading(self, -2),
-                         ActionHeading(self,  5),
+                         ActionHeading(self,  2),
                          ActionHeading(self, -5),
-                         ActionHeading(self,  10),
+                         ActionHeading(self,  5),
                          ActionHeading(self, -10),
+                         ActionHeading(self,  10),
                          ActionPypilot(self, 'center', 'servo.position', 0),
                          ActionTack(self, 'tack port', 'port'),
                          ActionTack(self, 'tack starboard', 'starboard'),
@@ -535,7 +539,7 @@ class Hat(object):
                 if count <= 0:
                     self.web.send({'action': action.name})
                     if not self.keytime:
-                        break # do not apply keyup if already applied
+                        return # do not apply keyup if already applied
                     self.keytime = False
                 else:
                     self.keytime = key, time.monotonic()
@@ -635,9 +639,6 @@ class Hat(object):
                 self.apply_code(key, 0)
                 self.keytime = False
                 self.keycounts = {}
-
-        # receive heading once per second if autopilot is not enabled
-        self.client.watch('ap.heading', False if self.last_msg['ap.enabled'] else 1)
 
         # timeout manual move
         if self.servo_timeout:

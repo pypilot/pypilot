@@ -119,6 +119,7 @@ class PipeNonBlockingPipeEnd(object):
         self.pollout.register(self.w, select.POLLOUT)
         self.recvfailok = recvfailok
         self.sendfailok = sendfailok
+        self.sendfail_time = 0
 
     def fileno(self):
         return self.r
@@ -175,9 +176,12 @@ class PipeNonBlockingPipeEnd(object):
                 print('too long send nonblocking pipe', t1-t0, t2-t1, self.name, len(data))
             return True
         except Exception as e:
-            print("failed send ex", t0, time.monotonic(), self.name, e)
-            if not self.sendfailok:
-                print('failed to encode data pipe!', self.name, e)
+            if t0 > self.sendfail_time:
+                self.sendfail_time = t0+10
+                if not self.sendfailok:
+                    print('ERROR: failed to encode data pipe!', t0, self.name, e)
+                else:
+                    print("Warning failed send ex", t0, self.name, e)
             return False
 
 # non multiprocessed pipe emulates functions in a simple queue

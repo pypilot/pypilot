@@ -51,6 +51,11 @@ ISR(PCINT2_vect) {
 
 // the setup routine runs once when you press reset:
 void setup() {
+    // for led
+    LED2_ON;
+    LED1_OFF;
+    DDRB|=_BV(LED1) | _BV(LED2) | _BV(BOOST);
+
     PCICR |= _BV(PCIE2); // enable pin change interrupt
     PCMSK2 = 0xff; // port D used for 8 keys, wake on any change
 
@@ -61,9 +66,11 @@ void setup() {
     CLKPR = _BV(CLKPS1); // divide by 4 (2mhz)
     sei();
 
+
     PORTD = 0xff; // internal pullup resistors for all port D
     rf.enableTransmit(9); // d9
     rf.setRepeatTransmit(1);
+
 
     // these appear not to affect sleep consumption...
     DIDR0 = 0x30; // disable digital io on analog pins 4 and 5
@@ -71,12 +78,10 @@ void setup() {
     DDRC = 0; // all input
     PORTB = _BV(PB3) | _BV(PB4);
   
-    // for led
-    DDRB|=_BV(LED1) | _BV(LED2) | _BV(BOOST);
-
     PORTC = PINC; // enable pullups only on pins without pulldown straps
 
     uid_code = ~eeprom_read_byte((uint8_t*)&uid_code_ee);
+    LED2_OFF;
 }
 
 uint8_t count_bits (uint8_t byte)

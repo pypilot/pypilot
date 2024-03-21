@@ -7,9 +7,11 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from pypilot.autopilot import HeadingOffset, resolv
+from pypilot.resolv import resolv
 from pilot import AutopilotPilot, AutopilotGain
 from pypilot.values import *
+
+disabled = True
 
 # the wind pilot does not require a compass but does require a wind sensor.
 # it does not rely on the compass or calibration (unless in compass mode)

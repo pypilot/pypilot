@@ -373,7 +373,7 @@ class TackDialogBase ( wx.Dialog ):
 class CalibrationDialogBase ( wx.Dialog ):
 
 	def __init__( self, parent ):
-		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Calibration"), pos = wx.DefaultPosition, size = wx.Size( 617,432 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Calibration"), pos = wx.DefaultPosition, size = wx.Size( 1024,768 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
 
 		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 
@@ -402,7 +402,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer22.SetFlexibleDirection( wx.BOTH )
 		fgSizer22.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.BoatPlot = wx.glcanvas.GLCanvas(self.m_panel3, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])
+		self.BoatPlot = wx.glcanvas.GLCanvas(self.m_panel4, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])
 		self.BoatPlot.SetMinSize( wx.Size( -1,100 ) )
 		self.BoatPlot.SetMaxSize( wx.Size( -1,500 ) )
 
@@ -937,6 +937,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.CompassCalibration.Bind( wx.EVT_LEFT_DOWN, self.onMouseEventsCompass )
 		self.CompassCalibration.Bind( wx.EVT_LEFT_UP, self.onMouseEventsCompass )
 		self.CompassCalibration.Bind( wx.EVT_MOTION, self.onMouseEventsCompass )
+		self.CompassCalibration.Bind( wx.EVT_MOUSEWHEEL, self.onMouseEventsCompass )
 		self.CompassCalibration.Bind( wx.EVT_PAINT, self.onPaintGLCompass )
 		self.CompassCalibration.Bind( wx.EVT_SIZE, self.onSizeGLCompass )
 		self.m_button10.Bind( wx.EVT_BUTTON, self.onClearCompass )
@@ -974,6 +975,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.CompassCalibration.Unbind( wx.EVT_LEFT_DOWN, None )
 		self.CompassCalibration.Unbind( wx.EVT_LEFT_UP, None )
 		self.CompassCalibration.Unbind( wx.EVT_MOTION, None )
+		self.CompassCalibration.Unbind( wx.EVT_MOUSEWHEEL, None )
 		self.CompassCalibration.Unbind( wx.EVT_PAINT, None )
 		self.CompassCalibration.Unbind( wx.EVT_SIZE, None )
 		self.m_button10.Unbind( wx.EVT_BUTTON, None )
@@ -1042,6 +1044,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 
 	def onMouseEventsCompass( self, event ):
 		event.Skip()
+
 
 
 

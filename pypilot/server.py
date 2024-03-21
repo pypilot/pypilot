@@ -315,8 +315,8 @@ class ServerValues(pypilotValue):
         self.pipevalues = {}
         self.msg = 'new'
         self.persistent_timeout = time.monotonic() + server_persistent_period
-        self.load()
         self.need_store = False
+        self.load()
         self.pqwatches = [] # priority queue of watches
         self.last_send_watches = 0
 
@@ -530,7 +530,7 @@ class ServerValues(pypilotValue):
             except Exception as e:
                 print("failed to remove watch", e)
                 
-        print("store_file", filename, '%.3f'%time.monotonic())
+        print('store_file', filename, '%.3f'%time.monotonic(), self.need_store)
         file = open(filename, 'w')
         for name, value in self.persistent_data[None].items():
             file.write(value)
@@ -565,7 +565,7 @@ class ServerValues(pypilotValue):
             if msg and (not name in data or msg != data[name]):
                 #print("need store, changed", name, data[name].rstrip(), msg.rstrip())
                 data[name] = msg
-                self.need_store = True
+                self.need_store = name
 
         if self.need_store:
             try:
@@ -662,7 +662,7 @@ class pypilotServer(object):
             pipe.close()
 
     def RemoveSocket(self, socket):
-        print('server, remove socket', socket.address)
+        print('server remove socket', socket.address)
         self.sockets.remove(socket)
 
         found = False

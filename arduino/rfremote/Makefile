@@ -49,6 +49,7 @@ BAUDRATE = 19200
 #stty -F /dev/ttyUSB0 -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 0 time 0
 #stty -F /dev/ttyUSB0 crtscts
 prog: $(SKETCHNAME).cpp.hex
+	-$(AVRDUDE) -C/usr/share/arduino/hardware/tools/avrdude.conf -v -p$(MCU) -cstk500v1 -P$(DEVICE) -b19200 -e
 	$(AVRDUDE) -P $(DEVICE) -u -p $(MCU) -c $(BOOTLOADER) -b $(BAUDRATE)  -Uefuse:w:0xFE:m -Uhfuse:w:0xDB:m -Ulfuse:w:0x7F:m
 	$(AVRDUDE) -C/usr/share/arduino/hardware/tools/avrdude.conf -v -patmega328p -c $(BOOTLOADER) -P $(DEVICE) -b $(BAUDRATE) -Uflash:w:$(SKETCHNAME).cpp.hex:i -Ulock:w:0xc0:m
 

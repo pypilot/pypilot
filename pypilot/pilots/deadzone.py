@@ -13,6 +13,7 @@
 from pilot import AutopilotPilot
 from resolv import resolv
 from pypilot.values import *
+disabled = True
 
 class DeadZonePilot(AutopilotPilot):
   def __init__(self, ap, name='deadzone'):
