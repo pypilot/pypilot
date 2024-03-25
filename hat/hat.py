@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 #
 #   Copyright (C) 2023 Sean D'Epagnier
@@ -318,15 +319,11 @@ class Hat(object):
         self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf'
 
         # read config
-        print('loading config file:', self.configfilename)
-        try:
-            file = open(self.configfilename)
-            config = pyjson.loads(file.read())
-            file.close()
-            for name in config:
-                self.config[name] = config[name]
-        except Exception as e:
-            print('config failed:', e)
+        if self.read_config(self.configfilename):
+            self.write_config('.bak')
+        else:
+            print('failed to read config file, trying backup config')
+            self.read_config(self.configfilename + '.bak')
 
         host = self.config['host']
         print('host', host, time.monotonic())
@@ -498,7 +495,26 @@ class Hat(object):
                 signal.signal(s, cleanup)
         signal.signal(signal.SIGCHLD, cleanup)
 
-    def write_config(self):
+    def read_config(self, filename):
+        print('loading config file:', filename)
+        try:
+            file = open(filename)
+            config = pyjson.loads(file.read())
+            file.close()
+            for name in config:
+                self.config[name] = config[name]
+            return True
+        except Exception as e:
+            print('config failed:', e)
+            try:
+                file = open(filename)
+                print('bad config: ', file.read())
+                file.close()
+            except Exception as e:
+                print('config read exception printing exception', e)
+        return False
+        
+    def write_config(self, suffix=''):
         actions = self.config['actions']
         for name in list(actions):
             if not actions[name] and name[:6] != 'pilot ':
@@ -510,11 +526,11 @@ class Hat(object):
                 self.config['modes'] = values['ap.mode']['choices']
             
         try:
-            f = open(self.configfilename, 'w')
+            f = open(self.configfilename+suffix, 'w')
             f.write(pyjson.dumps(self.config) + '\n')
             f.close()
         except IOError:
-            print('failed to save config file:', self.configfilename)
+            print('failed to save config file:', self.configfilename+suffix)
 
     def update_config(self, name, value):
         if name in self.config and self.config[name] == value:
