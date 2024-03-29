@@ -614,14 +614,18 @@ void loop() {
 
     // send code up message on timeout
     static uint32_t t=0;
+    t = millis();
+#if 1
     uint32_t timeout[] = {0, 300, 350, 100};
     for(uint8_t source=1; source<4; source++) {
         uint32_t dt = t - codes[source].ltime;
-        if(codes[source].lvalue && (dt > timeout[source] && dt < 10000))
+        if(codes[source].lvalue && (dt > timeout[source] && dt < 10000)) {
             send_code(source, 0);
+            if(source == RF)
+                rf.resetAvailable();
+        }
     }
-    t = millis();
-
+#endif
 #ifdef USE_IR
     // read from IR??
     if (ir.getResults()) {
@@ -642,7 +646,7 @@ void loop() {
         rf.resetAvailable();
     }
 #endif
-
+    
     // parse incoming data
     uint32_t dt = t - codes[GP].ltime;
     if(dt > 40) { // do not send faster than 40 ms

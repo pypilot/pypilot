@@ -555,12 +555,27 @@ void RCSwitch::disableReceive() {
   this->nReceiverInterrupt = -1;
 }
 
+static unsigned long lastTime = 0;
+static unsigned int changeCount = 0;
+
 bool RCSwitch::available() {
-  return RCSwitch::nReceivedValue != 0;
+    const long time = micros();
+    long duration = time - lastTime;
+    // some receivers do not change state after last bit
+    // so the interrupt is not triggered
+    // check here if there is a long enough delay and enough changes
+    // and attempt to receive
+    if(duration > RCSwitch::timings[0] + 1200 && changeCount>=42) {
+        RCSwitch::receiveAny();
+        changeCount = 0;
+    }
+    
+    return RCSwitch::nReceivedValue != 0;
 }
 
 void RCSwitch::resetAvailable() {
-  RCSwitch::nReceivedValue = 0;
+    RCSwitch::nReceivedValue = 0;
+    changeCount=0;
 }
 
 unsigned long RCSwitch::getReceivedValue() {
@@ -638,32 +653,37 @@ bool RECEIVE_ATTR RCSwitch::receiveProtocol(const int p, unsigned int changeCoun
     return true;
 }
 
+// only try 1 or 2 protocols at a time (because of division being too slow in ISR)
+void RCSwitch::receiveAny() {
+    static uint8_t lastProtocol = 1, nextProtocol = 2;
+    if (receiveProtocol(lastProtocol, changeCount))
+        return;
+    
+    if (receiveProtocol(nextProtocol, changeCount))
+        lastProtocol = nextProtocol;
+    nextProtocol++;
+    if(nextProtocol > numProto)
+        nextProtocol = 1;    
+}
+
 void RECEIVE_ATTR RCSwitch::handleInterrupt() {
-  static unsigned int changeCount = 0;
-  static unsigned long lastTime = 0;
 
   const long time = micros();
   const unsigned int duration = time - lastTime;
-  static uint8_t lastProtocol = 1, nextProtocol = 2;
 
   if (duration > RCSwitch::nSeparationLimit) {
-    // A long stretch without signal level change occurred. This could
-    // be the gap between two transmission.
-    if (duration > RCSwitch::timings[0] - 1200 && changeCount>42) {
-      // This long signal is close in length to the long signal which
-      // started the previously recorded timings; this suggests that
-      // it may indeed by a a gap between two transmissions (we assume
-      // here that a sender will send the signal multiple times,
-      // with roughly the same gap between them).
-      if (!receiveProtocol(lastProtocol, changeCount)) {
-          if (receiveProtocol(nextProtocol, changeCount))
-              lastProtocol = nextProtocol;
-          nextProtocol++;
-          if(nextProtocol > numProto)
-              nextProtocol = 1;
+  
+      // A long stretch without signal level change occurred. This could
+      // be the gap between two transmission.
+      if (duration > RCSwitch::timings[0] - 1200 && changeCount>=42) {
+          // This long signal is close in length to the long signal which
+          // started the previously recorded timings; this suggests that
+          // it may indeed by a a gap between two transmissions (we assume
+          // here that a sender will send the signal multiple times,
+          // with roughly the same gap between them).
+          RCSwitch::receiveAny();
       }
-    }
-    changeCount = 0;
+      changeCount = 0;
   }
  
   // detect overflow
