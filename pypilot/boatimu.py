@@ -314,7 +314,7 @@ class QuaternionValue(ResettableValue):
 def heading_filter(lp, a, b):
     if a is False:
         return b
-    if is False:
+    if b is False:
         return a
     if a - b > 180:
         a -= 360

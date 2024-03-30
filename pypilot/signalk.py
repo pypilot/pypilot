@@ -11,7 +11,7 @@ import time, socket, multiprocessing, os
 from nonblockingpipe import NonBlockingPipe
 import pyjson
 from client import pypilotClient
-from values import Property, RangeProperty
+from values import Property, RangeProperty, BooleanProperty
 from sensors import source_priority
 
 signalk_priority = source_priority['signalk']
@@ -321,9 +321,6 @@ class signalk(object):
             self.client.watch(sensor+'.source')
         
     def poll(self, timeout=0):
-        if not self.enabled:
-            return
-
         if self.process:
             msg = self.sensors_pipe_out.recv()
             while msg:
@@ -335,6 +332,9 @@ class signalk(object):
         t0 = time.monotonic()
         if not self.initialized:
             self.setup()
+            return
+
+        if not self.enabled.value:
             return
 
         zc = self.zero_conf.poll()
