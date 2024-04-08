@@ -218,13 +218,7 @@ body[theme="dark"] #configuration_container .w3-row {
 /* Steer button styling */
 body[theme="dark"] #steer_buttons_container {
 	margin-top: 10px;
-	margin-left: 0.1%;
-	margin-right: 0.1%;
 	padding-top: 10px;
-	padding-left: 5px;
-	padding-right: 5px;
-	border: 1px solid #253036;
-	border-radius: 3px;
 	overflow: hidden;
 }
 

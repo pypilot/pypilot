@@ -1,3 +1,6 @@
+#steer_buttons_container{
+	text-align: center;
+}
 .toggle-button {
     background-color: white;
     margin: 0 10% 0 0;
