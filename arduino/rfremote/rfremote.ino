@@ -180,6 +180,7 @@ void loop() {
         if(count <= 2 && count > key_count) {
             // construct output using PC0-PC3 to give unique codes for different remote types
             uint32_t pinc = (PINC & 0xf);
+            //pinc = 5;
             pinc ^= ((uid_code&7) << 2);
             if(wd)
                 pinc ^= 0xac; //  1011 1111
