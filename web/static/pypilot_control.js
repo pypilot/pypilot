@@ -798,6 +798,8 @@ $(document).ready(function() {
 
     function window_resize() {
         var w = $(window).width();
+        var wbc = $('#steer_buttons_container').width();
+
         $(".font-resizable").each(function(i, obj) {
             if (w < 600)
                 $(this).css('font-size', w/18+"px")
@@ -813,8 +815,12 @@ $(document).ready(function() {
         $(".font-resizable3").each(function(i, obj) {
             $(this).css('font-size', w/50+"px")
         });
-        $(".button-resizable").each(function(i, obj) {
+        $(".button-resizable").not("#steer_buttons_container .button-resizable").each(function(i, obj) {
             $(this).css('width', w/5+"px")
+            $(this).css('height', w/6+"px")
+        });
+        $("#steer_buttons_container .button-resizable").each(function(i, obj) {
+            $(this).css('width', (wbc/5)-(w*.01)+"px")
             $(this).css('height', w/6+"px")
         });
         $(".button-resizable1").each(function(i, obj) {
