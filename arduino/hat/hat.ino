@@ -501,7 +501,7 @@ void read_analog()
     //Configure TIMER1 to drive backlight variable pwm
     static uint8_t last_backlight = 0;
     uint8_t backlight = 0;
-    if(ambient < 12000 ||
+    if(ambient < 13000 ||
        (ambient < 15000 && last_backlight) ||
        backlight_value > 80)
         backlight = backlight_value;
