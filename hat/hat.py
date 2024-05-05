@@ -217,6 +217,7 @@ class Arduino(Process):
         super(Arduino, self).__init__(hat)
         self.voltage = {'vcc': 5, 'vin': 3.3}
         self.status = 'Not Connected'
+        self.need_restart = 0
 
     def create(self):
         def process(pipe, config):
@@ -231,6 +232,14 @@ class Arduino(Process):
 
     def poll(self):
         ret = []
+        if self.need_restart:
+            t0 = time.monotonic()
+            if self.need_restart < t0:
+                if os.system('which avrdude') == 0:
+                    print('avrdude available, resetting hat to update firmware')
+                    exit(0)
+                self.need_restart = t0 + 10 # try again in 10 seconds
+
         while True:
             msgs = self.pipe.recv()
             if not msgs:
@@ -260,11 +269,16 @@ class Arduino(Process):
                     pass
                 elif key == 'version':
                     old_version = self.hat.config.get('version')
-                    if old_version != code:
-                        print('update version from ', old_version, ' to ', code, ' restart may update firmware')
+                    if old_version != code: 
+                        print('actual hat version update from ', old_version, ' to ', code)
                         self.hat.config['version'] = code;
                         self.hat.write_config()
-                        #exit(1)
+                    if self.hat.config.get('firmware_version', 0) > code:
+                        print('new firmware version ',
+                              self.hat.config.get('firmware_version', 0),
+                              ' available to update current version ', code)
+                        # restart once avrdude is available
+                        self.need_restart = time.monotonic()
                 else:
                     ret.append(msg)
         return ret
@@ -352,7 +366,7 @@ class Hat(object):
                                   'lirc':'gpio4'}
             self.write_config()
 
-        # update firmware
+        # possibly update firmware, before initializing lcd (which shares SPI bus)
         arduino.update_firmware(self.config)
 
         self.servo_timeout = 0
