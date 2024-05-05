@@ -259,7 +259,10 @@ def readable_timespan(total):
             t = int(total%int(div))
         else:
             t = total
-        return loop(i+1, mods[i][1]*mod) + (('%d' + mods[i][0] + ' ') % (t/(mods[i][1]*mod)))
+        pre = loop(i+1, mods[i][1]*mod)
+        if pre:
+            pre += ' '
+        return pre + (('%d' + mods[i][0]) % (t/(mods[i][1]*mod)))
     return loop(0, 1)
 
 class TimeValue(StringValue):
