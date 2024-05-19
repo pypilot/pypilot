@@ -259,11 +259,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                     n = self.cProfile.Append(value)
                 self.cProfile.SetSelection(n)
             elif name == 'profiles':
-                profile = self.cProfile.GetStringSelection()
+                cur_profile = self.cProfile.GetStringSelection()
                 self.cProfile.Clear()
                 for profile in value:
                     self.cProfile.Append(profile)
-                n = self.cProfile.FindString(profile)
+                n = self.cProfile.FindString(cur_profile)
                 if n >= 0:
                     self.cProfile.SetSelection(n)
             elif name == 'imu.error':
