@@ -275,7 +275,7 @@ class Servo(object):
         self.use_brake = self.register(BooleanProperty, 'use_brake', False, persistent=True)
         self.brake_on = False
         
-        self.period = self.register(RangeSetting, 'period', .4, .1, 3, 'sec', profiled=True)
+        self.period = self.register(RangeSetting, 'period', .4, .1, 1, 'sec', profiled=True)
         self.compensate_current = self.register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.register(BooleanProperty, 'compensate_voltage', False, persistent=True)
         self.amphours = self.register(ResettableValue, 'amp_hours', 0, fmt='%.2f', persistent=True)

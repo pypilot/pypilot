@@ -16,8 +16,8 @@ class BasicPilot(AutopilotPilot):
     super(BasicPilot, self).__init__(name, ap)
 
     # create extended pid filter
-    self.PosGain('P',  .003, .1)   # position (heading error)
-    self.PosGain('I',   0, .1)       # integral
+    self.PosGain('P',  .003, .03)   # position (heading error)
+    self.PosGain('I',   0, .05)       # integral
     self.PosGain('D',  .09, 0.24)    # derivative (gyro)
     self.PosGain('DD', .075, 0.24) # rate of derivative
     self.PosGain('PR', .005, .02) # position root
