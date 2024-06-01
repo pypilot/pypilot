@@ -4,13 +4,13 @@
 
 Clone the repository by running the following command:
 
-```git clone https://github.com/pypilot/pypilot```
+`git clone https://github.com/pypilot/pypilot`
 
 ### Dependencies
 
 You could install the dependencies with the following command:
 
-```sudo python3 setup.py install```
+`sudo python3 setup.py install`
 
 ### Configuration
 
