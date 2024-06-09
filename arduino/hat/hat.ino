@@ -35,7 +35,7 @@
 #define PACKET_LEN 6
 
 #define VERSION_MAJOR  1
-#define VERSION_MINOR  1
+#define VERSION_MINOR  2
 
 // of packet bytes, first byte defines message type 
 enum {RF=0x01, IR=0x02, GP=0x03, VOLTAGE=0x04, ANALOG=0x05, VERSION=0x0a,
