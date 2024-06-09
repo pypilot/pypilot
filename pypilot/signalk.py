@@ -546,6 +546,8 @@ class signalk(object):
                 elif 'source' in update:
                     if 'talker' in update['source']:
                         source = update['source']['talker']
+                    elif 'label' in update['source']:
+                        source = update['source']['label']                            
 
                 if 'timestamp' in update:
                     timestamp = update['timestamp']
