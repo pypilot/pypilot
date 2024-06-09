@@ -271,7 +271,7 @@ class Arduino(Process):
                 elif key == 'version':
                     old_version = self.hat.config.get('arduino_firmware_version')
                     if old_version != code: 
-                        print('actual hat version update from ', old_version, ' to ', code)
+                        print('actual hat version update from', old_version, 'to', code)
                         self.hat.config['arduino_firmware_version'] = code;
                         self.hat.write_config()
                     available_version = self.hat.config.get('arduino_firmware_version_available', 0)
