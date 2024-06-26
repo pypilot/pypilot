@@ -46,6 +46,7 @@ class TackDialog(autopilot_control_ui.TackDialogBase):
 
 class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     ID_MESSAGES = 1000
+    ID_MANUAL = 1001
 
     def __init__(self):
         super(AutopilotControl, self).__init__(None)
@@ -71,6 +72,11 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.timer = wx.Timer(self, self.ID_MESSAGES)
         self.timer.Start(100)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=self.ID_MESSAGES)
+
+        self.manual_timer = wx.Timer(self, self.ID_MANUAL)
+        self.Bind(wx.EVT_TIMER, self.onManualTimer, id=self.ID_MANUAL)
+        self.manual_timeout = 0
+
         self.init()
 
 
@@ -301,6 +307,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                     self.cMode.Append(mode)
                     if mode == self.mode:
                         self.cMode.SetSelection(n)
+                        self.set_mode_color()
                     n += 1
             elif name == 'ap.heading_command':
                 self.stHeadingCommand.SetLabel('%.1f' % value)
@@ -405,6 +412,61 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             val = self.sCommand.GetMin() + (self.sCommand.GetMax() - self.sCommand.GetMin()) * x / self.sCommand.GetSize().x
             self.sCommand.SetValue(val)
 
+    def onCommandClick( self, event ):
+        if not self.apenabled:
+            return
+
+        if event.GetEventObject() == self.bPort10:
+            command = -10
+        elif event.GetEventObject() == self.bPort1:
+            command = -1
+        elif event.GetEventObject() == self.bStarboard1:
+            command = 1
+        elif event.GetEventObject() == self.bStarboard10:
+            command = 10
+        else:
+            return
+        
+        if 'wind' in self.mode:
+            command = -command
+        self.heading_command += command
+        self.client.set('ap.heading_command', self.heading_command)
+
+    def onCommandMouseDown( self, event ):
+        if self.apenabled:
+            event.Skip()
+            return
+        if event.GetEventObject() == self.bPort10:
+            command, timeout = 1, .3
+        elif event.GetEventObject() == self.bPort1:
+            command, timeout = 1, .2
+        elif event.GetEventObject() == self.bStarboard1:
+            command, timeout = -1, .2
+        elif event.GetEventObject() == self.bStarboard10:
+            command, timeout = -1, .3
+        else:
+            return
+
+        self.manual_timeout = time.monotonic() + timeout
+        self.servo_command(command)
+        if not self.manual_timer.IsRunning():
+            self.manual_timer.Start(int(timeout*1000))
+        event.Skip()
+
+    def onCommandMouseUp( self, event ):
+        if self.apenabled:
+            return
+        if self.manual_timeout < time.monotonic():
+            self.servo_command(0)
+        self.manual_timeout = 0
+
+    def onManualTimer(self, event):
+        if not self.manual_timeout or time.monotonic() > self.manual_timeout + 5:
+            self.manual_timer.Stop()
+            self.servo_command(0)
+        else:
+            self.servo_command(self.lastcommand)
+            
     def onCenter( self, event ):
         self.client.set('servo.position_command', 0)
 
