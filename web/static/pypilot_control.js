@@ -45,6 +45,7 @@ $(document).ready(function() {
     $('#rudder').text("N/A");
     $('#power_consumption').text("N/A");
     $('#runtime').text("N/A");
+    $('#center_button').hide();
 
     // Connect to the Socket.IO server.
     var port = location.port;
@@ -635,6 +636,8 @@ $(document).ready(function() {
         if(time - heading_set_time > 1000)
             heading_local_command = heading_command;
         heading_set_time = time;
+        if($('#mode').val().includes('wind'))
+            x = -x;
         heading_local_command += x;
         pypilot_set('ap.heading_command', heading_local_command);
     }
@@ -685,7 +688,7 @@ $(document).ready(function() {
         return false;
     }
 
-    buttons = {'#port1': [-.6, -1], '#star1': [.6, 1], '#port10': [-1, -10], '#star10': [1, 10]};
+    buttons = {'#port1': [.7, -1], '#star1': [-.7, 1], '#port10': [1, -10], '#star10': [-1, 10]};
     for (var name in buttons) {
         $(name).on('touchstart', nocontext);
         $(name).on('touchmove', nocontext);
