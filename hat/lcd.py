@@ -28,7 +28,7 @@ except:
     micropython = False
 
 driver = 'default'
-for pdriver in ['nokia5110', 'jlx12864', 'glut', 'framebuffer', 'tft', 'none']:
+for pdriver in ['nokia5110', 'jlx12864', 'ssd1309', 'glut', 'framebuffer', 'tft', 'none']:
     if pdriver in sys.argv:
         print('overriding lcd driver "' + driver + '" to command line "' + pdriver + '"')
         driver = pdriver
@@ -113,6 +113,8 @@ class LCD():
             screen = ugfx.spiscreen(0)
         elif driver == 'jlx12864':
             screen = ugfx.spiscreen(1)
+        elif driver == 'ssd1309':
+            screen = ugfx.spiscreen(2)
         elif driver == 'glut' or (driver == 'default' and use_glut):
             self.use_glut = True
             print('using glut')
