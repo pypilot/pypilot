@@ -771,7 +771,7 @@ public:
     }
 };
 
-// JLX12864G-086 
+// JLX12864G-086
 
 
 #define LCD_C LOW
@@ -972,7 +972,7 @@ static int detect(int driver) {
     
     return driver;
 }
-const int spilcdsizes[][2] = {{48, 84}, {64, 128}, {64, 128}};
+const int spilcdsizes[][2] = {{48, 84}, {64, 128}};
 
 spiscreen::spiscreen(int driver)
     : surface(spilcdsizes[detect(driver)][0], spilcdsizes[detect(driver)][1], 1, NULL)
@@ -981,8 +981,8 @@ spiscreen::spiscreen(int driver)
     switch (driver) {
 #ifdef WIRINGPI
     case 0: disp = new PCD8544(); break;
-    case 1: disp = new SSD1309(); break;
-    case 2: disp = new JLX12864G(); break;
+    case 1: disp = new JLX12864G(); break;
+    case 2: disp = new SSD1309(); break;
 #endif
     default:
         fprintf(stderr, "invalid driver: %d", driver);
