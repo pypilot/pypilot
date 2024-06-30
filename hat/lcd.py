@@ -111,9 +111,9 @@ class LCD():
             self.surface = screen
         elif driver == 'nokia5110' or (driver == 'default' and not use_glut):
             screen = ugfx.spiscreen(0)
-        elif driver == 'ssd1309':
-            screen = ugfx.spiscreen(1)
         elif driver == 'jlx12864':
+            screen = ugfx.spiscreen(1)
+        elif driver == 'ssd1309':
             screen = ugfx.spiscreen(2)
         elif driver == 'glut' or (driver == 'default' and use_glut):
             self.use_glut = True
