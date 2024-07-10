@@ -296,7 +296,7 @@ class page(object):
         speed = 0;
         sign = 0;
         if sp or ss:
-            speed = min(.6, .002*max(sp, ss)**1.6)
+            speed = max(.4, min(.8, .003*max(sp, ss)**1.8))
         if bp or bs:
             speed = max(.4, min(1, .006*max(bp, bs)**2.5))
 
