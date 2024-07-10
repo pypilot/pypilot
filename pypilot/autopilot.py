@@ -477,7 +477,7 @@ class Autopilot(object):
             self.sensors.gps.predict(self)
             self.sensors.water.compute(self) # calculate leeway and currents
 
-        self.boatimu.poll() # after critical loop is done
+        self.boatimu.poll(not self.enabled.value) # after critical loop is done, only calibrate (avoid updating when underway)
         self.tack.poll()
 
         if self.heading_command_rate.value:

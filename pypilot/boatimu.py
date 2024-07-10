@@ -564,8 +564,8 @@ class BoatIMU(object):
                          'fusionQPose': data['fusionQPose']}
         return data
 
-    def poll(self):
-        if self.auto_cal.calibration_ready() and self.cal_data:
+    def poll(self, calibrate=True):
+        if self.auto_cal.calibration_ready() and calibrate and self.cal_data:
             try:
                 self.auto_cal.cal_pipe.send(self.cal_data)
             except Exception as e:
