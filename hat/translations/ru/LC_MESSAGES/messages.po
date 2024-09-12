@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ru <LL@li.org>\n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
@@ -24,23 +24,23 @@ msgstr "конфигурация шляпы pypilot"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
-msgstr "настройка жк-дисплея и пульта ДУ"
+msgstr "ЖК-дисплей и пульт дистанционного управления"
 
 #: templates/index.html:17
 msgid "clear"
-msgstr "Чисто"
+msgstr "прозрачный"
 
 #: templates/index.html:17
 msgid "default"
-msgstr "дефолт"
+msgstr "по умолчанию"
 
 #: templates/index.html:18
 msgid ""
 "press button(s) on the keypad or remote then assign a command with the "
 "button."
 msgstr ""
-"нажмите кнопку (и) на клавиатуре или пульте дистанционного управления, затем"
-" назначьте команду с помощью кнопки."
+"нажмите кнопку (кнопки) на клавиатуре или пульте дистанционного управления, "
+"затем назначьте команду с помощью кнопки."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
@@ -60,7 +60,7 @@ msgid ""
 "wireless remotes."
 msgstr ""
 "Эти действия не зависят от состояния дисплея и могут использоваться "
-"беспроводными пультами дистанционного управления."
+"беспроводными пультами."
 
 #: templates/index.html:28
 msgid "infared receiver port"
@@ -72,9 +72,9 @@ msgid ""
 "arduino can receive from many different remotes without special calibration "
 "recordings."
 msgstr ""
-"ИК-порт может управляться напрямую от пи или ардуино. Используя arduino, "
-"можно получать сигналы от множества разных пультов без специальных "
-"калибровочных записей."
+"Портом можно управлять напрямую с пи или ардуино. С помощью arduino можно "
+"получать данные с множества разных пультов без специальных калибровочных "
+"записей."
 
 #: templates/index.html:36
 msgid "remote mode"
@@ -86,7 +86,7 @@ msgstr "удаленный"
 
 #: templates/index.html:41
 msgid "nmea current baud rate"
-msgstr "nmea текущая скорость передачи"
+msgstr "Текущая скорость передачи данных NMEA"
 
 #: templates/index.html:42
 msgid "voltages"
@@ -103,3 +103,71 @@ msgstr "связь"
 #: templates/index.html:45
 msgid "Web Server Latency"
 msgstr "Задержка веб-сервера"
+
+#~ msgid "pypilot hat configuration"
+#~ msgstr "конфигурация шляпы pypilot"
+
+#~ msgid "lcd and remote control setup"
+#~ msgstr "настройка жк-дисплея и пульта ДУ"
+
+#~ msgid "clear"
+#~ msgstr "Чисто"
+
+#~ msgid "default"
+#~ msgstr "дефолт"
+
+#~ msgid ""
+#~ "press button(s) on the keypad or remote then assign a command with the "
+#~ "button."
+#~ msgstr ""
+#~ "нажмите кнопку (и) на клавиатуре или пульте дистанционного управления, затем"
+#~ " назначьте команду с помощью кнопки."
+
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Действия для ЖК-интерфейса"
+
+#~ msgid "key"
+#~ msgstr "ключ"
+
+#~ msgid "action"
+#~ msgstr "действие"
+
+#~ msgid ""
+#~ "These actions do not depend on the state of the display and can be used by "
+#~ "wireless remotes."
+#~ msgstr ""
+#~ "Эти действия не зависят от состояния дисплея и могут использоваться "
+#~ "беспроводными пультами дистанционного управления."
+
+#~ msgid "infared receiver port"
+#~ msgstr "порт инфракрасного приемника"
+
+#~ msgid ""
+#~ "The ir port can be handled direcly from the pi or the arduino.  Using the "
+#~ "arduino can receive from many different remotes without special calibration "
+#~ "recordings."
+#~ msgstr ""
+#~ "ИК-порт может управляться напрямую от пи или ардуино. Используя arduino, "
+#~ "можно получать сигналы от множества разных пультов без специальных "
+#~ "калибровочных записей."
+
+#~ msgid "remote mode"
+#~ msgstr "удаленный режим"
+
+#~ msgid "remote"
+#~ msgstr "удаленный"
+
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea текущая скорость передачи"
+
+#~ msgid "voltages"
+#~ msgstr "напряжения"
+
+#~ msgid "status"
+#~ msgstr "положение дел"
+
+#~ msgid "connection"
+#~ msgstr "связь"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Задержка веб-сервера"

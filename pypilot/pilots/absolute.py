@@ -19,7 +19,6 @@ class AbsolutePilot(AutopilotPilot):
     super(AbsolutePilot, self).__init__('absolute', ap)
 
     # create simple pid filter
-    self.gains = {}
     self.PosGain('P', .05, 2)
     self.PosGain('I', 0, .05)
     self.PosGain('D', .2, 2)
@@ -43,6 +42,6 @@ class AbsolutePilot(AutopilotPilot):
     command = self.Compute(gain_values)
 
     if ap.enabled.value:
-        ap.servo.position_command.set(command)
+        ap.servo.position_command.command(command)
 
 pilot = AbsolutePilot

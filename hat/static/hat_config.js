@@ -9,7 +9,7 @@
 
 $(document).ready(function() {
     namespace = '';
-    $('#code').text("N/A");
+    $('#code').text('N/A');
     // Connect to the Socket.IO server.
     var port = location.port;
     port = web_port;
@@ -18,6 +18,7 @@ $(document).ready(function() {
     // Event handler for new connections.
     socket.on('connect', function(msg) {
         $('#connection').text('connected')
+        show_adc_channels();
     });
 
     socket.on('disconnect', function() {
@@ -41,20 +42,58 @@ $(document).ready(function() {
         $('#key1').text(key);
     });
 
+
     socket.on('action', function(action) {
         $('#action0').text(action);
         $('#action1').text(action);
     });
     
     socket.on('action_keys', function(keys) {
-        $('#action'+keys['name']+'keys').text(keys['keys'])
+        n = keys['name'].replace(' ', '_')
+        n = n.replace('+', 'plus')
+        $('#action'+n+'keys').text(keys['keys'])
     });
 
-    for (var i = 0; i < action_names.length; i++) {
-        $('#action_'+action_names[i]).click(function(event) {
+    shown_found_rf = false;
+    socket.on('found_rf_codes', function(channel) {
+        if(shown_found_rf)
+            return
+        shown_found_rf = true;
+        if(confirm('detected remote on channel ' + channel + ' program default codes?')) {
+            // remove any rf keys
+            // program this channel
+            socket.emit('program_rf_codes', channel);
+        }
+    });
+
+    function program_button(event) {
+        if($('#action0').text().length == 0) {
+            if(confirm('clear all codes for' + ' "' + event.target.innerText + '" ?'))
+                socket.emit('keys', 'clearcodes'+event.target.innerText);
+        } else
             socket.emit('keys', event.target.innerText);
-        });
     }
+
+    socket.on('profiles', function(profiles) {
+        html = '<table>';
+        for(var profile of profiles) {
+            p = profile.replace(' ', '_')
+            html += '<tr><td><button id="action_profile_' +
+                p + '">profile ' +
+                profile + '</button></td><td><span id="actionprofile_' + p + 'keys"></span></td></tr>';
+        }
+        html += '</table>';
+        $('#action_profiles').html(html);
+
+        for(var profile of profiles) {
+            p = profile.replace(' ', '_')
+            //$('#action_profile_'+p).unbind('click')
+            $('#action_profile_'+p).click(program_button);
+        }
+    });
+    
+    for (var i = 0; i < action_names.length; i++)
+        $('#action_'+action_names[i]).click(program_button);
 
     $('#clear').click(function(event) {
         socket.emit('keys', 'clear');
@@ -63,6 +102,30 @@ $(document).ready(function() {
     $('#default').click(function(event) {
         socket.emit('keys', 'default');
     });
+
+    function show_adc_channels() {
+        count = parseInt($('#adc_channels').val());
+        for (var i = 0; i<3; i++)
+            if(i < count)
+                $('#adc_channel_'+i).show();
+            else
+                $('#adc_channel_'+i).hide();
+    }        
+
+    $('#adc_channels').change(function(event) {
+        show_adc_channels();
+        send_adc_channels(event);
+    });
+    for (var i = 0; i<3; i++)
+        $('#adc_channel_' + i + '_select').change(send_adc_channels);
+    
+    function send_adc_channels(event) {
+        adc_channels = []
+        count = parseInt($('#adc_channels').val());
+        for (var i = 0; i<count; i++)
+            adc_channels.push($('#adc_channels_'+i+'_select').val());
+        socket.emit('config', {'arduino.adc_channels': adc_channels});
+    }        
 
     function config_ir() {
         socket.emit('config', {'pi.ir': document.getElementById('pi_ir').checked});
@@ -74,7 +137,7 @@ $(document).ready(function() {
     
     $('#arduino_nmea_in').click(function(event) {
         socket.emit('config', {'arduino.nmea.in': document.getElementById('arduino_nmea_in').checked});
-    });
+   });
     
     $('#arduino_nmea_out').click(function(event) {
         socket.emit('config', {'arduino.nmea.out': document.getElementById('arduino_nmea_out').checked});
@@ -88,6 +151,10 @@ $(document).ready(function() {
         if(!document.getElementById('remote').checked)
             document.getElementById('host').value = 'localhost'
         socket.emit('config', {'host': document.getElementById('host').value});
+    });
+
+    $('#command').change(function(event) {
+        socket.emit('config', {'command': document.getElementById('command').value});
     });
     
     // Interval function that tests message latency by sending a "ping"

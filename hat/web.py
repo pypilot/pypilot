@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2021 Sean D'Epagnier
+#   Copyright (C) 2023 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -17,16 +17,74 @@ socketio = SocketIO(app, async_mode=None)
 
 web_port = 33333
 
-default_actions = \
-    {'auto':['ir030C1000','ir030C1800','KEY_POWER','gpio17','rf7E1C2950','rf7E0C2950'],
-     'menu':['ir030D1000','ir030D1800','KEY_MUTE','gpio23','rf7D1C2950','rf7D0C2950'],
-     'port1':['ir03201800','ir03201000','KEY_UP','gpio27','rf771C2950','rf770C2950'],
-     'starboard1':['ir03211800','ir03211000','KEY_DOWN','gpio22','rf7B1C2950','rf7B0C2950'],
-     'select':['ir030B1000','ir030B1800','KEY_SELECT','gpio18','rf6F1C2950','rf6F0C2950'],
-     'port10':['ir03111800','ir03111000','KEY_LEFT','gpio6','rf3F1C2950','rf3F0C2950'],
-     'starboard10':['ir03101800','ir03101000','KEY_RIGHT','gpio5','rf5F1C2950','rf5F0C2950'],
-     'tack':['gpio26','rf7F1C2910','rf7F0C2910']}
+# strap pins for remotes give different codes depending on if the remote is intended to be used with the display or not
+REMOTE = 0x5
+PANEL =  0xF
 
+# both types of remotes
+STANDBY, COMPASS, PLUS1, MINUS1, GPS, PLUS10, MINUS10, WIND = list(map(lambda x : 2 ** x, range(8)))
+AUTO, MENU, PLUS1, MINUS1, MODE, PLUS10, MINUS10            = list(map(lambda x : 2 ** x, range(7)))
+
+# definitions for multiple keys pressed
+TACK_PORT = MINUS10 | MINUS1 
+TACK_STARBOARD = PLUS10 | PLUS1
+NAV_MODE = COMPASS | GPS
+TRUE_WIND_MODE = GPS | WIND
+
+def lmap(*cargs):
+    return list(map(*cargs))
+
+def rf_code(pinc, pind):
+    def wd_code(wd):
+        code = ~pind, pind, (pinc ^ wd)
+        code4 = code[0] & 0x7f, code[1] & 0x7f, code[2] & 0x7f, (code[0]&0x80)>>1 | (code[1]&0x80)>>2 | (code[2]&0x80)>>3
+        return 'rf%02X%02X%02X%02X' % (code4[0], code4[1], code4[2], code4[3])
+    return wd_code
+
+def generate_codes(channel):
+    pins = {'-10_': (PANEL, MINUS10), '-1_': (PANEL, MINUS1),
+            '+10_': (PANEL, PLUS10), '+1_': (PANEL, PLUS1),
+            'auto_': (PANEL, AUTO), 'menu_': (PANEL, MENU),
+            'mode_': (PANEL, MODE),
+
+            '-10': (REMOTE, MINUS10), '-1': (REMOTE, MINUS1),
+            '+10': (REMOTE, PLUS10), '+1': (REMOTE, PLUS1),
+            'standby': (REMOTE, STANDBY), 'compass mode': (REMOTE, COMPASS),
+            'gps mode': (REMOTE, GPS), 'wind mode': (REMOTE, WIND),
+
+            'tack port': [(REMOTE, TACK_PORT), (PANEL, TACK_PORT)],
+            'tack starboard': [(REMOTE, TACK_STARBOARD), (PANEL, TACK_STARBOARD)],
+            'nav mode': (REMOTE, NAV_MODE),
+            'true wind mode': (REMOTE, TRUE_WIND_MODE)}
+    codes = {}
+    for name, pins in pins.items():        
+        if type(pins) != type([]):
+            pins = [pins]
+        for (pinc, pind) in pins:
+            pinc ^= channel<<2
+            codes[name] = codes.get(name, []) + lmap(rf_code(pinc, pind), [0xac, 0xdc])
+    return codes
+
+
+all_code_channels = {}
+for channel in range(8):
+    for name, codes in generate_codes(channel).items():
+        for code in codes:
+            all_code_channels[code] = channel
+
+
+default_actions = \
+    {'-10_': ['ir03111800','ir03111000','KEY_LEFT'  ,'gpio06'],
+     '-1_':  ['ir03201800','ir03201000','KEY_UP'    ,'gpio27'],
+     '+1_':  ['ir03211800','ir03211000','KEY_DOWN'  ,'gpio22'],
+     '+10_': ['ir03101800','ir03101000','KEY_RIGHT' ,'gpio05'],
+     'auto_':['ir030C1000','ir030C1800','KEY_POWER' ,'gpio17'],
+     'menu_':['ir030D1000','ir030D1800','KEY_MUTE'  ,'gpio23'],
+     'mode_':['ir030B1000','ir030B1800','KEY_SELECT','gpio18'],
+
+     'tack port':      ['gpio27_06'],
+     'tack starboard': ['gpio22_05'],
+    }
 
 try:
     from flask_babel import Babel, gettext
@@ -51,6 +109,7 @@ class WebConfig(Namespace):
         self.pipe = pipe
         self.config = config
         self.status = 'N/A'
+        self.profiles = False
 
         self.last_key = False
 
@@ -63,7 +122,12 @@ class WebConfig(Namespace):
         i = 0
         actions = config['actions']
         for name in actions:
-            if i == 8:
+            if name.startswith('profile '):
+                continue
+
+            n = name.replace(' ', '_')
+            n = n.replace('+', 'plus')
+            if i == 7:
                 acts[ind] += Markup('</tr></table>')
                 ind = 1
                 acts[ind] += Markup('<table border=0>')
@@ -72,20 +136,42 @@ class WebConfig(Namespace):
     
             if col == 0:
                 acts[ind] += Markup('<tr>')
-            acts[ind] += Markup('<td><button id="action_' + name + '">' +
-                           name + '</button></td><td><span id="action' +
-                           name + 'keys"></span></td>')
+            acts[ind] += Markup('<td><button id="action_' + n + '">' +
+                                name + '</button></td><td><span id="action' +
+                                n + 'keys"></span></td>')
             if col == cols-1:
                 acts[ind] += Markup('</tr>')
                 col = 0
             else:
                 col += 1
-            names += Markup('"' + name + '", ')
+            names += Markup('"' + n + '", ')
 
         acts[ind] += Markup('</table>')
-
         names += Markup('""]')
 
+        adc_channels = Markup('<select id="adc_channels">')
+        cadc = config.get('adc_channels', [])
+
+        for i in range(4):
+            adc_channels += Markup('<option value="' + str(i) + '"');
+            if i == len(cadc):
+                adc_channels += Markup(' selected')
+            adc_channels += Markup('>' + str(i) + '</option>');
+        adc_channels += Markup('</select>')
+        for i in range(3):
+            #adc_channels += Markup('<br>')
+            adc_channels += Markup('<div id="adc_channel_' + str(i) + '">')
+            adc_channels += Markup('Channel ' + str(i))
+            adc_channels += Markup('<select id="adc_channel_' + str(i) + '_select">')
+            options = ['none', 'steering', 'custom']
+            for option in options:
+                adc_channels += Markup('<option value="' + option + '"')
+                if i < len(cadc) and cadc[i] == option:
+                    adc_channels += Markup(' selected')
+                adc_channels += Markup('>' + option + '</option>')
+            adc_channels += Markup('</select>')
+            adc_channels += Markup('</div>')
+        
         ir = Markup('<input type="radio" id="pi_ir" name="ir"')
         if config['pi.ir']:
             ir += Markup(' checked')
@@ -112,11 +198,11 @@ class WebConfig(Namespace):
         remote = Markup('<input type="checkbox" id="remote"')
         if config['host'] != 'localhost':
             remote += Markup(' checked')
-        remote += Markup('/><input type="text" id="host" value="' + config['host'] + '">')
+        remote += Markup(' /><input type="text" id="host" value="' + config['host'] + '" />')
 
         @app.route('/')
         def index():
-            return render_template('index.html', async_mode=socketio.async_mode, web_port=web_port, actionkeys = acts, action_names = names, ir_settings = ir, nmea_settings = nmea, remote_settings = remote)
+            return render_template('index.html', async_mode=socketio.async_mode, web_port=web_port, actionkeys = acts, action_names = names, adc_channels = adc_channels, ir_settings = ir, nmea_settings = nmea, remote_settings = remote)
 
     def on_ping(self):
         emit('pong')
@@ -134,21 +220,38 @@ class WebConfig(Namespace):
                 actions[name] = []
 
             for name, keys in default_actions.items():
-                actions[name] = keys.copy()
+                if not name in actions:
+                    actions[name] = []
+                actions[name] += keys.copy()
 
+            for name, keys in generate_codes(0).items():
+                if not name in actions:
+                    actions[name] = []
+                actions[name] += keys.copy()
+
+            self.emit_keys()
+            return
+
+        if command.startswith('clearcodes'):
+            command = command[10:]
+            if command in actions:
+                actions[command] = []
             self.emit_keys()
             return
 
         if not self.last_key:
             return
-        
+
         # remove this key from any actions
         for name, keys in actions.items():
             while self.last_key in keys:
                 keys.remove(self.last_key)
 
         # add the last key to the action
-        actions[command].append(self.last_key)
+        if command != 'none':
+            if not command in actions:
+                actions[command] = []
+            actions[command].append(self.last_key)
         self.emit_keys()
 
     def on_config(self, config):
@@ -157,14 +260,38 @@ class WebConfig(Namespace):
     def emit_keys(self):
         actions = self.config['actions']
         for name, keys in actions.items():
-            keys = {'name': name, 'keys': keys}
+            keys = {'name': name.replace(' ', '_'), 'keys': keys}
             socketio.emit('action_keys', keys)
         self.pipe.send({'actions': actions})
-        
+
     def on_connect(self):
+        if self.profiles:
+            socketio.emit('profiles', self.profiles)
         self.emit_keys()
+
         print('web client connected', request.sid)
-        socketio.emit('status', self.status)
+
+    def on_program_rf_codes(self, channel):
+        print('program rf', channel)
+        if not channel in range(8):
+            return
+        actions = self.config['actions']
+
+        # remove any programming for any of these codes
+        rf_codes = generate_codes(channel)
+        for name, keys in rf_codes.items():
+            for key in keys:
+                for name, keys in actions.items():
+                    while key in keys:
+                        keys.remove(key)
+
+        # add programming for this code
+        for name, keys in rf_codes.items():
+            if not name in actions:
+                actions[name] = []
+            actions[name] += keys
+        self.emit_keys()
+
 
     def on_disconnect(self):
         print('web client disconnected', request.sid)
@@ -193,13 +320,26 @@ class WebConfig(Namespace):
                     break
 
                 if 'key' in msg:
-                    self.last_key = msg['key']
+                    self.last_key = msg['key']                    
                     last_key_time = time.monotonic()
+
+                if msg.get('action') == 'none': # if we have a known remote c
+                    if self.last_key in all_code_channels:
+                        channel = all_code_channels[self.last_key]
+                        print('found rf codes', channel)
+                        socketio.emit('found_rf_codes', channel)
+                    
                 for name in msg:
-                    socketio.emit(name, str(msg[name]))
+                    d = msg[name]
+                    if name != 'profiles':
+                        d = str(d)
+                    socketio.emit(name, d)
                 if 'status' in msg:
                     self.status = msg['status']
                     socketio.emit('status', self.status)
+                if 'profiles' in msg:
+                    self.profiles = msg['profiles']
+                    self.emit_keys()
 
 def web_process(pipe, config):
     print('web process', os.getpid())

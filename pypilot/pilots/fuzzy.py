@@ -112,9 +112,6 @@ class FuzzyPilot(AutopilotPilot):
         super(FuzzyPilot, self).__init__('fuzzy', ap)
 
         # create simple pid filter
-
-        self.gains = {}
-        
         self.learningP = self.register(RangeProperty, 'learningP', .003, 0, .02)
         self.learningD = self.register(RangeProperty, 'learningD', .09, 0, 1)
         
@@ -174,7 +171,7 @@ class FuzzyPilot(AutopilotPilot):
         # compute fuzzy command from matrix and command servo
         command = fuzzy_compute(0, self.dimensions, self.matrix)
         t2 = time.monotonic()
-        ap.servo.command.set(command)
+        ap.servo.command.command(command)
         t3 = time.monotonic()
 
         # feedback to update fuzzy matrix

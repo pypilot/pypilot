@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from pypilot.autopilot import HeadingOffset, resolv
+from pypilot.resolv import resolv
 from pilot import AutopilotPilot, AutopilotGain
 from pypilot.values import *
 disabled = True
@@ -56,7 +56,7 @@ class GPSPilot(AutopilotPilot):
     if mode == 'compass': # only if gps failed use compass
       compass = ap.boatimu.SensorValues['heading_lowpass'].value
       ap.heading.set(compass)
-    if mode == 'gps':
+    if mode == 'gps' or mode == 'nav':
       ap.heading.set(gps_course) # no filter?
     elif mode == 'wind':
       wind = resolv(self.wind_gps_offset.value - gps_course, 180)  
@@ -66,30 +66,27 @@ class GPSPilot(AutopilotPilot):
       ap.heading.set(true_wind)
 
   def best_mode(self, mode):
-      sensors = self.ap.sensors
-      gps_speed = sensors.gps.speed.value
-      nogps = sensors.gps.source.value == 'none' or gps_speed < 1.2
-      nowind = sensors.wind.source.value == 'none'
-      if nogps:  # fallback to compass only if gps has failed boat speed < 1.2knots
-        return 'compass'
-      elif mode == 'compass' or nowind:
-        return 'gps' # force gps mode overriding compass mode
+      modes = self.ap.modes.value
+      if not mode in modes:  # fallback to compass
+          if 'gps' in modes:
+              return 'gps'
+          return 'compass'
       return mode
       
   def process(self):
-    ap = self.ap
+      ap = self.ap
 
-    # compute command
-    headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
-    headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
-    gain_values = {'P': ap.heading_error.value,
-                   'D': headingrate,      
-                   'DD': headingraterate,
-                   'FF': ap.heading_command_rate.value}
+      # compute command
+      headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
+      headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
+      gain_values = {'P': ap.heading_error.value,
+                     'D': headingrate,      
+                     'DD': headingraterate,
+                     'FF': ap.heading_command_rate.value}
 
-    command = self.Compute(gain_values)
-
-    if ap.enabled.value:
-      ap.servo.command.set(command)
+      command = self.Compute(gain_values)
+      
+      if ap.enabled.value:
+          ap.servo.command.command(command)
 
 pilot = GPSPilot

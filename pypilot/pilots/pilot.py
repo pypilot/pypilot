@@ -12,7 +12,7 @@ from pypilot.resolv import resolv
 
 class AutopilotGain(RangeProperty):
     def __init__(self, *cargs):
-        super(AutopilotGain, self).__init__(*cargs, persistent=True)
+        super(AutopilotGain, self).__init__(*cargs, persistent=True, profiled=True)
         self.info['AutopilotGain'] = True
 
 class AutopilotPilot(object):
@@ -20,6 +20,7 @@ class AutopilotPilot(object):
         super(AutopilotPilot, self).__init__()
         self.name = name
         self.ap = ap
+        self.gains = {}
 
     def register(self, _type, name, *args, **kwargs):
         return self.ap.client.register(_type(*(['ap.pilot.' + self.name + '.' + name] + list(args)), **kwargs))
@@ -55,7 +56,7 @@ class AutopilotPilot(object):
         elif ap.mode.value == 'wind':
             wind = resolv(ap.wind_compass_offset.value - compass)
             ap.heading.set(wind)
-        elif ap.mode.value == 'gps':
+        elif ap.mode.value == 'gps' or ap.mode.value == 'nav':
             gps = resolv(compass + ap.gps_compass_offset.value, 180)
             ap.heading.set(gps)
         elif ap.mode.value == 'compass':
@@ -63,16 +64,10 @@ class AutopilotPilot(object):
 
     # return new mode if sensors don't support it
     def best_mode(self, mode):
-        sensors = self.ap.sensors
-        nowind = sensors.wind.source.value == 'none'
-        notruewind = sensors.truewind.source.value == 'none'
-        nogps = sensors.gps.source.value == 'none'
-        nowater = sensors.water.source.value == 'none'
-
-        if mode == 'true wind' and notruewind:
-            mode = 'wind'
-        if mode == 'wind' and nowind:
-            return 'compass'
-        if mode == 'gps' and nogps:
-            return 'compass'
+        modes = self.ap.modes.value
+        while not mode in modes:
+            fallbacks = {'nav': 'gps', 'gps': 'compass', 'wind': 'compass', 'true wind': 'wind'}
+            if not mode in fallbacks:
+                break
+            mode = fallbacks[mode] 
         return mode

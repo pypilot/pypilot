@@ -102,6 +102,9 @@ class zeroconf(threading.Thread):
                         zeroconf[address].register_service(info[address])
                     except Exception as e:
                         print('zeroconf exception:', e)
+                        print('e is', info, address)
+                        addresses = []
+                        break # maybe try again?
                         
             time.sleep(60)
 

@@ -160,7 +160,10 @@ def enumerate_devices():
     if enumstate == 'init':
         enumstate = {'monitor': False, 'starttime': t0, 'scantime': 0, 'retries': 0, 'pyudevwarning': False}
         devices = {}
-        read_last_working_devices()
+        try:
+            read_last_working_devices()
+        except Exception as e:
+            print('read_last_working_devices failed', e)
 
     if enumstate['monitor']:
         # only scan devices if they change

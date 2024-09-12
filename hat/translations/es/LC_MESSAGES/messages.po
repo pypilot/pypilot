@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: es <LL@li.org>\n"
@@ -16,11 +16,11 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
-msgstr "configuración del sombrero pypilot"
+msgstr "configuración del sombrero de pypilot"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
@@ -32,15 +32,15 @@ msgstr "claro"
 
 #: templates/index.html:17
 msgid "default"
-msgstr "defecto"
+msgstr "por defecto"
 
 #: templates/index.html:18
 msgid ""
 "press button(s) on the keypad or remote then assign a command with the "
 "button."
 msgstr ""
-"presione el (los) botón (s) en el teclado o el control remoto y luego asigne"
-" un comando con el botón."
+"presione el (los) botón(es) en el teclado o en el control remoto y luego "
+"asigne un comando con el botón."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
@@ -72,8 +72,8 @@ msgid ""
 "arduino can receive from many different remotes without special calibration "
 "recordings."
 msgstr ""
-"El puerto ir se puede manejar directamente desde pi o arduino. El uso del "
-"arduino puede recibir desde muchos controles remotos diferentes sin "
+"El puerto ir se puede manejar directamente desde el pi o el arduino. Usando "
+"el arduino puede recibir desde muchos controles remotos diferentes sin "
 "grabaciones de calibración especiales."
 
 #: templates/index.html:36
@@ -86,7 +86,7 @@ msgstr "remoto"
 
 #: templates/index.html:41
 msgid "nmea current baud rate"
-msgstr "nmea velocidad en baudios actual"
+msgstr "nmea tasa de baudios actual"
 
 #: templates/index.html:42
 msgid "voltages"
@@ -102,4 +102,72 @@ msgstr "conexión"
 
 #: templates/index.html:45
 msgid "Web Server Latency"
-msgstr "Latencia del servidor web"
+msgstr ""
+
+#~ msgid "pypilot hat configuration"
+#~ msgstr "configuración del sombrero pypilot"
+
+#~ msgid "lcd and remote control setup"
+#~ msgstr "configuración de lcd y control remoto"
+
+#~ msgid "clear"
+#~ msgstr "claro"
+
+#~ msgid "default"
+#~ msgstr "defecto"
+
+#~ msgid ""
+#~ "press button(s) on the keypad or remote then assign a command with the "
+#~ "button."
+#~ msgstr ""
+#~ "presione el (los) botón (s) en el teclado o el control remoto y luego asigne"
+#~ " un comando con el botón."
+
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Acciones para la interfaz LCD"
+
+#~ msgid "key"
+#~ msgstr "llave"
+
+#~ msgid "action"
+#~ msgstr "acción"
+
+#~ msgid ""
+#~ "These actions do not depend on the state of the display and can be used by "
+#~ "wireless remotes."
+#~ msgstr ""
+#~ "Estas acciones no dependen del estado de la pantalla y pueden ser utilizadas"
+#~ " por controles remotos inalámbricos."
+
+#~ msgid "infared receiver port"
+#~ msgstr "puerto receptor de infrarrojos"
+
+#~ msgid ""
+#~ "The ir port can be handled direcly from the pi or the arduino.  Using the "
+#~ "arduino can receive from many different remotes without special calibration "
+#~ "recordings."
+#~ msgstr ""
+#~ "El puerto ir se puede manejar directamente desde pi o arduino. El uso del "
+#~ "arduino puede recibir desde muchos controles remotos diferentes sin "
+#~ "grabaciones de calibración especiales."
+
+#~ msgid "remote mode"
+#~ msgstr "modo remoto"
+
+#~ msgid "remote"
+#~ msgstr "remoto"
+
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea velocidad en baudios actual"
+
+#~ msgid "voltages"
+#~ msgstr "voltajes"
+
+#~ msgid "status"
+#~ msgstr "estado"
+
+#~ msgid "connection"
+#~ msgstr "conexión"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Latencia del servidor web"

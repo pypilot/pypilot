@@ -1,8 +1,9 @@
 This script writes to the pypilot hat eeprom to specify which devices that particular hat is using.
 
 git clone https://github.com/raspberrypi/hats/
+edit to make always not ask
 cd hats/eepromutils
 make
-sudo cp eepflash.sh  eepmake eepdump /usr/local/bin
+sudo make install
 cd ../..
 

@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+  <body>
+    <H2>pypilot web client</H2>
+      <script type="text/javascript" src="static/jquery.min.js"></script>
+      <script type="text/javascript" src="static/socket.io.min.js"></script>
+      <script type="text/javascript" src="static/pypilot_client.js"></script>
+      <script>
+        var pypilot_web_port = {{pypilot_web_port}};
+      </script>
+      <table id="values">
+      </table>
+      <p><a href="/">back</a>
+      <br>{{_('Connection')}}: <span id="connection"></span>
+   </body>
+</html> 
+

@@ -27,7 +27,7 @@ signalk_table = {'wind': {('environment.wind.speedApparent', meters_s): 'speed',
                          ('navigation.speedOverGround', meters_s): 'speed',
                          ('navigation.position', 1): {'latitude': 'lat',
                                                       'longitude': 'lon'}},
-                 'rudder': {('steering.rudderAngle', radians): 'angle'},
+                 'rudder': {('steering.rudderAngle', -radians): 'angle'},
                  'apb': {('steering.autopilot.target.headingTrue', radians): 'track'},
                  'imu': {('navigation.headingMagnetic', radians): 'heading_lowpass',
                          ('navigation.attitude', radians): {'pitch': 'pitch', 'roll': 'roll', 'yaw': 'heading_lowpass'},
@@ -41,6 +41,80 @@ def debug(*args):
     #print(*args)
     pass
 
+class ZeroConfProcess(multiprocessing.Process): 
+    def __init__(self, signalk):
+        self.name_type = False
+        self.pipe = NonBlockingPipe('zeroconf', True)
+        super(ZeroConfProcess, self).__init__(target=self.process, daemon=True)
+        self.start()
+            
+    def remove_service(self, zc, type, name):
+        print('signalk zeroconf ' + _('service removed'), name, type)
+        if self.name_type == (name, type):
+            self.pipe[1].send('disconnect')
+            print('signalk zeroconf ' + _('server lost'))
+
+    def update_service(self, zc, type, name):
+        self.add_service(zc, type, name)
+
+    def add_service(self, zc, type, name):
+        print('signalk zeroconf ' + _('service add'), name, type)
+        info = zc.get_service_info(type, name)
+        if not info:
+            return
+        properties = {}
+        for name, value in info.properties.items():
+            try:
+                properties[name.decode()] = value.decode()
+            except Exception as e:
+                print('signalk zeroconf exception', e, name, value)
+
+        if 'swname' in properties and properties['swname'] == 'signalk-server':
+            try:
+                host_port = socket.inet_ntoa(info.addresses[0]) + ':' + str(info.port)
+            except Exception as e:
+                host_port = socket.inet_ntoa(info.address) + ':' + str(info.port)
+            self.name_type = name, type
+            self.pipe[1].send(host_port)
+
+
+    def process(self):
+        warned = False        
+        while True:
+            try:
+                import zeroconf
+                if warned:
+                    print('signalk:' + _('succeeded') + ' import zeroconf')
+                break
+            except Exception as e:
+                if not warned:
+                    print('signalk: ' + _('failed to') + ' import zeroconf, ' + _('autodetection not possible'))
+                    print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
+                    warned = True
+                time.sleep(20)
+
+        current_ip_address = []
+        zc = None
+        while True:
+            new_ip_address = zeroconf.get_all_addresses()
+            if current_ip_address != new_ip_address:
+                debug("IP address changed from ", current_ip_address, "to", new_ip_address)
+                current_ip_address = new_ip_address
+                if zc != None:
+                    zc.close()
+                zc = zeroconf.Zeroconf()
+                self.browser = zeroconf.ServiceBrowser(zc, "_http._tcp.local.", self)
+            time.sleep(5)
+
+    def poll(self):  # from signalk process
+        last = False
+        while True:
+            p = self.pipe[0].recv()
+            if not p:
+                return last
+            last = p
+
+
 class signalk(object):
     def __init__(self, sensors=False):
         self.sensors = sensors
@@ -53,17 +127,19 @@ class signalk(object):
             self.client = pypilotClient(server)
 
         self.initialized = False
-        self.missingzeroconfwarned = False
         self.signalk_access_url = False
         self.last_access_request_time = 0
 
         self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('signalk pipe', self.multiprocessing)
+        self.zero_conf = ZeroConfProcess(self)
+        
         if self.multiprocessing:
             import multiprocessing
             self.process = multiprocessing.Process(target=self.process, daemon=True)
             self.process.start()
         else:
             self.process = False
+
 
     def setup(self):
         try:
@@ -73,18 +149,8 @@ class signalk(object):
             f.close()
         except Exception as e:
             print('signalk ' + _('failed to read token'), token_path)
-            self.token = False
+            self.invalid_token()
 
-        try:
-            from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
-        except Exception as e:
-            if not self.missingzeroconfwarned:
-                print('signalk: ' + _('failed to') + ' import zeroconf, ' + _('autodetection not possible'))
-                print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
-                self.missingzeroconfwarned = True
-            time.sleep(20)
-            return
-            
         self.last_values = {}
         self.last_sources = {}
         self.signalk_last_msg_time = {}
@@ -106,48 +172,9 @@ class signalk(object):
         self.signalk_host_port = False
         self.signalk_ws_url = False
         self.ws = False
-        
-        class Listener:
-            def __init__(self, signalk):
-                self.signalk = signalk
-                self.name_type = False
-            
-            def remove_service(self, zeroconf, type, name):
-                debug('signalk zeroconf ' + _('service removed'), name, type)
-                if self.name_type == (name, type):
-                    self.signalk.signalk_host_port = False
-                    self.signalk.disconnect_signalk()
-                    print('signalk ' + _('server lost'))
 
-            def update_service(self, zeroconf, type, name):
-                self.add_service(zeroconf, type, name)
-
-            def add_service(self, zeroconf, type, name):
-                debug('signalk zeroconf ' + _('service add'), name, type)
-                self.name_type = name, type
-                info = zeroconf.get_service_info(type, name)
-                if not info:
-                    return
-                properties = {}
-                for name, value in info.properties.items():
-                    try:
-                        properties[name.decode()] = value.decode()
-                    except Exception as e:
-                        print('signalk zeroconf exception', e, name, value)
-
-                if 'swname' in properties and properties['swname'] == 'signalk-server':
-                    try:
-                        host_port = socket.inet_ntoa(info.addresses[0]) + ':' + str(info.port)
-                    except Exception as e:
-                        host_port = socket.inet_ntoa(info.address) + ':' + str(info.port)
-                    self.signalk.signalk_host_port = host_port
-                    print('signalk ' + _('server found'), host_port)
-
-        zeroconf = Zeroconf()
-        listener = Listener(self)
-        browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
-        #zeroconf.close()
         self.initialized = True
+        
 
     def probe_signalk(self):
         debug('signalk ' + _('probe') + '...', self.signalk_host_port)
@@ -193,10 +220,18 @@ class signalk(object):
                                 f.close()
                             except Exception as e:
                                 print('signalk ' + _('failed to store token'), token_path)
+                    else:
+                        self.uid.set('pypilot') # re-enumerate a new ID
                         # if permission == DENIED should we try other servers??
                     self.signalk_access_url = False
             except Exception as e:
                 print('signalk ' + _('error requesting access'), e)
+                import traceback
+                print(traceback.format_exc())
+                try:
+                    print('content', r.content)
+                except Exception as e:
+                    print('no content', e)
                 self.signalk_access_url = False
             return
 
@@ -212,13 +247,26 @@ class signalk(object):
             r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":self.uid.value, "description": "pypilot"})
             
             contents = pyjson.loads(r.content)
-            debug('signalk post', contents)
+            print('signalk post', contents)
             if contents['statusCode'] == 202 or contents['statusCode'] == 400:
                 self.signalk_access_url = 'http://' + self.signalk_host_port + contents['href']
-                debug('signalk ' + _('request access url'), self.signalk_access_url)
+                print('signalk ' + _('request access url'), self.signalk_access_url)
         except Exception as e:
-            print('signalk ' + _('error requesting access'), e)
+            print('signalk ' + _('error posting access'), e)
+            import traceback
+            print(traceback.format_exc())
+            try:
+                print('content', r.content)
+            except Exception as e:
+                print('no content', e)
             self.signalk_ws_url = False
+
+    def invalid_token(self):
+        self.token = False
+        try:
+            os.unlink(token_path)
+        except:
+            pass # ignore
         
     def connect_signalk(self):
         try:
@@ -238,9 +286,9 @@ class signalk(object):
         try:
             self.ws = create_connection(self.signalk_ws_url, header={'Authorization': 'JWT ' + self.token})
             self.ws.settimeout(0) # nonblocking
-        except WebSocketBadStatusException:
-            print('signalk ' + _('bad status, rejecting token'))
-            self.token = False
+        except WebSocketBadStatusException as e:
+            print('signalk ' + _('bad status, rejecting token'), e)
+            self.invalid_token()
             self.ws = False
         except ConnectionRefusedError:
             print('signalk ' + _('connection refused'))
@@ -285,6 +333,16 @@ class signalk(object):
             self.setup()
             return
 
+        zc = self.zero_conf.poll()
+        if zc == 'disconnect':
+            self.signalk_host_port = False
+            self.disconnect_signalk()
+        elif zc:
+            host_port = zc
+            self.signalk_host_port = host_port
+            print('signalk ' + _('server found'), host_port)
+        
+        
         self.client.poll(timeout)
         if not self.signalk_host_port:
             return # waiting for signalk to detect
@@ -350,8 +408,8 @@ class signalk(object):
             if not msg:
                 print('signalk server closed connection')
                 if not self.keep_token:
-                    print('signalk invalidating token')
-                    self.token = False
+                    debug('signalk invalidating token')
+                    self.invalid_token()
                 self.disconnect_signalk()
                 return
 
@@ -488,6 +546,8 @@ class signalk(object):
                 elif 'source' in update:
                     if 'talker' in update['source']:
                         source = update['source']['talker']
+                    elif 'label' in update['source']:
+                        source = update['source']['label']                            
 
                 if 'timestamp' in update:
                     timestamp = update['timestamp']
@@ -518,7 +578,7 @@ class signalk(object):
         if watch:
             watch = self.period.value
 
-        if sensor == 'gps':
+        if sensor == 'gps': # the fix contains everything
             self.client.watch('gps.fix', watch)
         else:
             for signalk_path_conversion, pypilot_path in signalk_table[sensor].items():

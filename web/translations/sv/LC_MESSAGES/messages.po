@@ -7,66 +7,87 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-25 21:11-0400\n"
+"POT-Creation-Date: 2023-04-07 14:58-0400\n"
 "PO-Revision-Date: 2021-05-08 20:38-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: sv\n"
 "Language-Team: sv <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Language: sv\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.6.0\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Generated-By: Babel 2.12.1\n"
 
-#: static/pypilot_control.js:37
+#: web.py:84
+msgid "failed to read log file"
+msgstr "kunde inte läsa loggfilen"
+
+#: static/pypilot_control.js:40
 msgid "Not Connected"
-msgstr "Inte ansluten"
+msgstr "Ej ansluten"
 
-#: static/pypilot_control.js:68
+#: static/pypilot_control.js:122
 msgid "Connected"
 msgstr "Ansluten"
 
-#: static/pypilot_control.js:175
+#: static/pypilot_control.js:153
+msgid "Enter profile name."
+msgstr "Ange profilnamn."
+
+#: static/pypilot_control.js:166
+msgid "Remove current profile?"
+msgstr "Ta bort nuvarande profil?"
+
+#: static/pypilot_control.js:267
+msgid "The following settings are captured by the current profile"
+msgstr "Följande inställningar registreras av den aktuella profilen"
+
+#: static/pypilot_control.js:303
 msgid "Disconnected"
 msgstr "Osammanhängande"
 
-#: static/pypilot_control.js:245
+#: static/pypilot_control.js:382
 msgid "compass or gyro failure!"
 msgstr "kompass eller gyrofel!"
 
-#: static/pypilot_control.js:258
+#: static/pypilot_control.js:395 templates/index.html:161
+#: templates/index.html:163
 msgid "Tack"
 msgstr "Kryssa"
 
-#: static/pypilot_control.js:261
+#: static/pypilot_control.js:398 templates/index.html:162
 msgid "Cancel"
-msgstr "Avbryt"
+msgstr "Annullera"
 
-#: static/pypilot_control.js:320
+#: static/pypilot_control.js:468
 msgid "Engaged"
 msgstr "Engagerad"
 
-#: static/pypilot_control.js:322
+#: static/pypilot_control.js:470
 msgid "Disengaged"
-msgstr "Frikopplad"
+msgstr "Urkopplad"
 
-#: static/pypilot_control.js:394
+#: static/pypilot_control.js:546
+msgid "Motor temperature"
+msgstr "Motortemperatur"
+
+#: static/pypilot_control.js:562
 msgid "no motor controller!"
-msgstr "ingen motorstyrenhet!"
+msgstr "ingen motorstyrning!"
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
 msgstr "Kalibreringsdiagram"
 
-#: templates/calibrationplot.html:21
+#: templates/calibrationplot.html:25
 msgid ""
-"The raw sensor readings should fall on a sphere when calibrated.  The age"
-" will reset when the calibration updates."
+"The raw sensor readings should fall on a sphere when calibrated.  The age "
+"will reset when the calibration updates."
 msgstr ""
-"De råa sensoravläsningarna ska falla på en sfär när de kalibreras. Åldern"
-" återställs när kalibreringen uppdateras."
+"De råa sensoravläsningarna bör falla på en sfär när de kalibreras. Åldern "
+"återställs när kalibreringen uppdateras."
 
-#: templates/calibrationplot.html:28
+#: templates/calibrationplot.html:32
 msgid "Connection"
 msgstr "Förbindelse"
 
@@ -90,13 +111,21 @@ msgstr "Konfiguration"
 msgid "Statistics"
 msgstr "Statistik"
 
-#: templates/index.html:51
+#: templates/index.html:49
 msgid "Heading"
 msgstr "Rubrik"
 
-#: templates/index.html:53
+#: templates/index.html:52
 msgid "Command"
 msgstr "Kommando"
+
+#: templates/index.html:89
+msgid "Add"
+msgstr "Lägg till"
+
+#: templates/index.html:90
+msgid "Remove"
+msgstr "Avlägsna"
 
 #: templates/index.html:96
 msgid "Magnetic Heading"
@@ -110,109 +139,133 @@ msgstr "Tonhöjd"
 msgid "Roll"
 msgstr "Rulla"
 
-#: templates/index.html:99
+#: templates/index.html:99 templates/index.html:105
 msgid "Press"
 msgstr "Tryck"
 
-#: templates/index.html:99
+#: templates/index.html:99 templates/index.html:105
 msgid "here"
 msgstr "här"
 
 #: templates/index.html:100
 msgid "when the boat is level to align the inertial sensors."
-msgstr "när båten är i nivå för att justera tröghetssensorerna."
+msgstr "när båten är vågrätt för att rikta in tröghetssensorerna."
 
-#: templates/index.html:105
+#: templates/index.html:106
+msgid ""
+"when the boat is traveling straight with no leeway, no currents, and gps to "
+"align the compass, or manually enter the compass offset"
+msgstr ""
+"när båten färdas rakt utan spelrum, inga strömmar och gps för att rikta in "
+"kompassen, eller manuellt ange kompassförskjutningen"
+
+#: templates/index.html:111
 msgid "Magnetic Heading Offset"
-msgstr "Magnetisk rubrikförskjutning"
+msgstr "Magnetisk kursförskjutning"
 
-#: templates/index.html:107
-msgid "Lock Calibration"
-msgstr "Lås kalibrering"
+#: templates/index.html:113
+msgid "Lock Accelerometer Calibration"
+msgstr "Lås Accelerometer Kalibrering"
 
-#: templates/index.html:109
+#: templates/index.html:114
+msgid "Lock Compass Calibration"
+msgstr "Lås kompasskalibrering"
+
+#: templates/index.html:116
 msgid "calibration plot"
 msgstr "kalibreringsdiagram"
 
-#: templates/index.html:111
-msgid "Rudder"
-msgstr "Roder"
+#: templates/index.html:118
+msgid "Rudder Sensor"
+msgstr "Rodersensor"
 
-#: templates/index.html:113
+#: templates/index.html:120
 msgid "centered"
 msgstr "centrerad"
 
-#: templates/index.html:114
+#: templates/index.html:121
 msgid "port range"
 msgstr "Hamnområdet"
 
-#: templates/index.html:115
+#: templates/index.html:122
 msgid "starboard range"
-msgstr "styrbordsutbud"
+msgstr "styrbords räckvidd"
 
-#: templates/index.html:116 templates/index.html:140
+#: templates/index.html:123 templates/index.html:146
 msgid "reset"
 msgstr "återställa"
 
-#: templates/index.html:119
+#: templates/index.html:126
 msgid "Rudder Range"
-msgstr "Ruder Range"
+msgstr "Roderområde"
 
-#: templates/index.html:120
+#: templates/index.html:127
 msgid "Degrees"
 msgstr "Grader"
 
-#: templates/index.html:126
+#: templates/index.html:133
 msgid "Display"
 msgstr "Visa"
 
-#: templates/index.html:127
+#: templates/index.html:134
 msgid "Clear"
 msgstr "Klar"
 
-#: templates/index.html:128
+#: templates/index.html:135
 msgid "Dark"
 msgstr "Mörk"
 
-#: templates/index.html:131
-msgid "Configure LCD Keypad and Remotes"
-msgstr "Konfigurera LCD -knappsats och fjärrkontroller"
+#: templates/index.html:139
+msgid "NMEA Client host:port (leave blank for none) eg: 192.168.0.1:10110"
+msgstr "NMEA Client host:port (lämna tom för ingen) t.ex.: 192.168.0.1:10110"
 
-#: templates/index.html:133
-msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
-msgstr "NMEA -klientvärd: port (lämna tomt som standard) t.ex.: 192.168.0.1:10110"
-
-#: templates/index.html:138
+#: templates/index.html:144
 msgid "Amp Hours"
-msgstr "Förstärkartimmar"
+msgstr "Amp timmar"
 
-#: templates/index.html:141
+#: templates/index.html:147
 msgid "Voltage"
 msgstr "Spänning"
 
-#: templates/index.html:142
+#: templates/index.html:148
 msgid "Controller temperature"
-msgstr "Regulatorns temperatur"
+msgstr "Reglertemperatur"
 
-#: templates/index.html:143
+#: templates/index.html:150
 msgid "Runtime"
 msgstr "Körning"
 
-#: templates/index.html:144
+#: templates/index.html:151 templates/index.html:153
+msgid "Version"
+msgstr "Version"
+
+#: templates/index.html:152
 msgid "Servo"
 msgstr "Servo"
 
-#: templates/index.html:148
+#: templates/index.html:155 templates/logs.html:9
+msgid "Logs"
+msgstr "Loggar"
+
+#: templates/index.html:161
+msgid "Port"
+msgstr "Hamn"
+
+#: templates/index.html:163
+msgid "Starboard"
+msgstr "Styrbord"
+
+#: templates/index.html:170
 msgid "Server"
 msgstr "Server"
 
-#: templates/index.html:150
+#: templates/index.html:172
 msgid "Errors"
 msgstr "Fel"
 
-#: templates/index.html:151
+#: templates/index.html:173
 msgid "Web Server Latency"
-msgstr "Webbserver latens"
+msgstr "Webbserverfördröjning"
 
 #: templates/wifi.html:4
 msgid "setup"
@@ -228,7 +281,7 @@ msgstr "Åtkomstpunkt"
 
 #: templates/wifi.html:17 templates/wifi.html:22
 msgid "Key (leave blank for no encryption)"
-msgstr "Nyckel (lämna tom för ingen kryptering)"
+msgstr "Nyckel (lämna tomt för ingen kryptering)"
 
 #: templates/wifi.html:21 templates/wifi.html:22
 msgid "Client"
@@ -236,7 +289,7 @@ msgstr "Klient"
 
 #: templates/wifi.html:24
 msgid "Client Mode Address (leave blank for dhcp)"
-msgstr "Klientlägesadress (lämna tomt för DHCP)"
+msgstr "Klientlägesadress (lämna tomt för dhcp)"
 
 #: templates/wifi.html:28
 msgid "If there is a problem, edit the file"
@@ -253,8 +306,168 @@ msgstr "tillbaka"
 #~ msgstr "Nyckel (lämna tom för ingen kryptering)"
 
 #~ msgid "Client Mode Address (leave blank for dhcp)"
-#~ msgstr "Klientlägesadress (lämna tom för dhcp)"
+#~ msgstr "Klientlägesadress (lämna tomt för DHCP)"
 
 #~ msgid "If there is a problem, edit the file"
-#~ msgstr "Redigera filen om det finns ett problem"
+#~ msgstr "Om det finns ett problem, redigera filen"
 
+#~ msgid "Not Connected"
+#~ msgstr "Inte ansluten"
+
+#~ msgid "Connected"
+#~ msgstr "Ansluten"
+
+#~ msgid "Disconnected"
+#~ msgstr "Osammanhängande"
+
+#~ msgid "compass or gyro failure!"
+#~ msgstr "kompass eller gyrofel!"
+
+#~ msgid "Tack"
+#~ msgstr "Kryssa"
+
+#~ msgid "Cancel"
+#~ msgstr "Avbryt"
+
+#~ msgid "Engaged"
+#~ msgstr "Engagerad"
+
+#~ msgid "Disengaged"
+#~ msgstr "Frikopplad"
+
+#~ msgid "no motor controller!"
+#~ msgstr "ingen motorstyrenhet!"
+
+#~ msgid "Calibration Plot"
+#~ msgstr "Kalibreringsdiagram"
+
+#~ msgid ""
+#~ "The raw sensor readings should fall on a sphere when calibrated.  The age "
+#~ "will reset when the calibration updates."
+#~ msgstr ""
+#~ "De råa sensoravläsningarna ska falla på en sfär när de kalibreras. Åldern "
+#~ "återställs när kalibreringen uppdateras."
+
+#~ msgid "Connection"
+#~ msgstr "Förbindelse"
+
+#~ msgid "Control"
+#~ msgstr "Kontrollera"
+
+#~ msgid "Gain"
+#~ msgstr "Få"
+
+#~ msgid "Calibration"
+#~ msgstr "Kalibrering"
+
+#~ msgid "Configuration"
+#~ msgstr "Konfiguration"
+
+#~ msgid "Statistics"
+#~ msgstr "Statistik"
+
+#~ msgid "Heading"
+#~ msgstr "Rubrik"
+
+#~ msgid "Command"
+#~ msgstr "Kommando"
+
+#~ msgid "Magnetic Heading"
+#~ msgstr "Magnetisk rubrik"
+
+#~ msgid "Pitch"
+#~ msgstr "Tonhöjd"
+
+#~ msgid "Roll"
+#~ msgstr "Rulla"
+
+#~ msgid "Press"
+#~ msgstr "Tryck"
+
+#~ msgid "here"
+#~ msgstr "här"
+
+#~ msgid "when the boat is level to align the inertial sensors."
+#~ msgstr "när båten är i nivå för att justera tröghetssensorerna."
+
+#~ msgid "Magnetic Heading Offset"
+#~ msgstr "Magnetisk rubrikförskjutning"
+
+#~ msgid "Lock Calibration"
+#~ msgstr "Lås kalibrering"
+
+#~ msgid "calibration plot"
+#~ msgstr "kalibreringsdiagram"
+
+#~ msgid "Rudder"
+#~ msgstr "Roder"
+
+#~ msgid "centered"
+#~ msgstr "centrerad"
+
+#~ msgid "port range"
+#~ msgstr "Hamnområdet"
+
+#~ msgid "starboard range"
+#~ msgstr "styrbordsutbud"
+
+#~ msgid "reset"
+#~ msgstr "återställa"
+
+#~ msgid "Rudder Range"
+#~ msgstr "Ruder Range"
+
+#~ msgid "Degrees"
+#~ msgstr "Grader"
+
+#~ msgid "Display"
+#~ msgstr "Visa"
+
+#~ msgid "Clear"
+#~ msgstr "Klar"
+
+#~ msgid "Dark"
+#~ msgstr "Mörk"
+
+#~ msgid "Configure LCD Keypad and Remotes"
+#~ msgstr "Konfigurera LCD -knappsats och fjärrkontroller"
+
+#~ msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
+#~ msgstr ""
+#~ "NMEA -klientvärd: port (lämna tomt som standard) t.ex.: 192.168.0.1:10110"
+
+#~ msgid "Amp Hours"
+#~ msgstr "Förstärkartimmar"
+
+#~ msgid "Voltage"
+#~ msgstr "Spänning"
+
+#~ msgid "Controller temperature"
+#~ msgstr "Regulatorns temperatur"
+
+#~ msgid "Runtime"
+#~ msgstr "Körning"
+
+#~ msgid "Servo"
+#~ msgstr "Servo"
+
+#~ msgid "Server"
+#~ msgstr "Server"
+
+#~ msgid "Errors"
+#~ msgstr "Fel"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Webbserver latens"
+
+#~ msgid "setup"
+#~ msgstr "uppstart"
+
+#~ msgid "Access Point"
+#~ msgstr "Åtkomstpunkt"
+
+#~ msgid "Client"
+#~ msgstr "Klient"
+
+#~ msgid "back"
+#~ msgstr "tillbaka"

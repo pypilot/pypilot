@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import os, time
+import os, time, signal
 
 raspberrypi = False
 orangepi = False
@@ -45,6 +45,9 @@ class gpio(object):
         self.keystate = {}
         self.events = []
 
+        from pypilot.nonblockingpipe import NonBlockingPipe
+        self.pipe = NonBlockingPipe(str(self), True)
+        
         if orangepi:
             self.pins = [11, 16, 13, 15, 12]
         else:
@@ -54,7 +57,9 @@ class gpio(object):
         for p in self.pins:
             self.lastkeystate[p] = False
 
-        self.keystate = self.keypin = 1
+        self.keystate = 0
+        self.keypin = False
+        self.lastkeyevent = 0
 
         if not GPIO:
             return
@@ -79,26 +84,31 @@ class gpio(object):
                 GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
                     
             def cbr(pin):
-                value = GPIO.input(pin)
+                #value = GPIO.input(pin)
                 time.sleep(.02)  # workaround buggy gpio
-                self.lastkeystate[pin] = not value
-                self.evalkeys()
+                #self.lastkeystate[pin] = not value
+                #self.evalkeys()
+                # break from poll by sending to a pipe
+                self.pipe[0].send(pin)
 
             while True:
                 try:
                     GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=50)
                     break
                 except Exception as e:
-                    print('WARNING', e)
+                    print('WARNING', e, 'on pin ', pin)
 
                 if not raspberrypi:
                     break
-                print('retrying to setup gpio with edge detect...')
-                time.sleep(1)
+                print('retrying to setup gpio with edge detect.')
+                time.sleep(3)
 
     def poll(self):
         if not GPIO:
             return []
+
+        while self.pipe[1].recv():
+            pass
         
         for p in self.pins:
             value = GPIO.input(p)
@@ -111,21 +121,34 @@ class gpio(object):
         return events
 
     def evalkeys(self):
-        pin = 1
+        pin = ''
         for p in self.pins:
             if self.lastkeystate[p]:
-                pin *= p # multiple keys
+                if pin:
+                    pin += '_'
+                pin += '%02d' % p
 
-        if pin == self.keypin:
+        # once all keys are released reset state
+        if self.keypin is False:
+            if not pin:
+                self.keypin = ''
+            return
+
+        if pin == self.keypin: # key repeated limit rate
+            if time.monotonic() - self.lastkeyevent < .03:
+                return
             self.keystate += 1
-        else:
-            if self.keypin > 1:
-                self.events.append(('gpio%d'%self.keypin, 0))
+        elif len(self.keypin) <= len(pin):  # new key
             self.keypin = pin
             self.keystate = 1
+        elif self.keypin:     # any key released, send release code
+            self.events.append(('gpio' + self.keypin, 0))
+            self.keypin = False  # require all keys to release before new code
+            return
 
-        if pin > 1:
-            self.events.append(('gpio%d'%pin, self.keystate))
+        if self.keypin:
+            self.lastkeyevent = time.monotonic()
+            self.events.append(('gpio' + self.keypin, self.keystate))
 
 
 def main():

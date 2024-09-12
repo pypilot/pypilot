@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import sys
+import sys, time
 import os, os.path
 
 if sys.version_info[0] < 3:
@@ -84,7 +84,6 @@ os.system('cd hat; pybabel compile -d translations')
 os.system('cd pypilot/locale;./translate.sh')
 os.system('cd web; pybabel compile -d translations')
 
-    
 def find_locales(name, dir = 'locale'):
     locale_files = []
     for walk in os.walk('./' + name + '/' + dir):
@@ -93,6 +92,7 @@ def find_locales(name, dir = 'locale'):
         for file in files:
             if file[-3:] == '.mo':
                 locale_files.append(os.path.join(path, file))
+
     return locale_files
 
 from pypilot import version

@@ -273,7 +273,7 @@ bool arduino_servo_eeprom::initial()
 
     // signature failed, discard this data
     if(memcmp(arduino.signature, local.signature, sizeof local.signature)) {
-        printf("Arduino EEPROM Signature FAILED!\n");
+        printf("Arduino motor controller EEPROM Signature FAILED!\n");
         return false;
     }
 
@@ -284,11 +284,11 @@ bool arduino_servo_eeprom::initial()
     // This is invalid data and is also the initial eeprom value
     for(int i=0; i < ls; i++) {
         if(a[i] == 0xff) {
-            printf("EEPROM SIGNATURE invalid byte %d\n", i);
+            printf("Arduino motor controller EEPROM SIGNATURE invalid byte %d\n", i);
             return false;
         }
     }
-    printf("EEPROM SIGNATURE ok\n");
+    printf("Arduino motor controller EEPROM SIGNATURE ok\n");
     
     return true;
 }

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: it <LL@li.org>\n"
@@ -16,15 +16,15 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
-msgstr "configurazione del cappello pypilot"
+msgstr "configurazione cappello pypilot"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
-msgstr "LCD e configurazione del telecomando"
+msgstr "configurazione lcd e telecomando"
 
 #: templates/index.html:17
 msgid "clear"
@@ -39,12 +39,12 @@ msgid ""
 "press button(s) on the keypad or remote then assign a command with the "
 "button."
 msgstr ""
-"premere il/i pulsante/i sulla tastiera o sul telecomando, quindi assegnare "
-"un comando con il pulsante."
+"premere i pulsanti sulla tastiera o sul telecomando, quindi assegnare un "
+"comando con il pulsante."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
-msgstr "Azioni per l'interfaccia LCD"
+msgstr "Azioni per interfaccia LCD"
 
 #: templates/index.html:21 templates/index.html:25
 msgid "key"
@@ -60,7 +60,7 @@ msgid ""
 "wireless remotes."
 msgstr ""
 "Queste azioni non dipendono dallo stato del display e possono essere "
-"utilizzate dai telecomandi wireless."
+"utilizzate da telecomandi wireless."
 
 #: templates/index.html:28
 msgid "infared receiver port"
@@ -86,7 +86,7 @@ msgstr "a distanza"
 
 #: templates/index.html:41
 msgid "nmea current baud rate"
-msgstr "nmea baud rate attuale"
+msgstr "velocità di trasmissione corrente nmea"
 
 #: templates/index.html:42
 msgid "voltages"
@@ -102,4 +102,72 @@ msgstr "connessione"
 
 #: templates/index.html:45
 msgid "Web Server Latency"
-msgstr "Latenza del server Web"
+msgstr "Latenza del server web"
+
+#~ msgid "pypilot hat configuration"
+#~ msgstr "configurazione del cappello pypilot"
+
+#~ msgid "lcd and remote control setup"
+#~ msgstr "LCD e configurazione del telecomando"
+
+#~ msgid "clear"
+#~ msgstr "chiaro"
+
+#~ msgid "default"
+#~ msgstr "predefinito"
+
+#~ msgid ""
+#~ "press button(s) on the keypad or remote then assign a command with the "
+#~ "button."
+#~ msgstr ""
+#~ "premere il/i pulsante/i sulla tastiera o sul telecomando, quindi assegnare "
+#~ "un comando con il pulsante."
+
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Azioni per l'interfaccia LCD"
+
+#~ msgid "key"
+#~ msgstr "chiave"
+
+#~ msgid "action"
+#~ msgstr "azione"
+
+#~ msgid ""
+#~ "These actions do not depend on the state of the display and can be used by "
+#~ "wireless remotes."
+#~ msgstr ""
+#~ "Queste azioni non dipendono dallo stato del display e possono essere "
+#~ "utilizzate dai telecomandi wireless."
+
+#~ msgid "infared receiver port"
+#~ msgstr "porta del ricevitore a infrarossi"
+
+#~ msgid ""
+#~ "The ir port can be handled direcly from the pi or the arduino.  Using the "
+#~ "arduino can receive from many different remotes without special calibration "
+#~ "recordings."
+#~ msgstr ""
+#~ "La porta ir può essere gestita direttamente dal pi o dall'arduino. "
+#~ "Utilizzando l'arduino puoi ricevere da molti telecomandi diversi senza "
+#~ "registrazioni di calibrazione speciali."
+
+#~ msgid "remote mode"
+#~ msgstr "modalità remota"
+
+#~ msgid "remote"
+#~ msgstr "a distanza"
+
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea baud rate attuale"
+
+#~ msgid "voltages"
+#~ msgstr "tensioni"
+
+#~ msgid "status"
+#~ msgstr "stato"
+
+#~ msgid "connection"
+#~ msgstr "connessione"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Latenza del server Web"

@@ -12,7 +12,7 @@ import wx.xrc
 import wx.glcanvas
 
 import gettext
-#_ = gettext.gettext
+_ = gettext.gettext
 
 ###########################################################################
 ## Class AutopilotControlBase
@@ -21,7 +21,7 @@ import gettext
 class AutopilotControlBase ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Autopilot Control"), pos = wx.DefaultPosition, size = wx.Size( 444,400 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Autopilot Control"), pos = wx.DefaultPosition, size = wx.Size( 510,400 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 
 		self.SetSizeHints( wx.Size( -1,-1 ), wx.DefaultSize )
 
@@ -106,32 +106,28 @@ class AutopilotControlBase ( wx.Frame ):
 
 		fgSizer4.Add( fgSizer20, 1, wx.EXPAND, 5 )
 
-		fgSizer40 = wx.FlexGridSizer( 0, 1, 0, 0 )
-		fgSizer40.SetFlexibleDirection( wx.BOTH )
-		fgSizer40.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-
-		self.stTackState = wx.StaticText( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.stTackState.Wrap( -1 )
-
-		fgSizer40.Add( self.stTackState, 0, wx.ALL|wx.EXPAND, 5 )
-
-		self.bTack = wx.Button( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 70,-1 ), 0 )
-		fgSizer40.Add( self.bTack, 0, wx.ALL, 5 )
-
-		cTackDirectionChoices = [ _(u"port"), _(u"starboard") ]
-		self.cTackDirection = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.Size( 70,-1 ), cTackDirectionChoices, 0 )
-		self.cTackDirection.SetSelection( 0 )
-		fgSizer40.Add( self.cTackDirection, 0, wx.ALL, 5 )
-
-
-		fgSizer4.Add( fgSizer40, 1, wx.EXPAND, 5 )
+		self.bTack = wx.Button( self, wx.ID_ANY, _(u"Tack"), wx.DefaultPosition, wx.Size( 70,-1 ), 0 )
+		fgSizer4.Add( self.bTack, 0, wx.ALL, 5 )
 
 
 		fgSizer5.Add( fgSizer4, 1, wx.EXPAND, 5 )
 
 		fgSizer26 = wx.FlexGridSizer( 1, 0, 0, 0 )
+		fgSizer26.AddGrowableCol( 1 )
+		fgSizer26.AddGrowableCol( 3 )
+		fgSizer26.AddGrowableCol( 5 )
 		fgSizer26.SetFlexibleDirection( wx.BOTH )
 		fgSizer26.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		self.m_staticText45 = wx.StaticText( self, wx.ID_ANY, _(u"Profile"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText45.Wrap( -1 )
+
+		fgSizer26.Add( self.m_staticText45, 0, wx.ALL, 5 )
+
+		cProfileChoices = []
+		self.cProfile = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cProfileChoices, 0 )
+		self.cProfile.SetSelection( 0 )
+		fgSizer26.Add( self.cProfile, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_staticText52 = wx.StaticText( self, wx.ID_ANY, _(u"Pilot"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText52.Wrap( -1 )
@@ -141,39 +137,66 @@ class AutopilotControlBase ( wx.Frame ):
 		cPilotChoices = []
 		self.cPilot = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cPilotChoices, 0 )
 		self.cPilot.SetSelection( 0 )
-		fgSizer26.Add( self.cPilot, 0, wx.ALL, 5 )
+		fgSizer26.Add( self.cPilot, 0, wx.ALL|wx.EXPAND, 5 )
 
-		self.rbCompass = wx.RadioButton( self, wx.ID_ANY, _(u"Compass"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer26.Add( self.rbCompass, 0, wx.ALL, 5 )
+		self.m_staticText44 = wx.StaticText( self, wx.ID_ANY, _(u"Mode"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText44.Wrap( -1 )
 
-		self.rbGPS = wx.RadioButton( self, wx.ID_ANY, _(u"GPS"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.rbGPS.Enable( False )
+		fgSizer26.Add( self.m_staticText44, 0, wx.ALL, 5 )
 
-		fgSizer26.Add( self.rbGPS, 0, wx.ALL, 5 )
-
-		self.rbWind = wx.RadioButton( self, wx.ID_ANY, _(u"Wind"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.rbWind.Enable( False )
-
-		fgSizer26.Add( self.rbWind, 0, wx.ALL, 5 )
-
-		self.rbTrueWind = wx.RadioButton( self, wx.ID_ANY, _(u"True Wind"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.rbTrueWind.Enable( False )
-
-		fgSizer26.Add( self.rbTrueWind, 0, wx.ALL, 5 )
+		cModeChoices = []
+		self.cMode = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, cModeChoices, 0 )
+		self.cMode.SetSelection( 0 )
+		fgSizer26.Add( self.cMode, 0, wx.ALL|wx.EXPAND, 5 )
 
 
 		fgSizer5.Add( fgSizer26, 1, wx.EXPAND, 5 )
 
-		fgSizer39 = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgSizer39 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer39.AddGrowableCol( 0 )
 		fgSizer39.SetFlexibleDirection( wx.BOTH )
 		fgSizer39.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.sCommand = wx.Slider( self, wx.ID_ANY, 0, -250, 250, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_AUTOTICKS|wx.SL_HORIZONTAL )
-		fgSizer39.Add( self.sCommand, 0, wx.ALL|wx.EXPAND, 5 )
+		fgSizer40 = wx.FlexGridSizer( 1, 0, 0, 0 )
+		fgSizer40.AddGrowableCol( 1 )
+		fgSizer40.AddGrowableCol( 3 )
+		fgSizer40.AddGrowableCol( 5 )
+		fgSizer40.AddGrowableCol( 7 )
+		fgSizer40.SetFlexibleDirection( wx.BOTH )
+		fgSizer40.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		self.bPort10 = wx.Button( self, wx.ID_ANY, _(u"10"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer40.Add( self.bPort10, 0, wx.ALL, 5 )
+
+
+		fgSizer40.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+		self.bPort1 = wx.Button( self, wx.ID_ANY, _(u"1"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer40.Add( self.bPort1, 0, wx.ALL, 5 )
+
+
+		fgSizer40.Add( ( 0, 0), 1, wx.EXPAND, 5 )
 
 		self.bCenter = wx.Button( self, wx.ID_ANY, _(u"Center"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer39.Add( self.bCenter, 0, wx.ALL, 5 )
+		fgSizer40.Add( self.bCenter, 0, wx.ALL, 5 )
+
+
+		fgSizer40.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+		self.bStarboard1 = wx.Button( self, wx.ID_ANY, _(u"1"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer40.Add( self.bStarboard1, 0, wx.ALL, 5 )
+
+
+		fgSizer40.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+		self.bStarboard10 = wx.Button( self, wx.ID_ANY, _(u"10"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer40.Add( self.bStarboard10, 0, wx.ALL, 5 )
+
+
+		fgSizer39.Add( fgSizer40, 1, wx.EXPAND, 5 )
+
+		self.sCommand = wx.Slider( self, wx.ID_ANY, 0, -250, 250, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_AUTOTICKS|wx.SL_HORIZONTAL )
+		fgSizer39.Add( self.sCommand, 0, wx.ALL|wx.EXPAND, 5 )
 
 
 		fgSizer5.Add( fgSizer39, 1, wx.EXPAND, 5 )
@@ -220,15 +243,24 @@ class AutopilotControlBase ( wx.Frame ):
 		# Connect Events
 		self.tbAP.Bind( wx.EVT_TOGGLEBUTTON, self.onAP )
 		self.bTack.Bind( wx.EVT_BUTTON, self.onTack )
-		self.cTackDirection.Bind( wx.EVT_CHOICE, self.onTackDirection )
+		self.cProfile.Bind( wx.EVT_CHOICE, self.onProfile )
 		self.cPilot.Bind( wx.EVT_CHOICE, self.onPilot )
-		self.rbCompass.Bind( wx.EVT_RADIOBUTTON, self.onMode )
-		self.rbGPS.Bind( wx.EVT_RADIOBUTTON, self.onMode )
-		self.rbWind.Bind( wx.EVT_RADIOBUTTON, self.onMode )
-		self.rbTrueWind.Bind( wx.EVT_RADIOBUTTON, self.onMode )
+		self.cMode.Bind( wx.EVT_CHOICE, self.onMode )
+		self.bPort10.Bind( wx.EVT_BUTTON, self.onCommandClick )
+		self.bPort10.Bind( wx.EVT_LEFT_DOWN, self.onCommandMouseDown )
+		self.bPort10.Bind( wx.EVT_LEFT_UP, self.onCommandMouseUp )
+		self.bPort1.Bind( wx.EVT_BUTTON, self.onCommandClick )
+		self.bPort1.Bind( wx.EVT_LEFT_DOWN, self.onCommandMouseDown )
+		self.bPort1.Bind( wx.EVT_LEFT_UP, self.onCommandMouseUp )
+		self.bCenter.Bind( wx.EVT_BUTTON, self.onCenter )
+		self.bStarboard1.Bind( wx.EVT_BUTTON, self.onCommandClick )
+		self.bStarboard1.Bind( wx.EVT_LEFT_DOWN, self.onCommandMouseDown )
+		self.bStarboard1.Bind( wx.EVT_LEFT_UP, self.onCommandMouseUp )
+		self.bStarboard10.Bind( wx.EVT_BUTTON, self.onCommandClick )
+		self.bStarboard10.Bind( wx.EVT_LEFT_DOWN, self.onCommandMouseDown )
+		self.bStarboard10.Bind( wx.EVT_LEFT_UP, self.onCommandMouseUp )
 		self.sCommand.Bind( wx.EVT_SCROLL, self.onCommand )
 		self.sCommand.Bind( wx.EVT_UPDATE_UI, self.onPaintControlSlider )
-		self.bCenter.Bind( wx.EVT_BUTTON, self.onCenter )
 		self.bScope.Bind( wx.EVT_BUTTON, self.onScope )
 		self.bClient.Bind( wx.EVT_BUTTON, self.onClient )
 		self.bCalibration.Bind( wx.EVT_BUTTON, self.onCalibration )
@@ -238,15 +270,24 @@ class AutopilotControlBase ( wx.Frame ):
 		# Disconnect Events
 		self.tbAP.Unbind( wx.EVT_TOGGLEBUTTON, None )
 		self.bTack.Unbind( wx.EVT_BUTTON, None )
-		self.cTackDirection.Unbind( wx.EVT_CHOICE, None )
+		self.cProfile.Unbind( wx.EVT_CHOICE, None )
 		self.cPilot.Unbind( wx.EVT_CHOICE, None )
-		self.rbCompass.Unbind( wx.EVT_RADIOBUTTON, None )
-		self.rbGPS.Unbind( wx.EVT_RADIOBUTTON, None )
-		self.rbWind.Unbind( wx.EVT_RADIOBUTTON, None )
-		self.rbTrueWind.Unbind( wx.EVT_RADIOBUTTON, None )
+		self.cMode.Unbind( wx.EVT_CHOICE, None )
+		self.bPort10.Unbind( wx.EVT_BUTTON, None )
+		self.bPort10.Unbind( wx.EVT_LEFT_DOWN, None )
+		self.bPort10.Unbind( wx.EVT_LEFT_UP, None )
+		self.bPort1.Unbind( wx.EVT_BUTTON, None )
+		self.bPort1.Unbind( wx.EVT_LEFT_DOWN, None )
+		self.bPort1.Unbind( wx.EVT_LEFT_UP, None )
+		self.bCenter.Unbind( wx.EVT_BUTTON, None )
+		self.bStarboard1.Unbind( wx.EVT_BUTTON, None )
+		self.bStarboard1.Unbind( wx.EVT_LEFT_DOWN, None )
+		self.bStarboard1.Unbind( wx.EVT_LEFT_UP, None )
+		self.bStarboard10.Unbind( wx.EVT_BUTTON, None )
+		self.bStarboard10.Unbind( wx.EVT_LEFT_DOWN, None )
+		self.bStarboard10.Unbind( wx.EVT_LEFT_UP, None )
 		self.sCommand.Unbind( wx.EVT_SCROLL, None )
 		self.sCommand.Unbind( wx.EVT_UPDATE_UI, None )
-		self.bCenter.Unbind( wx.EVT_BUTTON, None )
 		self.bScope.Unbind( wx.EVT_BUTTON, None )
 		self.bClient.Unbind( wx.EVT_BUTTON, None )
 		self.bCalibration.Unbind( wx.EVT_BUTTON, None )
@@ -260,7 +301,7 @@ class AutopilotControlBase ( wx.Frame ):
 	def onTack( self, event ):
 		event.Skip()
 
-	def onTackDirection( self, event ):
+	def onProfile( self, event ):
 		event.Skip()
 
 	def onPilot( self, event ):
@@ -269,6 +310,24 @@ class AutopilotControlBase ( wx.Frame ):
 	def onMode( self, event ):
 		event.Skip()
 
+	def onCommandClick( self, event ):
+		event.Skip()
+
+	def onCommandMouseDown( self, event ):
+		event.Skip()
+
+	def onCommandMouseUp( self, event ):
+		event.Skip()
+
+
+
+
+	def onCenter( self, event ):
+		event.Skip()
+
+
+
+
 
 
 
@@ -276,9 +335,6 @@ class AutopilotControlBase ( wx.Frame ):
 		event.Skip()
 
 	def onPaintControlSlider( self, event ):
-		event.Skip()
-
-	def onCenter( self, event ):
 		event.Skip()
 
 	def onScope( self, event ):
@@ -295,13 +351,106 @@ class AutopilotControlBase ( wx.Frame ):
 
 
 ###########################################################################
+## Class TackDialogBase
+###########################################################################
+
+class TackDialogBase ( wx.Dialog ):
+
+	def __init__( self, parent ):
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Tack"), pos = wx.DefaultPosition, size = wx.Size( 800,-1 ), style = wx.DEFAULT_DIALOG_STYLE )
+
+		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+
+		fgSizer38 = wx.FlexGridSizer( 0, 1, 0, 0 )
+		fgSizer38.AddGrowableCol( 0 )
+		fgSizer38.AddGrowableRow( 0 )
+		fgSizer38.AddGrowableRow( 1 )
+		fgSizer38.SetFlexibleDirection( wx.BOTH )
+		fgSizer38.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		fgSizer40 = wx.FlexGridSizer( 0, 1, 0, 0 )
+		fgSizer40.SetFlexibleDirection( wx.BOTH )
+		fgSizer40.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		self.stTackState = wx.StaticText( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.stTackState.Wrap( -1 )
+
+		fgSizer40.Add( self.stTackState, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+		fgSizer38.Add( fgSizer40, 1, wx.EXPAND, 5 )
+
+		fgSizer39 = wx.FlexGridSizer( 1, 0, 0, 0 )
+		fgSizer39.AddGrowableCol( 1 )
+		fgSizer39.AddGrowableCol( 3 )
+		fgSizer39.AddGrowableRow( 0 )
+		fgSizer39.SetFlexibleDirection( wx.BOTH )
+		fgSizer39.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		self.m_button16 = wx.Button( self, wx.ID_ANY, _(u"← Tack Port"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button16.SetLabelMarkup( _(u"← Tack Port") )
+		self.m_button16.SetFont( wx.Font( 25, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, wx.EmptyString ) )
+
+		fgSizer39.Add( self.m_button16, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+		fgSizer39.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+		self.m_button17 = wx.Button( self, wx.ID_ANY, _(u"Cancel"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button17.SetLabelMarkup( _(u"Cancel") )
+		self.m_button17.SetFont( wx.Font( 25, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, wx.EmptyString ) )
+
+		fgSizer39.Add( self.m_button17, 0, wx.ALL, 5 )
+
+
+		fgSizer39.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
+		self.m_button18 = wx.Button( self, wx.ID_ANY, _(u"Tack Starboard →"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button18.SetLabelMarkup( _(u"Tack Starboard →") )
+		self.m_button18.SetFont( wx.Font( 24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, wx.EmptyString ) )
+
+		fgSizer39.Add( self.m_button18, 0, wx.ALL, 5 )
+
+
+		fgSizer38.Add( fgSizer39, 1, wx.EXPAND, 5 )
+
+
+		self.SetSizer( fgSizer38 )
+		self.Layout()
+
+		self.Centre( wx.BOTH )
+
+		# Connect Events
+		self.m_button16.Bind( wx.EVT_BUTTON, self.OnTackPort )
+		self.m_button17.Bind( wx.EVT_BUTTON, self.OnTackCancel )
+		self.m_button18.Bind( wx.EVT_BUTTON, self.OnTackStarboard )
+
+	def __del__( self ):
+		# Disconnect Events
+		self.m_button16.Unbind( wx.EVT_BUTTON, None )
+		self.m_button17.Unbind( wx.EVT_BUTTON, None )
+		self.m_button18.Unbind( wx.EVT_BUTTON, None )
+
+
+	# Virtual event handlers, overide them in your derived class
+	def OnTackPort( self, event ):
+		event.Skip()
+
+	def OnTackCancel( self, event ):
+		event.Skip()
+
+	def OnTackStarboard( self, event ):
+		event.Skip()
+
+
+###########################################################################
 ## Class CalibrationDialogBase
 ###########################################################################
 
 class CalibrationDialogBase ( wx.Dialog ):
 
 	def __init__( self, parent ):
-		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Calibration"), pos = wx.DefaultPosition, size = wx.Size( 617,432 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Calibration"), pos = wx.DefaultPosition, size = wx.Size( 1024,768 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
 
 		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 
@@ -330,7 +479,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		fgSizer22.SetFlexibleDirection( wx.BOTH )
 		fgSizer22.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.BoatPlot = wx.glcanvas.GLCanvas(self.m_panel3, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])
+		self.BoatPlot = wx.glcanvas.GLCanvas(self.m_panel4, attribList=[ wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 16, wx.glcanvas.WX_GL_STENCIL_SIZE, 8, 0 ])
 		self.BoatPlot.SetMinSize( wx.Size( -1,100 ) )
 		self.BoatPlot.SetMaxSize( wx.Size( -1,500 ) )
 
@@ -499,7 +648,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel3.SetSizer( fgSizer12 )
 		self.m_panel3.Layout()
 		fgSizer12.Fit( self.m_panel3 )
-		self.m_notebook.AddPage( self.m_panel3, _(u"alignment"), False )
+		self.m_notebook.AddPage( self.m_panel3, _(u"alignment"), True )
 		self.m_panel7 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer81 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer81.AddGrowableCol( 0 )
@@ -705,7 +854,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.m_panel1.SetSizer( fgSizer8 )
 		self.m_panel1.Layout()
 		fgSizer8.Fit( self.m_panel1 )
-		self.m_notebook.AddPage( self.m_panel1, _(u"compass"), True )
+		self.m_notebook.AddPage( self.m_panel1, _(u"compass"), False )
 		self.m_panel71 = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer35 = wx.FlexGridSizer( 0, 1, 0, 0 )
 		fgSizer35.SetFlexibleDirection( wx.BOTH )
@@ -865,6 +1014,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.CompassCalibration.Bind( wx.EVT_LEFT_DOWN, self.onMouseEventsCompass )
 		self.CompassCalibration.Bind( wx.EVT_LEFT_UP, self.onMouseEventsCompass )
 		self.CompassCalibration.Bind( wx.EVT_MOTION, self.onMouseEventsCompass )
+		self.CompassCalibration.Bind( wx.EVT_MOUSEWHEEL, self.onMouseEventsCompass )
 		self.CompassCalibration.Bind( wx.EVT_PAINT, self.onPaintGLCompass )
 		self.CompassCalibration.Bind( wx.EVT_SIZE, self.onSizeGLCompass )
 		self.m_button10.Bind( wx.EVT_BUTTON, self.onClearCompass )
@@ -902,6 +1052,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.CompassCalibration.Unbind( wx.EVT_LEFT_DOWN, None )
 		self.CompassCalibration.Unbind( wx.EVT_LEFT_UP, None )
 		self.CompassCalibration.Unbind( wx.EVT_MOTION, None )
+		self.CompassCalibration.Unbind( wx.EVT_MOUSEWHEEL, None )
 		self.CompassCalibration.Unbind( wx.EVT_PAINT, None )
 		self.CompassCalibration.Unbind( wx.EVT_SIZE, None )
 		self.m_button10.Unbind( wx.EVT_BUTTON, None )
@@ -970,6 +1121,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 
 	def onMouseEventsCompass( self, event ):
 		event.Skip()
+
 
 
 

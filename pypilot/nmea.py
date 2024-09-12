@@ -69,7 +69,8 @@ def parse_nmea_gps(line):
         gps = {}
 
         try: # since we are given only time and not date, use current day
-            ts = time.mktime(time.strptime(data[0], '%H%M%S.%f'))
+            x = time.strptime(data[0], '%H%M%S.%f')
+            ts = (x.tm_hour*60+x.tm_min)*60+x.tm_sec
             t0 = time.time()
             global gps_timeoffset
             ts += gps_timeoffset # seconds since 1970
@@ -77,11 +78,12 @@ def parse_nmea_gps(line):
             if ts > t0 or ts < t0 - sec_in_day: # wrong day
                 ts -= gps_timeoffset # undo offset
                 day = int(t0/sec_in_day)
-                gps_timeoffset = sec_in_day*day
+                if gps_timeoffset != sec_in_day*day:
+                    gps_timeoffset = sec_in_day*day
+                    print('reset gps timeoffset', day, ts, t0)
                 if ts + gps_timeoffset > t0:
                     gps_timeoffset -= sec_in_day
                 ts += gps_timeoffset
-                print('reset gps timeoffset', day)
         except:
             ts = time.time()
 
@@ -94,10 +96,17 @@ def parse_nmea_gps(line):
             lon = -lon
 
         speed = float(data[6]) if data[6] else 0
+
         gps = {'timestamp': ts, 'speed': speed, 'lat': lat, 'lon': lon}
         if data[7]:
             gps['track'] = float(data[7])
 
+        if data[9]:
+            decl = float(data[9])
+            if data[10] == 'W':
+                decl = -decl
+            gps['declination'] = decl
+            
     except Exception as e:
         print(_('nmea failed to parse gps'), line, e)
         return False
@@ -154,7 +163,7 @@ def parse_nmea_rudder(line):
     except:
         angle = False
 
-    return 'rudder', {'angle': angle}
+    return 'rudder', {'angle': -angle}
 
 
 def parse_nmea_apb(line):
@@ -479,7 +488,7 @@ class Nmea(object):
                         wind = self.sensors.truewind
                         self.send_nmea('APMWV,%.3f,T,%.3f,N,A' % (wind.direction.value, wind.speed.value))
                     elif name == 'rudder':
-                        self.send_nmea('APRSA,%.3f,A,,' % self.sensors.rudder.angle.value)
+                        self.send_nmea('APRSA,%.3f,A,,' % -self.sensors.rudder.angle.value)
                     period = 1/rate
                     self.nmea_times[name] = max(min(self.nmea_times[name] + period, t+period), t)
 
@@ -488,8 +497,9 @@ class Nmea(object):
             self.nmea_bridge.poll()
         
         t6 = time.monotonic()
-        if t6 - t0 > .05 and t0-self.start_time > 1: # report times if processing takes more than 0.05 seconds
-            print('nmea poll times', t6-self.start_time, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t6-t0)
+        if t6 - t0 > .05 and t0-self.start_time > 10: # report times if processing takes more than 0.05 seconds
+            times = map(lambda t : round_value(t, '%.3f'), [t6-self.start_time, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t6-t0])
+            print('nmea poll times', *times)
             
     def probe_serial(self):
         # probe new nmea data devices
@@ -791,7 +801,7 @@ class nmeaBridge(object):
             msg = self.pipe.recv()
             if not msg:
                 return
-            if msg[0] != '$': # perform checksum in this subprocess
+            if msg[0] != '$' and msg[0] != '!': # perform checksum in this subprocess
                 msg = '$' + msg + ('*%02X' % nmea_cksum(msg))
             # relay nmea message from server to all tcp sockets
             for sock in self.sockets:

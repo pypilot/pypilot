@@ -20,6 +20,9 @@ calibration_fit_period = 30  # run every 30 seconds
 def lmap(*cargs):
     return list(map(*cargs))
 
+def safedegasin(x):
+    return math.degrees(math.asin(min(max(x, -1), 1)))
+
 def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
     try:
         import scipy.optimize
@@ -28,7 +31,11 @@ def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
         debug('cannot perform calibration update!')
         return False
 
+    t0 = time.monotonic()
     leastsq = scipy.optimize.leastsq(f, beta0, zpoints)
+    #print('scipy.optimize.leastsq took ', time.monotonic() - t0, leastsq)
+    if not leastsq[1] in [1, 2, 3, 4]:
+        return False
     return list(leastsq[0])
 
 def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
@@ -55,11 +62,9 @@ def ComputeDeviation(points, fit):
 
         if len(fit) > 4:
             n = vector.dot(v, p[3:]) / vector.norm(v)
-            if abs(n) <= 1:
-                ang = math.degrees(math.asin(n))
-                d += (fit[4] - ang)**2
-            else:
-                d += 1e111
+            ang = safedegasin(n)
+            d += (fit[4] - ang)**2
+
     m /= len(points)
     d /= len(points)
     return [m**.5, d**.5]
@@ -218,7 +223,7 @@ def FitPointsCompass(debug, points, current, norm):
         debug('FitLeastSq new_sphere1 failed!!!! ', len(points), new_sphere1d_fit)
         new_sphere1d_fit = current
     else:
-        new_sphere1d_fit = lmap(lambda x, a: x + new_sphere1d_fit[0]*a, initial[:3], norm) + [new_sphere1d_fit[1], math.degrees(math.asin(new_sphere1d_fit[2]))]
+        new_sphere1d_fit = lmap(lambda x, a: x + new_sphere1d_fit[0]*a, initial[:3], norm) + [new_sphere1d_fit[1], safedegasin(new_sphere1d_fit[2])]
     new_sphere1d_fit = [new_sphere1d_fit, ComputeDeviation(points, new_sphere1d_fit), 1]
         #print('new sphere1 fit', new_sphere1d_fit)
 
@@ -270,11 +275,12 @@ def FitPointsCompass(debug, points, current, norm):
     if not new_sphere2d_fit or new_sphere2d_fit[2] < 0 or abs(new_sphere2d_fit[3]) >= 1:
         debug('FitLeastSq sphere2 failed!!!! ', len(points), new_sphere2d_fit)
         return False
-    new_sphere2d_fit = lmap(lambda x, a, b: x + new_sphere2d_fit[0]*a + new_sphere2d_fit[1]*b, initial[:3], u, v) + [new_sphere2d_fit[2], math.degrees(math.asin(new_sphere2d_fit[3]))]
+    new_sphere2d_fit = lmap(lambda x, a, b: x + new_sphere2d_fit[0]*a + new_sphere2d_fit[1]*b, initial[:3], u, v) + [new_sphere2d_fit[2], safedegasin(new_sphere2d_fit[3])]
     new_sphere2d_fit = [new_sphere2d_fit, ComputeDeviation(points, new_sphere2d_fit), 2]
 
     if plane_max_dev < 1.2:
-        ang = math.degrees(math.asin(vector.norm(vector.cross(plane_fit[1], norm))))
+        plane_fit1 = vector.normalize(plane_fit[1])
+        ang = safedegasin(vector.norm(vector.cross(plane_fit1, norm)))
         
         debug('plane fit found, 2D fit only', ang, plane_fit, plane_dev, plane_max_dev)
         if ang > 30:
@@ -315,7 +321,7 @@ def FitPointsCompass(debug, points, current, norm):
     if not new_sphere3d_fit or new_sphere3d_fit[3] < 0 or abs(new_sphere3d_fit[4]) >= 1:
         debug('FitLeastSq sphere3 failed!!!! ', len(points))
         return False
-    new_sphere3d_fit[4] = math.degrees(math.asin(new_sphere3d_fit[4]))
+    new_sphere3d_fit[4] = safedegasin(new_sphere3d_fit[4])
     new_sphere3d_fit = [new_sphere3d_fit, ComputeDeviation(points, new_sphere3d_fit), 3]
     #debug('new sphere3 fit', new_sphere3d_fit)
     
@@ -349,6 +355,7 @@ class SigmaPoints(object):
         self.min_count = min_count
         self.Reset()
         self.updated = False
+        self.last_sample = False
 
     def Updated(self):
         if self.updated:
@@ -386,6 +393,7 @@ class SigmaPoints(object):
 
         # use lastpoint as better sample
         sensor, down = self.lastpoint.sensor, self.lastpoint.down
+        self.last_sample = sensor, down
         self.lastpoint = False
 
         ind = 0
@@ -458,7 +466,6 @@ def ComputeCoverage(p, bias, norm):
         v = quaternion.rotvecquat(c, quaternion.vec2vec2quat(d, [0, 0, 1]))
         v = vector.normalize(v)
         return math.degrees(math.atan2(v[1], v[0]))
-    #, abs(math.degrees(math.acos(v[2])))
 
     spacing = 20 # 20 degree segments
     angles = [False] * int(360 / spacing)
@@ -479,10 +486,10 @@ def FitAccel(debug, accel_cal):
     maxa = lmap(max, *p)
     diff = vector.sub(maxa[:3], mina[:3])
     if min(*diff) < 1.2:
-        debug('need more range', min(*diff))
+        debug('need more range', '%.4f' % min(*diff))
         return # require sufficient range on all axes
     if sum(diff) < 4.5:
-        debug('need more spread', sum(diff))
+        debug('need more spread', '%.4f' % sum(diff))
         return # require more spread
     fit = FitPointsAccel(debug, p)
     if not fit:
@@ -539,7 +546,7 @@ def FitCompass(debug, compass_points, compass_calibration, norm):
 
     # make sure the magnitude is sane
     mag = c[0][3]
-    if mag < 7 or mag > 120:
+    if mag < 12 or mag > 120:
         debug('fit found field outside of normal earth field strength', mag)
         return
 
@@ -590,7 +597,7 @@ class CalibrationProperty(RoundedValue):
 
 class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
-        super(AgeValue, self).__init__(name, time.monotonic(), **kwargs)
+        super(AgeValue, self).__init__(name, 0, **kwargs)
         self.lastreadable = 0
 
     def reset(self):
@@ -604,7 +611,9 @@ class AgeValue(StringValue):
 
     def get_msg(self):
         t = time.monotonic()
-        return '"' + boatimu.readable_timespan(t - self.value) + '"'
+        if self.value:
+            return '"' + boatimu.readable_timespan(t - self.value) + '"'
+        return '"N/A"'
 
 def RegisterCalibration(client, name, default):
     calibration = client.register(CalibrationProperty(name, default))
@@ -623,6 +632,8 @@ def CalibrationProcess(cal_pipe, client):
 
     accel_calibration = RegisterCalibration(client, 'imu.accel', [[0, 0, 0, 1], 1])
     compass_calibration = RegisterCalibration(client, 'imu.compass', [[0, 0, 0, 30, 0], [1, 1], 0])
+    compass_calibration.field_strength = client.register(SensorValue('imu.compass.calibration.field_strength'))
+    compass_calibration.inclination = client.register(SensorValue('imu.compass.calibration.inclination'))
     
     client.watch('imu.alignmentQ')
     if not cal_pipe: # get these through client rather than direct pipe
@@ -634,12 +645,35 @@ def CalibrationProcess(cal_pipe, client):
         def debug_by_name(*args):
             s = ''
             for a in args:
+                try:
+                    s = '%.5f' % value
+                except Exception as e:
+                    pass
                 s += str(a) + ' '
+                #print("debug", name, s)
             client.set('imu.'+name+'.calibration.log', s)
         return debug_by_name
 
     last_compass_coverage = 0
+
+    warnings = {}
+    def warnings_update(sensor, warning, value):
+        if value:
+            if sensor in warnings and warnings[sensor] == warning:
+                return
+            warnings[sensor] = warning
+        else:
+            if not sensor in warnings:
+                return
+            del warnings[sensor]
+
+        str_warnings = 'warnings='
+        for sensor, warning in warnings.items():
+            str_warnings += sensor + ' ' + warning
+        cal_pipe.send(str_warnings)
+    
     while True:
+      try:
         t = time.monotonic()
         addedpoint = False
         down = False
@@ -649,6 +683,7 @@ def CalibrationProcess(cal_pipe, client):
             for name in msg:
                 value = msg[name]
                 if name == 'imu.alignmentQ' and value:
+                    value = quaternion.normalize(value)
                     norm = quaternion.rotvecquat([0, 0, 1], value)
                     compass_points.Reset()
                 elif name == 'imu.accel':
@@ -657,10 +692,11 @@ def CalibrationProcess(cal_pipe, client):
                     addedpoint = True
                 elif name == 'imu.compass' and down:
                     if value and down:
-                        compass_points.AddPoint(value, down)
+                         compass_points.AddPoint(value, down)                            
                     addedpoint = True
                 elif name == 'imu.fusionQPose':
                     if value:
+                        value = quaternion.normalize(value)
                         down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(value))
 
             # receive calibration data
@@ -671,15 +707,58 @@ def CalibrationProcess(cal_pipe, client):
                         accel_points.AddPoint(p['accel'])
                         addedpoint = True
                     if 'compass' in p:
-                        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(p['fusionQPose']))
+                        fusionQPose = quaternion.normalize(p['fusionQPose'])
+                        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(fusionQPose))
                         compass_points.AddPoint(p['compass'], down)
                         addedpoint = True
                     p = cal_pipe.recv()
 
+            if accel_points.last_sample:
+                sensor, down = accel_points.last_sample
+                accel_points.last_sample = False
+                cal = accel_calibration.value
+                # apply calibration
+                value = vector.sub(sensor, cal[0][:3])
+                g = vector.norm(value)
+                # check that calibration points are near magnitude of 1
+                warnings_update('accel', 'warning', abs(g-1) > .1)
+
+            if compass_points.last_sample:
+                sensor, down = compass_points.last_sample
+                accel_points.last_sample = False
+                cal = compass_calibration.value
+                # apply calibration
+                value = vector.sub(sensor, cal[0][:3])
+                # check that rate of change of compass magnitude and inclination is not too high
+                warn = False
+                gauss = vector.norm(value)
+                d = .0001
+                if compass_calibration.field_strength.value is False:
+                    d = 1
+                field_strength = compass_calibration.field_strength.value * (1-d) + gauss * d
+                compass_calibration.field_strength.set(field_strength)
+                if abs(field_strength - gauss) > 5:
+                    warn = True
+
+                d = .001
+                if compass_calibration.inclination.value is False:
+                    d = 1
+
+                c = vector.dot(value, down) / vector.norm(value)
+                angle = safedegasin(c)
+                inclination = compass_calibration.inclination.value * (1-d) + angle * d
+                compass_calibration.inclination.set(inclination)
+
+                if abs(inclination - angle) > 2:
+                    warn = True
+
+                warnings_update('compass', 'distortions', warn)
+                #print('mag distortions debug', warn, field_strength, gauss, inclination, angle)
+
             cals = [(accel_calibration, accel_points), (compass_calibration, compass_points)]
             for calibration, points in cals:
                 calibration.age.update()
-                if points.Updated():
+                if points.Updated():                    
                     calibration.sigmapoints.set(points.Points())
 
         if not addedpoint: # don't bother to run fit if no new data
@@ -708,8 +787,16 @@ def CalibrationProcess(cal_pipe, client):
             else:
                 compass_calibration.set(fit)
                 compass_calibration.points.set(compass_points.Points())
+
+                compass_calibration.field_strength.set(False)
+                compass_calibration.inclination.set(False)
         else:
             last_compass_coverage = 0 # reset
+      except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        print('Warning: Calibration process unhandled exception', e)
+          
 
 def ExtraFit():
     ellipsoid_fit = False
@@ -839,7 +926,7 @@ def ExtraFit():
     #    q = [1 - vector.norm(quat_fit[:3])] + list(quat_fit[:3])
     q = angvec2quat(vector.norm(quat_fit[:3]), quat_fit[:3])
 
-    print('quat fit', q, math.degrees(angle(q)), math.degrees(math.asin(quat_fit[3])))
+    print('quat fit', q, math.degrees(angle(q)), safedegasin(quat_fit[3]))
     
     def f_rot(beta, x, sphere_fit):
         sphere_fit = numpy.array(sphere_fit)
@@ -851,7 +938,7 @@ def ExtraFit():
         return beta[3] - d
 
     rot_fit = FitLeastSq([0, 0, 0, 0], f_rot, (zpoints, sphere_fit))
-    print('rot fit', rot_fit, math.degrees(rot_fit[0]), math.degrees(rot_fit[1]), math.degrees(rot_fit[2]), math.degrees(math.asin(min(1, max(-1, rot_fit[3])))))
+    print('rot fit', rot_fit, math.degrees(rot_fit[0]), math.degrees(rot_fit[1]), math.degrees(rot_fit[2]), safedegasin(min(1, max(-1, rot_fit[3]))))
     
 
 def main():

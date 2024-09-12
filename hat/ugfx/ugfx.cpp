@@ -856,6 +856,101 @@ public:
      }
 };
 
+// SSD1309
+
+#define LCD_C LOW
+#define LCD_D HIGH
+
+#define LCD_X 128
+#define LCD_Y 64
+#define LCD_CMD 0
+
+class SSD1309 : public spilcd
+{
+public:
+    SSD1309() : spilcd(rstPIN, rsPIN, 4000000) {}
+    virtual ~SSD1309() {}
+    void refresh(int contrast, surface *s) {
+        if(contrast < 0)
+            contrast = 0;
+        if(contrast > 120)
+            contrast = 120;
+        contrast = 15+(contrast*2); // in range
+        unsigned char cmd[] = {
+            0xE2, // Soft reset Display
+            0x20, // Set Memory Addressing Mode
+            0x00, // 00=Horizonal Addressing Mode; 01=Vertical Addressing Mode;
+                  // 10=Page Addressing Mode (RESET); 11=Invalid
+            0xB0, // Set Page Start Address for Page Addressing Mode, 0-7
+            0xC8, // Set COM Output Scan Direction
+            0x00, // --set low column address
+            0x10, // --set high column address
+            0x40, // --set start line address
+            0x81, // Set contrast control register
+            (uint8_t)contrast, // Trim Contrast value range can be set from 0 to 255
+            0xA0, // Set Segment Re-map. A0=address mapped; A1=address 127 mapped
+            0xA6, // Set Display Mode. A6=Normal; A7=Inverse
+            0xA8, // Set Multiplex Ratio(1 to 64)
+            0x3F, // Ratio value for 64
+            0xA4, // Output RAM to Display
+                        // 0xA4=Output follows RAM content; 0xA5=Output ignores Ram content
+            0xD3, // Set Display Offset
+            0x00, // 00=No offset
+            0xD5, // --set display clock divide ratio/oscillator frequency
+            0x80, // --set divide ratio
+            0xD9, // Set pre-charge period
+            0xF1, // Pre-charge period
+            0xDA, // Set com pins hardware configuration
+            0x12, // 12=Display Height 64, 02=Display Heigt 32
+            0xDB, // --set vcomh
+            0x40, // VCOM deselect level
+            0x8D, // Set DC-DC enable
+            0x14, // Enable charge pump
+            0xAF  // Display ON
+            
+        };
+
+        digitalWrite (dc, LOW) ;	// Off
+        write(spifd, cmd, sizeof cmd);
+        digitalWrite (dc, HIGH) ;	// Off
+
+
+        unsigned char binary[128*64];//width*height/8];
+        for(int col = 0; col<8; col++)
+            for(int y = 0; y < 128; y++) {
+                int index = y + col*s->height;
+                uint8_t bits = 0;
+                for(int bit = 0; bit<8; bit++) {
+                    bits <<= 1;
+//                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+7-bit))
+                    if(*(uint8_t*)(s->p + (127-y)*s->line_length + (7-col)*8+bit))
+                        bits |= 1;
+                }
+                binary[index] = bits;
+            }
+
+        for(uint8_t i=0;i<8;i++)
+        {
+            unsigned char c1 = 0xb0+i;
+            unsigned char cmd[] = {c1, 0x10};
+            digitalWrite (dc, LOW) ;	// Off
+            write(spifd, cmd, sizeof cmd);
+            digitalWrite (dc, HIGH) ;	// Off
+#if 0
+            unsigned char *address = binary + i*128; //pointer
+            for (unsigned int pos=0; pos<128; pos ++) {
+                char data[1] = {binary[i*128+pos]};
+                write(spifd, data, 1);
+                address++;
+            }
+#else
+            unsigned char *address = binary + i*128; //pointer
+            write(spifd, address, 128);
+#endif
+        }
+     }
+};
+
 #endif
 
 static int detect(int driver) {
@@ -869,13 +964,15 @@ static int detect(int driver) {
     fgets(drv, sizeof drv, f);
     if(!strcmp(drv, "jlx12864"))
         driver = 1;
+    else if(!strcmp(drv, "ssd1309"))
+        driver = 2;
     else
         driver = 0;
     fclose(f);
     
     return driver;
 }
-const int spilcdsizes[][2] = {{48, 84}, {64, 128}};
+const int spilcdsizes[][2] = {{48, 84}, {64, 128}, {64, 128}};
 
 spiscreen::spiscreen(int driver)
     : surface(spilcdsizes[detect(driver)][0], spilcdsizes[detect(driver)][1], 1, NULL)
@@ -885,6 +982,7 @@ spiscreen::spiscreen(int driver)
 #ifdef WIRINGPI
     case 0: disp = new PCD8544(); break;
     case 1: disp = new JLX12864G(); break;
+    case 2: disp = new SSD1309(); break;
 #endif
     default:
         fprintf(stderr, "invalid driver: %d", driver);

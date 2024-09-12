@@ -9,6 +9,7 @@
 
 import os, time, math
 import pyjson
+from resolv import resolv
 
 class Value(object):
     def __init__(self, name, initial, **kwargs):
@@ -17,6 +18,9 @@ class Value(object):
         self.set(initial)
 
         self.info = {'type': 'Value'}
+        if 'profiled' in kwargs and kwargs['profiled']:
+            self.info['profiled'] = True
+            self.info['persistent'] = True
         # if persistent argument make the server store/load this value regularly
         if 'persistent' in kwargs and kwargs['persistent']:
             self.info['persistent'] = True
@@ -76,7 +80,7 @@ class RoundedValue(Value):
         super(RoundedValue, self).__init__(name, initial, **kwargs)
       
     def get_msg(self):
-        return round_value(self.value, '%.3f')
+        return round_value(self.value, '%.4f')
 
 class StringValue(Value):
     def __init__(self, name, initial, **kwargs):
@@ -90,10 +94,10 @@ class StringValue(Value):
         return strvalue
 
 class SensorValue(Value):
-    def __init__(self, name, initial=False, fmt='%.3f', **kwargs):
+    def __init__(self, name, initial=False, fmt='%.4f', **kwargs):
         super(SensorValue, self).__init__(name, initial, **kwargs)
         self.directional = 'directional' in kwargs and kwargs['directional']
-        self.fmt = fmt # round to 3 places unless overrideen
+        self.fmt = fmt # round to 4 places unless overridden
 
         self.info['type'] = 'SensorValue'
         if self.directional:
@@ -105,6 +109,14 @@ class SensorValue(Value):
             value = list(value)
         return round_value(value, self.fmt)
 
+class HeadingOffset(object):
+    def __init__(self):
+        self.value = 0
+
+    def update(self, offset, d):
+        offset = resolv(offset, self.value)
+        self.value = resolv(d*offset + (1-d)*self.value)
+    
 # a value that may be modified by external clients
 class Property(Value):
     def __init__(self, name, initial, **kwargs):
@@ -112,13 +124,17 @@ class Property(Value):
         self.info['writable'] = True
 
 class ResettableValue(Property):
-    def __init__(self, name, initial, **kwargs):
+    def __init__(self, name, initial, fmt=None, **kwargs):
         self.initial = initial
         super(ResettableValue, self).__init__(name, initial, **kwargs)
+        self.fmt = fmt
+        self.info['type'] = 'ResettableValue'
 
-    def type(self):
-        return {'type': 'ResettableValue'}
-
+    def get_msg(self):
+        if self.fmt:
+            return round_value(self.value, self.fmt)
+        return str(self.value) # do not round if fmt is not set
+        
     def set(self, value):
         if not value:
             value = self.initial # override value
@@ -154,9 +170,9 @@ class RangeProperty(Property):
 
 # a range property that is persistent and specifies the units
 class RangeSetting(RangeProperty):
-    def __init__(self, name, initial, min_value, max_value, units):
+    def __init__(self, name, initial, min_value, max_value, units, **kwargs):
         self.units = units
-        super(RangeSetting, self).__init__(name, initial, min_value, max_value, persistent=True)
+        super(RangeSetting, self).__init__(name, initial, min_value, max_value, persistent=True, **kwargs)
 
         self.info['type'] = 'RangeSetting'
         self.info['units'] = self.units

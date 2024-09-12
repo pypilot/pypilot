@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-23 23:09-0400\n"
+"POT-Creation-Date: 2023-04-07 14:39-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ca <LL@li.org>\n"
@@ -16,15 +16,15 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"Generated-By: Babel 2.6.0\n"
+"Generated-By: Babel 2.12.1\n"
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
-msgstr "configuració de barret de pilot"
+msgstr "configuració del barret pypilot"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
-msgstr "Configuració del control remot i lcd"
+msgstr "Configuració de lcd i control remot"
 
 #: templates/index.html:17
 msgid "clear"
@@ -39,8 +39,8 @@ msgid ""
 "press button(s) on the keypad or remote then assign a command with the "
 "button."
 msgstr ""
-"premeu els botons del teclat o del comandament a distància i assigneu una "
-"ordre amb el botó."
+"premeu els botons del teclat o del comandament a distància i després "
+"assigneu una ordre amb el botó."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
@@ -59,12 +59,12 @@ msgid ""
 "These actions do not depend on the state of the display and can be used by "
 "wireless remotes."
 msgstr ""
-"Aquestes accions no depenen de l'estat de la pantalla i poden ser "
-"utilitzades per comandaments a distància sense fils."
+"Aquestes accions no depenen de l'estat de la pantalla i es poden utilitzar "
+"amb comandaments a distància sense fil."
 
 #: templates/index.html:28
 msgid "infared receiver port"
-msgstr "port receptor d'infrarojos"
+msgstr "port del receptor d'infrarojos"
 
 #: templates/index.html:29
 msgid ""
@@ -72,8 +72,8 @@ msgid ""
 "arduino can receive from many different remotes without special calibration "
 "recordings."
 msgstr ""
-"El port ir es pot gestionar directament des del pi o l’arduino. L’ús de "
-"l’arduino pot rebre de molts comandaments a distància diferents sense "
+"El port ir es pot manejar directament des del pi o l'arduino. L'ús de "
+"l'arduino es pot rebre de molts comandaments a distància diferents sense "
 "enregistraments de calibratge especials."
 
 #: templates/index.html:36
@@ -90,7 +90,7 @@ msgstr "nmea velocitat de transmissió actual"
 
 #: templates/index.html:42
 msgid "voltages"
-msgstr "tensions"
+msgstr "voltatges"
 
 #: templates/index.html:43
 msgid "status"
@@ -103,3 +103,71 @@ msgstr "connexió"
 #: templates/index.html:45
 msgid "Web Server Latency"
 msgstr "Latència del servidor web"
+
+#~ msgid "pypilot hat configuration"
+#~ msgstr "configuració de barret de pilot"
+
+#~ msgid "lcd and remote control setup"
+#~ msgstr "Configuració del control remot i lcd"
+
+#~ msgid "clear"
+#~ msgstr "clar"
+
+#~ msgid "default"
+#~ msgstr "per defecte"
+
+#~ msgid ""
+#~ "press button(s) on the keypad or remote then assign a command with the "
+#~ "button."
+#~ msgstr ""
+#~ "premeu els botons del teclat o del comandament a distància i assigneu una "
+#~ "ordre amb el botó."
+
+#~ msgid "Actions for LCD interface"
+#~ msgstr "Accions per a la interfície LCD"
+
+#~ msgid "key"
+#~ msgstr "clau"
+
+#~ msgid "action"
+#~ msgstr "acció"
+
+#~ msgid ""
+#~ "These actions do not depend on the state of the display and can be used by "
+#~ "wireless remotes."
+#~ msgstr ""
+#~ "Aquestes accions no depenen de l'estat de la pantalla i poden ser "
+#~ "utilitzades per comandaments a distància sense fils."
+
+#~ msgid "infared receiver port"
+#~ msgstr "port receptor d'infrarojos"
+
+#~ msgid ""
+#~ "The ir port can be handled direcly from the pi or the arduino.  Using the "
+#~ "arduino can receive from many different remotes without special calibration "
+#~ "recordings."
+#~ msgstr ""
+#~ "El port ir es pot gestionar directament des del pi o l’arduino. L’ús de "
+#~ "l’arduino pot rebre de molts comandaments a distància diferents sense "
+#~ "enregistraments de calibratge especials."
+
+#~ msgid "remote mode"
+#~ msgstr "mode remot"
+
+#~ msgid "remote"
+#~ msgstr "remot"
+
+#~ msgid "nmea current baud rate"
+#~ msgstr "nmea velocitat de transmissió actual"
+
+#~ msgid "voltages"
+#~ msgstr "tensions"
+
+#~ msgid "status"
+#~ msgstr "estat"
+
+#~ msgid "connection"
+#~ msgstr "connexió"
+
+#~ msgid "Web Server Latency"
+#~ msgstr "Latència del servidor web"

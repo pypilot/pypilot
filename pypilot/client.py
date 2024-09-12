@@ -17,6 +17,7 @@ from bufferedsocket import LineBufferedNonBlockingSocket
 from values import Value
 
 DEFAULT_PORT = 23322
+udp_control_port = 43822
 
 try:
     IOError
@@ -105,7 +106,7 @@ class ClientValues(Value):
                 self.wvalues[name] = self.values[name].info
 
 class pypilotClient(object):
-    def __init__(self, host=False):
+    def __init__(self, host=False, use_udp=False):
         if sys.version_info[0] < 3:
             import failedimports
 
@@ -114,6 +115,7 @@ class pypilotClient(object):
         self.wwatches = {}
         self.received = []
         self.last_values_list = False
+        self.udp_socket = False
 
         if False:
             self.server = host
@@ -129,6 +131,18 @@ class pypilotClient(object):
                 self.poller.register(fd, select.POLLIN)
                 self.values.onconnected()
             self.timeout_time = False # no timeout for pipe connection
+
+            if use_udp:
+                try:
+                    self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    self.udp_socket.bind(('127.0.0.1', udp_control_port))
+                    self.udp_socket.settimeout(0)
+                    self.poller.register(self.udp_socket, select.POLLIN)
+            
+                except Exception as e:
+                    print('failed to initialize udp socket, this may affect manual control performance', e)
+                    self.udp_socket = False
+
             return
 
         self.timeout_time = time.monotonic()
@@ -174,6 +188,8 @@ class pypilotClient(object):
         self.can_probe = not host
         self.probed = False
 
+            
+
     def onconnected(self):
         #print('connected to pypilot server', time.time())
         self.last_values_list = False
@@ -209,6 +225,7 @@ class pypilotClient(object):
         except Exception as e:
             print(_('failed to') + ' import zeroconf, ' + _('autodetecting pypilot server not possible'))
             print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
+            return
 
         class Listener:
             def __init__(self, client):
@@ -294,17 +311,44 @@ class pypilotClient(object):
             self.update_timeout()
             
             fd, flag = events.pop()
-            if not (flag & select.POLLIN) or (self.connection and not self.connection.recvdata()):
-                # other flags indicate disconnect
-                self.disconnect() # recv returns 0 means connection closed
-                return
+
+            if fd == self.connection.fileno():
+                if not (flag & select.POLLIN) or (self.connection and not self.connection.recvdata()):
+                    # other flags indicate disconnect
+                    self.disconnect() # recv returns 0 means connection closed
+                    return
+            elif self.udp_socket and fd == self.udp_socket.fileno():
+                if not (flag & select.POLLIN):
+                    print(_('lost udp_socket'))
+                    self.udp_socket.close()
+                    self.udp_socket = False
+                else:
+                    try:
+                        while True:
+                            line = self.udp_socket.recvfrom(128)
+                            if not line:
+                                break
+                            if 'servo.command' in self.values.values:
+                                self.values.values['servo.command'].set(float(line[0]))
+
+                    except OSError as e:
+                        import errno
+                        if e.args[0] is errno.EAGAIN:
+                            pass
+                        else:
+                            print("unknown os error", e)
+                    except Exception as e:
+                        self.poller.unregister(self.udp_socket)
+                        self.udp_socket.close()
+                        self.udp_socket = False
+                        print("failed  udp??\n", e, line)
 
         # read incoming data line by line
         while True:
             line = self.connection.readline()
             if not line:
                 return
-            #print('line', line, time.monotonic())
+            #print('client line', line, time.monotonic())
             try:
                 name, data = line.rstrip().split('=', 1)
                 if name == 'error':
