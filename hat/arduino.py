@@ -64,9 +64,12 @@ def update_firmware(config):
         for filename in os.listdir(path):
             print("FILE", filename)
             if filename.startswith('hat_') and filename.endswith('.hex'):
-                config['arduino_firmware_version_available'] = filename[4:-4]
-                firmware = path+os.path.sep + filename
-                break
+                try:
+                    config['arduino_firmware_version_available'] = float(filename[4:-4])
+                    firmware = path+os.path.sep + filename
+                    break
+                except Exception as e:
+                    print("invalid firmware filename found", filename, e)
         else:
             print('no firmware file found in', path)
             return
@@ -79,7 +82,7 @@ def update_firmware(config):
         print('cannot update firmware until version is known')
         return
 
-    if float(config['arduino_firmware_version_available']) <= float(config['arduino_firmware_version']):
+    if config['arduino_firmware_version_available'] <= config['arduino_firmware_version']:
         print('firmware up to date')
         return
 
@@ -103,7 +106,7 @@ def update_firmware(config):
         release = f.readline().rstrip()
     f.close()
     avrdude_version = release.split('version')[1]
-    print("avrdude version", avrdude_version)
+    print('avrdude version', avrdude_version)
     old_avrdude = avrdude_version[1].split()[0].startswith('6')
     if old_avrdude:
         print('detected old avrdude')
@@ -389,7 +392,7 @@ class arduino(object):
                 events.append(['analog', adc])
                 continue
             elif cmd == VERSION:
-                self.version = '%d.%d' % (d[0], d[1])
+                self.version = float('%d.%d' % (d[0], d[1]))
                 print('hat firmware version', self.version)
                 events.append(['version', self.version])
                 continue
