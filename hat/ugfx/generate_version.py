@@ -22,7 +22,8 @@ from PIL import ImageFont
 ifont = ImageFont.truetype('../font.ttf', 14)
 version = pypilot.version.strversion
 print('using version', version)
-size = ifont.getsize(version)
+(left, top, right, bottom) = ifont.getbbox(version)
+size = (right - left, bottom - top)
 image = Image.new('RGBA', size)
 draw = ImageDraw.Draw(image)
 draw.text((0, 0), version, font=ifont)
@@ -45,7 +46,7 @@ f.write('static char header_data[] = {')
 for i in range(len(data)):
     d = data[i]
     if d[3] < 128:
-        f.write('255,')
+        f.write('-1,')
     else:
         f.write('0,')
 
