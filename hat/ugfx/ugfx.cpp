@@ -772,14 +772,8 @@ public:
 };
 
 // JLX12864G-086
-
-
 #define LCD_C LOW
 #define LCD_D HIGH
-
-#define LCD_X 128
-#define LCD_Y 64
-#define LCD_CMD 0
 
 const int rstPIN  = 5;    // RST
 const int  rsPIN  = 6;    // RS
@@ -827,7 +821,6 @@ public:
                 uint8_t bits = 0;
                 for(int bit = 0; bit<8; bit++) {
                     bits <<= 1;
-//                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+7-bit))
                     if(*(uint8_t*)(s->p + (127-y)*s->line_length + (7-col)*8+bit))
                         bits |= 1;
                 }
@@ -860,10 +853,6 @@ public:
 
 #define LCD_C LOW
 #define LCD_D HIGH
-
-#define LCD_X 128
-#define LCD_Y 64
-#define LCD_CMD 0
 
 class SSD1309 : public spilcd
 {
@@ -922,7 +911,6 @@ public:
                 uint8_t bits = 0;
                 for(int bit = 0; bit<8; bit++) {
                     bits <<= 1;
-//                    if(*(uint8_t*)(s->p + y*s->line_length + col*8+7-bit))
                     if(*(uint8_t*)(s->p + (127-y)*s->line_length + (7-col)*8+bit))
                         bits |= 1;
                 }
@@ -951,6 +939,134 @@ public:
      }
 };
 
+// DG240160 using ST7586S
+
+#define LCD_C LOW
+#define LCD_D HIGH
+
+// greyscale lcd is a bit strange, must set least significant bit for black, but not for grey
+// 111 = black, 100 = dark grey, 010 = light grey, 000 = white
+// 3 bit grey value only used for 2 out of 3 pixels, 3rd pixel does not need conversion
+inline uint8_t conv(uint8_t x) {
+    if (x == 3)
+	return 7;
+    return x << 1;
+}
+
+class DG240160 : public spilcd
+{
+public:
+    int initialized, last_contrast;
+    DG240160() : spilcd(rstPIN, rsPIN, 4000000) {
+	initialized = 0;
+	last_contrast = -1;
+    }
+    virtual ~DG240160() {}
+    void cmd(uint8_t d) {
+	digitalWrite (dc, LOW) ;	// Off
+	write(spifd, &d, 1);
+    }
+    void data(uint8_t d) {
+	digitalWrite (dc, HIGH) ;	// Off
+	write(spifd, &d, 1);
+    }
+    void data4(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+	digitalWrite (dc, HIGH) ;	// Off
+	uint8_t data[4] = {a, b, c, d};
+	write(spifd, &data, 4);
+    }
+
+    void init() {
+	if(initialized > 0) {
+	    initialized--;
+	    return;
+	}
+	initialized = 20; // only perform init commands occasionally... could interleave them somewhat but this is ok
+
+	cmd(0x11);     //退出睡眠模式 
+
+	cmd(0xC3);     // 设置BIAS 
+	data(0x02);        // 00：BIAS = 1/12 
+
+	// set booster level
+	cmd(0xC4);     // 设置升压倍数
+	data(0x07);        // 07：8倍压 cmd(0xD0);     // 允许模拟电路 
+
+	// enable analog circuit
+	cmd(0xD0);     //允许模拟电路 
+	data(0x1D);        //允许模拟电路 
+ 
+	// greyscale mode
+	cmd(0x38);     // 39:  设置为黑白模式 
+	cmd(0x3A);     // 允许 DDRAM 接口 
+	data(0x02);        // 允许 DDRAM 接口 
+	cmd(0x36);     // 扫描顺序设置 
+	data(0x80);        // 扫描顺序设置:MX=1,MY=1: 从到右，从上到下的扫描顺序 
+	cmd(0xB0);     // Duty设置  
+	data(0x9F);        // Duty设置:1/160 
+	cmd(0x20);     // 反显设置：OFF 
+
+	cmd(0xB3);     //设置FOSC DIVIDER
+	data(0x00);        //NOT Divider 
+
+	// frame rate greyscale
+	cmd(0xF0);     //温度补偿，温度变化改变帧频
+	data4(0x15, 0x15, 0x15, 0x15);
+
+	// first output com
+	cmd(0xB1);     //设置起始输出COM
+	data(0x00);        //设置起始输出COM：从COM0开始 
+
+	// start line
+	cmd(0x37);     // 扫描起始行设置 
+	data(0x00);        // 扫描起始行设置：从COM0开始 
+
+	cmd(0x29); // display on
+
+	cmd(0x2A);   //设置列地址
+	data4(0x00, 0x30, 0x00, 0x7F);
+	cmd(0x2B);   //设置行地址
+	data4(0x00, 0x00, 0x00, 0x9F);
+
+	cmd(0x2C); // begin write data
+        digitalWrite (dc, HIGH) ;	// Off
+    }
+    
+    void refresh(int contrast, surface *s) {
+	if(contrast != last_contrast) {
+	    last_contrast = contrast;
+	    if(contrast < 0)
+		contrast = 0;
+	    if(contrast > 120)
+		contrast = 120;
+	    contrast = 245 + contrast/2; // in range
+	    // contrast
+	    cmd(0xC0);     // 设置VOP 
+	    data((contrast & 0xFF));        // 设置VOP的值的低8位（总共9位）,客户参数 VOP=15.0V
+	    data((contrast >> 8)&1);        // 设置VOP的值的第9位，也是最高一位
+	}
+
+	init();
+
+	// convert our 8bpp framebuffer into the format the lcd uses
+        unsigned char binary[160*80]; // crazy but each byte represents 3 pixels
+        for(int x = 0; x<160; x++)
+            for(int y = 0; y < 80; y++) {
+		int index = x*80 + y;
+		// find byte value for 3 pixels
+		uint8_t *p = (uint8_t*)s->p + 3*y*s->line_length + x;
+		uint8_t a = conv(p[0] >> 6), b = conv(p[160] >> 6), c = p[320] >> 6;
+		// uncomment to force monochrome
+		// a = a ? 7 : 0, b = b ? 7 : 0, c = c ? 3 : 0;
+		binary[index] = (a<<5) | (b<<2) | c;
+            }
+
+	// somehow spi transfer more than 4096 bytes fails, break into 4 transfers
+	for(int i=0; i<4; i++)
+	    write(spifd, binary+i*80*40, 80*40);
+    }
+};
+
 #endif
 
 static int detect(int driver) {
@@ -966,13 +1082,15 @@ static int detect(int driver) {
         driver = 1;
     else if(!strcmp(drv, "ssd1309"))
         driver = 2;
+    else if(!strcmp(drv, "dg240160"))
+        driver = 3;
     else
         driver = 0;
     fclose(f);
     
     return driver;
 }
-const int spilcdsizes[][2] = {{48, 84}, {64, 128}, {64, 128}};
+const int spilcdsizes[][2] = {{48, 84}, {64, 128}, {64, 128}, {160, 240}};
 
 spiscreen::spiscreen(int driver)
     : surface(spilcdsizes[detect(driver)][0], spilcdsizes[detect(driver)][1], 1, NULL)
@@ -983,6 +1101,7 @@ spiscreen::spiscreen(int driver)
     case 0: disp = new PCD8544(); break;
     case 1: disp = new JLX12864G(); break;
     case 2: disp = new SSD1309(); break;
+    case 3: disp = new DG240160(); break;
 #endif
     default:
         fprintf(stderr, "invalid driver: %d", driver);

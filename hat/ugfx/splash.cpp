@@ -77,6 +77,10 @@ int main(int argc, char *argv[])
             framebuffer = new spiscreen(0);
         else if(!strcmp(argv[1], "jlx12864"))
             framebuffer = new spiscreen(1);
+        else if(!strcmp(argv[1], "ssd1309"))
+            framebuffer = new spiscreen(2);
+        else if(!strcmp(argv[1], "dg240160"))
+            framebuffer = new spiscreen(3);
         else {
             printf("unknown lcd %s\n", argv[1]);
             exit(1);
@@ -113,7 +117,6 @@ int main(int argc, char *argv[])
     //logom->magnify(logo, fac);
     stretch(logom, logo);
 
-    
     logom->invert(0, 0, logom->width, logom->height);
 
     framebuffer->fill(255);
