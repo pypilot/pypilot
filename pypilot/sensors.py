@@ -92,7 +92,9 @@ class BaseWind(Sensor):
             dx = speed*math.sin(math.radians(direction))
             dy = speed*math.cos(math.radians(direction))
 
-            m = math.radians(self.compensation_height.value)
+            # convert from degrees/sec to radians/s, then from m/s to knots
+            m = math.radians(1) * 1.94
+            m *= self.compensation_height.value # correction based on mast height
             dx -= m * self.boatimu.SensorValues['rollrate'].value # is this positive or negative?!?
             dy -= m * self.boatimu.SensorValues['pitchrate'].value
 
