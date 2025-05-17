@@ -427,7 +427,7 @@ class signalk(object):
                 data = {}
                 for signalk_path_conversion, pypilot_path in sensor_table.items():
                     signalk_path, signalk_conversion = signalk_path_conversion
-                    if signalk_path in values:
+                    if signalk_path in values and not values[signalk_path] is None:
                         try:
                             if not 'timestamp'in data and signalk_path in self.signalk_last_msg_time:
                                 ts = time.strptime(self.signalk_last_msg_time[signalk_path], '%Y-%m-%dT%H:%M:%S.%fZ')
@@ -438,10 +438,8 @@ class signalk(object):
                                 for signalk_key, pypilot_key in pypilot_path.items():
                                     if not value[signalk_key] is None:
                                         data[pypilot_key] = value[signalk_key] / signalk_conversion
-                            elif not value is None:
-                                data[pypilot_path] = value
-                                if signalk_conversion != 1:
-                                    data[pypilot_path] /= signalk_conversion
+                            else:
+                                data[pypilot_path] = value / signalk_conversion
                         except Exception as e:
                             print(_('Exception converting signalk->pypilot'), e, self.signalk_values)
                             break
