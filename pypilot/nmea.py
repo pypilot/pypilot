@@ -513,7 +513,7 @@ class Nmea(object):
                 serialprobe.relinquish('nmea%d' % self.probeindex)
             self.probeindex = index
 
-            self.probedevicepath = serialprobe.probe('nmea%d' % self.probeindex, [38400, 4800], 8)
+            self.probedevicepath = serialprobe.probe('nmea%d' % self.probeindex, [460800, 38400, 4800], 8)
             if self.probedevicepath:
                 print('nmea probe', self.probedevicepath)
                 try:
