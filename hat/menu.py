@@ -219,7 +219,9 @@ class RangeEdit(page):
 
         keypad = self.lcd.keypad
         def spd(k):
-            dt = keypad[k].dt()*2
+            if k != keypad.index:
+                return 0
+            dt = keypad.dt()*2
             if dt or self.testkeydown(k):
                 return dt + 1
             return 0
@@ -249,7 +251,6 @@ class RangeEdit(page):
                 sign = -1
 
             speed = sign * speed
-
         
         if speed:
             self.move(speed)

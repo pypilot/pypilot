@@ -271,40 +271,26 @@ class page(object):
             return v
 
     def testkeydown(self, key):
-        k = self.lcd.keypad[key]
-        if k.down:
+        keypad = self.lcd.keypad
+        if keypad.index == key and keypad.down > 0:
             self.lcd.buzz_key()
-            k.down -= 1
-            return True
-        return False
-
-    def testkeyup(self, key):
-        k = self.lcd.keypad[key]
-        if k.up:
-            k.up = False
+            keypad.down -= 1
             return True
         return False
 
     def speed_of_keys(self):
         # for keys providing acceration
         keypad = self.lcd.keypad
-        ss = keypad[SMALL_STARBOARD].dt()*10
-        sp = keypad[SMALL_PORT].dt()*10
-        bp = keypad[BIG_PORT].dt()*10
-        bs = keypad[BIG_STARBOARD].dt()*10
+        speed = 0
+        dt = keypad.dt()
+        if dt == 0:
+            return 0
+        if keypad.index == SMALL_STARBOARD or keypad.index == SMALL_PORT:
+            speed = max(.5, min(.8, .5+.04*dt**1.88))
+        if keypad.index == BIG_STARBOARD or keypad.index == BIG_PORT:
+            speed = max(.6, min(1, .6+.06*dt**2.5))
 
-        speed = 0;
-        sign = 0;
-        if sp or ss:
-            speed = max(.4, min(.8, .003*max(sp, ss)**1.8))
-        if bp or bs:
-            speed = max(.4, min(1, .006*max(bp, bs)**2.5))
-
-        if ss or bs:
-            sign = -1
-        elif sp or bp:
-            sign = 1
-
+        sign = -1 if keypad.index == SMALL_STARBOARD or keypad.index == BIG_STARBOARD else 1
         return sign * speed
 
     def set(self, name, value):
@@ -815,10 +801,10 @@ class control(controlbase):
                     key = k
                     dt = .1
                     break
-            else: # determine how long key was pressed if released
+            else: # determine how long key pressed if held
                 key = self.manualkeystate['key']
-                if key:
-                    dt = self.lcd.keypad[key].dt()
+                if key and self.lcd.keypad.index == key:
+                    dt = self.lcd.keypad.dt()
 
             if not dt:
                 self.resetmanualkeystate(0)

@@ -37,21 +37,27 @@ for pdriver in ['nokia5110', 'jlx12864', 'ssd1309', 'gd240160', 'glut', 'framebu
 
 class Key():
     def __init__(self):
-        self.time = 0
-        self.down = 0
-        self.up = False
+        self.index = 0 # which key
+        self.time = 0  # when it was pressed
+        self.down = 0 # how many times pressed
 
-    def update(self, down, count=None):
-        if down:
-            if not self.time:
-                self.down += 1
-                self.time = gettime()
-            if count:
-                t0 = gettime() - count*.1
-                self.time = min(t0, self.time)
-        elif self.time:
-            self.up = True
+    def update(self, index, down, count=None):
+        if not down:
             self.time = 0
+            return
+        
+        if self.index != index:
+            self.index = index
+            self.down = 0
+            self.time = 0
+
+        if not self.time:
+            self.time = gettime()
+            self.down += 1
+
+        if count:
+            t0 = gettime() - count*.1
+            self.time = min(t0, self.time)
 
     def dt(self):
         t0 = gettime()
@@ -179,9 +185,7 @@ class LCD():
         self.need_refresh = True
         self.need_buzz = False
 
-        self.keypad = []
-        for i in range(NUM_KEYS):
-            self.keypad.append(Key())
+        self.keypad = Key()
 
         self.blink = black, white # two cursor states
         self.data_update = False
@@ -230,10 +234,10 @@ class LCD():
         return self.client.get_values()
             
     def key(self, k, down):
-        if k < 0 or k >= len(self.keypad):
+        if k < 0 or k >= NUM_KEYS:
             return
 
-        self.keypad[k].update(down)
+        self.keypad.update(k, down)
             #self.glutkeytime = k, gettime()
 
     def glutkeydown(self, k, x, y):
@@ -351,12 +355,10 @@ class LCD():
                 if index == 'voltage':
                     self.voltage = count
                 else:
-                    self.keypad[index].update(count, count)
+                    self.keypad.update(index, count, count)
 
     def reset_keys(self):
-        for key in self.keypad:
-            key.down = 0
-            key.up = False
+        self.keypad.down = 0
 
     def check_voltage(self):
         if not self.voltage:
