@@ -37,13 +37,13 @@ product "pypilot hat"
 # these will force the bank to use the custom setting.
 
 # drive strength, 0=default, 1-8=2,4,6,8,10,12,14,16mA, 9-15=reserved
-gpio_drive 0
+#gpio_drive 0
 
 # 0=default, 1=slew rate limiting, 2=no slew limiting, 3=reserved
-gpio_slew 0
+#gpio_slew 0
 
 # 0=default, 1=hysteresis disabled, 2=hysteresis enabled, 3=reserved
-gpio_hysteresis 0
+#gpio_hysteresis 0
 
 # If board back-powers Pi via 5V GPIO header pins:
 # 0 = board does not back-power
@@ -52,7 +52,7 @@ gpio_hysteresis 0
 # 3 = reserved
 # If back_power=2 then USB high current mode will be automatically 
 # enabled on the Pi
-back_power 0
+#back_power 0
 
 ########################################################################
 # GPIO pins, uncomment for GPIOs used on board
@@ -76,7 +76,7 @@ back_power 0
 #setgpio  13    INPUT     DEFAULT
 #setgpio  14    INPUT     DEFAULT
 #setgpio  15    INPUT     DEFAULT
-setgpio  16    INPUT     UP
+#setgpio  16    INPUT     UP
 #setgpio  17    INPUT     DEFAULT
 #setgpio  18    INPUT     DEFAULT
 #setgpio  19    INPUT     DEFAULT

@@ -507,6 +507,7 @@ def arduino_process(pipe, config):
                 events.append(['baudrate', 'ERROR: no connection to server for nmea'])
 
         if events and t0 - start > 2:
+            print("events", events)
             pipe.send(events)
             if events[0][0] != 'voltage':
                 period = 0

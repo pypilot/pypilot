@@ -165,6 +165,7 @@ class signalk(object):
                 if type(pypilot_path) == type({}): # single path translates to multiple pypilot
                     self.last_values_keys[signalk_path] = {}
 
+        self.enabled = self.client.register(BooleanProperty('signalk.enabled', True, persistent=True))
         self.period = self.client.register(RangeProperty('signalk.period', .5, .1, 2, persistent=True))
         self.last_period = False
         self.uid = self.client.register(Property('signalk.uid', 'pypilot', persistent=True))
@@ -320,6 +321,9 @@ class signalk(object):
             self.client.watch(sensor+'.source')
         
     def poll(self, timeout=0):
+        if not self.enabled:
+            return
+
         if self.process:
             msg = self.sensors_pipe_out.recv()
             while msg:
