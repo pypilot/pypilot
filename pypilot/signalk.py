@@ -41,8 +41,9 @@ def debug(*args):
     #print(*args)
     pass
 
-class ZeroConfProcess(multiprocessing.Process): 
+class ZeroConfProcess(multiprocessing.Process):
     def __init__(self, signalk):
+        self.signalk = signalk  # Store reference to signalk instance
         self.name_type = False
         self.pipe = NonBlockingPipe('zeroconf', True)
         super(ZeroConfProcess, self).__init__(target=self.process, daemon=True)
@@ -79,7 +80,11 @@ class ZeroConfProcess(multiprocessing.Process):
 
 
     def process(self):
-        warned = False        
+        # Wait for configuration to be loaded before starting discovery
+        while not self.signalk.config_loaded:
+            time.sleep(0.1)
+        
+        warned = False
         while True:
             try:
                 import zeroconf
@@ -129,6 +134,7 @@ class signalk(object):
         self.initialized = False
         self.signalk_access_url = False
         self.last_access_request_time = 0
+        self.config_loaded = False  # Flag to control ZeroConf discovery timing
 
         self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('signalk pipe', self.multiprocessing)
         self.zero_conf = ZeroConfProcess(self)
@@ -168,10 +174,21 @@ class signalk(object):
         self.period = self.client.register(RangeProperty('signalk.period', .5, .1, 2, persistent=True))
         self.last_period = False
         self.uid = self.client.register(Property('signalk.uid', 'pypilot', persistent=True))
+        
+        # Register configuration properties for host and port
+        self.signalk_host = self.client.register(Property('signalk.host', '', persistent=True))
+        self.signalk_port = self.client.register(Property('signalk.port', 3000, persistent=True))
+
+        # Check if we should use configured host instead of ZeroConf
+        if self.signalk_host.value:
+            print('signalk using configured host:', self.signalk_host.value + ':' + str(self.signalk_port.value))
 
         self.signalk_host_port = False
         self.signalk_ws_url = False
         self.ws = False
+
+        # Signal that configuration is loaded and ZeroConf can start discovery
+        self.config_loaded = True
 
         self.initialized = True
         
@@ -333,14 +350,22 @@ class signalk(object):
             self.setup()
             return
 
-        zc = self.zero_conf.poll()
-        if zc == 'disconnect':
-            self.signalk_host_port = False
-            self.disconnect_signalk()
-        elif zc:
-            host_port = zc
-            self.signalk_host_port = host_port
-            print('signalk ' + _('server found'), host_port)
+        # Check if we should use configured host or ZeroConf discovery
+        if self.signalk_host.value and not self.signalk_host_port:
+            host = self.signalk_host.value
+            port = self.signalk_port.value
+            self.signalk_host_port = f"{host}:{port}"
+            print('signalk using configured host', self.signalk_host_port)
+        elif not self.signalk_host.value and self.zero_conf:
+            # Use ZeroConf discovery only if no host is configured
+            zc = self.zero_conf.poll()
+            if zc == 'disconnect':
+                self.signalk_host_port = False
+                self.disconnect_signalk()
+            elif zc:
+                host_port = zc
+                self.signalk_host_port = host_port
+                print('signalk ' + _('server found'), host_port)
         
         
         self.client.poll(timeout)
