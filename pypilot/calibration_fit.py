@@ -49,7 +49,7 @@ def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
 def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
     try:
         import scipy.odr
-    except:
+    except ImportError:
         print(_('failed to load scientific library, cannot perform calibration update!'))
         return False
     try:
@@ -58,7 +58,7 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
         Odr = scipy.odr.ODR(Data, Model, beta0, maxit = 1000)
         output = Odr.run()
         return list(output.beta)
-    except:
+    except Exception:
         print('exception running odr fit!')
         return False
 
@@ -599,7 +599,7 @@ class CalibrationProperty(RoundedValue):
             if self.value and self.locked.value:
                 return
             self.age.reset()
-        except:
+        except Exception:
             pass # startup before locked is initiated
         super().set(value)
 

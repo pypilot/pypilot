@@ -269,7 +269,7 @@ class signalk:
         self.token = False
         try:
             os.unlink(token_path)
-        except:
+        except OSError:
             pass # ignore
 
     def connect_signalk(self):
@@ -534,7 +534,7 @@ class signalk:
     def receive_signalk(self, msg):
         try:
             data = pyjson.loads(msg)
-        except:
+        except ValueError:
             if msg:
                 print('signalk ' + _('failed to parse msg:'), msg)
             return

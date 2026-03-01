@@ -227,7 +227,7 @@ class MainFrame(wx.Frame):
                             self.controls[name].SetValue(int(float(value - r[0])/(r[1]-r[0])*1000))
                         else:
                             self.controls[name].SetValue(value)
-                    except:
+                    except Exception:
                         self.controls[name].SetValue(str(value))
 
 

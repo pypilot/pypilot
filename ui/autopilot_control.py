@@ -294,7 +294,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'rudder.angle':
                 try:
                     value = round(value, 1)
-                except:
+                except ValueError:
                     pass
                 self.rudder = value
                 if (not (not self.apenabled and self.rudder)) == self.bCenter.IsShown():

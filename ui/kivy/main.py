@@ -59,7 +59,7 @@ class AutopilotControlApp(App):
         try:
             self.client = pypilotClient(on_con, autoreconnect=True)
             pass
-        except:
+        except OSError:
             return
 
     def update(self, dt):

@@ -42,7 +42,7 @@ class NonBlockingPipeEnd:
                 return self.pipe.recv()
             if not self.recvfailok:
                 print(_('error pipe block on recv!'), self.name)
-        except:
+        except Exception:
             print(_('failed to recv nonblocking pipe!'), self.name)
         return False
 
@@ -111,7 +111,7 @@ class SocketNonBlockingPipeEnd(LineBufferedNonBlockingSocket):
 
 try:
     from pypilot.linebuffer import linebuffer
-except:
+except ImportError:
     pass
 
 class PipeNonBlockingPipeEnd:

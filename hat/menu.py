@@ -14,7 +14,7 @@ from page import _
 
 try:
     import micropython
-except:
+except ImportError:
     micropython = False
 
 class menu(page):
@@ -168,7 +168,7 @@ class RangeEdit(page):
                 v = str(round(10000*v)/10000)
                 while len(v) < 6:
                     v+='0'
-            except:
+            except Exception:
                 pass
         else: #config items rounded to integer
             v = str(round(v))
@@ -181,7 +181,7 @@ class RangeEdit(page):
             xp = (float(v) - self.range[0]) / (self.range[1] - self.range[0])
             sliderarea.width *= xp
             self.rectangle(sliderarea)
-        except:
+        except Exception:
             pass
 
     def move(self, delta):
@@ -197,7 +197,7 @@ class RangeEdit(page):
             v = self.value
             try:
                 v += step
-            except:
+            except Exception:
                 pass # not connected to server and value is N/A
         else:
             v = step + self.value
@@ -416,7 +416,7 @@ class calibrate(menu):
     def getheading(self):
         try:
             return '%.1f' % self.last_val('imu.heading')
-        except:
+        except Exception:
             return str(self.last_val('imu.heading'))
 
     def display(self, refresh):

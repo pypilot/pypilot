@@ -65,7 +65,7 @@ def read_last_working_devices():
                     if name not in probes:
                         new_probe(name)
                     probes[name]['lastworking'] = lastdevice[0], lastdevice[1]
-                except:
+                except (OSError, ValueError):
                     pass
 
 def scan_devices():
@@ -365,7 +365,7 @@ def success(name, device):
         file.write(pyjson.dumps(device) + '\n')
         file.close()
 
-    except:
+    except OSError:
         print('serialprobe ' + _('failed to record device'), name)
 
 if __name__ == '__main__':

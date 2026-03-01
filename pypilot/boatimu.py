@@ -26,7 +26,7 @@ try:
     from client import pypilotClient
     from nonblockingpipe import NonBlockingPipe
     from values import *
-except:
+except ImportError:
     pass
 
 try:

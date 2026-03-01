@@ -282,7 +282,7 @@ class KerasModel(Model):
             self.build(len(self.train_x[0]), len(self.train_y[0]))
             try:
                 self.model.load_weights(model_filename(self.state)+'model')
-            except:
+            except OSError:
                 print('failed to load model, starting from new')
             self.load_time.stop()
 

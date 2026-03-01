@@ -12,7 +12,7 @@ try:
     import subprocess
 
     import polib
-except:
+except ImportError:
     print('failed to translate', sys.argv[1])
     exit(0)
 

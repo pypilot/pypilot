@@ -37,7 +37,7 @@ if not raspberrypi:
         import OPi.GPIO as GPIO
         orangepi = True
         print('have gpio for orange pi')
-    except:
+    except ImportError:
         print('No gpio available')
         GPIO = None
 

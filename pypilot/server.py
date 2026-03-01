@@ -633,7 +633,7 @@ class pypilotServer:
             try:
                 self.server_socket.bind(('0.0.0.0', self.port))
                 break
-            except:
+            except OSError:
                 print(_('pypilot_server: bind failed; already running a server?'))
                 time.sleep(3)
 

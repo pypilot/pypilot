@@ -108,7 +108,7 @@ class CalibrationPlot:
         down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(q))
         try:
             glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
-        except:
+        except ValueError:
             print('couldnt do q angle', q)
 
         return down

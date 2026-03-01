@@ -30,7 +30,7 @@ try:
     config.update(pyjson.loads(file.readline()))
     file.close()
 
-except:
+except OSError:
     print('failed to read config', configfilename)
 
 def write_config():
@@ -38,7 +38,7 @@ def write_config():
         file = open(configfilename, 'w')
         file.write(pyjson.dumps(config) + '\n')
         file.close()
-    except:
+    except OSError:
         print('failed to write config')
 
 if len(sys.argv) > 1:
@@ -125,7 +125,7 @@ def wifi():
             except Exception:
                 print('failed to parse line in networking.txt', l)
         f.close()
-    except:
+    except OSError:
         pass
 
     if request.method == 'POST':

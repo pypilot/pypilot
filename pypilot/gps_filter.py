@@ -25,7 +25,7 @@ from values import *
 
 try:
     import wmm2020
-except:
+except ImportError:
     print('world magnetic model not available')
     wmm2020 = False
 
@@ -72,7 +72,7 @@ class GPSFilterProcess(multiprocessing.Process):
                 global np
                 import numpy as np
                 break
-            except:
+            except ImportError:
                 pass
             time.sleep(20)
         print('gps filter process', os.getpid())
@@ -323,7 +323,7 @@ class GPSFilter:
         #K = P*Ht*S^-1
         try:
             invS = np.linalg.inv(S)
-        except:
+        except Exception:
             # failed to invert matrix, reset filter?
             print('gps filter failed to invert S')
             return

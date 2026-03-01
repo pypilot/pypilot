@@ -37,7 +37,7 @@ PACKET_LEN=6
 
 try:
     import RPi.GPIO as GPIO
-except:
+except ImportError:
     GPIO = False
 
 def update_firmware(config):
@@ -229,7 +229,7 @@ class arduino:
         self.set_baud(self.config['arduino.nmea.baud'])
         try:
             self.set_adc_channels(len(self.config['arduino.adc_channels']))
-        except:
+        except (KeyError, ValueError):
             pass
 
     def close(self, e):
@@ -257,7 +257,7 @@ class arduino:
     def set_baud(self, baud):
         try:
             baud = int(baud)
-        except:
+        except (ValueError, TypeError):
             baud = 38400
 
         # 0, 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600
@@ -491,7 +491,7 @@ class arduino:
         except Exception as e:
             print('exception', e)
             self.nmea_socket = False
-        except:
+        except Exception:
             print('exception? 975m33')
 
 def arduino_process(pipe, config):

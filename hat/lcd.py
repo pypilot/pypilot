@@ -20,7 +20,7 @@ try:
     def gettime():
         return time.ticks_ms()/1e3
     import ugfx
-except:
+except ImportError:
     import select
 
     from pypilot.client import pypilotClient
@@ -303,7 +303,7 @@ class LCD:
                     self.blink = self.blink[1], self.blink[0]
                     self.data_update = False
                 self.blinktime = t0
-        except:
+        except Exception:
             self.blinktime = 0
 
         w, h = self.surface.width, self.surface.height

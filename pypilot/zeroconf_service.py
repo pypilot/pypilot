@@ -47,7 +47,7 @@ def get_local_addresses():
                 0x8915,  # SIOCGIFADDR
                 struct.pack('256s', bytes(interface[:15], 'utf-8'))
             )[20:24]))
-        except: # no address for this interface
+        except OSError: # no address for this interface
             pass
 
     return addresses
@@ -63,7 +63,7 @@ class zeroconf(threading.Thread):
                 # register zeroconf service
                 from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
-            except:
+            except ImportError:
                 time.sleep(10)
                 continue # try again
             break

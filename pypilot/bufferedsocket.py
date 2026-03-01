@@ -140,7 +140,7 @@ except Exception as e:
                 return
 
             self.out_buffer = self.out_buffer[count:]
-        except:
+        except OSError:
             self.out_buffer = ''
             self.socket.close()
 

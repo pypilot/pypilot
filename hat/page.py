@@ -39,9 +39,9 @@ try:
 
     try:
         import gettext_esp32 as gettext
-    except:
+    except ImportError:
         print('failed to import gettext')
-except:
+except ImportError:
     def gettime():
         return time.monotonic()
     def test_wifi():
@@ -51,7 +51,7 @@ except:
             wlan0.close()
             if line == 'up':
                 return True
-        except:
+        except OSError:
             pass
         return False
 
@@ -201,7 +201,7 @@ class page:
                 size = int(min(sw*metric_size, sh*metric_size))
             try:
                 self.lcd.client.reset_timeout()
-            except:
+            except Exception:
                 pass
             #time.sleep(.02)  # this line is required!  needed to process wifi packets durning long sleep
             if wordwrap: # only cache wordwrap fit!!
@@ -268,7 +268,7 @@ class page:
         try:
             n = 10**places
             return str(round(v*n)/n)
-        except:
+        except Exception:
             return v
 
     def testkeydown(self, key):
@@ -395,7 +395,7 @@ class calibrate_info(info):
                     if cal[1][0] <= n[0]:
                         deviationstr = n[1]
                         break
-            except:
+            except Exception:
                 pass
 
             self.fittext(rectangle(0, .3, 1, .15), _('compass'))
@@ -409,7 +409,7 @@ class calibrate_info(info):
                 raw = ''
                 for c in cal[0]:
                     raw += '%.1f\n' % c
-            except:
+            except Exception:
                 raw = 'N/A'
 
             self.fittext(rectangle(0, .3, 1, .7), raw)
@@ -441,7 +441,7 @@ class calibrate_info(info):
                 p = map(lambda p0 : quaternion.rotvecquat(p0, q), p)
                 for p0 in p:
                     self.surface.putpixel(int(r*p0[0]+x), int(r*p0[1]+y), white)
-            except:
+            except Exception:
                 self.fittext(rectangle(0, .3, 1, .7), 'N/A')
 
 class controlbase(page):
@@ -603,7 +603,7 @@ class control(controlbase):
                 while len(s) < 3:
                     s = ' ' + s
                 return s
-            except:
+            except Exception:
                 return x
 
         def draw_big_number(pos, num, lastnum):
@@ -621,7 +621,7 @@ class control(controlbase):
                 try:
                     if num[i] == lastnum[i]:
                         continue
-                except:
+                except Exception:
                     pass
                 x = float(i)*.33
                 self.box(rectangle(x, pos, .34, .4), black)
@@ -631,7 +631,7 @@ class control(controlbase):
             heading, mode, num = value
             try:
                 lastheading, lastmode, lastnum = lastvalue
-            except:
+            except Exception:
                 lastmode = False #refresh
 
             windmode = 'wind' in mode

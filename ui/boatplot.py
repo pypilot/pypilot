@@ -13,7 +13,7 @@ import numpy
 
 try:
     import Image
-except:
+except ImportError:
     from PIL import Image
 
 from OpenGL.GL import *
@@ -75,7 +75,7 @@ class BoatPlot:
         def glRotateQ(q):
             try:
                 glRotatef(quaternion.angle(q)*180/math.pi, q[1], q[2], q[3])
-            except:
+            except ValueError:
                 pass
 
         dist = 12
@@ -160,7 +160,7 @@ class BoatPlot:
             self.chdir()
             try:
                 img = Image.open('compass.png')
-            except:
+            except OSError:
                 print('compass.png ' + _('not found, texture compass cannot be used'))
                 self.texture_compass = False
                 return

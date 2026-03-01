@@ -161,7 +161,7 @@ class RangeProperty(Property):
     def set(self, value):
         try:
             value = float(value) # try to convert to number
-        except:
+        except ValueError:
             return # ignore invalid value
         if value >= self.min_value and value <= self.max_value:
             super().set(value)
@@ -192,7 +192,7 @@ class EnumProperty(Property):
             try: # accept floating point equivilent, 10.0 is 10
                 if float(choice) != float(value):
                     continue
-            except:
+            except (ValueError, TypeError):
                 if str(choice) != str(value):
                     continue
             super().set(value)

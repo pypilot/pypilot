@@ -24,12 +24,12 @@ udp_control_port = 43822
 
 try:
     IOError
-except:
+except NameError:
     class IOError(Exception):
         pass
 try:
     ourPOLLNVAL = select.POLLNVAL
-except:
+except AttributeError:
     print('select.POLLNVAL not defined, using 32')
     ourPOLLNVAL = 32
 
@@ -521,7 +521,7 @@ def pypilotClientFromArgs(values, period=True, host=False):
             name, value = arg.split('=', 1)
             try: # make string if it won't load
                 pyjson.loads(value)
-            except:
+            except ValueError:
                 value = pyjson.dumps(value)
 
             client.send(name + '=' + value + '\n')

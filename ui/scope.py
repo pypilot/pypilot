@@ -65,7 +65,7 @@ class trace:
         try:
             avg = sum(map(lambda x : x[1], self.points)) / len(self.points)
             return math.sqrt(sum(map(lambda x : (avg-x[1])**2, self.points))) / len(self.points)
-        except:
+        except (ValueError, ZeroDivisionError):
             return 0
 
     def tracevertexes(self, time, plot, gldrawtype):
@@ -422,7 +422,7 @@ def main():
                 else:
                     time.sleep(.01)
                     break
-            except:
+            except Exception:
                 pass
 
     glutInit(sys.argv)

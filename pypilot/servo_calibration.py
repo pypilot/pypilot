@@ -20,7 +20,7 @@ from servo import *
 def fit(x, n):
     try:
         import scipy.optimize
-    except:
+    except ImportError:
         print("failed to load scientific library, cannot perform calibration update!")
         return False
 

@@ -61,7 +61,7 @@ class ArduinoServo:
                 return False
             try:
                 c = os.read(self.fd, 12)
-            except:
+            except OSError:
                 return -1
             self.in_buf += map(ord, c)
             if len(self.in_buf) < 3:

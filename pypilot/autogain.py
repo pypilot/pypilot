@@ -60,7 +60,7 @@ class autogain:
             try:
                 self.client = PypilotClient(on_con, host, autoreconnect=True)
                 break
-            except:
+            except Exception:
                 time.sleep(2)
 
         print('connected')

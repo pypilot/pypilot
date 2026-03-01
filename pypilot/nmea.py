@@ -51,7 +51,7 @@ def check_nmea_cksum(line):
     cksplit = line.split('*')
     try:
         return nmea_cksum(cksplit[0][1:]) == int(cksplit[1], 16)
-    except:
+    except (ValueError, IndexError):
         return False
 
 gps_timeoffset = 0
@@ -87,7 +87,7 @@ def parse_nmea_gps(line):
                 if ts + gps_timeoffset > t0:
                     gps_timeoffset -= sec_in_day
                 ts += gps_timeoffset
-        except:
+        except (ValueError, IndexError):
             ts = time.time()
 
         lat = degrees_minutes_to_decimal(float(data[2]))
@@ -139,7 +139,7 @@ def parse_nmea_wind(line):
     msg = {}
     try:
         msg['direction'] = float(data[1])
-    except:
+    except (ValueError, IndexError):
         return False  # require direction
 
     try:
@@ -163,7 +163,7 @@ def parse_nmea_rudder(line):
     data = line.split(',')
     try:
         angle = float(data[1])
-    except:
+    except (ValueError, IndexError):
         angle = False
 
     return 'rudder', {'angle': -angle}
@@ -511,7 +511,7 @@ class Nmea:
         if not self.probedevice:
             try:
                 index = self.devices.index(False)
-            except:
+            except ValueError:
                 index = len(self.devices)
             if self.probeindex != index and \
                (self.probeindex >= len(self.devices) or not self.devices[self.probeindex]):
@@ -590,7 +590,7 @@ class nmeaBridge:
             try:
                 self.server.bind(('0.0.0.0', port))
                 break
-            except:
+            except OSError:
                 print(_('nmea server on port') + (' %d: '  % port) + _('bind failed.'))
             time.sleep(1)
         print(_('listening on port'), port, _('for nmea connections'))
@@ -694,7 +694,7 @@ class nmeaBridge:
             self.client_socket = False
         try:
             self.sockets.remove(sock)
-        except:
+        except ValueError:
             print(_('nmea sock not in sockets!'))
             return
 

@@ -22,7 +22,7 @@ from values import *
 def gps_json_loads(line):
     try:
         return pyjson.loads(line)
-    except:
+    except ValueError:
         pass
     act = '"activated"'
     i = line.index(act)
@@ -123,7 +123,7 @@ class gpsProcess(multiprocessing.Process):
                     try:
                         ts = time.strptime(msg['time'], '%Y-%m-%dT%H:%M:%S.%f%z')
                         fix['timestamp'] = time.mktime(ts)
-                    except:
+                    except ValueError:
                         pass
 
                 fix['speed'] *= 1.944 # knots

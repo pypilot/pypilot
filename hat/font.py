@@ -17,7 +17,7 @@ try:
     #character = ugfx.surface(64, 84, 1)
     character = ugfx.surface(76, 149, 1)
 
-except:
+except ImportError:
     micropython = False
     import os
 
@@ -78,7 +78,7 @@ def draw(surface, pos, text, size, bw, crop=False):
                 if not micropython:
                     try:
                         print('create font charater', c, size, src.bypp, surface.bypp)
-                    except:
+                    except Exception:
                         print('create font charater', size, src.bypp, surface.bypp)
                         print('unable to print unicode character to console')
                     src = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)

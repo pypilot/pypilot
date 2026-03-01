@@ -459,7 +459,7 @@ class Servo:
                 return
 
             command = cal[0] + abs(speed)*cal[1]
-        except:
+        except (KeyError, ValueError):
             print (_('servo calibration invalid'), self.calibration.value)
             self.calibration.set({'port': [.2, .8], 'starboard': [.2, .8]})
             return
@@ -557,7 +557,7 @@ class Servo:
         # but it throws an exception for usb serial ports which we can ignore
         try:
             self.device.timeout=0
-        except:
+        except OSError:
             pass
 
         fcntl.ioctl(self.device.fileno(), TIOCNXCL) #exclusive
@@ -761,7 +761,7 @@ class Servo:
             print(_('loading servo calibration'), filename)
             file = open(filename)
             self.calibration.set(pyjson.loads(file.readline()))
-        except:
+        except (OSError, ValueError):
             print(_('WARNING: using default servo calibration!!'))
             self.calibration.set(False)
 
