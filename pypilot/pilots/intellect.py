@@ -5,12 +5,15 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import os, sys, time, math, json
-import lzma
+import json
+import math
+import os
+import sys
+import time
+
 from pypilot.client import pypilotClient
-
 
 '''
 eye:
@@ -142,7 +145,7 @@ def model_filename(state):
       filename += '_' + str(value)
   return filename
 
-class stopwatch(object):
+class stopwatch:
     def __init__(self):
         self.total = 0
         self.starttime = False
@@ -159,7 +162,7 @@ class stopwatch(object):
       return self.total + time.monotonic() - self.starttime
 
 
-class History(object):
+class History:
     def __init__(self, conf, state, future=False):
         future = self.conf['future'] if future else 0
         dt = (self.conf['past']+future)*self.state['imu.rate']
@@ -182,7 +185,7 @@ def inputs(history, names):
     def select(values, names):
         data = []
         for name in values:
-            if not name in names:
+            if name not in names:
                 continue
             value = values[name]
             if type(value) == type([]):
@@ -219,7 +222,7 @@ def norm_sensor(name, value):
     return norm_value(value)
 
 
-class Model(object):
+class Model:
     def __init__(self):
         self.history = False
 
@@ -229,11 +232,11 @@ class Model(object):
     def receive(self, name, value):
         if name in self.conf['sensors'] and self.enabled:
             self.inputs[name] = norm_sensor(name, value)
-    
+
 
 class KerasModel(Model):
     def __init__(self, host):
-        super(KerasModel, self).__init__()
+        super().__init__()
         self.host = host
         self.train_x, self.train_y = [], []
         self.inputs = {}
@@ -254,7 +257,7 @@ class KerasModel(Model):
         self.fit_time = stopwatch()
         self.total_time = stopwatch()
         self.total_time.start()
-        
+
     def train(self):
         if len(self.history.data) != self.history.samples():
             return # not enough data in history yet
@@ -266,7 +269,7 @@ class KerasModel(Model):
         actions_data = inputs(self.history.data[p:], self.conf['actions'])
         # predictions in the future
         predictions_data = inputs(self.history.data[p:], self.conf['predictions'])
-    
+
         if not self.model:
             self.train_x, self.train_y = [], []
 
@@ -297,7 +300,7 @@ class KerasModel(Model):
                 lp = .01
                 accuracy = self.conf['accuracy']
                 accuracy[i][j] = accuracy[i][j]*(1-lp) + a[j]*lp
-            
+
         pool_size = 6000 # how much data to accumulate before training
         l = len(self.train_x)
         if l < pool_size:
@@ -327,7 +330,7 @@ class KerasModel(Model):
         output = tf.keras.layers.Dense(output_size, activation='tanh')(hidden2)
         self.model = tf.keras.Model(inputs=input, outputs=output)
         self.model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mse'])
-        #self.accuracy = 
+        #self.accuracy =
 
     def save(self):
         filename = learning.model_filename(self.state)
@@ -340,7 +343,7 @@ class KerasModel(Model):
             f = open(filename + '.tflite_model', 'w')
             f.write(tflite_model)
             f.close()
-        except Exception as e:
+        except Exception:
             print('failed to save', f)
 
     def receive_single(self, name, value):
@@ -363,7 +366,7 @@ class KerasModel(Model):
                 dtl = t0 - first_t0
                 if(dtl-dt > 10.0):
                     print('computation not keep up!!', dtl-dt)
-              
+
             dt = value - self.lasttimestamp
             self.lasttimestamp = value
             dte = abs(dt - 1.0/float(rate(self.conf)))
@@ -372,7 +375,7 @@ class KerasModel(Model):
                 return
 
             for s in self.conf['sensors']:
-                if not s in self.inputs:
+                if s not in self.inputs:
                     print('missing input', s)
                     return
 
@@ -381,7 +384,7 @@ class KerasModel(Model):
             self.history.put(self.inputs)
             self.train()
         else:
-            self.model.data(name, value)                
+            self.model.data(name, value)
 
     def receive(self):
         if self.playback_file:
@@ -432,9 +435,9 @@ class KerasModel(Model):
 
         # add predictions to the list of sensors
         for p in self.conf['predictions']:
-            if not p in self.conf['sensors']:
+            if p not in self.conf['sensors']:
                 self.conf['sensors'].append(p)
-      
+
         t0 = time.monotonic()
 
         print('connecting to', self.host)
@@ -446,10 +449,10 @@ class KerasModel(Model):
 
         while True:
             self.receive()
-              
+
             if time.monotonic() - t0 > 600:
                 self.save()
-              
+
           # find cpu usage of training process
           #cpu = ps.cpu_percent()
           #if cpu > 50:
@@ -480,7 +483,7 @@ def main():
             kerasmodel.playback(value)
         elif name == '-r':
             kerasmodel.record(value)
-  
+
     kerasmodel.run()
 
 if __name__ == '__main__':

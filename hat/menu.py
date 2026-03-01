@@ -5,9 +5,9 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import time, os
+import os
 
 from page import *
 from page import _
@@ -19,7 +19,7 @@ except:
 
 class menu(page):
     def __init__(self, name, items):
-        super(menu, self).__init__(name)
+        super().__init__(name)
         self.selection = 0
         self.items = items
         self.prev = False
@@ -48,13 +48,13 @@ class menu(page):
                     path = item.pypilot_path
                     val = self.last_val(path)
                     if not refresh:
-                        refresh = not path in self.menu_values or self.menu_values[path] != val
+                        refresh = path not in self.menu_values or self.menu_values[path] != val
                     self.menu_values[path] = val
             if not refresh:
                 return
 
         self.last_selection = self.selection
-            
+
         self.fill(black)
         fit = self.fittext(rectangle(0, 0, 1, .25), self.name)
 
@@ -91,9 +91,9 @@ class menu(page):
                     continue
                 sliderarea.width *= val
                 self.rectangle(sliderarea)
-            except Exception as e:
+            except Exception:
                 pass
-            
+
         # invert selected menu item
         if self.selection >= 0:
             y = .15*(self.selection-scroll) + sy
@@ -120,7 +120,7 @@ class menu(page):
         if self.selection >= len(self.items):
             self.selection = len(self.items)-1
 
-        return super(menu, self).process()
+        return super().process()
 
 def sign(x):
     if x < 0:
@@ -128,11 +128,11 @@ def sign(x):
     if x > 0:
         return 1
     return 0
-    
+
 class RangeEdit(page):
     def __init__(self, name, desc, id, pypilot_path, minval, maxval, isinteger=False):
         self.name = name
-        if type(desc) == type('') or type(desc) == type(u''):
+        if type(desc) == str or type(desc) == str:
             self.desc = lambda : desc
         else:
             self.desc = desc
@@ -142,8 +142,8 @@ class RangeEdit(page):
         self.lastmovetime = 0
         self.value = None
         self.isinteger = isinteger
-        super(RangeEdit, self).__init__(name)
-     
+        super().__init__(name)
+
     def display(self, refresh):
         if refresh:
             self.fill(black)
@@ -172,7 +172,7 @@ class RangeEdit(page):
                 pass
         else: #config items rounded to integer
             v = str(round(v))
-        
+
         self.fittext(rectangle(0, .6, 1, .18), v)
 
         sliderarea = rectangle(0, .8, 1, .1)
@@ -201,7 +201,7 @@ class RangeEdit(page):
                 pass # not connected to server and value is N/A
         else:
             v = step + self.value
-            
+
         v = min(v, self.range[1])
         v = max(v, self.range[0])
         self.value = v
@@ -238,8 +238,8 @@ class RangeEdit(page):
             bp = spd(BIG_PORT)
             bs = spd(BIG_STARBOARD)
 
-            speed = 0;
-            sign = 0;
+            speed = 0
+            sign = 0
             if sp or ss:
                 speed = max(sp, ss)
             if bp or bs:
@@ -251,18 +251,18 @@ class RangeEdit(page):
                 sign = -1
 
             speed = sign * speed
-        
+
         if speed:
             self.move(speed)
         else:
-            return super(RangeEdit, self).process()
+            return super().process()
 
 def ConfigEdit(name, desc, config_name, *args):
     return RangeEdit(name, desc, config_name, False, *args)
-        
+
 class ValueEdit(RangeEdit):
     def __init__(self, name, desc, pypilot_path, value=False):
-        super(ValueEdit, self).__init__(name, desc, False, pypilot_path, 0, 1)
+        super().__init__(name, desc, False, pypilot_path, 0, 1)
         self.range = False
 
     def display(self, refresh):
@@ -273,11 +273,11 @@ class ValueEdit(RangeEdit):
             else:
                 info = {'min': 0, 'max': 0}
             self.range = info['min'], info['max']
-        super(ValueEdit, self).display(refresh)
+        super().display(refresh)
 
 class ValueCheck(page):
     def __init__(self, name, pypilot_path=False):
-        super(ValueCheck, self).__init__(name)
+        super().__init__(name)
         self.pypilot_path = pypilot_path
 
     def process(self):
@@ -286,7 +286,7 @@ class ValueCheck(page):
 
 class ValueEnumSelect(page):
     def __init__(self, lcd, name, pypilot_path):
-        super(ValueEnumSelect, self).__init__(name)
+        super().__init__(name)
         self.lcd = lcd
         self.pypilot_path = pypilot_path
 
@@ -296,12 +296,12 @@ class ValueEnumSelect(page):
 
 class ValueEnum(menu):
     def __init__(self, name, pypilot_path, pypilot_items_path=None):
-        super(ValueEnum, self).__init__(name, [])
+        super().__init__(name, [])
         self.pypilot_path = pypilot_path
         self.pypilot_items_path = pypilot_items_path
         self.items_val = None
         self.selection = -1
-        
+
     def process(self):
         if self.pypilot_items_path:
             items_val = self.last_val(self.pypilot_items_path)
@@ -328,18 +328,18 @@ class ValueEnum(menu):
             for i in range(len(self.items)):
                 if self.items[i].name == val:
                     self.selection = i
-                
-        return super(ValueEnum, self).process()
+
+        return super().process()
 
 def GainEdit(gain):
     n = gain[gain.rfind('.')+1:]
     return ValueEdit(n, n, gain, True)
-            
+
 class gain(menu):
     def __init__(self):
         self.last_pilot = False
         self.profile = [ValueEnum(_('profile'), 'profile', 'profiles')]
-        super(gain, self).__init__(_('gain'), [])
+        super().__init__(_('gain'), [])
 
     def curgains(self):
         ret = []
@@ -363,7 +363,7 @@ class gain(menu):
             self.lcd.need_refresh = True
             if self.selection < 0:
                 self.selection = 0
-        return super(gain, self).process()
+        return super().process()
 
 class level(page):
     def process(self):
@@ -373,12 +373,12 @@ class level(page):
 class calibrate_rudder_state(page):
     def __init__(self, name):
         self.value = name
-        super(calibrate_rudder_state, self).__init__(_(name))
-    
+        super().__init__(_(name))
+
     def process(self):
         self.set('rudder.calibration_state', self.value)
         return self.lcd.menu
-    
+
 class calibrate_rudder_feedback(menu):
     def __init__(self):
         items = [calibrate_rudder_state('reset'),
@@ -386,26 +386,26 @@ class calibrate_rudder_feedback(menu):
                  calibrate_rudder_state('starboard range'),
                  calibrate_rudder_state('port range'),
                  ValueEdit(_('range'), _('degrees'), 'rudder.range')]
-        super(calibrate_rudder_feedback, self).__init__(_('rudder'), items)
+        super().__init__(_('rudder'), items)
 
     def process(self):
         if self.last_val('rudder.angle') is False:
             if self.testkeydown(MENU):
                 return self.prev
-            
-        return super(calibrate_rudder_feedback, self).process()
-        
+
+        return super().process()
+
     def display(self, refresh):
         if self.last_val('rudder.angle') is False:
             self.box(rectangle(0, .18, 1, .82), black)
             self.fittext(rectangle(0, .4, 1, .4), "No Rudder Feedback Detected", True)
             return
-        super(calibrate_rudder_feedback, self).display(True)
+        super().display(True)
         self.fittext(rectangle(0, .9, 1, .1), str(self.last_val('rudder.angle')))
 
 class calibrate(menu):
     def __init__(self):
-        super(calibrate, self).__init__(_('calibrate'),
+        super().__init__(_('calibrate'),
                                         [level(_('level')),
                                          ValueEdit(_('heading'), self.getheading, 'imu.heading_offset'),
                                          ValueCheck(_('lock'), 'imu.compass.calibration.locked'),
@@ -418,10 +418,10 @@ class calibrate(menu):
             return '%.1f' % self.last_val('imu.heading')
         except:
             return str(self.last_val('imu.heading'))
-        
+
     def display(self, refresh):
         counter = self.last_val('imu.alignmentCounter', default=0)
-        super(calibrate, self).display(refresh or counter != self.lastcounter)
+        super().display(refresh or counter != self.lastcounter)
         self.lastcounter = counter
         if counter:
             r = rectangle(0, 0, 1, .15)
@@ -430,13 +430,13 @@ class calibrate(menu):
             r.width = 1-float(counter)/100
             r.height = .25
             self.invertrectangle(r)
-            
+
         self.fittext(rectangle(0, .9, .5, .11), self.round_last_val('imu.pitch', 1))
         self.fittext(rectangle(.5, .9, .5, .11), self.round_last_val('imu.heel', 1))
-    
+
 class motor(menu):
     def __init__(self):
-        super(motor, self).__init__(_('motor'),
+        super().__init__(_('motor'),
                                     [ValueEdit(_('min speed'), _('relative'), 'servo.speed.min'),
                                      ValueEdit(_('max speed'), _('relative'), 'servo.speed.max'),
                                      ValueEdit(_('max current'), _('amps'), 'servo.max_current'),
@@ -449,7 +449,7 @@ default_network = {'mode': 'Master', 'ssid': 'pypilot', 'key':'', 'client_ssid':
 class select_wifi(page):
     def __init__(self, name, wifi_settings):
         self.wifi_settings = wifi_settings
-        super(select_wifi, self).__init__(name)
+        super().__init__(name)
 
     def setup_network(self):
         try:
@@ -460,7 +460,7 @@ class select_wifi(page):
         except Exception as e:
             print('exception writing', networking, ':', e)
         os.system('/opt/networking.sh')
-        
+
 class select_wifi_ap_toggle(select_wifi):
     def process(self):
         ap = self.wifi_settings['mode'] == 'Master'
@@ -474,7 +474,7 @@ class select_wifi_defaults(select_wifi):
             self.wifi_settings[n] = v
         self.setup_network()
         return self.lcd.menu
-            
+
 class wifi(menu):
     def __init__(self):
         self.wifi_settings = False
@@ -487,7 +487,7 @@ class wifi(menu):
                      select_wifi_defaults(_('defaults'), self.wifi_settings)]
         else:
             items = []
-        super(wifi, self).__init__('WIFI', items)
+        super().__init__('WIFI', items)
 
     def read_networking(self):
         try:
@@ -498,7 +498,7 @@ class wifi(menu):
             self.mtime = mtime
             for name, value in default_network.items():
                 self.wifi_settings[name] = value
-            f = open(networking, 'r')
+            f = open(networking)
             while True:
                 l = f.readline()
                 if not l:
@@ -519,12 +519,12 @@ class wifi(menu):
             self.fittext(rectangle(0, 0, 1, 1), _('Wifi not managed'), True)
             return
 
-        super(wifi, self).display(refresh)
+        super().display(refresh)
         self.have_wifi = test_wifi()
         if not self.have_wifi:
             info = _('No Connection')
             self.fittext(rectangle(0, 0, 1, .20), info)
-            
+
         if self.wifi_settings['mode'] == 'Master':
             info = 'mode: AP\n'
             ssid = 'ssid'
@@ -552,12 +552,12 @@ class wifi(menu):
             self.wifi_updatetime = t
             if self.read_networking():
                 self.lcd.need_refresh = True
-            
-        return super(wifi, self).process()
-        
+
+        return super().process()
+
 class control_menu(menu):
     def __init__(self):
-        super(control_menu, self).__init__(_('control'),
+        super().__init__(_('control'),
                                       [wifi(),
                                        ConfigEdit(_('small step'), _('degrees'), 'smallstep', 1, 5),
                                        ConfigEdit(_('big step'), _('degrees'), 'bigstep', 5, 20)])
@@ -575,10 +575,10 @@ class flip(page):
 
 class BacklightEdit(RangeEdit):
     def __init__(self):
-        super(BacklightEdit, self).__init__(_('backlight'), '', 'backlight', False, 0, 40)
+        super().__init__(_('backlight'), '', 'backlight', False, 0, 40)
 
     def move(self, delta):
-        super(BacklightEdit, self).move(delta)
+        super().move(delta)
         self.lcd.send('backlight', self.value)
 
 class display(menu):
@@ -587,12 +587,12 @@ class display(menu):
             bl = [ConfigEdit(_('hue'), '', 'hue', 0, 255)]
         else:
             bl = [BacklightEdit(), ConfigEdit(_('buzzer'), 'pitch', 'buzzer_pitch', 0, 9, True)]
-        super(display, self).__init__(_('display'),
+        super().__init__(_('display'),
                                       [ConfigEdit(_('contrast'), '', 'contrast', 0, 120),
                                        invert(_('invert')), flip(_('flip'))] + bl)
 class select_language(page):
     def __init__(self, lang):
-        super(select_language, self).__init__(lang[0])
+        super().__init__(lang[0])
         self.lang = lang[1]
 
     def process(self):
@@ -618,7 +618,7 @@ class language(menu):
                  ('svenska', 'sv')
     ]
     def __init__(self):
-        super(language, self).__init__(_('language'), list(map(select_language, self.languages)))
+        super().__init__(_('language'), list(map(select_language, self.languages)))
         self.selection = -1
 
     def process(self):
@@ -628,23 +628,23 @@ class language(menu):
                 if lang[1] == self.lcd.config['language']:
                     self.selection = index
                 index += 1
-        return super(language, self).process()
+        return super().process()
 
-        
+
 class settings(menu):
     def __init__(self):
         if no_translation == translate:
             lang = []
         else:
             lang = [language()]
-        super(settings, self).__init__(_('settings'),
+        super().__init__(_('settings'),
                             [ValueEnum(_('mode'), 'ap.mode', 'ap.modes'),
                              ValueEnum(_('pilot'), 'ap.pilot'),
                              motor(), control_menu(), display()] + lang)
-        
+
 class mainmenu(menu):
     def __init__(self, lcd):
-        super(mainmenu, self).__init__(_('Menu'), [gain(), calibrate(), settings(), info()])
+        super().__init__(_('Menu'), [gain(), calibrate(), settings(), info()])
         self.lcd = lcd
         self.find_parents()
         self.loadtime = 0
@@ -677,5 +677,5 @@ class mainmenu(menu):
             elif dt > .6:
                 self.fittext(rectangle(0, .4, 1, .2), '.'*int(dt*2+.5))
         else:
-            super(mainmenu, self).display(refresh)
-        
+            super().display(refresh)
+

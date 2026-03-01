@@ -5,13 +5,16 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import os, time, math
+import math
+import time
+
 import pyjson
 from resolv import resolv
 
-class Value(object):
+
+class Value:
     def __init__(self, name, initial, **kwargs):
         self.name = name
         self.watch = False
@@ -51,7 +54,7 @@ class Value(object):
 
 class JSONValue(Value):
     def __init__(self, name, initial, **kwargs):
-      super(JSONValue, self).__init__(name, initial, **kwargs)
+      super().__init__(name, initial, **kwargs)
 
     def get_msg(self):
         return pyjson.dumps(self.value)
@@ -64,7 +67,7 @@ def round_value(value, fmt):
             for item in value[1:]:
                 ret += ', ' + round_value(item, fmt)
         return ret + ']'
-    elif type(value) == type(False):
+    elif type(value) == bool:
         if value:
             return 'true'
         return 'false'
@@ -77,17 +80,17 @@ def round_value(value, fmt):
 
 class RoundedValue(Value):
     def __init__(self, name, initial, **kwargs):
-        super(RoundedValue, self).__init__(name, initial, **kwargs)
-      
+        super().__init__(name, initial, **kwargs)
+
     def get_msg(self):
         return round_value(self.value, '%.4f')
 
 class StringValue(Value):
     def __init__(self, name, initial, **kwargs):
-        super(StringValue, self).__init__(name, initial, **kwargs)
+        super().__init__(name, initial, **kwargs)
 
     def get_msg(self):
-        if type(self.value) == type(False):
+        if type(self.value) == bool:
             strvalue = 'true' if self.value else 'false'
         else:
             strvalue = '"' + self.value + '"'
@@ -95,7 +98,7 @@ class StringValue(Value):
 
 class SensorValue(Value):
     def __init__(self, name, initial=False, fmt='%.4f', **kwargs):
-        super(SensorValue, self).__init__(name, initial, **kwargs)
+        super().__init__(name, initial, **kwargs)
         self.directional = 'directional' in kwargs and kwargs['directional']
         self.fmt = fmt # round to 4 places unless overridden
 
@@ -109,24 +112,24 @@ class SensorValue(Value):
             value = list(value)
         return round_value(value, self.fmt)
 
-class HeadingOffset(object):
+class HeadingOffset:
     def __init__(self):
         self.value = 0
 
     def update(self, offset, d):
         offset = resolv(offset, self.value)
         self.value = resolv(d*offset + (1-d)*self.value)
-    
+
 # a value that may be modified by external clients
 class Property(Value):
     def __init__(self, name, initial, **kwargs):
-        super(Property, self).__init__(name, initial, **kwargs)
+        super().__init__(name, initial, **kwargs)
         self.info['writable'] = True
 
 class ResettableValue(Property):
     def __init__(self, name, initial, fmt=None, **kwargs):
         self.initial = initial
-        super(ResettableValue, self).__init__(name, initial, **kwargs)
+        super().__init__(name, initial, **kwargs)
         self.fmt = fmt
         self.info['type'] = 'ResettableValue'
 
@@ -134,11 +137,11 @@ class ResettableValue(Property):
         if self.fmt:
             return round_value(self.value, self.fmt)
         return str(self.value) # do not round if fmt is not set
-        
+
     def set(self, value):
         if not value:
             value = self.initial # override value
-        super(ResettableValue, self).set(value)
+        super().set(value)
 
 class RangeProperty(Property):
     def __init__(self, name, initial, min_value, max_value, **kwargs):
@@ -146,7 +149,7 @@ class RangeProperty(Property):
         self.max_value = max_value
         if initial < min_value or initial > max_value:
             print(_('invalid initial value for range property'), name, initial)
-        super(RangeProperty, self).__init__(name, initial, **kwargs)
+        super().__init__(name, initial, **kwargs)
 
         self.info['type'] = 'RangeProperty'
         self.info['min'] = self.min_value
@@ -154,14 +157,14 @@ class RangeProperty(Property):
 
     def get_msg(self):
         return '%.4f' % self.value
-        
+
     def set(self, value):
         try:
             value = float(value) # try to convert to number
         except:
             return # ignore invalid value
         if value >= self.min_value and value <= self.max_value:
-            super(RangeProperty, self).set(value)
+            super().set(value)
 
     def set_max(self, max_value):
         if self.value > max_value:
@@ -172,7 +175,7 @@ class RangeProperty(Property):
 class RangeSetting(RangeProperty):
     def __init__(self, name, initial, min_value, max_value, units, **kwargs):
         self.units = units
-        super(RangeSetting, self).__init__(name, initial, min_value, max_value, persistent=True, **kwargs)
+        super().__init__(name, initial, min_value, max_value, persistent=True, **kwargs)
 
         self.info['type'] = 'RangeSetting'
         self.info['units'] = self.units
@@ -180,10 +183,10 @@ class RangeSetting(RangeProperty):
 class EnumProperty(Property):
     def __init__(self, name, initial, choices, **kwargs):
         self.choices = choices
-        super(EnumProperty, self).__init__(name, initial, **kwargs)
+        super().__init__(name, initial, **kwargs)
         self.info['type'] = 'EnumProperty'
         self.info['choices'] = self.choices
-        
+
     def set(self, value):
         for choice in self.choices:
             try: # accept floating point equivilent, 10.0 is 10
@@ -192,22 +195,22 @@ class EnumProperty(Property):
             except:
                 if str(choice) != str(value):
                     continue
-            super(EnumProperty, self).set(value)
+            super().set(value)
             return
         print(_('invalid set'), self.name, '=', value)
 
 class BooleanValue(Value):
     def __init__(self, name, initial, **kwargs):
-        super(BooleanValue, self).__init__(name, initial, **kwargs)
+        super().__init__(name, initial, **kwargs)
 
     def get_msg(self):
         return 'true' if self.value else 'false'
 
 class BooleanProperty(BooleanValue):
     def __init__(self, name, initial, **kwargs):
-        super(BooleanProperty, self).__init__(name, initial, **kwargs)
+        super().__init__(name, initial, **kwargs)
         self.info['writable'] = True
         self.info['type'] = 'BooleanProperty'
 
     def set(self, value):
-        super(BooleanProperty, self).set(not not value)
+        super().set(not not value)

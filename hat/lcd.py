@@ -5,23 +5,26 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import time, sys, os, math
+import os
+import sys
+import time
 
 from page import *
-from page import _
 
 try:
     import micropython
+
     from upy_client import pypilotClient
     def gettime():
         return time.ticks_ms()/1e3
     import ugfx
 except:
-    from pypilot.client import pypilotClient
-    import font
     import select
+
+    from pypilot.client import pypilotClient
+
     def gettime():
         return time.monotonic()
     from pypilot.hat.ugfx import ugfx
@@ -35,7 +38,7 @@ for pdriver in ['nokia5110', 'jlx12864', 'ssd1309', 'gd240160', 'glut', 'framebu
         sys.argv.remove(driver)
         break
 
-class Key():
+class Key:
     def __init__(self):
         self.index = 0 # which key
         self.time = 0  # when it was pressed
@@ -45,7 +48,7 @@ class Key():
         if not down:
             self.time = 0
             return
-        
+
         if self.index != index:
             self.index = index
             self.down = 0
@@ -68,7 +71,7 @@ class Key():
             return dt
         return 0
 
-class LCD():
+class LCD:
     def __init__(self, config):
         if config:
             self.config = config['lcd']
@@ -77,13 +80,13 @@ class LCD():
         self.pipe = False
         self.poller = False
         self.voltage = False
-            
+
         default = {'contrast': 60, 'invert': False, 'backlight': 20,
                    'hue': 214, 'flip': False, 'language': 'en', 'bigstep': 10,
-                   'smallstep': 1, 'buzzer_pitch': 2};
+                   'smallstep': 1, 'buzzer_pitch': 2}
 
         for name in default:
-            if not name in self.config:
+            if name not in self.config:
                 self.config[name] = default[name]
 
         global driver
@@ -133,11 +136,14 @@ class LCD():
             screen = glut.screen((64, 128))
             #screen = glut.screen((48, 84))
             #screen = glut.screen((96, 168))
-            
-            from OpenGL.GLUT import glutKeyboardFunc, glutKeyboardUpFunc
-            from OpenGL.GLUT import glutSpecialFunc, glutSpecialUpFunc
 
-            from OpenGL.GLUT import glutLeaveMainLoop
+            from OpenGL.GLUT import (
+                glutKeyboardFunc,
+                glutKeyboardUpFunc,
+                glutLeaveMainLoop,
+                glutSpecialFunc,
+                glutSpecialUpFunc,
+            )
             self.leave = glutLeaveMainLoop
 
 
@@ -154,7 +160,7 @@ class LCD():
                 print('warning huge width')
                 #screen.width = 480
                 #screen.height= min(screen.height, 640)
-                
+
         if screen:
             self.bw=1 if screen.width < 120 else False # larger screens have ability to antialias fonts
             self.mag=1
@@ -175,7 +181,7 @@ class LCD():
             self.surface = None
 
         self.screen = screen
-        
+
         set_language(self.config['language'])
         self.client = False
         self.connect()
@@ -195,19 +201,19 @@ class LCD():
             from menu import mainmenu
             self.menu = mainmenu(self)
         return self.menu
-        
+
     def set_language(self, lang):
         set_language(lang)
         self.config['language'] = lang
         self.write_config()
-        
+
     def connect(self):
         self.last_msg = {}
         self.last_msg['gps.source'] = 'none'
         self.last_msg['wind.source'] = 'none'
         self.last_msg['truewind.source'] = 'none'
         self.last_msg['ap.heading_command'] = 0
-        
+
         if self.client:
             self.client.disconnect()
 
@@ -222,7 +228,7 @@ class LCD():
 
     def buzz_key(self):
         self.need_buzz = True
-            
+
     def write_config(self):
         if micropython:
             from config_esp32 import write_config
@@ -232,7 +238,7 @@ class LCD():
 
     def get_values(self):
         return self.client.get_values()
-            
+
     def key(self, k, down):
         if k < 0 or k >= NUM_KEYS:
             return
@@ -241,7 +247,7 @@ class LCD():
             #self.glutkeytime = k, gettime()
 
     def glutkeydown(self, k, x, y):
-        self.glutkey(k);
+        self.glutkey(k)
 
     def glutkeyup(self, k, x, y):
         self.glutkey(k, False)
@@ -262,7 +268,7 @@ class LCD():
         self.key(key, down)
 
     def glutspecialdown(self, k, x, y):
-        self.glutspecial(k);
+        self.glutspecial(k)
 
     def glutspecialup(self, k, x, y):
         self.glutspecial(k, False)
@@ -285,7 +291,7 @@ class LCD():
             #self.page.watches['imu.accel'] = True
         if self.page.display(self.need_refresh):
             return #optimization
-        t1=gettime();
+        t1=gettime()
 
         self.need_refresh = False
         surface = self.surface
@@ -299,7 +305,7 @@ class LCD():
                 self.blinktime = t0
         except:
             self.blinktime = 0
-        
+
         w, h = self.surface.width, self.surface.height
         size = h // 40
         self.surface.box(w-size-1, h-size-1, w-1, h-1, self.blink[0])
@@ -322,14 +328,14 @@ class LCD():
         if micropython:
             self.screen.hue = int(float(self.config['hue']))
 
-        t2=gettime();
+        t2=gettime()
         self.screen.refresh()
-        t3=gettime();
+        t3=gettime()
         #print('display times', t1-t0, t2-t1, t3-t2)
 
     def update_watches(self):
         for name in list(self.client.watches):
-            if name != 'values' and not name in list(self.page.watches):
+            if name != 'values' and name not in list(self.page.watches):
                 self.client.watch(name, False)
         for name, period in self.page.watches.items():
             self.client.watch(name, period)
@@ -346,7 +352,7 @@ class LCD():
                 self.poller = select.poll()
                 self.poller.register(self.pipe, select.POLLIN)
                 self.registered = True
-                
+
             while True:
                 msg = self.pipe.recv()
                 if not msg:
@@ -370,7 +376,7 @@ class LCD():
         if vcc < 4.5 or vcc > 5.5:
             return '5v Voltage Bad' + (': %.2f' % vcc)
         return False
-            
+
     def poll(self):
         if self.screen == None:
             return
@@ -378,10 +384,10 @@ class LCD():
         t0 = gettime()
         self.receive()
         t1 = gettime()
-        
+
         if not self.page:
             frameperiod = 1
-            
+
         else:
             frameperiod = self.page.frameperiod
 
@@ -393,7 +399,7 @@ class LCD():
             self.reset_keys()
             self.need_refresh = True
         t2 = gettime()
-        
+
         #        if dt >= frameperiod or dt < 0:
         self.display()
         self.update_watches()
@@ -401,7 +407,7 @@ class LCD():
         if self.need_buzz:
             self.need_buzz = False
             self.buzz(0, .05)
-        
+
         t3 = gettime()
 
         #dt = t3-t0
@@ -425,13 +431,13 @@ def main():
 
         time.sleep(.1)
     if lcd.use_glut:
-        from OpenGL.GLUT import glutMainLoop, glutIdleFunc
+        from OpenGL.GLUT import glutIdleFunc, glutMainLoop
         glutIdleFunc(idle)
         glutMainLoop()
     else:
         while True:
             lcd.poll()
             time.sleep(.1)
-            
+
 if __name__ == '__main__':
-    main() 
+    main()

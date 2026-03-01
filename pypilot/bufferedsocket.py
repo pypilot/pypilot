@@ -5,13 +5,16 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import time, select, socket, os
+import os
+import select
+import socket
+import time
 
 try:
   from pypilot.linebuffer import linebuffer
-  class LineBufferedNonBlockingSocket(object):
+  class LineBufferedNonBlockingSocket:
     def __init__(self, connection, address):
         connection.setblocking(0)
         self.b = linebuffer.LineBuffer(connection.fileno())
@@ -41,10 +44,10 @@ try:
         if self.udp_socket:
             self.udp_socket.close()
             self.udp_socket = False
-        
+
     def recvdata(self):
         return self.b.recv()
-        
+
     def readline(self):
         return self.b.line()
 
@@ -60,7 +63,7 @@ try:
             print(_('overflow in pypilot socket'), self.address, len(self.out_buffer), os.getpid())
             self.out_buffer = ''
             self.close()
-    
+
     def flush(self):
         if self.udp_out_buffer:
             try:
@@ -74,7 +77,7 @@ try:
             if count != len(self.udp_out_buffer):
                 print(_('failed to send udp packet'), self.address)
             self.udp_out_buffer = ''
-        
+
         if not self.out_buffer:
             return
 
@@ -88,7 +91,7 @@ try:
                 if self.sendfail_cnt > 100:
                     self.socket.close()
                     return
-  
+
             t0 = time.monotonic()
             count = self.socket.send(self.out_buffer.encode())
             #print('write', count, self.out_buffer, time.monotonic())
@@ -103,10 +106,10 @@ try:
         except Exception as e:
             print(_('pypilot socket exception'), self.address, e, os.getpid(), self.socket)
             self.close()
-  
+
 except Exception as e:
   print(_('falling back to python nonblocking socket, will consume more cpu'), e)
-  class LineBufferedNonBlockingSocket(object):
+  class LineBufferedNonBlockingSocket:
     def __init__(self, connection, address):
         connection.setblocking(0)
         self.socket = connection
@@ -118,7 +121,7 @@ except Exception as e:
 
     def close(self):
         self.socket.close()
-        
+
     def fileno(self):
         return self.socket.fileno()
 

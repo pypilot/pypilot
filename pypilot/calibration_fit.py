@@ -5,16 +5,24 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import sys, time, math, numpy, scipy.optimize
-import vector, resolv, quaternion
+import math
+import sys
+import time
+
+import numpy
+
 import boatimu
+import quaternion
+import resolv
+import vector
+
 resolv = resolv.resolv
 
-from values import *
 from client import pypilotClientFromArgs
-    
+from values import *
+
 calibration_fit_period = 30  # run every 30 seconds
 
 def lmap(*cargs):
@@ -34,7 +42,7 @@ def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
     t0 = time.monotonic()
     leastsq = scipy.optimize.leastsq(f, beta0, zpoints)
     #print('scipy.optimize.leastsq took ', time.monotonic() - t0, leastsq)
-    if not leastsq[1] in [1, 2, 3, 4]:
+    if leastsq[1] not in [1, 2, 3, 4]:
         return False
     return list(leastsq[0])
 
@@ -96,7 +104,7 @@ def LinearFit(points):
     zpoints = [[], [], []]
     for i in range(3):
         zpoints[i] = lmap(lambda x : x[i], points)
-        
+
     data = numpy.array(list(zip(zpoints[0], zpoints[1], zpoints[2])))
     datamean = data.mean(axis=0)
     uu, dd, vv = numpy.linalg.svd(data - datamean)
@@ -121,7 +129,7 @@ def LinearFit(points):
         d = vector.dot(v, v)
         max_plane_dev = max(d, max_plane_dev)
         plane_dev += d
-        
+
     line_dev /= len(points)
     plane_dev /= len(points)
 
@@ -133,7 +141,7 @@ def FitPointsAccel(debug, points):
     zpoints = [[], [], []]
     for i in range(3):
         zpoints[i] = lmap(lambda x : x[i], points)
-        
+
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
     if point_max_dev < .1:
@@ -162,7 +170,7 @@ def FitPointsCompass(debug, points, current, norm):
     zpoints = [[], [], [], [], [], []]
     for i in range(6):
         zpoints[i] = lmap(lambda x : x[i], points)
-        
+
     # determine if we have 0D, 1D, 2D, or 3D set of points
     point_fit, point_dev, point_max_dev = PointFit(points)
     if point_max_dev < 9:
@@ -230,7 +238,7 @@ def FitPointsCompass(debug, points, current, norm):
     if line_max_dev < 2:
         debug('line fit found, insufficient data %.1f %.1f' % (line_dev, line_max_dev))
         return False
-    
+
     # 2d sphere fit across normal vector
     u = vector.cross(norm, [norm[1]-norm[2], norm[2]-norm[0], norm[0]-norm[1]])
     v = vector.cross(norm, u)
@@ -241,7 +249,7 @@ def FitPointsCompass(debug, points, current, norm):
     initial = vector.add(guess[:3], vector.project(vector.sub(current[:3], guess[:3]), norm))
     initial.append(current[3])
     #debug('initial 2d fit', initial)
-    
+
     '''
     def f_sphere2(beta, x):
         bias = lmap(lambda x, a, b: x + beta[0]*a + beta[1]*b, initial[:3], u, v)
@@ -281,7 +289,7 @@ def FitPointsCompass(debug, points, current, norm):
     if plane_max_dev < 1.2:
         plane_fit1 = vector.normalize(plane_fit[1])
         ang = safedegasin(vector.norm(vector.cross(plane_fit1, norm)))
-        
+
         debug('plane fit found, 2D fit only', ang, plane_fit, plane_dev, plane_max_dev)
         if ang > 30:
             debug('angle of plane not aligned to normal: no 2d fit')
@@ -324,14 +332,14 @@ def FitPointsCompass(debug, points, current, norm):
     new_sphere3d_fit[4] = safedegasin(new_sphere3d_fit[4])
     new_sphere3d_fit = [new_sphere3d_fit, ComputeDeviation(points, new_sphere3d_fit), 3]
     #debug('new sphere3 fit', new_sphere3d_fit)
-    
+
     return [new_sphere1d_fit, new_sphere2d_fit, new_sphere3d_fit]
 
 
 def avg(fac, v0, v1):
     return lmap(lambda a, b : (1-fac)*a + fac*b, v0, v1)
 
-class SigmaPoint(object):
+class SigmaPoint:
     def __init__(self, sensor, down=False):
         self.sensor = sensor
         self.down = down
@@ -348,7 +356,7 @@ class SigmaPoint(object):
 
 # store averaged sensore measurements over time for
 # calibration curve fitting
-class SigmaPoints(object):
+class SigmaPoints:
     def __init__(self, sigma, max_sigma_points, min_count):
         self.sigma = sigma
         self.max_sigma_points = max_sigma_points
@@ -387,7 +395,7 @@ class SigmaPoints(object):
             if vector.dist2(self.lastpoint.sensor, sensor) < self.sigma:
                 self.lastpoint.add_measurement(sensor, down)
                 return
-            
+
             self.lastpoint = False
             return
 
@@ -582,7 +590,7 @@ class CalibrationProperty(RoundedValue):
     def __init__(self, name, default):
         self.default = default
         self.client_can_set = True
-        super(CalibrationProperty, self).__init__(name+'.calibration', default, persistent=True)
+        super().__init__(name+'.calibration', default, persistent=True)
 
     def set(self, value):
         if not value:
@@ -593,11 +601,11 @@ class CalibrationProperty(RoundedValue):
             self.age.reset()
         except:
             pass # startup before locked is initiated
-        super(CalibrationProperty, self).set(value)
+        super().set(value)
 
 class AgeValue(StringValue):
     def __init__(self, name, **kwargs):
-        super(AgeValue, self).__init__(name, 0, **kwargs)
+        super().__init__(name, 0, **kwargs)
         self.lastreadable = 0
 
     def reset(self):
@@ -623,7 +631,7 @@ def RegisterCalibration(client, name, default):
     calibration.points = client.register(RoundedValue(name+'.calibration.points', False, persistent=True))
     calibration.log = client.register(Property(name+'.calibration.log', ''))
     return calibration
-        
+
 def CalibrationProcess(cal_pipe, client):
     accel_points = SigmaPoints(.05**2, 12, 10)
     compass_points = SigmaPoints(1.1**2, 28, 3)
@@ -634,7 +642,7 @@ def CalibrationProcess(cal_pipe, client):
     compass_calibration = RegisterCalibration(client, 'imu.compass', [[0, 0, 0, 30, 0], [1, 1], 0])
     compass_calibration.field_strength = client.register(SensorValue('imu.compass.calibration.field_strength'))
     compass_calibration.inclination = client.register(SensorValue('imu.compass.calibration.inclination'))
-    
+
     client.watch('imu.alignmentQ')
     if not cal_pipe: # get these through client rather than direct pipe
         client.watch('imu.accel')
@@ -647,7 +655,7 @@ def CalibrationProcess(cal_pipe, client):
             for a in args:
                 try:
                     s = '%.5f' % value
-                except Exception as e:
+                except Exception:
                     pass
                 s += str(a) + ' '
                 #print("debug", name, s)
@@ -663,7 +671,7 @@ def CalibrationProcess(cal_pipe, client):
                 return
             warnings[sensor] = warning
         else:
-            if not sensor in warnings:
+            if sensor not in warnings:
                 return
             del warnings[sensor]
 
@@ -671,7 +679,7 @@ def CalibrationProcess(cal_pipe, client):
         for sensor, warning in warnings.items():
             str_warnings += sensor + ' ' + warning
         cal_pipe.send(str_warnings)
-    
+
     while True:
       try:
         t = time.monotonic()
@@ -692,7 +700,7 @@ def CalibrationProcess(cal_pipe, client):
                     addedpoint = True
                 elif name == 'imu.compass' and down:
                     if value and down:
-                         compass_points.AddPoint(value, down)                            
+                         compass_points.AddPoint(value, down)
                     addedpoint = True
                 elif name == 'imu.fusionQPose':
                     if value:
@@ -758,7 +766,7 @@ def CalibrationProcess(cal_pipe, client):
             cals = [(accel_calibration, accel_points), (compass_calibration, compass_points)]
             for calibration, points in cals:
                 calibration.age.update()
-                if points.Updated():                    
+                if points.Updated():
                     calibration.sigmapoints.set(points.Points())
 
         if not addedpoint: # don't bother to run fit if no new data
@@ -796,7 +804,7 @@ def CalibrationProcess(cal_pipe, client):
         import traceback
         print(traceback.format_exc())
         print('Warning: Calibration process unhandled exception', e)
-          
+
 
 def ExtraFit():
     ellipsoid_fit = False
@@ -907,7 +915,7 @@ def ExtraFit():
         v3 = [v2[0]*cos(beta[2]) + v2[1]*sin(beta[2]),
               v2[1]*cos(beta[2]) - v2[0]*sin(beta[1]),
               v2[2]]
-            
+
         return v3
 
     def f_quat(beta, x, sphere_fit):
@@ -927,7 +935,7 @@ def ExtraFit():
     q = angvec2quat(vector.norm(quat_fit[:3]), quat_fit[:3])
 
     print('quat fit', q, math.degrees(angle(q)), safedegasin(quat_fit[3]))
-    
+
     def f_rot(beta, x, sphere_fit):
         sphere_fit = numpy.array(sphere_fit)
         n = [x[0]-sphere_fit[0], x[1]-sphere_fit[1], x[2]-sphere_fit[2]]
@@ -939,7 +947,7 @@ def ExtraFit():
 
     rot_fit = FitLeastSq([0, 0, 0, 0], f_rot, (zpoints, sphere_fit))
     print('rot fit', rot_fit, math.degrees(rot_fit[0]), math.degrees(rot_fit[1]), math.degrees(rot_fit[2]), safedegasin(min(1, max(-1, rot_fit[3]))))
-    
+
 
 def main():
     print('running remote calibration')

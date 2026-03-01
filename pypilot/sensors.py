@@ -5,24 +5,21 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import math, datetime
+import math
 
 from client import *
-from values import *
-from resolv import resolv
-
-from gpsd import gpsd
 from gps_filter import *
-
-import quaternion
+from gpsd import gpsd
+from resolv import resolv
+from values import *
 
 # favor lower priority sources
 source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3,
                    'signalk' : 4, 'water+wind' : 5, 'gps+wind' : 6, 'none' : 7}
 
-class Sensor(object):
+class Sensor:
     def __init__(self, client, name):
         self.source = client.register(StringValue(name + '.source', 'none'))
         if name != 'apb':
@@ -31,10 +28,10 @@ class Sensor(object):
         self.device = None
         self.name = name
         self.client = client
-            
+
     def write(self, data, source):
         if source_priority[self.source.value] < source_priority[source]:
-            return False               
+            return False
 
         # if there are more than one device for a source at the same priority,
         # we only use data from one rather than randomly switching between the two
@@ -44,13 +41,13 @@ class Sensor(object):
 
         if not self.update(data):
             return False
-                
+
         if self.source.value != source:
             print(_('sensor found'), self.name, source, data['device'], time.asctime(time.localtime(time.time())))
             self.source.set(source)
             self.device = data['device']
         self.lastupdate = time.monotonic()
-        
+
         return True
 
     def reset(self):
@@ -64,7 +61,7 @@ class Sensor(object):
 
 class BaseWind(Sensor):
     def __init__(self, client, name, boatimu):
-        super(BaseWind, self).__init__(client, name)
+        super().__init__(client, name)
 
         self.boatimu = boatimu
 
@@ -126,11 +123,11 @@ class BaseWind(Sensor):
 
 class Wind(BaseWind):
     def __init__(self, client, boatimu):
-        super(Wind, self).__init__(client, 'wind', boatimu)
+        super().__init__(client, 'wind', boatimu)
 
 class TrueWind(BaseWind):
     def __init__(self, client, boatimu):
-        super(TrueWind, self).__init__(client, 'truewind', boatimu)
+        super().__init__(client, 'truewind', boatimu)
 
     @staticmethod
     def compute_true_wind_direction(water_speed, wind_speed, wind_direction):
@@ -139,7 +136,7 @@ class TrueWind(BaseWind):
         truewind = math.degrees(math.atan2(*windv))
         #print( 'truewind', truewind, math.hypot(*windv))
         return truewind
-        
+
     @staticmethod
     def compute_true_wind_speed(water_speed, wind_speed, wind_direction):
         rd = math.radians(wind_direction)
@@ -155,7 +152,7 @@ class TrueWind(BaseWind):
 
 class APB(Sensor):
     def __init__(self, client):
-        super(APB, self).__init__(client, 'apb')
+        super().__init__(client, 'apb')
         self.track = self.register(SensorValue, 'track', directional=True)
         self.xte = self.register(SensorValue, 'xte')
         # 300 is 30 degrees for 1/10th mile
@@ -186,7 +183,7 @@ class APB(Sensor):
         # do not apply heading change message if not enabled in nav mod
         if mode.value != 'nav' or not self.client.values.values['ap.enabled'].value:
             return True
-        
+
         command = data['track'] + self.gain.value*xte
         #print('apb command', command, data)
 
@@ -197,7 +194,7 @@ class APB(Sensor):
 
 class gps(Sensor):
     def __init__(self, client):
-        super(gps, self).__init__(client, 'gps')
+        super().__init__(client, 'gps')
         self.track = self.register(SensorValue, 'track', directional=True)
         self.speed = self.register(SensorValue, 'speed')
         self.fix = self.register(JSONValue, 'fix', False)
@@ -208,7 +205,7 @@ class gps(Sensor):
         self.declination = self.register(SensorValue, 'declination')
         self.alignmentCounter = self.register(Property, 'alignmentCounter', 0)
         self.last_alignmentCounter = False
-        
+
         self.filtered = GPSFilterProcess(client)
         self.lastpredictt = time.monotonic()
 
@@ -252,9 +249,9 @@ class gps(Sensor):
                             mag_track -= self.declination
                         heading = self.client.values.values['imu.heading']
                         self.client.values.values['imu.heading_offset'].set(heading - mag_track)
-                    
+
                 self.gps_alignment_track = total, count, self.alignmentCounter.value
-            
+
         return True
 
     def predict(self, ap):
@@ -274,7 +271,7 @@ class gps(Sensor):
 # water speed and leeway sensor
 class Water(Sensor):
     def __init__(self, client):
-        super(Water, self).__init__(client, 'water')
+        super().__init__(client, 'water')
 
         self.speed = self.register(SensorValue, 'speed')
         self.leeway = self.register(SensorValue, 'leeway')
@@ -290,7 +287,7 @@ class Water(Sensor):
 
     def update(self, data):
         t = time.monotonic()
-        if not 'speed' in data:
+        if 'speed' not in data:
             return False
 
         self.speed.set(data['speed'])
@@ -357,17 +354,17 @@ class Water(Sensor):
 
             self.water_wind_speed.set(math.hypot(vya, vxa))
             self.water_wind_direction.set(math.degrees(math.atan2(vya, vxa)))
-            
+
 
     def reset(self):
         self.speed.set(False)
         self.leeway.set(False)
-        
 
-class Sensors(object):
+
+class Sensors:
     def __init__(self, client, boatimu):
-        from rudder import Rudder
         from nmea import Nmea
+        from rudder import Rudder
         from signalk import signalk
 
         self.client = client
@@ -412,13 +409,13 @@ class Sensors(object):
     def lostgpsd(self):
         if self.gps.source.value == 'gpsd':
             self.lostsensor(self.gps)
-            
+
     def write(self, sensor, data, source):
-        if not sensor in self.sensors:
+        if sensor not in self.sensors:
             print(_('unknown data parsed!'), sensor)
             return
         self.sensors[sensor].write(data, source)
-        
+
     def lostdevice(self, device):
         # optional routine  useful when a device is
         # unplugged to skip the normal data timeout

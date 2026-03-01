@@ -5,11 +5,12 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
-from machine import Pin, TouchPad
+# version 3 of the License, or (at your option) any later version.
 import gc
-import time
 from time import sleep
+
+from machine import Pin, TouchPad
+
 if gc.mem_free() > 1e6:  # larger ttgo display
     keypad_pin_numbers = [34, 36, 26, 33, 0, 35, 39] #BIG_PORT, SMALL_PORT, SMALL_STARBOARD, BIG_STARBOARD, AUTO, MENU, MODE (set to -1 if button is not present)
     keypad_pullup = [37, 38, 39]                                 #add the pins that have pullups(LOW activ) ALL other will have pulldowns(HIGH active)
@@ -25,7 +26,7 @@ noisr = False
 
 def make_pin(pin, i, lcd):
     global noisr
-    
+
     if pin in keypad_pullup:
         pin = Pin(pin, Pin.IN, Pin.PULL_UP)
     else:
@@ -43,7 +44,7 @@ def make_pin(pin, i, lcd):
     return pin
 
 def handle_pin(pin, i, lcd):
-    
+
     if pin == -5 :
         key = lcd.keypad[i]
         lcd.keypress = True
@@ -65,9 +66,9 @@ def handle_pin(pin, i, lcd):
             lcd.keypress = True
             #print('update key', i, v)
         key.update(v)
-                
-        
-        
+
+
+
 keypad_pins = []
 keypad_pins_wake = []
 index_pins_for_touch = []
@@ -82,21 +83,21 @@ def init(lcd):
     global keypad_pins
     global Threshold
     global Threshold_ratio
-    
+
     if power_down_pin_number:
         Pin(power_down_pin_number, Pin.IN, Pin.PULL_UP)
-    
+
     for i in range(len(keypad_pin_numbers)):
         pini = keypad_pin_numbers[i]
         if pini >= 0:
-            if not pini in keypad_touch:
+            if pini not in keypad_touch:
                 pin = make_pin(pini, i, lcd)
                 keypad_pins.append(pin)
-                if not pini in keypad_pullup:
+                if pini not in keypad_pullup:
                     keypad_pins_wake.append(pin)
             else:
                 index_pins_for_touch.append(i)        #get the index of the touchpins
-    
+
     #calculate and store the threshold ratio for each touch pin. It takes 1.2s for each pin but it will wait for tinypilot
     #to boot because the are powered at the same time so there is enough time
     for i in range(len(index_pins_for_touch)):
@@ -106,13 +107,13 @@ def init(lcd):
             sleep(.1)
         Threshold_ratio.append(sum(Threshold) // len(Threshold))
         Threshold = []
-  
-    
+
+
 def poll(lcd):
     if noisr:
         for i in range(len(keypad_pins)):
             handle_pin(keypad_pins[i], i, lcd)
-            
+
     #Currently there is no support for interrupts from touchpads in micropython(as i know) so it is a bit laggy but saves
     #pcb space and complexibility
     for i in range(len(index_pins_for_touch)):
@@ -126,7 +127,7 @@ def poll(lcd):
                 ratio = touch.read()  / Threshold_ratio[i]
                 sleep(0.1)
             handle_pin(-10, index_pins_for_touch[i], lcd)
-            
-    
-    
-    
+
+
+
+

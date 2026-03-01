@@ -5,14 +5,17 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 import math
 
 from pilot import AutopilotPilot
+
+from pypilot import vector
+
 #from pypilot.resolv import resolv
 from pypilot.values import *
-from pypilot import vector
+
 disabled = True
 
 matrixfilepath = os.getenv('HOME') + '/.pypilot/' + 'fuzzy.json'
@@ -35,7 +38,7 @@ def fuzzy_defaults(dimensions, c=0):
 
 def fuzzy_matrix(index, matrix):
     # work index toward 0 when data deficient
-    while not index in matrix:
+    while index not in matrix:
         if index < 0:
             index += 1
         elif index > 0:
@@ -47,7 +50,7 @@ def fuzzy_matrix(index, matrix):
 def fuzzy_compute(di, dimensions, matrix):
     if di == len(dimensions):
         return matrix
-        
+
     dimension = dimensions[di]
     name, sensor, step = dimension
     value = sensor.value
@@ -80,7 +83,7 @@ def fuzzy_set(matrix, indicies, update):
     if len(indicies) == 1:
         matrix[indicies[0]] = update
     else:
-        if not indicies[0] in matrix:
+        if indicies[0] not in matrix:
             matrix[indicies[0]] = matrix['N/A'].copy()
         fuzzy_set(matrix[indicies[0]], indicies[1:], update)
 
@@ -109,12 +112,12 @@ def fuzzy_train(dimensions, matrix, state, error):
 
 class FuzzyPilot(AutopilotPilot):
     def __init__(self, ap):
-        super(FuzzyPilot, self).__init__('fuzzy', ap)
+        super().__init__('fuzzy', ap)
 
         # create simple pid filter
         self.learningP = self.register(RangeProperty, 'learningP', .003, 0, .02)
         self.learningD = self.register(RangeProperty, 'learningD', .09, 0, 1)
-        
+
         self.seastate = self.register(SensorValue, 'seastate')
         self.accelm = 1
 
@@ -153,7 +156,7 @@ class FuzzyPilot(AutopilotPilot):
             f.close()
         except Exception as e:
             print('failed to load fuzzy data', e)
-            
+
     def process(self):
         t0 = time.monotonic()
         ap = self.ap

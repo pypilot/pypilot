@@ -5,10 +5,13 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import sys, time
+import sys
+import time
+
 from pypilot.client import PypilotClient
+
 
 # list must be already sorted
 def unique(l):
@@ -25,7 +28,7 @@ def frange(min, max, step):
         return [val] + each(val+step)
     return each(min)
 
-class autogain(object):
+class autogain:
     def __init__(self):
         self.search = [ \
                        #{'name': 'ap.I', 'min': 0, 'max': .006, 'step': .003},
@@ -101,14 +104,14 @@ class autogain(object):
             time.sleep(.05)
 
         for var in self.variables:
-            if not var in self.results:
+            if var not in self.results:
                 self.results[var] = []
             count = self.total[var]['count']
             if count:
                 self.results[var].append((self.searchval.copy(), self.total[var]['total'] / count))
             else:
                 print('warning, no results for', var)
-        
+
     def run_search(self, search):
         if search:
             s = search[0]
@@ -134,7 +137,7 @@ class autogain(object):
         if len(values) == 1:
             return '%.4f' % values[0]
         return values
-        
+
     def print_results(self, results, search, vals):
         l = len(search)
         s = search[0]
@@ -148,7 +151,7 @@ class autogain(object):
                 print(s['name'], '=', val)
                 vals[s['name']] = val
                 self.print_results(results, search[1:], vals)
-                
+
         elif l == 2:
             t = search[1]
             print(s['name'], '/', t['name'])

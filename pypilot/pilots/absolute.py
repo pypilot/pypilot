@@ -5,18 +5,19 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 from pilot import AutopilotPilot
 
+
 # this pilot is an experiment to command the rudder
 # to an absolute position rather than relative speed
-# 
+#
 # This pilot requires rudder feedback
 #
 class AbsolutePilot(AutopilotPilot):
   def __init__(self, ap):
-    super(AbsolutePilot, self).__init__('absolute', ap)
+    super().__init__('absolute', ap)
 
     # create simple pid filter
     self.PosGain('P', .05, 2)
@@ -27,10 +28,10 @@ class AbsolutePilot(AutopilotPilot):
   def process(self):
     ap = self.ap
 
-    if type(ap.sensors.rudder.angle.value) == type(False):
+    if type(ap.sensors.rudder.angle.value) == bool:
         ap.pilot.set('basic') # fall back to basic pilot if rudder feedback fails
         return
-    
+
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
     gain_values = {'P': ap.heading_error.value,

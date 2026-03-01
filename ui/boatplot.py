@@ -5,17 +5,20 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import math, json, numpy
+import math
+
+import numpy
+
 try:
     import Image
 except:
     from PIL import Image
 
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
 from OpenGL.GL import *
+from OpenGL.GLU import *
+from OpenGL.GLUT import *
 
 #from objloader import *
 try:
@@ -28,7 +31,8 @@ except Exception as e:
 
 from pypilot import quaternion
 
-class BoatPlot():
+
+class BoatPlot:
     def __init__(self):
         # looking at boat from nice angle
         self.Q = [-0.32060682, -0.32075041, 0.73081691, -0.51013437]
@@ -54,16 +58,16 @@ class BoatPlot():
         if width < 10 or height < 10:
             print('boatplot: ' + _('invalid display dimensions'), width, height)
             return
-        
+
         ar = 0.5 * width / height
         glFrustum(-ar, ar, -0.5, 0.5, 2.0, 300.0)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-        
+
         glClearColor(0, .2, .7, 0)
         glClearDepth(100)
-        
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         glPushMatrix()
@@ -92,7 +96,7 @@ class BoatPlot():
             glRotatef(90, 0, 0, -1)
             glRotatef(90, -1, 0, 0)
             glEnable(GL_LIGHTING)
-            
+
             lightfv = ctypes.c_float * 4
             glLightfv(GL_LIGHT0, GL_DIFFUSE, lightfv(1.0, 1.0, 1.0, 1.0))
             glEnable(GL_LIGHT0)
@@ -121,7 +125,7 @@ class BoatPlot():
         s = 1
 
         #glTranslatef(0, -2*s, 0)
-        
+
         def draw_string(s, pos):
             viewport = glGetIntegerv(GL_VIEWPORT)
             proj = glGetDoublev(GL_PROJECTION_MATRIX)
@@ -174,10 +178,10 @@ class BoatPlot():
 #                          img.size[0], img.size[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, data )
             gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA,
                               img.size[0], img.size[1], GL_RGBA, GL_UNSIGNED_BYTE, data)
-        
+
         glEnable(GL_TEXTURE_2D)
         glEnable(GL_BLEND)
-        glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+        glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA )
 
         glBindTexture(GL_TEXTURE_2D, self.compasstex)
         glBegin(GL_QUADS)
@@ -204,7 +208,7 @@ if __name__ == '__main__':
         if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
             global last
             last = x, y
-                
+
     def motion(x, y):
         global last
         dx, dy = x - last[0], y - last[1]
@@ -229,5 +233,5 @@ if __name__ == '__main__':
     glutKeyboardFunc( keyboard )
     glutMouseFunc( mouse )
     glutMotionFunc( motion )
-    
+
     glutMainLoop()

@@ -5,10 +5,16 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import wx, sys, math, subprocess, os, socket
+import math
+import os
+import subprocess
+import sys
+
+import wx
 from pypilot.client import pypilotClient
+
 
 def round3(value):
     if type(value) == type([]):
@@ -18,7 +24,7 @@ def round3(value):
         for each in value:
             ret[round3(each)] = round3(value[each])
         return ret
-    elif type(value) == type(1.0):
+    elif type(value) == float:
         return round(value, 3)
     return value
 
@@ -61,14 +67,14 @@ class MainFrame(wx.Frame):
         bsizer.Add(self.bClose)
 
         ssizer.Add(bsizer, 1, wx.EXPAND)
-        
+
         self.SetSizer(ssizer)
         self.Layout()
 
         self.timer = wx.Timer(self, wx.ID_ANY)
         self.timer.Start(500)
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=wx.ID_ANY)
-        
+
     def layout_widgets(self, value_list):
         sizer = self.scrolledWindow.GetSizer()
         if not sizer:
@@ -89,7 +95,7 @@ class MainFrame(wx.Frame):
                 continue
 
             sizer.Add( wx.StaticText(self.scrolledWindow, wx.ID_ANY, name), 0, wx.ALL, 5 )
-                    
+
             self.values[name] = wx.StaticText(self.scrolledWindow, wx.ID_ANY)
             sizer.Add( self.values[name], 0, wx.ALL, 5 )
 
@@ -171,7 +177,7 @@ class MainFrame(wx.Frame):
         self.scrolledWindow.Layout()
 
         sizer.Fit(self.scrolledWindow)
-        
+
     def Refresh(self, event):
         if self.client.connection:
             self.client.disconnect()
@@ -181,7 +187,7 @@ class MainFrame(wx.Frame):
         self.values = {}
         self.controls = {}
         self.sliderrange = {}
-        
+
     def receive_messages(self, event):
         if self.client.connection != self.connected:
             self.connected = self.client.connection
@@ -196,7 +202,7 @@ class MainFrame(wx.Frame):
             size = self.GetSize()
             self.Fit()
             self.SetSize(size)
-                
+
         while True:
             result = self.client.receive()
             if not result:
@@ -224,7 +230,7 @@ class MainFrame(wx.Frame):
                     except:
                         self.controls[name].SetValue(str(value))
 
-            
+
 def main():
     app = wx.App()
     MainFrame().Show()

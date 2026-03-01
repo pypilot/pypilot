@@ -5,13 +5,14 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 
-import wifi_esp32
-import sys
-import socket, time, json
 import errno
+import json
+import socket
+import sys
+import time
 
 DEFAULT_PORT = 23322
 
@@ -19,7 +20,7 @@ def gettime():
     return time.ticks_us()/1e6
 
 
-class pypilotClient(object):
+class pypilotClient:
     def __init__(self, host=False):
         self.connection = False
         self.connection_in_progress = False
@@ -45,7 +46,7 @@ class pypilotClient(object):
             self.connection.close()
         self.connection = False
         time.sleep(.25)
-        
+
     def connect(self):
         if self.connection or not self.host:
             return False
@@ -54,20 +55,20 @@ class pypilotClient(object):
         if not self.addr or self.addr[1] != self.host:
             addr_info = socket.getaddrinfo(self.host, DEFAULT_PORT)
             self.addr = addr_info[0][-1], self.host
-    
+
         try:
             connection = socket.socket()
         except Exception as e:
             print("couldn't create socket", e)
             import machine
             machine.reset()
-        
+
         self.wwatches = {}
         for name, value in self.watches.items():
             self.wwatches[name] = value # resend watches
         #self.values = {}
         connection.settimeout(1)
-        
+
         try:
             connection.connect(self.addr[0])
         except OSError as e:
@@ -75,7 +76,7 @@ class pypilotClient(object):
                 print('unreachable.. restarting')
                 import machine
                 machine.reset()
-            if not (e.args[0] is errno.EINPROGRESS):
+            if e.args[0] is not errno.EINPROGRESS:
                 print('failed to connect', e)
                 connection.close()
                 return False
@@ -109,8 +110,8 @@ class pypilotClient(object):
             f=open('badline', 'w')
             f.write(line)
             f.close()
-                    
-                    
+
+
     def receive(self):
         t0 = gettime()
         if not self.connection:
@@ -130,7 +131,7 @@ class pypilotClient(object):
             if not self.requested_values:
                 self.requested_values = True
                 self.wwatches['values'] = True # watch values
-            
+
         # inform server of any watches we have changed
         if self.wwatches:
             self.set('watch', self.wwatches)
@@ -183,18 +184,18 @@ class pypilotClient(object):
                 curly = 0
                 try:
                     name, rest = self.valuesbuffer.split(':', 1)
-                except Exception as e:
+                except Exception:
                     if self.valuesbuffer.startswith(' }\n'):
                         line = self.valuesbuffer[3:]
                         self.valuesbuffer = ''
                     break
- 
+
                 for i in range(len(rest)):
                     c = rest[i]
                     if c == '{':
                         curly += 1
                     elif c == '}':
-                        curly -= 1                   
+                        curly -= 1
                     if curly == 0:
                         data = rest[:i+1]
                         fields = ['AutopilotGain', 'min', 'max', 'choices']
@@ -225,11 +226,11 @@ class pypilotClient(object):
 
             if gettime() - t0 > .5: # .5 second maximum
                 break
-                
+
             if self.valuesbuffer:
                 continue
             if len(line) < 4:
-                self.valuesbuffer = ''                
+                self.valuesbuffer = ''
                 continue
 
             if line[-1] == ord('\n'):
@@ -243,14 +244,14 @@ class pypilotClient(object):
 
         if not some_lines:
             t = gettime()
-            dt = t - self.lastlinetime            
+            dt = t - self.lastlinetime
             #if dt > 1.0:
             #    print('upy_client: dt', dt, t)
             if dt > 2.5:
                 print('upy_client: timeout on socket', dt, 'reset wifi')
                 from wifi_esp32 import connect
                 connect()
-                self.disconnect()                
+                self.disconnect()
         return msgs
 
     def list_values(self):
@@ -261,7 +262,7 @@ class pypilotClient(object):
         if self.valuesbuffer:
             return {}
         return self.values
-    
+
     def watch(self, name, period=True):
         if name in self.watches and self.watches[name] is period:
             return
@@ -270,7 +271,7 @@ class pypilotClient(object):
             self.watches[name] = period
         elif name in self.watches:
             del self.watches[name]
-        
+
     def set(self, name, value):
         if not self.connection:
             return
@@ -279,7 +280,7 @@ class pypilotClient(object):
             self.reset_timeout()
             self.connection.send(name + '=' + line)
         except OSError as e:
-            if not (e.args[0] is errno.EINPROGRESS):
+            if e.args[0] is not errno.EINPROGRESS:
                 print('failed to set', e)
                 self.disconnect(False)
                 return False
@@ -304,6 +305,6 @@ def main():
 
         for name, value in msgs.items():
             print(name, '=', value)
-            
+
 if __name__ == '__main__':
-    main() 
+    main()

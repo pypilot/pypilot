@@ -4,10 +4,14 @@ __author__ = 'Rory McCann <rory@technomancy.org>'
 __version__ = '1.0'
 __licence__ = 'GPLv3'
 
-import sys, time
+import sys
+import time
 
 try:
-    import polib, subprocess, re
+    import re
+    import subprocess
+
+    import polib
 except:
     print('failed to translate', sys.argv[1])
     exit(0)
@@ -63,7 +67,7 @@ def translate(string, lang_direction):
             replace = re.compile(re.escape(translated_match), re.IGNORECASE)
             full_trans = replace.sub(match, full_trans)
 
-        
+
         new = full_trans
 
     return new
@@ -79,7 +83,7 @@ def translate_po(filename, lang):
     try:
         for entry in pofile:
 
-            if entry.msgstr: 
+            if entry.msgstr:
                 continue # already translated
             if entry.msgid_plural == '':
                 # not a pluralized string

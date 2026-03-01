@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 ###########################################################################
 ## Python code generated with wxFormBuilder (version 3.9.0 Sep 12 2020)
@@ -7,11 +6,11 @@
 ## PLEASE DO *NOT* EDIT THIS FILE!
 ###########################################################################
 
-import wx
-import wx.xrc
-import wx.glcanvas
 
-import gettext
+import wx
+import wx.glcanvas
+import wx.xrc
+
 #_ = gettext.gettext
 
 ###########################################################################
@@ -21,7 +20,7 @@ import gettext
 class pypilotScopeBase ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"pypilot Scope"), pos = wx.DefaultPosition, size = wx.Size( 1024,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = _("pypilot Scope"), pos = wx.DefaultPosition, size = wx.Size( 1024,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 
 		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 
@@ -70,34 +69,34 @@ class pypilotScopeBase ( wx.Frame ):
 		fgSizer5.SetFlexibleDirection( wx.BOTH )
 		fgSizer5.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 
-		self.bZero = wx.Button( self, wx.ID_ANY, _(u"Zero"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bZero = wx.Button( self, wx.ID_ANY, _("Zero"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer5.Add( self.bZero, 0, wx.ALL, 5 )
 
-		self.bCenter = wx.Button( self, wx.ID_ANY, _(u"Center"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bCenter = wx.Button( self, wx.ID_ANY, _("Center"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer5.Add( self.bCenter, 0, wx.ALL, 5 )
 
-		self.bScalePlus = wx.Button( self, wx.ID_ANY, _(u"Scale +"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bScalePlus = wx.Button( self, wx.ID_ANY, _("Scale +"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer5.Add( self.bScalePlus, 0, wx.ALL, 5 )
 
-		self.bScaleMinus = wx.Button( self, wx.ID_ANY, _(u"Scale -"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bScaleMinus = wx.Button( self, wx.ID_ANY, _("Scale -"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer5.Add( self.bScaleMinus, 0, wx.ALL, 5 )
 
-		self.bOffsetPlus = wx.Button( self, wx.ID_ANY, _(u"Offset /\\"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bOffsetPlus = wx.Button( self, wx.ID_ANY, _("Offset /\\"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer5.Add( self.bOffsetPlus, 0, wx.ALL, 5 )
 
-		self.bOffsetMinus = wx.Button( self, wx.ID_ANY, _(u"Offset \\/"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bOffsetMinus = wx.Button( self, wx.ID_ANY, _("Offset \\/"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer5.Add( self.bOffsetMinus, 0, wx.ALL, 5 )
 
-		self.tbFreeze = wx.ToggleButton( self, wx.ID_ANY, _(u"Freeze"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.tbFreeze = wx.ToggleButton( self, wx.ID_ANY, _("Freeze"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer5.Add( self.tbFreeze, 0, wx.ALL, 5 )
 
-		self.bReset = wx.Button( self, wx.ID_ANY, _(u"Reset"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bReset = wx.Button( self, wx.ID_ANY, _("Reset"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer5.Add( self.bReset, 0, wx.ALL, 5 )
 
-		self.cbfftw = wx.CheckBox( self, wx.ID_ANY, _(u"fftw"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.cbfftw = wx.CheckBox( self, wx.ID_ANY, _("fftw"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer5.Add( self.cbfftw, 0, wx.ALL, 5 )
 
-		self.m_staticText1 = wx.StaticText( self, wx.ID_ANY, _(u"Time"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText1 = wx.StaticText( self, wx.ID_ANY, _("Time"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText1.Wrap( -1 )
 
 		fgSizer5.Add( self.m_staticText1, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
@@ -105,7 +104,7 @@ class pypilotScopeBase ( wx.Frame ):
 		self.sTime = wx.SpinCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 60,-1 ), wx.SP_ARROW_KEYS, 1, 3600, 0 )
 		fgSizer5.Add( self.sTime, 0, wx.ALL, 5 )
 
-		self.bClose = wx.Button( self, wx.ID_ANY, _(u"Close"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bClose = wx.Button( self, wx.ID_ANY, _("Close"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		fgSizer5.Add( self.bClose, 0, wx.ALL, 5 )
 
 
