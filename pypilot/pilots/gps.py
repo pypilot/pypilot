@@ -5,11 +5,13 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
+
+from pilot import AutopilotPilot
 
 from pypilot.resolv import resolv
-from pilot import AutopilotPilot, AutopilotGain
 from pypilot.values import *
+
 disabled = True
 
 # the gps pilot requires gps
@@ -19,7 +21,7 @@ disabled = True
 
 class GPSPilot(AutopilotPilot):
   def __init__(self, ap):
-    super(GPSPilot, self).__init__('gps', ap)
+    super().__init__('gps', ap)
 
     # create filters
     self.wind_gps_offset = HeadingOffset()
@@ -27,7 +29,7 @@ class GPSPilot(AutopilotPilot):
 
     # create simple pid filter
     self.gains = {}
-        
+
     self.PosGain('P', .003, .02)  # position (heading error)
     self.PosGain('D',  .1, 1.0)   # derivative (gyro)
     self.PosGain('DD',  .05, 1.0)  # position root
@@ -35,7 +37,7 @@ class GPSPilot(AutopilotPilot):
 
     self.wind_gps_offset = HeadingOffset()
     self.true_wind_gps_offset = HeadingOffset()
-    
+
   def compute_heading(self):
     # compute the difference from wind to other headings
     ap = self.ap
@@ -59,7 +61,7 @@ class GPSPilot(AutopilotPilot):
     if mode == 'gps' or mode == 'nav':
       ap.heading.set(gps_course) # no filter?
     elif mode == 'wind':
-      wind = resolv(self.wind_gps_offset.value - gps_course, 180)  
+      wind = resolv(self.wind_gps_offset.value - gps_course, 180)
       ap.heading.set(wind)
     elif mode == 'true wind':
       true_wind = resolve(self.true_wind_gps_offset.value - gps_course, 180)
@@ -67,12 +69,12 @@ class GPSPilot(AutopilotPilot):
 
   def best_mode(self, mode):
       modes = self.ap.modes.value
-      if not mode in modes:  # fallback to compass
+      if mode not in modes:  # fallback to compass
           if 'gps' in modes:
               return 'gps'
           return 'compass'
       return mode
-      
+
   def process(self):
       ap = self.ap
 
@@ -80,12 +82,12 @@ class GPSPilot(AutopilotPilot):
       headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
       headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
       gain_values = {'P': ap.heading_error.value,
-                     'D': headingrate,      
+                     'D': headingrate,
                      'DD': headingraterate,
                      'FF': ap.heading_command_rate.value}
 
       command = self.Compute(gain_values)
-      
+
       if ap.enabled.value:
           ap.servo.command.command(command)
 

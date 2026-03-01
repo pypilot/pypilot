@@ -1,4 +1,5 @@
 *.pyc
+*.so
 pypilot.egg-info
 build
 dist

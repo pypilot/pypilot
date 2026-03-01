@@ -17,17 +17,14 @@ pypilot kivy control app
 '''
 
 from kivy.app import App
-from kivy.uix.tabbedpanel import TabbedPanel
-from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.spinner import Spinner
-from kivy.uix.widget import Widget
-from kivy.uix.image import Image
-from kivy.animation import Animation
+
 #from kivy.lang import Builder
 from kivy.clock import Clock
+from kivy.uix.image import Image
+from kivy.uix.tabbedpanel import TabbedPanel
 
 from client import pypilotClient
+
 
 class AutopilotControl(TabbedPanel):
     pass
@@ -53,7 +50,7 @@ class AutopilotControlApp(App):
     def connect(self, dt):
         if self.client:
             return
-        
+
         watchlist = ['ap.enabled', 'ap.mode', 'ap.heading', 'ap.heading_command']
         def on_con(client):
             for name in watchlist:
@@ -62,13 +59,13 @@ class AutopilotControlApp(App):
         try:
             self.client = pypilotClient(on_con, autoreconnect=True)
             pass
-        except:
+        except OSError:
             return
 
     def update(self, dt):
         if not self.client:
             return
-        
+
         result = self.client.receive()
         for msg in result:
             value = result[msg]['value']
@@ -83,9 +80,9 @@ class AutopilotControlApp(App):
                 if self.enabled:
                     colors = {'compass': '00ff00', 'gps': '0000ff', 'wind': 'ffff00'}
                     color = colors[self.mode]
-                    
+
                 self.control.ap.text = '[color=' + color + ']AP'
-                
+
             elif msg == 'ap.heading':
                 self.control.heading_label.text = str(value)
                 self.control.compass.heading = value
@@ -106,6 +103,6 @@ class AutopilotControlApp(App):
         else:
             self.client.set('servo.command', 0)
             self.client.set('ap.enabled', False)
-            
+
 if __name__ == '__main__':
     AutopilotControlApp().run()

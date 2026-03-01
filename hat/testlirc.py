@@ -1,5 +1,7 @@
-import pylirc as LIRC
 import time
+
+import pylirc as LIRC
+
 LIRC.init('pypilot')
 
 while True:

@@ -5,26 +5,29 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 # Boat imu is built on top of RTIMU
 
 # it is an enhanced imu with special knowledge of boat dynamics
 # giving it the ability to auto-calibrate the inertial sensors
 
-import os, sys
-import time, math, multiprocessing, select
+import math
+import multiprocessing
+import os
+import sys
+import time
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    import vector, quaternion
+    import quaternion
+    import vector
     from client import pypilotClient
-    from values import *
-
     from nonblockingpipe import NonBlockingPipe
-except:
-    import failedimports
+    from values import *
+except ImportError:
+    pass
 
 try:
     import RTIMU
@@ -32,7 +35,7 @@ except ImportError:
     RTIMU = False
     print(_('RTIMU library not detected, please install it'))
 
-class IMU(object):
+class IMU:
     def __init__(self, server):
         self.client = pypilotClient(server)
         self.multiprocessing = server.multiprocessing
@@ -43,7 +46,7 @@ class IMU(object):
             return
         self.process = False
         self.setup()
-          
+
     def setup(self):
         self.client.watch('imu.accel.calibration')
         self.client.watch('imu.compass.calibration')
@@ -149,7 +152,7 @@ class IMU(object):
                 self.gyrobias.set(list(map(math.degrees, self.s.GyroBias)))
                 self.lastgyrobiastime = t0
                 self.s.GyroBiasValid = True
-            
+
             self.poll()
             t3 = time.monotonic()
             dt = time.monotonic() - t0
@@ -168,13 +171,13 @@ class IMU(object):
         if not self.rtimu.IMURead():
             print(_('failed to read IMU!'), t0)
             self.init() # reinitialize imu
-            return False 
-         
+            return False
+
         data = self.rtimu.getIMUData()
         data['accel.residuals'] = list(self.rtimu.getAccelResiduals())
 
         data['timestamp'] = t0 # imu timestamp is perfectly accurate
-        
+
         if self.compass_calibration_updated:
             data['compass_calibration_updated'] = True
             self.compass_calibration_updated = False
@@ -219,7 +222,7 @@ class IMU(object):
                 print('IMU all sensor axes verified')
                 self.error.set('')
                 self.axes_test = False
-                
+
         # see if gyro is out of range, sometimes the sensors read
         # very high gyro readings and the sensors need to be reset by software
         # this is probably a bug in the underlying driver with fifo misalignment
@@ -237,7 +240,7 @@ class IMU(object):
 
 class FrequencyValue(SensorValue):
     def __init__(self, name):
-        super(FrequencyValue, self).__init__(name)
+        super().__init__(name)
         self.loopc = 0
         self.t0 = time.monotonic()
 
@@ -250,7 +253,7 @@ class FrequencyValue(SensorValue):
             self.loopc = 0
 
 def readable_timespan(total):
-    mods = [('s', 1), ('m', 60), ('h', 60), ('d', 24), ('y', 365.24)]          
+    mods = [('s', 1), ('m', 60), ('h', 60), ('d', 24), ('y', 365.24)]
     def loop(i, mod):
         if i == len(mods) or (int(total / (mods[i][1]*mod)) == 0 and i > 0):
             return ''
@@ -267,12 +270,12 @@ def readable_timespan(total):
 
 class TimeValue(StringValue):
     def __init__(self, name, **kwargs):
-        super(TimeValue, self).__init__(name, 0, **kwargs)
+        super().__init__(name, 0, **kwargs)
         self.lastupdate_value = 0
         self.lastage_value = -100
         self.stopped = True
         self.total = self.value
-        
+
     def reset(self):
         self.lastupdate_value = 0
         self.total = 0
@@ -304,12 +307,12 @@ class TimeValue(StringValue):
 
 class QuaternionValue(ResettableValue):
     def __init__(self, name, initial, **kwargs):
-        super(QuaternionValue, self).__init__(name, initial, **kwargs)
+        super().__init__(name, initial, **kwargs)
 
     def set(self, value):
         if value:
             value = quaternion.normalize(value)
-        super(QuaternionValue, self).set(value)
+        super().set(value)
 
 def heading_filter(lp, a, b):
     if not a:
@@ -348,7 +351,7 @@ def CalibrationProcess(cal_pipe, client):
     calibration_fit.CalibrationProcess(cal_pipe, client) # does not return
 
 
-class AutomaticCalibrationProcess():
+class AutomaticCalibrationProcess:
     def __init__(self, server):
         if True:
             # direct connection to send raw sensors to calibration process is more
@@ -382,7 +385,7 @@ class AutomaticCalibrationProcess():
         self.process.terminate()
 
 
-class BoatIMU(object):
+class BoatIMU:
     def __init__(self, client):
         self.client = client
 
@@ -391,7 +394,7 @@ class BoatIMU(object):
         self.frequency = self.register(FrequencyValue, 'frequency')
         self.alignmentQ = self.register(QuaternionValue, 'alignmentQ', [1, 0, 0, 0], persistent=True)
         self.alignmentQ.last = False
-        
+
         self.heading_off = self.register(RangeProperty, 'heading_offset', 0, -180, 180, persistent=True)
         self.heading_off.last = 3000 # invalid
 
@@ -400,7 +403,7 @@ class BoatIMU(object):
 
         self.uptime = self.register(TimeValue, 'uptime')
         self.warning = self.register(StringValue, 'warning', '')
-        
+
         self.auto_cal = AutomaticCalibrationProcess(client.server)
 
         self.lasttimestamp = 0
@@ -415,7 +418,7 @@ class BoatIMU(object):
         sensornames += ['headingrate_lowpass', 'headingraterate_lowpass']
         directional_sensornames = ['heading', 'heading_lowpass']
         sensornames += directional_sensornames
-    
+
         self.SensorValues = {}
         for name in sensornames:
             self.SensorValues[name] = self.register(SensorValue, name, directional = name in directional_sensornames)
@@ -423,7 +426,7 @@ class BoatIMU(object):
         # quaternion needs to report many more decimal places than other sensors
         #sensornames += ['fusionQPose']
         self.SensorValues['fusionQPose'] = self.register(SensorValue, 'fusionQPose', fmt='%.10f')
-    
+
         self.imu = IMU(client.server)
 
         self.last_imuread = time.monotonic() + 4 # ignore failed readings at startup
@@ -438,7 +441,7 @@ class BoatIMU(object):
     def register(self, _type, name, *args, **kwargs):
         value = _type(*(['imu.' + name] + list(args)), **kwargs)
         return self.client.register(value)
-      
+
     def update_alignment(self, q):
         a2 = 2*math.atan2(q[3], q[0])
         heading_offset = a2*180/math.pi
@@ -470,15 +473,15 @@ class BoatIMU(object):
                     self.SensorValues[name].set(False)
                 self.uptime.reset()
             return False
-  
+
         if vector.norm(data['accel']) == 0:
             print(_('accel values invalid'), data['accel'])
             return False
-  
+
         self.last_imuread = time.monotonic()
         self.frequency.strobe()
-  
-        # apply alignment calibration                                       
+
+        # apply alignment calibration
         aligned = quaternion.multiply(data['fusionQPose'], self.alignmentQ.value)
         aligned = quaternion.normalize(aligned) # floating point precision errors
 
@@ -496,7 +499,7 @@ class BoatIMU(object):
                 alignment = []
                 alignment = quaternion.vec2vec2quat([0, 0, 1], adown)
                 alignment = quaternion.multiply(self.alignmentQ.value, alignment)
-        
+
                 if len(alignment):
                     self.update_alignment(alignment)
 
@@ -509,7 +512,7 @@ class BoatIMU(object):
             self.heading_off.last = self.heading_off.value
             self.alignmentQ.last = self.alignmentQ.value
 
-    
+
         data['roll'], data['pitch'], data['heading'] = map(math.degrees, quaternion.toeuler(aligned))
         if data['heading'] < 0:
             data['heading'] += 360
@@ -524,19 +527,19 @@ class BoatIMU(object):
         crh = math.cos(rh)
         data['rollrate'] = ur*crh + vr*srh
         data['pitchrate'] = vr*crh - ur*srh
-  
+
         dt = data['timestamp'] - self.lasttimestamp
         self.lasttimestamp = data['timestamp']
         if dt > .01 and dt < .2:
             data['headingraterate'] = (data['headingrate'] - self.headingrate) / dt
         else:
             data['headingraterate'] = 0
-  
+
         self.headingrate = data['headingrate']
-  
+
         data['heel'] = self.heel = data['roll']*.03 + self.heel*.97
         data['gyro'] = list(map(math.degrees, data['gyro']))
-  
+
         # lowpass heading and rate
         llp = self.heading_lowpass_constant.value
         if self.reset_alignment or data.get('compass_calibration_updated'):
@@ -546,7 +549,7 @@ class BoatIMU(object):
 
         llp = self.headingrate_lowpass_constant.value
         data['headingrate_lowpass'] = llp*data['headingrate'] + (1-llp)*self.SensorValues['headingrate_lowpass'].value
-  
+
         llp = self.headingraterate_lowpass_constant.value
         data['headingraterate_lowpass'] = llp*data['headingraterate'] + (1-llp)*self.SensorValues['headingraterate_lowpass'].value
 
@@ -585,7 +588,7 @@ def printline(*args):
         sys.stdout.write(' ')
     sys.stdout.write('\r')
     sys.stdout.flush()
-    
+
 def main():
     from server import pypilotServer
     server = pypilotServer()
@@ -611,6 +614,6 @@ def main():
                 break
             if dt > 0:
                 time.sleep(dt)
-            
+
 if __name__ == '__main__':
     main()

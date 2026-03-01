@@ -5,22 +5,23 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import time, sys
-from pypilot.client import pypilotClient
-import json, math, numpy
-from pypilot import quaternion
-from pypilot import vector
+import math
+import sys
+import time
 
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
 from OpenGL.GL import *
+from OpenGL.GLU import *
+from OpenGL.GLUT import *
+from pypilot import quaternion
+from pypilot.client import pypilotClient
 
 history_point_count=200
 recent_point_count=20
 
 from shape import *
+
 
 def TranslateAfter(x, y, z):
     m = glGetFloatv(GL_MODELVIEW_MATRIX)
@@ -37,7 +38,7 @@ def RotateAfter(ang, x, y, z):
 def rotate_mouse(dx, dy):
     RotateAfter((dx**2 + dy**2)**.1, dy, dx, 0)
 
-class CalibrationPlot(object):
+class CalibrationPlot:
     def __init__(self, name):
         self.name = name
         self.mode = GL_LINE
@@ -47,7 +48,7 @@ class CalibrationPlot(object):
         self.historypoints = []
         self.sigmapoints = []
         self.points = []
-        
+
     def add_point(self, value):
         if not value:
             return
@@ -76,7 +77,7 @@ class CalibrationPlot(object):
             self.sigmapoints = value
         elif name == 'imu.'+self.name+'.calibration.points':
             self.points = value
-                
+
     def display_setup(self):
         width, height = self.dim
         ar = float(width) / float(height)
@@ -107,9 +108,9 @@ class CalibrationPlot(object):
         down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(q))
         try:
             glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
-        except:
+        except ValueError:
             print('couldnt do q angle', q)
-            
+
         return down
 
     def draw_points(self):
@@ -119,7 +120,7 @@ class CalibrationPlot(object):
         for p in self.recentpoints:
             glVertex3fv(p)
         glEnd()
-            
+
         glPointSize(2)
         glColor3f(0,1,0)
         glBegin(GL_POINTS)
@@ -187,11 +188,11 @@ class CalibrationPlot(object):
     def reshape(self, width, height):
         glEnable(GL_DEPTH_TEST)
         self.dim = width, height
-        
+
 class AccelCalibrationPlot(CalibrationPlot):
     default_radius = 1
     def __init__(self):
-        super(AccelCalibrationPlot, self).__init__('accel')
+        super().__init__('accel')
         self.userscale = .3
         self.cal_sphere = [0, 0, 0, 1]
         self.fit_sphere = False
@@ -203,24 +204,24 @@ class AccelCalibrationPlot(CalibrationPlot):
             def fsphere(beta, x):
                 return beta[3]*x+beta[:3]
             self.cal_sphere = value[0]
-            self.fit_sphere = Spherical(self.cal_sphere, fsphere,  32, 16);
+            self.fit_sphere = Spherical(self.cal_sphere, fsphere,  32, 16)
 
     def display(self):
-        self.display_setup();
+        self.display_setup()
         cal_sphere = self.cal_sphere
-        
+
         if self.fit_sphere:
             glColor3f(0, .3, .8)
             self.fit_sphere.draw()
 
         glPopMatrix()
-        glTranslatef(-cal_sphere[0], -cal_sphere[1], -cal_sphere[2])        
+        glTranslatef(-cal_sphere[0], -cal_sphere[1], -cal_sphere[2])
         self.draw_points()
 
 class CompassCalibrationPlot(CalibrationPlot):
     default_radius = 30
     def __init__(self):
-        super(CompassCalibrationPlot, self).__init__('compass')
+        super().__init__('compass')
         self.userscale = .005
         self.unit_sphere = Spherical([0, 0, 0, 1], lambda beta, x: x, 32, 16)
         self.mag_fit_new_bias = self.mag_fit_new_sphere = False
@@ -228,7 +229,7 @@ class CompassCalibrationPlot(CalibrationPlot):
         self.mag_cal_new_bias = [0, 0, 0, 30, 0]
         self.mag_cal_new_sphere = [0, 0, 0, 30, 0]
         self.mag_cal_sphere = [0, 0, 0, 30]
-        
+
         self.accel = [0, 0, 0]
         self.heading = 0
 
@@ -247,17 +248,17 @@ class CompassCalibrationPlot(CalibrationPlot):
                 return beta[3]*x+beta[:3]
             try:
                 self.mag_cal_sphere = value[0]
-                self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  32, 16);
-                self.mag_fit_cone = Conical(self.mag_cal_sphere, 32, 16);
+                self.mag_fit_sphere = Spherical(self.mag_cal_sphere, fsphere,  32, 16)
+                self.mag_fit_cone = Conical(self.mag_cal_sphere, 32, 16)
             except Exception as e:
                 print("Exception", e)
-                
+
     def display(self):
         down = self.display_setup()
         cal_new_bias = self.mag_cal_new_bias
         cal_new_sphere = self.mag_cal_new_sphere
         cal_sphere = self.mag_cal_sphere
-        
+
         if self.mag_fit_new_bias:
             glColor3f(1, 0, 0)
             self.mag_fit_new_bias.draw()
@@ -265,7 +266,7 @@ class CompassCalibrationPlot(CalibrationPlot):
         if self.mag_fit_new_sphere:
             glColor3f(1, 0, 1)
             self.mag_fit_new_sphere.draw()
-                
+
         if self.mag_fit_sphere:
             glColor3f(0, 0, 1)
             self.mag_fit_sphere.draw()
@@ -299,7 +300,7 @@ if __name__ == '__main__':
     client = pypilotClient(host)
     for name in watchlist:
         client.watch(name)
-        
+
     plot = CompassCalibrationPlot()
 
     def display():
@@ -311,7 +312,7 @@ if __name__ == '__main__':
         if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
             global last
             last = x, y
-                
+
     def motion(x, y):
         global last
         rotate_mouse(x - last[0], y - last[1])
@@ -345,5 +346,5 @@ if __name__ == '__main__':
 
     glutMouseFunc( mouse )
     glutMotionFunc( motion )
-    
+
     glutMainLoop()
