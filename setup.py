@@ -10,7 +10,7 @@
 # This setup.py only handles C/SWIG extension builds.
 # All metadata, dependencies, and entry points are in pyproject.toml.
 
-from setuptools import setup, Extension
+from setuptools import Extension, setup
 from setuptools.command.install import install
 
 
@@ -45,11 +45,11 @@ arduino_servo_module = Extension(
 
 ugfx_defs = ["-DWIRINGPI"]
 try:
-    import RPi.GPIO
+    import RPi.GPIO  # noqa: F401
     ugfx_libraries = ["wiringPi"]
 except Exception:
     try:
-        import OPi.GPIO
+        import OPi.GPIO  # noqa: F401
         ugfx_libraries = ["wiringPi"]
     except Exception:
         print("no RPi.GPIO library for ugfx")
