@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=64", "swig"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pypilot"
+dynamic = ["version"]
+description = "Free autopilot for sailboats written in Python supporting SignalK"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.9"
+authors = [
+    { name = "Sean D'Epagnier" },
+]
+keywords = ["autopilot", "sailboat", "raspberry-pi", "signalk", "nmea"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+"Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "pyserial",
+    "numpy",
+    "scipy",
+]
+
+[project.optional-dependencies]
+optimize = ["ujson", "pyudev", "inotify"]
+signalk = ["zeroconf", "requests", "websocket-client"]
+hat = ["pillow"]
+web = [
+    "flask",
+    "gevent-websocket",
+    "python-socketio",
+    "flask-socketio>=5",
+    "flask-babel",
+]
+gui = ["PyOpenGL", "pyglet", "pywavefront"]
+dev = [
+    "ruff",
+    "mypy",
+    "pytest",
+    "pytest-cov",
+]
+
+[project.urls]
+Homepage = "http://pypilot.org/"
+Repository = "https://github.com/pypilot/pypilot"
+Issues = "https://github.com/pypilot/pypilot/issues"
+
+[project.scripts]
+pypilot = "pypilot.autopilot:main"
+pypilot_boatimu = "pypilot.boatimu:main"
+pypilot_servo = "pypilot.servo:main"
+pypilot_web = "pypilot.web.web:main"
+pypilot_hat = "pypilot.hat.hat:main"
+pypilot_control = "pypilot.ui.autopilot_control:main"
+pypilot_calibration = "pypilot.ui.autopilot_calibration:main"
+pypilot_client = "pypilot.client:main"
+pypilot_scope = "pypilot.ui.scope_wx:main"
+pypilot_client_wx = "pypilot.ui.client_wx:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "pypilot.version.strversion" }
+
+[tool.setuptools.packages.find]
+include = ["pypilot*"]
+
+[tool.setuptools.package-dir]
+"pypilot.hat" = "hat"
+"pypilot.hat.ugfx" = "hat/ugfx"
+"pypilot.hat.spireader" = "hat/spireader"
+"pypilot.web" = "web"
+"pypilot.ui" = "ui"
+
+[tool.setuptools.package-data]
+"pypilot" = ["locale/**/*.mo"]
+"pypilot.hat" = [
+    "font.ttf",
+    "static/*",
+    "templates/*",
+    "locale/**/*.mo",
+    "translations/**/*.mo",
+]
+"pypilot.ui" = ["*.png", "*.mtl", "*.obj"]
+"pypilot.web" = [
+    "static/*",
+    "templates/*",
+    "pypilot_web.pot",
+    "translations/**/*.mo",
+]
