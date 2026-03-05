@@ -403,6 +403,11 @@ class BoatIMU(object):
         
         self.auto_cal = AutomaticCalibrationProcess(client.server)
 
+        # source for imu data: 'local' (RTIMU hardware) or 'signalk'
+        self.source = self.register(StringValue, 'source', 'local', persistent=True)
+        # pipe for receiving external IMU data from signalk
+        self.signalk_pipe = None
+
         self.lasttimestamp = 0
 
         self.headingrate = self.heel = 0
@@ -457,11 +462,88 @@ class BoatIMU(object):
                 lastdata = data
         return self.imu.read()
 
+    def read_signalk(self):
+        """Read IMU data from SignalK pipe when no local IMU is available."""
+        if not self.signalk_pipe:
+            return False
+        lastdata = False
+        while True:
+            data = self.signalk_pipe.recv()
+            if not data:
+                break
+            lastdata = data
+        if not lastdata:
+            return False
+
+        # SignalK provides heading_lowpass, pitch, roll, headingrate_lowpass (in degrees)
+        # Build a minimal data dict compatible with the processing below
+        heading = lastdata.get('heading_lowpass', 0)
+        pitch = lastdata.get('pitch', 0)
+        roll = lastdata.get('roll', 0)
+        headingrate = lastdata.get('headingrate_lowpass', 0)
+
+        data = {}
+        data['timestamp'] = lastdata.get('timestamp', time.monotonic())
+        data['heading'] = heading
+        data['pitch'] = pitch
+        data['roll'] = roll
+        data['headingrate'] = headingrate
+        data['headingraterate'] = 0
+        data['rollrate'] = 0
+        data['pitchrate'] = 0
+        data['accel'] = [0, 0, 1]  # placeholder
+        data['gyro'] = [0, 0, 0]  # placeholder
+        data['compass'] = [0, 0, 0]  # placeholder
+        data['fusionQPose'] = [1, 0, 0, 0]  # identity quaternion
+        data['accel.residuals'] = data['accel']
+        return data
+
     def read(self):
         if not self.imu.multiprocessing:
             self.imu.poll()
 
         data = self.IMUread()
+
+        # If no local IMU data, try reading from SignalK
+        if not data and self.source.value == 'signalk':
+            data = self.read_signalk()
+            if data:
+                # SignalK data already has heading/pitch/roll in degrees
+                # Skip quaternion/gyro processing, go straight to filtering
+                self.last_imuread = time.monotonic()
+                self.frequency.strobe()
+
+                dt = data['timestamp'] - self.lasttimestamp
+                self.lasttimestamp = data['timestamp']
+                if dt > .01 and dt < 1:
+                    data['headingraterate'] = (data['headingrate'] - self.headingrate) / dt
+                else:
+                    data['headingraterate'] = 0
+
+                self.headingrate = data['headingrate']
+                data['heel'] = self.heel = data['roll']*.03 + self.heel*.97
+
+                # lowpass heading and rate
+                llp = self.heading_lowpass_constant.value
+                if self.reset_alignment:
+                    llp = 1
+                    self.reset_alignment = False
+                data['heading_lowpass'] = heading_filter(llp, data['heading'], self.SensorValues['heading_lowpass'].value)
+
+                llp = self.headingrate_lowpass_constant.value
+                data['headingrate_lowpass'] = llp*data['headingrate'] + (1-llp)*self.SensorValues['headingrate_lowpass'].value
+
+                llp = self.headingraterate_lowpass_constant.value
+                data['headingraterate_lowpass'] = llp*data['headingraterate'] + (1-llp)*self.SensorValues['headingraterate_lowpass'].value
+
+                # set sensors
+                for name in self.SensorValues:
+                    if name in data:
+                        self.SensorValues[name].set(data[name])
+
+                self.uptime.update()
+                return data
+
         if not data:
             if time.monotonic() - self.last_imuread > 1 and self.frequency.value:
                 print('IMURead failed!')
