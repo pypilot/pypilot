@@ -48,18 +48,14 @@ arduino_servo_module = Extension('pypilot/arduino_servo/_arduino_servo',
                         swig_opts=['-c++']
 )
 
-ugfx_defs = ['-DWIRINGPI']
+ugfx_defs = ['-DLGPIO']
 try:
-    import RPi.GPIO
-    ugfx_libraries=['wiringPi']
+    import lgpio
+    ugfx_libraries=['lgpio']
 except:
-    try:
-        import OPi.GPIO
-        ugfx_libraries=['wiringPi']
-    except:
-        print('no RPi.GPIO library for ugfx')
-        ugfx_libraries=[]
-        ugfx_defs = []
+    print('no lgpio library for ugfx')
+    ugfx_libraries=[]
+    ugfx_defs = []
 
 ugfx_module = Extension('pypilot/hat/ugfx/_ugfx',
                         sources=['hat/ugfx/ugfx.cpp',

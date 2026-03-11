@@ -1125,7 +1125,7 @@ spiscreen::spiscreen(int driver)
     case 3: disp = new DG240160(); break;
 #endif
     default:
-        fprintf(stderr, "invalid driver: %d", driver);
+        fprintf(stderr, "invalid driver: %d\n", driver);
         exit(1);
     }
     contrast = 60;

@@ -56,7 +56,7 @@ public:
     int fbfd = 0;
     long int screensize = 0;
 };
-#ifdef WIRINGPI
+#ifdef LGPIO
 class spiscreen : public surface
 {
 public:

@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import select, time, os
-from . import pyjson
+import pyjson
 
 class NonBlockingPipeEnd(object):
     def __init__(self, pipe, name, recvfailok, sendfailok):
@@ -71,7 +71,7 @@ class NonBlockingPipeEnd(object):
         return False
 
 
-from .bufferedsocket import LineBufferedNonBlockingSocket
+from bufferedsocket import LineBufferedNonBlockingSocket
 class SocketNonBlockingPipeEnd(LineBufferedNonBlockingSocket):
     def __init__(self, socket, name, recvfailok, sendfailok):
         self.name = name
