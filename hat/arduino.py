@@ -30,11 +30,6 @@ GET_VERSION=0x1b
 
 PACKET_LEN=6
 
-try:
-    import RPi.GPIO as GPIO
-except:
-    GPIO = False
-
 def update_firmware(config):
     if not 'hat' in config:
         return

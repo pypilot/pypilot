@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2026 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import select, time, os
-import pyjson
+from . import pyjson
 
 class NonBlockingPipeEnd(object):
     def __init__(self, pipe, name, recvfailok, sendfailok):
@@ -71,7 +71,7 @@ class NonBlockingPipeEnd(object):
         return False
 
 
-from bufferedsocket import LineBufferedNonBlockingSocket
+from .bufferedsocket import LineBufferedNonBlockingSocket
 class SocketNonBlockingPipeEnd(LineBufferedNonBlockingSocket):
     def __init__(self, socket, name, recvfailok, sendfailok):
         self.name = name
