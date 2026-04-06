@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2026 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -23,13 +23,14 @@ ifont = ImageFont.truetype('../font.ttf', 14)
 version = pypilot.version.strversion
 print('using version', version)
 (left, top, right, bottom) = ifont.getbbox(version)
+
 size = (right - left, bottom - top)
 image = Image.new('RGBA', size)
 draw = ImageDraw.Draw(image)
-draw.text((0, 0), version, font=ifont)
+draw.text((0, -top), version, font=ifont)
 
 data = list(image.getdata())
-print('len', len(data), size)
+print('len', len(data), size, top, bottom)
 
 f = open('pypilot_version.h', 'w')
 f.write('static unsigned int width = %d;\n' % size[0])
