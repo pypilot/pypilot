@@ -131,6 +131,7 @@ class signalk(object):
         self.last_access_request_time = 0
 
         self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('signalk pipe', self.multiprocessing)
+        self.imu_pipe = None  # set by Sensors.__init__ to send IMU data to BoatIMU
         self.zero_conf = ZeroConfProcess(self)
         
         if self.multiprocessing:
@@ -169,6 +170,11 @@ class signalk(object):
         self.period = self.client.register(RangeProperty('signalk.period', .5, .1, 2, persistent=True))
         self.last_period = False
         self.uid = self.client.register(Property('signalk.uid', 'pypilot', persistent=True))
+
+        # manual host:port fallback when zeroconf discovery fails
+        from values import StringValue
+        self.host = self.client.register(Property('signalk.host', '', persistent=True))
+        self.port = self.client.register(Property('signalk.port', 3000, persistent=True))
 
         self.signalk_host_port = False
         self.signalk_ws_url = False
@@ -325,7 +331,10 @@ class signalk(object):
             msg = self.sensors_pipe_out.recv()
             while msg:
                 sensor, data = msg
-                self.sensors.write(sensor, data, 'signalk')
+                if sensor == 'imu' and self.imu_pipe:
+                    self.imu_pipe.send(data)
+                elif sensor != 'imu':
+                    self.sensors.write(sensor, data, 'signalk')
                 msg = self.sensors_pipe_out.recv()
             return
 
@@ -349,7 +358,13 @@ class signalk(object):
         
         self.client.poll(timeout)
         if not self.signalk_host_port:
-            return # waiting for signalk to detect
+            # fallback: use manually configured host:port if zeroconf fails
+            if self.host.value:
+                host_port = self.host.value + ':' + str(int(self.port.value))
+                self.signalk_host_port = host_port
+                print('signalk ' + _('using configured host'), host_port)
+            else:
+                return # waiting for signalk to detect
 
         t1 = time.monotonic()
         if not self.signalk_ws_url:
@@ -469,6 +484,10 @@ class signalk(object):
         for sensor in signalk_table:
             if sensor != 'imu' and (not sensor in self.last_sources or\
                                     source_priority[self.last_sources[sensor]]>=signalk_priority):
+                #debug('signalk skip send from priority', sensor)
+                continue
+            # don't send imu data back to signalk when we're receiving it from signalk
+            if sensor == 'imu' and self.subscribed.get('imu'):
                 #debug('signalk skip send from priority', sensor)
                 continue
             sensork = sensor

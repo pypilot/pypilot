@@ -377,6 +377,14 @@ class Sensors(object):
         self.signalk = signalk(self)
         self.gpsd = gpsd(self)
 
+        # wire signalk IMU data directly to BoatIMU (bypasses Sensors.write)
+        # always create the pipe - source value may not be loaded from config yet at init time
+        if boatimu:
+            from nonblockingpipe import NonBlockingPipe
+            imu_pipe_in, imu_pipe_out = NonBlockingPipe('signalk imu pipe', self.signalk.multiprocessing)
+            self.signalk.imu_pipe = imu_pipe_in
+            boatimu.signalk_pipe = imu_pipe_out
+
         # actual sensors supported
         self.gps = gps(client)
         self.wind = Wind(client, boatimu)
