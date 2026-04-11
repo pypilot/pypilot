@@ -25,7 +25,7 @@ class Rudder(Sensor):
         self.calibration_state = self.register(EnumProperty, 'calibration_state', 'idle', ['idle', 'reset', 'centered', 'starboard range', 'port range', 'auto gain'])
         self.calibration_raw = {}
         self.range = self.register(RangeProperty, 'range',  45, 10, 100, persistent=True)
-        self.lastrange = 0
+        self.lastrange = None
         self.minmax = -.5, .5
         self.autogain_state = 'idle'
         self.raw = 0
@@ -39,7 +39,7 @@ class Rudder(Sensor):
         oldminmax = self.minmax
         self.minmax = (-range - offset)/scale, (range - offset)/scale
 
-        if self.lastrange and self.lastrange != self.range.value:
+        if self.lastrange is not None and self.lastrange != self.range.value:
             # compute and update scale and offset if range changes
             nonlinearity = self.nonlinearity.value
 
@@ -136,7 +136,7 @@ class Rudder(Sensor):
         return type(self.angle.value) == type(False)
 
     def poll(self):
-        if self.lastrange != self.range.value:
+        if self.lastrange is not None and self.lastrange != self.range.value:
             self.update_minmax()
         
         if self.calibration_state.value == 'idle':
