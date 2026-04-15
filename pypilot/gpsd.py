@@ -70,7 +70,7 @@ class gpsProcess(multiprocessing.Process):
                 break
             if self.gpsd_socket and not self.devices: # only probe if there are no gpsd devices
                 print('gpsd PROBING...', device)                    
-                if not os.system('timeout -s KILL -t 30 gpsctl -f ' + device + ' 2> /dev/null'):
+                if not os.system('timeout -s KILL 30 gpsctl -f ' + device + ' 2> /dev/null'):
                     print(_('gpsd PROBE success'), device)
                     # probe was success
                     os.environ['GPSD_SOCKET'] = '/tmp/gpsd.sock'
