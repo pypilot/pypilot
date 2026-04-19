@@ -35,7 +35,7 @@ def fuzzy_defaults(dimensions, c=0):
 
 def fuzzy_matrix(index, matrix):
     # work index toward 0 when data deficient
-    while not index in matrix:
+    while index not in matrix:
         if index < 0:
             index += 1
         elif index > 0:
@@ -80,7 +80,7 @@ def fuzzy_set(matrix, indicies, update):
     if len(indicies) == 1:
         matrix[indicies[0]] = update
     else:
-        if not indicies[0] in matrix:
+        if indicies[0] not in matrix:
             matrix[indicies[0]] = matrix['N/A'].copy()
         fuzzy_set(matrix[indicies[0]], indicies[1:], update)
 

@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import math, datetime
+import math
 
 from client import *
 from values import *
@@ -16,7 +16,6 @@ from resolv import resolv
 from gpsd import gpsd
 from gps_filter import *
 
-import quaternion
 
 # favor lower priority sources
 source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3,
@@ -290,7 +289,7 @@ class Water(Sensor):
 
     def update(self, data):
         t = time.monotonic()
-        if not 'speed' in data:
+        if 'speed' not in data:
             return False
 
         self.speed.set(data['speed'])
@@ -414,7 +413,7 @@ class Sensors(object):
             self.lostsensor(self.gps)
             
     def write(self, sensor, data, source):
-        if not sensor in self.sensors:
+        if sensor not in self.sensors:
             print(_('unknown data parsed!'), sensor)
             return
         self.sensors[sensor].write(data, source)

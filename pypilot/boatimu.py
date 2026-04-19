@@ -12,19 +12,23 @@
 # it is an enhanced imu with special knowledge of boat dynamics
 # giving it the ability to auto-calibrate the inertial sensors
 
-import os, sys
-import time, math, multiprocessing, select
+import os
+import sys
+import time
+import math
+import multiprocessing
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    import vector, quaternion
+    import vector
+    import quaternion
     from client import pypilotClient
     from values import *
 
     from nonblockingpipe import NonBlockingPipe
 except:
-    import failedimports
+    pass
 
 try:
     import RTIMU

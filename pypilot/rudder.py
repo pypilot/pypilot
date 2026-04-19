@@ -133,7 +133,7 @@ class Rudder(Sensor):
         self.update_minmax()
 
     def invalid(self):
-        return type(self.angle.value) == type(False)
+        return isinstance(self.angle.value, bool)
 
     def poll(self):
         if self.lastrange != self.range.value:
@@ -156,7 +156,7 @@ class Rudder(Sensor):
                 self.autogain_movetime = t
 
             # must have rudder readings
-            if type(self.value) == type(False):
+            if isinstance(self.value, bool):
                 idle()
 
             rng = self.range.value

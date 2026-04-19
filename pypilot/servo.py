@@ -7,8 +7,11 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import os, math, sys, time
-import select, serial
+import os
+import math
+import sys
+import time
+import serial
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -216,7 +219,7 @@ class MinRangeSetting(RangeSetting):
 
     def set(self, value):
         if value < self.minvalue.value:
-            value = self.minvalue.value;
+            value = self.minvalue.value
         super(MinRangeSetting, self).set(value)
 
 class MaxRangeSetting(RangeSetting):
@@ -770,7 +773,7 @@ def test(device_path):
     while True:
         try:
             device = serial.Serial(device_path, 38400)
-            break;
+            break
         except Exception as e:
             print(e)
             time.sleep(.5)

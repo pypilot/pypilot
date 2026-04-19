@@ -7,7 +7,6 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import multiprocessing, select
 from pilot import AutopilotPilot, AutopilotGain
 from intellect import *
 disabled = True
@@ -35,7 +34,6 @@ class TFliteModel(Model):
     def load(self, state):
         filename = model_filename(state)
         try:
-            import tflite_runtime.interpreter as tflite
             f = open(filename + '.conf')
             self.conf = json.loads(f.read())
             f.close()
@@ -55,7 +53,7 @@ class TFliteModel(Model):
             print('interpreter timings', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
             self.interpreter = interpreter
             self.history = History(self.conf, state)
-        except Exception as e:
+        except Exception:
             self.start_time = time.monotonic()          
             print('failed to load model', filename)
             self.interpreter = False
@@ -70,7 +68,7 @@ class TFliteModel(Model):
         count = self.history.samples - self.present()
         rate = state['imu.rate']
         current = self.servo.command.value
-        period = .4;
+        period = .4
 
         # actions can be stored to optimize this
         actions = self.build_actions(current, period/rate, count)

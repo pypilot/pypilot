@@ -5,9 +5,10 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, sys, os
+import time
+import sys
+import os
 import json
-from pypilot.client import pypilotClient
 from servo import *
 
 import threading
@@ -448,14 +449,14 @@ class ServoCalibration(object):
             self.thread.exit()
 
 def round_any(x, n):
-    if type(x) == type({}):
+    if isinstance(x, dict):
         r = {}
         for v in x:
             r[v] = round_any(x[v], n)
         return r
-    elif type(x) == type([]):
+    elif isinstance(x, list):
         return map(lambda v : round_any(v, n), x)
-    elif type(x) == type(0.0):
+    elif isinstance(x, float):
         return round(x, n)
     else:
         return x

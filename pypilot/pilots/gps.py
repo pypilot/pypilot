@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from pypilot.resolv import resolv
-from pilot import AutopilotPilot, AutopilotGain
+from pilot import AutopilotPilot
 from pypilot.values import *
 disabled = True
 
@@ -67,7 +67,7 @@ class GPSPilot(AutopilotPilot):
 
   def best_mode(self, mode):
       modes = self.ap.modes.value
-      if not mode in modes:  # fallback to compass
+      if mode not in modes:  # fallback to compass
           if 'gps' in modes:
               return 'gps'
           return 'compass'

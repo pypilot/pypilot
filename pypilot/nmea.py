@@ -22,7 +22,9 @@
 
 DEFAULT_PORT = 20220
 
-import sys, select, time, socket
+import select
+import time
+import socket
 
 import multiprocessing
 import serial
@@ -343,7 +345,7 @@ class Nmea(object):
         msgs = self.pipe.recv()
         if not msgs:
             return
-        if type(msgs) == type('string'):
+        if isinstance(msgs, str):
             if msgs == 'sockets':
                 self.sockets = True
             elif msgs == 'nosockets':
@@ -369,7 +371,7 @@ class Nmea(object):
             if self.sensors.gps.filtered.output.value:  # pass gps through, or use filtered gps depends on setting
                 blacklist.append('RMC')
             
-            if not nmea_name[3:] in blacklist:
+            if nmea_name[3:] not in blacklist:
                 # do not output nmea data over tcp faster than 4hz
                 # for each message type
                 # forward nmea lines from serial to tcp
@@ -474,7 +476,7 @@ class Nmea(object):
                 if source_priority[source] >= source_priority['tcp']:
                     continue
                 
-                if not name in self.nmea_times:
+                if name not in self.nmea_times:
                     self.nmea_times[name] = 0
                     
                 dt = t - self.nmea_times[name]
@@ -735,7 +737,7 @@ class nmeaBridge(object):
         if not self.nmea_client.value:
             return
         
-        if not ':' in self.nmea_client.value:
+        if ':' not in self.nmea_client.value:
             self.warn_connecting_client(_('invalid value'))
             return
         

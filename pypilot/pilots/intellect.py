@@ -7,8 +7,11 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import os, sys, time, math, json
-import lzma
+import os
+import sys
+import time
+import math
+import json
 from pypilot.client import pypilotClient
 
 
@@ -182,17 +185,17 @@ def inputs(history, names):
     def select(values, names):
         data = []
         for name in values:
-            if not name in names:
+            if name not in names:
                 continue
             value = values[name]
-            if type(value) == type([]):
+            if isinstance(value, list):
                 data += value
             else:
                 data.append(value)
         return data
 
     def flatten(values):
-        if type(values) != type([]):
+        if not isinstance(values, list):
           return [float(values)]
         data = []
         for value in values:
@@ -214,7 +217,7 @@ def norm_sensor(name, value):
     def norm_value(value):
         return math.tanh(c*value)
 
-    if type(value) == type([]):
+    if isinstance(value, list):
         return list(map(norm_value, value))
     return norm_value(value)
 
@@ -340,7 +343,7 @@ class KerasModel(Model):
             f = open(filename + '.tflite_model', 'w')
             f.write(tflite_model)
             f.close()
-        except Exception as e:
+        except Exception:
             print('failed to save', f)
 
     def receive_single(self, name, value):
@@ -372,7 +375,7 @@ class KerasModel(Model):
                 return
 
             for s in self.conf['sensors']:
-                if not s in self.inputs:
+                if s not in self.inputs:
                     print('missing input', s)
                     return
 
@@ -432,7 +435,7 @@ class KerasModel(Model):
 
         # add predictions to the list of sensors
         for p in self.conf['predictions']:
-            if not p in self.conf['sensors']:
+            if p not in self.conf['sensors']:
                 self.conf['sensors'].append(p)
       
         t0 = time.monotonic()

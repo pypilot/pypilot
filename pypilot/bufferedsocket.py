@@ -7,7 +7,10 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import time, select, socket, os
+import time
+import select
+import socket
+import os
 
 try:
   from pypilot.linebuffer import linebuffer

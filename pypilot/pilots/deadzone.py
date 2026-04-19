@@ -11,7 +11,6 @@
 # this pilot is an experiment to compare performance to others
 
 from pilot import AutopilotPilot
-from resolv import resolv
 from pypilot.values import *
 disabled = True
 
