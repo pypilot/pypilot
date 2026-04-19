@@ -37,6 +37,14 @@ signalk_table = {'wind': {('environment.wind.speedApparent', meters_s): 'speed',
 
 token_path = os.getenv('HOME') + '/.pypilot/signalk-token'
 
+# Timeout (seconds) for all HTTP requests against the SignalK server. Keep
+# this small because the poll loop is otherwise frozen while it waits.
+SIGNALK_HTTP_TIMEOUT = 5
+
+# Exponential backoff bounds for reconnect attempts to the SignalK server.
+SIGNALK_BACKOFF_MIN = 5
+SIGNALK_BACKOFF_MAX = 60
+
 def debug(*args):
     #print(*args)
     pass
@@ -144,9 +152,17 @@ class signalk(object):
     def setup(self):
         try:
             f = open(token_path)
-            self.token = f.read()
-            print('signalk' + _('read token'), self.token)
+            self.token = f.read().strip()
+            print('signalk ' + _('read token'))  # never log the token itself
             f.close()
+            # SignalK tokens grant write access to the vessel; make sure the
+            # file is not world- or group-readable.
+            try:
+                st = os.stat(token_path)
+                if st.st_mode & 0o077:
+                    os.chmod(token_path, 0o600)
+            except Exception as e:
+                print('signalk ' + _('could not secure token file'), e)
         except Exception as e:
             print('signalk ' + _('failed to read token'), token_path)
             self.invalid_token()
@@ -188,7 +204,8 @@ class signalk(object):
             return
 
         try:
-            r = requests.get('http://' + self.signalk_host_port + '/signalk')
+            r = requests.get('http://' + self.signalk_host_port + '/signalk',
+                             timeout=SIGNALK_HTTP_TIMEOUT)
             contents = pyjson.loads(r.content)
             self.signalk_ws_url = contents['endpoints']['v1']['signalk-ws'] + '?subscribe=none'
         except Exception as e:
@@ -206,7 +223,7 @@ class signalk(object):
                 return
             self.last_access_request_time = time.monotonic()
             try:
-                r = requests.get(self.signalk_access_url)
+                r = requests.get(self.signalk_access_url, timeout=SIGNALK_HTTP_TIMEOUT)
                 contents = pyjson.loads(r.content)
                 debug('signalk ' + _('see if token is ready'), self.signalk_access_url, contents)
                 if contents['state'] == 'COMPLETED':
@@ -214,13 +231,17 @@ class signalk(object):
                         access = contents['accessRequest']
                         if access['permission'] == 'APPROVED':
                             self.token = access['token']
-                            print('signalk ' + _('received token'), self.token)
+                            print('signalk ' + _('received token'))  # never log the token itself
                             try:
-                                f = open(token_path, 'w')
-                                f.write(self.token)
-                                f.close()
+                                # O_CREAT | O_WRONLY | O_TRUNC with restrictive perms so the token
+                                # is never written with default world-readable perms.
+                                fd = os.open(token_path,
+                                             os.O_CREAT | os.O_WRONLY | os.O_TRUNC,
+                                             0o600)
+                                with os.fdopen(fd, 'w') as f:
+                                    f.write(self.token)
                             except Exception as e:
-                                print('signalk ' + _('failed to store token'), token_path)
+                                print('signalk ' + _('failed to store token'), token_path, e)
                     else:
                         self.uid.set('pypilot') # re-enumerate a new ID
                         # if permission == DENIED should we try other servers??
@@ -245,7 +266,9 @@ class signalk(object):
             
             if self.uid.value == 'pypilot':
                 self.uid.set('pypilot-' + random_number_string(11))
-            r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":self.uid.value, "description": "pypilot"})
+            r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests',
+                              data={"clientId": self.uid.value, "description": "pypilot"},
+                              timeout=SIGNALK_HTTP_TIMEOUT)
             
             contents = pyjson.loads(r.content)
             print('signalk post', contents)
