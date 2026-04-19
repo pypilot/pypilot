@@ -7,7 +7,9 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import sys, os
-from flask import Flask, render_template, session, request, Markup
+from flask import Flask, render_template, session, request
+# Flask 2.3+ removed the `Markup` re-export; import from its real home.
+from markupsafe import Markup
 
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
