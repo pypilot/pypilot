@@ -147,7 +147,13 @@ class TrueWind(BaseWind):
         return math.hypot(*windv)
 
     def update_from_apparent(self, boat_speed, wind_speed, wind_direction):
-        if self.source.value == 'water+wind' or self.source.value == 'gps+wind':
+        # Only synthesize true wind if the current source is a synthesizer
+        # (water+wind or gps+wind) or there is no source yet. Otherwise a
+        # higher-priority explicit provider (NMEA serial, SignalK, etc.) is
+        # already supplying true wind and re-computing here causes an
+        # oscillation feedback loop when SignalK echoes our values back.
+        synth_sources = ('water+wind', 'gps+wind', 'none')
+        if self.source.value in synth_sources:
             self.direction.set(TrueWind.compute_true_wind_direction(boat_speed, wind_speed, wind_direction))
             self.wdirection = self.direction.value
             self.wfactor = .05

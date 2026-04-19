@@ -11,8 +11,30 @@ import time, socket, multiprocessing, os
 from nonblockingpipe import NonBlockingPipe
 import pyjson
 from client import pypilotClient
-from values import Property, RangeProperty, BooleanProperty
+from values import Property, RangeProperty, BooleanProperty, EnumProperty
 from sensors import source_priority
+
+# Hoist optional third-party imports to the module level. They were
+# previously re-imported inside hot loops (probe_signalk, request_access,
+# connect_signalk, ZeroConfProcess.process), which both slowed the poll
+# loop and made it fragile when dependencies were missing. Fall back to
+# None on ImportError; each call-site checks.
+try:
+    import requests
+except ImportError:
+    requests = None
+
+try:
+    from websocket import create_connection, WebSocketBadStatusException
+except ImportError:
+    create_connection = None
+    class WebSocketBadStatusException(Exception):
+        pass
+
+try:
+    import zeroconf as _zeroconf_mod
+except ImportError:
+    _zeroconf_mod = None
 
 signalk_priority = source_priority['signalk']
 radians = 3.141592653589793/180
@@ -36,6 +58,29 @@ signalk_table = {'wind': {('environment.wind.speedApparent', meters_s): 'speed',
                            ('navigation.leewayAngle', radians): 'leeway'}}
 
 token_path = os.getenv('HOME') + '/.pypilot/signalk-token'
+
+# Timeout (seconds) for all HTTP requests against the SignalK server. Keep
+# this small because the poll loop is otherwise frozen while it waits.
+SIGNALK_HTTP_TIMEOUT = 5
+
+# Exponential backoff bounds for reconnect attempts to the SignalK server.
+SIGNALK_BACKOFF_MIN = 5
+SIGNALK_BACKOFF_MAX = 60
+
+# Subscription policy values permitted by the SignalK v1 spec.
+SIGNALK_POLICIES = ('instant', 'fixed', 'ideal')
+
+# SignalK paths that pypilot is willing to accept PUT requests for.
+# Map: signalk_path -> (pypilot_name, conversion_factor)
+# Incoming SI value is divided by conversion_factor to get pypilot units.
+# Keep this small: every entry here is a control surface exposed over
+# the network when signalk.put.enabled is True.
+signalk_put_table = {
+    'steering.autopilot.target.headingMagnetic': ('ap.heading_command', radians),
+    'steering.autopilot.target.headingTrue': ('ap.heading_command', radians),
+    'steering.autopilot.state': ('ap.mode', 1),
+    'steering.autopilot.engaged': ('ap.enabled', 1),
+}
 
 def debug(*args):
     #print(*args)
@@ -79,32 +124,42 @@ class ZeroConfProcess(multiprocessing.Process):
 
 
     def process(self):
-        warned = False        
-        while True:
-            try:
-                import zeroconf
-                if warned:
-                    print('signalk:' + _('succeeded') + ' import zeroconf')
-                break
-            except Exception as e:
-                if not warned:
-                    print('signalk: ' + _('failed to') + ' import zeroconf, ' + _('autodetection not possible'))
-                    print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
-                    warned = True
-                time.sleep(20)
+        if _zeroconf_mod is None:
+            print('signalk: ' + _('failed to') + ' import zeroconf, ' + _('autodetection not possible'))
+            print(_('try') + ' pip3 install zeroconf ' + _('or') + ' apt install python3-zeroconf')
+            return
+        zeroconf = _zeroconf_mod
 
         current_ip_address = []
         zc = None
+        # Poll interval for interface set changes. Short enough to react
+        # to network flaps, long enough that we are not tearing down the
+        # service browser every few seconds under normal conditions.
+        poll_interval = 30
         while True:
-            new_ip_address = zeroconf.get_all_addresses()
+            try:
+                new_ip_address = zeroconf.get_all_addresses()
+            except Exception as e:
+                print('signalk zeroconf get_all_addresses failed', e)
+                time.sleep(poll_interval)
+                continue
             if current_ip_address != new_ip_address:
                 debug("IP address changed from ", current_ip_address, "to", new_ip_address)
                 current_ip_address = new_ip_address
-                if zc != None:
-                    zc.close()
-                zc = zeroconf.Zeroconf()
-                self.browser = zeroconf.ServiceBrowser(zc, "_http._tcp.local.", self)
-            time.sleep(5)
+                if zc is not None:
+                    try:
+                        zc.close()
+                    except Exception as e:
+                        debug('zeroconf close failed', e)
+                try:
+                    zc = zeroconf.Zeroconf()
+                    self.browser = zeroconf.ServiceBrowser(zc, "_http._tcp.local.", self)
+                except Exception as e:
+                    print('signalk zeroconf init failed', e)
+                    zc = None
+                    time.sleep(poll_interval)
+                    continue
+            time.sleep(poll_interval)
 
     def poll(self):  # from signalk process
         last = False
@@ -144,9 +199,17 @@ class signalk(object):
     def setup(self):
         try:
             f = open(token_path)
-            self.token = f.read()
-            print('signalk' + _('read token'), self.token)
+            self.token = f.read().strip()
+            print('signalk ' + _('read token'))  # never log the token itself
             f.close()
+            # SignalK tokens grant write access to the vessel; make sure the
+            # file is not world- or group-readable.
+            try:
+                st = os.stat(token_path)
+                if st.st_mode & 0o077:
+                    os.chmod(token_path, 0o600)
+            except Exception as e:
+                print('signalk ' + _('could not secure token file'), e)
         except Exception as e:
             print('signalk ' + _('failed to read token'), token_path)
             self.invalid_token()
@@ -169,6 +232,17 @@ class signalk(object):
         self.period = self.client.register(RangeProperty('signalk.period', .5, .1, 2, persistent=True))
         self.last_period = False
         self.uid = self.client.register(Property('signalk.uid', 'pypilot', persistent=True))
+        # Subscription policy per SignalK v1 spec. 'instant' sends every
+        # update (cheap, but can saturate slow links). 'fixed' respects
+        # minPeriod strictly. 'ideal' behaves like 'fixed' but batches.
+        self.subscribe_policy = self.client.register(
+            EnumProperty('signalk.subscribe.policy', 'instant',
+                         list(SIGNALK_POLICIES), persistent=True))
+        # Allow SignalK clients to command pypilot via PUT deltas. Off by
+        # default because it opens a remote control surface; the operator
+        # has to opt in.
+        self.put_enabled = self.client.register(
+            BooleanProperty('signalk.put.enabled', False, persistent=True))
 
         self.signalk_host_port = False
         self.signalk_ws_url = False
@@ -179,16 +253,15 @@ class signalk(object):
 
     def probe_signalk(self):
         debug('signalk ' + _('probe') + '...', self.signalk_host_port)
-        try:
-            import requests
-        except Exception as e:
-            print('signalk ' + _('could not') + ' import requests', e)
+        if requests is None:
+            print('signalk ' + _('could not') + ' import requests')
             print(_('try') + " 'sudo apt install python3-requests' " + _('or') + " 'pip3 install requests'")
             time.sleep(50)
             return
 
         try:
-            r = requests.get('http://' + self.signalk_host_port + '/signalk')
+            r = requests.get('http://' + self.signalk_host_port + '/signalk',
+                             timeout=SIGNALK_HTTP_TIMEOUT)
             contents = pyjson.loads(r.content)
             self.signalk_ws_url = contents['endpoints']['v1']['signalk-ws'] + '?subscribe=none'
         except Exception as e:
@@ -199,14 +272,15 @@ class signalk(object):
         print('signalk ' + _('found'), self.signalk_ws_url)
 
     def request_access(self):
-        import requests
+        if requests is None:
+            return
         if self.signalk_access_url:
             dt = time.monotonic() - self.last_access_request_time            
             if dt < 10:
                 return
             self.last_access_request_time = time.monotonic()
             try:
-                r = requests.get(self.signalk_access_url)
+                r = requests.get(self.signalk_access_url, timeout=SIGNALK_HTTP_TIMEOUT)
                 contents = pyjson.loads(r.content)
                 debug('signalk ' + _('see if token is ready'), self.signalk_access_url, contents)
                 if contents['state'] == 'COMPLETED':
@@ -214,13 +288,17 @@ class signalk(object):
                         access = contents['accessRequest']
                         if access['permission'] == 'APPROVED':
                             self.token = access['token']
-                            print('signalk ' + _('received token'), self.token)
+                            print('signalk ' + _('received token'))  # never log the token itself
                             try:
-                                f = open(token_path, 'w')
-                                f.write(self.token)
-                                f.close()
+                                # O_CREAT | O_WRONLY | O_TRUNC with restrictive perms so the token
+                                # is never written with default world-readable perms.
+                                fd = os.open(token_path,
+                                             os.O_CREAT | os.O_WRONLY | os.O_TRUNC,
+                                             0o600)
+                                with os.fdopen(fd, 'w') as f:
+                                    f.write(self.token)
                             except Exception as e:
-                                print('signalk ' + _('failed to store token'), token_path)
+                                print('signalk ' + _('failed to store token'), token_path, e)
                     else:
                         self.uid.set('pypilot') # re-enumerate a new ID
                         # if permission == DENIED should we try other servers??
@@ -245,7 +323,9 @@ class signalk(object):
             
             if self.uid.value == 'pypilot':
                 self.uid.set('pypilot-' + random_number_string(11))
-            r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":self.uid.value, "description": "pypilot"})
+            r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests',
+                              data={"clientId": self.uid.value, "description": "pypilot"},
+                              timeout=SIGNALK_HTTP_TIMEOUT)
             
             contents = pyjson.loads(r.content)
             print('signalk post', contents)
@@ -270,10 +350,8 @@ class signalk(object):
             pass # ignore
         
     def connect_signalk(self):
-        try:
-            from websocket import create_connection, WebSocketBadStatusException
-        except Exception as e:
-            print('signalk ' + _('cannot create connection:'), e)
+        if create_connection is None:
+            print('signalk ' + _('cannot create connection:') + ' websocket-client not installed')
             print(_('try') + ' pip3 install websocket-client ' + _('or') + ' apt install python3-websocket')
             self.signalk_host_port = False
             return
@@ -287,19 +365,28 @@ class signalk(object):
         try:
             self.ws = create_connection(self.signalk_ws_url, header={'Authorization': 'JWT ' + self.token})
             self.ws.settimeout(0) # nonblocking
+            self.connect_attempts = 0
         except WebSocketBadStatusException as e:
             print('signalk ' + _('bad status, rejecting token'), e)
             self.invalid_token()
             self.ws = False
         except ConnectionRefusedError:
             print('signalk ' + _('connection refused'))
-            #self.signalk_host_port = False
             self.signalk_ws_url = False
-            time.sleep(5)
+            time.sleep(self._backoff_delay())
         except Exception as e:
             print('signalk ' + _('failed to connect'), e)
             self.signalk_ws_url = False
-            time.sleep(5)
+            time.sleep(self._backoff_delay())
+
+    def _backoff_delay(self):
+        # Exponential backoff, capped. Counter resets on successful
+        # connect (see connect_signalk) so transient flaps do not
+        # permanently degrade reconnect speed.
+        attempts = getattr(self, 'connect_attempts', 0)
+        delay = min(SIGNALK_BACKOFF_MIN * (2 ** attempts), SIGNALK_BACKOFF_MAX)
+        self.connect_attempts = attempts + 1
+        return delay
             
     def process(self):
         time.sleep(6) # let other stuff load
@@ -471,9 +558,9 @@ class signalk(object):
                                     source_priority[self.last_sources[sensor]]>=signalk_priority):
                 #debug('signalk skip send from priority', sensor)
                 continue
-            sensork = sensor
+            sensor_key = sensor
             if sensor == 'gps' and self.gps_filtered_output:
-                sensork = 'gps.filtered'
+                sensor_key = 'gps.filtered'
 
             for signalk_path_conversion, pypilot_path in signalk_table[sensor].items():
                 signalk_path, signalk_conversion = signalk_path_conversion
@@ -481,9 +568,9 @@ class signalk(object):
                     keys = self.last_values_keys[signalk_path]
                     # store keys we need for this signalk path in dictionary                    
                     for signalk_key, pypilot_key in pypilot_path.items():
-                        key = sensork+'.'+pypilot_key
+                        key = sensor_key+'.'+pypilot_key
                         if sensor == 'gps':
-                            kf = sensork+'.fix'
+                            kf = sensor_key+'.fix'
                             if self.last_values.get(kf):
                                 keys[key] = self.last_values[kf][pypilot_key]
                         else:
@@ -493,7 +580,7 @@ class signalk(object):
                     # see if we have the keys needed
                     v = {}
                     for signalk_key, pypilot_key in pypilot_path.items():
-                        key = sensork+'.'+pypilot_key
+                        key = sensor_key+'.'+pypilot_key
                         if not key in keys:
                             break
                         v[signalk_key] = keys[key]*signalk_conversion
@@ -503,7 +590,7 @@ class signalk(object):
                 else:
                     v = None
                     if sensor == 'gps': # for now gps fix is stored in dictionary
-                        key = sensork+'.fix'
+                        key = sensor_key+'.fix'
                         kv = self.last_values.get(key)
                         if kv and pypilot_path in kv:
                             v = kv[pypilot_path]
@@ -532,48 +619,122 @@ class signalk(object):
         self.client.clear_watches() # don't need to receive pypilot data
 
     def receive_signalk(self, msg):
+        # Defensive parsing: every field in a SignalK delta is technically
+        # optional per the spec, so do not blindly index into the dict.
         try:
             data = pyjson.loads(msg)
-        except:
+        except Exception as e:
             if msg:
-                print('signalk ' + _('failed to parse msg:'), msg)
+                print('signalk ' + _('failed to parse msg:'), e, repr(msg)[:200])
             return
-        
-        if 'updates' in data:
-            updates = data['updates']
-            for update in updates:
-                source = 'unknown'
-                if '$source' in update:
-                    source = update['$source']
-                elif 'source' in update:
-                    if 'talker' in update['source']:
-                        source = update['source']['talker']
-                    elif 'label' in update['source']:
-                        source = update['source']['label']                            
 
-                if 'timestamp' in update:
-                    timestamp = update['timestamp']
-                if not source in self.signalk_values:
-                    self.signalk_values[source] = {}
-                if 'values' in update:
-                    values = update['values']
-                elif 'meta' in update:
-                    values = update['meta']
-                else:
-                    debug('signalk message update contains no values or meta', update)
+        if not isinstance(data, dict):
+            debug('signalk non-dict message', type(data))
+            return
+
+        updates = data.get('updates')
+        if not isinstance(updates, list):
+            return
+
+        for update in updates:
+            if not isinstance(update, dict):
+                continue
+
+            source = 'unknown'
+            src_field = update.get('$source')
+            if isinstance(src_field, str):
+                source = src_field
+            else:
+                src_dict = update.get('source')
+                if isinstance(src_dict, dict):
+                    source = src_dict.get('talker') or src_dict.get('label') or 'unknown'
+
+            timestamp = update.get('timestamp')
+            if not timestamp:
+                # Without a timestamp we cannot tell duplicates from fresh
+                # data, so skip entirely rather than mis-ordering.
+                continue
+
+            if source not in self.signalk_values:
+                self.signalk_values[source] = {}
+
+            # SignalK clients can PUT to paths this node is authoritative
+            # for. pypilot, as a client, surfaces PUTs from the server as
+            # delta updates with a `put` array. Act on them when the user
+            # has opted in via signalk.put.enabled.
+            puts = update.get('put')
+            if isinstance(puts, list):
+                self._handle_signalk_put(puts, update.get('requestId'))
+
+            values = update.get('values')
+            if not isinstance(values, list):
+                values = update.get('meta')
+                if not isinstance(values, list):
+                    debug('signalk update has no values/meta list', update)
                     continue
 
-                for value in values:
-                    path = value['path']
-                    if path in self.signalk_last_msg_time:
-                        if self.signalk_last_msg_time[path] == timestamp:
-                            debug('signalk skip duplicate timestamp', source, path, timestamp)
-                            continue
-                        self.signalk_values[source][path] = value['value']
-                    else:
-                        debug('signalk skip initial message', source, path, timestamp)
-                    self.signalk_last_msg_time[path] = timestamp
-                    
+            for value in values:
+                if not isinstance(value, dict):
+                    continue
+                path = value.get('path')
+                if not isinstance(path, str) or 'value' not in value:
+                    continue
+                # Skip exact duplicate timestamps. Previously the initial
+                # message for each path was silently discarded, which lost
+                # the first value after every reconnect. Now we store the
+                # value on first sight as well.
+                if self.signalk_last_msg_time.get(path) == timestamp:
+                    debug('signalk skip duplicate timestamp', source, path, timestamp)
+                    continue
+                self.signalk_values[source][path] = value['value']
+                self.signalk_last_msg_time[path] = timestamp
+
+    def _handle_signalk_put(self, puts, request_id):
+        if not self.put_enabled.value:
+            self._put_response(request_id, 'COMPLETED', 403,
+                               'pypilot signalk.put.enabled is false')
+            return
+        statuses = []
+        for put in puts:
+            if not isinstance(put, dict):
+                continue
+            path = put.get('path')
+            if not isinstance(path, str) or 'value' not in put:
+                statuses.append((path, 400, 'malformed put entry'))
+                continue
+            mapping = signalk_put_table.get(path)
+            if mapping is None:
+                statuses.append((path, 404, 'unsupported path'))
+                continue
+            pypilot_name, conversion = mapping
+            try:
+                raw = put['value']
+                if isinstance(raw, (int, float)) and conversion != 1:
+                    raw = raw / conversion
+                self.client.set(pypilot_name, raw)
+                statuses.append((path, 200, 'ok'))
+            except Exception as e:
+                print('signalk put failed', path, e)
+                statuses.append((path, 500, str(e)))
+        # SignalK allows grouped responses; we emit one COMPLETED per put.
+        for _path, code, message in statuses:
+            self._put_response(request_id, 'COMPLETED', code, message)
+
+    def _put_response(self, request_id, state, status_code, message):
+        if not self.ws or not request_id:
+            return
+        try:
+            response = {
+                'requestId': request_id,
+                'state': state,
+                'statusCode': status_code,
+                'message': message,
+            }
+            self.ws.send(pyjson.dumps(response) + '\n')
+        except Exception as e:
+            debug('signalk put response send failed', e)
+
+
     def update_sensor_source(self, sensor, source):
         priority = source_priority[source]
         watch = priority < signalk_priority # translate from pypilot -> signalk
@@ -604,8 +765,13 @@ class signalk(object):
         self.subscribed[sensor] = subscribe
 
         if not subscribe:
-            #signalk can't unsubscribe by path!?!?!
-            subscription = {'context': '*', 'unsubscribe': [{'path': '*'}]}
+            # Unsubscribe the explicit paths belonging to this sensor rather
+            # than a wildcard. Some SignalK servers ignore wildcard
+            # unsubscribes which would leave stale subscriptions alive.
+            unsubscribe_paths = [
+                {'path': path} for path, _conv in signalk_table[sensor]
+            ]
+            subscription = {'context': 'vessels.self', 'unsubscribe': unsubscribe_paths}
             debug('signalk unsubscribe', subscription)
             try:
                 self.ws.send(pyjson.dumps(subscription)+'\n')
@@ -621,7 +787,12 @@ class signalk(object):
                 signalk_path, signalk_conversion = signalk_path_conversion
                 if signalk_path in self.signalk_last_msg_time:
                     del self.signalk_last_msg_time[signalk_path]
-                subscriptions.append({'path': signalk_path, 'minPeriod': self.period.value*1000, 'format': 'delta', 'policy': 'instant'})
+                subscriptions.append({
+                    'path': signalk_path,
+                    'minPeriod': int(self.period.value * 1000),
+                    'format': 'delta',
+                    'policy': self.subscribe_policy.value,
+                })
             self.subscriptions += subscriptions
         else:
             # remove this subscription and resend all subscriptions
