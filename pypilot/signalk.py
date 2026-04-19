@@ -71,6 +71,30 @@ def debug(*args):
     #print(*args)
     pass
 
+
+def _parse_signalk_timestamp(ts):
+    """Convert a SignalK RFC 3339 timestamp to a POSIX float.
+
+    The SignalK v1 spec (and RFC 3339) allow either a 'Z' UTC suffix or a
+    numeric offset like '-04:00'. Real-world servers ship both: Node
+    signalk-server emits 'Z', NMEA 2000 bridges often emit '-04:00'.
+    time.strptime with '%Y-%m-%dT%H:%M:%S.%fZ' rejects the offset form,
+    which used to drown the log in conversion exceptions.
+
+    datetime.fromisoformat accepts both in Python 3.11+. For older
+    interpreters, normalize 'Z' to '+00:00' first.
+    """
+    import datetime
+    if not isinstance(ts, str):
+        raise ValueError('timestamp must be a string')
+    # Python 3.10 and older: fromisoformat does not accept trailing 'Z'.
+    if ts.endswith('Z') and '+' not in ts and not ts[11:].count('-'):
+        ts = ts[:-1] + '+00:00'
+    dt = datetime.datetime.fromisoformat(ts)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+    return dt.timestamp()
+
 class ZeroConfProcess(multiprocessing.Process): 
     def __init__(self, signalk):
         self.name_type = False
@@ -494,9 +518,9 @@ class signalk(object):
                     signalk_path, signalk_conversion = signalk_path_conversion
                     if signalk_path in values and not values[signalk_path] is None:
                         try:
-                            if not 'timestamp'in data and signalk_path in self.signalk_last_msg_time:
-                                ts = time.strptime(self.signalk_last_msg_time[signalk_path], '%Y-%m-%dT%H:%M:%S.%fZ')
-                                data['timestamp'] = time.mktime(ts)
+                            if 'timestamp' not in data and signalk_path in self.signalk_last_msg_time:
+                                data['timestamp'] = _parse_signalk_timestamp(
+                                    self.signalk_last_msg_time[signalk_path])
 
                             value = values[signalk_path]
                             if type(pypilot_path) == dict: # single path translates to multiple pypilot
