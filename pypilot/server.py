@@ -7,23 +7,32 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import select, socket, time
-import sys, os, heapq
+import select
+import socket
+import time
+import sys
+import os
+import heapq
 
-import numbers
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import gettext_loader
+import gettext_loader  # noqa: F401 — installs `_` as a builtin via side effect
 import pyjson
 from bufferedsocket import LineBufferedNonBlockingSocket
 from nonblockingpipe import NonBlockingPipe
-
-DEFAULT_PORT = 23322
 from zeroconf_service import zeroconf
-max_connections = 30
-configfilepath = os.getenv('HOME') + '/.pypilot/'
+
+# Runtime configuration. All of these can be overridden via PYPILOT_*
+# environment variables so deployments can pick different ports or
+# config directories without editing source.
+DEFAULT_PORT = int(os.getenv('PYPILOT_PORT', '23322'))
+max_connections = int(os.getenv('PYPILOT_MAX_CONNECTIONS', '30'))
+configfilepath = os.getenv('PYPILOT_CONFIG_DIR',
+                           os.path.expanduser('~/.pypilot/'))
+if not configfilepath.endswith('/'):
+    configfilepath += '/'
 configfilename = 'pypilot.conf'
-server_persistent_period = 60 # store data every 60 seconds
-use_multiprocessing = True # run server in a separate process
+server_persistent_period = int(os.getenv('PYPILOT_PERSIST_PERIOD', '60'))
+use_multiprocessing = os.getenv('PYPILOT_MULTIPROCESSING', '1') != '0'
 
 class Watch(object):
     def __init__(self, value, connection, period):
@@ -76,7 +85,7 @@ class pypilotValue(object):
                 try:
                     pyjson.loads(data) # validate data
                     self.connection.write(msg)
-                except Exception as e:
+                except Exception:
                     print('failed to load ', msg)
                 self.msg = None
             else: # inform key can not be set arbitrarily
@@ -168,7 +177,7 @@ class ServerWatch(pypilotValue):
         watches = pyjson.loads(data)
         values = self.server_values.values
         for name in watches:
-            if not name in values:
+            if name not in values:
                 # watching value not yet registered, add it so we can watch it
                 values[name] = pypilotValue(self.server_values, name)
             values[name].watch(connection, watches[name])
@@ -183,7 +192,7 @@ class ServerUDP(pypilotValue):
         try:
             name, data = msg.rstrip().split('=', 1)
             self.msg = pyjson.loads(data)
-            if not (self.msg is False) and self.msg < 1024 or self.msg > 65535:
+            if self.msg is not False and self.msg < 1024 or self.msg > 65535:
                 raise Exception('port out of range')
         except Exception as e:
             connection.write('error=invalid udp_port:' + msg + e + '\n')
@@ -237,7 +246,7 @@ class ServerProfiles(pypilotValue):
             profile = self.server_values.values['profile']
 
             # if current profile is removed switch to first profile
-            if not profile.profile in self.profiles:
+            if profile.profile not in self.profiles:
                 profile.set('profile="' + profiles[0] + '"\n', False)
                 
         except Exception as e:
@@ -278,10 +287,10 @@ class ServerProfile(pypilotValue):
         persistent_values = self.server_values.persistent_values
         persistent_data = self.server_values.persistent_data
 
-        if not self.profile in persistent_data:
+        if self.profile not in persistent_data:
             persistent_data[self.profile] = {}
         prev = persistent_data[self.profile]
-        if not strprofile in persistent_data:
+        if strprofile not in persistent_data:
             persistent_data[strprofile] = {}
         data = persistent_data[strprofile]
         for name, value in persistent_values.items():
@@ -289,11 +298,11 @@ class ServerProfile(pypilotValue):
                 continue
             #print("set profile", name, value, value.msg, prev[name])
             if value.msg:  # the msg may still be invalidated from a previous set
-                if not name in prev or prev[name] != value.msg:
+                if name not in prev or prev[name] != value.msg:
                     prev[name] = value.msg
                 self.server_values.need_store = True # ensure we store c
 
-            if not name in data:
+            if name not in data:
                 vmsg = value.get_msg()  # add this value to profile copying it from previous profile
                 if vmsg:
                     data[name] = vmsg
@@ -400,7 +409,7 @@ class ServerValues(pypilotValue):
             if info.get('persistent'):
                 # when a persistant value is missing from pypilot.conf
                 value.calculate_watch_period()
-                if not name in self.persistent_values:
+                if name not in self.persistent_values:
                     self.persistent_values[name] = value
 
             if info.get('profiled'):
@@ -422,7 +431,7 @@ class ServerValues(pypilotValue):
             return # silently ignore empty line used to poll connection if no data
         #print("SERvER HANdLE request", msg)
         name, data = msg.split('=', 1)
-        if not name in self.values:
+        if name not in self.values:
             connection.write('error=invalid unknown value: ' + name + '\n')
             return
 
@@ -441,7 +450,7 @@ class ServerValues(pypilotValue):
                 break
             try:
                 name, data = line.rstrip().split('=', 1)
-            except Exception as e:
+            except Exception:
                 print('failed to split ' + filename + ' line ', linei)
                 continue
             if name[0] == '[' and data[-1] == ']': # new section
@@ -454,7 +463,7 @@ class ServerValues(pypilotValue):
                     continue
                 
                 profile = data[1:-2].replace('"', '')
-                if not profile in self.persistent_data:
+                if profile not in self.persistent_data:
                     self.persistent_data[profile] = {}
                 continue
 
@@ -558,14 +567,14 @@ class ServerValues(pypilotValue):
                 continue
             if value.info.get('profiled'):
                 profile = self.values['profile'].profile
-                if not profile in self.persistent_data:
+                if profile not in self.persistent_data:
                     self.persistent_data[profile] = {}
             else:
                 profile = None
 
             data = self.persistent_data[profile]
             msg = value.get_msg()
-            if msg and (not name in data or msg != data[name]):
+            if msg and (name not in data or msg != data[name]):
                 #print("need store, changed", name, data[name].rstrip(), msg.rstrip())
                 data[name] = msg
                 self.need_store = name
@@ -730,7 +739,7 @@ class pypilotServer(object):
                 self.fd_to_connection[fd] = socket
                 self.poller.register(fd, select.POLLIN)
             elif flag & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
-                if not connection in self.sockets:
+                if connection not in self.sockets:
                     print(_('internal pipe closed, server exiting'))
                     exit(0)
                 self.RemoveSocket(connection)

@@ -27,7 +27,7 @@ class AbsolutePilot(AutopilotPilot):
   def process(self):
     ap = self.ap
 
-    if type(ap.sensors.rudder.angle.value) == type(False):
+    if isinstance(ap.sensors.rudder.angle.value, bool):
         ap.pilot.set('basic') # fall back to basic pilot if rudder feedback fails
         return
     

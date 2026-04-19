@@ -4,10 +4,13 @@ __author__ = 'Rory McCann <rory@technomancy.org>'
 __version__ = '1.0'
 __licence__ = 'GPLv3'
 
-import sys, time
+import sys
+import time
 
 try:
-    import polib, subprocess, re
+    import polib
+    import subprocess
+    import re
 except:
     print('failed to translate', sys.argv[1])
     exit(0)

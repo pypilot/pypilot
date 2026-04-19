@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from pilot import AutopilotPilot
-from pypilot.resolv import resolv
 disabled = True
 
 class AutotunePilot(AutopilotPilot):

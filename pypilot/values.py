@@ -7,7 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import os, time, math
+import time
+import math
 import pyjson
 from resolv import resolv
 
@@ -57,14 +58,14 @@ class JSONValue(Value):
         return pyjson.dumps(self.value)
 
 def round_value(value, fmt):
-    if type(value) == type([]):
+    if isinstance(value, list):
         ret = '['
         if len(value):
             ret += round_value(value[0], fmt)
             for item in value[1:]:
                 ret += ', ' + round_value(item, fmt)
         return ret + ']'
-    elif type(value) == type(False):
+    elif isinstance(value, bool):
         if value:
             return 'true'
         return 'false'
@@ -87,7 +88,7 @@ class StringValue(Value):
         super(StringValue, self).__init__(name, initial, **kwargs)
 
     def get_msg(self):
-        if type(self.value) == type(False):
+        if isinstance(self.value, bool):
             strvalue = 'true' if self.value else 'false'
         else:
             strvalue = '"' + self.value + '"'
@@ -105,7 +106,7 @@ class SensorValue(Value):
 
     def get_msg(self):
         value = self.value
-        if type(value) == type(tuple()):
+        if isinstance(value, tuple):
             value = list(value)
         return round_value(value, self.fmt)
 

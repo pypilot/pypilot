@@ -7,7 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import sys, time
+import sys
+import time
 from pypilot.client import PypilotClient
 
 # list must be already sorted
@@ -101,7 +102,7 @@ class autogain(object):
             time.sleep(.05)
 
         for var in self.variables:
-            if not var in self.results:
+            if var not in self.results:
                 self.results[var] = []
             count = self.total[var]['count']
             if count:

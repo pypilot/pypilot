@@ -11,7 +11,10 @@
 
 import time
 print('autopilot start', time.monotonic())
-import sys, os, math, socket, io
+import sys
+import os
+import math
+import io
 
 # use line buffering so the log files are sensible
 sys.stdout = io.TextIOWrapper(sys.stdout.detach(), line_buffering=True)
@@ -25,7 +28,8 @@ from client import pypilotClient
 from values import *
 from boatimu import *
 from resolv import *
-import tacking, servo
+import tacking
+import servo
 from version import strversion
 from sensors import Sensors
 import pilots
@@ -59,7 +63,7 @@ class HeadingProperty(RangeProperty):
             # set to tenth of degree
             value = round(value*10)/10
             super(HeadingProperty, self).set(value)
-        except Exception as e:
+        except Exception:
             pass # ignore for now
 
 class TimeStamp(SensorValue):
@@ -185,7 +189,7 @@ class Autopilot(object):
                     #print('kill', pid, process)
                     try:
                         os.kill(pid, signal.SIGTERM) # get backtrace
-                    except Exception as e:
+                    except Exception:
                         pass
                         #print('kill failed', e)
             sys.stdout.flush()
@@ -438,7 +442,7 @@ class Autopilot(object):
         if self.enabled.value:
             # filter the heading command to compute feed-forward gain
             heading_command_diff = resolv(self.heading_command.value - self.last_heading_command)
-            if not 'wind' in self.mode.value: # wind modes need opposite gain
+            if 'wind' not in self.mode.value: # wind modes need opposite gain
                 heading_command_diff = -heading_command_diff
             lp = .1
             command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff

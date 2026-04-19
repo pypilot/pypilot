@@ -5,7 +5,9 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import os, select, time
+import os
+import select
+import time
 
 from servo import *
 from crc import crc8

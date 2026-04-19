@@ -7,12 +7,15 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from datetime import datetime
-import multiprocessing, time, socket, select
+import multiprocessing
+import time
+import socket
+import select
 from nonblockingpipe import NonBlockingPipe
 from bufferedsocket import LineBufferedNonBlockingSocket
 from values import *
-import serialprobe, pyjson
+import serialprobe
+import pyjson
 
 def gps_json_loads(line):
     try:
@@ -85,7 +88,7 @@ class gpsProcess(multiprocessing.Process):
             pipe.send({'devices': self.devices})
 
     def parse_gpsd(self, msg, pipe):
-        if not 'class' in msg:
+        if 'class' not in msg:
             return False# unrecognized
 
         ret = False
@@ -98,7 +101,7 @@ class gpsProcess(multiprocessing.Process):
         elif cls == 'DEVICE':
             device = msg['path']
             if msg['activated']:
-                if not device in self.devices:
+                if device not in self.devices:
                     self.devices.append(device)
                     ret = True
             else:
@@ -125,7 +128,7 @@ class gpsProcess(multiprocessing.Process):
                 device = msg['device']
                 if self.baud_boot_device_hint != device:
                     self.write_baud_boot_hint(device)
-                if not device in self.devices:
+                if device not in self.devices:
                     self.devices.append(device)
                     ret = True
                 pipe.send(fix, False)
@@ -143,7 +146,7 @@ class gpsProcess(multiprocessing.Process):
             f = open(os.getenv('HOME') + '/.pypilot/gpsd_baud_hint', 'w')
             f.write(str(bps))
             f.close()
-        except Exception as e:
+        except Exception:
             print(_('gpsd failed to determine serial baud rate of device'))
             
     def gps_process(self, pipe):
@@ -162,7 +165,7 @@ class gpsProcess(multiprocessing.Process):
             if not events:
                 if self.gpsconnecttime and time.monotonic() - self.gpsconnecttime > 10:
                     print(_('gpsd timeout from lack of data'))
-                    self.disconnect();
+                    self.disconnect()
                 continue
 
             self.gpsconnecttime = False
@@ -227,7 +230,7 @@ class gpsd(object):
                 self.read()
 
         return # don't probe gpsd anymore
-        if (not self.devices is False) and (t0 - self.last_read_time > 20 or not self.devices):
+        if (self.devices is not False) and (t0 - self.last_read_time > 20 or not self.devices):
             device_path = serialprobe.probe('gpsd', [4800], 4)
             if device_path:
                 print(_('gpsd serial probe'), device_path)

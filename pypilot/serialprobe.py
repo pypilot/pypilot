@@ -5,7 +5,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import sys, os, time
+import os
+import time
 import pyjson
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
@@ -26,7 +27,7 @@ def read_config(filename, fail):
                 devices.append(device.strip())
             f.close()
             return devices
-        except Exception as e:
+        except Exception:
             print(_('error reading'), pypilot_dir + filename)
     return fail
 
@@ -60,7 +61,7 @@ def read_last_working_devices():
                     lastdevice = pyjson.loads(file.readline().rstrip())
                     file.close()
                     # ensure lastdevice defines path and baud here
-                    if not name in probes:
+                    if name not in probes:
                         new_probe(name)
                     probes[name]['lastworking'] = lastdevice[0], lastdevice[1]
                 except:
@@ -220,12 +221,12 @@ def enumerate_devices():
     debug('serialprobe scan', scanned_devices)
     # remove devices not scanned
     for device in list(devices):
-        if not device in scanned_devices:
+        if device not in scanned_devices:
             del devices[device]
 
     # add new devices and set the time the device was added
     for device in scanned_devices:
-        if not device in devices:
+        if device not in devices:
             devices[device] = scanned_devices[device]
             devices[device]['time'] = t0
     return True
@@ -246,10 +247,10 @@ def probe(name, bauds, timeout=5):
         # relinquish any probes that are assigned to devices that no longer exist
         for n, probe in probes.items():
             device = probe['device']
-            if device and not device in devices:
+            if device and device not in devices:
                 probe['device'] = False
     
-    if not name in probes:
+    if name not in probes:
         new_probe(name)
     probe = probes[name]
 

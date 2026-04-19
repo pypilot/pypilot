@@ -7,8 +7,13 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import sys, time, math, numpy, scipy.optimize
-import vector, resolv, quaternion
+import sys
+import time
+import math
+import numpy
+import vector
+import resolv
+import quaternion
 import boatimu
 resolv = resolv.resolv
 
@@ -34,7 +39,7 @@ def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
     t0 = time.monotonic()
     leastsq = scipy.optimize.leastsq(f, beta0, zpoints)
     #print('scipy.optimize.leastsq took ', time.monotonic() - t0, leastsq)
-    if not leastsq[1] in [1, 2, 3, 4]:
+    if leastsq[1] not in [1, 2, 3, 4]:
         return False
     return list(leastsq[0])
 
@@ -647,7 +652,7 @@ def CalibrationProcess(cal_pipe, client):
             for a in args:
                 try:
                     s = '%.5f' % value
-                except Exception as e:
+                except Exception:
                     pass
                 s += str(a) + ' '
                 #print("debug", name, s)
@@ -663,7 +668,7 @@ def CalibrationProcess(cal_pipe, client):
                 return
             warnings[sensor] = warning
         else:
-            if not sensor in warnings:
+            if sensor not in warnings:
                 return
             del warnings[sensor]
 

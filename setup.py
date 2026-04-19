@@ -126,11 +126,17 @@ setup (name = 'pypilot',
        license = 'GPLv3',
        author="Sean D'Epagnier",
        url='http://pypilot.org/',
+       python_requires='>=3.6',
        packages=packages,
        package_dir=package_dirs,
        ext_modules = ext_modules,
        package_data=package_data,
        cmdclass={'install': build_ext_first},
+       extras_require={
+           # Optional performance dep; pypilot.pyjson falls back to the
+           # stdlib json module if ujson is not importable.
+           'performance': ['ujson>=1.35'],
+       },
        entry_points={
            'console_scripts': [
                'pypilot=pypilot.autopilot:main',

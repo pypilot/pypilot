@@ -7,7 +7,9 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import select, time, os
+import select
+import time
+import os
 import pyjson
 
 class NonBlockingPipeEnd(object):
@@ -106,7 +108,7 @@ class SocketNonBlockingPipeEnd(LineBufferedNonBlockingSocket):
 try:
     from pypilot.linebuffer import linebuffer
 except:
-    import failedimports
+    pass
 
 class PipeNonBlockingPipeEnd(object):
     def __init__(self, r, w, name, recvfailok, sendfailok):

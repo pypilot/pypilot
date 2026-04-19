@@ -65,9 +65,9 @@ class AutopilotPilot(object):
     # return new mode if sensors don't support it
     def best_mode(self, mode):
         modes = self.ap.modes.value
-        while not mode in modes:
+        while mode not in modes:
             fallbacks = {'nav': 'gps', 'gps': 'compass', 'wind': 'compass', 'true wind': 'wind'}
-            if not mode in fallbacks:
+            if mode not in fallbacks:
                 break
             mode = fallbacks[mode] 
         return mode

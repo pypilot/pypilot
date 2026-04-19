@@ -67,7 +67,7 @@ class vmgTable(object):
         ve = speed*math.sin(rtrack)
         t = time.monotonic()
         
-        if not headingi in self.table:
+        if headingi not in self.table:
             vnt, vet, count, tt = vn, ve, 1, t
         else:
             vnt, vet, count, tt = self.table[headingi]

@@ -7,12 +7,16 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-import socket, select, sys, os, time
+import socket
+import select
+import sys
+import os
+import time
 
 import heapq
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import gettext_loader  # noqa: F401 — installs `_` as a builtin via side effect
 import pyjson
-import gettext_loader
 from bufferedsocket import LineBufferedNonBlockingSocket
 from values import Value
 
@@ -108,7 +112,7 @@ class ClientValues(Value):
 class pypilotClient(object):
     def __init__(self, host=False, use_udp=False):
         if sys.version_info[0] < 3:
-            import failedimports
+            pass
 
         self.values = ClientValues(self)
         self.watches = {}
@@ -121,7 +125,7 @@ class pypilotClient(object):
             self.server = host
             host='127.0.0.1'
 
-        if host and type(host) != type(''):
+        if host and not isinstance(host, str):
             # host is the server object for direct pipe connection
             self.server = host
             self.connection = host.pipe()
@@ -154,7 +158,7 @@ class pypilotClient(object):
                 os.makedirs(configfilepath)
             if not os.path.isdir(configfilepath):
                 raise Exception(configfilepath + 'should be a directory')
-        except Exception as e:
+        except Exception:
             print('os not supported')
             configfilepath = '/.pypilot/'
         self.configfilename = configfilepath + 'pypilot_client.conf'
@@ -176,10 +180,10 @@ class pypilotClient(object):
             else:
                 config['host'] = host
         
-        if not 'host' in config:
+        if 'host' not in config:
             config['host'] = '127.0.0.1'
 
-        if not 'port' in config:
+        if 'port' not in config:
             config['port'] = DEFAULT_PORT
         self.config = config
             
@@ -221,8 +225,8 @@ class pypilotClient(object):
             return # do not search if host is specified by commandline, or again
 
         try:
-            from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
-        except Exception as e:
+            from zeroconf import ServiceBrowser, Zeroconf
+        except Exception:
             print(_('failed to') + ' import zeroconf, ' + _('autodetecting pypilot server not possible'))
             print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
             return
@@ -445,9 +449,9 @@ class pypilotClient(object):
     
     def set(self, name, value):
         # quote strings
-        if type(value) == type('') or type(value) == type(u''):
+        if isinstance(value, str) or isinstance(value, str):
             value = '"' + value + '"'
-        elif type(value) == type(True):
+        elif isinstance(value, bool):
             value = 'true' if value else 'false'
         self.send(name + '=' + str(value) + '\n')
 
@@ -540,7 +544,7 @@ def pypilotClientFromArgs(values, period=True, host=False):
 # ujson makes very ugly results like -0.28200000000000003
 # round all floating point to 8 places here
 def nice_str(value):
-    if type(value) == type([]):
+    if isinstance(value, list):
         s = '['
         if len(value):
             s += nice_str(value[0])
@@ -548,7 +552,7 @@ def nice_str(value):
             s += ', ' + nice_str(v)
         s += ']'
         return s
-    if type(value) == type(1.0):
+    if isinstance(value, float):
         return '%.11g' % value
     return str(value)
 
@@ -609,7 +613,7 @@ def main():
             if dt > 10:
                 print(_('timeout retrieving'), len(watches) - len(values), 'values')
                 for name in watches:
-                    if not name in values:
+                    if name not in values:
                         print(_('missing'), name)
                 break
                     

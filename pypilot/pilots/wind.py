@@ -8,7 +8,7 @@
 # version 3 of the License, or (at your option) any later version.  
 
 from pypilot.resolv import resolv
-from pilot import AutopilotPilot, AutopilotGain
+from pilot import AutopilotPilot
 from pypilot.values import *
 
 disabled = True

@@ -9,7 +9,11 @@
 
 # make it not blocking with the main server
 
-import socket, struct, fcntl, time, os
+import socket
+import struct
+import fcntl
+import time
+import os
 import threading
 
 DEFAULT_PORT = 23322
@@ -31,7 +35,7 @@ def get_local_addresses():
                     if 'addr' in i:
                         addresses.append(i['addr'])
             return addresses
-        except Exception as e:
+        except Exception:
             #print('zeroconf service fallback to socket address')
             retries -= 1
         

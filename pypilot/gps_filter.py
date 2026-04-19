@@ -178,7 +178,7 @@ class GPSFilter(object):
             print('gpsfilter reset', dt)
             self.reset()
 
-        if type(self.X) == bool and not self.X: # filter was reset            
+        if isinstance(self.X, bool) and not self.X: # filter was reset            
             return # do not have a trusted measurement yet, so cannot perform predictions
         
         self.apply_prediction(dt, U)
@@ -245,7 +245,7 @@ class GPSFilter(object):
 
         # adjust coordinate frame
         ll = data['lat'], data['lon']
-        if type(self.X) != bool:
+        if not isinstance(self.X, bool):
             pll = xy_to_ll(self.X[0], self.X[1], *self.lastll)
             self.X[0], self.X[1] = ll_to_xy(pll[0], pll[1], *ll)
         self.lastll = ll
@@ -309,7 +309,7 @@ class GPSFilter(object):
             to = min(max(t0, 0), 2)
             self.gps_time_offset.update(to)
 
-        if type(self.X) == bool and not self.X: # filter was reset
+        if isinstance(self.X, bool) and not self.X: # filter was reset
             self.X = Z
 
         # apply normal kalman measurement update

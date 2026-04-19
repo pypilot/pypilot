@@ -12,7 +12,8 @@ import sys
 e = sys.stdout.encoding.lower()
 #print('terminal encoding:', e)
 if e.startswith('utf'):
-    import gettext, os
+    import gettext
+    import os
     locale_d = os.path.abspath(os.path.dirname(__file__)) + '/locale'
     gettext.translation('pypilot', locale_d, fallback=True).install()
 else:

@@ -2,7 +2,8 @@
 
 default = []
 
-import sys, os
+import sys
+import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import importlib
@@ -24,13 +25,13 @@ for module in os.listdir(os.path.dirname(__file__)):
     try:
         if mod.disabled:
             continue
-    except Exception as e:
+    except Exception:
         #print('e1', e)
         pass
 
     try:
         #print('append')
         default.append(mod.pilot)
-    except Exception as e:
+    except Exception:
         #print('e2', e)
         pass
