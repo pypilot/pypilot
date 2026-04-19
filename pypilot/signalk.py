@@ -11,7 +11,7 @@ import time, socket, multiprocessing, os
 from nonblockingpipe import NonBlockingPipe
 import pyjson
 from client import pypilotClient
-from values import Property, RangeProperty, BooleanProperty
+from values import Property, RangeProperty, BooleanProperty, EnumProperty
 from sensors import source_priority
 
 # Hoist optional third-party imports to the module level. They were
@@ -66,6 +66,21 @@ SIGNALK_HTTP_TIMEOUT = 5
 # Exponential backoff bounds for reconnect attempts to the SignalK server.
 SIGNALK_BACKOFF_MIN = 5
 SIGNALK_BACKOFF_MAX = 60
+
+# Subscription policy values permitted by the SignalK v1 spec.
+SIGNALK_POLICIES = ('instant', 'fixed', 'ideal')
+
+# SignalK paths that pypilot is willing to accept PUT requests for.
+# Map: signalk_path -> (pypilot_name, conversion_factor)
+# Incoming SI value is divided by conversion_factor to get pypilot units.
+# Keep this small: every entry here is a control surface exposed over
+# the network when signalk.put.enabled is True.
+signalk_put_table = {
+    'steering.autopilot.target.headingMagnetic': ('ap.heading_command', radians),
+    'steering.autopilot.target.headingTrue': ('ap.heading_command', radians),
+    'steering.autopilot.state': ('ap.mode', 1),
+    'steering.autopilot.engaged': ('ap.enabled', 1),
+}
 
 def debug(*args):
     #print(*args)
@@ -217,6 +232,17 @@ class signalk(object):
         self.period = self.client.register(RangeProperty('signalk.period', .5, .1, 2, persistent=True))
         self.last_period = False
         self.uid = self.client.register(Property('signalk.uid', 'pypilot', persistent=True))
+        # Subscription policy per SignalK v1 spec. 'instant' sends every
+        # update (cheap, but can saturate slow links). 'fixed' respects
+        # minPeriod strictly. 'ideal' behaves like 'fixed' but batches.
+        self.subscribe_policy = self.client.register(
+            EnumProperty('signalk.subscribe.policy', 'instant',
+                         list(SIGNALK_POLICIES), persistent=True))
+        # Allow SignalK clients to command pypilot via PUT deltas. Off by
+        # default because it opens a remote control surface; the operator
+        # has to opt in.
+        self.put_enabled = self.client.register(
+            BooleanProperty('signalk.put.enabled', False, persistent=True))
 
         self.signalk_host_port = False
         self.signalk_ws_url = False
@@ -632,6 +658,14 @@ class signalk(object):
             if source not in self.signalk_values:
                 self.signalk_values[source] = {}
 
+            # SignalK clients can PUT to paths this node is authoritative
+            # for. pypilot, as a client, surfaces PUTs from the server as
+            # delta updates with a `put` array. Act on them when the user
+            # has opted in via signalk.put.enabled.
+            puts = update.get('put')
+            if isinstance(puts, list):
+                self._handle_signalk_put(puts, update.get('requestId'))
+
             values = update.get('values')
             if not isinstance(values, list):
                 values = update.get('meta')
@@ -654,7 +688,53 @@ class signalk(object):
                     continue
                 self.signalk_values[source][path] = value['value']
                 self.signalk_last_msg_time[path] = timestamp
-                    
+
+    def _handle_signalk_put(self, puts, request_id):
+        if not self.put_enabled.value:
+            self._put_response(request_id, 'COMPLETED', 403,
+                               'pypilot signalk.put.enabled is false')
+            return
+        statuses = []
+        for put in puts:
+            if not isinstance(put, dict):
+                continue
+            path = put.get('path')
+            if not isinstance(path, str) or 'value' not in put:
+                statuses.append((path, 400, 'malformed put entry'))
+                continue
+            mapping = signalk_put_table.get(path)
+            if mapping is None:
+                statuses.append((path, 404, 'unsupported path'))
+                continue
+            pypilot_name, conversion = mapping
+            try:
+                raw = put['value']
+                if isinstance(raw, (int, float)) and conversion != 1:
+                    raw = raw / conversion
+                self.client.set(pypilot_name, raw)
+                statuses.append((path, 200, 'ok'))
+            except Exception as e:
+                print('signalk put failed', path, e)
+                statuses.append((path, 500, str(e)))
+        # SignalK allows grouped responses; we emit one COMPLETED per put.
+        for _path, code, message in statuses:
+            self._put_response(request_id, 'COMPLETED', code, message)
+
+    def _put_response(self, request_id, state, status_code, message):
+        if not self.ws or not request_id:
+            return
+        try:
+            response = {
+                'requestId': request_id,
+                'state': state,
+                'statusCode': status_code,
+                'message': message,
+            }
+            self.ws.send(pyjson.dumps(response) + '\n')
+        except Exception as e:
+            debug('signalk put response send failed', e)
+
+
     def update_sensor_source(self, sensor, source):
         priority = source_priority[source]
         watch = priority < signalk_priority # translate from pypilot -> signalk
@@ -707,7 +787,12 @@ class signalk(object):
                 signalk_path, signalk_conversion = signalk_path_conversion
                 if signalk_path in self.signalk_last_msg_time:
                     del self.signalk_last_msg_time[signalk_path]
-                subscriptions.append({'path': signalk_path, 'minPeriod': self.period.value*1000, 'format': 'delta', 'policy': 'instant'})
+                subscriptions.append({
+                    'path': signalk_path,
+                    'minPeriod': int(self.period.value * 1000),
+                    'format': 'delta',
+                    'policy': self.subscribe_policy.value,
+                })
             self.subscriptions += subscriptions
         else:
             # remove this subscription and resend all subscriptions
