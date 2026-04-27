@@ -71,7 +71,7 @@ cd ..
 
 
 INSDIR=$TMPDIR$PYTDIR/$PYNAM
-rm -rf $INSDIR/*pyc
+#rm -rf $INSDIR/*pyc
 
 # Delete *.pyc files
 
