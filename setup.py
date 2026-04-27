@@ -48,12 +48,13 @@ arduino_servo_module = Extension('pypilot/arduino_servo/_arduino_servo',
                         swig_opts=['-c++']
 )
 
-ugfx_defs = ['-DLGPIO']
-try:
-    import lgpio
-    ugfx_libraries=['lgpio']
-except:
-    print('no lgpio library for ugfx')
+ret = os.system('pkg-config --cflags libgpiod')
+if ret == 0:
+    print('detected libgpiod')
+    ugfx_libraries=['gpiod']
+    ugfx_defs = ['-DGPIOD']
+else:
+    print('no gpiod library for ugfx')
     ugfx_libraries=[]
     ugfx_defs = []
 
@@ -64,16 +65,12 @@ ugfx_module = Extension('pypilot/hat/ugfx/_ugfx',
                         libraries=ugfx_libraries,
                         swig_opts=['-c++'] + ugfx_defs)
 
-if ugfx_libraries:
-    spireader_module = Extension('pypilot/hat/spireader/_spireader',
-                        sources=['hat/spireader/spireader.cpp',
-                                 'hat/spireader/spireader.i'],
-                        extra_compile_args=['-Wno-unused-result'],
-                        libraries=ugfx_libraries,
-                        swig_opts=['-c++'])
-
-else:
-    spireader_module = None
+spireader_module = Extension('pypilot/hat/spireader/_spireader',
+                             sources=['hat/spireader/spireader.cpp',
+                                      'hat/spireader/spireader.i'],
+                             extra_compile_args=['-Wno-unused-result'],
+                             libraries=ugfx_libraries,
+                             swig_opts=['-c++'])
 
 os.system('cd hat/locale;./translate.sh')
 os.system('cd hat; pybabel compile -d translations')

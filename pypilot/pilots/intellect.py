@@ -8,7 +8,6 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import os, sys, time, math, json
-import lzma
 from pypilot.client import pypilotClient
 
 
