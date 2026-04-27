@@ -252,7 +252,9 @@ class pypilotClient(object):
                     zeroconf.close()
                 except Exception as e:
                     print('zeroconf service exception', e)
-                    
+
+            def update_service(self, zeroconf, type, name):
+                pass
 
         self.can_probe = False
         zeroconf = Zeroconf()
