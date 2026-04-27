@@ -12,7 +12,8 @@
 # pins for more functionallity (tack button, 
 # spi port.
 
-import os, sys, time, socket, errno, select
+import time
+import os, sys, socket, errno, select
 from pypilot.client import udp_control_port
 
 RF=0x01
@@ -310,6 +311,47 @@ class arduino(object):
                         print('nmea socket exception reading', e)
                         self.nmea_socket.close()
                         self.nmea_socket = False
+            '''
+            max_xfer = 4
+            i = []
+            if self.socketdata:
+                count, t0 = self.pollt0
+                while self.socketdata and len(i) < max_xfer:
+                    dt = time.monotonic() - t0
+                    rate = 10*(count)/dt
+                    if rate > baud:
+                        break
+                    if self.socketdata[0] and self.socketdata[0] < 128:
+                        i.append(self.socketdata[0])
+                        self.pollt0[0] += 1
+                    self.socketdata = self.socketdata[1:]
+            else:
+                self.pollt0 = [0, time.monotonic()] # reset
+
+            while len(i) < max_xfer and self.packetout_data:
+                i.append(self.packetout_data[0])
+                #print('send %c %x' %(i,i))
+                self.packetout_data = self.packetout_data[1:]
+
+            ta = time.monotonic()
+            if not i:
+                ob = self.spi.blocking_read_byte()
+                if not ob:
+                    break
+                x = self.spi.xfer([0]*(max_xfer-1))
+                print("x tye", type(x), ob, x)
+                o = [ob]+list(x);
+            else:
+                o = self.spi.xfer(i)
+            tb = time.monotonic()
+
+            for ob in o:
+                if ob > 127:
+                    ob &= 0x7f
+                    self.packetin_data.append(ob)
+                elif ob:
+                    serial_data.append(ob)
+            '''
             i = 0
             if self.socketdata:
                 count, t0 = self.pollt0
@@ -325,13 +367,16 @@ class arduino(object):
 
             if not i and self.packetout_data:
                 i = self.packetout_data[0]
-                #print('send %c %x' %(i,i))
+                #print('send %c %x' %(i,i))                                                                                                                                                   
                 self.packetout_data = self.packetout_data[1:]
 
             ta = time.monotonic()
-            o = self.spi.xfer(i, not i and len(self.packetin_data) < PACKET_LEN+3)
+            if not i and len(self.packetin_data) < PACKET_LEN+3:
+                o = self.spi.blocking_read_byte()
+            else:
+                o = self.spi.xfer_byte(i)
             tb = time.monotonic()
-            
+
             if not i and not o:
                 break
 
@@ -340,7 +385,7 @@ class arduino(object):
                 self.packetin_data.append(o)
             elif o:
                 serial_data.append(o)
-
+                
         t2 = time.monotonic()
         # now read packet data
         while len(self.packetin_data) >= PACKET_LEN+3:

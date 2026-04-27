@@ -9,14 +9,16 @@
 
 import time
 print('hat start', time.monotonic())
-import os, sys, signal, select
-from pypilot import pyjson
+import os
+import sys
+import signal # delay this?
+import select
+from pypilot import pyjson  # very slow why?
 from pypilot.client import pypilotClient
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gpio
 import lcd
 import arduino
-
 print('hat import done', time.monotonic())
 
 class Action(object):
@@ -161,11 +163,15 @@ class Process():
             self.pipe.send(value, maxdt=.1)
 
     def create(self, process):
+        print("process create", process, time.monotonic())
         import multiprocessing
         from pypilot.nonblockingpipe import NonBlockingPipe
         self.pipe, pipe = NonBlockingPipe(str(self), True)
+        print("process create 1", time.monotonic())
         self.process = multiprocessing.Process(target=process, args=(pipe, self.hat.config), daemon=True)
+        print("process create 2", time.monotonic())
         self.process.start()
+        print("process create 3", time.monotonic())
             
 class Web(Process):
     def __init__(self, hat):
@@ -290,11 +296,15 @@ class LCD(Process):
     
     def create(self):
         def process(pipe, config):
+            print('lcd process on', os.getpid(), time.monotonic())
+            sys.stdout.reconfigure(line_buffering=True)
+            print('lcd process on', os.getpid(), time.monotonic())
             import lcd
-            print('lcd process on', os.getpid())
+            print('import lcd', time.monotonic())
             self.lcd = lcd.LCD(self.hat.config)
             self.lcd.pipe = pipe
 
+            print('lcd process main loop running', time.monotonic())
             if self.lcd.use_glut:
                 from OpenGL.GLUT import glutMainLoop, glutIdleFunc
                 glutIdleFunc(self.lcd.poll)
@@ -382,13 +392,19 @@ class Hat(object):
             self.config['host'] = sys.argv[1]
             self.write_config()
 
+        print('hat init processes...', time.monotonic())
         self.poller = select.poll()        
+        print('processes 1...', time.monotonic())
         self.gpio = gpio.gpio()
+        print('processes 2...', time.monotonic())
         self.poller.register(self.gpio.pipe[1], select.POLLIN)
-        
+        print('processes 3...', time.monotonic())
         self.lcd = LCD(self)
+        print('processes 4...', time.monotonic())
+        
         #time.sleep(1)
 
+        print('hat init processes done', time.monotonic())
         self.watchlist = ['ap.enabled', 'ap.heading_command', 'ap.mode']
         self.watchlist += ['profile', 'profiles']
         self.watchlist += ['ap.tack.state', 'ap.tack.direction']
@@ -406,6 +422,8 @@ class Hat(object):
             self.arduino = False
 
         self.lcd.poll()
+
+        print('init lircd', time.monotonic())
 
         import lircd
         self.lirc = lircd.lirc(self.config)
@@ -468,6 +486,7 @@ class Hat(object):
             if name.startswith('profile '):
                 self.config['actions'][name] = cfg[name]
 
+        print('init web', time.monotonic())
         self.web = Web(self)
 
         def cleanup(signal_number, frame=None):

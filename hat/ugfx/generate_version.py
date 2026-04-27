@@ -29,7 +29,7 @@ image = Image.new('RGBA', size)
 draw = ImageDraw.Draw(image)
 draw.text((0, -top), version, font=ifont)
 
-data = list(image.getdata())
+data = list(image.get_flattened_data())
 print('len', len(data), size, top, bottom)
 
 f = open('pypilot_version.h', 'w')

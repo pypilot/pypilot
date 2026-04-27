@@ -27,6 +27,7 @@ except:
     from pypilot.hat.ugfx import ugfx
     micropython = False
 
+
 driver = 'default'
 for pdriver in ['nokia5110', 'jlx12864', 'ssd1309', 'dg240160', 'glut', 'framebuffer', 'tft', 'none']:
     if pdriver in sys.argv:

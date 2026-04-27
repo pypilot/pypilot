@@ -8,13 +8,22 @@
 #include "spireader.h"
 %}
 
-class spireader
-{
-public:
-    spireader(int ms, int repeatn);
-    virtual ~spireader();
+%include <stdint.i>
+%include <std_vector.i>
+%include <exception.i>
 
-    int open(int portn, int slave, int baud);
-    void close();
-    unsigned char xfer(unsigned char c, bool block);
-};
+%exception {
+    try {
+        $action
+    } catch (const std::exception &e) {
+        SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+}
+
+
+/* expose std::vector<uint8_t> */
+namespace std {
+    %template(Uint8Vector) vector<uint8_t>;
+}
+
+%include "spireader.h"
