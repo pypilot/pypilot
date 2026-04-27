@@ -7,7 +7,8 @@
 # version 3 of the License, or (at your option) any later version.  
 
 import sys, os
-from flask import Flask, render_template, session, request, Markup
+from flask import Flask, render_template, session, request
+from markupsafe import Markup
 
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
@@ -52,19 +53,15 @@ print('using port', pypilot_web_port)
 # Set this variable to 'threading', 'eventlet' or 'gevent' to test the
 # different async modes, or leave it set to None for the application to choose
 # the best option based on installed packages.
-async_mode = None
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 try:
     from flask_babel import Babel, gettext
-    babel = Babel(app)
 
     LANGUAGES = os.listdir(os.path.dirname(os.path.abspath(__file__)) + '/translations')
-
-    @babel.localeselector
     def get_locale():
         if 'language' in config:
             language = config['language']
@@ -73,12 +70,14 @@ try:
         if language == 'default' or not language in LANGUAGES:
             return request.accept_languages.best_match(LANGUAGES)
         return language
+    babel = Babel(app, locale_selector=get_locale)
     
 except Exception as e:
     print('failed to import flask_babel, translations not possible!!', e)
     def _(x): return x
     app.jinja_env.globals.update(_=_)
     babel = None
+    LANGUAGES = []
 
 
 @app.route('/logs')
@@ -261,7 +260,7 @@ def main():
     port = pypilot_web_port
     while True:
         try:
-            socketio.run(app, debug=False, host='0.0.0.0', port=port)
+            socketio.run(app, debug=False, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
             break
         except PermissionError as e:
             print('failed to run socket io on port', port, e)
