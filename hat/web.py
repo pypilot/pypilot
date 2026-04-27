@@ -7,7 +7,8 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.  
 
-from flask import Flask, render_template, request, Markup
+from flask import Flask, render_template, request
+from markupsafe import Markup
 from flask_socketio import SocketIO, Namespace, emit, disconnect
 import time, math, select, os
 
@@ -346,7 +347,7 @@ def web_process(pipe, config):
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
     socketio.on_namespace(WebConfig('', pipe, config))
-    socketio.run(app, debug=False, host='0.0.0.0', port=web_port)
+    socketio.run(app, debug=False, host='0.0.0.0', port=web_port, allow_unsafe_werkzeug=True)
     
 if __name__ == '__main__':
     config = {'host': 'localhost', 'actions': {},
