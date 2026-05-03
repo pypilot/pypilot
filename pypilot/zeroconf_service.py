@@ -5,12 +5,16 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 # make it not blocking with the main server
 
-import socket, struct, fcntl, time, os
+import fcntl
+import os
+import socket
+import struct
 import threading
+import time
 
 DEFAULT_PORT = 23322
 from version import strversion
@@ -24,17 +28,17 @@ def get_local_addresses():
     addresses = []
     if retries:
         try:
-            from netifaces import interfaces, ifaddresses
+            from netifaces import ifaddresses, interfaces
             for interface in interfaces():
                 addrs = ifaddresses(interface)
                 for i in addrs:
                     if 'addr' in i:
                         addresses.append(i['addr'])
             return addresses
-        except Exception as e:
+        except Exception:
             #print('zeroconf service fallback to socket address')
             retries -= 1
-        
+
     interfaces = os.listdir('/sys/class/net')
     for interface in interfaces:
         try:
@@ -43,7 +47,7 @@ def get_local_addresses():
                 0x8915,  # SIOCGIFADDR
                 struct.pack('256s', bytes(interface[:15], 'utf-8'))
             )[20:24]))
-        except: # no address for this interface
+        except OSError: # no address for this interface
             pass
 
     return addresses
@@ -51,15 +55,15 @@ def get_local_addresses():
 class zeroconf(threading.Thread):
     #def __del__(self):
     #self.close()
-    
+
     def run(self):
         # wait until zeroconf is available (tinypilot booting)
         while True:
             try:
                 # register zeroconf service
                 from zeroconf import IPVersion, ServiceInfo, Zeroconf
-                
-            except:
+
+            except ImportError:
                 time.sleep(10)
                 continue # try again
             break
@@ -96,7 +100,7 @@ class zeroconf(threading.Thread):
                         addresses=[socket.inet_aton(address)],
                         port=DEFAULT_PORT,
                         properties={'version': strversion})
-        
+
                     zeroconf[address] = Zeroconf(ip_version=ip_version, interfaces=[address])
                     try:
                         zeroconf[address].register_service(info[address])
@@ -105,7 +109,7 @@ class zeroconf(threading.Thread):
                         print('e is', info, address)
                         addresses = []
                         break # maybe try again?
-                        
+
             time.sleep(60)
 
 

@@ -5,31 +5,30 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 # combine GPS and inertial measurements in a kalman filter to estimate
 # speed and position with high output rate and better accuracy
 # wave height
 # boat speed
 
-import os
-import multiprocessing
 import math
+import multiprocessing
+import os
 
-from values import *
-from resolv import *
-
+import quaternion
+import vector
 from client import pypilotClient
 from nonblockingpipe import NonBlockingPipe
-import vector
-import quaternion
+from resolv import *
+from values import *
 
 try:
     import wmm2020
-except:
+except ImportError:
     print('world magnetic model not available')
     wmm2020 = False
-            
+
 
 earth_radius =  6378137.0
 earth_md = earth_radius*2*math.pi/360
@@ -56,9 +55,9 @@ class GPSFilterProcess(multiprocessing.Process):
         self.output = client.register(BooleanProperty('gps.filtered.output', False, persistent=True))
 
         self.pipe, pipe = NonBlockingPipe('gps filter pipe', True)
-        super(GPSFilterProcess, self).__init__(target=self.filter_process, args=(pipe,), daemon=True)
+        super().__init__(target=self.filter_process, args=(pipe,), daemon=True)
         self.start()
-        
+
 
     def predict(self, accel, fusionQpose_ned_magnetic, t):
         self.pipe.send(('predict', (accel, fusionQpose_ned_magnetic, t)))
@@ -73,7 +72,7 @@ class GPSFilterProcess(multiprocessing.Process):
                 global np
                 import numpy as np
                 break
-            except:
+            except ImportError:
                 pass
             time.sleep(20)
         print('gps filter process', os.getpid())
@@ -93,14 +92,14 @@ class GPSFilterProcess(multiprocessing.Process):
             msgs = self.client.receive(.1)
             for msg in msgs:
                 self.values[msg] = msgs[msg]
-        
 
-class GPSFilter(object):
+
+class GPSFilter:
     def __init__(self, client):
         self.client = client
         self.gps_system_time_offset = 0
         self.stale_count = 0
-        
+
         self.use3d = False # estimate altitude and climb
 
         posSigma = 10 # meters
@@ -109,7 +108,7 @@ class GPSFilter(object):
             self.R = np.diag([posSigma, posSigma, posSigma*2, velSigma, velSigma, velSigma*2])
         else:
             self.R = np.diag([posSigma, posSigma, velSigma, velSigma])
-            
+
         self.enabled = self.register(BooleanProperty, 'enabled', False, persistent=True)
         self.declination = self.register(SensorValue, 'declination')
         self.declination_time = 0
@@ -151,15 +150,15 @@ class GPSFilter(object):
 
         ta = time.monotonic()
         # convert accel to magnetic world frame
-        accel_ned_magnetic = quaternion.rotvecquat(accel, fusionQPose)        
-        
+        accel_ned_magnetic = quaternion.rotvecquat(accel, fusionQPose)
+
         # log new prediction and apply it estimating new state
 
         # subtract gravity
         residual_accel_magnetic = vector.sub(accel_ned_magnetic, [0, 0, 1])
 
         # rotate by declination
-        decl_q = quaternion.angvec2quat(self.declination.value, [0, 0, 1])    
+        decl_q = quaternion.angvec2quat(self.declination.value, [0, 0, 1])
         accel_true = quaternion.rotvecquat(residual_accel_magnetic, decl_q)
 
         # apply predicted compass error
@@ -172,15 +171,15 @@ class GPSFilter(object):
 
         #t = time.monotonic()
         dt = t - self.predict_t
-        
+
         self.predict_t = t
         if dt < 0 or dt > .5:
             print('gpsfilter reset', dt)
             self.reset()
 
-        if type(self.X) == bool and not self.X: # filter was reset            
+        if type(self.X) == bool and not self.X: # filter was reset
             return # do not have a trusted measurement yet, so cannot perform predictions
-        
+
         self.apply_prediction(dt, U)
         self.history.append({'t': t, 'dt': dt, 'U': U, 'X': self.X, 'P': self.P})
 
@@ -203,11 +202,11 @@ class GPSFilter(object):
             fix['alt'] = self.X[2]
             fix['climb'] = self.X[5]
         self.fix.set(fix)
-        
+
         tb = time.monotonic()
 
     def apply_prediction(self, dt, U):
-        
+
         dt = min(max(dt, .02), .1)
         dt2 = dt*dt/2
         c = 3 if self.use3d else 2
@@ -259,13 +258,13 @@ class GPSFilter(object):
 
         c = 3 if self.use3d else 2
         try:
-            
+
             #xy = ll_to_xy(data['lat'], data['lon'], *self.lastll)
             xy = 0, 0
-            
+
             speed = data['speed'] / 1.944 # in meters/second
             track = data['track']
-            
+
             Z = list(xy)
             if self.use3d:
                 Z.append(data['alt'] if 'alt' in data else 0)
@@ -314,7 +313,7 @@ class GPSFilter(object):
 
         # apply normal kalman measurement update
         H = np.identity(2*c)
-        
+
         #Y = Z - H*X
         Y = Z - H@self.X
 
@@ -324,7 +323,7 @@ class GPSFilter(object):
         #K = P*Ht*S^-1
         try:
             invS = np.linalg.inv(S)
-        except:
+        except Exception:
             # failed to invert matrix, reset filter?
             print('gps filter failed to invert S')
             return

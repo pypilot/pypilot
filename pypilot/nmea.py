@@ -5,7 +5,7 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 #
 # A separate process listens on port 20220 for tcp connections
@@ -22,18 +22,22 @@
 
 DEFAULT_PORT = 20220
 
-import sys, select, time, socket, threading
-
-import multiprocessing
-import serial
-from client import pypilotClient
-from values import *
-from nonblockingpipe import NonBlockingPipe
-from bufferedsocket import LineBufferedNonBlockingSocket
-from sensors import source_priority
-import serialprobe
-
 import fcntl
+import multiprocessing
+import select
+import socket
+import time
+import threading
+
+import serial
+
+import serialprobe
+from bufferedsocket import LineBufferedNonBlockingSocket
+from client import pypilotClient
+from nonblockingpipe import NonBlockingPipe
+from sensors import source_priority
+from values import *
+
 # these are not defined in python module
 TIOCEXCL = 0x540C
 
@@ -48,7 +52,7 @@ def check_nmea_cksum(line):
     cksplit = line.split('*')
     try:
         return nmea_cksum(cksplit[0][1:]) == int(cksplit[1], 16)
-    except:
+    except (ValueError, IndexError):
         return False
 
 gps_timeoffset = 0
@@ -114,7 +118,7 @@ def parse_nmea_gps(line):
             if data[10] == 'W':
                 decl = -decl
             gps['declination'] = decl
-            
+
     except Exception as e:
         print(_('nmea failed to parse gps'), line, e)
         return False
@@ -144,7 +148,7 @@ def parse_nmea_wind(line):
     msg = {}
     try:
         msg['direction'] = float(data[1])
-    except:
+    except (ValueError, IndexError):
         return False  # require direction
 
     try:
@@ -168,7 +172,7 @@ def parse_nmea_rudder(line):
     data = line.split(',')
     try:
         angle = float(data[1])
-    except:
+    except (ValueError, IndexError):
         angle = False
 
     return 'rudder', {'angle': -angle}
@@ -275,13 +279,15 @@ def parse_nmea_water(line):
                 return 'water', {'leeway': leeway}
         except Exception as e:
             print(_('exception parsing vhw'), e, line)
-        
+
     return False
 
 nmea_parsers = {'gps': parse_nmea_gps, 'wind': parse_nmea_wind, 'rudder': parse_nmea_rudder, 'apb': parse_nmea_apb, 'water': parse_nmea_water}
 
 from pypilot.linebuffer import linebuffer
-class NMEASerialDevice(object):
+
+
+class NMEASerialDevice:
     def __init__(self, path):
         self.device = serial.Serial(*path)
         self.path = path
@@ -298,17 +304,17 @@ class NMEASerialDevice(object):
 nmeasocketuid = 0
 class NMEASocket(LineBufferedNonBlockingSocket):
     def __init__(self, connection, address):
-        super(NMEASocket, self).__init__(connection, address)
+        super().__init__(connection, address)
 
         global nmeasocketuid
         self.uid = nmeasocketuid
         nmeasocketuid += 1
-        
+
     def readline(self):
         if self.b: # optimized version in c
             return self.b.readline_nmea()
         while True: # python version (not used normally)
-            line = super(NMEASocket, self).readline()
+            line = super().readline()
             if not line:
                 return False
             line = line.rstrip()
@@ -318,7 +324,7 @@ class NMEASocket(LineBufferedNonBlockingSocket):
                 if cksum == nmea_cksum(line[1:-3]):
                     return line
 
-class Nmea(object):
+class Nmea:
     def __init__(self, sensors):
         self.client = sensors.client
 
@@ -355,7 +361,7 @@ class Nmea(object):
         msgs = self.pipe.recv()
         if not msgs:
             return
-        if type(msgs) == type('string'):
+        if type(msgs) == str:
             if msgs == 'sockets':
                 self.sockets = True
             elif msgs == 'nosockets':
@@ -367,7 +373,7 @@ class Nmea(object):
         else:
             for name in msgs:
                 self.sensors.write(name, msgs[name], 'tcp')
-                
+
     def read_serial_device(self, device, serial_msgs):
         t = time.monotonic()
         line = device.readline()
@@ -380,8 +386,8 @@ class Nmea(object):
             blacklist = ['MWV', 'RSA', 'APB']
             if self.sensors.gps.filtered.output.value:  # pass gps through, or use filtered gps depends on setting
                 blacklist.append('RMC')
-            
-            if not nmea_name[3:] in blacklist:
+
+            if nmea_name[3:] not in blacklist:
                 # do not output nmea data over tcp faster than 4hz
                 # for each message type
                 # forward nmea lines from serial to tcp
@@ -422,7 +428,7 @@ class Nmea(object):
         self.poller.unregister(device.device.fileno())
         del self.devices_lastmsg[device]
         device.close()
-            
+
     def poll(self):
         t0 = time.monotonic()
         self.probe_serial()
@@ -453,7 +459,7 @@ class Nmea(object):
         for name in serial_msgs:
             self.sensors.write(name, serial_msgs[name], 'serial')
         t3 = time.monotonic()
-                
+
         for device in self.devices:
             # timeout serial devices
             if not device:
@@ -485,10 +491,10 @@ class Nmea(object):
                 # only output to tcp if we have a better source
                 if source_priority[source] >= source_priority['tcp']:
                     continue
-                
-                if not name in self.nmea_times:
+
+                if name not in self.nmea_times:
                     self.nmea_times[name] = 0
-                    
+
                 dt = t - self.nmea_times[name]
                 freq = 1/dt
                 rate = self.sensors.sensors[name].rate.value
@@ -507,18 +513,18 @@ class Nmea(object):
         t5 = time.monotonic()
         if not self.nmea_bridge.process:
             self.nmea_bridge.poll()
-        
+
         t6 = time.monotonic()
         if t6 - t0 > .05 and t0-self.start_time > 10: # report times if processing takes more than 0.05 seconds
             times = map(lambda t : round_value(t, '%.3f'), [t6-self.start_time, t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t6-t0])
             print('nmea poll times', *times)
-            
+
     def probe_serial(self):
         # probe new nmea data devices
         if not self.probedevice:
             try:
                 index = self.devices.index(False)
-            except:
+            except ValueError:
                 index = len(self.devices)
             if self.probeindex != index and \
                (self.probeindex >= len(self.devices) or not self.devices[self.probeindex]):
@@ -561,8 +567,8 @@ class Nmea(object):
 def getddmmmmmm(degrees, n, s):
     minutes = (abs(degrees) - abs(int(degrees))) * 60
     return '%02d%07.4f,%c' % (abs(degrees), minutes, n if degrees >= 0 else s)
-        
-class nmeaBridge(object):
+
+class nmeaBridge:
     def __init__(self, server):
         self.client = pypilotClient(server)
         self.client.connection.name += 'nmeabridge'
@@ -582,7 +588,7 @@ class nmeaBridge(object):
 
         self.gps_id = self.client.register(EnumProperty('nmea.gps_id', 'APRMC', ['APRMC', 'GPRMC'], persistent=True))
 
-        
+
         self.client_socket_warning_address = False
 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -597,7 +603,7 @@ class nmeaBridge(object):
             try:
                 self.server.bind(('0.0.0.0', port))
                 break
-            except:
+            except OSError:
                 print(_('nmea server on port') + (' %d: '  % port) + _('bind failed.'))
             time.sleep(1)
         print(_('listening on port'), port, _('for nmea connections'))
@@ -610,7 +616,7 @@ class nmeaBridge(object):
         keys = ['gps.source', 'wind.source', 'truewind.source', 'rudder.source',
                 'apb.source', 'water.source', 'gps.filtered.output']
         for k in keys:
-            self.last_values[k] = 'none'                    
+            self.last_values[k] = 'none'
         for name in self.last_values:
             self.client.watch(name)
         self.addresses = {}
@@ -622,7 +628,7 @@ class nmeaBridge(object):
 
         self.poller.register(self.client.connection, select.POLLIN)
         self.fd_to_socket[self.client.connection.fileno()] = self.client
-        
+
         if self.multiprocessing:
             self.poller.register(self.pipe, select.POLLIN)
             self.fd_to_socket[self.pipe.fileno()] = self.pipe
@@ -649,7 +655,7 @@ class nmeaBridge(object):
             for s in self.sockets:
                 if s != sock:
                     s.write(line+'\r\n')
-        
+
         # optimization to only to parse sentences here that would be discarded
         # in the main process anyway because they are already handled by a source
         # with a higher priority than tcp
@@ -673,7 +679,7 @@ class nmeaBridge(object):
             connection.close()
             print(_('nmea server has too many connections'))
             return
-    
+
         if not self.sockets:
             self.setup_watches()
             self.pipe.send('sockets')
@@ -701,10 +707,10 @@ class nmeaBridge(object):
             self.client_socket = False
         try:
             self.sockets.remove(sock)
-        except:
+        except ValueError:
             print(_('nmea sock not in sockets!'))
             return
-        
+
         self.pipe.send('lostsocket' + str(sock.uid))
         if not self.sockets:
             self.setup_watches(False)
@@ -741,16 +747,16 @@ class nmeaBridge(object):
         self.client_socket_nmea_address = self.nmea_client.value
         if t - self.nmea_client_connect_time < timeout:
             return
-        
+
         self.nmea_client_connect_time = t
 
         if not self.nmea_client.value:
             return
-        
-        if not ':' in self.nmea_client.value:
+
+        if ':' not in self.nmea_client.value:
             self.warn_connecting_client(_('invalid value'))
             return
-        
+
         hostport = self.nmea_client.value.split(':')
 
         host = hostport[0]
@@ -759,8 +765,8 @@ class nmeaBridge(object):
         self.client_socket = False
         def warning(e, s):
             self.warn_connecting_client(_('connect error') + ' : ' + str(e))
-            s.close()            
-            
+            s.close()
+
         try:
             port = int(port)
             if self.connecting_client_socket:
@@ -785,7 +791,7 @@ class nmeaBridge(object):
         if self.client_socket_warning_address != self.client_socket_nmea_address:
             print('nmea client ' + msg, self.client_socket_nmea_address)
             self.client_socket_warning_address = self.client_socket_nmea_address
-            
+
     def close_connecting_client(self):
         self.warn_connecting_client(_('failed to connect'))
         fd = self.connecting_client_socket.fileno()
@@ -799,7 +805,7 @@ class nmeaBridge(object):
         self.client_socket_warning_address = False
         self.client_socket = self.new_socket_connection(connection, self.client_socket_nmea_address)
         self.connecting_client_socket = False
-        
+
     def nmea_process(self):
         print('nmea process', os.getpid())
         self.setup()
@@ -825,7 +831,7 @@ class nmeaBridge(object):
         t1 = time.monotonic()
         if t1-t0 > timeout:
             print(_('poll took too long in nmea process!'))
-            
+
         while events:
             fd, flag = events.pop()
             sock = self.fd_to_socket[fd]
@@ -855,7 +861,7 @@ class nmeaBridge(object):
                         line = sock.readline()
                         if not line:
                             break
-                
+
                         self.receive_nmea(line, sock)
             else:
                 print(_('nmea bridge unhandled poll flag'), flag)
@@ -907,14 +913,14 @@ class nmeaBridge(object):
                 print('failed to assembly nmea', fix, e)
                 pass
         t5 = time.monotonic()
-        
+
         # flush sockets
         for sock in self.sockets:
             sock.flush()
 
         # reconnect client tcp socket
         self.connect_client()
-                                
+
         t6 = time.monotonic()
 
         if t6-t1 > .1:

@@ -15,10 +15,11 @@
 
 
 from enum import Enum
+from queue import Empty, Queue
+from typing import TypedDict
 
 from pypilot.client import pypilotClientFromArgs
-from queue import Queue, Empty
-from typing import TypedDict
+
 from .log_config import logger
 
 HOST = "localhost"

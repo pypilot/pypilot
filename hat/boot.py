@@ -5,15 +5,12 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-from config_esp32 import config
 
-import time
 
-import lcd_esp32
 try:
-    import lcd_esp32
+    pass
 except Exception as e:
     print('exception', e)
     print('reboot')

@@ -5,14 +5,16 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import network    
+import network
+
 station = network.WLAN(network.STA_IF)  # client, not AP
 station.wifi_ps(network.WIFI_PS_MAX_MODEM)  # not sure this saves any power!!
 
+
 from page import gettime
-import time
+
 connected = False, gettime()
 enabled = True
 
@@ -49,7 +51,7 @@ def disable():
     global enabled
     station.active(False)
     enabled = False
-    
+
 
 def poll(client):
     global connected

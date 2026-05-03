@@ -5,76 +5,82 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 import time
+
 print('hat start', time.monotonic())
-import os, sys, signal, select
+import os
+import select
+import signal
+import sys
+
 from pypilot import pyjson
 from pypilot.client import pypilotClient
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import arduino
 import gpio
 import lcd
-import arduino
 
 print('hat import done', time.monotonic())
 
-class Action(object):
+class Action:
     def  __init__(self, hat, name):
         self.hat = hat
         self.name = name
 
 class ActionNone(Action):
     def __init__(self):
-        super(ActionNone, self).__init__(None, 'none')
+        super().__init__(None, 'none')
 
     def trigger(self, count):
         pass
 
 class ActionKeypad(Action):
     def __init__(self, lcd, index, name):
-        super(ActionKeypad, self).__init__(None, name)
+        super().__init__(None, name)
         self.lcd = lcd
         self.index = index
 
     def trigger(self, count):
         self.lcd.keypad(self.index, count)
-        
+
 class ActionPypilot(Action):
     def  __init__(self, hat, name, pypilot_name, pypilot_value=None):
-        super(ActionPypilot, self).__init__(hat, name)
+        super().__init__(hat, name)
         self.pypilot_name = pypilot_name
         self.value = pypilot_value
 
     def trigger(self, count):
         if self.hat.client and not count:
             self.hat.client.set(self.pypilot_name, self.value)
-            
+
 class ActionEngage(ActionPypilot):
     def  __init__(self, hat):
-        super(ActionEngage, self).__init__(hat, 'engage', 'ap.enabled', True)
+        super().__init__(hat, 'engage', 'ap.enabled', True)
 
     def trigger(self, count):
         # set heading to current heading
         if self.hat.client and not count and 'ap.heading' in self.hat.last_msg:
             self.hat.client.set('ap.heading_command', self.hat.last_msg['ap.heading'])
-        super(ActionEngage, self).trigger(count)
+        super().trigger(count)
 
 class ActionMode(ActionEngage):
     def  __init__(self, hat, mode):
-        super(ActionMode, self).__init__(hat)
+        super().__init__(hat)
         self.mode = mode
         self.name = mode + ' mode'
 
     def trigger(self, count):
         if self.hat.client and not count:
             self.hat.client.set('ap.mode', self.mode)
-        
-        super(ActionMode, self).trigger(count)
-            
+
+        super().trigger(count)
+
 class ActionHeading(Action):
     def __init__(self, hat, offset):
-        super(ActionHeading, self).__init__(hat, ('-' if offset < 0 else '+') + str(abs(offset)))
+        super().__init__(hat, ('-' if offset < 0 else '+') + str(abs(offset)))
         self.offset = offset
 
     def trigger(self, count):
@@ -95,15 +101,15 @@ class ActionHeading(Action):
             else:
                 self.hat.servo_timeout = 0
                 self.hat.servo_command = 0
-                
+
             self.hat.client.set('servo.command', self.hat.servo_command)
             self.hat.client.poll() # reduce lag
 
 class ActionTack(ActionPypilot):
     def  __init__(self, hat, name, direction):
-        super(ActionTack, self).__init__(hat, name, 'ap.tack.state', 'begin')
+        super().__init__(hat, name, 'ap.tack.state', 'begin')
         self.direction = direction
-                                
+
     def trigger(self, count):
         if self.hat.client and not count:
             state =  self.hat.last_msg['ap.tack.state']
@@ -117,7 +123,7 @@ class ActionTack(ActionPypilot):
 
 class ActionDodge(ActionPypilot):
     def  __init__(self, hat, name, direction):
-        super(ActionDodge, self).__init__(hat, name, 'servo.command')
+        super().__init__(hat, name, 'servo.command')
         self.direction = direction
 
     def trigger(self, count):
@@ -127,11 +133,11 @@ class ActionDodge(ActionPypilot):
 
 class ActionProfile(ActionPypilot):
     def __init__(self, hat, profile):
-        super(ActionProfile, self).__init__(hat, 'profile ' + profile, 'profile', profile)
-        
+        super().__init__(hat, 'profile ' + profile, 'profile', profile)
+
 class ActionProfileRelative(ActionPypilot):
     def __init__(self, hat, name, offset):
-        super(ActionProfileRelative, self).__init__(hat, 'profile ' + name, 'profile')
+        super().__init__(hat, 'profile ' + name, 'profile')
         self.offset = offset
 
     def trigger(self, count):
@@ -141,36 +147,37 @@ class ActionProfileRelative(ActionPypilot):
         if profile in profiles:
             index = (profiles.index(profile) + self.offset) % len(profiles)
             self.value = profiles[index]
-            super(ActionProfileRelative, self).trigger(count)
+            super().trigger(count)
 
 class ActionCommand(Action):
     def __init__(self, name, command):
-        super(ActionCommand, self).__init__(None, name)
+        super().__init__(None, name)
         self.command = command
 
     def trigger(self, count):
         os.system(self.command)
 
-class Process():
+class Process:
     def __init__(self, hat):
         self.hat = hat
-        self.create()            
-    
+        self.create()
+
     def send(self, value):
         if self.process:
             self.pipe.send(value, maxdt=.1)
 
     def create(self, process):
         import multiprocessing
+
         from pypilot.nonblockingpipe import NonBlockingPipe
         self.pipe, pipe = NonBlockingPipe(str(self), True)
         self.process = multiprocessing.Process(target=process, args=(pipe, self.hat.config), daemon=True)
         self.process.start()
-            
+
 class Web(Process):
     def __init__(self, hat):
         self.status = 'Not Connected'
-        super(Web, self).__init__(hat)
+        super().__init__(hat)
 
     def set_status(self, value):
         if self.status == value:
@@ -195,15 +202,15 @@ class Web(Process):
                 except Exception as e:
                     print('web failed to run process:', e)
 
-        super(Web, self).create(process)
+        super().create(process)
         self.send({'status': self.status})
-        
+
     def poll(self):
         msg = self.pipe.recv()
         if msg:
             for name in msg:
                 value = msg[name]
-                self.hat.update_config(name, value);
+                self.hat.update_config(name, value)
             self.hat.write_config()
             if 'host' in msg:
                 print('host changed, exiting', msg['host'])
@@ -214,7 +221,7 @@ class Web(Process):
 
 class Arduino(Process):
     def __init__(self, hat):
-        super(Arduino, self).__init__(hat)
+        super().__init__(hat)
         self.voltage = {'vcc': 5, 'vin': 3.3}
         self.status = 'Not Connected'
         self.need_restart = 0
@@ -228,7 +235,7 @@ class Arduino(Process):
             while True:
                 arduino.arduino_process(pipe, config)
                 time.sleep(15)
-        super(Arduino, self).create(process)
+        super().create(process)
 
     def poll(self):
         ret = []
@@ -269,9 +276,9 @@ class Arduino(Process):
                     pass
                 elif key == 'version':
                     old_version = self.hat.config.get('arduino_firmware_version')
-                    if old_version != code: 
+                    if old_version != code:
                         print('actual hat version update from', old_version, 'to', code)
-                        self.hat.config['arduino_firmware_version'] = code;
+                        self.hat.config['arduino_firmware_version'] = code
                         self.hat.write_config()
                     available_version = self.hat.config.get('arduino_firmware_version_available', 0.0)
                     if available_version > code:
@@ -286,28 +293,27 @@ class Arduino(Process):
 
 class LCD(Process):
     def __init__(self, hat):
-        super(LCD, self).__init__(hat)
-    
+        super().__init__(hat)
+
     def create(self):
         def process(pipe, config):
-            import lcd
             print('lcd process on', os.getpid())
             self.lcd = lcd.LCD(self.hat.config)
             self.lcd.pipe = pipe
 
             if self.lcd.use_glut:
-                from OpenGL.GLUT import glutMainLoop, glutIdleFunc
+                from OpenGL.GLUT import glutIdleFunc, glutMainLoop
                 glutIdleFunc(self.lcd.poll)
                 glutMainLoop()
             else:
                 while True:
                     self.lcd.poll()
-            
-        super(LCD, self).create(process)
+
+        super().create(process)
 
     def keypad(self, index, count):
         self.send((index, count))
-        
+
     def poll(self):
         ret = []
         while True:
@@ -321,8 +327,8 @@ class LCD(Process):
             elif key == 'buzzer' or key == 'backlight':
                 if self.hat.arduino:
                     self.hat.arduino.send(msg)
-            
-class Hat(object):
+
+class Hat:
     def __init__(self):
         # default config
         self.config = {'host': 'localhost', 'actions': {},
@@ -345,7 +351,7 @@ class Hat(object):
         print('host', host, time.monotonic())
         self.client = pypilotClient(host)
         self.client.registered = False
-            
+
         # read hardware config
         try:
             configfile = '/proc/device-tree/hat/custom_0'
@@ -353,14 +359,14 @@ class Hat(object):
             hat_config = pyjson.loads(f.read())
             f.close()
             print('loaded device tree hat config', time.monotonic())
-            if not 'hat' in self.config or hat_config != self.config['hat']:
+            if 'hat' not in self.config or hat_config != self.config['hat']:
                 self.config['hat'] = hat_config
                 print('writing device tree hat to hat.conf')
                 self.write_config()
         except Exception as e:
             print('failed to load', configfile, ':', e)
-            
-        if not 'hat' in self.config:
+
+        if 'hat' not in self.config:
             print('assuming original 26 pin tinypilot with nokia5110 display')
             self.config['hat'] = {'lcd':{'driver':'default',
                                          'port':'/dev/spidev0.0'},
@@ -382,10 +388,10 @@ class Hat(object):
             self.config['host'] = sys.argv[1]
             self.write_config()
 
-        self.poller = select.poll()        
+        self.poller = select.poll()
         self.gpio = gpio.gpio()
         self.poller.register(self.gpio.pipe[1], select.POLLIN)
-        
+
         self.lcd = LCD(self)
         #time.sleep(1)
 
@@ -398,7 +404,7 @@ class Hat(object):
 
         # receive heading once per second for mode changes
         self.client.watch('ap.heading', 1)
-            
+
         if 'arduino' in self.config['hat']:
             self.arduino = Arduino(self)
             self.poller.register(self.arduino.pipe, select.POLLIN)
@@ -451,7 +457,7 @@ class Hat(object):
 
         # execute an arbitrary command, eg: shutdown
         self.actions.append(ActionCommand('shutdown', 'shutdown -h now'))
-                
+
         # useful to unassign a key
         self.actions.append(ActionNone())
 
@@ -459,7 +465,7 @@ class Hat(object):
         cfg = self.config['actions']
         self.config['actions'] = {}
         for action in self.actions:
-            if not action.name in cfg:
+            if action.name not in cfg:
                 self.config['actions'][action.name] = []
             else:
                 self.config['actions'][action.name] = cfg[action.name]
@@ -479,7 +485,7 @@ class Hat(object):
                     childpids.append(process.process.pid)
             if signal_number == signal.SIGCHLD:
                 pid = os.waitpid(-1, os.WNOHANG)
-                if not pid[0] in childpids:
+                if pid[0] not in childpids:
                     print('subprocess returned', pid, childpids)
                     # flask or system makes process at startup that dies
                     return
@@ -529,7 +535,7 @@ class Hat(object):
             except Exception as e:
                 print('config read exception printing exception', e)
         return False
-        
+
     def write_config(self, suffix=''):
         print('write config', suffix)
         actions = self.config['actions']
@@ -537,22 +543,22 @@ class Hat(object):
             if not actions[name] and name[:6] != 'pilot ':
                 del actions[name]
 
-        if self.client and not 'modes' in self.config:
+        if self.client and 'modes' not in self.config:
             values = self.client.get_values()
             if 'ap.mode' in values:
                 self.config['modes'] = values['ap.mode']['choices']
-            
+
         try:
             f = open(self.configfilename+suffix, 'w')
             f.write(pyjson.dumps(self.config) + '\n')
             f.close()
-        except IOError:
+        except OSError:
             print('failed to save config file:', self.configfilename+suffix)
 
     def update_config(self, name, value):
         if name in self.config and self.config[name] == value:
             return
-        
+
         if self.arduino:
             if name == 'actions' or name.startswith('arduino.'):
                 self.arduino.send((name, value))
@@ -565,7 +571,7 @@ class Hat(object):
 
         actions = self.config['actions']
         for action in self.actions:
-            if not action.name in actions:
+            if action.name not in actions:
                 actions[action.name] = []
             keys = actions[action.name]
             if key in keys:
@@ -586,19 +592,19 @@ class Hat(object):
     def update_values(self):
         values = self.client.list_values()
         if values:
-            if 'ap.pilot' in values:                
+            if 'ap.pilot' in values:
                 pilots = values['ap.pilot']['choices']
                 update = False
                 for pilot in pilots:
                     name = 'pilot '+pilot
-                    if not name in self.config['actions']:
+                    if name not in self.config['actions']:
                         print('adding pilot', pilot)
                         self.config['actions'][name] = []
                         update = True
                 for name in list(self.config['actions']):
                     if name.startswith('pilot '):
                         pilot = name.replace('pilot ', '', 1)
-                        if not pilot in pilots:
+                        if pilot not in pilots:
                             print('removing pilot', pilot)
                             del self.config['actions'][name]
                             update = True
@@ -607,7 +613,7 @@ class Hat(object):
                     print('shutting down since pilots updated')
                     exit(0) #respawn
 
-    def poll(self):            
+    def poll(self):
         t0 = time.monotonic()
         for i in self.inputs:
             try:
@@ -690,7 +696,7 @@ class Hat(object):
                 #self.poller.register(self.client.connection.fileno(), select.POLLIN)
                 self.client.registered = True
 
-            self.update_values()                    
+            self.update_values()
         else:
             self.client.registered = False
             self.web.set_status('disconnected')
@@ -709,7 +715,7 @@ class Hat(object):
         #print('hattime', time.monotonic(), e)
         #print('hat times', t1-t0, t2-t1, t3-t2, t4-t3, period, dt)
 
-def main():    
+def main():
     hat = Hat()
     print('hat init complete', time.monotonic())
     while True:

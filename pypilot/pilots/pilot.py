@@ -5,19 +5,20 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-from pypilot.values import *
 from pypilot.resolv import resolv
+from pypilot.values import *
+
 
 class AutopilotGain(RangeProperty):
     def __init__(self, *cargs):
-        super(AutopilotGain, self).__init__(*cargs, persistent=True, profiled=True)
+        super().__init__(*cargs, persistent=True, profiled=True)
         self.info['AutopilotGain'] = True
 
-class AutopilotPilot(object):
+class AutopilotPilot:
     def __init__(self, name, ap):
-        super(AutopilotPilot, self).__init__()
+        super().__init__()
         self.name = name
         self.ap = ap
         self.gains = {}
@@ -34,7 +35,7 @@ class AutopilotPilot(object):
 
     def PosGain(self, name, default, max_val):
         self.Gain(name, default, 0, max_val)
-    
+
     def Compute(self, gain_values):
         command = 0
         for gain in self.gains:
@@ -46,7 +47,7 @@ class AutopilotPilot(object):
             #print('command', command)
         return command
 
-    def compute_heading(self):        
+    def compute_heading(self):
         ap = self.ap
         compass = ap.boatimu.SensorValues['heading_lowpass'].value
 
@@ -65,9 +66,9 @@ class AutopilotPilot(object):
     # return new mode if sensors don't support it
     def best_mode(self, mode):
         modes = self.ap.modes.value
-        while not mode in modes:
+        while mode not in modes:
             fallbacks = {'nav': 'gps', 'gps': 'compass', 'wind': 'compass', 'true wind': 'wind'}
-            if not mode in fallbacks:
+            if mode not in fallbacks:
                 break
-            mode = fallbacks[mode] 
+            mode = fallbacks[mode]
         return mode

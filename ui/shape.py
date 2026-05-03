@@ -5,10 +5,13 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import math, numpy
+import math
+
+import numpy
 from OpenGL.GL import *
+
 
 def GLArray(points):
     vpoints = (GLfloat * (3*len(points)))()
@@ -19,15 +22,15 @@ def GLArray(points):
         i += 3
     return vpoints
 
-class Shape(object):
+class Shape:
     def __init__(self, vertexes):
         self.array = GLArray(vertexes)
 
     def draw(self):
-        glEnableClientState(GL_VERTEX_ARRAY);
+        glEnableClientState(GL_VERTEX_ARRAY)
         glVertexPointer(3, GL_FLOAT, 0, self.array)
         glDrawArrays(GL_LINE_STRIP, 0, int(len(self.array)/3))
-        glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableClientState(GL_VERTEX_ARRAY)
 
 class Spherical(Shape):
     def __init__(self, beta, f, lons, lats):
@@ -56,10 +59,10 @@ class Spherical(Shape):
 
                     l_lp = lp
                     l_p = p
-            
+
             lastPoints = points
 
-        super(Spherical, self).__init__(vertexes)
+        super().__init__(vertexes)
 
 class Conical(Shape):
     def __init__(self, beta, lons, rs):
@@ -89,12 +92,12 @@ class Conical(Shape):
 
                     l_lp = lp
                     l_p = p
-            
+
             lastPoints = points
 
-        super(Conical, self).__init__(vertexes)
+        super().__init__(vertexes)
 
-        
+
 class Plane(Shape):
     def __init__(self, plane_fit, gridsize):
         plane = numpy.array(plane_fit)
