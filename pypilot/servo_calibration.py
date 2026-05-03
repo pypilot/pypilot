@@ -3,24 +3,27 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import time, sys, os
 import json
-from pypilot.client import pypilotClient
+import os
+import sys
+import threading
+import time
+
+import numpy
+
 from servo import *
 
-import threading
-import numpy
 
 # fit to order n
 def fit(x, n):
     try:
         import scipy.optimize
-    except:
+    except ImportError:
         print("failed to load scientific library, cannot perform calibration update!")
         return False
-    
+
     def func(b, x, n):
         res = -x[1]
         for o in range(n+1):
@@ -49,7 +52,7 @@ def FitCalibration(cal):
         raw_cmd, idle_current, stall_current, idle_voltage, dt, power = cal[speed]
         speeds.append(speed)
         commands.append(raw_cmd)
-    
+
     fits = {}
     print('speeds', len(speeds))
     print('plot')
@@ -61,7 +64,7 @@ def FitCalibration(cal):
             fits[n] = fit([speeds, commands], n)
         else:
             fits[n] = False
-            
+
         print('fit order', n, fits[n])
         if fits[n]:
             print(fit_str(fits[n][0]))
@@ -87,7 +90,7 @@ def ServoCalibrationThread(calibration):
         calibration.console.set(c)
         if printconsole:
             print(c)
-    
+
     def command(value):
         if self.fwd_fault and value < 0:
             servo.fwd_fault = False
@@ -120,7 +123,7 @@ def ServoCalibrationThread(calibration):
                 power+= dt*voltage*current
             avgv /= len(self.log)
             avgc /= len(self.log)
-                
+
         return avgc, avgv, power
 
     def calibrate_period(raw_cmd, period, idle_current):
@@ -161,7 +164,7 @@ def ServoCalibrationThread(calibration):
         print(transitions, truespeed, 'plota' if raw_cmd > 0 else 'plotb')
         return current, voltage, transitions, dt, power
 
-    
+
     def calibrate_speed(raw_cmd):
         self.reset()
         for t in range(10):
@@ -186,7 +189,7 @@ def ServoCalibrationThread(calibration):
 
             voltage, current, p = average_power(avgtime)
             power += p
-            
+
             if not t0:
                 t0 = t
             if t-t0 >= self.timeout:
@@ -206,7 +209,7 @@ def ServoCalibrationThread(calibration):
                     return False
                 console('stall current above max current for raw_cmd:', raw_cmd)
                 stall_current = servo.max_current
-                
+
             elif idle_current and current > servo.max_current:
                 console('servo failed to stop overcurrent!!!!', current)
                 stall_current = servo.max_current.value
@@ -221,7 +224,7 @@ def ServoCalibrationThread(calibration):
 
                 idle_current = current
                 idle_voltage = voltage
-                
+
             prevcurrent = current
 
             lp_current = .9*lp_current + .1*current
@@ -235,7 +238,7 @@ def ServoCalibrationThread(calibration):
         if self.brake_hack and d > 0:
             d *= 1.4
         return period_speed*d # 60% of full speed should always work??
-    
+
     def search_end(sign):
         self.reset()
         self.waitfault(1)
@@ -272,15 +275,15 @@ def ServoCalibrationThread(calibration):
         if not cal:
             console('failed to reset servo position to start')
             exit(1)
-        
+
     print('initial cal', cal)
     command, idle_current, stall_current, cal_voltage, dt, power = cal
     truespeed = 1/dt
     max_current = idle_current + .75*(stall_current - idle_current)
 
-    reset()        
+    reset()
     #self.client.set('servo.max_current', max_current)
-                        
+
     console('max current found', max_current)
     console('found start')
 
@@ -293,11 +296,11 @@ def ServoCalibrationThread(calibration):
             cal = self.calibrate_period(-period_speed, period, idle_current)
             print('rev', cal)
             period *= 1.5
-                                          
+
         exit(0)
-        
+
     calibration = {} # clear old cal
-        
+
     complete = [False, False]
     lastspeed = [0, 0]
     steps = 14 # speeds 20 speeds
@@ -381,15 +384,15 @@ def ServoCalibrationThread(calibration):
     #print('forward calibration', fwd_calibration)
     fwdfit = FitCalibration(fwd_calibration)
     #print('reverse calibration', rev_calibration)
-    revfit = FitCalibration(rev_calibration)        
+    revfit = FitCalibration(rev_calibration)
     cal = {'forward': fwdfit, 'reverse': revfit, 'Min Speed': min_speed, 'Brake Hack': self.brake_hack}
 
     f = open(os.getenv('HOME') + '/.pypilot/servocalibration', 'w')
     f.write(json.dumps(cal))
     console('calibration complete')
 
-        
-class ServoCalibration(object):
+
+class ServoCalibration:
     def __init__(self, servo):
         self.server = servo.server
         self.run = self.Register(BooleanProperty, 'run', False)
@@ -409,7 +412,7 @@ class ServoCalibration(object):
         def fault(self):
             return (ServoFlags.OVERCURRENT_FAULT | ServoFlags.FALTPIN) & self.servo.flags.value or \
                 not self.servo.engaged.value
-    
+
     def poll(self):
         if not self.thread.is_alive():
             if self.run.value: # calibration should start
@@ -426,7 +429,7 @@ class ServoCalibration(object):
         if not self.run.value or self.ap.enabled.value:
             self.thread.exit()
             return
-        
+
         if self.command != self.servo.command.value:
             console('servo command received, aborting')
             console('ensure the autopilot is not active and')
@@ -455,7 +458,7 @@ def round_any(x, n):
         return r
     elif type(x) == type([]):
         return map(lambda v : round_any(v, n), x)
-    elif type(x) == type(0.0):
+    elif type(x) == float:
         return round(x, n)
     else:
         return x

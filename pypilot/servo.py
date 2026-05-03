@@ -5,17 +5,22 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import os, math, sys, time
-import select, serial
+import math
+import os
+import sys
+import time
+
+import serial
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from values import *
-import serialprobe
-
 import fcntl
+
+import serialprobe
+from values import *
+
 # these are not defined in python module
 TIOCEXCL = 0x540C
 TIOCNXCL = 0x540D
@@ -35,7 +40,7 @@ def interpolate(x, x0, x1, y0, y1):
 # the pwm0 output from the raspberry pi directly to
 # a servo or motor controller
 # there is no current feedback, instead a fault pin is used
-class RaspberryHWPWMServoDriver(object):
+class RaspberryHWPWMServoDriver:
     def __init__(self):
         import wiringpi
         wiringpi.wiringPiSetup()
@@ -54,7 +59,7 @@ class RaspberryHWPWMServoDriver(object):
             wiringpi.pwmSetRange( 1000 )
             wiringpi.pwmSetClock( 400 )
             self.engaged = True
-            
+
         clockcmd = 60 + 30*command
         clockcmd = int(min(110, max(36, clockcmd)))
         wiringpi.pwmWrite(1, clockcmd)
@@ -62,7 +67,7 @@ class RaspberryHWPWMServoDriver(object):
     def stop():
         wiringpi.pinMode(1, wiringpi.GPIO.PWM_INPUT)
         self.engaged = False
-        
+
     def fault(self):
         return wiringpi.digitalRead(self.fault_pin)
 
@@ -101,7 +106,7 @@ class ServoFlags(Value):
     SATURATED = sz*8
 
     def __init__(self, name):
-        super(ServoFlags, self).__init__(name, 0)
+        super().__init__(name, 0)
 
     def get_str(self):
         ret = ""
@@ -150,7 +155,7 @@ class ServoFlags(Value):
 
     def clearbit(self, bit):
         self.setbit(bit, False)
-            
+
     def port_overcurrent_fault(self):
         self.update((self.value | ServoFlags.PORT_OVERCURRENT_FAULT) \
                     & ~ServoFlags.STARBOARD_OVERCURRENT_FAULT)
@@ -159,7 +164,7 @@ class ServoFlags(Value):
         self.update((self.value | ServoFlags.STARBOARD_OVERCURRENT_FAULT) \
                     & ~ServoFlags.PORT_OVERCURRENT_FAULT)
 
-class ServoTelemetry(object):
+class ServoTelemetry:
     FLAGS = 1
     CURRENT = 2
     VOLTAGE = 4
@@ -173,7 +178,7 @@ class ServoTelemetry(object):
 # a property which records the time when it is updated
 class TimedProperty(Property):
     def __init__(self, name):
-        super(TimedProperty, self).__init__(name, 0)
+        super().__init__(name, 0)
         self.time = 0
         self.set_time = 0
         self.use_period = True
@@ -183,7 +188,7 @@ class TimedProperty(Property):
         self.time = time.monotonic()
         self.set_time = self.time
         self.use_period = False # manual control is not delayed by period
-        return super(TimedProperty, self).set(value)
+        return super().set(value)
 
     # internal command set, normal autopilot uses a period
     # to avoid short movements, but this can be overriden by some pilots
@@ -193,15 +198,15 @@ class TimedProperty(Property):
             return # ignore pilot command if recent manual override
         self.time = t
         self.use_period = True
-        return super(TimedProperty, self).set(value)
+        return super().set(value)
 
 class TimeoutSensorValue(SensorValue):
     def __init__(self, name):
-        super(TimeoutSensorValue, self).__init__(name, False, fmt='%.3f')
+        super().__init__(name, False, fmt='%.3f')
 
     def set(self, value):
         self.time = time.monotonic()
-        super(TimeoutSensorValue, self).set(value)
+        super().set(value)
 
     def timeout(self):
         if self.value and time.monotonic() - self.time > 8:
@@ -212,24 +217,24 @@ class MinRangeSetting(RangeSetting):
     def __init__(self, name, initial, min_value, max_value, units, minvalue, **kwargs):
         self.minvalue = minvalue
         minvalue.maxvalue = self
-        super(MinRangeSetting, self).__init__(name, initial, min_value, max_value, units, **kwargs)
+        super().__init__(name, initial, min_value, max_value, units, **kwargs)
 
     def set(self, value):
         if value < self.minvalue.value:
-            value = self.minvalue.value;
-        super(MinRangeSetting, self).set(value)
+            value = self.minvalue.value
+        super().set(value)
 
 class MaxRangeSetting(RangeSetting):
     def __init__(self, name, initial, min_value, max_value, units, **kwargs):
         self.maxvalue = None
-        super(MaxRangeSetting, self).__init__(name, initial, min_value, max_value, units, **kwargs)
+        super().__init__(name, initial, min_value, max_value, units, **kwargs)
 
     def set(self, value):
         if self.maxvalue and value > self.maxvalue.value:
             self.maxvalue.set(value)
-        super(MaxRangeSetting, self).set(value)
-            
-class Servo(object):
+        super().set(value)
+
+class Servo:
     pypilot_dir = os.getenv('HOME') + '/.pypilot/'
     calibration_filename = pypilot_dir + 'servocalibration'
 
@@ -274,7 +279,7 @@ class Servo(object):
         self.clutch_pwm = self.register(RangeProperty, 'clutch_pwm', 100, 10, 100, persistent=True)
         self.use_brake = self.register(BooleanProperty, 'use_brake', False, persistent=True)
         self.brake_on = False
-        
+
         self.period = self.register(RangeSetting, 'period', .4, .1, 1, 'sec', profiled=True)
         self.compensate_current = self.register(BooleanProperty, 'compensate_current', False, persistent=True)
         self.compensate_voltage = self.register(BooleanProperty, 'compensate_voltage', False, persistent=True)
@@ -338,7 +343,7 @@ class Servo(object):
                 self.command.command(0)
             self.disengaged = False
         self.do_command(self.command.value)
-        
+
     def do_position_command(self, position):
         e = position - self.position.value
         d = self.speed.value * self.sensors.rudder.range.value
@@ -353,7 +358,7 @@ class Servo(object):
         #print('pid', pid, p, i, d)
         # map in min_speed to max_speed range
         self.do_command(pid)
-        
+
     def do_command(self, speed):
         t = time.monotonic()
         dt = t - self.inttime
@@ -391,20 +396,20 @@ class Servo(object):
         # compensate for fluxuating battery voltage
         if self.compensate_voltage.value and self.voltage.value:
             speed *= 12 / self.voltage.value
-        
+
         min_speed = self.speed.min.value/100.0 # convert percent to 0-1
         max_speed = self.speed.max.value/100.0
-        
+
         # adjust minimum speed based on current duty
         min_speed += (max_speed - min_speed)*self.duty.value*self.speed_gain.value
 
         # ensure it is in range
         min_speed = min(min_speed, max_speed)
-        
+
         if self.command.use_period:  # use servo period when autopilot is in control
             # rarely: if the rate is slow and period set low windup overflows easily
             period = max(self.period.value, 2*dt)
-            
+
             # integrate windup
             self.windup += (speed - self.speed.value) * dt
 
@@ -439,7 +444,7 @@ class Servo(object):
                         self.windup_change = t
                         if m < 0: # switched direction (difficult to actually hit)
                             speed = 0
-        
+
         # clamp to max speed
         speed = min(max(speed, -max_speed), max_speed)
         self.speed.set(speed)
@@ -454,7 +459,7 @@ class Servo(object):
                 return
 
             command = cal[0] + abs(speed)*cal[1]
-        except:
+        except (KeyError, ValueError):
             print (_('servo calibration invalid'), self.calibration.value)
             self.calibration.set({'port': [.2, .8], 'starboard': [.2, .8]})
             return
@@ -468,7 +473,7 @@ class Servo(object):
             # overcurrent end stops with sufficient movement in the other direction
             position = self.position.value + command*dt*rudder_range
             self.position.set(min(max(position, -rudder_range), rudder_range))
-            
+
         self.raw_command(command)
 
     def stop(self):
@@ -495,7 +500,7 @@ class Servo(object):
         else:
             self.state.update('port')
             self.lastdir = 1
-        
+
     def do_raw_command(self, command):
         self.rawcommand.set(command)
         # compute duty cycle
@@ -537,7 +542,7 @@ class Servo(object):
                             self.flags.setbit(ServoFlags.DRIVER_TIMEOUT)
                     else:
                         self.driver_timeout_start = t
-                        
+
     def reset(self):
         if self.driver:
             self.driver.reset()
@@ -552,7 +557,7 @@ class Servo(object):
         # but it throws an exception for usb serial ports which we can ignore
         try:
             self.device.timeout=0
-        except:
+        except OSError:
             pass
 
         fcntl.ioctl(self.device.fileno(), TIOCNXCL) #exclusive
@@ -665,7 +670,7 @@ class Servo(object):
             corrected_current = self.current.factor.value*self.driver.current
             if self.driver.current:
                 corrected_current = max(0, corrected_current + self.current.offset.value)
-            
+
             self.current.set(round(corrected_current, 3))
             # integrate power consumption
             dt = (t - self.current.lasttime)
@@ -717,7 +722,7 @@ class Servo(object):
             if not self.flags.value & ServoFlags.PORT_OVERCURRENT_FAULT and \
                not self.flags.value & ServoFlags.STARBOARD_OVERCURRENT_FAULT:
                 self.faults.set(self.faults.value + 1)
-            
+
             # if overcurrent then fault in the direction traveled
             # this prevents moving further in this direction
             if self.flags.value & ServoFlags.OVERCURRENT_FAULT:
@@ -731,7 +736,7 @@ class Servo(object):
 
             self.reset() # clear fault condition
 
-        # update position from rudder feedback    
+        # update position from rudder feedback
         if not self.sensors.rudder.invalid():
             self.position.set(self.sensors.rudder.angle.value)
 
@@ -756,7 +761,7 @@ class Servo(object):
             print(_('loading servo calibration'), filename)
             file = open(filename)
             self.calibration.set(pyjson.loads(file.readline()))
-        except:
+        except (OSError, ValueError):
             print(_('WARNING: using default servo calibration!!'))
             self.calibration.set(False)
 
@@ -770,11 +775,11 @@ def test(device_path):
     while True:
         try:
             device = serial.Serial(device_path, 38400)
-            break;
+            break
         except Exception as e:
             print(e)
             time.sleep(.5)
-        
+
     device.timeout=0 #nonblocking
     fcntl.ioctl(device.fileno(), TIOCEXCL) #exclusive
     driver = ArduinoServo(device.fileno())
@@ -786,7 +791,7 @@ def test(device_path):
             exit(0)
         time.sleep(.1)
     exit(1)
-        
+
 def main():
     for i in range(len(sys.argv)):
         if sys.argv[i] == '-t':
@@ -794,7 +799,7 @@ def main():
                 print(_('device needed for option') + ' -t')
                 exit(1)
             test(sys.argv[i+1])
-    
+
     print('pypilot Servo')
     from server import pypilotServer
     server = pypilotServer()
@@ -802,7 +807,7 @@ def main():
     from client import pypilotClient
     client = pypilotClient(server)
 
-    from sensors import Sensors # for rudder feedback
+    from sensors import Sensors  # for rudder feedback
     sensors = Sensors(client, False)
     servo = Servo(client, sensors)
 

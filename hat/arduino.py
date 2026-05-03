@@ -5,14 +5,19 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 # A separate process manages a possible arduino to receive IR/RF
 # The arduino also controls the backlight and provides additional
-# pins for more functionallity (tack button, 
+# pins for more functionallity (tack button,
 # spi port.
 
-import os, sys, time, socket, errno, select
+import errno
+import os
+import select
+import socket
+import time
+
 from pypilot.client import udp_control_port
 
 RF=0x01
@@ -31,11 +36,11 @@ GET_VERSION=0x1b
 PACKET_LEN=6
 
 def update_firmware(config):
-    if not 'hat' in config:
+    if 'hat' not in config:
         return
 
     hatconfig = config['hat']
-    if not 'arduino' in hatconfig:
+    if 'arduino' not in hatconfig:
         return
 
     arduinoconfig = hatconfig['arduino']
@@ -68,12 +73,12 @@ def update_firmware(config):
         else:
             print('no firmware file found in', path)
             return
-                
+
     except Exception as e:
         print('failed to find firmware', e)
         return
 
-    if not 'arduino_firmware_version' in config:
+    if 'arduino_firmware_version' not in config:
         print('cannot update firmware until version is known')
         return
 
@@ -89,7 +94,8 @@ def update_firmware(config):
     time.sleep(1) # needed?
 
     resetpin = str(arduinoconfig['resetpin'])
-    import tempfile, subprocess
+    import subprocess
+    import tempfile
     temp = tempfile.mkstemp()
     p=subprocess.Popen(['avrdude', '-?'], stderr=temp[0], close_fds=True)
     p.wait()
@@ -97,7 +103,7 @@ def update_firmware(config):
     f = os.fdopen(temp[0], 'r')
     f.seek(0)
     release = ''
-    while not 'version' in release:
+    while 'version' not in release:
         release = f.readline().rstrip()
     f.close()
     avrdude_version = release.split('version')[1]
@@ -107,20 +113,20 @@ def update_firmware(config):
         print('detected old avrdude')
         os.system('echo ' + resetpin + ' > /sys/class/gpio/export')
         os.system('echo out > /sys/class/gpio/gpio' + resetpin + '/direction')
-    
+
     def flash(filename, c):
         if old_avrdude:
             command = 'sudo avrdude -P ' + device + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 1000000'
         else:
             command = 'sudo avrdude -P ' + device + ':' + '/dev/gpiochip0:' + resetpin + ' -u -p atmega328p -c linuxspi -U f:' + c + ':' + filename + ' -b 1000000'
         print('flash cmd', command)
-        ret = os.system(command)             
+        ret = os.system(command)
         return not ret
-    
+
     def verify(filename):
         print('verifying', filename)
         return flash(filename, 'v')
-    
+
     def write(filename):
         print('writing', filename)
         return flash(filename, 'w')
@@ -138,9 +144,9 @@ def update_firmware(config):
 
     if old_avrdude:
         os.system('echo in > /sys/class/gpio/gpio' + resetpin + '/direction')
-    
-    
-class arduino(object):    
+
+
+class arduino:
     def __init__(self, config):
         self.spi = False
         self.nmea_socket = False
@@ -153,7 +159,7 @@ class arduino(object):
             self.debug = print
         else:
             self.debug = lambda *args : None
-            
+
         self.hatconfig = False
         self.backlight_polarity = False
         if 'hat' in config:
@@ -218,7 +224,7 @@ class arduino(object):
         self.set_baud(self.config['arduino.nmea.baud'])
         try:
             self.set_adc_channels(len(self.config['arduino.adc_channels']))
-        except:
+        except (KeyError, ValueError):
             pass
 
     def close(self, e):
@@ -238,7 +244,7 @@ class arduino(object):
             self.packetout_data += bytes([d | 0x80])
         self.packetout_data += bytes([p | 0x80])
 
-    def set_backlight(self, value):        
+    def set_backlight(self, value):
         value = min(max(int(value*3), 0), 120)
         backlight = [value, self.backlight_polarity]
         self.send(SET_BACKLIGHT, backlight)
@@ -246,7 +252,7 @@ class arduino(object):
     def set_baud(self, baud):
         try:
             baud = int(baud)
-        except:
+        except (ValueError, TypeError):
             baud = 38400
 
         # 0, 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600
@@ -289,7 +295,7 @@ class arduino(object):
         if not self.version and t0-self.get_version_time > 10:
             self.send(GET_VERSION)
             self.get_version_time = t0+170
-        
+
         events = []
         serial_data =  []
         self.open_nmea()
@@ -331,7 +337,7 @@ class arduino(object):
             ta = time.monotonic()
             o = self.spi.xfer(i, not i and len(self.packetin_data) < PACKET_LEN+3)
             tb = time.monotonic()
-            
+
             if not i and not o:
                 break
 
@@ -349,7 +355,7 @@ class arduino(object):
                 continue
             cmd = self.packetin_data[1]
             d = self.packetin_data[2:PACKET_LEN+2]
-            parity = self.packetin_data[PACKET_LEN+2];
+            parity = self.packetin_data[PACKET_LEN+2]
             p = 0
             for x in d:
                 p ^= x
@@ -450,7 +456,7 @@ class arduino(object):
                 self.nmea_socket.close()
                 self.nmea_socket = False
             return
-        
+
         if self.nmea_socket:
             return
         if time.monotonic() < self.nmea_connect_time:
@@ -480,7 +486,7 @@ class arduino(object):
         except Exception as e:
             print('exception', e)
             self.nmea_socket = False
-        except:
+        except Exception:
             print('exception? 975m33')
 
 def arduino_process(pipe, config):
@@ -541,7 +547,7 @@ def arduino_process(pipe, config):
         #print('arduino times', period, dt, t1-t0, t2-t1, events)
         if dt > 0:
             time.sleep(dt)
-    
+
 def main():
     print('initializing arduino')
     config = {'host':'localhost','hat':{'arduino':{'device':'/dev/spidev0.1',
@@ -565,6 +571,6 @@ def main():
         baud_rate = a.get_baud_rate()
         if baud_rate:
             print('baud rate', baud_rate)
-    
+
 if __name__ == '__main__':
     main()

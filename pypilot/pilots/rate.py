@@ -5,16 +5,17 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 from pilot import AutopilotPilot
-from resolv import resolv
+
 from pypilot.values import *
+
 disabled = True
 
 class RatePilot(AutopilotPilot):
   def __init__(self, ap, name='rate'):
-    super(RatePilot, self).__init__(name, ap)
+    super().__init__(name, ap)
 
     # create extended pid filter
     self.PosGain('D', .075, 0.3) # rate of derivative
@@ -28,7 +29,7 @@ class RatePilot(AutopilotPilot):
   def process(self):
     t = time.monotonic()
     ap = self.ap
-    
+
     # compute command
     headingerror = ap.heading_error.value
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
