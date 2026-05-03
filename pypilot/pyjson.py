@@ -12,12 +12,12 @@ try:
 except ImportError:
     from . import gettext_loader
 
+# ujson is declared in pyproject.toml under the `optimize` extra. When it
+# isn't installed, the stdlib json module is the documented fallback, so
+# the warning print on ImportError has been dropped.
 try:
-    import ujson
+    import ujson as _json
+except ImportError:
+    import json as _json
 
-    loads, dumps = ujson.loads, ujson.dumps
-except Exception as e:
-    print(_("WARNING: python ujson library failed, parsing will consume more cpu"), e)
-    import json
-
-    loads, dumps = json.loads, json.dumps
+loads, dumps = _json.loads, _json.dumps
