@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 Sean D'Epagnier <seandepagnier@gmail.com>
+/* Copyright (C) 2026 Sean D'Epagnier <seandepagnier@gmail.com>
  *
  * This Program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -617,14 +617,15 @@ screen::~screen()
 }
 #endif
 
-#ifdef WIRINGPI
-#include <wiringPiSPI.h>
+#ifdef LGPIO
+#include <lgpio.h>
 
 class spilcd
 {
 public:
     spilcd(int _rst, int _dc, int baud)
         : rst(_rst), dc(_dc) {
+#if 0        
     	setenv("WIRINGPI_CODES", "1", 1);
         if(wiringPiSetup () < 0) {
             printf("wiringPiSetup Failed (no permissions?) aborting\n");
@@ -637,31 +638,51 @@ public:
 	for(int port=0; port<2; port++)
 	    if((spifd = wiringPiSPISetup(port, baud)) != -1)
 		break;
+#else
+        if((lgpio_handle = lgGpiochipOpen(0)) < 0) {
+            printf("lgGpiochipOpen failed (no permissions?) aborting\n");
+            exit(1);
+        }
+        
+        if (lgGpioClaimOutput(lgpio_handle, 0, rst, 1) != LG_OKAY) {
+            printf("lgGpioClaimOutput failed on pin %d aborting\n", rst);
+            exit(1);
+        }
+        
+        if (lgGpioClaimOutput(lgpio_handle, 0, dc, 0) != LG_OKAY) {
+            printf("lgGpioClaimOutput failed on pin %d aborting\n", dc);
+            exit(1);
+        }
+
+        spifd = lgSpiOpen(0, 0, baud, 0);
+#endif
+        
 	  
 	if(spifd == -1) {
-//            fprintf(stderr, "failed to open spi device");
+            fprintf(stderr, "failed to open spi device");
             exit(1);
 	}
     }
 
     virtual ~spilcd() {
-        close(spifd);
+        lgSpiClose(spifd);
     }
 
 
     void command(uint8_t c) {
-        digitalWrite (dc, LOW) ;	// Off
-        write(spifd, &c, 1);
+        lgGpioWrite(lgpio_handle, dc, 0);
+        lgSpiWrite(spifd, (char*)&c, 1);
     }
 
     void reset() {
-        digitalWrite (rst, LOW);
+        lgGpioWrite(lgpio_handle, rst, 0);
         usleep(200000);
-        digitalWrite (rst, HIGH);
+        lgGpioWrite(lgpio_handle, rst, 1);
     }
 
     virtual void refresh(int contrast, surface *s) = 0;
 
+    int lgpio_handle;
     int spifd, rst, dc;
 };
 
@@ -687,9 +708,9 @@ public:
 };
 #endif
 
-#ifdef WIRINGPI
-#define DC 6 //25
-#define RST 5 //24
+#ifdef LGPIO
+#define DC 25
+#define RST 24
 
 #define LCDWIDTH 84
 #define LCDHEIGHT 48
@@ -744,7 +765,7 @@ public:
         command(PCD8544_SETYADDR);
         command(PCD8544_SETXADDR);
 
-        digitalWrite (dc, HIGH) ;
+        lgGpioWrite(lgpio_handle, dc, 1);
 
         int size = 84*48/8;
 
@@ -766,17 +787,17 @@ public:
             int len = 64;
             if (size - pos < 64)
                 len = size - pos;
-            write(spifd, binary + pos, len);
+            lgSpiWrite(spifd, binary + pos, len);
         }
     }
 };
 
 // JLX12864G-086
-#define LCD_C LOW
-#define LCD_D HIGH
+#define LCD_C 0
+#define LCD_D 1
 
-const int rstPIN  = 5;    // RST
-const int  rsPIN  = 6;    // RS
+const int rstPIN  = RST;    // RST
+const int  rsPIN  = DC;    // RS
 
 class JLX12864G : public spilcd
 {
@@ -809,10 +830,9 @@ public:
             0xaf // Open the display
         };
 
-        digitalWrite (dc, LOW) ;	// Off
-        write(spifd, cmd, sizeof cmd);
-        digitalWrite (dc, HIGH) ;	// Off
-
+        lgGpioWrite(lgpio_handle, dc, 0);
+        lgSpiWrite(spifd, (char*)cmd, sizeof cmd);
+        lgGpioWrite(lgpio_handle, dc, 1);
 
         unsigned char binary[128*64];//width*height/8];
         for(int col = 0; col<8; col++)
@@ -831,19 +851,21 @@ public:
         {
             unsigned char c1 = 0xb0+i;
             unsigned char cmd[] = {c1, 0x10};
-            digitalWrite (dc, LOW) ;	// Off
-            write(spifd, cmd, sizeof cmd);
-            digitalWrite (dc, HIGH) ;	// Off
+            lgGpioWrite(lgpio_handle, dc, 0);
+
+            lgSpiWrite(spifd, (char*)cmd, sizeof cmd);
+            lgGpioWrite(lgpio_handle, dc, 1);
+
 #if 0
             unsigned char *address = binary + i*128; //pointer
             for (unsigned int pos=0; pos<128; pos ++) {
                 char data[1] = {binary[i*128+pos]};
-                write(spifd, data, 1);
+                lgSpiWrite(spifd, data, 1);
                 address++;
             }
 #else
             unsigned char *address = binary + i*128; //pointer
-            write(spifd, address, 128);
+            lgSpiWrite(spifd, (char*)address, 128);
 #endif
         }
      }
@@ -851,8 +873,8 @@ public:
 
 // SSD1309
 
-#define LCD_C LOW
-#define LCD_D HIGH
+#define LCD_C 0
+#define LCD_D 1
 
 class SSD1309 : public spilcd
 {
@@ -899,10 +921,9 @@ public:
             
         };
 
-        digitalWrite (dc, LOW) ;	// Off
-        write(spifd, cmd, sizeof cmd);
-        digitalWrite (dc, HIGH) ;	// Off
-
+        lgGpioWrite(lgpio_handle, dc, 0);
+        lgSpiWrite(spifd, (char*)cmd, sizeof cmd);
+        lgGpioWrite(lgpio_handle, dc, 1);
 
         unsigned char binary[128*64];//width*height/8];
         for(int col = 0; col<8; col++)
@@ -921,19 +942,19 @@ public:
         {
             unsigned char c1 = 0xb0+i;
             unsigned char cmd[] = {c1, 0x10};
-            digitalWrite (dc, LOW) ;	// Off
-            write(spifd, cmd, sizeof cmd);
-            digitalWrite (dc, HIGH) ;	// Off
+            lgGpioWrite(lgpio_handle, dc, 0);
+            lgSpiWrite(spifd, (char*)cmd, sizeof cmd);
+            lgGpioWrite(lgpio_handle, dc, 1);
 #if 0
             unsigned char *address = binary + i*128; //pointer
             for (unsigned int pos=0; pos<128; pos ++) {
                 char data[1] = {binary[i*128+pos]};
-                write(spifd, data, 1);
+                lgSpiWrite(spifd, data, 1);
                 address++;
             }
 #else
             unsigned char *address = binary + i*128; //pointer
-            write(spifd, address, 128);
+            lgSpiWrite(spifd, (char*)address, 128);
 #endif
         }
      }
@@ -941,8 +962,8 @@ public:
 
 // DG240160 using ST7586S
 
-#define LCD_C LOW
-#define LCD_D HIGH
+#define LCD_C 0
+#define LCD_D 1
 
 // greyscale lcd is a bit strange, must set least significant bit for black, but not for grey
 // 111 = black, 100 = dark grey, 010 = light grey, 000 = white
@@ -963,17 +984,17 @@ public:
     }
     virtual ~DG240160() {}
     void cmd(uint8_t d) {
-	digitalWrite (dc, LOW) ;	// Off
-	write(spifd, &d, 1);
+        lgGpioWrite(lgpio_handle, dc, 0);
+	lgSpiWrite(spifd, (char*)&d, 1);
     }
     void data(uint8_t d) {
-	digitalWrite (dc, HIGH) ;	// Off
-	write(spifd, &d, 1);
+        lgGpioWrite(lgpio_handle, dc, 1);
+	lgSpiWrite(spifd, (char*)&d, 1);
     }
     void data4(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
-	digitalWrite (dc, HIGH) ;	// Off
+        lgGpioWrite(lgpio_handle, dc, 1);
 	uint8_t data[4] = {a, b, c, d};
-	write(spifd, &data, 4);
+	lgSpiWrite(spifd, (char*)&data, 4);
     }
 
     void init() {
@@ -1029,7 +1050,7 @@ public:
 	data4(0x00, 0x00, 0x00, 0x9F);
 
 	cmd(0x2C); // begin write data
-        digitalWrite (dc, HIGH) ;	// Off
+        lgGpioWrite(lgpio_handle, dc, 1);
     }
     
     void refresh(int contrast, surface *s) {
@@ -1063,7 +1084,7 @@ public:
 
 	// somehow spi transfer more than 4096 bytes fails, break into 4 transfers
 	for(int i=0; i<4; i++)
-	    write(spifd, binary+i*80*40, 80*40);
+	    lgSpiWrite(spifd, (char*)(binary+i*80*40), 80*40);
     }
 };
 
@@ -1097,14 +1118,14 @@ spiscreen::spiscreen(int driver)
 {
     driver = detect(driver);
     switch (driver) {
-#ifdef WIRINGPI
+#ifdef LGPIO
     case 0: disp = new PCD8544(); break;
     case 1: disp = new JLX12864G(); break;
     case 2: disp = new SSD1309(); break;
     case 3: disp = new DG240160(); break;
 #endif
     default:
-        fprintf(stderr, "invalid driver: %d", driver);
+        fprintf(stderr, "invalid driver: %d\n", driver);
         exit(1);
     }
     contrast = 60;

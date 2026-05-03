@@ -5,12 +5,13 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-from values import *
 from resolv import *
+from values import *
 
-class TackSensorLog(object):
+
+class TackSensorLog:
     def __init__(self, threshold):
         self.log = []
         self.time = time.monotonic()
@@ -53,17 +54,17 @@ class TackSensorLog(object):
 
 class TackState(EnumProperty):
     def __init__(self, name):
-        super(TackState, self).__init__(name, 'none', ['none', 'begin', 'waiting', 'tacking'])
+        super().__init__(name, 'none', ['none', 'begin', 'waiting', 'tacking'])
         def set_internal(self, value):
-            super(TackState, self).set(value)
+            super().set(value)
 
         def set(self, value):
             # only allow tack state to be set to begin or none
             if value in ['none', 'begin']:
                 set_internal(value)
-    
 
-class Tack(object):
+
+class Tack:
     def __init__(self, ap):
         self.ap = ap
 
@@ -106,7 +107,7 @@ class Tack(object):
             r = self.heel_log.update(self.ap.boatimu.heel)
 
         if r:
-            self.direction.update(r)                                   
+            self.direction.update(r)
 
     def process(self):
         ap = self.ap
@@ -139,17 +140,17 @@ class Tack(object):
             self.state.update('tacking')
             self.tack_angle = self.angle.value
 
-            
+
         # tacking, moving rudder continuously at tack rate
         if self.state.value == 'tacking':
             # command servo to turn boat at tack rate
             command = ap.heading_command.value
             heading = ap.boatimu.SensorValues['heading_lowpass'].value
             headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
-            headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value        
- 
+            headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
+
             if 'wind' in ap.mode.value:  #  Prevents jibing with wind instr?
-                winddir = resolv(ap.sensors.wind.direction.value)                
+                winddir = resolv(ap.sensors.wind.direction.value)
                 tack_heading = -command
                 if abs(command) < 90: # tacking
                     direction = 1 if command < 0 else -1
@@ -173,7 +174,7 @@ class Tack(object):
 
             # for now very simple filter based on turn rate for tacking
             command = (headingrate + headingraterate/2)/self.rate.value + direction
-            
+
             command = min(max(command, -1), 1) # do not cause integrator windup
             ap.servo.command.command(command)
             return True # ensure current pilot is overridden

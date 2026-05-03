@@ -69,7 +69,7 @@ void stretch(surface *dest, surface *src)
 int main(int argc, char *argv[])
 {
     surface *framebuffer;
-#ifdef WIRINGPI    
+#ifdef LGPIO    
     if(argc > 1) {
         if(!strcmp(argv[1], "spi"))
             framebuffer = new spiscreen(-1);

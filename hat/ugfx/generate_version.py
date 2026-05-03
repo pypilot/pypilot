@@ -1,35 +1,32 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2026 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 
-import sys, os
+import os
+import sys
+
 sys.path.insert(0,os.path.abspath(os.path.dirname(os.path.abspath(__file__))+'/../..'))
 import pypilot.version
-
-from PIL import Image
-
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
-
+from PIL import Image, ImageDraw, ImageFont
 
 ifont = ImageFont.truetype('../font.ttf', 14)
 version = pypilot.version.strversion
 print('using version', version)
 (left, top, right, bottom) = ifont.getbbox(version)
+
 size = (right - left, bottom - top)
 image = Image.new('RGBA', size)
 draw = ImageDraw.Draw(image)
-draw.text((0, 0), version, font=ifont)
+draw.text((0, -top), version, font=ifont)
 
 data = list(image.getdata())
-print('len', len(data), size)
+print('len', len(data), size, top, bottom)
 
 f = open('pypilot_version.h', 'w')
 f.write('static unsigned int width = %d;\n' % size[0])
@@ -46,7 +43,7 @@ f.write('static char header_data[] = {')
 for i in range(len(data)):
     d = data[i]
     if d[3] < 128:
-        f.write('-1,')
+        f.write('255,')
     else:
         f.write('0,')
 

@@ -5,19 +5,23 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import time, socket, multiprocessing, os
-from nonblockingpipe import NonBlockingPipe
+import multiprocessing
+import os
+import socket
+import time
+
 import pyjson
 from client import pypilotClient
-from values import Property, RangeProperty
+from nonblockingpipe import NonBlockingPipe
 from sensors import source_priority
+from values import Property, RangeProperty
 
 signalk_priority = source_priority['signalk']
 radians = 3.141592653589793/180
 meters_s = 0.5144456333854638
-        
+
 # provide bi-directional translation of these keys
 signalk_table = {'wind': {('environment.wind.speedApparent', meters_s): 'speed',
                           ('environment.wind.angleApparent', radians): 'direction'},
@@ -41,13 +45,13 @@ def debug(*args):
     #print(*args)
     pass
 
-class ZeroConfProcess(multiprocessing.Process): 
+class ZeroConfProcess(multiprocessing.Process):
     def __init__(self, signalk):
         self.name_type = False
         self.pipe = NonBlockingPipe('zeroconf', True)
-        super(ZeroConfProcess, self).__init__(target=self.process, daemon=True)
+        super().__init__(target=self.process, daemon=True)
         self.start()
-            
+
     def remove_service(self, zc, type, name):
         print('signalk zeroconf ' + _('service removed'), name, type)
         if self.name_type == (name, type):
@@ -72,21 +76,21 @@ class ZeroConfProcess(multiprocessing.Process):
         if 'swname' in properties and properties['swname'] == 'signalk-server':
             try:
                 host_port = socket.inet_ntoa(info.addresses[0]) + ':' + str(info.port)
-            except Exception as e:
+            except Exception:
                 host_port = socket.inet_ntoa(info.address) + ':' + str(info.port)
             self.name_type = name, type
             self.pipe[1].send(host_port)
 
 
     def process(self):
-        warned = False        
+        warned = False
         while True:
             try:
                 import zeroconf
                 if warned:
                     print('signalk:' + _('succeeded') + ' import zeroconf')
                 break
-            except Exception as e:
+            except Exception:
                 if not warned:
                     print('signalk: ' + _('failed to') + ' import zeroconf, ' + _('autodetection not possible'))
                     print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
@@ -115,7 +119,7 @@ class ZeroConfProcess(multiprocessing.Process):
             last = p
 
 
-class signalk(object):
+class signalk:
     def __init__(self, sensors=False):
         self.sensors = sensors
         if not sensors: # only signalk process for testing
@@ -132,7 +136,7 @@ class signalk(object):
 
         self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('signalk pipe', self.multiprocessing)
         self.zero_conf = ZeroConfProcess(self)
-        
+
         if self.multiprocessing:
             import multiprocessing
             self.process = multiprocessing.Process(target=self.process, daemon=True)
@@ -147,7 +151,7 @@ class signalk(object):
             self.token = f.read()
             print('signalk' + _('read token'), self.token)
             f.close()
-        except Exception as e:
+        except Exception:
             print('signalk ' + _('failed to read token'), token_path)
             self.invalid_token()
 
@@ -165,6 +169,7 @@ class signalk(object):
                 if type(pypilot_path) == type({}): # single path translates to multiple pypilot
                     self.last_values_keys[signalk_path] = {}
 
+        self.enabled = self.client.register(BooleanProperty('signalk.enabled', True, persistent=True))
         self.period = self.client.register(RangeProperty('signalk.period', .5, .1, 2, persistent=True))
         self.last_period = False
         self.uid = self.client.register(Property('signalk.uid', 'pypilot', persistent=True))
@@ -176,7 +181,7 @@ class signalk(object):
         self.last_manual_signalk_host = False
 
         self.initialized = True
-        
+
 
     def probe_signalk(self):
         debug('signalk ' + _('probe') + '...', self.signalk_host_port)
@@ -202,7 +207,7 @@ class signalk(object):
     def request_access(self):
         import requests
         if self.signalk_access_url:
-            dt = time.monotonic() - self.last_access_request_time            
+            dt = time.monotonic() - self.last_access_request_time
             if dt < 10:
                 return
             self.last_access_request_time = time.monotonic()
@@ -220,7 +225,7 @@ class signalk(object):
                                 f = open(token_path, 'w')
                                 f.write(self.token)
                                 f.close()
-                            except Exception as e:
+                            except Exception:
                                 print('signalk ' + _('failed to store token'), token_path)
                     else:
                         self.uid.set('pypilot') # re-enumerate a new ID
@@ -243,11 +248,11 @@ class signalk(object):
                     return ''
                 import random
                 return str(int(random.random()*10)) + random_number_string(n-1)
-            
+
             if self.uid.value == 'pypilot':
                 self.uid.set('pypilot-' + random_number_string(11))
             r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests', data={"clientId":self.uid.value, "description": "pypilot"})
-            
+
             contents = pyjson.loads(r.content)
             print('signalk post', contents)
             if contents['statusCode'] == 202 or contents['statusCode'] == 400:
@@ -267,12 +272,12 @@ class signalk(object):
         self.token = False
         try:
             os.unlink(token_path)
-        except:
+        except OSError:
             pass # ignore
-        
+
     def connect_signalk(self):
         try:
-            from websocket import create_connection, WebSocketBadStatusException
+            from websocket import WebSocketBadStatusException, create_connection
         except Exception as e:
             print('signalk ' + _('cannot create connection:'), e)
             print(_('try') + ' pip3 install websocket-client ' + _('or') + ' apt install python3-websocket')
@@ -301,7 +306,7 @@ class signalk(object):
             print('signalk ' + _('failed to connect'), e)
             self.signalk_ws_url = False
             time.sleep(5)
-            
+
     def process(self):
         time.sleep(6) # let other stuff load
         print('signalk process', os.getpid())
@@ -320,7 +325,7 @@ class signalk(object):
 
         for sensor in signalk_table:
             self.client.watch(sensor+'.source')
-        
+
     def poll(self, timeout=0):
         if self.process:
             msg = self.sensors_pipe_out.recv()
@@ -335,6 +340,9 @@ class signalk(object):
             self.setup()
             return
 
+        if not self.enabled.value:
+            return
+          
         manual_host = self.signalk_host.value.strip()
         if manual_host:
             if manual_host != self.signalk_host_port:
@@ -386,7 +394,7 @@ class signalk(object):
         if self.last_period != self.period.value: # period changed
             self.disconnect_signalk()
             return
-        
+
         # at this point we have a connection
         # read all messages from pypilot
         while True:
@@ -414,12 +422,12 @@ class signalk(object):
                 self.last_values[name] = value
 
         t3 = time.monotonic()
-                
+
         t4 = time.monotonic()
         while True:
             try:
                 msg = self.ws.recv()
-            except Exception as e:
+            except Exception:
                 break
 
             if not msg:
@@ -444,16 +452,16 @@ class signalk(object):
                 data = {}
                 for signalk_path_conversion, pypilot_path in sensor_table.items():
                     signalk_path, signalk_conversion = signalk_path_conversion
-                    if signalk_path in values and not values[signalk_path] is None:
+                    if signalk_path in values and values[signalk_path] is not None:
                         try:
-                            if not 'timestamp'in data and signalk_path in self.signalk_last_msg_time:
+                            if 'timestamp' not in data and signalk_path in self.signalk_last_msg_time:
                                 ts = time.strptime(self.signalk_last_msg_time[signalk_path], '%Y-%m-%dT%H:%M:%S.%fZ')
                                 data['timestamp'] = time.mktime(ts)
 
                             value = values[signalk_path]
                             if type(pypilot_path) == dict: # single path translates to multiple pypilot
                                 for signalk_key, pypilot_key in pypilot_path.items():
-                                    if not value[signalk_key] is None:
+                                    if value[signalk_key] is not None:
                                         data[pypilot_key] = value[signalk_key] / signalk_conversion
                             else:
                                 data[pypilot_path] = value / signalk_conversion
@@ -467,7 +475,7 @@ class signalk(object):
                         signalk_path, signalk_conversion = signalk_path_conversion
                         if signalk_path in values:
                             del values[signalk_path]
-                    # all needed sensor data is found 
+                    # all needed sensor data is found
                     data['device'] = source + 'signalk'
                     if self.sensors_pipe:
                         self.sensors_pipe.send([sensor, data])
@@ -480,7 +488,7 @@ class signalk(object):
         # see if we can produce any signalk output from the data we have read
         updates = []
         for sensor in signalk_table:
-            if sensor != 'imu' and (not sensor in self.last_sources or\
+            if sensor != 'imu' and (sensor not in self.last_sources or\
                                     source_priority[self.last_sources[sensor]]>=signalk_priority):
                 #debug('signalk skip send from priority', sensor)
                 continue
@@ -492,7 +500,7 @@ class signalk(object):
                 signalk_path, signalk_conversion = signalk_path_conversion
                 if type(pypilot_path) == dict: # single path translates to multiple pypilot
                     keys = self.last_values_keys[signalk_path]
-                    # store keys we need for this signalk path in dictionary                    
+                    # store keys we need for this signalk path in dictionary
                     for signalk_key, pypilot_key in pypilot_path.items():
                         key = sensork+'.'+pypilot_key
                         if sensor == 'gps':
@@ -507,7 +515,7 @@ class signalk(object):
                     v = {}
                     for signalk_key, pypilot_key in pypilot_path.items():
                         key = sensork+'.'+pypilot_key
-                        if not key in keys:
+                        if key not in keys:
                             break
                         v[signalk_key] = keys[key]*signalk_conversion
                     else: # we have all the keys required
@@ -547,11 +555,11 @@ class signalk(object):
     def receive_signalk(self, msg):
         try:
             data = pyjson.loads(msg)
-        except:
+        except ValueError:
             if msg:
                 print('signalk ' + _('failed to parse msg:'), msg)
             return
-        
+
         if 'updates' in data:
             updates = data['updates']
             for update in updates:
@@ -562,11 +570,11 @@ class signalk(object):
                     if 'talker' in update['source']:
                         source = update['source']['talker']
                     elif 'label' in update['source']:
-                        source = update['source']['label']                            
+                        source = update['source']['label']
 
                 if 'timestamp' in update:
                     timestamp = update['timestamp']
-                if not source in self.signalk_values:
+                if source not in self.signalk_values:
                     self.signalk_values[source] = {}
                 if 'values' in update:
                     values = update['values']
@@ -586,7 +594,7 @@ class signalk(object):
                     else:
                         debug('signalk skip initial message', source, path, timestamp)
                     self.signalk_last_msg_time[path] = timestamp
-                    
+
     def update_sensor_source(self, sensor, source):
         priority = source_priority[source]
         watch = priority < signalk_priority # translate from pypilot -> signalk
@@ -626,7 +634,7 @@ class signalk(object):
                 print('signalk failed to send', e)
                 self.disconnect_signalk()
                 return
-        
+
         signalk_sensor = signalk_table[sensor]
         if subscribe: # translate from signalk -> pypilot
             subscriptions = []
@@ -649,7 +657,7 @@ class signalk(object):
                     subscriptions.append(subscription)
             self.subscriptions = subscriptions
             self.signalk_last_msg_time = {}
-            
+
         subscription = {'context': 'vessels.self'}
         subscription['subscribe'] = subscriptions
         debug('signalk subscribe', subscription)
@@ -663,6 +671,6 @@ def main():
     sk = signalk()
     while True:
         sk.poll(1)
-            
+
 if __name__ == '__main__':
     main()

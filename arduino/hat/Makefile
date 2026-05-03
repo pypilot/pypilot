@@ -89,7 +89,7 @@ resetpin:
 prog:
 	make setfuses
 	make upload
-	sudo make resetpin
+	#sudo make resetpin
 
 serial:
 	stty -F $(DEVICE) ignbrk -icrnl -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke min 1 time 5 38400

@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2020 Sean D'Epagnier
+#   Copyright (C) 2026 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import select, time, os
+import os
+import select
+import time
+
 import pyjson
 
-class NonBlockingPipeEnd(object):
+
+class NonBlockingPipeEnd:
     def __init__(self, pipe, name, recvfailok, sendfailok):
         self.pipe = pipe
         self.pollin = select.poll()
@@ -38,7 +42,7 @@ class NonBlockingPipeEnd(object):
                 return self.pipe.recv()
             if not self.recvfailok:
                 print(_('error pipe block on recv!'), self.name)
-        except:
+        except Exception:
             print(_('failed to recv nonblocking pipe!'), self.name)
         return False
 
@@ -50,7 +54,7 @@ class NonBlockingPipeEnd(object):
 
     def write(self, value, udp=False):
         self.send(value)
-    
+
     def send(self, value, block=False):
         t0=time.time()
         if block or self.pollout.poll(0):
@@ -72,14 +76,16 @@ class NonBlockingPipeEnd(object):
 
 
 from bufferedsocket import LineBufferedNonBlockingSocket
+
+
 class SocketNonBlockingPipeEnd(LineBufferedNonBlockingSocket):
     def __init__(self, socket, name, recvfailok, sendfailok):
         self.name = name
-        super(SocketNonBlockingPipeEnd, self).__init__(socket, name)
+        super().__init__(socket, name)
 
     def recv(self, timeout=0):
         self.recvdata()
-        line = super(SocketNonBlockingPipeEnd, self).readline()
+        line = super().readline()
         if not line:
             return
         try:
@@ -105,10 +111,10 @@ class SocketNonBlockingPipeEnd(LineBufferedNonBlockingSocket):
 
 try:
     from pypilot.linebuffer import linebuffer
-except:
-    import failedimports
+except ImportError:
+    pass
 
-class PipeNonBlockingPipeEnd(object):
+class PipeNonBlockingPipeEnd:
     def __init__(self, r, w, name, recvfailok, sendfailok):
         self.name = name
         self.r, self.w = r, w
@@ -123,17 +129,17 @@ class PipeNonBlockingPipeEnd(object):
 
     def fileno(self):
         return self.r
-        
+
     def close(self):
         os.close(self.r)
         os.close(self.w)
-        
+
     def recvdata(self):
         return self.b.recv()
-        
+
     def readline(self):
         return self.b.line()
-        
+
     def recv(self, timeout=0):
         self.recvdata()
         line = self.b.line()
@@ -185,7 +191,7 @@ class PipeNonBlockingPipeEnd(object):
             return False
 
 # non multiprocessed pipe emulates functions in a simple queue
-class NoMPLineBufferedPipeEnd(object):
+class NoMPLineBufferedPipeEnd:
     def __init__(self, name):
         self.name = name
         self.lines = []
@@ -201,7 +207,7 @@ class NoMPLineBufferedPipeEnd(object):
 
     def write(self, data, udp=False):
         self.send(data)
-    
+
     def recv(self, timeout=0):
         return self.readline()
 
@@ -217,7 +223,7 @@ class NoMPLineBufferedPipeEnd(object):
             return False
         self.remote.lines.append(value)
         return True
-        
+
 
 def NonBlockingPipe(name, use_multiprocessing, recvfailok=True, sendfailok=False):
     if use_multiprocessing:
