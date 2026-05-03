@@ -126,6 +126,29 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             color = wx.RED
         self.tbAP.SetForegroundColour(color)
 
+    def onPaintGauge(self, event):
+        gauge = event.GetEventObject()
+
+        s = gauge.GetSize()
+        
+        dc = wx.PaintDC( gauge )
+        dc.SetPen(wx.Pen(wx.TRANSPARENT_PEN))
+
+        av = abs(gauge.value)
+
+        if av < 1.0:
+            if gauge.value > 0.001:
+                dc.SetBrush(wx.Brush(wx.RED))
+            elif gauge.value < -0.001:
+                dc.SetBrush(wx.Brush(wx.GREEN))
+            else:
+                dc.SetBrush(wx.Brush(wx.LIGHT_GREY))
+        else:
+            dc.SetBrush(wx.Brush(wx.BLUE))
+
+        h = int(s.y*av)
+        dc.DrawRectangle(0, s.y-h, s.x, h)
+
     def enumerate_controls(self, value_list):
         self.tbAP.SetValue(False)
         self.set_mode_color()
@@ -159,8 +182,12 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 hsizer.AddGrowableRow( 0 )
                 hsizer.SetFlexibleDirection( wx.VERTICAL )
         
-                gauge = wx.Gauge( self.swGains, wx.ID_ANY, 1000, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_VERTICAL )
+                gauge = wx.Window( self.swGains )
+                gauge.value = 0
                 hsizer.Add( gauge, 0, wx.ALL|wx.EXPAND, 5 )
+
+                gauge.Bind(wx.EVT_PAINT, self.onPaintGauge)
+                
                 slider = wx.Slider( self.swGains, wx.ID_ANY, 0, 0, 1000, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_VERTICAL| wx.SL_INVERSE)
                 hsizer.Add( slider, 0, wx.ALL|wx.EXPAND, 5 )
         
@@ -192,25 +219,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.enumerate_controls(value_list)
                 self.enumerated = True
             return
-        
-        command = self.sCommand.GetValue()
-        if command != 0:
-            if self.tbAP.GetValue():
-                self.heading_command += self.apply_command(command)
-                self.client.set('ap.heading_command', self.heading_command)
-                self.sCommand.SetValue(0)
-            else:
-                
-                if True:
-                    if command > 0:
-                        command -= 1
-                    elif command < 0:
-                        command += 1
-                else:
-                    if abs(command) < 3:
-                        command=0
-                self.sCommand.SetValue(command)
-                self.servo_command(-command / 100.0)
 
         for gain_name in self.gains:
             gain = self.gains[gain_name]
@@ -237,24 +245,12 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                     gain['sliderval'] = (value-gain['min'])*1000/(gain['max'] - gain['min'])
                     found = True
                 elif name == gain_name + 'gain':
-                    v = abs(value) * 1000.0
-                    if v < gain['gauge'].GetRange():
-                        if gain['gauge'].GetValue() != int(v):
-                            gain['gauge'].SetValue(int(v))
-                            if value > 0:
-                                gain['gauge'].SetBackgroundColour(wx.RED)
-                            elif value < 0:
-                                gain['gauge'].SetBackgroundColour(wx.GREEN)
-                            else:
-                                gain['gauge'].SetBackgroundColour(wx.LIGHT_GREY)
-                    elif gain['gauge'].GetValue():
-                        gain['gauge'].SetValue(0)
-                        gain['gauge'].SetBackgroundColour(wx.BLUE)
-
+                    gain['gauge'].value = value
+                    gain['gauge'].Refresh()
                     found = True
 
             if found:
-                pass
+                continue
 
             if self.tackdialog.receive(name, value):
                 pass
@@ -311,8 +307,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                     n += 1
             elif name == 'ap.heading_command':
                 self.stHeadingCommand.SetLabel('%.1f' % value)
-                if command == 0:
-                    self.heading_command = value
+                self.heading_command = value
             elif name == 'ap.pilot':
                 self.cPilot.SetStringSelection(value)
                 self.enumerate_gains()
@@ -357,30 +352,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.tackdialog.Show(True)
         self.tackdialog.Move(int(s[0]/2), int(s[1]/2))
 
-    def onPaintControlSlider( self, event ):
-        return
-        # gtk3 is a bit broken
-        if 'gtk3' in wx.version():
-            return
-        
-        dc = wx.PaintDC( self.sCommand )        
-        s = self.sCommand.GetSize()
-
-        #dc.SetTextForeground(wx.BLACK)
-        dc.SetPen(wx.Pen(wx.BLACK))
-        dc.SetBrush(wx.TRANSPARENT_BRUSH)
-        y = 10
-        x = 0
-        for l in self.sliderlabels:
-            t = str(abs(l))
-            tx = x
-            if l > 0:
-                tx -= dc.GetTextExtent(t)[0]
-
-            dc.DrawText(t, tx, y)
-            dc.DrawLine(x, 0, x, s.y)
-            x += s.x / (len(self.sliderlabels) - 1)
-
     def enumerate_gains(self):
         while not self.fgGains.IsEmpty():
             self.fgGains.Detach(0)
@@ -397,21 +368,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.Fit()
         self.SetSize(s)
                 
-    def apply_command(self, command):
-        r = self.sCommand.GetMax() - self.sCommand.GetMin() + 1.0
-        p = (len(self.sliderlabels) - 1) * (command - self.sCommand.GetMin()) / r
-        l0 = self.sliderlabels[int(p)]
-        l1 = self.sliderlabels[int(p)+1]
-        v = (p - int(p)) * (l1 - l0) + l0
-        #print('a', command, r, p, l0, l1, v)
-        return v        
-    
-    def onCommand( self, event ):
-        if wx.GetMouseState().LeftIsDown():
-            x = self.sCommand.ScreenToClient(wx.GetMousePosition()).x
-            val = self.sCommand.GetMin() + (self.sCommand.GetMax() - self.sCommand.GetMin()) * x / self.sCommand.GetSize().x
-            self.sCommand.SetValue(val)
-
     def onCommandClick( self, event ):
         if not self.apenabled:
             return

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ###########################################################################
-## Python code generated with wxFormBuilder (version 3.9.0 Sep 12 2020)
+## Python code generated with wxFormBuilder (version 3.10.1-354-g9e568c3f)
 ## http://www.wxformbuilder.org/
 ##
 ## PLEASE DO *NOT* EDIT THIS FILE!
@@ -195,9 +195,6 @@ class AutopilotControlBase ( wx.Frame ):
 
 		fgSizer39.Add( fgSizer40, 1, wx.EXPAND, 5 )
 
-		self.sCommand = wx.Slider( self, wx.ID_ANY, 0, -250, 250, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_AUTOTICKS|wx.SL_HORIZONTAL )
-		fgSizer39.Add( self.sCommand, 0, wx.ALL|wx.EXPAND, 5 )
-
 
 		fgSizer5.Add( fgSizer39, 1, wx.EXPAND, 5 )
 
@@ -259,8 +256,6 @@ class AutopilotControlBase ( wx.Frame ):
 		self.bStarboard10.Bind( wx.EVT_BUTTON, self.onCommandClick )
 		self.bStarboard10.Bind( wx.EVT_LEFT_DOWN, self.onCommandMouseDown )
 		self.bStarboard10.Bind( wx.EVT_LEFT_UP, self.onCommandMouseUp )
-		self.sCommand.Bind( wx.EVT_SCROLL, self.onCommand )
-		self.sCommand.Bind( wx.EVT_UPDATE_UI, self.onPaintControlSlider )
 		self.bScope.Bind( wx.EVT_BUTTON, self.onScope )
 		self.bClient.Bind( wx.EVT_BUTTON, self.onClient )
 		self.bCalibration.Bind( wx.EVT_BUTTON, self.onCalibration )
@@ -286,15 +281,13 @@ class AutopilotControlBase ( wx.Frame ):
 		self.bStarboard10.Unbind( wx.EVT_BUTTON, None )
 		self.bStarboard10.Unbind( wx.EVT_LEFT_DOWN, None )
 		self.bStarboard10.Unbind( wx.EVT_LEFT_UP, None )
-		self.sCommand.Unbind( wx.EVT_SCROLL, None )
-		self.sCommand.Unbind( wx.EVT_UPDATE_UI, None )
 		self.bScope.Unbind( wx.EVT_BUTTON, None )
 		self.bClient.Unbind( wx.EVT_BUTTON, None )
 		self.bCalibration.Unbind( wx.EVT_BUTTON, None )
 		self.bClose.Unbind( wx.EVT_BUTTON, None )
 
 
-	# Virtual event handlers, overide them in your derived class
+	# Virtual event handlers, override them in your derived class
 	def onAP( self, event ):
 		event.Skip()
 
@@ -330,12 +323,6 @@ class AutopilotControlBase ( wx.Frame ):
 
 
 
-
-	def onCommand( self, event ):
-		event.Skip()
-
-	def onPaintControlSlider( self, event ):
-		event.Skip()
 
 	def onScope( self, event ):
 		event.Skip()
@@ -432,7 +419,7 @@ class TackDialogBase ( wx.Dialog ):
 		self.m_button18.Unbind( wx.EVT_BUTTON, None )
 
 
-	# Virtual event handlers, overide them in your derived class
+	# Virtual event handlers, override them in your derived class
 	def OnTackPort( self, event ):
 		event.Skip()
 
@@ -1064,7 +1051,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 		self.sRudderRange.Unbind( wx.EVT_SPINCTRL, None )
 
 
-	# Virtual event handlers, overide them in your derived class
+	# Virtual event handlers, override them in your derived class
 	def PageChanged( self, event ):
 		event.Skip()
 
