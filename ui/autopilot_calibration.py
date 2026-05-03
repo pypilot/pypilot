@@ -5,19 +5,28 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import tempfile, time, math, sys, subprocess, json, socket, os
-import wx, wx.glcanvas
+import math
+import os
+import subprocess
+import sys
+import time
+
+import wx
+import wx.glcanvas
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import calibration_plot, boatplot, autopilot_control_ui
-from pypilot import quaternion
-import scope_wx
-from pypilot.client import pypilotClient
-from client_wx import round3
-
 from OpenGL.GL import *
 from OpenGL.GLU import *
+from pypilot import quaternion
+from pypilot.client import pypilotClient
+
+import autopilot_control_ui
+import boatplot
+import calibration_plot
+import scope_wx
+from client_wx import round3
 
 
 class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
@@ -26,7 +35,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     ID_HEADING_OFFSET = 1002
 
     def __init__(self):
-        super(CalibrationDialog, self).__init__(None)
+        super().__init__(None)
         self.host = ''
         if len(sys.argv) > 1:
             self.host = sys.argv[1]
@@ -40,7 +49,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
         self.boat_plot = boatplot.BoatPlot()
         self.boat_plot_glContext =  wx.glcanvas.GLContext(self.BoatPlot)
-        
+
         self.lastmouse = False
         self.alignment_count = 0
 
@@ -54,7 +63,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.have_rudder = False
 
         self.fusionQPose = [1, 0, 0, 0]
-        self.alignmentQ = [1, 0, 0, 0]        
+        self.alignmentQ = [1, 0, 0, 0]
         self.controltimes = {}
 
         self.client = pypilotClient(self.host)
@@ -74,7 +83,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             return [name + '.calibration', name + '.calibration.age',
                     (name, .2), name + '.calibration.sigmapoints', name + '.calibration.points',
                     name + '.calibration.locked', name + '.calibration.log']
-        
+
         watchlist = [
             ['imu.fusionQPose', ('imu.alignmentCounter', .2), ('imu.heading', .5),
              ('imu.alignmentQ', 1), ('imu.pitch', .5), ('imu.roll', .5), ('imu.heel', .5), ('imu.heading_offset', 1)],
@@ -82,7 +91,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             calwatch('compass') + ['imu.fusionQPose'],
             ['rudder.offset', 'rudder.scale', 'rudder.nonlinearity', ('rudder.angle', 1),
              'rudder.range', 'servo.flags'], list(self.settings)]
-            
+
         pageindex = self.m_notebook.GetSelection()
         watches = {}
         for i in range(len(watchlist)):
@@ -126,7 +135,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                     fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, name), 0, wx.ALL, 5)
                     fgSettings.Add(s, 0, wx.ALL | wx.EXPAND, 5)
                     fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, v['units']), 0, wx.ALL, 5)
-                    
+
                     sname = name
                     def onspin(event):
                         self.client.set(sname, s.GetValue())
@@ -140,7 +149,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         #fgSettings.Add( ( 0, 0), 1, wx.EXPAND, 5 )
         #b = wx.Button( self.m_pSettings, wx.ID_OK )
         #fgSettings.Add ( b, 1, wx.ALIGN_RIGHT, 5)
-            
+
     def receive_messages(self, event):
         self.client.poll()
 
@@ -154,7 +163,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             msg = self.client.receive_single()
         self.timer.Start(50)
         return
-            
+
         try:
             msg = self.client.receive_single()
             while msg:
@@ -166,16 +175,16 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def UpdateControl(self, control, update):
         t = time.monotonic()
-        if not control in self.controltimes or t - self.controltimes[control] > .5:
+        if control not in self.controltimes or t - self.controltimes[control] > .5:
             update()
             self.controltimes[control] = t
-                
+
     def UpdateLabel(self, label, value):
         self.UpdateControl(label, lambda : label.SetLabel(str(value)))
 
     def UpdatedSpin(self, dspin, value):
         self.UpdateControl(dspin, lambda : dspin.SetValue(int(value)))
-                
+
     def receive_message(self, msg):
         name, value = msg
 
@@ -184,14 +193,14 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
             if name == 'imu.alignmentQ':
                 self.stAlignment.SetLabel(str(value) + ' ' + str(round3(math.degrees(quaternion.angle(value)))))
                 self.alignmentQ = value
-            elif name == 'imu.fusionQPose':                
+            elif name == 'imu.fusionQPose':
                 if not value:
                     return # no imu!  show warning?
 
                 #lastaligned = quaternion.normalize(quaternion.multiply(self.fusionQPose, self.alignmentQ))
                 aligned = quaternion.normalize(quaternion.multiply(value, self.alignmentQ))
                 value = aligned
-                    
+
                 if self.cCoords.GetSelection() == 1:
                     #self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, lastedaligned)
                     self.boat_plot.Q = quaternion.multiply(self.boat_plot.Q, self.fusionQPose)
@@ -243,7 +252,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 self.cbCompassCalibrationLocked.SetValue(value)
             elif name == 'imu.compass.calibration.log':
                 self.tCompassCalibrationLog.WriteText(value+'\n')
-        
+
         #elif self.m_notebook.GetSelection() == 3:
             if name == 'rudder.angle':
                 self.UpdateLabel(self.stRudderAngle, str(round3(value)))
@@ -265,16 +274,16 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def servo_console(self, text):
         self.stServoCalibrationConsole.SetLabel(self.stServoCalibrationConsole.GetLabel() + text + '\n')
-    
+
     def PageChanged( self, event ):
         self.set_watches()
-            
+
     def onKeyPressAccel( self, event ):
         self.onKeyPress(event, self.compass_calibration_plot)
 
     def onKeyPressCompass( self, event ):
         self.onKeyPress(event, self.compass_calibration_plot)
-        
+
     def onKeyPress( self, event, plot ):
         scope_wx.wxglutkeypress(event, plot.special, plot.key)
 
@@ -283,7 +292,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onClearCompass( self, event ):
         self.compass_calibration_plot.points = []
-        
+
     def onAccelCalibrationLocked( self, event ):
         self.client.set('imu.accel.calibration.locked', self.cbAccelCalibrationLocked.GetValue())
 
@@ -296,11 +305,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     def onMouseEventsAccel( self, event ):
         self.AccelCalibration.SetFocus()
         self.onMouseEvents( event, self.AccelCalibration, self.accel_calibration_plot )
-        
+
     def onMouseEventsCompass( self, event ):
         self.CompassCalibration.SetFocus()
         self.onMouseEvents( event, self.CompassCalibration, self.compass_calibration_plot )
-        
+
     def onMouseEvents( self, event, canvas, plot ):
         pos = event.GetPosition()
         if event.LeftDown():
@@ -322,7 +331,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 plot.userscale *= .9
                 rotation += 1
             plot.userscale = min(max(plot.userscale, .001), 1)
-        
+
     def onPaintGLAccel( self, event ):
         self.onPaintGL( self.AccelCalibration, self.accel_calibration_plot, self.accel_calibration_glContext )
 
@@ -346,11 +355,11 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
     def onLevel( self, event ):
         self.client.set('imu.alignmentCounter', 100)
-        
+
     def onIMUHeadingOffset( self, event ):
         self.client.set('imu.heading_offset', self.sHeadingOffset.GetValue())
         self.heading_offset_timer.Stop()
-        
+
     def onKeyPressBoatPlot( self, event ):
         self.BoatPlot.SetFocus()
         k = '%c' % (event.GetKeyCode()&255)
@@ -382,7 +391,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                 self.boat_plot.Scale *= .9
                 rotation += 1
             self.BoatPlot.Refresh()
-            
+
     def onPaintGLBoatPlot( self, event ):
         wx.PaintDC( self.BoatPlot )
         self.BoatPlot.SetCurrent(self.boat_plot_glContext)
@@ -424,7 +433,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
 
 def main():
     app = wx.App()
-    
+
     CalibrationDialog().ShowModal()
 
 if __name__ == "__main__":

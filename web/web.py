@@ -4,9 +4,10 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import sys, os
+import sys
+import os
 from flask import Flask, render_template, session, request
 
 try:
@@ -18,10 +19,13 @@ from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
 
 from engineio.payload import Payload
+from flask import Flask, Markup, render_template, request
+from flask_socketio import Namespace, SocketIO, emit
+
 Payload.max_decode_packets = 500
 
-from pypilot.client import pypilotClient
 from pypilot import pyjson
+from pypilot.client import pypilotClient
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -31,11 +35,11 @@ config = {'port': 8000, 'language': 'default'}
 configfilename = os.getenv('HOME')+'/.pypilot/web.conf'
 
 try:
-    file = open(configfilename, 'r')
+    file = open(configfilename)
     config.update(pyjson.loads(file.readline()))
     file.close()
 
-except:
+except OSError:
     print('failed to read config', configfilename)
 
 def write_config():
@@ -43,7 +47,7 @@ def write_config():
         file = open(configfilename, 'w')
         file.write(pyjson.dumps(config) + '\n')
         file.close()
-    except:
+    except OSError:
         print('failed to write config')
 
 if len(sys.argv) > 1:
@@ -52,7 +56,7 @@ else:
     pypilot_web_port = config['port']
 
 print('using port', pypilot_web_port)
-        
+
 
 # Set this variable to 'threading', 'eventlet' or 'gevent' to test the
 # different async modes, or leave it set to None for the application to choose
@@ -64,7 +68,7 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins="*")
 
 try:
-    from flask_babel import Babel, gettext
+    from flask_babel import Babel
     babel = Babel(app)
 
     LANGUAGES = os.listdir(os.path.dirname(os.path.abspath(__file__)) + '/translations')
@@ -75,10 +79,10 @@ try:
             language = config['language']
         else:
             language = 'default'
-        if language == 'default' or not language in LANGUAGES:
+        if language == 'default' or language not in LANGUAGES:
             return request.accept_languages.best_match(LANGUAGES)
         return language
-    
+
 except Exception as e:
     print('failed to import flask_babel, translations not possible!!', e)
     def _(x): return x
@@ -93,7 +97,7 @@ def logs():
         logdirs = os.listdir('/var/log')
         for name in logdirs:
             if os.path.exists(os.path.join('/var/log', name, 'current')):
-                log_links+='<br><a href="log/'+name+'">'+name+'</a>';
+                log_links+='<br><a href="log/'+name+'">'+name+'</a>'
     except Exception as e:
         print('failed to enumerate log directory', e)
 
@@ -112,14 +116,14 @@ def log(name):
     r.mimetype = 'text/plain'
     return r
 
-    
+
 @app.route('/wifi', methods=['GET', 'POST'])
 def wifi():
     networking = '/home/tc/.pypilot/networking.txt'
     wifi = {'mode': 'Master', 'ssid': 'pypilot', 'key': '',
             'client_ssid': 'openplotter', 'client_key': '12345678', 'client_address': '10.10.10.60'}
     try:
-        f = open(networking, 'r')
+        f = open(networking)
         while True:
             l = f.readline()
             if not l:
@@ -127,10 +131,10 @@ def wifi():
             try:
                 name, value = l.split('=')
                 wifi[name] = value.rstrip()
-            except Exception as e:
+            except Exception:
                 print('failed to parse line in networking.txt', l)
         f.close()
-    except:
+    except OSError:
         pass
 
     if request.method == 'POST':
@@ -157,14 +161,14 @@ def wifi():
             if len(elements) == 5:
                 if elements[3] == "*":
                     continue
-                
+
                 from datetime import datetime
                 ts = int(elements[0])
                 if ts:
                     ts = datetime.utcfromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
                 else:
                     ts = 'Never'
-                    
+
                 leases += '<tr>'
                 leases += '<td>' + elements[2] + '</td>'
                 leases += '<td>' + elements[1] + '</td>'
@@ -175,7 +179,7 @@ def wifi():
     except Exception as e:
         print('lease fail', e)
         leases = ''
-    if not 'Master' in wifi['mode']:
+    if 'Master' not in wifi['mode']:
         leases = ''
 
     return render_template('wifi.html', async_mode=socketio.async_mode, wifi=Markup(wifi), leases=Markup(leases))
@@ -219,7 +223,7 @@ class pypilotWeb(Namespace):
             sys.stdout.flush() # update log
             sids = list(self.clients)
             for sid in sids:
-                if not sid in self.clients:
+                if sid not in self.clients:
                     print('client was removed')
                     continue # was removed
 

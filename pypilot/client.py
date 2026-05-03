@@ -5,14 +5,17 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
-
-import socket, select, sys, os, time
+# version 3 of the License, or (at your option) any later version.
 
 import heapq
+import os
+import select
+import socket
+import sys
+import time
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pyjson
-import gettext_loader
 from bufferedsocket import LineBufferedNonBlockingSocket
 from values import Value
 
@@ -21,16 +24,16 @@ udp_control_port = 43822
 
 try:
     IOError
-except:
+except NameError:
     class IOError(Exception):
         pass
 try:
     ourPOLLNVAL = select.POLLNVAL
-except:
+except AttributeError:
     print('select.POLLNVAL not defined, using 32')
     ourPOLLNVAL = 32
-    
-class Watch(object):
+
+class Watch:
     def __init__(self, value, period):
         self.value = value
         self.period = period
@@ -38,7 +41,7 @@ class Watch(object):
 
 class ClientWatch(Value):
     def __init__(self, values, client):
-        super(ClientWatch, self).__init__('watch', {})
+        super().__init__('watch', {})
         self.values = values
         self.client = client
 
@@ -59,7 +62,7 @@ class ClientWatch(Value):
 class ClientValues(Value):
     def __init__(self, client):
         self.value = False
-        super(ClientValues, self).__init__('values', False)
+        super().__init__('values', False)
         self.client = client
         self.values = {'values': self}
         self.values['watch'] = ClientWatch(self.values, client)
@@ -85,7 +88,7 @@ class ClientValues(Value):
                 if watch.time < t0:
                     watch.time = t0
                 watch.value.pwatch = True # can watch again once updated
-            
+
     def insert_watch(self, watch):
         heapq.heappush(self.pqwatches, (watch.time, time.monotonic(), watch))
 
@@ -105,10 +108,10 @@ class ClientValues(Value):
             if name != 'values' and name != 'watch':
                 self.wvalues[name] = self.values[name].info
 
-class pypilotClient(object):
+class pypilotClient:
     def __init__(self, host=False, use_udp=False):
         if sys.version_info[0] < 3:
-            import failedimports
+            pass
 
         self.values = ClientValues(self)
         self.watches = {}
@@ -121,7 +124,7 @@ class pypilotClient(object):
             self.server = host
             host='127.0.0.1'
 
-        if host and type(host) != type(''):
+        if host and type(host) != str:
             # host is the server object for direct pipe connection
             self.server = host
             self.connection = host.pipe()
@@ -138,7 +141,7 @@ class pypilotClient(object):
                     self.udp_socket.bind(('127.0.0.1', udp_control_port))
                     self.udp_socket.settimeout(0)
                     self.poller.register(self.udp_socket, select.POLLIN)
-            
+
                 except Exception as e:
                     print('failed to initialize udp socket, this may affect manual control performance', e)
                     self.udp_socket = False
@@ -154,7 +157,7 @@ class pypilotClient(object):
                 os.makedirs(configfilepath)
             if not os.path.isdir(configfilepath):
                 raise Exception(configfilepath + 'should be a directory')
-        except Exception as e:
+        except Exception:
             print('os not supported')
             configfilepath = '/.pypilot/'
         self.configfilename = configfilepath + 'pypilot_client.conf'
@@ -163,7 +166,7 @@ class pypilotClient(object):
             file = open(self.configfilename)
             config = pyjson.loads(file.readline())
             file.close()
-                
+
         except Exception as e:
             print(_('failed to read config file:'), self.configfilename, e)
             config = {}
@@ -175,20 +178,20 @@ class pypilotClient(object):
                 config['port'] = host[i+1:]
             else:
                 config['host'] = host
-        
-        if not 'host' in config:
+
+        if 'host' not in config:
             config['host'] = '127.0.0.1'
 
-        if not 'port' in config:
+        if 'port' not in config:
             config['port'] = DEFAULT_PORT
         self.config = config
-            
+
         self.connection = False # connect later
         self.connection_in_progress = False
         self.can_probe = not host
         self.probed = False
 
-            
+
 
     def onconnected(self):
         #print('connected to pypilot server', time.time())
@@ -221,8 +224,8 @@ class pypilotClient(object):
             return # do not search if host is specified by commandline, or again
 
         try:
-            from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
-        except Exception as e:
+            from zeroconf import ServiceBrowser, Zeroconf
+        except Exception:
             print(_('failed to') + ' import zeroconf, ' + _('autodetecting pypilot server not possible'))
             print(_('try') + ' pip3 install zeroconf' + _('or') + ' apt install python3-zeroconf')
             return
@@ -252,7 +255,7 @@ class pypilotClient(object):
                     zeroconf.close()
                 except Exception as e:
                     print('zeroconf service exception', e)
-                    
+
 
         self.can_probe = False
         zeroconf = Zeroconf()
@@ -262,7 +265,7 @@ class pypilotClient(object):
     def poll(self, timeout=0):
         if not self.connection:
             if self.connection_in_progress:
-                events = self.poller_in_progress.poll(0)                
+                events = self.poller_in_progress.poll(0)
                 if events:
                     fd, flag = events.pop()
                     if not (flag & select.POLLOUT):
@@ -278,7 +281,7 @@ class pypilotClient(object):
                 if not self.connect(False):
                     time.sleep(timeout)
                 return
-            
+
         # inform server of any watches we have changed
         if self.wwatches:
             self.connection.write('watch=' + pyjson.dumps(self.wwatches) + '\n')
@@ -309,7 +312,7 @@ class pypilotClient(object):
                 return # no data ready
 
             self.update_timeout()
-            
+
             fd, flag = events.pop()
 
             if fd == self.connection.fileno():
@@ -391,7 +394,7 @@ class pypilotClient(object):
             self.connection_in_progress = False
             self.poller_in_progress = select.poll()
             self.connection_in_progress = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            
+
             self.connection_in_progress.settimeout(1) # set to 0 ?
             self.connection_in_progress.connect(host_port)
         except OSError as e:
@@ -408,16 +411,16 @@ class pypilotClient(object):
 
             self.probe()
             #time.sleep(.25)
-                
+
             return False
-                
+
         #except Exception as e:
         #    if verbose:
         #        print('connect failed to %s:%d' % host_port, e)
 
         self.onconnected()
         return True
-    
+
     def receive_single(self):
         if self.received:
             ret = self.received[0]
@@ -436,18 +439,18 @@ class pypilotClient(object):
 
     def update_timeout(self):
         if self.timeout_time:
-            self.timeout_time = time.monotonic()            
+            self.timeout_time = time.monotonic()
 
     def send(self, msg):
         if self.connection:
             self.update_timeout()
             self.connection.write(msg)
-    
+
     def set(self, name, value):
         # quote strings
-        if type(value) == type('') or type(value) == type(u''):
+        if type(value) == str or type(value) == str:
             value = '"' + value + '"'
-        elif type(value) == type(True):
+        elif type(value) == bool:
             value = 'true' if value else 'false'
         self.send(name + '=' + str(value) + '\n')
 
@@ -518,9 +521,9 @@ def pypilotClientFromArgs(values, period=True, host=False):
             name, value = arg.split('=', 1)
             try: # make string if it won't load
                 pyjson.loads(value)
-            except:
+            except ValueError:
                 value = pyjson.dumps(value)
-                
+
             client.send(name + '=' + value + '\n')
             sets = True
             watches[name] = True
@@ -530,7 +533,7 @@ def pypilotClientFromArgs(values, period=True, host=False):
 
     if sets:
         client.poll(1)
-        
+
     for name in watches:
         client.watch(name, watches[name])
 
@@ -548,7 +551,7 @@ def nice_str(value):
             s += ', ' + nice_str(v)
         s += ']'
         return s
-    if type(value) == type(1.0):
+    if type(value) == float:
         return '%.11g' % value
     return str(value)
 
@@ -609,10 +612,10 @@ def main():
             if dt > 10:
                 print(_('timeout retrieving'), len(watches) - len(values), 'values')
                 for name in watches:
-                    if not name in values:
+                    if name not in values:
                         print(_('missing'), name)
                 break
-                    
+
             client.poll(.1)
             msgs = client.receive()
             for name in msgs:

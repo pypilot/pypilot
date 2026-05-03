@@ -5,19 +5,22 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 import time
+
 try:
     import micropython
+
     import ugfx
     #fontpath = '/_#!#_spiffs/ugfxfonts/'
     fontpath = ''
     #character = ugfx.surface(64, 84, 1)
     character = ugfx.surface(76, 149, 1)
 
-except:
+except ImportError:
     micropython = False
     import os
+
     from pypilot.hat.ugfx import ugfx
     fontpath = os.path.abspath(os.getenv('HOME') + '/.pypilot/ugfxfonts/') + '/'
 
@@ -30,7 +33,7 @@ global fonts
 fonts = {}
 
 def draw(surface, pos, text, size, bw, crop=False):
-    if not size in fonts:
+    if size not in fonts:
         fonts[size] = {}
 
     font = fonts[size]
@@ -64,18 +67,18 @@ def draw(surface, pos, text, size, bw, crop=False):
                     src = character
                 else:
                     if bw:
-                        filename += 'b';
+                        filename += 'b'
                     if crop:
-                        filename += 'c';
+                        filename += 'c'
                     src = ugfx.surface(filename.encode('utf-8'), surface.bypp)
-            
+
                 if src.bypp == surface.bypp:
                     break # loaded
-                
+
                 if not micropython:
                     try:
                         print('create font charater', c, size, src.bypp, surface.bypp)
-                    except:
+                    except Exception:
                         print('create font charater', size, src.bypp, surface.bypp)
                         print('unable to print unicode character to console')
                     src = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
@@ -88,14 +91,14 @@ def draw(surface, pos, text, size, bw, crop=False):
         if not src or src.bypp != surface.bypp:
             print('font dont have character', ord(c), size)
             continue
-                
+
         if pos:
             surface.blit(src, x, y)
 
         x += src.width
         width = max(width, x-origx)
         lineheight = max(lineheight, src.height)
-        
+
         if not micropython:
             font[c] = src
 
@@ -103,15 +106,12 @@ def draw(surface, pos, text, size, bw, crop=False):
 
 def create_character(fontpath, size, c, bypp, crop, bpp):
     try:
-        from PIL import Image
-        from PIL import ImageDraw
-        from PIL import ImageFont
-        from PIL import ImageChops
+        from PIL import Image, ImageChops, ImageDraw, ImageFont
 
     except Exception as e:
         print('failed to load PIL to create fonts, aborting...', e)
         return False
-        time.sleep(3) # wait 3 seconds to avoid respawning too quickly        
+        time.sleep(3) # wait 3 seconds to avoid respawning too quickly
         #return ugfx.surface(size, size, bypp, bytes([0]*(size*size*bypp)))
         exit(0)
 
@@ -141,8 +141,8 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
     image.putdata(data)
 
     return ugfx.surface(image.size[0], image.size[1], bypp, image.tobytes())
-    
+
 if __name__ == '__main__':
     print('ugfx test program')
-    screen = ugfx.screen('/dev/fb0'.encode('utf-8'))
-    draw(screen, (0, 100), "1234567890", 28, False);
+    screen = ugfx.screen(b'/dev/fb0')
+    draw(screen, (0, 100), "1234567890", 28, False)

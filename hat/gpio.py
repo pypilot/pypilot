@@ -5,15 +5,16 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import os, time, signal
+import os
+import time
 
 raspberrypi = False
 orangepi = False
 
 try:
-    with open('/sys/firmware/devicetree/base/model', 'r') as m:
+    with open('/sys/firmware/devicetree/base/model') as m:
         if 'raspberry pi' in m.read().lower():
             while True:
                 try:
@@ -36,7 +37,7 @@ class gpio(object):
 
         from pypilot.nonblockingpipe import NonBlockingPipe
         self.pipe = NonBlockingPipe(str(self), True)
-        
+
         if orangepi:
             self.pins = [11, 16, 13, 15, 12]
         else:
@@ -96,13 +97,13 @@ class gpio(object):
 
         while self.pipe[1].recv():
             pass
-        
+
         for p in self.pins:
             value = lgpio.gpio_read(self.gpio_handle, p)
             self.lastkeystate[p] = not value
 
         self.evalkeys()
-                
+
         events = self.events
         self.events = []
         return events
@@ -145,6 +146,6 @@ def main():
         if events:
             print('events', events)
         time.sleep(.1)
-            
+
 if __name__ == '__main__':
-    main() 
+    main()

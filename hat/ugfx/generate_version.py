@@ -5,19 +5,15 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 
-import sys, os
+import os
+import sys
+
 sys.path.insert(0,os.path.abspath(os.path.dirname(os.path.abspath(__file__))+'/../..'))
 import pypilot.version
-
-from PIL import Image
-
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
-
+from PIL import Image, ImageDraw, ImageFont
 
 ifont = ImageFont.truetype('../font.ttf', 14)
 version = pypilot.version.strversion

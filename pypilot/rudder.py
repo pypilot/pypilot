@@ -5,15 +5,17 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 import math
+
 from pypilot.values import *
 from sensors import Sensor
 
+
 class Rudder(Sensor):
     def __init__(self, client):
-        super(Rudder, self).__init__(client, 'rudder')
+        super().__init__(client, 'rudder')
 
         self.angle = self.register(SensorValue, 'angle')
         self.speed = self.register(SensorValue, 'speed')
@@ -32,7 +34,7 @@ class Rudder(Sensor):
         self.lastdevice = False
 
     # calculate minimum and maximum raw rudder value in the range -0.5 to 0.5
-    def update_minmax(self):        
+    def update_minmax(self):
         scale = self.scale.value
         offset = self.offset.value
         range = float(self.range.value)
@@ -55,7 +57,7 @@ class Rudder(Sensor):
             self.offset.update(offset)
 
         self.lastrange = self.range.value
-        
+
     def calibration(self, command):
         if command == 'reset':
             self.nonlinearity.update(0.0)
@@ -74,11 +76,11 @@ class Rudder(Sensor):
         else:
             print('unhandled rudder_calibration', command)
             return
-        
+
         # raw range 0 to 1
         self.calibration_raw[command] = {'raw': self.raw,
                                          'rudder': true_angle}
-        
+
         scale = self.scale.value
         offset = self.offset.value
         nonlinearity = self.nonlinearity.value
@@ -88,7 +90,7 @@ class Rudder(Sensor):
         for c in ['starboard range', 'centered', 'port range']:
             if c in self.calibration_raw:
                 p.append(self.calibration_raw[c])
-                
+
         l = len(p)
         # 1 point, estimate offset
         if l == 1:
@@ -104,7 +106,7 @@ class Rudder(Sensor):
                 scale = (rudder1 - rudder0)/(raw1 - raw0)
             offset = rudder1 - scale*raw1
             nonlinearity = 0
-            
+
         # 3 points, estimate nonlinearity scale and offset
         if l == 3:
             rudder0, rudder1, rudder2 = p[0]['rudder'], p[1]['rudder'], p[2]['rudder']
@@ -116,7 +118,7 @@ class Rudder(Sensor):
                 nonlinearity = (rudder1 - scale*raw1 - offset)/(raw0-raw1)/(raw2-raw1)
             else:
                 print(_('bad rudder calibration'), self.calibration_raw)
-            
+
         if abs(scale) <= .01:
             # bad update, trash an other reading
             print(_('bad servo rudder calibration'), scale, nonlinearity)
@@ -133,18 +135,18 @@ class Rudder(Sensor):
         self.update_minmax()
 
     def invalid(self):
-        return type(self.angle.value) == type(False)
+        return type(self.angle.value) == bool
 
     def poll(self):
         if self.lastrange is not None and self.lastrange != self.range.value:
             self.update_minmax()
-        
+
         if self.calibration_state.value == 'idle':
             return
 
         if self.calibration_state.value == 'auto gain':
             return
-            
+
             def idle():
                 self.autogain_state='idle'
                 self.calibration_state.set('idle')
@@ -156,7 +158,7 @@ class Rudder(Sensor):
                 self.autogain_movetime = t
 
             # must have rudder readings
-            if type(self.value) == type(False):
+            if type(self.value) == bool:
                 idle()
 
             rng = self.range.value
@@ -172,7 +174,7 @@ class Rudder(Sensor):
                 self.command.set(-1)
                 if abs(self.angle.value) < rng - 1:
                     self.autogain_state='rev'
-                                        
+
             if self.autogain_state=='rev':
                 self.command.set(-1)
                 if abs(self.value) >= rng:
@@ -206,7 +208,7 @@ class Rudder(Sensor):
             self.lastdevice = data['device']
             self.angle.update(False)
             return False
-        
+
         self.raw = data['angle']
         if math.isnan(self.raw):
             self.angle.update(False)
@@ -218,11 +220,11 @@ class Rudder(Sensor):
         offset = self.offset.value
         nonlinearity = self.nonlinearity.value
         raw = self.raw
-        
+
         angle = scale*raw + offset + nonlinearity*(self.minmax[0]-raw)*(self.minmax[1]-raw)
         angle = round(angle, 2) # 2 decimal for rudder angle is enough
         self.angle.set(angle)
-        
+
         #print(angle, raw, scale, offset, nonlinearity)
 
         t = time.monotonic()

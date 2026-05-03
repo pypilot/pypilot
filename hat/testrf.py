@@ -1,4 +1,6 @@
-import time, spidev
+import time
+
+import spidev
 
 spi = spidev.SpiDev()
 spi.open(0, 1)

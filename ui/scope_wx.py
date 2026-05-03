@@ -5,16 +5,20 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import wx, wx.glcanvas, sys, socket, time, os
+import os
+import sys
+
+import wx
+import wx.glcanvas
 from OpenGL.GL import *
 from pypilot.client import pypilotClientFromArgs
 
-import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from scope_ui import pypilotScopeBase
 from scope import pypilotPlot
+from scope_ui import pypilotScopeBase
+
 
 def wxglutkeypress(event, special, key):
     translation = { wx.WXK_UP : GLUT_KEY_UP, wx.WXK_DOWN : GLUT_KEY_DOWN, \
@@ -32,7 +36,7 @@ def wxglutkeypress(event, special, key):
 
 class pypilotScope(pypilotScopeBase):
     def __init__(self):
-        super(pypilotScope, self).__init__(None)
+        super().__init__(None)
 
         self.plot = pypilotPlot()
         self.glContext =  wx.glcanvas.GLContext(self.glArea)
@@ -69,14 +73,14 @@ class pypilotScope(pypilotScopeBase):
 
         if watches:
             print(_('values not found:'), watches)
-                
+
     def receive_messages(self, event):
         if not self.client:
             try:
                 host, port = self.host_port
                 self.client = pypilotClient(self.on_con, host, port, autoreconnect=False)
                 self.timer.Start(50)
-            except socket.error:
+            except OSError:
                 self.timer.Start(1000)
                 return
 
@@ -86,14 +90,14 @@ class pypilotScope(pypilotScopeBase):
                 self.enumerate_values(value_list)
                 self.plot.init(value_list)
             return
-            
+
         refresh = False
         self.client.poll()
 
         if not self.client.connection:
             self.plot.add_blank()
             return
-            
+
         while True:
             result = self.client.receive_single()
             if not result:
@@ -183,7 +187,7 @@ class pypilotScope(pypilotScopeBase):
     def onOffsetPlus( self, event ):
         self.plot.curtrace.offset -= self.plot.scale/10.0
         self.glArea.Refresh()
-            
+
     def onOffsetMinus( self, event ):
         self.plot.curtrace.offset += self.plot.scale/10.0
         self.glArea.Refresh()
@@ -202,8 +206,10 @@ class pypilotScope(pypilotScopeBase):
 
     def onClose( self, event ):
         self.Close()
-	
+
 from OpenGL.GLUT import *
+
+
 def main():
     glutInit(sys.argv)
     app = wx.App()

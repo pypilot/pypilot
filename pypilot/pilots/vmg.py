@@ -5,13 +5,14 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 from pilot import AutopilotPilot
+
 disabled = True
 
-from resolv import resolv
 from pypilot.values import *
+from resolv import resolv
 
 # the vmg pilot optimizes velocity made good over tacks or jibes
 # once it has sufficient data on both tacks, it can determine the optimal
@@ -22,7 +23,7 @@ from pypilot.values import *
 # as well as the current speed and direction
 
 
-class vmgTable(object):
+class vmgTable:
     def __init__(self):
         self.t = 0
         self.reset()
@@ -41,19 +42,19 @@ class vmgTable(object):
             self.reset()
 
         self.t = t
-        
+
     def add_measurement(self, heading, command, speed, track):
         t = time.monotonic()
         dt = t - self.current_command_time
         if dt < 60:
             return # ignore first minute on a new command
-        
+
         if command != self.command:
             self.table = {}
 
             diff = resolv(command - self.command)
 
-            if diff > 60: # 
+            if diff > 60: #
                 self.previous = self.command
                 self.previous_table = self.table
             self.current_command_time = t
@@ -66,8 +67,8 @@ class vmgTable(object):
         vn = speed*math.cos(rtrack)
         ve = speed*math.sin(rtrack)
         t = time.monotonic()
-        
-        if not headingi in self.table:
+
+        if headingi not in self.table:
             vnt, vet, count, tt = vn, ve, 1, t
         else:
             vnt, vet, count, tt = self.table[headingi]
@@ -95,7 +96,7 @@ class vmgTable(object):
 
 class VMGPilot(AutopilotPilot):
     def __init__(self, ap, name='vmg'):
-        super(VMGPilot, self).__init__(name, ap)
+        super().__init__(name, ap)
 
         # create extended pid filter
         self.PosGain('P', .003, .02)   # position (heading error)
@@ -120,15 +121,15 @@ class VMGPilot(AutopilotPilot):
         if ap.sensors.wind.source.value == 'none':
             ap.pilot.set('basic') # fall back to basic pilot if gps input fails
             return
-        
+
         # compute command
         headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
         headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
         #reactive_value = self.servocommand_queue.take(t - self.reactive_time.value)
         #self.reactive_value.update(reactive_value)
-    
+
         gain_values = {'P': ap.heading_error.value,
-                       'D': headingrate,      
+                       'D': headingrate,
                        'DD': headingraterate}
 
         command = self.Compute(gain_values)
@@ -136,7 +137,7 @@ class VMGPilot(AutopilotPilot):
         if not ap.enabled.value:
             return
         ap.servo.command.command(command)
-        
+
         # log into table
         accel = ap.boatimu.SensorValues['accel'].value
         noise = vector.dist(accel, self.accel)
@@ -151,6 +152,6 @@ class VMGPilot(AutopilotPilot):
             vmg.add_measurement(ap.heading.value, ap.heading_comand.value, ap.sensors.gps.filtered.speed.value, ap.sensors.gps.filtered.track.value)
 
         vmg.update_command(ap.heading_command)
-            
+
 
 pilot = VMGPilot
