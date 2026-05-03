@@ -73,7 +73,8 @@ class sys_dep(dep):
             import apt
             return apt.Cache()[self.name].is_installed
         except Exception as e:
-            print("Failed to detect package", self.name, i)
+            # report the caught exception so we don't reference an undefined variable
+            print("Failed to detect package", self.name, e)
         return False
 
     def install(self):
