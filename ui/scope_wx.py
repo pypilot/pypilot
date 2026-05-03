@@ -129,7 +129,8 @@ class pypilotScope(pypilotScopeBase):
         self.glArea.SwapBuffers()
 
     def onSizeGL( self, event ):
-        self.plot_reshape = (event.GetSize().x, event.GetSize().y)
+        scale_factor = self.GetContentScaleFactor()
+        self.plot_reshape = (int(event.GetSize().x*scale_factor), int(event.GetSize().y*scale_factor))
 
     def onMouseEvents( self, event ):
         self.glArea.SetFocus()
