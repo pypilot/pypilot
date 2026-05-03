@@ -5,11 +5,11 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import multiprocessing, select
-from pilot import AutopilotPilot, AutopilotGain
 from intellect import *
+from pilot import AutopilotGain, AutopilotPilot
+
 disabled = True
 
 def build_actions(current, period_count, count):
@@ -30,12 +30,11 @@ def build_actions(current, period_count, count):
 # use tensor flow lite for prediction to achieve realtime performance
 class TFliteModel(Model):
     def __init__(self):
-        super(TFliteModel, self).__init__()
+        super().__init__()
 
     def load(self, state):
         filename = model_filename(state)
         try:
-            import tflite_runtime.interpreter as tflite
             f = open(filename + '.conf')
             self.conf = json.loads(f.read())
             f.close()
@@ -55,8 +54,8 @@ class TFliteModel(Model):
             print('interpreter timings', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
             self.interpreter = interpreter
             self.history = History(self.conf, state)
-        except Exception as e:
-            self.start_time = time.monotonic()          
+        except Exception:
+            self.start_time = time.monotonic()
             print('failed to load model', filename)
             self.interpreter = False
 
@@ -70,7 +69,7 @@ class TFliteModel(Model):
         count = self.history.samples - self.present()
         rate = state['imu.rate']
         current = self.servo.command.value
-        period = .4;
+        period = .4
 
         # actions can be stored to optimize this
         actions = self.build_actions(current, period/rate, count)
@@ -81,9 +80,9 @@ class TFliteModel(Model):
         self.interpreter.set_tensor(input_details[0]['index'], np.array(inputs))
         self.interpreter.invoke()
         outputs = interpreter.get_tensor(output_details[0]['index'])
-            
+
         pnames = self.conf['predictions']
-  
+
         # find best prediction based on loss
         besti = False
         for i in len(inputs):
@@ -95,16 +94,16 @@ class TFliteModel(Model):
                     prediction[pnames[j]] = output[j][k], self.conf['accuracy'][j][k]
                 action = actions[i][j]
                 weight += loss(prediction, action)
-                
+
             if not besti or weight < best:
                 besti = i
                 best = weight
-            
+
         return actions[besti]
 
 class LearningPilot(AutopilotPilot):
     def __init__(self, ap):
-        super(LearningPilot, self).__init__('learning', ap)
+        super().__init__('learning', ap)
         self.P = self.register(AutopilotGain, 'P', .001, .0001, .01)
         self.D = self.register(AutopilotGain, 'D', .03, .01, .1)
         self.W = self.register(AutopilotGain, 'W', 0, 0, .1)
@@ -142,5 +141,5 @@ class LearningPilot(AutopilotPilot):
             actions = self.model.predict(self.loss)
             ap.servo.command.command(actions[0])
 
-        
+
 pilot = LearningPilot

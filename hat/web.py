@@ -5,11 +5,13 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-from flask import Flask, render_template, request, Markup
-from flask_socketio import SocketIO, Namespace, emit, disconnect
-import time, math, select, os
+import os
+import time
+
+from flask import Flask, Markup, render_template, request
+from flask_socketio import Namespace, SocketIO, emit
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -26,7 +28,7 @@ STANDBY, COMPASS, PLUS1, MINUS1, GPS, PLUS10, MINUS10, WIND = list(map(lambda x 
 AUTO, MENU, PLUS1, MINUS1, MODE, PLUS10, MINUS10            = list(map(lambda x : 2 ** x, range(7)))
 
 # definitions for multiple keys pressed
-TACK_PORT = MINUS10 | MINUS1 
+TACK_PORT = MINUS10 | MINUS1
 TACK_STARBOARD = PLUS10 | PLUS1
 NAV_MODE = COMPASS | GPS
 TRUE_WIND_MODE = GPS | WIND
@@ -57,7 +59,7 @@ def generate_codes(channel):
             'nav mode': (REMOTE, NAV_MODE),
             'true wind mode': (REMOTE, TRUE_WIND_MODE)}
     codes = {}
-    for name, pins in pins.items():        
+    for name, pins in pins.items():
         if type(pins) != type([]):
             pins = [pins]
         for (pinc, pind) in pins:
@@ -87,7 +89,7 @@ default_actions = \
     }
 
 try:
-    from flask_babel import Babel, gettext
+    from flask_babel import Babel
     babel = Babel(app)
 
     LANGUAGES = os.listdir(os.path.dirname(os.path.abspath(__file__)) + '/translations')
@@ -95,7 +97,7 @@ try:
     @babel.localeselector
     def get_locale():
         return request.accept_languages.best_match(LANGUAGES)
-    
+
 except Exception as e:
     print('failed to import flask_babel, translations not possible!!', e)
     def _(x): return x
@@ -133,7 +135,7 @@ class WebConfig(Namespace):
                 acts[ind] += Markup('<table border=0>')
                 col = 0
             i+=1
-    
+
             if col == 0:
                 acts[ind] += Markup('<tr>')
             acts[ind] += Markup('<td><button id="action_' + n + '">' +
@@ -153,10 +155,10 @@ class WebConfig(Namespace):
         cadc = config.get('adc_channels', [])
 
         for i in range(4):
-            adc_channels += Markup('<option value="' + str(i) + '"');
+            adc_channels += Markup('<option value="' + str(i) + '"')
             if i == len(cadc):
                 adc_channels += Markup(' selected')
-            adc_channels += Markup('>' + str(i) + '</option>');
+            adc_channels += Markup('>' + str(i) + '</option>')
         adc_channels += Markup('</select>')
         for i in range(3):
             #adc_channels += Markup('<br>')
@@ -171,7 +173,7 @@ class WebConfig(Namespace):
                 adc_channels += Markup('>' + option + '</option>')
             adc_channels += Markup('</select>')
             adc_channels += Markup('</div>')
-        
+
         ir = Markup('<input type="radio" id="pi_ir" name="ir"')
         if config['pi.ir']:
             ir += Markup(' checked')
@@ -180,7 +182,7 @@ class WebConfig(Namespace):
         if config['arduino.ir']:
             ir += Markup(' checked')
         ir += Markup(' /> arduino')
- 
+
         nmea =  Markup('<input type="checkbox" id="arduino_nmea_in"')
         if config['arduino.nmea.in']:
             nmea += Markup(' checked')
@@ -220,12 +222,12 @@ class WebConfig(Namespace):
                 actions[name] = []
 
             for name, keys in default_actions.items():
-                if not name in actions:
+                if name not in actions:
                     actions[name] = []
                 actions[name] += keys.copy()
 
             for name, keys in generate_codes(0).items():
-                if not name in actions:
+                if name not in actions:
                     actions[name] = []
                 actions[name] += keys.copy()
 
@@ -249,7 +251,7 @@ class WebConfig(Namespace):
 
         # add the last key to the action
         if command != 'none':
-            if not command in actions:
+            if command not in actions:
                 actions[command] = []
             actions[command].append(self.last_key)
         self.emit_keys()
@@ -273,7 +275,7 @@ class WebConfig(Namespace):
 
     def on_program_rf_codes(self, channel):
         print('program rf', channel)
-        if not channel in range(8):
+        if channel not in range(8):
             return
         actions = self.config['actions']
 
@@ -287,7 +289,7 @@ class WebConfig(Namespace):
 
         # add programming for this code
         for name, keys in rf_codes.items():
-            if not name in actions:
+            if name not in actions:
                 actions[name] = []
             actions[name] += keys
         self.emit_keys()
@@ -320,7 +322,7 @@ class WebConfig(Namespace):
                     break
 
                 if 'key' in msg:
-                    self.last_key = msg['key']                    
+                    self.last_key = msg['key']
                     last_key_time = time.monotonic()
 
                 if msg.get('action') == 'none': # if we have a known remote c
@@ -328,7 +330,7 @@ class WebConfig(Namespace):
                         channel = all_code_channels[self.last_key]
                         print('found rf codes', channel)
                         socketio.emit('found_rf_codes', channel)
-                    
+
                 for name in msg:
                     d = msg[name]
                     if name != 'profiles':
@@ -347,7 +349,7 @@ def web_process(pipe, config):
     os.chdir(os.path.abspath(path))
     socketio.on_namespace(WebConfig('', pipe, config))
     socketio.run(app, debug=False, host='0.0.0.0', port=web_port)
-    
+
 if __name__ == '__main__':
     config = {'host': 'localhost', 'actions': {},
               'pi.ir': True, 'arduino.ir': False,

@@ -66,13 +66,12 @@ import asyncio
 import sys
 import threading
 
-
-from evdev import categorize, ecodes, InputDevice
+from evdev import InputDevice, categorize, ecodes
+from evdev.events import KeyEvent
 
 from .device_selection import select_device, select_device_interactive
-from .pypilot_state import Action, pypilot_comms_loop, queue_action
-from evdev.events import KeyEvent
 from .log_config import logger
+from .pypilot_state import Action, pypilot_comms_loop, queue_action
 
 KEY_ACTION_MAP = {
     ecodes.KEY_UP: Action.PLUS_ONE,

@@ -5,18 +5,18 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
-from OpenGL.GL import *
 import numpy
-
+from OpenGL.GL import *
+from OpenGL.GLU import *
+from OpenGL.GLUT import *
 from pypilot.hat.ugfx import ugfx
+
 
 class screen(ugfx.surface):
     def __init__(self, size):
-        super(screen, self).__init__(size[0], size[1], 4, None)
+        super().__init__(size[0], size[1], 4, None)
         self.fill(0)
 
         glutInit(sys.argv)
@@ -70,7 +70,7 @@ class screen(ugfx.surface):
         def key(k, x, y):
             if k == 'q' or k == 27:
                 glutLeaveMainLoop()
-        
+
         glutDisplayFunc(display)
         glutReshapeFunc(reshape)
         glutKeyboardFunc(key)

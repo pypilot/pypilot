@@ -5,14 +5,15 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 from pilot import AutopilotPilot
+
 disabled = True # IMPORTANT:  remove this line enable the simple pilot
 
 class SimplePilot(AutopilotPilot):
     def __init__(self, ap):
-        super(SimplePilot, self).__init__('simple', ap)
+        super().__init__('simple', ap)
 
         # create simple pid filter
         self.Gain('P', .005, 0, .025)

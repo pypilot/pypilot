@@ -5,10 +5,11 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
+
+from pilot import AutopilotPilot
 
 from pypilot.resolv import resolv
-from pilot import AutopilotPilot, AutopilotGain
 from pypilot.values import *
 
 disabled = True
@@ -20,13 +21,13 @@ disabled = True
 
 class WindPilot(AutopilotPilot):
   def __init__(self, ap):
-    super(WindPilot, self).__init__('wind', ap)
+    super().__init__('wind', ap)
 
     # create filters
     self.gps_wind_offset = HeadingOffset()
 
     self.last_wind_speed = 0
-    
+
     # create simple pid filter
     self.PosGain('P', .003, .02) # position (heading error)
     self.PosGain('I', 0, .1)     # integral
@@ -65,7 +66,7 @@ class WindPilot(AutopilotPilot):
           boat_speed = ap.gps_speed
       else:
           boat_speed = 0
-        
+
       true_wind = TrueWind.compute_true_wind_direction(boat_speed, sensors.wind.speed, wind)
       ap.heading.set(true_wind)
 
@@ -87,14 +88,14 @@ class WindPilot(AutopilotPilot):
 
       return mode
 
-      
+
   def process(self):
     ap = self.ap
 
     if ap.sensors.wind.source.value == 'none':
         ap.pilot.set('basic') # fall back to basic pilot if wind input fails
         return
-    
+
     # compute command
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
@@ -104,7 +105,7 @@ class WindPilot(AutopilotPilot):
         windgust = -windgust
     gain_values = {'P': self.heading_error.value,
                    'I': self.heading_error_int.value,
-                   'D': headingrate,      
+                   'D': headingrate,
                    'DD': headingraterate,
                    'WG': windgust}
 

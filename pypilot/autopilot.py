@@ -5,13 +5,17 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 # autopilot base handles reading from the imu (boatimu)
 
 import time
+
 print('autopilot start', time.monotonic())
-import sys, os, math, socket, io
+import io
+import math
+import os
+import sys
 
 # use line buffering so the log files are sensible
 sys.stdout = io.TextIOWrapper(sys.stdout.detach(), line_buffering=True)
@@ -20,15 +24,16 @@ sys.stderr = io.TextIOWrapper(sys.stderr.detach(), line_buffering=True)
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from server import pypilotServer
-from client import pypilotClient
-from values import *
-from boatimu import *
-from resolv import *
-import tacking, servo
-from version import strversion
-from sensors import Sensors
 import pilots
+import servo
+import tacking
+from boatimu import *
+from client import pypilotClient
+from resolv import *
+from sensors import Sensors
+from server import pypilotServer
+from values import *
+from version import strversion
 
 def minmax(value, r):
     return min(max(value, -r), r)
@@ -36,21 +41,21 @@ def minmax(value, r):
 class ModeProperty(EnumProperty):
     def __init__(self, name, ap):
         self.ap = ap
-        super(ModeProperty, self).__init__(name, 'compass', ['compass', 'gps', 'nav', 'wind', 'true wind'], persistent=True)
+        super().__init__(name, 'compass', ['compass', 'gps', 'nav', 'wind', 'true wind'], persistent=True)
 
     def set(self, value):
         # update the preferred mode when the mode changes from user
         self.ap.preferred_mode.update(value)
         self.ap.preferred_mode.command = None
-        super(ModeProperty, self).set(value)
+        super().set(value)
 
     def set_internal(self, value):
-        super(ModeProperty, self).set(value)
+        super().set(value)
 
 class HeadingProperty(RangeProperty):
     def __init__(self, name, mode):
         self.mode = mode
-        super(HeadingProperty, self).__init__(name, 0, -180, 360)
+        super().__init__(name, 0, -180, 360)
 
     # +-180 for wind modes 0-360 for compass and gps modes
     def set(self, value):
@@ -58,16 +63,16 @@ class HeadingProperty(RangeProperty):
             value = resolv(float(value), 0 if 'wind' in self.mode.value else 180)
             # set to tenth of degree
             value = round(value*10)/10
-            super(HeadingProperty, self).set(value)
-        except Exception as e:
+            super().set(value)
+        except Exception:
             pass # ignore for now
 
 class TimeStamp(SensorValue):
     def __init__(self):
-        super(TimeStamp, self).__init__('timestamp', 0)
+        super().__init__('timestamp', 0)
         self.info['type'] = 'TimeStamp' # not a sensor value to be scoped
 
-class TimedQueue(object):
+class TimedQueue:
   def __init__(self, length):
     self.data = []
     self.length = length
@@ -84,10 +89,10 @@ class TimedQueue(object):
     if self.data:
       return self.data[0][0]
     return 0
-        
-class Autopilot(object):
+
+class Autopilot:
     def __init__(self):
-        super(Autopilot, self).__init__()
+        super().__init__()
         self.watchdog_device = False
 
         self.server = pypilotServer()
@@ -106,12 +111,12 @@ class Autopilot(object):
         self.modes.sensors = {}
         self.gps_and_nav_modes = self.register(BooleanProperty, 'gps_and_nav_modes', True, persistent=True)
 
-        self.lastmode = False    
-        
+        self.lastmode = False
+
         self.heading_command = self.register(HeadingProperty, 'heading_command', self.mode)
         self.enabled = self.register(BooleanProperty, 'enabled', False)
         self.lastenabled = False
-        
+
         self.last_heading = False
         self.last_heading_off = self.boatimu.heading_off.value
 
@@ -124,7 +129,7 @@ class Autopilot(object):
         self.heading_command_rate = self.register(SensorValue, 'heading_command_rate')
         self.heading_command_rate.time = 0
         #self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
-        
+
         self.pilots = {}
         for pilot_type in pilots.default:
             try:
@@ -162,7 +167,7 @@ class Autopilot(object):
         self.server.poll() # setup process before we switch main process to realtime
         if os.system('sudo chrt -pf 1 %d 2>&1 > /dev/null' % os.getpid()):
             print(_('warning: failed to make autopilot process realtime'))
-    
+
         self.lasttime = time.monotonic()
 
         # setup all processes to exit on any signal
@@ -185,7 +190,7 @@ class Autopilot(object):
                     #print('kill', pid, process)
                     try:
                         os.kill(pid, signal.SIGTERM) # get backtrace
-                    except Exception as e:
+                    except Exception:
                         pass
                         #print('kill failed', e)
             sys.stdout.flush()
@@ -208,7 +213,7 @@ class Autopilot(object):
         signal.signal(signal.SIGCHLD, cleanup)
         import atexit
         atexit.register(lambda : cleanup('atexit'))
-    
+
     def __del__(self):
         print('closing autopilot')
         self.server.__del__()
@@ -286,7 +291,7 @@ class Autopilot(object):
             last_heading_off = resolv(self.last_heading_off, self.boatimu.heading_off.value)
             self.compass_change += self.boatimu.heading_off.value - last_heading_off
             self.last_heading_off = self.boatimu.heading_off.value
-            
+
         if self.compass_change:
             self.gps_compass_offset.value -= self.compass_change
             self.wind_compass_offset.value += self.compass_change
@@ -296,7 +301,7 @@ class Autopilot(object):
                 self.heading_command.set(resolv(heading_command, 180))
             # reset feed-forward gain
             self.heading_command_rate.time = 0
-          
+
     def compute_heading_error(self, t):
         heading = self.heading.value
         windmode = 'wind' in self.mode.value
@@ -313,13 +318,13 @@ class Autopilot(object):
                 self.heading_command.set(heading - error)
 
             self.lastmode = self.mode.value
-      
+
         # compute heading error
         heading_command = self.heading_command.value
 
         # error +- 60 degrees
         err = minmax(resolv(heading - heading_command), 60)
-      
+
         # since wind direction is where the wind is from, the sign is reversed
         if 'wind' in self.mode.value:
             err = -err
@@ -407,8 +412,8 @@ class Autopilot(object):
             if sensors['truewind']:
                 modes.append('true wind')
             self.modes.update(modes)
-                    
-                        
+
+
         self.adjust_mode(pilot)
         pilot.compute_heading()
         self.compute_heading_error(t0)
@@ -430,7 +435,7 @@ class Autopilot(object):
         self.last_heading_mode = self.mode.value
         if newmode:
             self.heading_error_int.set(0) # reset integral
-                
+
         # reset feed-forward error if mode changed, or last command is older than 1 second
         if newmode or t0 - self.heading_command_rate.time > 1:
             self.last_heading_command = self.heading_command.value
@@ -438,17 +443,17 @@ class Autopilot(object):
         if self.enabled.value:
             # filter the heading command to compute feed-forward gain
             heading_command_diff = resolv(self.heading_command.value - self.last_heading_command)
-            if not 'wind' in self.mode.value: # wind modes need opposite gain
+            if 'wind' not in self.mode.value: # wind modes need opposite gain
                 heading_command_diff = -heading_command_diff
             lp = .1
             command_rate = (1-lp)*self.heading_command_rate.value + lp*heading_command_diff
             self.heading_command_rate.update(command_rate)
         else:
             self.heading_command_rate.update(0)
-                
-        self.last_heading_command = self.heading_command.value        
+
+        self.last_heading_command = self.heading_command.value
         self.heading_command_rate.time = t0
-                            
+
         # perform tacking or pilot specific calculation
         if not self.tack.process():
             # if disabled, only compute if a client cares
@@ -473,7 +478,7 @@ class Autopilot(object):
             self.servo.poll()
 
         if self.starttime > 30:
-            # make gps position/velocity prediction from inertial sensors            
+            # make gps position/velocity prediction from inertial sensors
             self.sensors.gps.predict(self)
             self.sensors.water.compute(self) # calculate leeway and currents
 
@@ -492,7 +497,7 @@ class Autopilot(object):
 
         self.timings.set([t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t5-t0])
         self.timestamp.set(t0-self.starttime)
-          
+
         #if self.watchdog_device:
         #    self.watchdog_device.write('c')
 

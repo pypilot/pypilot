@@ -10,7 +10,9 @@
 # TODO:  fix loading slow,  make more responsive,  make power down work
 
 
-import time, gc
+import gc
+import time
+
 import wifi_esp32
 
 # running 60-90mA
@@ -26,21 +28,24 @@ def gettime():
 t0= gettime()
 
 t1= gettime()
-import page
 t2= gettime()
 from lcd import LCD
+
 t3= gettime()
 import gpio_esp32
+
 t4= gettime()
 
 from config_esp32 import read_config
+
 config = {'lcd': read_config()}
 
 lcd = LCD(config)
 period = .25
 sleeptime = gettime()
 
-import machine, micropython
+import machine
+
 rtc = machine.RTC()
 rtc_memory = rtc.memory().decode()
 
@@ -90,12 +95,12 @@ while True:
             lcd.client.host = lcd.host
             lcd.client.disconnect()
             lcd.poll()
-            lcd.screen.backlight = True;
+            lcd.screen.backlight = True
         sleepmode = 0
-    
+
     t0 = gettime()
     lcd.poll()
-            
+
     t1 = gettime()
     gpio_esp32.poll(lcd)
     t2 = gettime()
@@ -107,7 +112,7 @@ while True:
     if sleepmode == 0:
         if vbatt and sleepdt > idletimeout and lcd.battery_voltage < 4.2:
             print('sleep blank screen')
-            lcd.screen.backlight = False;
+            lcd.screen.backlight = False
             print('sleep wifi off')
             wifi_esp32.disable()
             lcd.client.host = False
@@ -131,11 +136,11 @@ while True:
 
     #if wifi_esp32.station.isconnected():
     wifi_esp32.poll(lcd.client)
-    
+
     t3 = gettime()
     dt = t3-t0
     if dt < 0:
-        s = .1;
+        s = .1
     else:
         if sleepmode:
             s = 1 - dt
@@ -145,5 +150,5 @@ while True:
             s = .01
         elif s > 1:
             s = 1
-        
+
     time.sleep(s)

@@ -5,11 +5,14 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 # determine if we are on tinypilot if piCore is in uname -r
 
-import tempfile, subprocess, os
+import os
+import subprocess
+import tempfile
+
 temp = tempfile.mkstemp()
 p=subprocess.Popen(['uname', '-r'], stdout=temp[0], close_fds=True)
 p.wait()

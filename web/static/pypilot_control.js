@@ -286,6 +286,7 @@ $(document).ready(function() {
         $('#configuration_container').append('<p><a href="http://' + url.split(':')[0].split('/')[0] + ':33333">' + _('Configure LCD Keypad and Remotes') + '</a>');
 
         pypilot_watch('nmea.client');
+        pypilot_watch('signalk.host');
 
         pypilot_watch('imu.error');
         pypilot_watch('imu.warning');
@@ -544,6 +545,8 @@ $(document).ready(function() {
 
         if('nmea.client' in data)
             $('#nmea_client').val(data['nmea.client']);
+        if('signalk.host' in data)
+            $('#signalk_host').val(data['signalk.host']);
 
         // statistics
         if('servo.amp_hours' in data) {
@@ -754,6 +757,9 @@ $(document).ready(function() {
     // Configuration
     $('#nmea_client').change(function(event) {
         pypilot_set('nmea.client', $('#nmea_client').val());
+    });
+    $('#signalk_host').change(function(event) {
+        pypilot_set('signalk.host', $('#signalk_host').val());
     });
 
     // Tack

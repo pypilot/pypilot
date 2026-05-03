@@ -3,12 +3,16 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import os, select, time
+import os
+import select
+import time
+
+from crc import crc8
 
 from servo import *
-from crc import crc8
+
 
 class ArduinoServo:
     sync_bytes = [0xe7, 0xf9, 0xc7, 0x1e, 0xa7, 0x19, 0x1c, 0xb3]
@@ -57,7 +61,7 @@ class ArduinoServo:
                 return False
             try:
                 c = os.read(self.fd, 12)
-            except:
+            except OSError:
                 return -1
             self.in_buf += map(ord, c)
             if len(self.in_buf) < 3:
@@ -67,7 +71,7 @@ class ArduinoServo:
         while len(self.in_buf) >= 3:
             code = [ArduinoServo.sync_bytes[self.in_sync]] + self.in_buf[:2]
             crc = crc8(code)
-            
+
 	    #print 'got code', code, self.in_buf
             if crc == self.in_buf[2]:
                 if self.in_sync_count == 2:
@@ -106,7 +110,7 @@ class ArduinoServo:
 
         os.write(self.fd, b)
         self.out_sync += 1
-        
+
     def raw_command(self, command):
         if self.out_sync == 0:
             self.send_value(self.max_current_value*65536.0*.05/1.1)

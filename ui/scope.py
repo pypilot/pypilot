@@ -5,19 +5,20 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
-from OpenGL.GL import *
-import numpy
 import math
-import time
 import sys
+import time
 
+import numpy
+from OpenGL.GL import *
+from OpenGL.GLU import *
+from OpenGL.GLUT import *
 from pypilot.client import pypilotClientFromArgs
 
-class trace(object):
+
+class trace:
     colors = [[1, 0, 0], [0, 1, 0], [1, 1, 0],
               [1, 0, 1], [0, 1, 1], [0, 0, 1],
               [1, 1, 1], [1, .5, 0], [.5, 1, 0],
@@ -42,16 +43,16 @@ class trace(object):
                 point = self.points[i]
                 self.points[i] = point[0]-dt, point[1]
 
-                
+
         if not self.timeoff or self.timeoff < time.monotonic() - t or self.timeoff > time.monotonic() - t + 1:
             self.timeoff = time.monotonic() - t
-            
+
         elif self.points and t-self.points[0][0]<mindt:
             return False
 
         self.points.insert(0, (t, data))
         return True
-        
+
     def add_blank(self):
         if self.points:
             self.points.insert(0, (self.points[0][0], float('nan')))
@@ -64,7 +65,7 @@ class trace(object):
         try:
             avg = sum(map(lambda x : x[1], self.points)) / len(self.points)
             return math.sqrt(sum(map(lambda x : (avg-x[1])**2, self.points))) / len(self.points)
-        except:
+        except (ValueError, ZeroDivisionError):
             return 0
 
     def tracevertexes(self, time, plot, gldrawtype):
@@ -94,7 +95,7 @@ class trace(object):
             return
 
         t = time.monotonic() - self.timeoff
-        
+
         glPushMatrix()
 
         glColor3dv(self.color)
@@ -136,7 +137,7 @@ class trace(object):
         glPopMatrix()
 
 
-class pypilotPlot():
+class pypilotPlot:
     NUM_X_DIV = 5
     NUM_Y_DIV = 6
 
@@ -186,7 +187,7 @@ class pypilotPlot():
         # time must change by 1 pixel to bother to log and display
         mindt = self.disptime / float(self.width)
         return t.add(timestamp, value, mindt) and t.visible
-        
+
     def add_blank(self, group=False):
         for t in self.traces:
             if not group or group == t.group:
@@ -209,7 +210,7 @@ class pypilotPlot():
                 ret = self.add_data(namei, name, timestamp, float(value[i])) or ret
             return ret
         else:
-            if type(value) == type(True):
+            if type(value) == bool:
                 if value:
                     value = 1
                 else:
@@ -225,7 +226,7 @@ class pypilotPlot():
     def synccolor(self):
         pos = glGetDoublev(GL_CURRENT_RASTER_POSITION)[:2]
         vp = glGetDoublev(GL_VIEWPORT)
-        self.lastrasterpos = pos[0] / vp[2], pos[1] / vp[3];
+        self.lastrasterpos = pos[0] / vp[2], pos[1] / vp[3]
         glRasterPos2d(*self.lastrasterpos)
 
     def rasterpos(self, pos):
@@ -243,12 +244,12 @@ class pypilotPlot():
             x = float(i) / pypilotPlot.NUM_X_DIV
             glVertex2d(x, 0)
             glVertex2d(x, 1)
-            
+
         for i in range(1, pypilotPlot.NUM_Y_DIV):
             y = float(i) / pypilotPlot.NUM_Y_DIV
             glVertex2d(0, y)
             glVertex2d(1, y)
-       
+
         glEnd()
         glDisable(GL_LINE_STIPPLE)
 
@@ -278,15 +279,15 @@ class pypilotPlot():
         glColor3d(1, 1, 1)
         #self.synccolor()
         pypilotPlot.drawputs("scale: %g  time: %g  " % (self.scale, self.disptime))
-        
+
         glColor3dv(self.curtrace.color)
         #self.synccolor()
-        
+
         pypilotPlot.drawputs("noise: %g" % self.curtrace.noise())
 
     def init(self, value_list):
         glClearColor (0.0, 0.0, 0.0, 0.0)
-    
+
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
@@ -347,7 +348,7 @@ class pypilotPlot():
     def key(self, k, x, y):
         if k == 'q' or k == 27:
             exit(0)
-        
+
         if not self.curtrace:
             return
 
@@ -385,7 +386,7 @@ class pypilotPlot():
                 trace.offset = 0
         elif k == 'w':
             self.fft_on = not self.fft_on
-        
+
     def special(self, key, x, y):
         if not self.curtrace:
             return
@@ -411,7 +412,7 @@ def main():
     if len(sys.argv) > 1:
         host, args = sys.argv[1], sys.argv[2:]
     client = pypilotClientFromArgs(args, host=host)
-    
+
     def idle():
         while True:
             try:
@@ -421,7 +422,7 @@ def main():
                 else:
                     time.sleep(.01)
                     break
-            except:
+            except Exception:
                 pass
 
     glutInit(sys.argv)
