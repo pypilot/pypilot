@@ -5,15 +5,15 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 from pilot import AutopilotPilot
-from pypilot.resolv import resolv
+
 disabled = True
 
 class AutotunePilot(AutopilotPilot):
   def __init__(self, ap):
-    super(AutotunePilot, self).__init__('autotune', ap)
+    super().__init__('autotune', ap)
 
     # create simple pid filter
     self.PosGain('P', .003, .025)
@@ -34,7 +34,7 @@ class AutotunePilot(AutopilotPilot):
     ap = self.ap
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
-    
+
     gain_values = {'P': ap.heading_error.value,
                    'D': headingrate + headingraterate,
                    'FF': ap.heading_command_rate.value}

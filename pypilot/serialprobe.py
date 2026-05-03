@@ -3,9 +3,11 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import sys, os, time
+import os
+import time
+
 import pyjson
 
 pypilot_dir = os.getenv('HOME') + '/.pypilot/'
@@ -18,7 +20,7 @@ def read_config(filename, fail):
     devices = []
     if os.path.exists(pypilot_dir + filename):
         try:
-            f = open(pypilot_dir + filename, 'r')
+            f = open(pypilot_dir + filename)
             while True:
                 device = f.readline()
                 if not device:
@@ -26,7 +28,7 @@ def read_config(filename, fail):
                 devices.append(device.strip())
             f.close()
             return devices
-        except Exception as e:
+        except Exception:
             print(_('error reading'), pypilot_dir + filename)
     return fail
 
@@ -36,7 +38,7 @@ def read_blacklist():
     if blacklist_serial_ports == 'init':
         blacklist_serial_ports = read_config('blacklist_serial_ports', [])
     return blacklist_serial_ports
-    
+
 allowed_serial_ports = 'init'
 def read_allowed():
     global allowed_serial_ports
@@ -56,14 +58,14 @@ def read_last_working_devices():
             name = filename[:-6]
             if name:
                 try:
-                    file = open(pypilot_dir + filename, 'r')
+                    file = open(pypilot_dir + filename)
                     lastdevice = pyjson.loads(file.readline().rstrip())
                     file.close()
                     # ensure lastdevice defines path and baud here
-                    if not name in probes:
+                    if name not in probes:
                         new_probe(name)
                     probes[name]['lastworking'] = lastdevice[0], lastdevice[1]
-                except:
+                except (OSError, ValueError):
                     pass
 
 def scan_devices():
@@ -86,7 +88,7 @@ def scan_devices():
                 print('serialprobe ' + _('found more devices by path'))
                 paths = by_path_paths
                 by = by_path
-        
+
         for device_path in paths:
             full_path = os.path.join(by, device_path)
             realpath = os.path.realpath(full_path)
@@ -102,7 +104,7 @@ def scan_devices():
             path = '/dev/'+dev
             realpath = os.path.realpath(path)
             devgpsdevices.append(realpath)
-            
+
         for p in devicesp:
             if dev.startswith(p):
                 path = '/dev/'+dev
@@ -117,18 +119,18 @@ def scan_devices():
         if devices[device]['realpath'] in devgpsdevices:
             print('serialprobe ' + _('removing gps device'), device)
             del devices[device]
-                    
+
     blacklist_serial_ports = read_blacklist()
     for path in blacklist_serial_ports:
         realpath = os.path.realpath(path)
         for device in list(devices):
             if devices[device]['realpath'] == realpath:
                 del devices[device]
-    
+
     allowed_serial_ports = read_allowed()
     if allowed_serial_ports == 'any':
         return devices
-    
+
     allowed_devices = {}
     for path in allowed_serial_ports:
         for device in devices:
@@ -145,7 +147,7 @@ def scan_devices():
                 break
         else:
             allowed_devices[path] = {'realpath': realpath}
-    
+
     return allowed_devices
 
 devices = {}
@@ -216,16 +218,16 @@ def enumerate_devices():
         elif enumstate['monitor']:
             debug('serialprobe pyudev found it', devices, scanned_devices)
             enumstate['retries'] = 0
-    
+
     debug('serialprobe scan', scanned_devices)
     # remove devices not scanned
     for device in list(devices):
-        if not device in scanned_devices:
+        if device not in scanned_devices:
             del devices[device]
 
     # add new devices and set the time the device was added
     for device in scanned_devices:
-        if not device in devices:
+        if device not in devices:
             devices[device] = scanned_devices[device]
             devices[device]['time'] = t0
     return True
@@ -236,20 +238,20 @@ def relinquish(name):
         probes[name]['device'] = False
 
 
-def probe(name, bauds, timeout=5):    
+def probe(name, bauds, timeout=5):
     global devices
     global probes
-    
+
     t0 = time.monotonic()
 
     if enumerate_devices():
         # relinquish any probes that are assigned to devices that no longer exist
         for n, probe in probes.items():
             device = probe['device']
-            if device and not device in devices:
+            if device and device not in devices:
                 probe['device'] = False
-    
-    if not name in probes:
+
+    if name not in probes:
         new_probe(name)
     probe = probes[name]
 
@@ -259,7 +261,7 @@ def probe(name, bauds, timeout=5):
         if probe['bauds']:  # there are more bauds to try
             return probe['device'], probe['bauds'][0]
         probe['device'] = False # relinquish device
-    
+
     if t0 - probe['time'] < timeout:
         # prevent probing too often
         probe['device'] = False
@@ -337,10 +339,10 @@ def probe(name, bauds, timeout=5):
     if devices[device]['realpath'] in gpsdevices:
         debug('serial probe abort', name, 'device', device, 'is a gps device')
         return False
-    
+
     probe['device'] = device
     probe['bauds'] = bauds
-    
+
     debug('serial probing', name, device, bauds[0])
     return device, bauds[0]
 
@@ -363,7 +365,7 @@ def success(name, device):
         file.write(pyjson.dumps(device) + '\n')
         file.close()
 
-    except:
+    except OSError:
         print('serialprobe ' + _('failed to record device'), name)
 
 if __name__ == '__main__':

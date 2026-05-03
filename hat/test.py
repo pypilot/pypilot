@@ -1,9 +1,10 @@
-from arduino import arduino
-import sys, time
+import sys
+import time
 
 from pypilot.servo import Servo
 
-from pypilot import server, client
+from arduino import arduino
+
 
 def main():
     for i in range(len(sys.argv)):
@@ -12,7 +13,7 @@ def main():
                 print(_('device needed for option') + ' -t')
                 exit(1)
             test(sys.argv[i+1])
-    
+
     print('pypilot Servo')
     from server import pypilotServer
     server = pypilotServer()
@@ -20,7 +21,7 @@ def main():
     from client import pypilotClient
     client = pypilotClient(server)
 
-    from sensors import Sensors # for rudder feedback
+    from sensors import Sensors  # for rudder feedback
     sensors = Sensors(client)
     servo = Servo(client, sensors)
 
@@ -36,7 +37,7 @@ def main():
 
     a = arduino(config)
     dt = 0
-    
+
     period = 0.0
     start = lastt = time.monotonic()
     while True:
@@ -52,11 +53,11 @@ def main():
                     else:
                         servo.command.set(0)
 
-        
+
         servo.poll()
         sensors.poll()
         client.poll()
-        server.poll()        
+        server.poll()
 
         dt = period - time.monotonic() + lastt
         if dt > 0 and dt < period:

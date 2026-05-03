@@ -5,17 +5,23 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import wx, sys, subprocess, socket, os, time
+import os
+import subprocess
+import sys
+import time
+
+import wx
 from pypilot.client import *
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import autopilot_control_ui
 
+
 class TackDialog(autopilot_control_ui.TackDialogBase):
     def __init__(self, parent):
-        super(TackDialog, self).__init__(parent)
+        super().__init__(parent)
 
     def receive(self, name, value):
         if name == 'ap.tack.state':
@@ -33,13 +39,13 @@ class TackDialog(autopilot_control_ui.TackDialogBase):
             self.GetParent().client.set('ap.tack.direction', direction)
         self.GetParent().client.set('ap.tack.state', state)
         self.Hide()
-            
+
     def OnTackPort(self, event):
         self.do('begin', 'port')
 
     def OnTackCancel(self, event):
         self.do('none')
-        
+
     def OnTackStarboard(self, event):
         self.do('begin', 'starboard')
 
@@ -49,7 +55,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     ID_MANUAL = 1001
 
     def __init__(self):
-        super(AutopilotControl, self).__init__(None)
+        super().__init__(None)
 
         self.sliderlabels = [-120, -40, -10, -5, 0, 5, 10, 40, 120]
         self.fgGains = self.swGains.GetSizer()
@@ -152,7 +158,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
     def enumerate_controls(self, value_list):
         self.tbAP.SetValue(False)
         self.set_mode_color()
-        
+
         self.fgGains.Clear(True)
         self.gains = {}
         pilots = {}
@@ -160,12 +166,12 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             sname = name.split('.')
             if len(sname) > 2 and sname[0] == 'ap' and sname[1] == 'pilot':
                 pilots[sname[2]] = True
-                
+
             if 'AutopilotGain' in value_list[name]:
                 sizer = wx.FlexGridSizer( 0, 1, 0, 0 )
                 sizer.AddGrowableRow( 2 )
                 sizer.SetFlexibleDirection( wx.VERTICAL )
-        
+
                 self.client.watch(name)
                 self.client.watch(name+'gain', 0.2)
 
@@ -177,7 +183,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 sizer.Add( stname, 0, wx.ALL, 5 )
                 stvalue = wx.StaticText( self.swGains, wx.ID_ANY, '   N/A   ')
                 sizer.Add( stvalue, 0, wx.ALL, 5 )
-        
+
                 hsizer = wx.FlexGridSizer( 1, 0, 0, 0 )
                 hsizer.AddGrowableRow( 0 )
                 hsizer.SetFlexibleDirection( wx.VERTICAL )
@@ -190,7 +196,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 
                 slider = wx.Slider( self.swGains, wx.ID_ANY, 0, 0, 1000, wx.DefaultPosition, wx.Size( -1,-1 ), wx.SL_VERTICAL| wx.SL_INVERSE)
                 hsizer.Add( slider, 0, wx.ALL|wx.EXPAND, 5 )
-        
+
                 sizer.Add( hsizer, 1, wx.EXPAND, 5 )
 
                 min_val, max_val = value_list[name]['min'], value_list[name]['max']
@@ -202,7 +208,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                         gain['last_change'] = time.monotonic()
                     return do_gain
                 slider.Bind( wx.EVT_SCROLL, make_ongain(gain) )
-                
+
         self.enumerate_gains()
 
         self.cPilot.Clear()
@@ -211,7 +217,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         self.GetSizer().Fit(self)
         self.SetSize(wx.Size(570, 420))
-        
+
     def receive_messages(self, event):
         if not self.enumerated and self.client.connection:
             value_list = self.client.list_values(10)
@@ -225,7 +231,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             if gain['need_update']:
                 self.send_gain(gain_name, gain)
                 gain['need_update'] = False
-                
+
             if gain['slider'].GetValue() != gain['sliderval'] and \
                time.monotonic() - gain['last_change'] > 1:
                 gain['slider'].SetValue(int(gain['sliderval']))
@@ -284,7 +290,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             elif name == 'rudder.angle':
                 try:
                     value = round(value, 1)
-                except:
+                except ValueError:
                     pass
                 self.rudder = value
                 if (not (not self.apenabled and self.rudder)) == self.bCenter.IsShown():
@@ -358,7 +364,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
         pilot = self.cPilot.GetStringSelection()
         for name in self.gains:
-            if pilot in name or not 'ap.pilot.' in name:
+            if pilot in name or 'ap.pilot.' not in name:
                 self.gains[name]['sizer'].ShowItems(True)
                 self.fgGains.Add( self.gains[name]['sizer'], 1, wx.EXPAND, 5 )
             else:
@@ -367,7 +373,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         s = self.GetSize()
         self.Fit()
         self.SetSize(s)
-                
+        
     def onCommandClick( self, event ):
         if not self.apenabled:
             return
@@ -382,7 +388,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             command = 10
         else:
             return
-        
+
         if 'wind' in self.mode:
             command = -command
         self.heading_command += command
@@ -422,19 +428,19 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             self.servo_command(0)
         else:
             self.servo_command(self.lastcommand)
-            
+
     def onCenter( self, event ):
         self.client.set('servo.position_command', 0)
 
     def onScope( self, event ):
         subprocess.Popen(['pypilot_scope'] + sys.argv[1:])
-	
+
     def onClient( self, event ):
         subprocess.Popen(['pypilot_client_wx'] + sys.argv[1:])
-	
+
     def onCalibration( self, event ):
         subprocess.Popen(['pypilot_calibration'] + sys.argv[1:])
-	
+
     def onClose( self, event ):
         self.Close()
 

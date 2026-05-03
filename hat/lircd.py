@@ -5,16 +5,17 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
-import time
 import threading
+import time
+
 
 # load lirc in background thread because it takes more than
 # 2 seconds and this is an unreasonable delay
 class LoadLIRC(threading.Thread):
     def __init__(self):
-        super(LoadLIRC, self).__init__()
+        super().__init__()
         self.version = 0
         self.daemon = True
 
@@ -56,7 +57,7 @@ class LoadLIRC(threading.Thread):
             time.sleep(2)
         self.version = version
 
-class lirc(object):
+class lirc:
     def __init__(self, config):
         self.lastkey = False
         self.lastcount = 0
@@ -76,7 +77,7 @@ class lirc(object):
                 self.LIRC.start()
             else:
                 return []
-                
+
         if self.LIRC.version == 0:
             return []
 
@@ -102,7 +103,7 @@ class lirc(object):
             # continue to read from lirc but do not send event
             if not self.config['pi.ir']:
                 continue
-                
+
             if (self.lastkey and self.lastkey != key) or \
                self.lastcount >= count:
                 events.append((self.lastkey, 0))
@@ -127,6 +128,6 @@ def main():
             print('events', events)
             lircd.events = []
         time.sleep(.02)
-            
+
 if __name__ == '__main__':
     main()
