@@ -173,10 +173,12 @@ class signalk:
         self.period = self.client.register(RangeProperty('signalk.period', .5, .1, 2, persistent=True))
         self.last_period = False
         self.uid = self.client.register(Property('signalk.uid', 'pypilot', persistent=True))
+        self.signalk_host = self.client.register(Property('signalk.host', '', persistent=True))
 
         self.signalk_host_port = False
         self.signalk_ws_url = False
         self.ws = False
+        self.last_manual_signalk_host = False
 
         self.initialized = True
 
@@ -340,17 +342,32 @@ class signalk:
 
         if not self.enabled.value:
             return
+          
+        manual_host = self.signalk_host.value.strip()
+        if manual_host:
+            if manual_host != self.signalk_host_port:
+                self.signalk_host_port = manual_host
+                self.signalk_ws_url = False
+                self.disconnect_signalk()
+            self.last_manual_signalk_host = manual_host
+        else:
+            if self.last_manual_signalk_host:
+                self.last_manual_signalk_host = False
+                self.signalk_host_port = False
+                self.signalk_ws_url = False
+                self.disconnect_signalk()
 
-        zc = self.zero_conf.poll()
-        if zc == 'disconnect':
-            self.signalk_host_port = False
-            self.disconnect_signalk()
-        elif zc:
-            host_port = zc
-            self.signalk_host_port = host_port
-            print('signalk ' + _('server found'), host_port)
-
-
+        if not manual_host:
+            zc = self.zero_conf.poll()
+            if zc == 'disconnect':
+                self.signalk_host_port = False
+                self.disconnect_signalk()
+            elif zc:
+                host_port = zc
+                self.signalk_host_port = host_port
+                print('signalk ' + _('server found'), host_port)
+        
+        
         self.client.poll(timeout)
         if not self.signalk_host_port:
             return # waiting for signalk to detect
