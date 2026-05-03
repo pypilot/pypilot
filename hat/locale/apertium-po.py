@@ -4,7 +4,12 @@ __author__ = 'Rory McCann <rory@technomancy.org>'
 __version__ = '1.0'
 __licence__ = 'GPLv3'
 
-import polib, subprocess, re, sys
+import re
+import subprocess
+import sys
+
+import polib
+
 
 def translate_subpart(string, lang_direction):
     """Simple translate for just a certin string"""
@@ -52,7 +57,7 @@ def translate(string, lang_direction):
             replace = re.compile(re.escape(translated_match), re.IGNORECASE)
             full_trans = replace.sub(match, full_trans)
 
-        
+
         new = full_trans
 
     return new

@@ -5,9 +5,10 @@
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
-# version 3 of the License, or (at your option) any later version.  
+# version 3 of the License, or (at your option) any later version.
 
 import time
+
 import font
 
 white = 0xffffff
@@ -17,10 +18,10 @@ black = 0x00
 
 BIG_PORT, SMALL_PORT, SMALL_STARBOARD, BIG_STARBOARD, AUTO, MENU, MODE, NUM_KEYS = range(8)
 
-class rectangle():
+class rectangle:
     def __init__(self, x, y, width, height):
         self.x, self.y, self.width, self.height = x, y, width, height
-        
+
 translate = lambda x : x # initially no translation
 no_translation = translate
 
@@ -30,7 +31,6 @@ def _(x):
 locale_d = ''
 
 try:
-    import micropython
     import wifi_esp32
     def test_wifi():
         return wifi_esp32.connected[0]
@@ -39,9 +39,9 @@ try:
 
     try:
         import gettext_esp32 as gettext
-    except:
+    except ImportError:
         print('failed to import gettext')
-except:
+except ImportError:
     def gettime():
         return time.monotonic()
     def test_wifi():
@@ -51,16 +51,17 @@ except:
             wlan0.close()
             if line == 'up':
                 return True
-        except:
+        except OSError:
             pass
         return False
 
     try:
-        import os, gettext
+        import gettext
+        import os
         locale_d= os.path.abspath(os.path.dirname(__file__)) + '/'
     except Exception as e:
         print('failed to import gettext', e)
-        
+
 def set_language(lang):
     print('set language', lang)
     try:
@@ -72,7 +73,7 @@ def set_language(lang):
     except Exception as e:
         print('no language', lang, e)
 
-class page(object):
+class page:
     def __init__(self, name=None, frameperiod=.4):
         self.name = name
         self.frameperiod = frameperiod
@@ -81,7 +82,7 @@ class page(object):
 
     def fill(self, color):
         self.lcd.surface.fill(color)
-        
+
     def text(self, pos, text, size, crop=False):
         surface = self.lcd.surface
         pos = int(pos[0]*surface.width), int(pos[1]*surface.height)
@@ -130,7 +131,7 @@ class page(object):
                     posx = 0
                     posy += lineheight
                     if width < minfirstwidth:
-                        minfirstwidth = width;
+                        minfirstwidth = width
                     lineheight = 0
 
                 if posx > 0:
@@ -140,7 +141,7 @@ class page(object):
                 posx += width
                 maxw = max(maxw, posx)
             maxh = posy + lineheight
-                    
+
             if maxw == 0 or maxh == 0: # failed to render anything
                 return 0, ''
             sw = surface.width * float(rect.width) / maxw
@@ -148,7 +149,7 @@ class page(object):
             cursize = int(min(sw*metric_size, sh*metric_size))
             if cursize < size:
                 break
-            
+
             size = cursize
             text = curtext
             if posy == 0:
@@ -159,8 +160,8 @@ class page(object):
         t3 = time.time()
 
         return size, text
-        
-    
+
+
     def fittext(self, rect, text, wordwrap=False, fill='none'):
         surface = self.lcd.surface
         bw = self.lcd.bw
@@ -200,7 +201,7 @@ class page(object):
                 size = int(min(sw*metric_size, sh*metric_size))
             try:
                 self.lcd.client.reset_timeout()
-            except:
+            except Exception:
                 pass
             #time.sleep(.02)  # this line is required!  needed to process wifi packets durning long sleep
             if wordwrap: # only cache wordwrap fit!!
@@ -253,7 +254,7 @@ class page(object):
     def box(self, rect, color):
         surface = self.lcd.surface
         surface.box(*(self.convrect(rect) + [color]))
-                
+
     def last_val(self, name, period=-1, default='N/A'):
         if period == -1:
             period = self.frameperiod
@@ -267,7 +268,7 @@ class page(object):
         try:
             n = 10**places
             return str(round(v*n)/n)
-        except:
+        except Exception:
             return v
 
     def testkeydown(self, key):
@@ -300,7 +301,7 @@ class page(object):
 
     def display(self, refresh):
         pass # some pages only perform an action
-        
+
     def process(self):
         if self.testkeydown(AUTO):
             return control(self.lcd)
@@ -313,7 +314,7 @@ class page(object):
 
 class info(page):
     def __init__(self, num_pages=4):
-        super(info, self).__init__(_('info'))
+        super().__init__(_('info'))
         self.num_pages = num_pages
         self.page = 0
 
@@ -322,7 +323,7 @@ class info(page):
             self.page = 0
         elif self.page < 0:
             self.page = self.num_pages-1
-        
+
     def display(self, refresh):
         self.bound_page()
         self.watches = {} # clear watches so they can be page specific
@@ -368,11 +369,11 @@ class info(page):
             self.page += 1
         if self.testkeydown(SMALL_STARBOARD) or self.testkeydown(BIG_PORT):
             self.page -= 1
-        return super(info, self).process()
-        
+        return super().process()
+
 class calibrate_info(info):
     def __init__(self):
-        super(calibrate_info, self).__init__(3)
+        super().__init__(3)
 
     def display(self, refresh):
         self.bound_page()
@@ -394,9 +395,9 @@ class calibrate_info(info):
                     if cal[1][0] <= n[0]:
                         deviationstr = n[1]
                         break
-            except:
+            except Exception:
                 pass
-            
+
             self.fittext(rectangle(0, .3, 1, .15), _('compass'))
             self.fittext(rectangle(0, .42, 1, .23), deviationstr)
             self.fittext(rectangle(0, .66, 1, .14), deviation[0] + ' ' + dim + 'd')
@@ -408,8 +409,8 @@ class calibrate_info(info):
                 raw = ''
                 for c in cal[0]:
                     raw += '%.1f\n' % c
-            except:
-                raw = 'N/A'                    
+            except Exception:
+                raw = 'N/A'
 
             self.fittext(rectangle(0, .3, 1, .7), raw)
         else:
@@ -440,12 +441,12 @@ class calibrate_info(info):
                 p = map(lambda p0 : quaternion.rotvecquat(p0, q), p)
                 for p0 in p:
                     self.surface.putpixel(int(r*p0[0]+x), int(r*p0[1]+y), white)
-            except:
+            except Exception:
                 self.fittext(rectangle(0, .3, 1, .7), 'N/A')
 
 class controlbase(page):
     def __init__(self, lcd, frameperiod = .4):
-        super(controlbase, self).__init__(frameperiod = frameperiod)
+        super().__init__(frameperiod = frameperiod)
         self.lcd = lcd
         self.batt = False
         self.wifi = False
@@ -461,7 +462,7 @@ class controlbase(page):
             self.profile = ''
             self.pilot = False
             self.wifi = False
-            
+
         if self.lcd.battery_voltage:
             battrect = rectangle(0.03, .93, .25, .06)
             batt = min(max(self.lcd.battery_voltage - 3.2, 0), 1)
@@ -496,7 +497,7 @@ class controlbase(page):
             pilotrect = rectangle(.2, .92, .5, .09)
             self.fittext(pilotrect, pilot[:6])
         '''
-                
+
         wifi = test_wifi()
         if self.wifi == wifi and not refresh:
             return # done displaying
@@ -512,7 +513,7 @@ class controlbase(page):
 
 class control(controlbase):
     def __init__(self, lcd):
-        super(control, self).__init__(lcd, .25)
+        super().__init__(lcd, .25)
         self.control = {} # used to keep track of what is drawn on screen to avoid redrawing it
         self.lastspeed = 0
         self.lasttime = 0
@@ -538,7 +539,7 @@ class control(controlbase):
         self.set('ap.heading_command', command)
         self.ap_heading_command = command
         self.ap_heading_command_time = gettime()
-        
+
     def resetmanualkeystate(self, k=0):
         self.manualkeystate = {'key': k,
                                'command': self.get_ap_heading_command(),
@@ -547,7 +548,7 @@ class control(controlbase):
     def display_mode(self):
         mode = self.last_val('ap.mode')
         modes = self.last_val('ap.modes', default=[])
-        if not mode in modes:
+        if mode not in modes:
             return
         index = modes.index(mode)
         nmodes = len(modes)
@@ -573,7 +574,7 @@ class control(controlbase):
         else:
             rindex = 2
             mindex = index - 2
-        
+
         #print('mode', self.last_val('ap.mode'))
         modes_r = [rectangle(  0, .74, .22, .16), rectangle(.22, .74, .25, .16),
                    rectangle(.47, .74, .3,  .16), rectangle(.77, .74, .23, .16)]
@@ -602,7 +603,7 @@ class control(controlbase):
                 while len(s) < 3:
                     s = ' ' + s
                 return s
-            except:
+            except Exception:
                 return x
 
         def draw_big_number(pos, num, lastnum):
@@ -620,17 +621,17 @@ class control(controlbase):
                 try:
                     if num[i] == lastnum[i]:
                         continue
-                except:
+                except Exception:
                     pass
                 x = float(i)*.33
                 self.box(rectangle(x, pos, .34, .4), black)
                 self.text((x, pos), num[i], size, True)
-                
+
         def draw_heading(pos, value, lastvalue):
             heading, mode, num = value
             try:
                 lastheading, lastmode, lastnum = lastvalue
-            except:
+            except Exception:
                 lastmode = False #refresh
 
             windmode = 'wind' in mode
@@ -640,7 +641,7 @@ class control(controlbase):
             elif windmode and lastheading != 'N/A' and \
                heading*lastheading <= 0:
                 lastnum = 'XXX' # redraw if sign changes
-                
+
             draw_big_number(pos, num, lastnum)
             # in wind mode draw indicator showing sign
             if windmode:
@@ -655,7 +656,7 @@ class control(controlbase):
             self.fittext(r, _('ERROR') + '\n' + _('compass or gyro failure!'), True, black)
             self.control['heading'] = 'no imu'
             self.control['heading_command'] = 'no imu'
-            super(control, self).display(refresh)
+            super().display(refresh)
             return
 
         t0 = gettime()
@@ -753,7 +754,7 @@ class control(controlbase):
                 warning = True
         if not warning:
             self.display_mode()
-        super(control, self).display(refresh)
+        super().display(refresh)
 
     def process(self):
         if not self.lcd.client.connection:
@@ -791,7 +792,7 @@ class control(controlbase):
                     BIG_PORT        : (1, -1),
                     BIG_STARBOARD   : (1, 1)}
             if self.last_val('ap.tack.state') != 'none':
-                
+
                 return
             key = None
             dt = 0
@@ -838,13 +839,13 @@ class control(controlbase):
                 self.set('servo.command', 0)
             self.lastspeed = speed
 
-        return super(control, self).process()
-            
+        return super().process()
+
 class connecting(controlbase):
     def __init__(self, lcd):
-        super(connecting, self).__init__(lcd)
+        super().__init__(lcd)
         self.connecting_dots = 0
-        
+
     def display(self, refresh):
         if refresh:
             self.box(rectangle(0, 0, 1, .4), black)
@@ -858,7 +859,7 @@ class connecting(controlbase):
         self.connecting_dots += 1
         if size[0] >= 1 or self.connecting_dots > 20:
             self.connecting_dots = 0
-        super(connecting, self).display(refresh)
+        super().display(refresh)
 
     def process(self):
         if self.lcd.client.connection:
