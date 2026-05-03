@@ -8,6 +8,11 @@
 # version 3 of the License, or (at your option) any later version.
 
 try:
+    import gettext_loader
+except ImportError:
+    from . import gettext_loader
+
+try:
     import ujson
 
     loads, dumps = ujson.loads, ujson.dumps

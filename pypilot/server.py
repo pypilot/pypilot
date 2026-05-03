@@ -485,7 +485,7 @@ class ServerValues(pypilotValue):
             self.inotify_time = time.monotonic()
         except Exception as e:
             self.inotify = None
-            print(_('failed to monitor '), configfilepath, e)
+            print(_('failed to monitor '), configfilepath + configfilename, e)
         try:
             if not os.path.exists(configfilepath):
                 print(_('creating config directory: ') + configfilepath)
@@ -629,11 +629,13 @@ class pypilotServer:
         if self.multiprocessing:
             import multiprocessing
             self.process = multiprocessing.Process(target=self.run, daemon=True)
+            print('server process start', time.monotonic())
             self.process.start()
         else:
             self.init()
 
     def init(self):
+        print('server init', time.monotonic())
         self.process = 'server process'
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setblocking(0)
@@ -648,11 +650,12 @@ class pypilotServer:
                 self.server_socket.bind(('0.0.0.0', self.port))
                 break
             except OSError as e:
-                print(_('pypilot_server: bind failed; already running a server?'), e)
-                time.sleep(3)
+                print(_('pypilot_server: bind failed; is pypilot already running?'), e)
+                exit(1)
 
         # listen for tcp sockets
         self.server_socket.listen(5)
+        print('server listening', time.monotonic())
         fd = self.server_socket.fileno()
         self.fd_to_connection = {fd: self.server_socket}
         self.poller = select.poll()
@@ -738,7 +741,7 @@ class pypilotServer:
                     print('pypilot server: ' + _('max connections reached') + '!!!', len(self.sockets))
                     self.RemoveSocket(self.sockets[0]) # dump first socket??
                 socket = LineBufferedNonBlockingSocket(connection, address)
-                print(_('server add socket'), socket.address)
+                print(_('server add socket'), socket.address, time.monotonic())
 
                 self.sockets.append(socket)
                 fd = socket.fileno()

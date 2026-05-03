@@ -10,8 +10,9 @@
 import os
 import time
 
-from flask import Flask, Markup, render_template, request
-from flask_socketio import Namespace, SocketIO, emit
+from flask import Flask, render_template, request
+from markupsafe import Markup
+from flask_socketio import SocketIO, Namespace, emit, disconnect
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -348,8 +349,8 @@ def web_process(pipe, config):
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
     socketio.on_namespace(WebConfig('', pipe, config))
-    socketio.run(app, debug=False, host='0.0.0.0', port=web_port)
-
+    socketio.run(app, debug=False, host='0.0.0.0', port=web_port, allow_unsafe_werkzeug=True)
+    
 if __name__ == '__main__':
     config = {'host': 'localhost', 'actions': {},
               'pi.ir': True, 'arduino.ir': False,

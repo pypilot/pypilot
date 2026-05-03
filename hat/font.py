@@ -6,6 +6,7 @@
 # modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.
+
 import time
 
 try:
@@ -110,13 +111,15 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
 
     except Exception as e:
         print('failed to load PIL to create fonts, aborting...', e)
-        return False
-        time.sleep(3) # wait 3 seconds to avoid respawning too quickly
-        #return ugfx.surface(size, size, bypp, bytes([0]*(size*size*bypp)))
+        time.sleep(3) # wait 3 seconds to avoid respawning too quickly        
         exit(0)
 
     ifont = ImageFont.truetype(fontpath, size)
-    size = ifont.getsize(c)
+    #size = ifont.getsize(c)
+    (left, top, right, bottom) = ifont.getbbox(c)
+    size = (right, bottom)
+    print("size ", c, size)
+
     image = Image.new('RGBA', size)
     draw = ImageDraw.Draw(image)
     draw.text((0, 0), c, font=ifont)
@@ -127,7 +130,7 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
         bbox = diff.getbbox()
         if bbox:
             image = image.crop(bbox)
-
+            
     data = list(image.getdata())
     if bpp:
         for i in range(len(data)):

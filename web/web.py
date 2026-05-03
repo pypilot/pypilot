@@ -9,11 +9,7 @@
 import sys
 import os
 from flask import Flask, render_template, session, request
-
-try:
-    from flask import Markup
-except ImportError:
-    from markupsafe import Markup
+from markupsafe import Markup
 
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
@@ -61,19 +57,20 @@ print('using port', pypilot_web_port)
 # Set this variable to 'threading', 'eventlet' or 'gevent' to test the
 # different async modes, or leave it set to None for the application to choose
 # the best option based on installed packages.
-async_mode = None
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 try:
+<<<<<<< HEAD
     from flask_babel import Babel
     babel = Babel(app)
+=======
+    from flask_babel import Babel, gettext
+>>>>>>> 1b0041392426038a23d89bb71f74f427c09891c0
 
     LANGUAGES = os.listdir(os.path.dirname(os.path.abspath(__file__)) + '/translations')
-
-    @babel.localeselector
     def get_locale():
         if 'language' in config:
             language = config['language']
@@ -82,12 +79,18 @@ try:
         if language == 'default' or language not in LANGUAGES:
             return request.accept_languages.best_match(LANGUAGES)
         return language
+<<<<<<< HEAD
 
+=======
+    babel = Babel(app, locale_selector=get_locale)
+    
+>>>>>>> 1b0041392426038a23d89bb71f74f427c09891c0
 except Exception as e:
     print('failed to import flask_babel, translations not possible!!', e)
     def _(x): return x
     app.jinja_env.globals.update(_=_)
     babel = None
+    LANGUAGES = []
 
 
 @app.route('/logs')
@@ -270,7 +273,7 @@ def main():
     port = pypilot_web_port
     while True:
         try:
-            socketio.run(app, debug=False, host='0.0.0.0', port=port)
+            socketio.run(app, debug=False, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
             break
         except PermissionError as e:
             print('failed to run socket io on port', port, e)

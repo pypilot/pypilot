@@ -8,6 +8,8 @@
 
 #include <time.h>
 
+#include <vector>
+
 class spireader
 {
 public:
@@ -16,7 +18,9 @@ public:
 
     int open(int portn, int slave, int baud);
     void close();
-    unsigned char xfer(unsigned char c, bool block);
+    unsigned char blocking_read_byte();
+    unsigned char xfer_byte(unsigned char c);
+    std::vector<uint8_t> xfer(const std::vector<uint8_t>& tx);
 
 private:
     struct timespec ts;

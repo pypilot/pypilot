@@ -10,25 +10,9 @@
 import os
 import time
 
-raspberrypi = False
-orangepi = False
-
-try:
-    with open('/sys/firmware/devicetree/base/model') as m:
-        if 'raspberry pi' in m.read().lower():
-            while True:
-                try:
-                    f = open('/dev/gpiomem', 'w')
-                    f.close()
-                    break
-                except Exception as e:
-                    print('waiting for gpiomem...', e)
-                time.sleep(1)
-            import lgpio
-            print('have gpio for raspberry pi')
-            raspberrypi = True
-except Exception:
-    pass
+#import threading
+#import gpiod
+gpiod = False
 
 class gpio(object):
     def __init__(self):
@@ -37,11 +21,7 @@ class gpio(object):
 
         from pypilot.nonblockingpipe import NonBlockingPipe
         self.pipe = NonBlockingPipe(str(self), True)
-
-        if orangepi:
-            self.pins = [11, 16, 13, 15, 12]
-        else:
-            self.pins = [17, 23, 27, 22, 18, 5, 6, 26]
+        self.pins = [17, 23, 27, 22, 18, 5, 6, 26]
 
         self.lastkeystate = {}
         for p in self.pins:
@@ -51,56 +31,42 @@ class gpio(object):
         self.keypin = False
         self.lastkeyevent = 0
 
-        if not lgpio:
+        if not gpiod:
             return
 
-        self.gpio_handle = lgpio.gpiochip_open(0)
-
+        config = {}
         for pin in self.pins:
-            while True:
-                try:
-                    lgpio.gpio_claim_alert(self.gpio_handle, pin, lgpio.BOTH_EDGES, lgpio.SET_PULL_UP)
-                    lgpio.gpio_set_debounce_micros(self.gpio_handle, pin, 20000)
-                    break
-                except RuntimeError:
-                    print('failed to open /dev/gpiomem, no permission')
-                    # if failed, attempt to give current user privilege if no sudo pw
-                    user = os.getenv('USER')
-                    os.system('sudo chown ' + user + ' /dev/gpiomem')
-                    time.sleep(0.01)
-                    
-            def cbr(chip, pin, level, timestamp):
-                #print("got cbr", chip, pin, level, timestamp)
-                #value = GPIO.input(pin)
-                #time.sleep(.02)  # workaround buggy gpio
-                #self.lastkeystate[pin] = not value
-                #self.evalkeys()
-                # break from poll by sending to a pipe
-                self.pipe[0].send(pin)
+            config[pin] = gpiod.LineSettings(direction=gpiod.line.Direction.INPUT, edge_detection=gpiod.line.Edge.BOTH, bias=gpiod.line.Bias.PULL_UP)
+        self.request = gpiod.request_lines("/dev/gpiochip0", consumer="keys", config=config)
 
-            while True:
-                try:
-                    #GPIO.add_event_detect(pin, GPIO.BOTH, callback=cbr, bouncetime=50)
-                    lgpio.callback(self.gpio_handle, pin, lgpio.BOTH_EDGES, cbr)
-                    break
-                except Exception as e:
-                    print('WARNING', e, 'on pin ', pin)
+        self.thread_running = True
+        self.thread = threading.Thread(target=self.thread_main, daemon=True)
+        self.thread.start()
 
-                if not raspberrypi:
-                    break
-                print('retrying to setup gpio with edge detect.')
-                time.sleep(3)
+    def thread_main(self):
+        while self.thread_running:
+            # This blocks waiting for GPIO edge events.
+            if not self.request.wait_edge_events(timeout=1.0):
+                continue
+
+            for ev in self.request.read_edge_events():
+                gpio = ev.line_offset
+                #value = self.request.get_value(gpio)
+                #state = 1 if value == Value.ACTIVE else 0
+                time.sleep(.03)
+                self.pipe[0].send(gpio) # wake up poll for gpio
 
     def poll(self):
-        if not lgpio:
+        if not gpiod:
             return []
 
-        while self.pipe[1].recv():
-            pass
+        while True:
+            pin = self.pipe[1].recv()
+            if not pin:
+                break
 
-        for p in self.pins:
-            value = lgpio.gpio_read(self.gpio_handle, p)
-            self.lastkeystate[p] = not value
+            value = self.request.get_value(pin)
+            self.lastkeystate[pin] = not value
 
         self.evalkeys()
 

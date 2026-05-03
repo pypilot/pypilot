@@ -42,12 +42,13 @@ arduino_servo_module = Extension(
     swig_opts=["-c++"],
 )
 
-ugfx_defs = ['-DLGPIO']
-try:
-    import lgpio
-    ugfx_libraries=['lgpio']
-except:
-    print('no lgpio library for ugfx')
+ret = os.system('pkg-config --cflags libgpiod')
+if ret == 0:
+    print('detected libgpiod')
+    ugfx_libraries=['gpiod']
+    ugfx_defs = ['-DGPIOD']
+else:
+    print('no gpiod library for ugfx')
     ugfx_libraries=[]
     ugfx_defs = []
 
@@ -59,16 +60,12 @@ ugfx_module = Extension(
     swig_opts=["-c++"] + ugfx_defs,
 )
 
-if ugfx_libraries:
-    spireader_module = Extension(
-        "pypilot/hat/spireader/_spireader",
-        sources=["hat/spireader/spireader.cpp", "hat/spireader/spireader.i"],
-        extra_compile_args=["-Wno-unused-result"],
-        libraries=ugfx_libraries,
-        swig_opts=["-c++"],
-    )
-else:
-    spireader_module = None
+spireader_module = Extension('pypilot/hat/spireader/_spireader',
+                             sources=['hat/spireader/spireader.cpp',
+                                      'hat/spireader/spireader.i'],
+                             extra_compile_args=['-Wno-unused-result'],
+                             libraries=ugfx_libraries,
+                             swig_opts=['-c++'])
 
 ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module]
 if spireader_module:

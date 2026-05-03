@@ -617,46 +617,114 @@ screen::~screen()
 }
 #endif
 
-#ifdef LGPIO
-#include <lgpio.h>
+#ifdef GPIOD
+#include <gpiod.h>
+
+static struct gpiod_chip *gpio_chip;
+static struct gpiod_line_request *gpio_req;
+
+static void gpio_write_pin(int gpio, int value)
+{
+    int ret = gpiod_line_request_set_value(
+        gpio_req,
+        gpio,
+        value ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE
+    );
+
+    if (ret < 0) {
+        perror("gpiod_line_request_set_value");
+        exit(1);
+    }
+}
+
+static void gpio_pin_settings(struct gpiod_line_config *line_cfg, unsigned int pin, int value)
+{
+    struct gpiod_line_settings *settings = gpiod_line_settings_new();
+    if(!settings) {
+        perror("gpiod_line_settings_new() failed ");
+        exit(1);
+    }
+    gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
+    gpiod_line_settings_set_output_value(settings, value ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+
+    if(gpiod_line_config_add_line_settings(line_cfg, &pin, 1, settings) < 0) {
+        perror("gpiod_line_config_add_line_settings ");
+        exit(1);
+    }
+}
+
+#include <fcntl.h>
+#include <linux/spi/spidev.h>
+#include <stdint.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+
+static int spi_open(unsigned int baud)
+{
+    int fd;
+    uint8_t mode = SPI_MODE_0;
+    uint8_t bits = 8;
+    uint32_t speed = baud;
+
+    fd = open("/dev/spidev0.0", O_RDWR);
+    if (fd < 0) {
+        perror("open /dev/spidev0.0");
+        exit(1);
+    }
+
+    if (ioctl(fd, SPI_IOC_WR_MODE, &mode) < 0) {
+        perror("SPI_IOC_WR_MODE");
+        exit(1);
+    }
+
+    if (ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits) < 0) {
+        perror("SPI_IOC_WR_BITS_PER_WORD");
+        exit(1);
+    }
+
+    if (ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed) < 0) {
+        perror("SPI_IOC_WR_MAX_SPEED_HZ");
+        exit(1);
+    }
+
+    return fd;
+}
 
 class spilcd
 {
 public:
     spilcd(int _rst, int _dc, int baud)
         : rst(_rst), dc(_dc) {
-#if 0        
-    	setenv("WIRINGPI_CODES", "1", 1);
-        if(wiringPiSetup () < 0) {
-            printf("wiringPiSetup Failed (no permissions?) aborting\n");
+
+        gpio_chip = gpiod_chip_open("/dev/gpiochip0");
+        if (!gpio_chip) {
+            perror("gpiod_chip_open");
             exit(1);
         }
 
-        pinMode(rst, OUTPUT);
-        pinMode(dc, OUTPUT);
+        struct gpiod_line_config *line_cfg = gpiod_line_config_new();
+        struct gpiod_request_config *req_cfg = gpiod_request_config_new();
 
-	for(int port=0; port<2; port++)
-	    if((spifd = wiringPiSPISetup(port, baud)) != -1)
-		break;
-#else
-        if((lgpio_handle = lgGpiochipOpen(0)) < 0) {
-            printf("lgGpiochipOpen failed (no permissions?) aborting\n");
-            exit(1);
-        }
-        
-        if (lgGpioClaimOutput(lgpio_handle, 0, rst, 1) != LG_OKAY) {
-            printf("lgGpioClaimOutput failed on pin %d aborting\n", rst);
-            exit(1);
-        }
-        
-        if (lgGpioClaimOutput(lgpio_handle, 0, dc, 0) != LG_OKAY) {
-            printf("lgGpioClaimOutput failed on pin %d aborting\n", dc);
+        if (!line_cfg || !req_cfg) {
+            fprintf(stderr, "gpiod allocation failed\n");
             exit(1);
         }
 
-        spifd = lgSpiOpen(0, 0, baud, 0);
-#endif
+        gpio_pin_settings(line_cfg, rst, 1);
+        gpio_pin_settings(line_cfg, dc, 0);
+
+        gpiod_request_config_set_consumer(req_cfg, "spilcd");
+
+        gpio_req = gpiod_chip_request_lines(gpio_chip, req_cfg, line_cfg);
+        if (!gpio_req) {
+            perror("gpiod_chip_request_lines");
+            exit(1);
+        }
+
+        gpiod_request_config_free(req_cfg);
+        gpiod_line_config_free(line_cfg);
         
+        spifd = spi_open(baud);
 	  
 	if(spifd == -1) {
             fprintf(stderr, "failed to open spi device");
@@ -665,19 +733,19 @@ public:
     }
 
     virtual ~spilcd() {
-        lgSpiClose(spifd);
+        close(spifd);
     }
 
 
     void command(uint8_t c) {
-        lgGpioWrite(lgpio_handle, dc, 0);
-        lgSpiWrite(spifd, (char*)&c, 1);
+        gpio_write_pin(dc, 0);
+        write(spifd, &c, 1);
     }
 
     void reset() {
-        lgGpioWrite(lgpio_handle, rst, 0);
+        gpio_write_pin(rst, 0);
         usleep(200000);
-        lgGpioWrite(lgpio_handle, rst, 1);
+        gpio_write_pin(rst, 1);
     }
 
     virtual void refresh(int contrast, surface *s) = 0;
@@ -708,7 +776,7 @@ public:
 };
 #endif
 
-#ifdef LGPIO
+#ifdef GPIOD
 #define DC 25
 #define RST 24
 
@@ -765,7 +833,7 @@ public:
         command(PCD8544_SETYADDR);
         command(PCD8544_SETXADDR);
 
-        lgGpioWrite(lgpio_handle, dc, 1);
+        gpio_write_pin(dc, 1);
 
         int size = 84*48/8;
 
@@ -787,7 +855,7 @@ public:
             int len = 64;
             if (size - pos < 64)
                 len = size - pos;
-            lgSpiWrite(spifd, binary + pos, len);
+            write(spifd, binary + pos, len);
         }
     }
 };
@@ -802,7 +870,7 @@ const int  rsPIN  = DC;    // RS
 class JLX12864G : public spilcd
 {
 public:
-    JLX12864G() : spilcd(rstPIN, rsPIN, 1000000) {}
+    JLX12864G() : spilcd(rstPIN, rsPIN, 1000000) { }
     virtual ~JLX12864G() {}
     void refresh(int contrast, surface *s) {
         if(contrast < 0)
@@ -830,9 +898,9 @@ public:
             0xaf // Open the display
         };
 
-        lgGpioWrite(lgpio_handle, dc, 0);
-        lgSpiWrite(spifd, (char*)cmd, sizeof cmd);
-        lgGpioWrite(lgpio_handle, dc, 1);
+        gpio_write_pin(dc, 0);
+        write(spifd, cmd, sizeof cmd);
+        gpio_write_pin(dc, 1);
 
         unsigned char binary[128*64];//width*height/8];
         for(int col = 0; col<8; col++)
@@ -851,21 +919,21 @@ public:
         {
             unsigned char c1 = 0xb0+i;
             unsigned char cmd[] = {c1, 0x10};
-            lgGpioWrite(lgpio_handle, dc, 0);
+            gpio_write_pin(dc, 0);
 
-            lgSpiWrite(spifd, (char*)cmd, sizeof cmd);
-            lgGpioWrite(lgpio_handle, dc, 1);
+            write(spifd, cmd, sizeof cmd);
+            gpio_write_pin(dc, 1);
 
 #if 0
             unsigned char *address = binary + i*128; //pointer
             for (unsigned int pos=0; pos<128; pos ++) {
                 char data[1] = {binary[i*128+pos]};
-                lgSpiWrite(spifd, data, 1);
+                write(spifd, data, 1);
                 address++;
             }
 #else
             unsigned char *address = binary + i*128; //pointer
-            lgSpiWrite(spifd, (char*)address, 128);
+            write(spifd, address, 128);
 #endif
         }
      }
@@ -921,9 +989,9 @@ public:
             
         };
 
-        lgGpioWrite(lgpio_handle, dc, 0);
-        lgSpiWrite(spifd, (char*)cmd, sizeof cmd);
-        lgGpioWrite(lgpio_handle, dc, 1);
+        gpio_write_pin(dc, 0);
+        write(spifd, cmd, sizeof cmd);
+        gpio_write_pin(dc, 1);
 
         unsigned char binary[128*64];//width*height/8];
         for(int col = 0; col<8; col++)
@@ -942,19 +1010,19 @@ public:
         {
             unsigned char c1 = 0xb0+i;
             unsigned char cmd[] = {c1, 0x10};
-            lgGpioWrite(lgpio_handle, dc, 0);
-            lgSpiWrite(spifd, (char*)cmd, sizeof cmd);
-            lgGpioWrite(lgpio_handle, dc, 1);
+            gpio_write_pin(dc, 0);
+            write(spifd, cmd, sizeof cmd);
+            gpio_write_pin(dc, 1);
 #if 0
             unsigned char *address = binary + i*128; //pointer
             for (unsigned int pos=0; pos<128; pos ++) {
                 char data[1] = {binary[i*128+pos]};
-                lgSpiWrite(spifd, data, 1);
+                write(spifd, data, 1);
                 address++;
             }
 #else
             unsigned char *address = binary + i*128; //pointer
-            lgSpiWrite(spifd, (char*)address, 128);
+            write(spifd, address, 128);
 #endif
         }
      }
@@ -984,17 +1052,17 @@ public:
     }
     virtual ~DG240160() {}
     void cmd(uint8_t d) {
-        lgGpioWrite(lgpio_handle, dc, 0);
-	lgSpiWrite(spifd, (char*)&d, 1);
+        gpio_write_pin(dc, 0);
+	write(spifd, &d, 1);
     }
     void data(uint8_t d) {
-        lgGpioWrite(lgpio_handle, dc, 1);
-	lgSpiWrite(spifd, (char*)&d, 1);
+        gpio_write_pin(dc, 1);
+	write(spifd, &d, 1);
     }
     void data4(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
-        lgGpioWrite(lgpio_handle, dc, 1);
+        gpio_write_pin(dc, 1);
 	uint8_t data[4] = {a, b, c, d};
-	lgSpiWrite(spifd, (char*)&data, 4);
+	write(spifd, &data, 4);
     }
 
     void init() {
@@ -1050,7 +1118,7 @@ public:
 	data4(0x00, 0x00, 0x00, 0x9F);
 
 	cmd(0x2C); // begin write data
-        lgGpioWrite(lgpio_handle, dc, 1);
+        gpio_write_pin(dc, 1);
     }
     
     void refresh(int contrast, surface *s) {
@@ -1084,7 +1152,7 @@ public:
 
 	// somehow spi transfer more than 4096 bytes fails, break into 4 transfers
 	for(int i=0; i<4; i++)
-	    lgSpiWrite(spifd, (char*)(binary+i*80*40), 80*40);
+	    write(spifd, binary+i*80*40, 80*40);
     }
 };
 
@@ -1118,7 +1186,7 @@ spiscreen::spiscreen(int driver)
 {
     driver = detect(driver);
     switch (driver) {
-#ifdef LGPIO
+#ifdef GPIOD
     case 0: disp = new PCD8544(); break;
     case 1: disp = new JLX12864G(); break;
     case 2: disp = new SSD1309(); break;

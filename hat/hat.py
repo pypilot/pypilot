@@ -11,17 +11,16 @@ import time
 
 print('hat start', time.monotonic())
 import os
-import select
-import signal
 import sys
-
-from pypilot import pyjson
+import signal # delay this?
+import select
+from pypilot import pyjson  # very slow why?
 from pypilot.client import pypilotClient
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import arduino
 import gpio
 import lcd
+import arduino
 
 print('hat import done', time.monotonic())
 
@@ -297,10 +296,12 @@ class LCD(Process):
 
     def create(self):
         def process(pipe, config):
-            print('lcd process on', os.getpid())
+            sys.stdout.reconfigure(line_buffering=True)
+            import lcd
             self.lcd = lcd.LCD(self.hat.config)
             self.lcd.pipe = pipe
 
+            print('lcd process main loop running', time.monotonic())
             if self.lcd.use_glut:
                 from OpenGL.GLUT import glutIdleFunc, glutMainLoop
                 glutIdleFunc(self.lcd.poll)
@@ -390,11 +391,15 @@ class Hat:
 
         self.poller = select.poll()
         self.gpio = gpio.gpio()
+        print('processes 2...', time.monotonic())
         self.poller.register(self.gpio.pipe[1], select.POLLIN)
 
         self.lcd = LCD(self)
+        print('processes 4...', time.monotonic())
+        
         #time.sleep(1)
 
+        print('hat init processes done', time.monotonic())
         self.watchlist = ['ap.enabled', 'ap.heading_command', 'ap.mode']
         self.watchlist += ['profile', 'profiles']
         self.watchlist += ['ap.tack.state', 'ap.tack.direction']
@@ -412,6 +417,8 @@ class Hat:
             self.arduino = False
 
         self.lcd.poll()
+
+        print('init lircd', time.monotonic())
 
         import lircd
         self.lirc = lircd.lirc(self.config)
@@ -474,6 +481,7 @@ class Hat:
             if name.startswith('profile '):
                 self.config['actions'][name] = cfg[name]
 
+        print('init web', time.monotonic())
         self.web = Web(self)
 
         def cleanup(signal_number, frame=None):

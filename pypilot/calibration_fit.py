@@ -10,8 +10,10 @@
 import math
 import sys
 import time
-
 import numpy
+
+#from odrpack import odr_fit
+import minpack
 
 import boatimu
 import quaternion
@@ -31,6 +33,7 @@ def lmap(*cargs):
 def safedegasin(x):
     return math.degrees(math.asin(min(max(x, -1), 1)))
 
+'''
 def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
     try:
         import scipy.optimize
@@ -45,13 +48,28 @@ def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
     if leastsq[1] not in [1, 2, 3, 4]:
         return False
     return list(leastsq[0])
-
-def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
+'''
+def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
     try:
-        import scipy.odr
-    except ImportError:
-        print(_('failed to load scientific library, cannot perform calibration update!'))
+        t0 = time.monotonic()
+
+        result = minpack.lmdif1(lambda beta: f(beta, zpoints), beta0)
+
+        info = getattr(result, 'info', None)
+        if info is not None and info not in [1, 2, 3, 4]:
+            return False
+
+        x = getattr(result, 'x', None)
+        if x is None:
+            x = result[0]
+
+        return list(x)
+    except Exception as e:
+        debug('exception running minpack fit:', e)
         return False
+    
+'''
+def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
     try:
         Model = scipy.odr.Model(f, implicit=1)
         Data = scipy.odr.RealData(zpoints, dimensions)
@@ -60,6 +78,27 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
         return list(output.beta)
     except Exception:
         print('exception running odr fit!')
+        return False
+'''
+def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
+    try:
+        xdata = np.asarray(zpoints, dtype=float)
+        ydata = np.zeros(xdata.shape[-1], dtype=float)
+
+        def f_odrpack(x, beta):
+            return f(beta, x)
+
+        sol = odr_fit(
+            f_odrpack,
+            xdata,
+            ydata,
+            beta0,
+            task='implicit-ODR',
+            maxit=1000,
+        )
+        return list(sol.beta)
+    except Exception as e:
+        print('exception running odr fit!', e)
         return False
 
 def ComputeDeviation(points, fit):
