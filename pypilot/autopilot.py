@@ -35,7 +35,6 @@ from server import pypilotServer
 from values import *
 from version import strversion
 
-
 def minmax(value, r):
     return min(max(value, -r), r)
 

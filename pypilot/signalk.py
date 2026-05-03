@@ -135,7 +135,7 @@ class signalk:
         self.last_access_request_time = 0
 
         self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('signalk pipe', self.multiprocessing)
-        self.zero_conf = ZeroConfProcess(self)
+        self.zero_conf = False # spawn this from within signalk process
 
         if self.multiprocessing:
             import multiprocessing
@@ -181,7 +181,6 @@ class signalk:
         self.last_manual_signalk_host = False
 
         self.initialized = True
-
 
     def probe_signalk(self):
         debug('signalk ' + _('probe') + '...', self.signalk_host_port)
@@ -311,6 +310,10 @@ class signalk:
         time.sleep(6) # let other stuff load
         print('signalk process', os.getpid())
         self.process = False
+        if self.multiprocessing:
+            self.zero_conf = ZeroConfProcess(self)
+        else:
+            print('multiprocessing disabled, signalk will not auto-discover via zeroconf')
         while True:
             time.sleep(.1)
             self.poll(1)
@@ -358,7 +361,8 @@ class signalk:
                 self.disconnect_signalk()
 
         if not manual_host:
-            zc = self.zero_conf.poll()
+            if self.zero_conf:
+                zc = self.zero_conf.poll()
             if zc == 'disconnect':
                 self.signalk_host_port = False
                 self.disconnect_signalk()
