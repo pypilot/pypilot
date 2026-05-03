@@ -13,6 +13,7 @@ import select
 import socket
 import sys
 import time
+import tempfile
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pyjson
@@ -537,18 +538,31 @@ class ServerValues(pypilotValue):
                 print("failed to remove watch", e)
 
         print('store_file', filename, '%.3f'%time.monotonic(), self.need_store)
-        file = open(filename, 'w')
-        for name, value in self.persistent_data[None].items():
-            file.write(value)
-        for profile, data in self.persistent_data.items():
-            if profile is None:
-                continue
-            profile.replace('"', '')
-            file.write('[profile="' + profile + '"]\n')
-            for name, value in data.items():
-                if value:
+        # Write to a sibling tempfile then atomically rename, so a crash or
+        # power loss mid-write cannot leave a truncated/corrupt config.
+        target_dir = os.path.dirname(filename) or '.'
+        tmp_fd, tmp_path = tempfile.mkstemp(prefix='.pypilot_conf.', dir=target_dir)
+        try:
+            with os.fdopen(tmp_fd, 'w') as file:
+                for name, value in self.persistent_data[None].items():
                     file.write(value)
-        file.close()
+                for profile, data in self.persistent_data.items():
+                    if profile is None:
+                        continue
+                    profile.replace('"', '')
+                    file.write('[profile="' + profile + '"]\n')
+                    for name, value in data.items():
+                        if value:
+                            file.write(value)
+                file.flush()
+                os.fsync(file.fileno())
+            os.replace(tmp_path, filename)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
         if self.inotify:
             self.inotify.add_watch(configfilepath + configfilename)
@@ -633,8 +647,8 @@ class pypilotServer:
             try:
                 self.server_socket.bind(('0.0.0.0', self.port))
                 break
-            except OSError:
-                print(_('pypilot_server: bind failed; already running a server?'))
+            except OSError as e:
+                print(_('pypilot_server: bind failed; already running a server?'), e)
                 time.sleep(3)
 
         # listen for tcp sockets

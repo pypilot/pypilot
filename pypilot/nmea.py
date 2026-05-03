@@ -27,6 +27,7 @@ import multiprocessing
 import select
 import socket
 import time
+import threading
 
 import serial
 
@@ -55,6 +56,7 @@ def check_nmea_cksum(line):
         return False
 
 gps_timeoffset = 0
+_gps_time_lock = threading.Lock()  # guard gps_timeoffset across threads / bridge process parsers
 def parse_nmea_gps(line):
     def degrees_minutes_to_decimal(n):
         n/=100
@@ -73,21 +75,28 @@ def parse_nmea_gps(line):
 
         try: # since we are given only time and not date, use current day
             x = time.strptime(data[0], '%H%M%S.%f')
-            ts = (x.tm_hour*60+x.tm_min)*60+x.tm_sec
+            sec_in_day = 86400
+            tod = (x.tm_hour*60+x.tm_min)*60+x.tm_sec
             t0 = time.time()
             global gps_timeoffset
-            ts += gps_timeoffset # seconds since 1970
-            sec_in_day = 86400
-            if ts > t0 or ts < t0 - sec_in_day: # wrong day
-                ts -= gps_timeoffset # undo offset
-                day = int(t0/sec_in_day)
-                if gps_timeoffset != sec_in_day*day:
-                    gps_timeoffset = sec_in_day*day
+            with _gps_time_lock:
+                ts = tod + gps_timeoffset # seconds since 1970
+                # If the derived timestamp is more than half a day off wall
+                # clock, recompute the day offset. The half-day threshold
+                # avoids flipping ±86400s when RMC arrives within a second
+                # of UTC midnight.
+                if abs(ts - t0) > sec_in_day / 2:
+                    day = int(t0 / sec_in_day)
+                    gps_timeoffset = sec_in_day * day
+                    ts = tod + gps_timeoffset
+                    if ts - t0 > sec_in_day / 2:
+                        gps_timeoffset -= sec_in_day
+                        ts -= sec_in_day
+                    elif t0 - ts > sec_in_day / 2:
+                        gps_timeoffset += sec_in_day
+                        ts += sec_in_day
                     print('reset gps timeoffset', day, ts, t0)
-                if ts + gps_timeoffset > t0:
-                    gps_timeoffset -= sec_in_day
-                ts += gps_timeoffset
-        except (ValueError, IndexError):
+        except Exception:
             ts = time.time()
 
         lat = degrees_minutes_to_decimal(float(data[2]))
@@ -205,6 +214,10 @@ def parse_nmea_apb(line):
         return False
     try:
         data = line[7:len(line)-3].split(',')
+        if len(data) < 14:
+            # short APB sentence can drive the autopilot; bail before indexing
+            print(_('nmea short apb sentence'), len(data), line)
+            return False
         mode = 'compass' if data[13] == 'M' else 'gps'
         track = float(data[12])
         xte = float(data[2])
