@@ -10,6 +10,8 @@
 # This setup.py only handles C/SWIG extension builds.
 # All metadata, dependencies, and entry points are in pyproject.toml.
 
+import os
+
 from setuptools import Extension, setup
 from setuptools.command.install import install
 
