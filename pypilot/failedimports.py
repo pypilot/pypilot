@@ -10,14 +10,7 @@
 
 print(_('pypilot failed to import required modules.  Did you forget to run sudo python3 setup.py install?'))
 
-import sys
-
-if sys.version_info[0] < 3:
-    print('pypilot requires python version 3.  python version is', sys.version)
-    print('I will now attempt to re-run the command using python 3')
-    cmd = 'python3 '
-    for arg in sys.argv:
-        cmd += arg + ' '
-    import os
-    os.system(cmd)
+# pyproject.toml declares requires-python>=3.9, so reaching this module
+# guarantees we are already on Python 3. The previous py2 re-exec branch
+# is unreachable and has been removed.
 exit(1)
