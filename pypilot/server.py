@@ -20,14 +20,21 @@ import pyjson
 from bufferedsocket import LineBufferedNonBlockingSocket
 from nonblockingpipe import NonBlockingPipe
 
-DEFAULT_PORT = 23322
+# Runtime configuration. Each value can be overridden via a PYPILOT_*
+# environment variable so deployments can pick a different port or
+# config directory without editing source. Behaviour with no env vars
+# set is unchanged.
+DEFAULT_PORT = int(os.getenv('PYPILOT_PORT', '23322'))
 from zeroconf_service import zeroconf
 
-max_connections = 30
-configfilepath = os.getenv('HOME') + '/.pypilot/'
+max_connections = int(os.getenv('PYPILOT_MAX_CONNECTIONS', '30'))
+configfilepath = os.getenv('PYPILOT_CONFIG_DIR',
+                           os.path.expanduser('~/.pypilot/'))
+if not configfilepath.endswith('/'):
+    configfilepath += '/'
 configfilename = 'pypilot.conf'
-server_persistent_period = 60 # store data every 60 seconds
-use_multiprocessing = True # run server in a separate process
+server_persistent_period = int(os.getenv('PYPILOT_PERSIST_PERIOD', '60'))
+use_multiprocessing = os.getenv('PYPILOT_MULTIPROCESSING', '1') != '0'
 
 class Watch:
     def __init__(self, value, connection, period):
