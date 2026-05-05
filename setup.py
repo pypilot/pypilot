@@ -56,7 +56,8 @@ else:
 
 ugfx_module = Extension(
     "pypilot/hat/ugfx/_ugfx",
-    sources=["hat/ugfx/ugfx.cpp", "hat/ugfx/ugfx.i"],
+    sources=["hat/ugfx/ugfx.cpp",
+             "hat/ugfx/ugfx.i"],
     extra_compile_args=["-Wno-unused-result"] + ugfx_defs,
     libraries=ugfx_libraries,
     swig_opts=["-c++"] + ugfx_defs,
@@ -68,6 +69,11 @@ spireader_module = Extension('pypilot/hat/spireader/_spireader',
                              extra_compile_args=['-Wno-unused-result'],
                              libraries=ugfx_libraries,
                              swig_opts=['-c++'])
+
+os.system('cd hat/locale;./translate.sh')
+os.system('cd hat; pybabel compile -d translations')
+os.system('cd pypilot/locale;./translate.sh')
+os.system('cd web; pybabel compile -d translations')
 
 ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module]
 if spireader_module:

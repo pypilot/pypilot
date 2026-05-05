@@ -82,7 +82,7 @@ class sys_dep(dep):
         if ret:
             return False
         return True
-
+'''
 class wiringpi_dep(dep):
     def __init__(self, name):
         super(wiringpi_dep, self).__init__(name)
@@ -112,7 +112,7 @@ class wiringpi_dep(dep):
         except:
             pass
         return True
-
+'''
 class RTIMULIB2_dep(dep):
     def __init__(self):
         super(RTIMULIB2_dep, self).__init__('RTIMULIB2')
@@ -180,14 +180,14 @@ subsystems = []
 def ss(*cargs):
     subsystems.append(subsystem(*cargs))
     
-# autopilot dependencies (required): RTIMULIB2 python3-serial libpython3-dev python3-numpy python3-scipy swig
+# autopilot dependencies (required): RTIMULIB2 python3-serial libpython3-dev python3-numpy swig
 #                        (recommended): python3-ujson python3-pyudev python3-zeroconf
 
 ss('dependencies', 'dependency script dependencies',
    [py_dep('importlib_metadata')])
 
 ss('autopilot', 'core autopilot or imu-only mode',
-   [RTIMULIB2_dep(), py_dep('serial'), py_dep('numpy'), py_dep('scipy'), sys_dep('libpython3-dev'), sys_dep('swig')])
+   [RTIMULIB2_dep(), py_dep('serial'), py_dep('numpy'), sys_dep('libpython3-dev'), sys_dep('swig')])
 
 # dependencies not required but reduce cpu usage considerably
 ss('optimize', '(recommended) core autopilot operations',

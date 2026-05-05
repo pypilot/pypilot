@@ -28,13 +28,12 @@ classifiers = [
 dependencies = [
     "pyserial",
     "numpy",
-    "scipy",
 ]
 
 [project.optional-dependencies]
 optimize = ["ujson", "pyudev", "inotify"]
 signalk = ["zeroconf", "requests", "websocket-client"]
-hat = ["pillow"]
+hat = ["pillow", "libgpiod"]
 web = [
     "flask",
     "gevent-websocket",
