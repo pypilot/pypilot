@@ -43,10 +43,9 @@ class screen(ugfx.surface):
                     p.append(v&0xff)
                     p.append(0)
 
-            data = numpy.array(list(p), numpy.int8)
+            data = numpy.array(list(p), numpy.uint8)
 
 #            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size[0], size[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, data)
-
 
             OpenGL.raw.GL.VERSION.GL_1_1.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size[0], size[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, data)
 

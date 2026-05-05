@@ -28,7 +28,6 @@ pywavefront = False
 
 from pypilot import quaternion
 
-
 class BoatPlot:
     def __init__(self):
         # looking at boat from nice angle
@@ -66,7 +65,7 @@ class BoatPlot:
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        glPushMatrix()
+        #glPushMatrix()
 
         def glRotateQ(q):
             try:
@@ -102,6 +101,12 @@ class BoatPlot:
 
             glPopMatrix()
 
+            glEnable(GL_DEPTH_TEST)
+            if self.texture_compass:
+                self.draw_texture_compass()
+            else:
+                self.draw_vector_compass()
+            
         elif pywavefront is False:
             try:
                 import pywavefront
@@ -120,12 +125,7 @@ class BoatPlot:
                 pywavefront = None
 
 
-        glEnable(GL_DEPTH_TEST)
-        if self.texture_compass:
-            self.draw_texture_compass()
-        else:
-            self.draw_vector_compass()
-        glPopMatrix()
+        #glPopMatrix()
 
     def draw_vector_compass(self):
 
@@ -204,7 +204,7 @@ class BoatPlot:
     def reshape(self, width, height):
         self.dim = width, height
 
-if __name__ == '__main__':
+def main():
     plot = BoatPlot()
 
     def display():
@@ -229,9 +229,9 @@ if __name__ == '__main__':
         exit(0)
 
     glutInit(sys.argv)
-    glutInitWindowPosition(0, 0)
+    glutInitWindowPosition(250, 250)
     glutInitWindowSize(600, 500)
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH)
     glutCreateWindow(sys.argv[0])
 
 #    glutIdleFunc(idle)
@@ -243,3 +243,6 @@ if __name__ == '__main__':
     glutMotionFunc( motion )
 
     glutMainLoop()
+
+if __name__ == '__main__':
+    main()

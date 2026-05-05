@@ -10,13 +10,16 @@
 import math
 import sys
 import time
-
 import numpy
+
+import os
+os.environ["PYOPENGL_PLATFORM"] = "glx"
+
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
-from pypilot.client import pypilotClientFromArgs
 
+from pypilot.client import pypilotClientFromArgs
 
 class trace:
     colors = [[1, 0, 0], [0, 1, 0], [1, 1, 0],
@@ -346,8 +349,9 @@ class pypilotPlot:
         self.curtrace.offset += offset*self.scale * self.NUM_Y_DIV / y
 
     def key(self, k, x, y):
+        k = chr(k[0])
         if k == 'q' or k == 27:
-            exit(0)
+            glutLeaveMainLoop()
 
         if not self.curtrace:
             return
@@ -412,24 +416,26 @@ def main():
     if len(sys.argv) > 1:
         host, args = sys.argv[1], sys.argv[2:]
     client = pypilotClientFromArgs(args, host=host)
+    client.watch('timestamp')
 
     def idle():
+        client.poll()
         while True:
             try:
                 result = client.receive_single()
                 if result:
                     plot.read_data(result)
                 else:
-                    time.sleep(.01)
                     break
             except Exception:
                 pass
+        time.sleep(.01)
 
     glutInit(sys.argv)
-    glutInitWindowPosition(250, 0)
+    glutInitWindowPosition(250, 250)
     glutInitWindowSize(1000, 500)
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB)
-    glutCreateWindow ('glplot')
+    glutCreateWindow ('pypilot scope')
 
     def display():
         plot.display()
@@ -441,7 +447,7 @@ def main():
     glutSpecialFunc(plot.special)
     glutIdleFunc(idle)
 
-    plot.init(client.list_values(10))
+    plot.init({})#client.list_values(10))
 
     fps = 30
     def timeout(arg):

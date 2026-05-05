@@ -11,6 +11,8 @@ import os
 import sys
 import time
 
+os.environ["PYOPENGL_PLATFORM"] = "glx"
+
 from page import *
 
 try:

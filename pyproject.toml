@@ -36,7 +36,7 @@ dependencies = [
 [project.optional-dependencies]
 optimize = ["ujson", "pyudev", "inotify"]
 signalk = ["zeroconf", "requests", "websocket-client"]
-hat = ["pillow", "libgpiod"]
+hat = ["pillow", "gpiod"]
 web = [
     "flask",
     "gevent-websocket",
@@ -44,7 +44,7 @@ web = [
     "flask-socketio>=5",
     "flask-babel",
 ]
-gui = ["wxPython", "PyOpenGL", "pyglet==1.5.21", "pywavefront", "pillow"]
+ui = ["wxPython", "PyOpenGL", "pyglet==1.5.21", "pywavefront", "pillow"]
 dev = [
     "ruff",
     "mypy",
@@ -72,8 +72,13 @@ pypilot_client_wx = "pypilot.ui.client_wx:main"
 [tool.setuptools.dynamic]
 version = { attr = "pypilot.version.strversion" }
 
-[tool.setuptools.packages.find]
-include = ["pypilot*"]
+[tool.setuptools]
+packages = [
+    "pypilot",
+    "pypilot.hat",
+    "pypilot.web",
+    "pypilot.ui",
+]
 
 [tool.setuptools.package-dir]
 "pypilot.hat" = "hat"
@@ -85,13 +90,11 @@ include = ["pypilot*"]
 [tool.setuptools.package-data]
 "pypilot" = ["locale/**/*.mo"]
 "pypilot.hat" = [
-    "font.ttf",
     "static/*",
     "templates/*",
     "locale/**/*.mo",
     "translations/**/*.mo",
 ]
-"pypilot.ui" = ["*.png", "*.mtl", "*.obj"]
 "pypilot.web" = [
     "static/*",
     "templates/*",
