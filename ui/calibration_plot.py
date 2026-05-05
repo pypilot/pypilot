@@ -11,6 +11,9 @@ import math
 import sys
 import time
 
+import os
+os.environ["PYOPENGL_PLATFORM"] = "glx"
+
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
@@ -205,6 +208,9 @@ class AccelCalibrationPlot(CalibrationPlot):
                 return beta[3]*x+beta[:3]
             self.cal_sphere = value[0]
             self.fit_sphere = Spherical(self.cal_sphere, fsphere,  32, 16)
+        else:
+            return False
+        return True
 
     def display(self):
         self.display_setup()
@@ -252,6 +258,9 @@ class CompassCalibrationPlot(CalibrationPlot):
                 self.mag_fit_cone = Conical(self.mag_cal_sphere, 32, 16)
             except Exception as e:
                 print("Exception", e)
+        else:
+            return False
+        return True
 
     def display(self):
         down = self.display_setup()
@@ -330,7 +339,6 @@ if __name__ == '__main__':
 
             if plot.read_data(result):
                 glutPostRedisplay()
-
 
     glutInit(sys.argv)
     glutInitWindowPosition(0, 0)

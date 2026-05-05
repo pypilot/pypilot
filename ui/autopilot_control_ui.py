@@ -7,12 +7,11 @@
 ## PLEASE DO *NOT* EDIT THIS FILE!
 ###########################################################################
 
-import gettext
-
 import wx
-import wx.glcanvas
 import wx.xrc
+import wx.glcanvas
 
+import gettext
 _ = gettext.gettext
 
 ###########################################################################

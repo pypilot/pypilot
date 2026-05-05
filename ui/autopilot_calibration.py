@@ -28,7 +28,6 @@ import calibration_plot
 import scope_wx
 from client_wx import round3
 
-
 class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
     ID_MESSAGES = 1000
     ID_CALIBRATE_SERVO = 1001
@@ -58,7 +57,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.Bind(wx.EVT_TIMER, self.receive_messages, id=self.ID_MESSAGES)
 
         self.heading_offset_timer = wx.Timer(self, self.ID_HEADING_OFFSET)
-        self.Bind(wx.EVT_TIMER, lambda e : self.sHeadingOffset.SetValue(round3(self.pypilot_heading_offset)), id = self.ID_HEADING_OFFSET)
+        self.Bind(wx.EVT_TIMER, lambda e : self.sHeadingOffset.SetValue(int(self.pypilot_heading_offset)), id = self.ID_HEADING_OFFSET)
 
         self.have_rudder = False
 
@@ -130,7 +129,7 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
                     s = wx.SpinCtrlDouble(self.m_pSettings, wx.ID_ANY)
                     s.SetRange(v['min'], v['max'])
                     s.SetIncrement(min(1, (v['max'] - v['min']) / 100.0))
-                    s.SetDigits(-math.log(s.GetIncrement()) / math.log(10) + 1)
+                    s.SetDigits(int(-math.log(s.GetIncrement()) / math.log(10) + 1))
                     self.settings[name] = s
                     fgSettings.Add(wx.StaticText(self.m_pSettings, wx.ID_ANY, name), 0, wx.ALL, 5)
                     fgSettings.Add(s, 0, wx.ALL | wx.EXPAND, 5)
@@ -342,13 +341,16 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         wx.PaintDC( canvas )
         canvas.SetCurrent(context)
         plot.display()
+
         canvas.SwapBuffers()
 
     def onSizeGLAccel( self, event ):
-        self.accel_calibration_plot.reshape(event.GetSize().x, event.GetSize().y)
+        scale_factor = self.GetContentScaleFactor()
+        self.accel_calibration_plot.reshape(int(event.GetSize().x*scale_factor), int(event.GetSize().y*scale_factor))
 
     def onSizeGLCompass( self, event ):
-        self.compass_calibration_plot.reshape(event.GetSize().x, event.GetSize().y)
+        scale_factor = self.GetContentScaleFactor()
+        self.compass_calibration_plot.reshape(int(event.GetSize().x*scale_factor), int(event.GetSize().y*scale_factor))
 
     def onResetAlignment(self, event):
         self.client.set('imu.alignmentQ', False)
@@ -397,13 +399,15 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.BoatPlot.SetCurrent(self.boat_plot_glContext)
 
         # stupid hack
-        self.boat_plot.reshape(self.BoatPlot.GetSize().x, self.BoatPlot.GetSize().y)
-
+        scale_factor = self.GetContentScaleFactor()
+        self.boat_plot.reshape(int(self.BoatPlot.GetSize().x*scale_factor), int(self.BoatPlot.GetSize().y*scale_factor))
         self.boat_plot.display(self.fusionQPose)
+        
         self.BoatPlot.SwapBuffers()
 
     def onSizeGLBoatPlot( self, event ):
-        self.boat_plot.reshape(event.GetSize().x, event.GetSize().y)
+        scale_factor = self.GetContentScaleFactor()
+        self.boat_plot.reshape(int(event.GetSize().x*scale_factor), int(event.GetSize().y*scale_factor))
         self.BoatPlot.Refresh()
 
     def onTextureCompass( self, event ):

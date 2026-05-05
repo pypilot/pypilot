@@ -24,14 +24,7 @@ from OpenGL.GLUT import *
 
 from importlib.resources import files
 
-#from objloader import *
-try:
-    import pywavefront
-    from pywavefront import visualization
-except Exception as e:
-    print(_('failed to load pywavefront:'), e)
-    pywavefront = False
-
+pywavefront = False
 
 from pypilot import quaternion
 
@@ -87,6 +80,7 @@ class BoatPlot:
 
         glRotateQ(self.Q)
 
+        global pywavefront
         if self.obj:
             glPushMatrix()
             #q = quaternion.multiply(fusionQPose, quaternion.angvec2quat(-math.pi/2, [1, 0, 0]))
@@ -103,19 +97,28 @@ class BoatPlot:
             lightfv = ctypes.c_float * 4
             glLightfv(GL_LIGHT0, GL_DIFFUSE, lightfv(1.0, 1.0, 1.0, 1.0))
             glEnable(GL_LIGHT0)
-            visualization.draw(self.obj)
+            self.visualization.draw(self.obj)
             glDisable(GL_LIGHTING)
 
             glPopMatrix()
 
-        elif pywavefront:
-            self.chdir()
+        elif pywavefront is False:
             try:
-                root = files("pypilot_data")
-                self.obj = pywavefront.Wavefront(root / 'ui' / 'Vagabond.obj')
+                import pywavefront
+                from pywavefront import visualization
+                self.visualization = visualization
+
+                self.chdir()
+                try:
+                    root = files("pypilot_data")
+                    self.obj = pywavefront.Wavefront(root / 'ui' / 'Vagabond.obj')
+                except Exception as e:
+                    print('Vagabond.obj ' + _('failed to load'), e)
+                    print(_('Did you add the pypilot_data repository?'))
             except Exception as e:
-                print('Vagabond.obj ' + _('failed to load'), e)
-                print(_('Did you add the pypilot_data repository?'))
+                print(_('failed to load pywavefront:'), e)
+                pywavefront = None
+
 
         glEnable(GL_DEPTH_TEST)
         if self.texture_compass:
