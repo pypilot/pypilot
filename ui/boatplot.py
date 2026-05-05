@@ -8,8 +8,10 @@
 # version 3 of the License, or (at your option) any later version.
 
 import math
-
 import numpy
+
+import os
+os.environ["PYOPENGL_PLATFORM"] = "glx"
 
 try:
     import Image
@@ -19,6 +21,8 @@ except ImportError:
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
+
+from importlib.resources import files
 
 #from objloader import *
 try:
@@ -64,7 +68,6 @@ class BoatPlot:
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-
         glClearColor(0, .2, .7, 0)
         glClearDepth(100)
 
@@ -108,7 +111,8 @@ class BoatPlot:
         elif pywavefront:
             self.chdir()
             try:
-                self.obj = pywavefront.Wavefront('Vagabond.obj')
+                root = files("pypilot_data")
+                self.obj = pywavefront.Wavefront(root / 'ui' / 'Vagabond.obj')
             except Exception as e:
                 print('Vagabond.obj ' + _('failed to load'), e)
                 print(_('Did you add the pypilot_data repository?'))
@@ -159,7 +163,8 @@ class BoatPlot:
         if self.compasstex == 0:
             self.chdir()
             try:
-                img = Image.open('compass.png')
+                root = files("pypilot_data")
+                img = Image.open(root / 'ui' / 'compass.png')
             except OSError:
                 print('compass.png ' + _('not found, texture compass cannot be used'))
                 self.texture_compass = False
@@ -167,7 +172,7 @@ class BoatPlot:
 
             self.compasstex = glGenTextures(1)
 
-            data = numpy.array(list(img.getdata()), numpy.int8)
+            data = numpy.array(list(img.get_flattened_data()), numpy.uint8)
             glBindTexture(GL_TEXTURE_2D, self.compasstex)
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)

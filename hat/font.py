@@ -82,7 +82,9 @@ def draw(surface, pos, text, size, bw, crop=False):
                     except Exception:
                         print('create font charater', size, src.bypp, surface.bypp)
                         print('unable to print unicode character to console')
-                    src = create_character(os.path.abspath(os.path.dirname(__file__)) + "/font.ttf", size, c, surface.bypp, crop, bw)
+                        from importlib.resources import files
+                        root = files("pypilot_data")
+                    src = create_character(root / 'hat' / 'font.ttf', size, c, surface.bypp, crop, bw)
                     if src:
                         print('store grey', filename)
                         src.store_grey(filename.encode('utf-8'))
