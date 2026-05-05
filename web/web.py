@@ -15,8 +15,6 @@ from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
 
 from engineio.payload import Payload
-from flask import Flask, Markup, render_template, request
-from flask_socketio import Namespace, SocketIO, emit
 
 Payload.max_decode_packets = 500
 
@@ -63,12 +61,7 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 try:
-<<<<<<< HEAD
     from flask_babel import Babel
-    babel = Babel(app)
-=======
-    from flask_babel import Babel, gettext
->>>>>>> 1b0041392426038a23d89bb71f74f427c09891c0
 
     LANGUAGES = os.listdir(os.path.dirname(os.path.abspath(__file__)) + '/translations')
     def get_locale():
@@ -79,12 +72,7 @@ try:
         if language == 'default' or language not in LANGUAGES:
             return request.accept_languages.best_match(LANGUAGES)
         return language
-<<<<<<< HEAD
-
-=======
     babel = Babel(app, locale_selector=get_locale)
-    
->>>>>>> 1b0041392426038a23d89bb71f74f427c09891c0
 except Exception as e:
     print('failed to import flask_babel, translations not possible!!', e)
     def _(x): return x
