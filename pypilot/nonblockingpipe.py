@@ -13,7 +13,6 @@ import time
 
 import pyjson
 
-
 class NonBlockingPipeEnd:
     def __init__(self, pipe, name, recvfailok, sendfailok):
         self.pipe = pipe
@@ -74,9 +73,7 @@ class NonBlockingPipeEnd:
             self.failcountmsg *= 10
         return False
 
-
 from bufferedsocket import LineBufferedNonBlockingSocket
-
 
 class SocketNonBlockingPipeEnd(LineBufferedNonBlockingSocket):
     def __init__(self, socket, name, recvfailok, sendfailok):
@@ -141,7 +138,9 @@ class PipeNonBlockingPipeEnd:
         return self.b.line()
 
     def recv(self, timeout=0):
-        self.recvdata()
+        #self.recvdata()
+        self.b.recv()
+
         line = self.b.line()
         if not line:
             return
