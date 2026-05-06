@@ -341,9 +341,12 @@ class Autopilot:
         # int error +- 1, from 0 to 500 deg/s
         heading_error_int = minmax(self.heading_error_int.value + (self.heading_error.value/50)*dt, 10)
 
-        heading_command_diff = resolv(self.heading_command.value - self.last_heading_command)
-        mul = 1-max(abs(heading_command_diff), 30.0) / 30.0 # push integral gain to zero once course change is above 30
-        print('mul', mul, heading_command_diff, heading_error_int)
+        if self.enabled.value:
+            heading_command_diff = resolv(self.heading_command.value - self.last_heading_command)
+            mul = 1-max(abs(heading_command_diff), 30.0) / 30.0 # push integral gain to zero once course change is above 30
+            print('mul', mul, heading_command_diff, heading_error_int)
+        else:
+            mul = 1
         self.heading_error_int.set(mul * heading_error_int)
         
 

@@ -118,6 +118,7 @@ class pypilotClient:
         self.wwatches = {}
         self.received = []
         self.last_values_list = False
+        self.received_data = False # flag to detect connection to report status on console
         self.udp_socket = False
 
         if False:
@@ -192,7 +193,6 @@ class pypilotClient:
         self.probed_addresses = []
 
     def onconnected(self):
-        #print('connected to pypilot server', time.time())
         self.last_values_list = False
 
         # write config if connection succeeds
@@ -290,60 +290,57 @@ class pypilotClient:
         # send any delayed watched values
         self.values.send_watches()
 
-        if self.connection.fileno():
-            # flush output
-            self.connection.flush()
-            events = self.poller.poll(int(1000 * timeout))
-            #try:
-            #    events = self.poller.poll(int(1000 * timeout))
-            #except Exception as e:
-            #    print('exception polling', e, os.getpid())
-            #    self.disconnect()
-            #    return
+        if not self.connection.fileno():
+            self.disconnect() # connection closed
+            return
+        
+        # flush output
+        self.connection.flush()
+        events = self.poller.poll(int(1000 * timeout))
 
-            if not events:
-                # 3 seconds without data in either direction, send linefeed
-                # if the connection is lost, sending some data is needed
-                # useful to cause the connection to reset
-                if self.timeout_time and time.monotonic() - self.timeout_time > 3:
-                    self.update_timeout()
-                    self.send('\n')
-                return # no data ready
+        if not events:
+            # 3 seconds without data in either direction, send linefeed
+            # if the connection is lost, sending some data is needed
+            # useful to cause the connection to reset
+            if self.timeout_time and time.monotonic() - self.timeout_time > 3:
+                self.update_timeout()
+                self.send('\n')
+            return # no data ready
 
-            self.update_timeout()
+        self.update_timeout()
 
-            fd, flag = events.pop()
+        fd, flag = events.pop()
 
-            if fd == self.connection.fileno():
-                if not (flag & select.POLLIN) or (self.connection and not self.connection.recvdata()):
-                    # other flags indicate disconnect
-                    self.disconnect() # recv returns 0 means connection closed
-                    return
-            elif self.udp_socket and fd == self.udp_socket.fileno():
-                if not (flag & select.POLLIN):
-                    print(_('lost udp_socket'))
+        if fd == self.connection.fileno():
+            if not (flag & select.POLLIN) or (self.connection and not self.connection.recvdata()):
+                # other flags indicate disconnect
+                self.disconnect() # recv returns 0 means connection closed
+                return
+        elif self.udp_socket and fd == self.udp_socket.fileno():
+            if not (flag & select.POLLIN):
+                print(_('lost udp_socket'))
+                self.udp_socket.close()
+                self.udp_socket = False
+            else:
+                try:
+                    while True:
+                        line = self.udp_socket.recvfrom(128)
+                        if not line:
+                            break
+                        if 'servo.command' in self.values.values:
+                            self.values.values['servo.command'].set(float(line[0]))
+
+                except OSError as e:
+                    import errno
+                    if e.args[0] is errno.EAGAIN:
+                        pass
+                    else:
+                        print("unknown os error", e)
+                except Exception as e:
+                    self.poller.unregister(self.udp_socket)
                     self.udp_socket.close()
                     self.udp_socket = False
-                else:
-                    try:
-                        while True:
-                            line = self.udp_socket.recvfrom(128)
-                            if not line:
-                                break
-                            if 'servo.command' in self.values.values:
-                                self.values.values['servo.command'].set(float(line[0]))
-
-                    except OSError as e:
-                        import errno
-                        if e.args[0] is errno.EAGAIN:
-                            pass
-                        else:
-                            print("unknown os error", e)
-                    except Exception as e:
-                        self.poller.unregister(self.udp_socket)
-                        self.udp_socket.close()
-                        self.udp_socket = False
-                        print("failed  udp??\n", e, line)
+                    print("failed  udp??\n", e, line)
 
         # read incoming data line by line
         while True:
@@ -365,6 +362,10 @@ class pypilotClient:
                 print(_('invalid message from server:'), line, e)
                 raise Exception()
 
+            if not self.received_data:
+                print('pypilot client connected')
+                self.received_data = True
+
             if name in self.values.values: # did this client register this value
                 self.values.values[name].set(value)
             else:
@@ -372,6 +373,9 @@ class pypilotClient:
 
     # polls at least as long as timeout
     def disconnect(self):
+        if self.received_data:
+            print('pypilot client disconnected')
+            self.received_data = False
         if self.connection:
             self.connection.close()
         self.connection = False
@@ -650,4 +654,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
