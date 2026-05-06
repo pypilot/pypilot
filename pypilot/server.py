@@ -89,17 +89,7 @@ class pypilotValue:
                     self.connection.write(msg)
                     # mirror writable updates into persistent_data so a restart
                     # before the owner's next watch tick can't revert (issue #274)
-                    if self.info.get('persistent'):
-                        if self.info.get('profiled'):
-                            profile = self.server_values.values['profile'].profile
-                        else:
-                            profile = None
-                        pdata = self.server_values.persistent_data
-                        if profile not in pdata:
-                            pdata[profile] = {}
-                        if self.name not in pdata[profile] or pdata[profile][self.name] != msg:
-                            pdata[profile][self.name] = msg
-                            self.server_values.need_store = self.name
+                    self.server_values.persist_msg(self, msg)
                 except Exception:
                     print('failed to load ', msg)
                 self.msg = None
@@ -118,6 +108,8 @@ class pypilotValue:
     def calculate_watch_period(self):
         # find minimum watch period from all watches
         watching = False
+
+        # TODO:  now that writable persistent updates are directlyupdated in persistent_data can this be removed??
         if 'persistent' in self.info and self.info['persistent']:
             watching = server_persistent_period
         for watch in self.awatches:
@@ -307,6 +299,7 @@ class ServerProfile(pypilotValue):
         prev = persistent_data[self.profile]
         if strprofile not in persistent_data:
             persistent_data[strprofile] = {}
+        self.profile = strprofile
         data = persistent_data[strprofile]
         for name, value in persistent_values.items():
             if not value.info.get('profiled'):
@@ -315,7 +308,7 @@ class ServerProfile(pypilotValue):
             if value.msg:  # the msg may still be invalidated from a previous set
                 if name not in prev or prev[name] != value.msg:
                     prev[name] = value.msg
-                self.server_values.need_store = True # ensure we store c
+                    self.server_values.need_store = name # ensure we store
 
             if name not in data:
                 vmsg = value.get_msg()  # add this value to profile copying it from previous profile
@@ -326,7 +319,6 @@ class ServerProfile(pypilotValue):
             elif data[name] != value.msg:
                 value.set(data[name], False)  # only inform clients of the updated value from profile change if it really did change
         self.msg = 'new' # invalidate
-        self.profile = strprofile
         super().set(msg, False) # inform any clients watching this value
 
 class ServerValues(pypilotValue):
@@ -498,14 +490,9 @@ class ServerValues(pypilotValue):
         f.close()
 
     def load(self):
-        try:
-            import inotify.adapters
-            self.inotify = inotify.adapters.Inotify(block_duration_s=0)
-            self.inotify.add_watch(configfilepath + configfilename)
-            self.inotify_time = time.monotonic()
-        except Exception as e:
-            self.inotify = None
-            print(_('failed to monitor '), configfilepath + configfilename, e)
+        self.inotify = None
+        self.inotify_time = time.monotonic()
+
         try:
             if not os.path.exists(configfilepath):
                 print(_('creating config directory: ') + configfilepath)
@@ -533,9 +520,21 @@ class ServerValues(pypilotValue):
         self.store_file(configfilepath + configfilename + '.bak')
 
     def poll_config(self, t0):
-        if not self.inotify or t0 - self.inotify_time < 5:
-            return
+        if not self.inotify:
+            if t0 - self.inotify_time < 20:
+                return
+            self.inotify_time = t0
 
+            try:
+                import inotify.adapters
+                self.inotify = inotify.adapters.Inotify(block_duration_s=0)
+                self.inotify.add_watch(configfilepath + configfilename)
+            except Exception as e:
+                self.inotify = None
+                print(_('server failed to monitor with inotify'), ': ', configfilepath + configfilename, e, time.monotonic())
+        
+        if t0 - self.inotify_time < 3:
+            return
         self.inotify_time = t0
         loaded = False
         for event in self.inotify.event_gen(timeout_s=0):
@@ -555,7 +554,7 @@ class ServerValues(pypilotValue):
             try:
                 self.inotify.remove_watch(configfilepath + configfilename)
             except Exception as e:
-                print("failed to remove watch", e)
+                print('inotify failed to remove watch', e)
 
         print('store_file', filename, '%.3f'%time.monotonic(), self.need_store)
         # Write to a sibling tempfile then atomically rename, so a crash or
@@ -587,25 +586,29 @@ class ServerValues(pypilotValue):
         if self.inotify:
             self.inotify.add_watch(configfilepath + configfilename)
 
+    def persist_msg(self, value, msg=None):
+        if not value.info.get('persistent'):
+            return
+
+        if value.info.get('profiled'):
+            profile = self.values['profile'].profile
+            if profile not in self.persistent_data:
+                self.persistent_data[profile] = {}
+        else:
+            profile = None
+
+        pdata = self.persistent_data[profile]
+        if not msg:
+            msg = value.get_msg()
+        if msg and (value.name not in pdata or msg != pdata[value.name]):
+            #print("need store, changed", name, data[name].rstrip(), msg.rstrip())
+            pdata[value.name] = msg
+            self.need_store = value.name
+
     def store(self):
         self.persistent_timeout = time.monotonic() + server_persistent_period
         for name in self.persistent_values:
-            value = self.persistent_values[name]
-            if not value.info.get('persistent'):
-                continue
-            if value.info.get('profiled'):
-                profile = self.values['profile'].profile
-                if profile not in self.persistent_data:
-                    self.persistent_data[profile] = {}
-            else:
-                profile = None
-
-            data = self.persistent_data[profile]
-            msg = value.get_msg()
-            if msg and (name not in data or msg != data[name]):
-                #print("need store, changed", name, data[name].rstrip(), msg.rstrip())
-                data[name] = msg
-                self.need_store = name
+            self.persist_msg(self.persistent_values[name])
 
         if self.need_store:
             try:
