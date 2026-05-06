@@ -78,7 +78,7 @@ class pypilotValue:
                     if t0 >= watch.time:
                         watch.time = t0
                     if watch.connections: # only insert if there are connections
-                        self.server_values.insert_watch(watch, t0)
+                        self.server_values.insert_watch(watch)
                 self.pwatches = []
 
         elif self.connection: # inform owner of change if we are not owner
@@ -336,6 +336,7 @@ class ServerValues(pypilotValue):
         self.need_store = False
         self.load()
         self.pqwatches = [] # priority queue of watches
+        self.pqcounter = 0
         self.last_send_watches = 0
 
     def get_msg(self):
@@ -378,8 +379,9 @@ class ServerValues(pypilotValue):
                 watch.time = t0
             watch.value.pwatches.append(watch) # put back on value periodic watch list
 
-    def insert_watch(self, watch, t0):
-        heapq.heappush(self.pqwatches, (watch.time, t0, watch))
+    def insert_watch(self, watch):
+        heapq.heappush(self.pqwatches, (watch.time, self.pqcounter, watch))
+        self.pqcounter += 1
 
     def remove(self, connection):
         for name in self.values:
