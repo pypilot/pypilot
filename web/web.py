@@ -94,14 +94,14 @@ def wifi():
     try:
         f = open(networking)
         while True:
-            l = f.readline()
+            l = f.readline().rstrip()
             if not l:
                 break
             try:
                 name, value = l.split('=')
                 wifi[name] = value.rstrip()
-            except Exception:
-                print('failed to parse line in networking.txt', l)
+            except Exception as e:
+                print('failed to parse line in networking.txt', e, l)
         f.close()
     except OSError:
         pass
@@ -111,6 +111,12 @@ def wifi():
             for name in request.form:
                 wifi[name] = str(request.form[name])
 
+            def make_valid_key(key):
+                if len(key) < 8:
+                    return ''
+                return key[:63]
+            wifi['key'] = make_valid_key(wifi['key'])
+            wifi['client_key'] = make_valid_key(wifi['client_key'])
             f = open(networking, 'w')
             for name in wifi:
                 f.write(name+'='+wifi[name]+'\n')

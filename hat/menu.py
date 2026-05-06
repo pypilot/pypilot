@@ -459,7 +459,7 @@ class select_wifi(page):
             f.close()
         except Exception as e:
             print('exception writing', networking, ':', e)
-        os.system('/opt/networking.sh')
+        os.system('sudo /opt/networking.sh')
 
 class select_wifi_ap_toggle(select_wifi):
     def process(self):
@@ -529,10 +529,19 @@ class wifi(menu):
             info = 'mode: AP\n'
             ssid = 'ssid'
             key = 'key'
-        else:
-            info = 'mode: Client\n'
+        elif self.wifi_settings['mode'] == 'Managed':
+            info = 'mode: STA\n'
             ssid = 'client_ssid'
             key = 'client_key'
+        elif self.wifi_settings['mode'] == 'Master+Managed':
+            info = 'mode: AP+STA\n'
+            ssid = 'ssid'
+            key = 'key'
+        else:
+            info = 'invalid'
+            ssid = 'bad'
+            key = 'settings'
+            
         self.fittext(rectangle(0, .6, 1, .13), info)
 
         info = self.wifi_settings[ssid]
