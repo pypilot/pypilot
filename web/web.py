@@ -8,6 +8,8 @@
 
 import os
 import sys
+import time
+import threading
 from datetime import datetime, timezone
 
 from engineio.payload import Payload
@@ -173,51 +175,93 @@ def index():
 
 class pypilotWeb(Namespace):
     def __init__(self, name):
-        super(Namespace, self).__init__(name)
-        socketio.start_background_task(target=self.background_thread)
+        super().__init__(name)
         self.clients = {}
+        self.clients_lock = threading.Lock()
+        socketio.start_background_task(target=self.background_thread)
 
     def background_thread(self):
         print('processing clients')
-        x = 0
-        while True:
-            socketio.sleep(.25)
-            sys.stdout.flush() # update log
-            sids = list(self.clients)
-            for sid in sids:
-                if sid not in self.clients:
-                    print('client was removed')
-                    continue # was removed
 
-                client = self.clients[sid]
-                values = client.list_values()
-                if values:
-                    socketio.emit('pypilot_values', pyjson.dumps(values), room=sid)
-                if not client.connection:
-                    socketio.emit('pypilot_disconnect', room=sid)
-                msgs = client.receive()
-                if msgs:
-                    # convert back to json (format is nicer)
-                    #print('msgs', msgs, sid)
-                    socketio.emit('pypilot', pyjson.dumps(msgs), room=sid)
+        while True:
+            # This could be optimized with backend-specific select()/poll() on
+            # pypilotClient file descriptors, but socketio has no portable fd wait API.
+            # Keep receive() nonblocking and use socketio.sleep() for portability.
+            socketio.sleep(.25)
+            sys.stdout.flush()
+
+            outgoing = []
+            t0 = time.monotonic()
+
+            with self.clients_lock:
+                for sid, client in list(self.clients.items()):
+                    try:
+                        values = client.list_values()
+                        if values:
+                            outgoing.append(('pypilot_values', values, sid))
+
+                        connected = client.connection
+
+                        # Important: receive() must be nonblocking because this lock is global.
+                        msgs = client.receive()
+                        if msgs:
+                            outgoing.append(('pypilot', msgs, sid))
+
+                        if not connected:
+                            outgoing.append(('pypilot_disconnect', None, sid))
+
+                    except Exception as e:
+                        print('client error', e)
+                        self._remove_sid(sid)
+
+            for event, data, sid in outgoing:
+                if data is None:
+                    socketio.emit(event, room=sid)
+                else:
+                    socketio.emit(event, pyjson.dumps(data), room=sid)
+            t1 = time.monotonic()
+
+            if t1-t0 > .25:
+                print('took too long to process clients', t1-t0)
+
 
     def on_pypilot(self, message):
+        sid = request.sid
         #print('message', message)
-        self.clients[request.sid].send(message + '\n')
+        with self.clients_lock:
+            client = self.clients.get(sid)
+            if client:
+                try:
+                    client.send(message + '\n')
+                except Exception as e:
+                    print('send error', sid, e)
+                    self._remove_sid(sid)
 
     def on_ping(self):
         emit('pong')
 
     def on_connect(self):
-        print('Client connected', request.sid)
-        client = pypilotClient()
-        self.clients[request.sid] = client
+        sid = request.sid
+        print('Client connected', sid)
+
+        with self.clients_lock:
+            self.clients[sid] = pypilotClient()
 
     def on_disconnect(self):
-        print('Client disconnected', request.sid)
-        client = self.clients[request.sid]
-        client.disconnect()
-        del self.clients[request.sid]
+        sid = request.sid
+        print('Client disconnected', sid)
+
+        with self.clients_lock:
+            self._remove_sid(sid)
+
+    # only call if you are holding the lock!
+    def _remove_sid(self, sid):
+        client = self.clients.pop(sid, None)
+        if client:
+            try:
+                client.disconnect()
+            except Exception as e:
+                print('disconnect error', sid, e)
 
     def on_language(self, language):
         config['language'] = language
@@ -230,6 +274,7 @@ def main():
     path = os.path.dirname(__file__)
     os.chdir(os.path.abspath(path))
     port = pypilot_web_port
+    print('async mode', socketio.async_mode)
     while True:
         try:
             socketio.run(app, debug=False, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
