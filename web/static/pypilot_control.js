@@ -1,5 +1,5 @@
 /*
-#   Copyright (C) 2023 Sean D'Epagnier
+#   Copyright (C) 2026 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -70,10 +70,12 @@ $(document).ready(function() {
     }
     
     // Event handler for new connections.
+    var enabled = false;
     var servo_command = 0, servo_command_timeout=0;
     var gains = [];
     var conf_names = [];
     var profile="default", profiles = [profile];
+    var exporting_profiles = [], profiled_names = [], profiled_values = {};
     var touch = is_touch_enabled();
 
     var rudder_source = 'none';
@@ -175,7 +177,168 @@ $(document).ready(function() {
                     new_profiles.push(p);
             pypilot_set('profiles', new_profiles);
         });
-              
+
+        // build a list of all the names of profiled values (for exporting profiles)
+        for (var name in list_values)
+            if('profiled' in list_values[name])
+                profiled_names.push(name);
+        
+        $('#export_profiles').off('click');
+        $('#export_profiles').click(function(event) {
+            if(enabled) {
+                alert(_("Do not export profiles while autopilot is enabled!"));
+                return;
+            }
+
+            // put the current profile at the end of exporting_profiles
+            exporting_profiles = profiles;
+            if (exporting_profiles.includes(profile)) {
+                exporting_profiles = exporting_profiles.filter(x => x !== profile);
+                exporting_profiles.push(profile);
+            }
+
+            profiled_values = {};
+            
+            // watch all profiled values
+            pypilot_watches(profiled_names, true, 0);
+
+            // kick off timer that stores profiled values until empty
+            function exportTimer() {
+                var cur_profile = exporting_profiles.shift();
+
+                if(cur_profile != profile) {
+                    alert(_("Failed to capture profiles for export!"));
+                    if(exporing_profiles.length)
+                        pypilot_set('profile', exporting_profiles[exporting_profiles.length-1]);
+                    else
+                        pypilot_set('profile', cur_profile);
+                    exporting_profiles = [];
+                    pypilot_watches(profiled_names, false, 0);
+                    setup_watches();
+                    return;
+                }
+                
+                if(exporting_profiles.length > 0) {
+                    pypilot_set('profile', exporting_profiles[0]);
+                    setTimeout(exportTimer, 1000);
+                } else {
+                    pypilot_watches(profiled_names, false, 0);
+                    setup_watches();
+
+                    text = [];
+                    for(var p in profiled_values) {
+                        text.push('[profile="' + p + '"]');
+                        for(var name in profiled_values[p])
+                            text.push(name + '=' + profiled_values[profile][name]);
+                    }
+
+                    function saveTextFile(text, filename) {
+                        const blob = new Blob([text], {
+                            type: "text/plain"
+                        });
+
+                        const url = URL.createObjectURL(blob);
+
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = filename;
+
+                        // required in some browsers
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+
+                        URL.revokeObjectURL(url);
+                    }
+
+                    saveTextFile(text.join('\n')+'\n', 'profiles.conf');
+                }
+            }
+            pypilot_set('profile', exporting_profiles[0]);
+            setTimeout(exportTimer, 1000);
+        });
+
+        $('#import_profiles').off('click');
+        $('#import_profiles').click(function(event) {
+            if(enabled) {
+                alert(_("Do not import profiles while autopilot is enabled!"));
+                return;
+            }
+
+            function openTextFile(callback) {
+                const input = document.createElement("input");
+                input.type = "file";
+
+                input.onchange = function () {
+                    const file = input.files[0];
+
+                    if (!file)
+                        return;
+
+                    file.text().then(function (text) {
+                        callback(text);
+                    });
+                };
+
+                input.click();
+            }
+
+            /* import is relatively simple
+               read the file line by line, and set the profile on [profile="name"] lines
+               otherwise update the pypilot value
+               finally reset to the current profile */
+            var initial_profile = profile;
+            var cur_profile = null;
+            var tries = 0;
+            function import_profiles(lines) {
+                while(lines.length) {
+                    line = lines.shift();
+                    const i = line.indexOf("=");
+
+                    if (i === -1) continue;
+
+                    const name = line.slice(0, i).trim();
+                    const data = line.slice(i + 1).trim();
+
+                    if (name[0] == '[' && data[data.length-1] == ']') {
+                        if(name.slice(1) == 'profile') {
+                            const m = data.match(/"([^"]*)"/);
+                            if(!m) {
+                                alert(_("Malformed profile config!"));
+                                return;
+                            }
+
+                            cur_profile = m[1];
+                            pypilot_set('profile', cur_profile);
+                            tries = 0;
+                            setTimeout(import_profiles, 0, lines);
+                            return;
+                        } else {
+                            alert(_("Malformed profile config!"));
+                            return;
+                        }
+                    } else if (cur_profile != null) {
+                        if(cur_profile == profile)
+                            pypilot_set(name, data);
+                        else {
+                            if(tries > 150)
+                                alert(_('Failed to import profiles'));
+                            else {
+                                lines.unshift(line);
+                                tries++;
+                                setTimeout(import_profiles, 50, lines);
+                            }
+                            return;
+                        }
+                    }
+                }
+                pypilot_set('profile', initial_profile);
+                alert(_("Import Complete!"));
+            }
+            
+            openTextFile(text => import_profiles(text.split(/\r?\n/)));
+        });
+
         gains = [];
         for (var name in list_values)
             if('AutopilotGain' in list_values[name] && name.substr(0, 3) == 'ap.')
@@ -396,7 +559,6 @@ $(document).ready(function() {
             else
                 $('#center_button').show();
         }
-
         
         if('ap.tack.timeout' in data)
             $('#tack_timeout').text(Math.round(10*data['ap.tack.timeout'])/10);
@@ -414,7 +576,8 @@ $(document).ready(function() {
         }
         
         if('ap.enabled' in data) {
-            if(data['ap.enabled']) {
+            enabled = data['ap.enabled']
+            if(enabled) {
                 var w = $(window).width();
                 $('#tb_engaged button').css('left', w/12+"px");
                 $('#tb_engaged').addClass('toggle-button-selected');
@@ -452,8 +615,12 @@ $(document).ready(function() {
         }
 
         if('profile' in data) {
+            prev_profile = profile;
             profile = data['profile'].toString();
             $('#profile').val(profile);
+
+            if(prev_profile in profiled_values)
+                profiled_values[profile] = {...profiled_values[prev_profile]};
         }
 
         if('profiles' in data) {
@@ -463,7 +630,6 @@ $(document).ready(function() {
                 $('#profile').append('<option value="' + p + '">' + p + '</option>');
             $('#profile').val(profile);
         }
-
         
         for (var i = 0; i<gains.length; i++)
             if(gains[i] in data) {
@@ -483,6 +649,15 @@ $(document).ready(function() {
                     $('#' + iname + 'label').text(value);
                 }
             }
+
+        //if(exporting_profiles.length > 0) {
+            if(!(profile in profiled_values))
+                profiled_values[profile] = {};
+            for(var name of profiled_names) {
+                if(name in data)
+                    profiled_values[profile][name] = data[name];
+            }
+    //}
 
         if('servo.engaged' in data) {
             if(data['servo.engaged'])
@@ -600,6 +775,7 @@ $(document).ready(function() {
     function pypilot_set(name, value) {
         try {
             socket.emit('pypilot', name + '=' + JSON.stringify(value));
+            //console.log('pypilot_set ' + name + ' = ' + value);
         } catch (error) {
             location.reload();
         }
