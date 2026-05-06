@@ -82,13 +82,20 @@ def draw(surface, pos, text, size, bw, crop=False):
                     except Exception:
                         print('create font charater', size, src.bypp, surface.bypp)
                         print('unable to print unicode character to console')
-                    from importlib.resources import files
-                    root = files("pypilot_data")
-                    src = create_character(str(root / 'hat' / 'font.ttf'), size, c, surface.bypp, crop, bw)
-                    if src:
-                        print('store grey', filename)
-                        src.store_grey(filename.encode('utf-8'))
-                    break
+
+                    try:
+                        from importlib.resources import files
+                        root = files('pypilot_data')
+                        src = create_character(str(root / 'hat' / 'font.ttf'), size, c, surface.bypp, crop, bw)
+                        if src:
+                            print('store grey', filename)
+                            src.store_grey(filename.encode('utf-8'))
+                        break
+                    except Exception as e:
+                        print('failed to create character:', e)
+                        time.sleep(10) # avoid respawning too quickly if pypilot_data is delayed loading
+                        print('exiting')
+                        exit(1)
                 size -= 1 # try smaller size
 
         if not src or src.bypp != surface.bypp:
@@ -120,7 +127,7 @@ def create_character(fontpath, size, c, bypp, crop, bpp):
     #size = ifont.getsize(c)
     (left, top, right, bottom) = ifont.getbbox(c)
     size = (right, bottom)
-    print("size ", c, size)
+    #print("size ", c, size)
 
     image = Image.new('RGBA', size)
     draw = ImageDraw.Draw(image)
