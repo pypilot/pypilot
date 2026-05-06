@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2019 Sean D'Epagnier
+#   Copyright (C) 2026 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -43,6 +43,7 @@ class AbsolutePilot(AutopilotPilot):
     range = ap.sensors.rudder.range.value
 
     if ap.enabled.value:
+        ap.servo.command.use_period = False # experiment with this
         ap.servo.position_command.command(command * range)
 
 pilot = AbsolutePilot
