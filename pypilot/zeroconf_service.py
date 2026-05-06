@@ -91,10 +91,11 @@ class zeroconf(threading.Thread):
 
         while True:
             t=time.time()
-            i = get_local_addresses()
+            new_addresses = get_local_addresses()
             #print("t", time.time()-t)
-            if i != addresses:
-                print('zeroconf addresses', i, len(i))
+            if new_addresses != addresses:
+                addresses = new_addresses
+                print('zeroconf addresses', addresses, len(addresses))
                 # close addresses
                 if zeroconf:
                     for i in zeroconf:
@@ -102,24 +103,23 @@ class zeroconf(threading.Thread):
                         zeroconf[i].close()
                     zeroconf = {}
 
-                addresses = i
-
                 for address in addresses:
                     # register addresses
-                    #print('zeroconf registering address', address)
-                    info = ServiceInfo(
-                        '_pypilot._tcp.local.',
-                        #"pypilot._pypilot._tcp.local.",
-                        f'pypilot-{address[0]}._pypilot._tcp.local.',
-                        addresses=[socket.inet_aton(address[1])],
-                        port=DEFAULT_PORT,
-                        properties={'version': strversion},
-                        server=f'pypilot-{address[0]}.local.',
-                    )
-
-                    print(f'zeroconf[{address[0]}] = Zeroconf(ip_version={ip_version}, interfaces=[{address[1]}])')
-                    zeroconf[address[0]] = Zeroconf(ip_version=ip_version, interfaces=[address[1]])
+                    print('zeroconf registering address', address)
                     try:
+                        info = ServiceInfo(
+                            '_pypilot._tcp.local.',
+                            #"pypilot._pypilot._tcp.local.",
+                            f'pypilot-{address[0]}._pypilot._tcp.local.',
+                            addresses=[socket.inet_aton(address[1])],
+                            port=DEFAULT_PORT,
+                            properties={'version': strversion},
+                            server=f'pypilot-{address[0]}.local.',
+                        )
+
+                        print(f'zeroconf[{address[0]}] = Zeroconf(ip_version={ip_version}, interfaces=[{address[1]}])')
+                        zeroconf[address[0]] = Zeroconf(ip_version=ip_version, interfaces=[address[1]])
+
                         zeroconf[address[0]].register_service(info)
                     except Exception as e:
                         print('zeroconf exception type:', type(e).__name__)
