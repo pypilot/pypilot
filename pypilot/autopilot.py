@@ -311,6 +311,7 @@ class Autopilot:
 
         # keep same heading if mode changes
         if self.mode.value != self.lastmode:
+            # restore preferred mode command (for example if the sensor is lost then restored)
             if self.mode.value == self.preferred_mode.value and \
                self.preferred_mode.command is not None and t-self.preferred_mode.time < 30:
                 self.heading_command.set(self.preferred_mode.command)
@@ -325,8 +326,8 @@ class Autopilot:
         # compute heading error
         heading_command = self.heading_command.value
 
-        # error +- 60 degrees
-        err = minmax(resolv(heading - heading_command), 60)
+        # error +- 30 degrees
+        err = minmax(resolv(heading - heading_command), 30)
 
         # since wind direction is where the wind is from, the sign is reversed
         if 'wind' in self.mode.value:
@@ -338,8 +339,13 @@ class Autopilot:
         dt = min(dt, 1) # ensure dt is less than 1
         self.heading_error_int_time = t
         # int error +- 1, from 0 to 500 deg/s
-        self.heading_error_int.set(minmax(self.heading_error_int.value + \
-                                          (self.heading_error.value/50)*dt, 10))
+        heading_error_int = minmax(self.heading_error_int.value + (self.heading_error.value/50)*dt, 10)
+
+        heading_command_diff = resolv(self.heading_command.value - self.last_heading_command)
+        mul = 1-max(abs(heading_command_diff), 30.0) / 30.0 # push integral gain to zero once course change is above 30
+        print('mul', mul, heading_command_diff, heading_error_int)
+        self.heading_error_int.set(mul * heading_error_int)
+        
 
     def iteration(self):
         data = False
