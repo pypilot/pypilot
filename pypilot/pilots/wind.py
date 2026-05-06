@@ -12,8 +12,6 @@ from pilot import AutopilotPilot
 from pypilot.resolv import resolv
 from pypilot.values import *
 
-disabled = True
-
 # the wind pilot does not require a compass but does require a wind sensor.
 # it does not rely on the compass or calibration (unless in compass mode)
 # and is not affected by magnetic changes.   Even in compass mode this pilot
@@ -24,7 +22,7 @@ class WindPilot(AutopilotPilot):
     super().__init__('wind', ap)
 
     # create filters
-    self.gps_wind_offset = HeadingOffset()
+    self.gps_wind_offset = self.register(HeadingOffset, 'gps_wind_offset')
 
     self.last_wind_speed = 0
 
@@ -61,11 +59,11 @@ class WindPilot(AutopilotPilot):
       ap.heading.set(gps)
     elif mode == 'true wind':
       if ap.true_wind_sensor.value == 'water':
-          boat_speed = sensors.water.speed
+        boat_speed = sensors.water.speed
       elif ap.true_wind_sensor.value == 'gps':
-          boat_speed = ap.gps_speed
+        boat_speed = ap.gps_speed
       else:
-          boat_speed = 0
+        boat_speed = 0
 
       true_wind = TrueWind.compute_true_wind_direction(boat_speed, sensors.wind.speed, wind)
       ap.heading.set(true_wind)
@@ -115,3 +113,4 @@ class WindPilot(AutopilotPilot):
         ap.servo.command.command(command)
 
 pilot = WindPilot
+

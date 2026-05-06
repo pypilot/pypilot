@@ -9,7 +9,6 @@
 
 from pilot import AutopilotPilot
 
-
 # this pilot is an experiment to command the rudder
 # to an absolute position rather than relative speed
 #
@@ -20,10 +19,10 @@ class AbsolutePilot(AutopilotPilot):
     super().__init__('absolute', ap)
 
     # create simple pid filter
-    self.PosGain('P', .05, 2)
+    self.PosGain('P', .05, .5)
     self.PosGain('I', 0, .05)
-    self.PosGain('D', .2, 2)
-    self.PosGain('DD',  0, 1) # rate of derivative
+    self.PosGain('D', .05, 1)
+    self.PosGain('DD',  0, 1) # rate of derivative (needed?)
 
   def process(self):
     ap = self.ap
@@ -41,8 +40,9 @@ class AbsolutePilot(AutopilotPilot):
                    'FF': ap.heading_command_rate.value}
 
     command = self.Compute(gain_values)
+    range = ap.sensors.rudder.range.value
 
     if ap.enabled.value:
-        ap.servo.position_command.command(command)
+        ap.servo.position_command.command(command * range)
 
 pilot = AbsolutePilot

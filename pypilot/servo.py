@@ -277,7 +277,7 @@ class Servo:
 
         self.gain = self.register(RangeProperty, 'gain', 1, -10, 10, persistent=True)
         self.clutch_pwm = self.register(RangeProperty, 'clutch_pwm', 100, 10, 100, persistent=True)
-        self.use_brake = self.register(BooleanProperty, 'use_brake', False, persistent=True)
+        self.use_brake = self.register(BooleanProperty, 'use_brake', True, persistent=True)
         self.brake_on = False
 
         self.period = self.register(RangeSetting, 'period', .4, .1, 1, 'sec', profiled=True)
@@ -295,9 +295,9 @@ class Servo:
         self.position.elp = 0
         self.position.set(0)
 
-        self.position.p = self.register(RangeProperty, 'position.p', .15, .01, 1, persistent=True)
+        self.position.p = self.register(RangeProperty, 'position.p', .1, .01, 1, persistent=True)
         self.position.i = self.register(RangeProperty, 'position.i', 0, 0, .1, persistent=True)
-        self.position.d = self.register(RangeProperty, 'position.d', .02, 0, .1, persistent=True)
+        self.position.d = self.register(RangeProperty, 'position.d', .01, 0, .1, persistent=True)
 
         self.rawcommand = self.register(SensorValue, 'raw_command')
 

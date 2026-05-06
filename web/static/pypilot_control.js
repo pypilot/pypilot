@@ -627,7 +627,7 @@ $(document).ready(function() {
     });
 
     $('#center_button').click(function(event) {
-        pypilot_set('servo.position', 0);
+        pypilot_set('servo.position_command', 0);
     });
     
     function move(x) {

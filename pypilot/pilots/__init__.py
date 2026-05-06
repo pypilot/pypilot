@@ -31,7 +31,7 @@ for module in os.listdir(os.path.dirname(__file__)):
         pass
 
     try:
-        #print('append')
+        print('pilot append', mod.pilot)
         default.append(mod.pilot)
     except Exception:
         #print('e2', e)
