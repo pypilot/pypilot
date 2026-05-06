@@ -635,7 +635,7 @@ class pypilotServer:
     def init_process(self):
         if self.multiprocessing:
             import multiprocessing
-            self.process = multiprocessing.Process(target=self.run, daemon=True)
+            self.process = multiprocessing.Process(target=self.run, name='server', daemon=True)
             print('server process start', time.monotonic())
             self.process.start()
         else:

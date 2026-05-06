@@ -69,8 +69,8 @@ class zeroconf(threading.Thread):
             break
 
         addresses = []
-        zeroconf = {}
-        info = {}
+        zeroconf = None
+        info = None
 
         #ip_version = IPVersion.All
         #ip_version = IPVersion.V6Only
@@ -83,32 +83,33 @@ class zeroconf(threading.Thread):
             if i != addresses:
                 print('zeroconf addresses', i, len(i))
                 # close addresses
-                for address in zeroconf:
-                    zeroconf[address].unregister_service(info[address])
-                    zeroconf[address].close()
-                zeroconf = {}
-                info = {}
+                if zeroconf:
+                    if info:
+                        zeroconf.unregister_service(info)
+                    zeroconf.close()
 
                 addresses = i
 
                 # register addresses
-                for address in addresses:
-                    #print('zeroconf registering address', address)
-                    info[address] = ServiceInfo(
-                        "_pypilot._tcp.local.",
-                        "pypilot._pypilot._tcp.local.",
-                        addresses=[socket.inet_aton(address)],
-                        port=DEFAULT_PORT,
-                        properties={'version': strversion})
+                #print('zeroconf registering address', address)
+                info = ServiceInfo(
+                    "_pypilot._tcp.local.",
+                    "pypilot._pypilot._tcp.local.",
+                    addresses=[socket.inet_aton(a) for a in addresses],
+                    port=DEFAULT_PORT,
+                    properties={'version': strversion})
 
-                    zeroconf[address] = Zeroconf(ip_version=ip_version, interfaces=[address])
-                    try:
-                        zeroconf[address].register_service(info[address])
-                    except Exception as e:
-                        print('zeroconf exception:', e)
-                        print('e is', info, address)
-                        addresses = []
-                        break # maybe try again?
+                zeroconf = Zeroconf(ip_version=ip_version)#, interfaces=[address])
+                try:
+                    zeroconf.register_service(info)
+                except Exception as e:
+                    print('zeroconf exception type:', type(e).__name__)
+                    print('zeroconf exception repr:', repr(e))
+                    import traceback
+                    traceback.print_exc()
+                    print('info/addresses:', info, addresses)
+                    addresses = []
+                    break # maybe try again?
 
             time.sleep(60)
 

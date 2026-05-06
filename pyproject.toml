@@ -28,15 +28,16 @@ classifiers = [
 dependencies = [
     "pyserial",
     "numpy",
+    "zeroconf",
+    "odrpack",
     "RTIMULib @ git+https://github.com/seandepagnier/RTIMULib2@master#subdirectory=Linux/python",
-    "pypilot_data @ git+https://github.com/pypilot/pypilot_data@1df915910725d586cb846cdca42ee445c2709ff6",
-    "zeroconf"
+    "pypilot_data @ git+https://github.com/pypilot/pypilot_data@1df915910725d586cb846cdca42ee445c2709ff6"
 ]
 
 [project.optional-dependencies]
 optimize = ["ujson", "pyudev", "inotify"]
 signalk = ["zeroconf", "requests", "websocket-client"]
-hat = ["pillow", "gpiod"]
+hat = ["pillow", "gpiod", "flask-babel"]
 web = [
     "flask",
     "gevent-websocket",
@@ -76,6 +77,8 @@ version = { attr = "pypilot.version.strversion" }
 packages = [
     "pypilot",
     "pypilot.hat",
+    "pypilot.hat.ugfx",
+    "pypilot.hat.spireader",
     "pypilot.web",
     "pypilot.ui",
 ]

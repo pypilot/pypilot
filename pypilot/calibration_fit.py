@@ -12,8 +12,12 @@ import sys
 import time
 import numpy
 
-#from odrpack import odr_fit
-import minpack
+try:
+    import odrpack
+except ImportError:
+    import minpack
+    print("failed to import odrpack, falling back to minpack")
+    odrpack = False
 
 import boatimu
 import quaternion
@@ -34,7 +38,7 @@ def safedegasin(x):
     return math.degrees(math.asin(min(max(x, -1), 1)))
 
 '''
-def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
+def FitLeastSq_min(beta0, f, zpoints, debug, dimensions):
     try:
         import scipy.optimize
     except Exception as e:
@@ -49,27 +53,27 @@ def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
         return False
     return list(leastsq[0])
 '''
-def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
+def FitLeastSq_min(beta0, f, zpoints, debug, dimensions):
     try:
-        t0 = time.monotonic()
+        #t0 = time.monotonic()
+        def minpack_f(beta, fvec):
+            fvec[:] = f(beta, zpoints)
+            return 0
 
-        result = minpack.lmdif1(lambda beta: f(beta, zpoints), beta0)
+        beta0 = numpy.array(beta0, dtype=float)
+        fvec = numpy.empty(len(zpoints[0]*dimensions), dtype=float)
+        result = minpack.lmdif1(minpack_f, beta0, fvec)
 
-        info = getattr(result, 'info', None)
-        if info is not None and info not in [1, 2, 3, 4]:
+        if result not in [1, 2, 3, 4]:
             return False
 
-        x = getattr(result, 'x', None)
-        if x is None:
-            x = result[0]
-
-        return list(x)
+        return list(beta0)
     except Exception as e:
         debug('exception running minpack fit:', e)
         return False
     
 '''
-def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
+def FitLeastSq_odr(beta0, f, zpoints, dimensions):
     try:
         Model = scipy.odr.Model(f, implicit=1)
         Data = scipy.odr.RealData(zpoints, dimensions)
@@ -80,15 +84,16 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
         print('exception running odr fit!')
         return False
 '''
-def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
+def FitLeastSq_odr(beta0, f, zpoints, debug, dimensions):
     try:
         xdata = np.asarray(zpoints, dtype=float)
-        ydata = np.zeros(xdata.shape[-1], dtype=float)
+        ydata = np.zeros((dimensions, xdata.shape[-1]), dtype=float)
 
         def f_odrpack(x, beta):
-            return f(beta, x)
+            r = numpy.asarray(f(beta, x), type=float)
+            return r.reshape((dimensions, -1))
 
-        sol = odr_fit(
+        sol = odrpack.odr_fit(
             f_odrpack,
             xdata,
             ydata,
@@ -96,10 +101,17 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions=1):
             task='implicit-ODR',
             maxit=1000,
         )
-        return list(sol.beta)
+
+        if sol.success:
+            return list(sol.beta)
     except Exception as e:
-        print('exception running odr fit!', e)
-        return False
+        debug('exception running odr fit!', e)
+    return False
+
+def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
+    if odrpack:
+        return FitLeastSq_odr(beta0, f, zpoints, debug, dimensions)
+    return FitLeastSq_min(beta0, f, zpoints, debug, dimensions)
 
 def ComputeDeviation(points, fit):
     m, d  = 0, 0

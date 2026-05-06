@@ -175,7 +175,11 @@ class BoatPlot:
 
             self.compasstex = glGenTextures(1)
 
-            data = numpy.array(list(img.get_flattened_data()), numpy.uint8)
+            try:
+                data = numpy.array(list(img.get_flattened_data()), numpy.uint8)
+            except:
+                data = numpy.array(list(img.getdata()), numpy.uint8)
+
             glBindTexture(GL_TEXTURE_2D, self.compasstex)
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)

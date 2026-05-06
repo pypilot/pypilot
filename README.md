@@ -8,12 +8,15 @@ Clone the repository by running the following command:
 git clone https://github.com/pypilot/pypilot
 ```
 
-### Dependencies
-
-You could install the dependencies with the following command:
+### Dependencies (on raspberry pi)
 
 ```
-sudo python3 setup.py install
+sudo apt install gettext libgpiod-dev
+```
+
+### Build and Install
+```
+sudo pip install .[optimze,ui,hat,web] --break-system-packages
 ```
 
 ### Configuration

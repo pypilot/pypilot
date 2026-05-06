@@ -621,6 +621,8 @@ screen::~screen()
 #include <gpiod.h>
 
 static struct gpiod_chip *gpio_chip;
+
+#if GPIOD_VERSION_MAJOR >= 2
 static struct gpiod_line_request *gpio_req;
 
 static void gpio_write_pin(int gpio, int value)
@@ -652,6 +654,40 @@ static void gpio_pin_settings(struct gpiod_line_config *line_cfg, unsigned int p
         exit(1);
     }
 }
+#else
+static struct gpiod_line *gpio_lines[256];
+
+static void gpio_request_output_pin(int gpio, int value)
+{
+    struct gpiod_line *line = gpiod_chip_get_line(gpio_chip, gpio);
+    if (!line) {
+        perror("gpiod_chip_get_line");
+        exit(1);
+    }
+
+    if (gpiod_line_request_output(line, "pypilot", value ? 1 : 0) < 0) {
+        perror("gpiod_line_request_output");
+        exit(1);
+    }
+
+    gpio_lines[gpio] = line;
+}
+
+static void gpio_write_pin(int gpio, int value)
+{
+    struct gpiod_line *line = gpio_lines[gpio];
+
+    if (!line) {
+        fprintf(stderr, "GPIO %d was not requested\n", gpio);
+        exit(1);
+    }
+
+    if (gpiod_line_set_value(line, value ? 1 : 0) < 0) {
+        perror("gpiod_line_set_value");
+        exit(1);
+    }
+}
+#endif
 
 #include <fcntl.h>
 #include <linux/spi/spidev.h>
@@ -702,6 +738,7 @@ public:
             exit(1);
         }
 
+#if GPIOD_VERSION_MAJOR >= 2
         struct gpiod_line_config *line_cfg = gpiod_line_config_new();
         struct gpiod_request_config *req_cfg = gpiod_request_config_new();
 
@@ -723,6 +760,10 @@ public:
 
         gpiod_request_config_free(req_cfg);
         gpiod_line_config_free(line_cfg);
+#else
+	gpio_request_output_pin(rst, 1);
+	gpio_request_output_pin(dc, 0);
+#endif
         
         spifd = spi_open(baud);
 	  

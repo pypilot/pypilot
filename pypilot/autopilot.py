@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2024 Sean D'Epagnier
+#   Copyright (C) 2026 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -145,11 +145,11 @@ class Autopilot:
 
         self.tack = tacking.Tack(self)
 
-        self.gps_compass_offset = HeadingOffset()
+        self.gps_compass_offset = self.register(HeadingOffset, 'gps_compass_offset')
         self.gps_speed = 0
 
-        self.wind_compass_offset = HeadingOffset()
-        self.true_wind_compass_offset = HeadingOffset()
+        self.wind_compass_offset = self.register(HeadingOffset, 'wind_compass_offset')
+        self.true_wind_compass_offset = self.register(HeadingOffset, 'true_wind_compass_offset')
 
         self.runtime = self.register(TimeValue, 'runtime') #, persistent=True)
         self.timings = self.register(SensorValue, 'timings', False)
@@ -173,9 +173,9 @@ class Autopilot:
         # setup all processes to exit on any signal
         self.childprocesses = [self.boatimu.imu, self.boatimu.auto_cal,
                                self.sensors.nmea, self.sensors.gpsd, self.sensors.gps.filtered,
-                               self.sensors.signalk, self.server]
+                               self.sensors.signalk, self.sensors.signalk.zero_conf, self.server]
         def cleanup(signal_number, frame=None):
-            #print('got signal', signal_number, 'cleaning up')
+            print('got signal', signal_number, 'cleaning up')
             if signal_number == signal.SIGCHLD:
                 pid = os.waitpid(-1, os.WNOHANG)
                 #print('sigchld waitpid', pid)
@@ -186,13 +186,15 @@ class Autopilot:
             while self.childprocesses:
                 process = self.childprocesses.pop().process
                 if process:
-                    pid = process.pid
-                    #print('kill', pid, process)
+                    try:
+                        pid = process.pid
+                    except:
+                        continue
+                    print('kill', pid, process)
                     try:
                         os.kill(pid, signal.SIGTERM) # get backtrace
-                    except Exception:
-                        pass
-                        #print('kill failed', e)
+                    except Exception as e:
+                        print('kill failed', e)
             sys.stdout.flush()
             if signal_number != 'atexit':
                 raise KeyboardInterrupt # to get backtrace on all processes
@@ -511,7 +513,6 @@ class Autopilot:
                 break
 
             time.sleep(dt)
-
 
         #print("times", t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
 

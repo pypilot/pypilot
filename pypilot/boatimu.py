@@ -41,7 +41,7 @@ class IMU:
         self.multiprocessing = server.multiprocessing
         if self.multiprocessing:
             self.pipe, pipe = NonBlockingPipe('imu pipe', self.multiprocessing)
-            self.process = multiprocessing.Process(target=self.process, args=(pipe,), daemon=True)
+            self.process = multiprocessing.Process(target=self.process, args=(pipe,), name='imu', daemon=True)
             self.process.start()
             return
         self.process = False
@@ -360,7 +360,7 @@ class AutomaticCalibrationProcess:
         else:
             self.cal_pipe, self.cal_pipe_process = False, False # use client
         self.client = pypilotClient(server)
-        self.process = multiprocessing.Process(target=CalibrationProcess, args=(self.cal_pipe_process, self.client), daemon=True)
+        self.process = multiprocessing.Process(target=CalibrationProcess, args=(self.cal_pipe_process, self.client), name='calibration', daemon=True)
         self.process.start()
         self.cal_ready = False
         self.warnings = ''

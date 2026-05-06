@@ -28,6 +28,7 @@ import select
 import socket
 import time
 import threading
+import os
 
 import serial
 
@@ -575,7 +576,7 @@ class nmeaBridge:
         self.multiprocessing = server.multiprocessing
         self.pipe, self.pipe_out = NonBlockingPipe('nmea pipe', self.multiprocessing)
         if self.multiprocessing:
-            self.process = multiprocessing.Process(target=self.nmea_process, daemon=True)
+            self.process = multiprocessing.Process(target=self.nmea_process, name='nmea', daemon=True)
             self.process.start()
         else:
             self.process = False

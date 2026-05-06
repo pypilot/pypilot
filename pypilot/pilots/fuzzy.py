@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.
 
 import math
+import os
 
 from pilot import AutopilotPilot
 

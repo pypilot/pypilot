@@ -84,7 +84,7 @@ def draw(surface, pos, text, size, bw, crop=False):
                         print('unable to print unicode character to console')
                     from importlib.resources import files
                     root = files("pypilot_data")
-                    src = create_character(root / 'hat' / 'font.ttf', size, c, surface.bypp, crop, bw)
+                    src = create_character(str(root / 'hat' / 'font.ttf'), size, c, surface.bypp, crop, bw)
                     if src:
                         print('store grey', filename)
                         src.store_grey(filename.encode('utf-8'))

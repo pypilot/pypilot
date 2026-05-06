@@ -11,6 +11,7 @@ import multiprocessing
 import select
 import socket
 import time
+import os
 
 import pyjson
 import serialprobe
@@ -35,7 +36,7 @@ class gpsProcess(multiprocessing.Process):
         # split pipe ends
         self.gpsd_failed_connect = False
         self.pipe, pipe = NonBlockingPipe('gps pipe', True)
-        super().__init__(target=self.gps_process, args=(pipe,), daemon=True)
+        super().__init__(target=self.gps_process, args=(pipe,), name='gpsd', daemon=True)
 
     def connect(self):
         time.sleep(2)

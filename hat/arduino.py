@@ -223,7 +223,7 @@ class arduino:
             self.set_backlight(self.config['lcd']['backlight'])
         self.set_baud(self.config['arduino.nmea.baud'])
         try:
-            self.set_adc_channels(len(self.config['arduino.adc_channels']))
+            self.set_adc_channels(self.config['arduino.adc_channels'])
         except (KeyError, ValueError):
             pass
 

@@ -119,7 +119,7 @@ class ZeroConfProcess(multiprocessing.Process):
     def __init__(self, signalk):
         self.name_type = False
         self.pipe = NonBlockingPipe('zeroconf', True)
-        super().__init__(target=self.process, daemon=True)
+        super().__init__(target=self.process, name='signalk_zero_conf', daemon=True)
         self.start()
 
     def remove_service(self, zc, type, name):
@@ -153,6 +153,7 @@ class ZeroConfProcess(multiprocessing.Process):
 
 
     def process(self):
+        time.sleep(6)
         if _zeroconf_mod is None:
             print('signalk: ' + _('failed to') + ' import zeroconf, ' + _('autodetection not possible'))
             print(_('try') + ' pip3 install zeroconf ' + _('or') + ' apt install python3-zeroconf')
@@ -215,11 +216,17 @@ class signalk:
         self.last_access_request_time = 0
 
         self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('signalk pipe', self.multiprocessing)
-        self.zero_conf = False # spawn this from within signalk process
+
+        self.process = False
+        if self.multiprocessing:
+            self.zero_conf = ZeroConfProcess(self)
+        else:
+            print('multiprocessing disabled, signalk will not auto-discover via zeroconf')
+            self.zero_conf = False
 
         if self.multiprocessing:
             import multiprocessing
-            self.process = multiprocessing.Process(target=self.process, daemon=True)
+            self.process = multiprocessing.Process(target=self.process, name='signalk', daemon=True)
             self.process.start()
         else:
             self.process = False
@@ -419,13 +426,8 @@ class signalk:
         return delay
             
     def process(self):
-        time.sleep(6) # let other stuff load
         print('signalk process', os.getpid())
-        self.process = False
-        if self.multiprocessing:
-            self.zero_conf = ZeroConfProcess(self)
-        else:
-            print('multiprocessing disabled, signalk will not auto-discover via zeroconf')
+        time.sleep(6) # let other stuff load
         while True:
             time.sleep(.1)
             self.poll(1)
