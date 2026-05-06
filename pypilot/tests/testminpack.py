@@ -1,5 +1,8 @@
 import numpy
 import minpack
+
+import sys
+sys.path.append('..')
 import vector
 
 zpoints= [[-0.019627960233410714, 0.995653995871544, -0.9579334219296776, 0.08272908578316371, -0.05848887097090483, -0.027316996594890956, -0.009766031941398978, -0.026300387984762592], [-0.080971110034734, -0.17618845626711846, -0.032236056774854666, 0.9415856222311656, -0.08898376487195493, -0.10522267706692222, -0.056559245195239784, -1.019424915313721], [1.0010001134872437, -0.026635131915099922, 0.27431152363618216, 0.26205423921346666, -0.9751406878232955, -1.0298668444156647, -1.0282527506351473, -0.03473897281413277]]
@@ -33,10 +36,18 @@ import odrpack
 
 beta0= numpy.asarray([0, 0, 0, 1], dtype=float)
 xdata = numpy.asarray(zpoints, dtype=float)
-ydata = numpy.zeros(xdata.shape[-1], dtype=float)
+ydata = numpy.zeros((1, xdata.shape[-1]), dtype=float)
+
+xdata = numpy.ascontiguousarray(xdata, dtype=numpy.float64)
+ydata = numpy.ascontiguousarray(ydata, dtype=numpy.float64)
+
+xdata = numpy.require(xdata, dtype=numpy.float64, requirements=["F", "A", "W", "O"])
+ydata = numpy.require(ydata, dtype=numpy.float64, requirements=["F", "A", "W", "O"])
 
 def f_odrpack(x, beta):
-    return numpy.asarray(f_sphere3(beta, x), dtype=float)
+    ret = numpy.asarray(f_sphere3(beta, x), dtype=float)
+    ret = ret.reshape((1, -1))
+    return ret
 
 sol = odrpack.odr_fit(
     f_odrpack,
@@ -44,9 +55,13 @@ sol = odrpack.odr_fit(
     ydata,
     beta0,
     task='implicit-ODR',
-    maxit=1000,
+    sstol=1e-5,
+    partol = 1e-5,
+    maxit=100,
 )
 
-#print("sol", sol)
+print("sol", sol.success, sol.beta)
 if sol.success:
     print("odrpack", sol.beta)
+
+print(sol.eps, sol.niter)

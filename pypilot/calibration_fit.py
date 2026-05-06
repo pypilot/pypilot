@@ -99,7 +99,9 @@ def FitLeastSq_odr(beta0, f, zpoints, debug, dimensions):
             ydata,
             beta0,
             task='implicit-ODR',
-            maxit=1000,
+            sstol=1e-5,
+            partol = 1e-5,
+            maxit=100,
         )
 
         if sol.success:

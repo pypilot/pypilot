@@ -17,22 +17,26 @@
 # then tinypilot is restarted
 
 SRCNAM=pypilot
-WRKDIR=.
 EXTNAM=pypilot
 PYTHONVERSION=`cat /opt/python`
 PYTHON="python"$PYTHONVERSION
 TMPDIR=/tmp/$EXTNAM
 PYTDIR=/usr/local/lib/$PYTHON/site-packages
 
+# stop pypilot to devote full cpu to building
+sudo sv d pypilot
+sudo sv d pypilot_hat
+sudo sv d pypilot_web
+
+#tce-load -i $PYTHON-pip cmake bison pcre m4
+tce-load -i $PYTHON-pip
+tce-load -i $PYTHON-wheel
+
 ######################################################
 # Prepare extension creation                         #
 ######################################################
 
 INITIALDIR=$PWD
-
-# Remove dirs and files left from previous creation
-
-#sudo pip uninstall Flask
 
 # Create temporary directory
 
@@ -49,35 +53,9 @@ export CXXFLAGS="-march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp"
 
 # Unpack source in current directory
 
-#tar -xf $SRCNAM
-
-
 # Configure it
 
-cd $WRKDIR
-
-# delete old dist
-rm -rf dist build
-
-# Build and Install
-
-#$PYTHON setup.py build # stupid script copies files before swigging!
-$PYTHON setup.py bdist
-tar xvf dist/*tar.gz -C $TMPDIR
-
-# Delete compilation work directory
-cd ..
-#rm -r -f $WRKDIR
-
-
-INSDIR=$TMPDIR$PYTDIR/$PYNAM
-#rm -rf $INSDIR/*pyc
-
-# Delete *.pyc files
-
-#find $TMPDIR/ -name *.pyc | xargs rm -r
-
-# Adjust directory access rigths
+python -m pip install . --prefix $TMPDIR/usr/local --no-build-isolation --no-deps --ignore-installed
 
 find $TMPDIR/ -type d | xargs chmod -v 755;
 

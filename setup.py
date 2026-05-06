@@ -48,7 +48,13 @@ ret = os.system('pkg-config --cflags libgpiod')
 if ret == 0:
     print('detected libgpiod')
     ugfx_libraries=['gpiod']
-    ugfx_defs = ['-DGPIOD']
+    import subprocess
+    ver = subprocess.check_output(
+        ["pkg-config", "--modversion", "libgpiod"],
+        text=True
+    ).strip()
+    ugfx_defs = ['-DGPIOD_VERSION_MAJOR=' + ver.split(".")[0]]
+
 else:
     print('no gpiod library for ugfx')
     ugfx_libraries=[]
@@ -69,11 +75,6 @@ spireader_module = Extension('pypilot/hat/spireader/_spireader',
                              extra_compile_args=['-Wno-unused-result'],
                              libraries=ugfx_libraries,
                              swig_opts=['-c++'])
-
-os.system('cd hat/locale;./translate.sh')
-os.system('cd hat; pybabel compile -d translations')
-os.system('cd pypilot/locale;./translate.sh')
-os.system('cd web; pybabel compile -d translations')
 
 ext_modules = [arduino_servo_module, linebuffer_module, ugfx_module]
 if spireader_module:

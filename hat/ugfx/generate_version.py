@@ -15,7 +15,9 @@ sys.path.insert(0,os.path.abspath(os.path.dirname(os.path.abspath(__file__))+'/.
 import pypilot.version
 from PIL import Image, ImageDraw, ImageFont
 
-ifont = ImageFont.truetype('../font.ttf', 14)
+from importlib.resources import files
+root = files("pypilot_data")
+ifont = ImageFont.truetype(str(root / 'hat' / 'font.ttf'), 14)
 version = pypilot.version.strversion
 print('using version', version)
 (left, top, right, bottom) = ifont.getbbox(version)

@@ -617,7 +617,7 @@ screen::~screen()
 }
 #endif
 
-#ifdef GPIOD
+#ifdef GPIOD_VERSION_MAJOR
 #include <gpiod.h>
 
 static struct gpiod_chip *gpio_chip;
@@ -654,7 +654,7 @@ static void gpio_pin_settings(struct gpiod_line_config *line_cfg, unsigned int p
         exit(1);
     }
 }
-#else
+#else // GPIOD v1
 static struct gpiod_line *gpio_lines[256];
 
 static void gpio_request_output_pin(int gpio, int value)
@@ -817,7 +817,7 @@ public:
 };
 #endif
 
-#ifdef GPIOD
+#ifdef GPIOD_VERSION_MAJOR
 #define DC 25
 #define RST 24
 
@@ -1227,7 +1227,7 @@ spiscreen::spiscreen(int driver)
 {
     driver = detect(driver);
     switch (driver) {
-#ifdef GPIOD
+#ifdef GPIOD_VERSION_MAJOR
     case 0: disp = new PCD8544(); break;
     case 1: disp = new JLX12864G(); break;
     case 2: disp = new SSD1309(); break;

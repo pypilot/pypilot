@@ -10,4 +10,4 @@ pypilot_version.h:
 	python generate_version.py
 
 splash: splash.cpp ugfx.cpp pypilot_version.h
-	g++ -O2 -o splash splash.cpp ugfx.cpp -g -lpthread -lgpiod -DGPIOD
+	g++ -O2 -o splash splash.cpp ugfx.cpp -g -lpthread -lgpiod -DGPIOD_VERSION_MAJOR=2

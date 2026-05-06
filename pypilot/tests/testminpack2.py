@@ -1,5 +1,8 @@
 import numpy
 import minpack
+
+import sys
+sys.path.append('..')
 import vector
 
 
@@ -54,8 +57,11 @@ sol = odrpack.odr_fit(
     ydata,
     beta0,
     task='implicit-ODR',
-    maxit=1000,
+    sstol=1e-5,
+    partol = 1e-5,
+    maxit=100,
 )
 
 if sol.success:
-    print("odrpack", sol.beta)
+    print("odrpack", sol.beta, sol.niter)
+

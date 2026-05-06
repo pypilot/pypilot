@@ -7,7 +7,7 @@ name = "pypilot"
 dynamic = ["version"]
 description = "Free autopilot for sailboats written in Python supporting SignalK"
 readme = "README.md"
-license = "GPL-3.0-or-later"
+license = { text = "GPL-3.0-or-later" }
 requires-python = ">=3.9"
 authors = [
     { name = "Sean D'Epagnier" },
@@ -82,6 +82,7 @@ packages = [
     "pypilot.web",
     "pypilot.ui",
 ]
+include-package-data = false
 
 [tool.setuptools.package-dir]
 "pypilot.hat" = "hat"
