@@ -15,8 +15,6 @@ from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
     close_room, rooms, disconnect
 
 from engineio.payload import Payload
-from flask import Flask, render_template, request
-from flask_socketio import Namespace, SocketIO, emit
 
 Payload.max_decode_packets = 500
 
@@ -76,7 +74,8 @@ try:
         return language
 
     babel = Babel(app, locale_selector=get_locale)
-    
+    _ = gettext
+
 except Exception as e:
     print('failed to import flask_babel, translations not possible!!', e)
     def _(x): return x
