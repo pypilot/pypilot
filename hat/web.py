@@ -12,11 +12,14 @@ import time
 
 from flask import Flask, render_template, request
 from markupsafe import Markup
-from flask_socketio import SocketIO, Namespace, emit, disconnect
+from flask_socketio import SocketIO, Namespace, emit
+
+from pypilot.web import gettext_helper
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode=None)
+gettext_helper.load(app)
 
 web_port = 33333
 
@@ -89,21 +92,6 @@ default_actions = \
      'tack starboard': ['gpio22_05'],
     }
 
-try:
-    from flask_babel import Babel
-    babel = Babel(app)
-
-    LANGUAGES = os.listdir(os.path.dirname(os.path.abspath(__file__)) + '/translations')
-
-    @babel.localeselector
-    def get_locale():
-        return request.accept_languages.best_match(LANGUAGES)
-
-except Exception as e:
-    print('failed to import flask_babel, translations not possible!!', e)
-    def _(x): return x
-    app.jinja_env.globals.update(_=_)
-    babel = None
 
 class WebConfig(Namespace):
     def __init__(self, name, pipe, config):
