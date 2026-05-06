@@ -220,6 +220,11 @@ class MinRangeSetting(RangeSetting):
         super().__init__(name, initial, min_value, max_value, units, **kwargs)
 
     def set(self, value):
+        try:
+            value = float(value) # try to convert to number
+        except ValueError:
+            return # ignore invalid value
+
         if value < self.minvalue.value:
             value = self.minvalue.value
         super().set(value)
@@ -230,9 +235,9 @@ class MaxRangeSetting(RangeSetting):
         super().__init__(name, initial, min_value, max_value, units, **kwargs)
 
     def set(self, value):
-        if self.maxvalue and value > self.maxvalue.value:
-            self.maxvalue.set(value)
         super().set(value)
+        if self.maxvalue and self.value > self.maxvalue.value:
+            self.maxvalue.set(self.value)
 
 class Servo:
     pypilot_dir = os.path.expanduser('~') + '/.pypilot/'
