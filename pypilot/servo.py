@@ -459,7 +459,7 @@ class Servo:
                 return
 
             command = cal[0] + abs(speed)*cal[1]
-        except (KeyError, ValueError):
+        except (KeyError, ValueError, TypeError):
             print (_('servo calibration invalid'), self.calibration.value)
             self.calibration.set({'port': [.2, .8], 'starboard': [.2, .8]})
             return

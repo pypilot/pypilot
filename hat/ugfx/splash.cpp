@@ -69,7 +69,7 @@ void stretch(surface *dest, surface *src)
 int main(int argc, char *argv[])
 {
     surface *framebuffer;
-#ifdef GPIOD
+#ifdef GPIOD_VERSION_MAJOR
     if(argc > 1) {
         if(!strcmp(argv[1], "spi"))
             framebuffer = new spiscreen(-1);
