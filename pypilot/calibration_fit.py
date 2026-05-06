@@ -87,11 +87,11 @@ def FitLeastSq_odr(beta0, f, zpoints, dimensions):
 '''
 def FitLeastSq_odr(beta0, f, zpoints, debug, dimensions):
     try:
-        xdata = np.asarray(zpoints, dtype=float)
-        ydata = np.zeros((dimensions, xdata.shape[-1]), dtype=float)
+        xdata = numpy.asarray(zpoints, dtype=float)
+        ydata = numpy.zeros((dimensions, xdata.shape[-1]), dtype=float)
 
         def f_odrpack(x, beta):
-            r = numpy.asarray(f(beta, x), type=float)
+            r = numpy.asarray(f(beta, x), dtype=float)
             return r.reshape((dimensions, -1))
 
         sol = odrpack.odr_fit(
