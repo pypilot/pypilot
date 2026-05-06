@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#   Copyright (C) 2021 Sean D'Epagnier
+#   Copyright (C) 2026 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -488,7 +488,7 @@ class controlbase(page):
             self.profile = profile
             profilerect = rectangle(0, .92, .32, .09)
             self.lcd.surface.box(*(self.convrect(profilerect) + [black]))
-            self.fittext(profilerect, 'P'+profile[:2])
+            self.fittext(profilerect, profile[:3])
 
         '''
         pilot = self.last_val('ap.pilot')
