@@ -452,7 +452,7 @@ class Hat:
                          ActionHeading(self,  5),
                          ActionHeading(self, -10),
                          ActionHeading(self,  10),
-                         ActionPypilot(self, 'center', 'servo.position', 0),
+                         ActionPypilot(self, 'center', 'servo.position_command', 0),
                          ActionTack(self, 'tack port', 'port'),
                          ActionTack(self, 'tack starboard', 'starboard'),
                          ActionDodge(self, 'dodge port', -1),
