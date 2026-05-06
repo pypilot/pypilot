@@ -13,7 +13,6 @@ import time
 import pyjson
 from resolv import resolv
 
-
 class Value:
     def __init__(self, name, initial, **kwargs):
         self.name = name
@@ -118,7 +117,7 @@ class HeadingOffset(SensorValue):
 
     def update(self, offset, d):
         offset = resolv(offset, self.value)
-        self.update(resolv(d*offset + (1-d)*self.value))
+        super().update(resolv(d*offset + (1-d)*self.value))
 
 # a value that may be modified by external clients
 class Property(Value):

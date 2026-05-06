@@ -301,9 +301,12 @@ class LCD(Process):
 
     def create(self):
         def process(pipe, config):
+            print('lcd process start', time.monotonic())
             sys.stdout.reconfigure(line_buffering=True)
             import lcd
+            print('lcd process imported lcd', time.monotonic())
             self.lcd = lcd.LCD(self.hat.config)
+            print('lcd process create lcd', time.monotonic())
             self.lcd.pipe = pipe
 
             print('lcd process main loop running', time.monotonic())

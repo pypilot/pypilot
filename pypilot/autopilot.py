@@ -252,8 +252,8 @@ class Autopilot:
                 self.gps_compass_offset.update(gps_track - compass, d)
 
         if self.sensors.wind.source.value != 'none':
-            offset = resolv(self.sensors.wind.wdirection + compass, self.wind_compass_offset.value)
-            self.wind_compass_offset.update(offset, self.sensors.wind.wfactor)
+            offset = resolv(self.sensors.wind.filtered_direction.value + compass, self.wind_compass_offset.value)
+            self.wind_compass_offset.update(offset, 0.1) #self.sensors.wind.filter_factor)
 
             boat_speed = None
             if self.sensors.water.source.value != 'none':
@@ -265,12 +265,12 @@ class Autopilot:
                 if self.sensors.truewind.source.value == 'none':
                     self.sensors.truewind.source.update('gps+wind')
             if boat_speed != None:
-                self.sensors.truewind.update_from_apparent(boat_speed, self.sensors.wind.wspeed,
-                                                           self.sensors.wind.wdirection)
+                self.sensors.truewind.update_from_apparent(boat_speed, self.sensors.wind.filtered_speed,
+                                                           self.sensors.wind.filtered_direction)
 
         if self.sensors.truewind.source.value != 'none':
-            offset = resolv(self.sensors.truewind.wdirection + compass, self.true_wind_compass_offset.value)
-            self.true_wind_compass_offset.update(offset, self.sensors.truewind.wfactor)
+            offset = resolv(self.sensors.truewind.filtered_direction.value + compass, self.true_wind_compass_offset.value)
+            self.true_wind_compass_offset.update(offset, 0.1) #self.sensors.truewind.wfactor)
 
     def fix_compass_calibration_change(self, data, t0):
         headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value
