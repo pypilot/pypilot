@@ -33,7 +33,7 @@ def get_local_addresses():
                 addrs = ifaddresses(interface)
                 for i in addrs:
                     if 'addr' in i:
-                        addresses.append(i['addr'])
+                        addresses.append((interface, i['addr']))
             return addresses
         except Exception:
             #print('zeroconf service fallback to socket address')
@@ -42,11 +42,11 @@ def get_local_addresses():
     interfaces = os.listdir('/sys/class/net')
     for interface in interfaces:
         try:
-            addresses.append(socket.inet_ntoa(fcntl.ioctl(
+            addresses.append((interface, socket.inet_ntoa(fcntl.ioctl(
                 zerosocket.fileno(),
                 0x8915,  # SIOCGIFADDR
                 struct.pack('256s', bytes(interface[:15], 'utf-8'))
-            )[20:24]))
+            )[20:24])))
         except OSError: # no address for this interface
             pass
 
@@ -69,8 +69,9 @@ class zeroconf(threading.Thread):
             break
 
         addresses = []
-        zeroconf = None
+        zeroconf = {}
         info = None
+        event = threading.Event()
 
         #ip_version = IPVersion.All
         #ip_version = IPVersion.V6Only
@@ -84,35 +85,40 @@ class zeroconf(threading.Thread):
                 print('zeroconf addresses', i, len(i))
                 # close addresses
                 if zeroconf:
-                    if info:
-                        zeroconf.unregister_service(info)
-                    zeroconf.close()
+                    for i in zeroconf:
+                        zeroconf[i].unregister_all_services()
+                        zeroconf[i].close()
+                    zeroconf = {}
 
                 addresses = i
 
-                # register addresses
-                #print('zeroconf registering address', address)
-                info = ServiceInfo(
-                    "_pypilot._tcp.local.",
-                    "pypilot._pypilot._tcp.local.",
-                    addresses=[socket.inet_aton(a) for a in addresses],
-                    port=DEFAULT_PORT,
-                    properties={'version': strversion})
+                for address in addresses:
+                    # register addresses
+                    #print('zeroconf registering address', address)
+                    info = ServiceInfo(
+                        '_pypilot._tcp.local.',
+                        #"pypilot._pypilot._tcp.local.",
+                        f'pypilot-{address[0]}._pypilot._tcp.local.',
+                        addresses=[socket.inet_aton(address[1])],
+                        port=DEFAULT_PORT,
+                        properties={'version': strversion},
+                        server=f'pypilot-{address[0]}.local.',
+                    )
 
-                zeroconf = Zeroconf(ip_version=ip_version)#, interfaces=[address])
-                try:
-                    zeroconf.register_service(info)
-                except Exception as e:
-                    print('zeroconf exception type:', type(e).__name__)
-                    print('zeroconf exception repr:', repr(e))
-                    import traceback
-                    traceback.print_exc()
-                    print('info/addresses:', info, addresses)
-                    addresses = []
-                    break # maybe try again?
+                    print(f'zeroconf[{address[0]}] = Zeroconf(ip_version={ip_version}, interfaces=[{address[1]}])')
+                    zeroconf[address[0]] = Zeroconf(ip_version=ip_version, interfaces=[address[1]])
+                    try:
+                        zeroconf[address[0]].register_service(info)
+                    except Exception as e:
+                        print('zeroconf exception type:', type(e).__name__)
+                        print('zeroconf exception repr:', repr(e))
+                        import traceback
+                        traceback.print_exc()
+                        print('info/addresses:', info, addresses)
+                        addresses = []
+                        break # maybe try again?
 
-            time.sleep(60)
-
+            event.wait(timeout=60)  # dont do sleep here, it blocks the zeroconf threads, it is better to use threading event wait
 
 if __name__ == '__main__':
     zc = zeroconf()
