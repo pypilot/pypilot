@@ -71,6 +71,11 @@ class AutopilotControlBase ( wx.Frame ):
 
 		fgSizer21.Add( self.stStatus, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL|wx.EXPAND, 5 )
 
+		self.m_staticText46 = wx.StaticText( self, wx.ID_ANY, _(u"Rudder:"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText46.Wrap( -1 )
+
+		fgSizer21.Add( self.m_staticText46, 0, wx.ALL, 5 )
+
 		self.stRudder = wx.StaticText( self, wx.ID_ANY, _(u"----"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.stRudder.Wrap( -1 )
 

@@ -18,7 +18,6 @@ from pypilot.client import *
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import autopilot_control_ui
 
-
 class TackDialog(autopilot_control_ui.TackDialogBase):
     def __init__(self, parent):
         super().__init__(parent)
@@ -82,6 +81,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.manual_timer = wx.Timer(self, self.ID_MANUAL)
         self.Bind(wx.EVT_TIMER, self.onManualTimer, id=self.ID_MANUAL)
         self.manual_timeout = 0
+
+        self.profile = None
 
         self.init()
 
@@ -266,6 +267,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 if n < 0:
                     n = self.cProfile.Append(value)
                 self.cProfile.SetSelection(n)
+                self.profile = value
             elif name == 'profiles':
                 cur_profile = self.cProfile.GetStringSelection()
                 self.cProfile.Clear()
@@ -274,6 +276,8 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 n = self.cProfile.FindString(cur_profile)
                 if n >= 0:
                     self.cProfile.SetSelection(n)
+                self.cProfile.Append('add new profile')
+                self.cProfile.Append('remove current profile')
             elif name == 'imu.error':
                 if value:
                     self.stEngaged.SetLabel(value)
@@ -286,7 +290,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                 self.tbAP.SetValue(int(value))
                 self.set_mode_color()
                 self.apenabled = value
-                self.bCenter.Show(not self.apenabled and self.rudder)
+                self.bCenter.Show(not self.apenabled and self.rudder is not False)
             elif name == 'rudder.angle':
                 try:
                     value = round(value, 1)
@@ -343,7 +347,33 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
             self.client.set('ap.enabled', False)
 
     def onProfile(self, event):
-        self.client.set('profile', self.cProfile.GetStringSelection())
+        profile = self.cProfile.GetStringSelection()
+        if profile == 'add new profile':
+            dlg = wx.TextEntryDialog(None, "Profile Name:", "Profile", "")
+            # Show the dialog and check if OK was pressed
+            if dlg.ShowModal() == wx.ID_OK:
+                text = dlg.GetValue()
+                if len(text) < 3:
+                    wx.MessageBox('Profile name too short!', 'Info', wx.OK | wx.ICON_INFORMATION)
+                else:
+                    for i in range(self.cProfile.GetCount()-2):
+                        if text == self.cProfile.GetString(i):
+                            wx.MessageBox('Already have profile with this name!', 'Info', wx.OK | wx.ICON_INFORMATION)
+                            break
+                    else:
+                        self.client.set('profile', text)
+                    
+            dlg.Destroy()  # Clean up the dialog
+            self.cProfile.SetStringSelection(self.profile)
+        elif profile == 'remove current profile':
+            profiles = []
+            for i in range(self.cProfile.GetCount()-2):
+                if self.profile != self.cProfile.GetString(i):
+                    profiles.append(self.cProfile.GetString(i))
+            self.client.set('profiles', profiles)
+        else:
+            self.profile = self.cProfile.GetStringSelection()
+            self.client.set('profile', self.profile)
 
     def onPilot(self, event):
         self.client.set('ap.pilot', self.cPilot.GetStringSelection())
@@ -354,7 +384,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
 
     def onTack(self, event):
         s = wx.DisplaySize()
-        print("s", s)
         self.tackdialog.Show(True)
         self.tackdialog.Move(int(s[0]/2), int(s[1]/2))
 
