@@ -396,7 +396,7 @@ class BoatIMU:
         self.alignmentQ.last = False
 
         # -90 be default is mounted so user is facing display
-        self.heading_off = self.register(RangeProperty, 'heading_offset', -90, -180, 180, persistent=True)
+        self.heading_off = self.register(RangeProperty, 'heading_offset', 90, -180, 180, persistent=True)
         self.heading_off.last = 3000 # invalid
 
         self.alignmentCounter = self.register(Property, 'alignmentCounter', 0)

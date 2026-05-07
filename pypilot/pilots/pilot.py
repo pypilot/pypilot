@@ -10,7 +10,6 @@
 from pypilot.resolv import resolv
 from pypilot.values import *
 
-
 class AutopilotGain(RangeProperty):
     def __init__(self, *cargs):
         super().__init__(*cargs, persistent=True, profiled=True)
