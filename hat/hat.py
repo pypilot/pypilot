@@ -14,12 +14,17 @@ import os
 import sys
 import signal # delay this?
 import select
+print('hat import 1', time.monotonic())
 from pypilot import pyjson  # very slow why?
 from pypilot.client import pypilotClient
+print('hat import 2', time.monotonic())
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+print('hat import 3', time.monotonic())
 import gpio
+print('hat import 4', time.monotonic())
 import lcd
+print('hat import 5', time.monotonic())
 import arduino
 
 print('hat import done', time.monotonic())

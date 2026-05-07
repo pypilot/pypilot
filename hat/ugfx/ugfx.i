@@ -56,7 +56,7 @@ public:
     int fbfd = 0;
     long int screensize = 0;
 };
-#ifdef GPIOD
+#ifdef GPIOD_VERSION_MAJOR
 class spiscreen : public surface
 {
 public:

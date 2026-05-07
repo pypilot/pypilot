@@ -76,6 +76,9 @@ version = { attr = "pypilot.version.strversion" }
 [tool.setuptools]
 packages = [
     "pypilot",
+    "pypilot.arduino_servo",
+    "pypilot.pilots",
+    "pypilot.linebuffer",
     "pypilot.hat",
     "pypilot.hat.ugfx",
     "pypilot.hat.spireader",
@@ -85,6 +88,7 @@ packages = [
 include-package-data = false
 
 [tool.setuptools.package-dir]
+"" = "."
 "pypilot.hat" = "hat"
 "pypilot.hat.ugfx" = "hat/ugfx"
 "pypilot.hat.spireader" = "hat/spireader"

@@ -14,6 +14,7 @@ import numpy
 
 try:
     import odrpack
+    print("imported odrpack")
 except ImportError:
     import minpack
     print("failed to import odrpack, falling back to minpack")
