@@ -95,12 +95,12 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         watches = {}
         for i in range(len(watchlist)):
             pagelist = watchlist[i]
-            for name in watchlist[pageindex]:
+            for name in pagelist:
+                if type(name) == type(()):
+                    name, watch = name # if a pair, it specifies the period
+                else:
+                    watch = True
                 if i == pageindex:
-                    if type(name) == type(()):
-                        name, watch = name # if a pair, it specifies the period
-                    else:
-                        watch = True
                     watches[name] = watch
                 elif name in self.client.watches:
                     self.client.watch(name, False)
@@ -182,7 +182,9 @@ class CalibrationDialog(autopilot_control_ui.CalibrationDialogBase):
         self.UpdateControl(label, lambda : label.SetLabel(str(value)))
 
     def UpdatedSpin(self, dspin, value):
-        self.UpdateControl(dspin, lambda : dspin.SetValue(int(value)))
+        if type(dspin) == wx._core.SpinCtrl:
+            value = int(value)
+        self.UpdateControl(dspin, lambda : dspin.SetValue(value))
 
     def receive_message(self, msg):
         name, value = msg
