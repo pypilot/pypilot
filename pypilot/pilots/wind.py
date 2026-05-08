@@ -28,7 +28,7 @@ class WindPilot(AutopilotPilot):
 
         # create simple pid filter
         self.PosGain('P', .003, .02) # position (heading error)
-        self.PosGain('I', 0, .1)     # integral
+#        self.PosGain('I', 0, .1)     # integral
         self.PosGain('D', .1, 1.0)   # derivative (gyro)
         self.PosGain('DD', .05, 1.0) # rate of derivative
         self.Gain('WG', 0, -.1, .1)  # wind gust
@@ -99,12 +99,13 @@ class WindPilot(AutopilotPilot):
         # compute command
         headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
         headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
-        windgust = ap.sensors.wind.speed - self.last_wind_speed
-        self.last_wind_speed = ap.sensors.wind.speed
-        if ap.sensors.wind.direction < 0:
+        windgust = ap.sensors.wind.speed.value - self.last_wind_speed
+        self.last_wind_speed = ap.sensors.wind.speed.value
+        if ap.sensors.wind.direction.value < 0:
             windgust = -windgust
-        gain_values = {'P': self.heading_error.value,
-                       'I': self.heading_error_int.value,
+
+        gain_values = {'P': ap.heading_error.value,
+#                       'I': ap.heading_error_int.value,
                        'D': headingrate,
                        'DD': headingraterate,
                        'WG': windgust}

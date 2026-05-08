@@ -19,10 +19,10 @@ class AbsolutePilot(AutopilotPilot):
     super().__init__('absolute', ap)
 
     # create simple pid filter
-    self.PosGain('P', .05, .5)
-    self.PosGain('I', 0, .05)
-    self.PosGain('D', .05, 1)
-    self.PosGain('DD',  0, 1) # rate of derivative (needed?)
+    self.PosGain('P', .05, .3)
+    self.PosGain('I', 0, .8)
+    self.PosGain('D', .05, .5)
+    self.PosGain('FF',  0, 1)
 
   def process(self):
     ap = self.ap
@@ -32,18 +32,16 @@ class AbsolutePilot(AutopilotPilot):
         return
 
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
-    headingraterate = ap.boatimu.SensorValues['headingraterate_lowpass'].value
     gain_values = {'P': ap.heading_error.value,
                    'I': ap.heading_error_int.value,
                    'D': headingrate,
-                   'DD': headingraterate,
                    'FF': ap.heading_command_rate.value}
 
     command = self.Compute(gain_values)
     range = ap.sensors.rudder.range.value
 
     if ap.enabled.value:
-        ap.servo.command.use_period = False # experiment with this
+        #ap.servo.command.use_period = False # experiment with this
         ap.servo.position_command.command(command * range)
 
 pilot = AbsolutePilot

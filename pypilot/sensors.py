@@ -156,8 +156,9 @@ class TrueWind(BaseWind):
         synth_sources = ('water+wind', 'gps+wind', 'none')
         if self.source.value in synth_sources:
             self.direction.set(TrueWind.compute_true_wind_direction(boat_speed, wind_speed, wind_direction))
-            self.wdirection = self.direction.value
-            self.wfactor = .05
+            self.speed.set(TrueWind.compute_true_wind_speed(boat_speed, wind_speed, wind_direction))
+            self.weight()
+
             self.lastupdate = time.monotonic()
 
 class APB(Sensor):
@@ -408,6 +409,7 @@ class Sensors:
             if sensor.source.value == 'none':
                 continue
             if t - sensor.lastupdate > 8:
+                #print("sensor lost timeout", t - sensor.lastupdate)
                 self.lostsensor(sensor)
 
     def lostsensor(self, sensor):

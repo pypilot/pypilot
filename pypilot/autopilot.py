@@ -266,8 +266,8 @@ class Autopilot:
                 if self.sensors.truewind.source.value == 'none':
                     self.sensors.truewind.source.update('gps+wind')
             if boat_speed != None:
-                self.sensors.truewind.update_from_apparent(boat_speed, self.sensors.wind.filtered_speed.value,
-                                                           self.sensors.wind.filtered_direction.value)
+                self.sensors.truewind.update_from_apparent(boat_speed, self.sensors.wind.speed.value,
+                                                           self.sensors.wind.direction.value)
 
         if self.sensors.truewind.source.value != 'none':
             offset = resolv(self.sensors.truewind.filtered_direction.value + compass, self.true_wind_compass_offset.value)
@@ -337,9 +337,9 @@ class Autopilot:
         dt = t - self.heading_error_int_time
         dt = min(dt, 1) # ensure dt is less than 1
         self.heading_error_int_time = t
-        # int error +- 1, from 0 to 1500 deg/s
+        # int error +- 1, from 0 to 500 deg/s
         self.heading_error_int.set(minmax(self.heading_error_int.value + \
-                                          (self.heading_error.value/1500)*dt, 5))
+                                          (self.heading_error.value/50)*dt, 10))
 
     def iteration(self):
         data = False
