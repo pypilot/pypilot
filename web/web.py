@@ -16,10 +16,9 @@ Payload.max_decode_packets = 500
 
 from pypilot import pyjson
 from pypilot.client import pypilotClient
-import gettext_helper
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+import gettext_helper
 import tinypilot
 
 config = {'port': 8000, 'language': 'default'}

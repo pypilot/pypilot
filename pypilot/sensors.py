@@ -120,7 +120,7 @@ class BaseWind(Sensor):
         if self.filtered_direction is False:
             filtered_direction = direction
         else:
-            filtered_direction = (1-d)*self.filtered_direction + d*direction
+            filtered_direction = (1-d)*self.filtered_direction.value + d*direction
         self.filtered_direction.set(resolv(filtered_direction))
         self.filter_factor.set(d)
 
