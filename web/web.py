@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#   Copyright (C) 2021 Sean D'Epagnier
+#   Copyright (C) 2026 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -8,18 +8,15 @@
 
 import sys
 import os
-from flask import Flask, render_template, session, request
+
 from markupsafe import Markup
-
-from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, \
-    close_room, rooms, disconnect
-
 from engineio.payload import Payload
 
 Payload.max_decode_packets = 500
 
 from pypilot import pyjson
 from pypilot.client import pypilotClient
+import gettext_helper
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -51,7 +48,6 @@ else:
 
 print('using port', pypilot_web_port)
 
-
 # Set this variable to 'threading', 'eventlet' or 'gevent' to test the
 # different async modes, or leave it set to None for the application to choose
 # the best option based on installed packages.
@@ -59,30 +55,7 @@ print('using port', pypilot_web_port)
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins="*")
-
-try:
-    from flask_babel import Babel, gettext
-
-    LANGUAGES = os.listdir(os.path.dirname(os.path.abspath(__file__)) + '/translations')
-    def get_locale():
-        if 'language' in config:
-            language = config['language']
-        else:
-            language = 'default'
-        if language == 'default' or language not in LANGUAGES:
-            return request.accept_languages.best_match(LANGUAGES)
-        return language
-
-    babel = Babel(app, locale_selector=get_locale)
-    _ = gettext
-
-except Exception as e:
-    print('failed to import flask_babel, translations not possible!!', e)
-    def _(x): return x
-    app.jinja_env.globals.update(_=_)
-    babel = None
-    LANGUAGES = []
-
+gettext_helper.load(app, config)
 
 @app.route('/logs')
 def logs():
@@ -186,22 +159,10 @@ def calibrationplot():
 def client():
     return render_template('client.html', async_mode=socketio.async_mode,pypilot_web_port=pypilot_web_port)
 
-translations = []
-static = False
-with open(os.path.dirname(os.path.abspath(__file__)) + '/pypilot_web.pot') as f:
-    for line in f:
-        if line.startswith('#: static'):
-            static = True
-        elif len(line.strip()) == 0:
-            static = False
-        elif static and line.startswith('msgid'):
-            s = line[7:-2]
-            if s:
-                translations.append(s)
 
 @app.route('/')
 def index():
-    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot.tinypilot, translations=translations, language=config['language'], languages=Markup(LANGUAGES))
+    return render_template('index.html', async_mode=socketio.async_mode, pypilot_web_port=pypilot_web_port, tinypilot=tinypilot.tinypilot, translations=gettext_helper.translations, language=config['language'], languages=Markup(gettext_helper.LANGUAGES))
 
 class pypilotWeb(Namespace):
     def __init__(self, name):

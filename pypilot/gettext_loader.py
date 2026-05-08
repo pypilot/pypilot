@@ -10,13 +10,14 @@
 import sys
 
 e = sys.stdout.encoding.lower()
-#print('terminal encoding:', e)
 if e.startswith('utf'):
     import gettext
     import os
+    print('loading translations: terminal encoding:', e)
     locale_d = os.path.abspath(os.path.dirname(__file__)) + '/locale'
     gettext.translation('pypilot', locale_d, fallback=True).install()
 else:
     # no translations
+    print('no translations, encoding', e)
     import builtins
     builtins.__dict__['_'] = lambda x : x
