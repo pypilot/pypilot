@@ -346,7 +346,8 @@ class pypilotPlot:
         self.scalestate-=1
 
     def adjustoffset(self, offset, y):
-        self.curtrace.offset += offset*self.scale * self.NUM_Y_DIV / y
+        if self.curtrace:
+            self.curtrace.offset += offset*self.scale * self.NUM_Y_DIV / y
 
     def key(self, k, x, y):
         k = chr(k[0])

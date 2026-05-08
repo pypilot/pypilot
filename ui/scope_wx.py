@@ -32,7 +32,10 @@ def wxglutkeypress(event, special, key):
             k = '%c' % code
             if not event.GetModifiers() & wx.MOD_SHIFT:
                 k = k.lower()
-            key(k, event.GetPosition().x, event.GetPosition().y)
+            if k=='q':
+                exit(0)
+
+            key([ord(k)], event.GetPosition().x, event.GetPosition().y)
 
 class pypilotScope(pypilotScopeBase):
     def __init__(self):
