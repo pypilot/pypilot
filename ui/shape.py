@@ -70,7 +70,7 @@ class Conical(Shape):
         vertexes = []
         dip = math.radians(beta[4])
         for r in range(rs):
-            fr = beta[3]*r/rs
+            fr = beta[3]*r/(rs-1)
             points = []
 
             for lon in range(lons):

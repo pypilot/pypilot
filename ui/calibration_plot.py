@@ -25,7 +25,6 @@ recent_point_count=20
 
 from shape import *
 
-
 def TranslateAfter(x, y, z):
     m = glGetFloatv(GL_MODELVIEW_MATRIX)
     glLoadIdentity()
@@ -107,13 +106,15 @@ class CalibrationPlot:
         if not self.fusionQPose:
             return [0, 0, 1]
 
-        q = quaternion.multiply(self.fusionQPose, self.alignmentQ)
-        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(q))
+        #q = self.fusionQPose
+        q = quaternion.conjugate(self.alignmentQ)
         try:
             glRotatef(-math.degrees(quaternion.angle(q)), *q[1:])
         except ValueError:
             print('couldnt do q angle', q)
 
+        down = quaternion.rotvecquat([0, 0, 1], quaternion.conjugate(q))
+            
         return down
 
     def draw_points(self):
@@ -305,7 +306,10 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         host = sys.argv[1]
 
-    watchlist = ['imu.accel', 'imu.compass', 'imu.compass.calibration', 'imu.compass.calibration', 'imu.compass.calibration.sigmapoints', 'imu.fusionQPose']
+    watchlist = ['imu.accel', 'imu.compass', 'imu.compass.calibration', 'imu.compass.calibration', 'imu.compass.calibration.sigmapoints',
+                 'imu.alignmentQ',
+                 #'imu.fusionQPose'
+                 ]
     client = pypilotClient(host)
     for name in watchlist:
         client.watch(name)
