@@ -16,12 +16,22 @@ sudo apt install gettext libgpiod-dev
 
 ### Build and Install
 ```
+cd pypilot
 sudo pip install .[optimze,ui,hat,web] --break-system-packages
 ```
 
+### Install data (fonts and 3d boat rendering, optional but nice)
+
+git clone https://github.com/pypilot/pypilot_data
+cd pypilot_data
+sudo pip install . --break-system-packages
+
+
 ### Configuration
 
-You may want to run pypilot as a service, see the scripts/debian directory
+You may want to run pypilot as a service, see the scripts/debian directory, eg:
+sudo cp -rv scripts/debian/etc/systemd /etc
+sudo systemctl daemon-reload
 
 ## Usage
 
@@ -41,12 +51,6 @@ instead of running the complete autopilot these scripts provide a server with sp
                       includes automatic 2d/3d calibration and alignment of magnetic sensors
                       * useful for testing the imu (gyros) or even just reading gyros
                       
-`pypilot_sensors`    -- test sensor inputs only
-                       reads nmea0183 from serial ports or from tcp connections, and multiplexes
-                       the output to both nmea0183.
-                       listed on tcp port 20220 by default
-                       * convert and multiplex nmea0183 data
-
 `pypilot_servo`   --   use to test or verify a working motor controller is detected,
                       can be used to control and calibrate the servo
 
@@ -55,8 +59,6 @@ instead of running the complete autopilot these scripts provide a server with sp
 `pypilot_control` -- simple interface to command autopilot
 
 `pypilot_calibration` -- interactive gui for all autopilot calibrations
-
-`pypilot_kivy` -- work in progress kivy control app
 
 `pypilot_client_wx` -- graphical client (wx widgets)
 
