@@ -150,6 +150,7 @@ class Autopilot:
 
         self.wind_compass_offset = self.register(HeadingOffset, 'wind_compass_offset')
         self.true_wind_compass_offset = self.register(HeadingOffset, 'true_wind_compass_offset')
+        self.wind_offset_filter = self.register(RangeProperty, 'wind_offset_filter', 0.1, 0.01, 0.5, persistent=True)
 
         self.runtime = self.register(TimeValue, 'runtime') #, persistent=True)
         self.timings = self.register(SensorValue, 'timings', False)
@@ -253,7 +254,7 @@ class Autopilot:
 
         if self.sensors.wind.source.value != 'none':
             offset = resolv(self.sensors.wind.filtered_direction.value + compass, self.wind_compass_offset.value)
-            self.wind_compass_offset.update(offset, 0.1) #self.sensors.wind.filter_factor)
+            self.wind_compass_offset.update(offset, self.wind_offset_filter.value)
 
             boat_speed = None
             if self.sensors.water.source.value != 'none':
@@ -265,12 +266,12 @@ class Autopilot:
                 if self.sensors.truewind.source.value == 'none':
                     self.sensors.truewind.source.update('gps+wind')
             if boat_speed != None:
-                self.sensors.truewind.update_from_apparent(boat_speed, self.sensors.wind.filtered_speed,
-                                                           self.sensors.wind.filtered_direction)
+                self.sensors.truewind.update_from_apparent(boat_speed, self.sensors.wind.filtered_speed.value,
+                                                           self.sensors.wind.filtered_direction.value)
 
         if self.sensors.truewind.source.value != 'none':
             offset = resolv(self.sensors.truewind.filtered_direction.value + compass, self.true_wind_compass_offset.value)
-            self.true_wind_compass_offset.update(offset, 0.1) #self.sensors.truewind.wfactor)
+            self.true_wind_compass_offset.update(offset, self.wind_offset_filter.value)
 
     def fix_compass_calibration_change(self, data, t0):
         headingrate = self.boatimu.SensorValues['headingrate_lowpass'].value

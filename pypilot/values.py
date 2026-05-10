@@ -113,7 +113,7 @@ class SensorValue(Value):
 
 class HeadingOffset(SensorValue):
     def __init__(self, name):
-        super().__init__(name, 0)
+        super().__init__(name, 0, directional=True)
 
     def update(self, offset, d):
         offset = resolv(offset, self.value)

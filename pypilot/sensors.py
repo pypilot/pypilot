@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#   Copyright (C) 2022 Sean D'Epagnier
+#   Copyright (C) 2026 Sean D'Epagnier
 #
 # This Program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -23,7 +23,7 @@ class Sensor:
     def __init__(self, client, name):
         self.source = client.register(StringValue(name + '.source', 'none'))
         if name != 'apb':
-            self.rate = client.register(RangeProperty(name + '.rate', 4, 0, 50))
+            self.rate = client.register(RangeSetting(name + '.rate', 4, 0, 50, 'hz'))
         self.lastupdate = 0
         self.device = None
         self.name = name
@@ -68,9 +68,10 @@ class BaseWind(Sensor):
         self.direction = self.register(SensorValue, 'direction', directional=True)
         self.speed = self.register(SensorValue, 'speed')
         self.offset = self.register(RangeSetting, 'offset', 0, -180, 180, 'deg')
-        self.compensation_height = self.register(RangeProperty, 'sensors_height', 0, 0, 100, persistent=True)
+        self.compensation_height = self.register(RangeSetting, 'sensors_height', 0, 0, 100, 'meters')
         self.filtered_speed = self.register(SensorValue, 'filtered_speed', 0)
         self.filtered_direction = self.register(SensorValue, 'filtered_direction', directional=True)
+        self.filter_constant = self.register(RangeProperty, 'filter_constant', 0.1, 0.01, 1.0, persistent=True)
         self.filter_factor = self.register(SensorValue, 'filter_factor')
 
     def update(self, data):
@@ -115,7 +116,7 @@ class BaseWind(Sensor):
         filtered_speed = (1-d)*self.filtered_speed.value + d*self.speed.value
         self.filtered_speed.set(filtered_speed)
         # weight wind direction more with higher wind speed
-        d = .15*math.log(filtered_speed/5.0 + 1.2)
+        d = self.filter_constant.value*math.log(filtered_speed/5.0 + 1.1)
         direction = resolv(self.direction.value, self.filtered_direction.value)
         if self.filtered_direction is False:
             filtered_direction = direction
