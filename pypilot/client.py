@@ -260,7 +260,6 @@ class pypilotClient:
         zeroconf = Zeroconf()
         listener = Listener(self)
         browser = ServiceBrowser(zeroconf, "_pypilot._tcp.local.", listener)
-        print("probe")
 
     def poll(self, timeout=0):
         if not self.connection:
