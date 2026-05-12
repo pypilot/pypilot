@@ -23,6 +23,16 @@ retries = 0
 
 # creating a socket is somehow slow...
 zerosocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+def _interface_is_up(name):
+    # skip loopback and down interfaces: Zeroconf registration on these fails,
+    # leaks instances every 60s, and eventually breaks the network stack (#272)
+    try:
+        with open('/sys/class/net/' + name + '/operstate') as f:
+            return f.read().strip() == 'up'
+    except OSError:
+        return False
+
 def get_local_addresses():
     global retries
     addresses = []
@@ -30,6 +40,8 @@ def get_local_addresses():
         try:
             from netifaces import ifaddresses, interfaces
             for interface in interfaces():
+                if not _interface_is_up(interface):
+                    continue
                 addrs = ifaddresses(interface)
                 for i in addrs:
                     if 'addr' in i:
@@ -39,7 +51,7 @@ def get_local_addresses():
             #print('zeroconf service fallback to socket address')
             retries -= 1
 
-    interfaces = os.listdir('/sys/class/net')
+    interfaces = [i for i in os.listdir('/sys/class/net') if _interface_is_up(i)]
     for interface in interfaces:
         try:
             addresses.append((interface, socket.inet_ntoa(fcntl.ioctl(
