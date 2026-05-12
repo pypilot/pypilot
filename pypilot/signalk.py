@@ -62,7 +62,7 @@ signalk_table = {'wind': {('environment.wind.speedApparent', meters_s): 'speed',
                  'water': {('navigation.speedThroughWater', meters_s): 'speed',
                            ('navigation.leewayAngle', radians): 'leeway'}}
 
-token_path = os.getenv('HOME') + '/.pypilot/signalk-token'
+token_path = os.path.expanduser('~') + '/.pypilot/signalk-token'
 
 # Timeout (seconds) for all HTTP requests against the SignalK server. Keep
 # this small because the poll loop is otherwise frozen while it waits.

@@ -21,7 +21,7 @@ import sys
 sys.stdout = io.TextIOWrapper(sys.stdout.detach(), line_buffering=True)
 sys.stderr = io.TextIOWrapper(sys.stderr.detach(), line_buffering=True)
 
-pypilot_dir = os.getenv('HOME') + '/.pypilot/'
+pypilot_dir = os.path.expanduser('~') + '/.pypilot/'
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import pilots

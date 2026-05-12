@@ -10,7 +10,7 @@ import time
 
 import pyjson
 
-pypilot_dir = os.getenv('HOME') + '/.pypilot/'
+pypilot_dir = os.path.expanduser('~') + '/.pypilot/'
 
 def debug(*args):
     #print(*args)

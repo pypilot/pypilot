@@ -152,7 +152,7 @@ class pypilotClient:
 
         config = {}
         try:
-            configfilepath = os.getenv('HOME') + '/.pypilot/'
+            configfilepath = os.path.expanduser('~') + '/.pypilot/'
             if not os.path.exists(configfilepath):
                 os.makedirs(configfilepath)
             if not os.path.isdir(configfilepath):

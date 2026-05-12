@@ -346,7 +346,7 @@ class Hat:
                        'arduino.nmea.in': False, 'arduino.nmea.out': False,
                        'arduino.nmea.baud': 4800,
                        'lcd': {}}
-        self.configfilename = os.getenv('HOME') + '/.pypilot/hat.conf'
+        self.configfilename = os.path.expanduser('~') + '/.pypilot/hat.conf'
 
         # read config
         self.client = False

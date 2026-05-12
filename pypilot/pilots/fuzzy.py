@@ -19,7 +19,7 @@ from pypilot.values import *
 
 disabled = True
 
-matrixfilepath = os.getenv('HOME') + '/.pypilot/' + 'fuzzy.json'
+matrixfilepath = os.path.expanduser('~') + '/.pypilot/' + 'fuzzy.json'
 
 def fuzzy_defaults(dimensions, c=0):
     if dimensions:

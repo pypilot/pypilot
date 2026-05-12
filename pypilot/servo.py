@@ -235,7 +235,7 @@ class MaxRangeSetting(RangeSetting):
         super().set(value)
 
 class Servo:
-    pypilot_dir = os.getenv('HOME') + '/.pypilot/'
+    pypilot_dir = os.path.expanduser('~') + '/.pypilot/'
     calibration_filename = pypilot_dir + 'servocalibration'
 
     def __init__(self, client, sensors):

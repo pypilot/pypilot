@@ -146,7 +146,7 @@ class gpsProcess(multiprocessing.Process):
             speed = line.index('speed')
             baud = line.index('baud')
             bps = int(line[speed+6:baud-1])
-            f = open(os.getenv('HOME') + '/.pypilot/gpsd_baud_hint', 'w')
+            f = open(os.path.expanduser('~') + '/.pypilot/gpsd_baud_hint', 'w')
             f.write(str(bps))
             f.close()
         except Exception:

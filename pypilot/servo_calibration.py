@@ -387,7 +387,7 @@ def ServoCalibrationThread(calibration):
     revfit = FitCalibration(rev_calibration)
     cal = {'forward': fwdfit, 'reverse': revfit, 'Min Speed': min_speed, 'Brake Hack': self.brake_hack}
 
-    f = open(os.getenv('HOME') + '/.pypilot/servocalibration', 'w')
+    f = open(os.path.expanduser('~') + '/.pypilot/servocalibration', 'w')
     f.write(json.dumps(cal))
     console('calibration complete')
 

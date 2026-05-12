@@ -140,7 +140,7 @@ separate program
 
 
 def model_filename(state):
-  filename = os.getenv('HOME')+'/.pypilot/model_'
+  filename = os.path.expanduser('~')+'/.pypilot/model_'
   for name, value in state.items():
       filename += '_' + str(value)
   return filename
