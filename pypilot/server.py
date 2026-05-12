@@ -87,6 +87,19 @@ class pypilotValue:
                 try:
                     pyjson.loads(data) # validate data
                     self.connection.write(msg)
+                    # mirror writable updates into persistent_data so a restart
+                    # before the owner's next watch tick can't revert (issue #274)
+                    if self.info.get('persistent'):
+                        if self.info.get('profiled'):
+                            profile = self.server_values.values['profile'].profile
+                        else:
+                            profile = None
+                        pdata = self.server_values.persistent_data
+                        if profile not in pdata:
+                            pdata[profile] = {}
+                        if self.name not in pdata[profile] or pdata[profile][self.name] != msg:
+                            pdata[profile][self.name] = msg
+                            self.server_values.need_store = self.name
                 except Exception:
                     print('failed to load ', msg)
                 self.msg = None
