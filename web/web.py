@@ -6,11 +6,13 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.
 
-import sys
 import os
+import sys
 
-from markupsafe import Markup
 from engineio.payload import Payload
+from flask import Flask, render_template, request
+from flask_socketio import Namespace, SocketIO, emit
+from markupsafe import Markup
 
 Payload.max_decode_packets = 500
 
@@ -54,7 +56,7 @@ print('using port', pypilot_web_port)
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins="*")
-gettext_helper.load(app, config)
+_ = gettext_helper.load(app, config)
 
 @app.route('/logs')
 def logs():
