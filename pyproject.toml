@@ -37,13 +37,12 @@ dependencies = [
 [project.optional-dependencies]
 optimize = ["ujson", "pyudev", "inotify"]
 signalk = ["zeroconf", "requests", "websocket-client"]
-hat = ["pillow", "gpiod", "flask-babel"]
+hat = ["pillow", "gpiod"]
 web = [
     "flask",
     "gevent-websocket",
     "python-socketio",
     "flask-socketio>=5",
-    "flask-babel",
 ]
 ui = ["wxPython", "PyOpenGL", "pyglet==1.5.21", "pywavefront", "pillow"]
 dev = [
