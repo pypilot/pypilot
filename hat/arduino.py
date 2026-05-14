@@ -60,7 +60,7 @@ def update_firmware(config):
     # determine firmware version we have on disk
     firmware = False
     try:
-        path = os.getenv('HOME') + '/.pypilot/firmware'
+        path = os.path.expanduser('~') + '/.pypilot/firmware'
         for filename in os.listdir(path):
             print("FILE", filename)
             if filename.startswith('hat_') and filename.endswith('.hex'):

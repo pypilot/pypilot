@@ -24,7 +24,7 @@ import gettext_helper
 import tinypilot
 
 config = {'port': 8000, 'language': 'default'}
-configfilename = os.getenv('HOME')+'/.pypilot/web.conf'
+configfilename = os.path.expanduser('~')+'/.pypilot/web.conf'
 
 try:
     file = open(configfilename)

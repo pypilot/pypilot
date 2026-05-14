@@ -23,7 +23,7 @@ except ImportError:
     import os
 
     from pypilot.hat.ugfx import ugfx
-    fontpath = os.path.abspath(os.getenv('HOME') + '/.pypilot/ugfxfonts/') + '/'
+    fontpath = os.path.abspath(os.path.expanduser('~') + '/.pypilot/ugfxfonts/') + '/'
 
     if not os.path.exists(fontpath):
         os.makedirs(fontpath)
