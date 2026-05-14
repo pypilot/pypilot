@@ -137,11 +137,15 @@ class ZeroConfProcess(multiprocessing.Process):
         if not info:
             return
         properties = {}
-        for name, value in info.properties.items():
+        for k, v in info.properties.items():
+            # zeroconf reports valueless TXT records as (key, None) per RFC 6763;
+            # skip rather than crash on None.decode() (issue #266)
+            if k is None or v is None:
+                continue
             try:
-                properties[name.decode()] = value.decode()
+                properties[k.decode()] = v.decode()
             except Exception as e:
-                print('signalk zeroconf exception', e, name, value)
+                print('signalk zeroconf exception', e, k, v)
 
         if 'swname' in properties and properties['swname'] == 'signalk-server':
             try:
