@@ -72,6 +72,9 @@ SIGNALK_HTTP_TIMEOUT = 5
 SIGNALK_BACKOFF_MIN = 5
 SIGNALK_BACKOFF_MAX = 60
 
+# Default SignalK HTTP/WS port. Used when signalk.host is a bare hostname.
+SIGNALK_DEFAULT_PORT = 3000
+
 # Subscription policy values permitted by the SignalK v1 spec.
 SIGNALK_POLICIES = ('instant', 'fixed', 'ideal')
 
@@ -465,6 +468,12 @@ class signalk:
             return
           
         manual_host = self.signalk_host.value.strip()
+        if manual_host and ':' not in manual_host:
+            # signalk_host_port is consumed as "host:port" throughout this
+            # module. A bare hostname from the user config defaults to the
+            # SignalK HTTP port so configs like "localhost" keep working
+            # without forcing the operator to remember the port.
+            manual_host = manual_host + ':' + str(SIGNALK_DEFAULT_PORT)
         if manual_host:
             if manual_host != self.signalk_host_port:
                 self.signalk_host_port = manual_host
