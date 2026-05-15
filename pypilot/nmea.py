@@ -175,7 +175,7 @@ def parse_nmea_rudder(line):
     try:
         angle = float(data[1])
     except (ValueError, IndexError):
-        angle = False
+        return False  # require angle
 
     return 'rudder', {'angle': -angle}
 
