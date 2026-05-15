@@ -51,10 +51,10 @@ class Sensor:
         return True
 
     def reset(self):
-        raise 'reset should be overloaded'
+        raise NotImplementedError('reset should be overloaded')
 
     def update(self, data):
-        raise 'update should be overloaded'
+        raise NotImplementedError('update should be overloaded')
 
     def register(self, _type, name, *args, **kwargs):
         return self.client.register(_type(*([self.name + '.' + name] + list(args)), **kwargs))
