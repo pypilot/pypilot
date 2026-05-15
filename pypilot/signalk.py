@@ -221,7 +221,6 @@ class signalk:
 
         self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('signalk pipe', self.multiprocessing)
 
-        self.process = False
         if self.multiprocessing:
             self.zero_conf = ZeroConfProcess(self)
         else:
@@ -230,6 +229,10 @@ class signalk:
 
         if self.multiprocessing:
             import multiprocessing
+            # target=self.process resolves to the `def process` method below.
+            # Don't assign self.process before this line: an attribute with
+            # that name would shadow the method, leaving target=False and
+            # the subprocess a silent no-op.
             self.process = multiprocessing.Process(target=self.process, name='signalk', daemon=True)
             self.process.start()
         else:
@@ -430,6 +433,13 @@ class signalk:
         return delay
             
     def process(self):
+        # The subprocess inherits self.process pointing at the Process handle
+        # the parent created. poll() uses that attribute to decide whether to
+        # take the parent-side "drain pipe and return" branch or the worker
+        # branch (probe / connect_signalk / send). Clear it locally so this
+        # subprocess executes the worker branch; the parent's copy is
+        # unaffected by the fork.
+        self.process = False
         print('signalk process', os.getpid())
         time.sleep(6) # let other stuff load
         while True:
