@@ -225,7 +225,8 @@ class gps(Sensor):
         if 'fix' in data: # flatten if needed
             data.update(data['fix'])
             del data['fix']
-        self.speed.set(data['speed'])
+        if 'speed' in data:
+            self.speed.set(data['speed'])
         if 'track' in data:
             self.track.set(data['track'])
         if 'declination' in data:
