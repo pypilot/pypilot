@@ -821,16 +821,13 @@ class signalk:
         self.subscribed[sensor] = subscribe
 
         if not subscribe:
-            # Unsubscribe the explicit paths belonging to this sensor rather
-            # than a wildcard. Some SignalK servers ignore wildcard
-            # unsubscribes which would leave stale subscriptions alive.
-            unsubscribe_paths = [
-                {'path': path} for path, _conv in signalk_table[sensor]
-            ]
-            subscription = {'context': 'vessels.self', 'unsubscribe': unsubscribe_paths}
-            debug('signalk unsubscribe', subscription)
+            # Node signalk-server only accepts the wildcard sentinel and
+            # throws on per-path unsubscribe. Clear everything here; the
+            # re-subscribe below restores the sensors we still want.
+            unsubscribe_all = {'context': '*', 'unsubscribe': [{'path': '*'}]}
+            debug('signalk unsubscribe', unsubscribe_all)
             try:
-                self.ws.send(pyjson.dumps(subscription)+'\n')
+                self.ws.send(pyjson.dumps(unsubscribe_all)+'\n')
             except Exception as e:
                 print('signalk failed to send', e)
                 self.disconnect_signalk()
