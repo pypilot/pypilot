@@ -40,7 +40,7 @@
       <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Configuration');">
         <div class="w3-col tablink font-resizable">{{_('Configuration')}}</div>
       </a>
-      <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Statistics');" st>
+      <a class="tabItem" href="javascript:void(0)" onclick="openTab(event, 'Statistics');">
         <div class="w3-col tablink font-resizable">{{_('Statistics')}}</div>
       </a>
     </div>
@@ -52,27 +52,16 @@
         <div class="w3-col" style="font-size: 3em;width:30%;" id="heading">---</div>
 
         <div class="w3-col" style="font-size: 2em;width:20%;">{{_('Command')}}</div>
-        <div class="w3-col" style="font-size: 3em;width:30%;" id="heading_command">---</div
->
+        <div class="w3-col" style="font-size: 3em;width:30%;" id="heading_command">---</div>
       </div>
       <div id="steer_buttons_container" class="w3-row" >
-          <button id="port10" class="button font-resizable1 button-resizable" style="float:left">
-            <span id="port10">--</span>
-          </button>
-          <button id="port1" class="button font-resizable1 button-resizable" style="float:left"> <!-- force no space between buttons-->
-            <span id="port1">--</span>
-          </button>
+          <button id="port10" class="button font-resizable1 button-resizable" style="float:left">--</button>
+          <button id="port1" class="button font-resizable1 button-resizable" style="float:left">--</button> <!-- force no space between buttons-->
           <span id="center_span">
-          <button id="center_button" class="button font-resizable1 button-resizable">
-            <span id="center">|</span>
-          </button>
+          <button id="center_button" class="button font-resizable1 button-resizable">|</button>
           </span>
-          <button id="star10" class="button font-resizable1 button-resizable" style="float:right">
-            <span id="star10">--</span>
-          </button>
-          <button id="star1" class="button font-resizable1 button-resizable" style="float:right">
-            <span id="star1">--</span>
-          </button>
+          <button id="star10" class="button font-resizable1 button-resizable" style="float:right">--</button>
+          <button id="star1" class="button font-resizable1 button-resizable" style="float:right">--</button>
       </div>
       <br>
       <br>
@@ -118,9 +107,9 @@
       </div>
       -->
       {{_('Magnetic Heading Offset')}}
-      <input type="spin" id="imu_heading_offset" min=-180 max=180 value=0>Degrees</input>
-      <p><input type="checkbox" id="accel_calibration_locked">{{_('Lock Accelerometer Calibration')}}</input>
-      <p><input type="checkbox" id="compass_calibration_locked">{{_('Lock Compass Calibration')}}</input>
+      <input type="number" id="imu_heading_offset" min=-180 max=180 value=0>Degrees
+      <p><label><input type="checkbox" id="accel_calibration_locked">{{_('Lock Accelerometer Calibration')}}</label>
+      <p><label><input type="checkbox" id="compass_calibration_locked">{{_('Lock Compass Calibration')}}</label>
       </p>
       <br><a href="/calibrationplot">{{_('calibration plot')}}</a>
       <br>
@@ -133,7 +122,7 @@
       </p>
       <p>
         {{_('Rudder Range')}} 
-       <input type="number" id="rudder_range" min=10 max=100 value=30 style="text-align: right;"></input>&nbsp;{{_('Degrees')}}
+       <input type="number" id="rudder_range" min=10 max=100 value=30 style="text-align: right;">&nbsp;{{_('Degrees')}}
       </p>
     </div>
 
@@ -145,15 +134,15 @@
       </div>      
       <div id="configuration_container" ></div>
       <div id='language_selector'>
-          <span ="value_name">{{_('Language')}}:</span>
+          <span class="value_name">{{_('Language')}}:</span>
           <select id="language">'<option value="default">default</option></select>
       </div>
       <p>
       {{_('NMEA Client host:port (leave blank for none) eg: 192.168.0.1:10110')}}
-      <p><input type="text" id="nmea_client"></input>
+      <p><input type="text" id="nmea_client">
       <p>
       {{_('SignalK server host:port(leave blank for zeroconf) eg: 192.168.0.1:3000')}}
-      <p><input type="text" id="signalk_host"></input>
+      <p><input type="text" id="signalk_host">
     </div>
 
     <div id="Statistics" class="w3-container tab" style="font-size: 1em">
@@ -166,7 +155,6 @@
       <br>{{_('Runtime')}} <span id="runtime"></span>
       <br>{{_('Version')}} <span id="version"></span>
       <br>{{_('Servo')}}: <b><span id="servo_engaged"></span></b>
-      <br>{{_('Version')}}: <span id="version"></span>
       <br>
       <br><button id="logs" class="button font-resizable3 button-resizable2" onclick="window.location.href='logs';">{{_('Logs')}}</button>
     </div>
