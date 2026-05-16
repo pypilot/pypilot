@@ -443,7 +443,12 @@ class motor(menu):
                                      ValueEdit(_('period'), _('seconds'), 'servo.period'),
                                      ValueEdit(_('clutch pwm'), _('percent'), 'servo.clutch_pwm')])
 
-networking = '/home/tc/.pypilot/networking.txt'
+# os.path.expanduser is unavailable under micropython; the micropython
+# branch value is unused since the wifi page only runs on the Linux build
+if micropython:
+    networking = '/home/tc/.pypilot/networking.txt'
+else:
+    networking = os.path.expanduser('~') + '/.pypilot/networking.txt'
 default_network = {'mode': 'Master', 'ssid': 'pypilot', 'key':'', 'client_ssid': 'openplotter', 'client_key': '12345678'}
 
 class select_wifi(page):
