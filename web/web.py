@@ -8,6 +8,7 @@
 
 import os
 import sys
+from datetime import datetime, timezone
 
 from engineio.payload import Payload
 from flask import Flask, render_template, request
@@ -87,7 +88,7 @@ def log(name):
 
 @app.route('/wifi', methods=['GET', 'POST'])
 def wifi():
-    networking = '/home/tc/.pypilot/networking.txt'
+    networking = os.path.expanduser('~') + '/.pypilot/networking.txt'
     wifi = {'mode': 'Master', 'ssid': 'pypilot', 'key': '',
             'client_ssid': 'openplotter', 'client_key': '12345678', 'client_address': '10.10.10.60'}
     try:
@@ -130,10 +131,9 @@ def wifi():
                 if elements[3] == "*":
                     continue
 
-                from datetime import datetime
                 ts = int(elements[0])
                 if ts:
-                    ts = datetime.utcfromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+                    ts = datetime.fromtimestamp(ts, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
                 else:
                     ts = 'Never'
 
