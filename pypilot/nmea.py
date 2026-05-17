@@ -36,6 +36,7 @@ import serialprobe
 from bufferedsocket import LineBufferedNonBlockingSocket
 from client import pypilotClient
 from nonblockingpipe import NonBlockingPipe
+from resolv import resolv
 from sensors import source_priority
 from values import *
 
@@ -174,7 +175,7 @@ def parse_nmea_rudder(line):
     try:
         angle = float(data[1])
     except (ValueError, IndexError):
-        angle = False
+        return False  # require angle
 
     return 'rudder', {'angle': -angle}
 
@@ -502,10 +503,12 @@ class Nmea:
                 if freq < rate:
                     if name == 'wind':
                         wind = self.sensors.wind
-                        self.send_nmea('APMWV,%.3f,R,%.3f,N,A' % (wind.direction.value, wind.speed.value))
+                        # NMEA MWV requires wind angle in 0..359, but
+                        # wind.direction is held in -180..180 by sensors.py.
+                        self.send_nmea('APMWV,%.3f,R,%.3f,N,A' % (resolv(wind.direction.value, 180), wind.speed.value))
                     elif name == 'truewind':
                         wind = self.sensors.truewind
-                        self.send_nmea('APMWV,%.3f,T,%.3f,N,A' % (wind.direction.value, wind.speed.value))
+                        self.send_nmea('APMWV,%.3f,T,%.3f,N,A' % (resolv(wind.direction.value, 180), wind.speed.value))
                     elif name == 'rudder':
                         self.send_nmea('APRSA,%.3f,A,,' % -self.sensors.rudder.angle.value)
                     period = 1/rate

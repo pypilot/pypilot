@@ -72,6 +72,9 @@ SIGNALK_HTTP_TIMEOUT = 5
 SIGNALK_BACKOFF_MIN = 5
 SIGNALK_BACKOFF_MAX = 60
 
+# Default SignalK HTTP/WS port. Used when signalk.host is a bare hostname.
+SIGNALK_DEFAULT_PORT = 3000
+
 # Subscription policy values permitted by the SignalK v1 spec.
 SIGNALK_POLICIES = ('instant', 'fixed', 'ideal')
 
@@ -221,7 +224,6 @@ class signalk:
 
         self.sensors_pipe, self.sensors_pipe_out = NonBlockingPipe('signalk pipe', self.multiprocessing)
 
-        self.process = False
         if self.multiprocessing:
             self.zero_conf = ZeroConfProcess(self)
         else:
@@ -230,6 +232,10 @@ class signalk:
 
         if self.multiprocessing:
             import multiprocessing
+            # target=self.process resolves to the `def process` method below.
+            # Don't assign self.process before this line: an attribute with
+            # that name would shadow the method, leaving target=False and
+            # the subprocess a silent no-op.
             self.process = multiprocessing.Process(target=self.process, name='signalk', daemon=True)
             self.process.start()
         else:
@@ -430,6 +436,13 @@ class signalk:
         return delay
             
     def process(self):
+        # The subprocess inherits self.process pointing at the Process handle
+        # the parent created. poll() uses that attribute to decide whether to
+        # take the parent-side "drain pipe and return" branch or the worker
+        # branch (probe / connect_signalk / send). Clear it locally so this
+        # subprocess executes the worker branch; the parent's copy is
+        # unaffected by the fork.
+        self.process = False
         print('signalk process', os.getpid())
         time.sleep(6) # let other stuff load
         while True:
@@ -465,6 +478,12 @@ class signalk:
             return
           
         manual_host = self.signalk_host.value.strip()
+        if manual_host and ':' not in manual_host:
+            # signalk_host_port is consumed as "host:port" throughout this
+            # module. A bare hostname from the user config defaults to the
+            # SignalK HTTP port so configs like "localhost" keep working
+            # without forcing the operator to remember the port.
+            manual_host = manual_host + ':' + str(SIGNALK_DEFAULT_PORT)
         if manual_host:
             if manual_host != self.signalk_host_port:
                 self.signalk_host_port = manual_host
@@ -821,16 +840,13 @@ class signalk:
         self.subscribed[sensor] = subscribe
 
         if not subscribe:
-            # Unsubscribe the explicit paths belonging to this sensor rather
-            # than a wildcard. Some SignalK servers ignore wildcard
-            # unsubscribes which would leave stale subscriptions alive.
-            unsubscribe_paths = [
-                {'path': path} for path, _conv in signalk_table[sensor]
-            ]
-            subscription = {'context': 'vessels.self', 'unsubscribe': unsubscribe_paths}
-            debug('signalk unsubscribe', subscription)
+            # Node signalk-server only accepts the wildcard sentinel and
+            # throws on per-path unsubscribe. Clear everything here; the
+            # re-subscribe below restores the sensors we still want.
+            unsubscribe_all = {'context': '*', 'unsubscribe': [{'path': '*'}]}
+            debug('signalk unsubscribe', unsubscribe_all)
             try:
-                self.ws.send(pyjson.dumps(subscription)+'\n')
+                self.ws.send(pyjson.dumps(unsubscribe_all)+'\n')
             except Exception as e:
                 print('signalk failed to send', e)
                 self.disconnect_signalk()
