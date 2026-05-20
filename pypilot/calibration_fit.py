@@ -12,13 +12,28 @@ import sys
 import time
 import numpy
 
+# Least-squares fit backend, chosen once in startup-speed preference order.
+# odrpack and minpack are standalone Fortran wrappers that load fast and are
+# preferred on optimized (tinypilot) installs.  scipy is the portable fallback.
+# Only the first backend that imports is used; later ones are never imported.
+# If none import, the ImportError propagates so the boatimu calibration loop
+# keeps retrying (a boot script may still be installing the package).
 try:
     import odrpack
-    print("imported odrpack")
+    _fit_backend = 'odrpack'
 except ImportError:
-    import minpack
-    print("failed to import odrpack, falling back to minpack")
-    odrpack = False
+    try:
+        import minpack
+        _fit_backend = 'minpack'
+    except ImportError:
+        try:
+            import scipy.odr
+            _fit_backend = 'scipy.odr'
+        except ImportError:
+            import scipy.optimize
+            _fit_backend = 'scipy.optimize'
+
+print('calibration fit backend:', _fit_backend)
 
 import boatimu
 import quaternion
@@ -38,54 +53,7 @@ def lmap(*cargs):
 def safedegasin(x):
     return math.degrees(math.asin(min(max(x, -1), 1)))
 
-'''
-def FitLeastSq_min(beta0, f, zpoints, debug, dimensions):
-    try:
-        import scipy.optimize
-    except Exception as e:
-        debug('failed to load scientific library:', e)
-        debug('cannot perform calibration update!')
-        return False
-
-    t0 = time.monotonic()
-    leastsq = scipy.optimize.leastsq(f, beta0, zpoints)
-    #print('scipy.optimize.leastsq took ', time.monotonic() - t0, leastsq)
-    if leastsq[1] not in [1, 2, 3, 4]:
-        return False
-    return list(leastsq[0])
-'''
-def FitLeastSq_min(beta0, f, zpoints, debug, dimensions):
-    try:
-        #t0 = time.monotonic()
-        def minpack_f(beta, fvec):
-            fvec[:] = f(beta, zpoints)
-            return 0
-
-        beta0 = numpy.array(beta0, dtype=float)
-        fvec = numpy.empty(len(zpoints[0]*dimensions), dtype=float)
-        result = minpack.lmdif1(minpack_f, beta0, fvec)
-
-        if result not in [1, 2, 3, 4]:
-            return False
-
-        return list(beta0)
-    except Exception as e:
-        debug('exception running minpack fit:', e)
-        return False
-    
-'''
-def FitLeastSq_odr(beta0, f, zpoints, dimensions):
-    try:
-        Model = scipy.odr.Model(f, implicit=1)
-        Data = scipy.odr.RealData(zpoints, dimensions)
-        Odr = scipy.odr.ODR(Data, Model, beta0, maxit = 1000)
-        output = Odr.run()
-        return list(output.beta)
-    except Exception:
-        print('exception running odr fit!')
-        return False
-'''
-def FitLeastSq_odr(beta0, f, zpoints, debug, dimensions):
+def FitLeastSq_odrpack(beta0, f, zpoints, debug, dimensions):
     try:
         xdata = numpy.asarray(zpoints, dtype=float)
         ydata = numpy.zeros((dimensions, xdata.shape[-1]), dtype=float)
@@ -111,10 +79,62 @@ def FitLeastSq_odr(beta0, f, zpoints, debug, dimensions):
         debug('exception running odr fit!', e)
     return False
 
+def FitLeastSq_minpack(beta0, f, zpoints, debug, dimensions):
+    try:
+        #t0 = time.monotonic()
+        def minpack_f(beta, fvec):
+            fvec[:] = f(beta, zpoints)
+            return 0
+
+        beta0 = numpy.array(beta0, dtype=float)
+        fvec = numpy.empty(len(zpoints[0]*dimensions), dtype=float)
+        result = minpack.lmdif1(minpack_f, beta0, fvec)
+
+        if result not in [1, 2, 3, 4]:
+            return False
+
+        return list(beta0)
+    except Exception as e:
+        debug('exception running minpack fit:', e)
+        return False
+
+def FitLeastSq_scipy_odr(beta0, f, zpoints, debug, dimensions):
+    try:
+        xdata = numpy.asarray(zpoints, dtype=float)
+        def fcn(beta, x):
+            return numpy.asarray(f(beta, x), dtype=float).reshape((dimensions, -1))
+        model = scipy.odr.Model(fcn, implicit=True)
+        data = scipy.odr.RealData(xdata, dimensions)
+        odr = scipy.odr.ODR(data, model, beta0, maxit=30, sstol=1e-5, partol=1e-5)
+        output = odr.run()
+        if output.info > 4:
+            return False
+        return list(output.beta)
+    except Exception as e:
+        debug('exception running scipy.odr fit:', e)
+        return False
+
+def FitLeastSq_scipy_min(beta0, f, zpoints, debug, dimensions):
+    try:
+        def residuals(beta, x):
+            return numpy.asarray(f(beta, x), dtype=float).ravel()
+        sol, ier = scipy.optimize.leastsq(residuals, beta0, args=(zpoints,))
+        if ier not in (1, 2, 3, 4):
+            return False
+        return list(sol)
+    except Exception as e:
+        debug('exception running scipy.optimize fit:', e)
+        return False
+
+_fit_funcs = {
+    'odrpack': FitLeastSq_odrpack,
+    'minpack': FitLeastSq_minpack,
+    'scipy.odr': FitLeastSq_scipy_odr,
+    'scipy.optimize': FitLeastSq_scipy_min,
+}
+
 def FitLeastSq(beta0, f, zpoints, debug, dimensions=1):
-    if odrpack:
-        return FitLeastSq_odr(beta0, f, zpoints, debug, dimensions)
-    return FitLeastSq_min(beta0, f, zpoints, debug, dimensions)
+    return _fit_funcs[_fit_backend](beta0, f, zpoints, debug, dimensions)
 
 def ComputeDeviation(points, fit):
     m, d  = 0, 0
