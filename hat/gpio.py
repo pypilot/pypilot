@@ -10,9 +10,9 @@
 import os
 import time
 
-#import threading
-#import gpiod
-gpiod = False
+import threading
+import gpiod
+from datetime import timedelta
 
 class gpio(object):
     def __init__(self):
@@ -20,8 +20,11 @@ class gpio(object):
         self.events = []
 
         from pypilot.nonblockingpipe import NonBlockingPipe
+        # a pipe is used (rather than just reading the keys directly)
+        # so that the main loop (typically in hat.py) can poll on the file descriptor of the pipe
+        # and react quickly to key presses without having to constantly read them at a high rate
         self.pipe = NonBlockingPipe(str(self), True)
-        self.pins = [17, 23, 27, 22, 18, 5, 6, 26]
+        self.pins = [17, 23, 27, 22, 18, 5, 6]
 
         self.lastkeystate = {}
         for p in self.pins:
@@ -36,7 +39,8 @@ class gpio(object):
 
         config = {}
         for pin in self.pins:
-            config[pin] = gpiod.LineSettings(direction=gpiod.line.Direction.INPUT, edge_detection=gpiod.line.Edge.BOTH, bias=gpiod.line.Bias.PULL_UP)
+            config[pin] = gpiod.LineSettings(direction=gpiod.line.Direction.INPUT, edge_detection=gpiod.line.Edge.BOTH,
+                                             bias=gpiod.line.Bias.PULL_UP, debounce_period=timedelta(milliseconds=20))
         self.request = gpiod.request_lines("/dev/gpiochip0", consumer="keys", config=config)
 
         self.thread_running = True
@@ -50,11 +54,8 @@ class gpio(object):
                 continue
 
             for ev in self.request.read_edge_events():
-                gpio = ev.line_offset
-                #value = self.request.get_value(gpio)
-                #state = 1 if value == Value.ACTIVE else 0
-                time.sleep(.03)
-                self.pipe[0].send(gpio) # wake up poll for gpio
+                self.pipe[0].send(ev.line_offset) # wake up poll for gpio
+            time.sleep(.01)
 
     def poll(self):
         if not gpiod:
@@ -106,9 +107,11 @@ class gpio(object):
 
 
 def main():
-    gp = gpio()
+    import sys
+    sys.path.append('../pypilot')
+    g = gpio()
     while True:
-        events = gp.poll()
+        events = g.poll()
         if events:
             print('events', events)
         time.sleep(.1)
