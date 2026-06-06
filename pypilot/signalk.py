@@ -10,7 +10,9 @@
 import multiprocessing
 import os
 import socket
+import ssl
 import time
+from urllib.parse import urlparse
 
 import pyjson
 from client import pypilotClient
@@ -28,6 +30,18 @@ try:
     import requests
 except ImportError:
     requests = None
+else:
+    # urllib3 raises InsecureRequestWarning whenever a request runs with
+    # verify=False, which happens once signalk.tls.verify is disabled (to
+    # accept a self-signed cert) and would then flood the log. Silence just
+    # that warning at import: it never fires while verification is on, so
+    # disabling it unconditionally is harmless, and the security tradeoff
+    # stays visible through the signalk.tls.verify flag.
+    try:
+        from urllib3.exceptions import InsecureRequestWarning
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+    except Exception:
+        pass
 
 try:
     from websocket import create_connection, WebSocketBadStatusException
@@ -289,10 +303,19 @@ class signalk:
         # has to opt in.
         self.put_enabled = self.client.register(
             BooleanProperty('signalk.put.enabled', False, persistent=True))
+        # When the SignalK server has SSL enabled it redirects http->https
+        # and advertises wss:// endpoints. Verify the server's certificate
+        # by default; disable to tolerate self-signed certificates, which
+        # is the common case for a SignalK server on the boat LAN. This
+        # relaxes verification for BOTH the HTTP probe/access requests and
+        # the websocket stream.
+        self.tls_verify = self.client.register(
+            BooleanProperty('signalk.tls.verify', True, persistent=True))
         self.signalk_host = self.client.register(Property('signalk.host', '', persistent=True))
 
         self.signalk_host_port = False
         self.signalk_ws_url = False
+        self.signalk_http_base = False
         self.ws = False
         self.last_manual_signalk_host = False
 
@@ -308,9 +331,21 @@ class signalk:
 
         try:
             r = requests.get('http://' + self.signalk_host_port + '/signalk',
-                             timeout=SIGNALK_HTTP_TIMEOUT)
+                             timeout=SIGNALK_HTTP_TIMEOUT,
+                             verify=self.tls_verify.value)
             contents = pyjson.loads(r.content)
-            self.signalk_ws_url = contents['endpoints']['v1']['signalk-ws'] + '?subscribe=none'
+            ws_url = contents['endpoints']['v1']['signalk-ws']
+            self.signalk_ws_url = ws_url + '?subscribe=none'
+            # Derive the HTTP(S) base for access requests from the
+            # advertised ws endpoint. An SSL server advertises
+            # wss://host:3443 (https on the same authority) and redirects
+            # the plain http://host:3000 we probed. Posting the access
+            # request to the http URL would hit that redirect, and requests
+            # downgrades a 302'd POST to a GET, silently breaking token
+            # enrollment. Use the advertised scheme and authority instead.
+            parsed = urlparse(ws_url)
+            scheme = 'https' if parsed.scheme == 'wss' else 'http'
+            self.signalk_http_base = scheme + '://' + parsed.netloc
         except Exception as e:
             print(_('failed to retrieve/parse data from'), self.signalk_host_port, e)
             time.sleep(5)
@@ -327,7 +362,9 @@ class signalk:
                 return
             self.last_access_request_time = time.monotonic()
             try:
-                r = requests.get(self.signalk_access_url, timeout=SIGNALK_HTTP_TIMEOUT)
+                r = requests.get(self.signalk_access_url,
+                                 timeout=SIGNALK_HTTP_TIMEOUT,
+                                 verify=self.tls_verify.value)
                 contents = pyjson.loads(r.content)
                 debug('signalk ' + _('see if token is ready'), self.signalk_access_url, contents)
                 if contents['state'] == 'COMPLETED':
@@ -370,14 +407,21 @@ class signalk:
 
             if self.uid.value == 'pypilot':
                 self.uid.set('pypilot-' + random_number_string(11))
-            r = requests.post('http://' + self.signalk_host_port + '/signalk/v1/access/requests',
+            # Use the scheme/authority discovered in probe_signalk so an
+            # SSL server's access request is posted to https directly
+            # rather than through the http->https redirect (which would
+            # downgrade the POST to a GET). Fall back to the probed host
+            # if probe has not run yet.
+            base = self.signalk_http_base or ('http://' + self.signalk_host_port)
+            r = requests.post(base + '/signalk/v1/access/requests',
                               data={"clientId": self.uid.value, "description": "pypilot"},
-                              timeout=SIGNALK_HTTP_TIMEOUT)
-            
+                              timeout=SIGNALK_HTTP_TIMEOUT,
+                              verify=self.tls_verify.value)
+
             contents = pyjson.loads(r.content)
             print('signalk post', contents)
             if contents['statusCode'] == 202 or contents['statusCode'] == 400:
-                self.signalk_access_url = 'http://' + self.signalk_host_port + contents['href']
+                self.signalk_access_url = base + contents['href']
                 print('signalk ' + _('request access url'), self.signalk_access_url)
         except Exception as e:
             print('signalk ' + _('error posting access'), e)
@@ -410,7 +454,14 @@ class signalk:
         self.signalk_values = {}
         self.keep_token = False
         try:
-            self.ws = create_connection(self.signalk_ws_url, header={'Authorization': 'JWT ' + self.token})
+            connect_kwargs = {'header': {'Authorization': 'JWT ' + self.token}}
+            # For a wss:// stream with verification disabled, tell
+            # websocket-client to skip certificate checks (self-signed
+            # certs). It also clears check_hostname when cert_reqs is
+            # CERT_NONE, so this is sufficient.
+            if self.signalk_ws_url.startswith('wss://') and not self.tls_verify.value:
+                connect_kwargs['sslopt'] = {'cert_reqs': ssl.CERT_NONE}
+            self.ws = create_connection(self.signalk_ws_url, **connect_kwargs)
             self.ws.settimeout(0) # nonblocking
             self.connect_attempts = 0
         except WebSocketBadStatusException as e:
