@@ -78,7 +78,7 @@ class pypilotValue:
                     if t0 >= watch.time:
                         watch.time = t0
                     if watch.connections: # only insert if there are connections
-                        self.server_values.insert_watch(watch)
+                        self.server_values.insert_watch(watch, t0)
                 self.pwatches = []
 
         elif self.connection: # inform owner of change if we are not owner
@@ -162,17 +162,17 @@ class pypilotValue:
                 watch.connections.append(connection)
                 if period > self.watching: # only need to update if period is relaxed
                     self.calculate_watch_period()
-                break
+                return
+
+        # need a new watch for this unique period
+        watch = Watch(self, connection, period)
+        if period == 0: # make sure period 0 is always at start of list
+            self.awatches.insert(0, watch)
         else:
-            # need a new watch for this unique period
-            watch = Watch(self, connection, period)
-            if period == 0: # make sure period 0 is always at start of list
-                self.awatches.insert(0, watch)
-            else:
-                self.awatches.append(watch)
-            self.calculate_watch_period()
-            if period:
-                self.pwatches.append(watch)
+            self.awatches.append(watch)
+        self.calculate_watch_period()
+        if period:
+            self.pwatches.append(watch)
 
 
 class ServerWatch(pypilotValue):
@@ -378,8 +378,8 @@ class ServerValues(pypilotValue):
                 watch.time = t0
             watch.value.pwatches.append(watch) # put back on value periodic watch list
 
-    def insert_watch(self, watch):
-        heapq.heappush(self.pqwatches, (watch.time, time.monotonic(), watch))
+    def insert_watch(self, watch, t0):
+        heapq.heappush(self.pqwatches, (watch.time, t0, watch))
 
     def remove(self, connection):
         for name in self.values:
