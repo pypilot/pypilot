@@ -53,19 +53,19 @@ msgstr "kompassi tai gyro vika!"
 #: static/pypilot_control.js:395 templates/index.html:161
 #: templates/index.html:163
 msgid "Tack"
-msgstr "Tack"
+msgstr "Venda"
 
 #: static/pypilot_control.js:398 templates/index.html:162
 msgid "Cancel"
-msgstr "Peruuttaa"
+msgstr "Peruuta"
 
 #: static/pypilot_control.js:468
 msgid "Engaged"
-msgstr "Kihloissa"
+msgstr "Kytketty"
 
 #: static/pypilot_control.js:470
 msgid "Disengaged"
-msgstr "Irrotettu"
+msgstr "Poiskytketty"
 
 #: static/pypilot_control.js:546
 msgid "Motor temperature"
@@ -97,7 +97,7 @@ msgstr "Ohjaus"
 
 #: templates/index.html:33
 msgid "Gain"
-msgstr "Saada"
+msgstr "Vahvistus"
 
 #: templates/index.html:36
 msgid "Calibration"
@@ -105,7 +105,7 @@ msgstr "Kalibrointi"
 
 #: templates/index.html:39
 msgid "Configuration"
-msgstr "Kokoonpano"
+msgstr "Asetukset"
 
 #: templates/index.html:42
 msgid "Statistics"
@@ -113,7 +113,7 @@ msgstr "Tilastot"
 
 #: templates/index.html:49
 msgid "Heading"
-msgstr "Otsikko"
+msgstr "Kurssi"
 
 #: templates/index.html:52
 msgid "Command"
@@ -121,7 +121,7 @@ msgstr "Komento"
 
 #: templates/index.html:89
 msgid "Add"
-msgstr "Lisätä"
+msgstr "Lisää"
 
 #: templates/index.html:90
 msgid "Remove"
@@ -129,7 +129,7 @@ msgstr "Poista"
 
 #: templates/index.html:96
 msgid "Magnetic Heading"
-msgstr "Magneettinen otsikko"
+msgstr "Magneettinen kurssi"
 
 #: templates/index.html:97
 msgid "Pitch"
@@ -141,7 +141,7 @@ msgstr "Rullaa"
 
 #: templates/index.html:99 templates/index.html:105
 msgid "Press"
-msgstr "Lehdistö"
+msgstr "Paina"
 
 #: templates/index.html:99 templates/index.html:105
 msgid "here"
@@ -169,7 +169,7 @@ msgstr "Lukitse kiihtyvyysmittarin kalibrointi"
 
 #: templates/index.html:114
 msgid "Lock Compass Calibration"
-msgstr "Lukituskompassin kalibrointi"
+msgstr "Lukitse kompassin kalibrointi"
 
 #: templates/index.html:116
 msgid "calibration plot"
@@ -181,23 +181,23 @@ msgstr "Peräsimen anturi"
 
 #: templates/index.html:120
 msgid "centered"
-msgstr "keskitetty"
+msgstr "keskellä"
 
 #: templates/index.html:121
 msgid "port range"
-msgstr "porttialue"
+msgstr "paapuurin raja"
 
 #: templates/index.html:122
 msgid "starboard range"
-msgstr "oikeanpuoleinen kantama"
+msgstr "tyyrpuurin raja"
 
 #: templates/index.html:123 templates/index.html:146
 msgid "reset"
-msgstr "nollaa"
+msgstr "Nollaa"
 
 #: templates/index.html:126
 msgid "Rudder Range"
-msgstr "Rudder Range"
+msgstr "Peräsimen liikealue"
 
 #: templates/index.html:127
 msgid "Degrees"
@@ -209,7 +209,7 @@ msgstr "Näyttö"
 
 #: templates/index.html:134
 msgid "Clear"
-msgstr "Asia selvä"
+msgstr "Vaalea"
 
 #: templates/index.html:135
 msgid "Dark"
@@ -218,12 +218,12 @@ msgstr "Tumma"
 #: templates/index.html:139
 msgid "NMEA Client host:port (leave blank for none) eg: 192.168.0.1:10110"
 msgstr ""
-"NMEA-asiakaspalvelin:portti (jätä tyhjäksi, jos ei mitään) esim.: "
+"NMEA-asiakkaan osoite host:portti (jätä tyhjäksi, jos ei käytössä) esim. "
 "192.168.0.1:10110"
 
 #: templates/index.html:144
 msgid "Amp Hours"
-msgstr "Vahvistimen tunnit"
+msgstr "Ampeeritunnit"
 
 #: templates/index.html:147
 msgid "Voltage"
@@ -251,11 +251,11 @@ msgstr "Lokit"
 
 #: templates/index.html:161
 msgid "Port"
-msgstr "Portti"
+msgstr "Paapuuri"
 
 #: templates/index.html:163
 msgid "Starboard"
-msgstr "Starboard"
+msgstr "Tyyrpuuri"
 
 #: templates/index.html:170
 msgid "Server"
@@ -275,7 +275,7 @@ msgstr "perustaa"
 
 #: templates/wifi.html:8
 msgid "Wireless Configuration"
-msgstr "Langaton kokoonpano"
+msgstr "Wifi Asetukset"
 
 #: templates/wifi.html:16 templates/wifi.html:17
 msgid "Access Point"
@@ -363,7 +363,7 @@ msgstr "takaisin"
 #~ msgstr "Kalibrointi"
 
 #~ msgid "Configuration"
-#~ msgstr "Kokoonpano"
+#~ msgstr "Asetukset"
 
 #~ msgid "Statistics"
 #~ msgstr "Tilastot"
