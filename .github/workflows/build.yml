@@ -1,0 +1,46 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container: debian:bookworm
+
+    steps:
+      - name: Install dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential swig git ca-certificates gettext \
+            python3-dev python3-setuptools python3-pip python3-babel \
+            python3-numpy python3-scipy python3-serial \
+            python3-ujson python3-pyudev \
+            python3-zeroconf python3-requests python3-websocket \
+            python3-pytest
+
+      - uses: actions/checkout@v4
+
+      - name: Build and install RTIMULib2
+        run: |
+          git clone --depth=1 https://github.com/seandepagnier/RTIMULib2 /tmp/RTIMULib2
+          cd /tmp/RTIMULib2/Linux/python
+          python3 setup.py install
+
+      - name: Build pypilot
+        run: |
+          # The deps file marks dependencies as resolved, otherwise setup.py
+          # runs dependencies.py which installs packages interactively via sudo.
+          touch deps
+          python3 setup.py build
+          python3 setup.py build_ext --inplace
+
+      - name: Install pypilot
+        run: python3 setup.py install
+
+      - name: Run tests
+        run: python3 -m pytest tests/ -v
