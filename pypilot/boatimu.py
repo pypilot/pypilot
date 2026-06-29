@@ -38,6 +38,9 @@ except ImportError:
 class IMU:
     def __init__(self, server):
         self.client = pypilotClient(server)
+
+        # Note: setting this to false seems to save a lot of CPU
+        # investigate the potential of keeping IMU in same process as main autopilot
         self.multiprocessing = server.multiprocessing
         if self.multiprocessing:
             self.pipe, pipe = NonBlockingPipe('imu pipe', self.multiprocessing)
@@ -140,7 +143,7 @@ class IMU:
             t0 = time.monotonic()
             data = self.read()
             t1 = time.monotonic()
-            pipe.send(data, not data)
+            pipe.send(data, not data) # block if false
             t2 = time.monotonic()
 
             if not self.s.GyroBiasValid:
@@ -161,7 +164,7 @@ class IMU:
             if t > 0 and t < period:
                 time.sleep(t)
             else:
-                print(_('imu process failed to keep time'), dt, t0, t1, t2, t3)
+                print(_('imu process failed to keep time'), dt, t1-t0, t2-t1, t3-t2)
 
     def read(self):
         t0 = time.monotonic()
@@ -451,21 +454,19 @@ class BoatIMU:
         self.alignmentQ.update(quaternion.normalize(quaternion.multiply(q, o)))
         self.reset_alignment = True
 
-    def IMUread(self):
-        if self.imu.multiprocessing:
-            lastdata = False
-            while True:
-                data = self.imu.pipe.recv()
-                if not data:
-                    return lastdata
-                lastdata = data
-        return self.imu.read()
 
     def read(self):
         if not self.imu.multiprocessing:
             self.imu.poll()
+            data = self.imu.read()
+        else:
+            data = False
+            while True:
+                nextdata = self.imu.pipe.recv()
+                if not nextdata:
+                    break
+                data = nextdata
 
-        data = self.IMUread()
         if not data:
             if time.monotonic() - self.last_imuread > 1 and self.frequency.value:
                 print('IMURead failed!')

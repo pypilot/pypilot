@@ -68,6 +68,7 @@ class ClientValues(Value):
         self.values['watch'] = ClientWatch(self.values, client)
         self.wvalues = {}
         self.pqwatches = []
+        self.pqcounter = 0
 
     def set(self, values):
         if self.value is False:
@@ -90,7 +91,8 @@ class ClientValues(Value):
                 watch.value.pwatch = True # can watch again once updated
 
     def insert_watch(self, watch):
-        heapq.heappush(self.pqwatches, (watch.time, time.monotonic(), watch))
+        heapq.heappush(self.pqwatches, (watch.time, self.pqcounter, watch))
+        self.pqcounter += 1
 
     def register(self, value):
         if value.name in self.values:
@@ -275,11 +277,10 @@ class pypilotClient:
                         return
 
                     self.onconnected()
-                return
             else:
                 if not self.connect(False):
                     time.sleep(timeout)
-                return
+            return
 
         # inform server of any watches we have changed
         if self.wwatches:

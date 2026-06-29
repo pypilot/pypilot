@@ -15,12 +15,12 @@
       <div id="Master">
       <p>{{_('Access Point')}} SSID <input type="text" name="ssid" />
       <p>{{_('Access Point')}} {{_('Key (leave blank for no encryption)')}}
-        <input type="text" name="key" />
+        <input type="text" name="key" minlength="8" maxlength="63" />
       </div>
       <div id="Managed">
       <p>{{_('Client')}} SSID <input type="text" name="client_ssid" />
       <p>{{_('Client')}} {{_('Key (leave blank for no encryption)')}}
-        <input type="text" name="client_key" />
+        <input type="text" name="client_key" minlength="8" maxlength="63" />
       <p>{{_('Client Mode Address (leave blank for dhcp)')}}
         <input type="text" name="client_address" />
         </div>

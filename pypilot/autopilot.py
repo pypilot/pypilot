@@ -35,9 +35,6 @@ from server import pypilotServer
 from values import *
 from version import strversion
 
-def minmax(value, r):
-    return min(max(value, -r), r)
-
 class ModeProperty(EnumProperty):
     def __init__(self, name, ap):
         self.ap = ap
@@ -128,7 +125,6 @@ class Autopilot:
         # track heading command changes
         self.heading_command_rate = self.register(SensorValue, 'heading_command_rate')
         self.heading_command_rate.time = 0
-        #self.servocommand_queue = TimedQueue(10) # remember at most 10 seconds
 
         self.pilots = {}
         for pilot_type in pilots.default:
@@ -286,7 +282,7 @@ class Autopilot:
                 # to prevent actual course change
                 last_heading = resolv(self.last_heading, data['heading'])
                 self.compass_change += data['heading'] - headingrate*dt - last_heading
-                #print('chage', data['heading'] , headingrate*dt , last_heading, self.compass_change)
+                #print('change', data['heading'] , headingrate*dt , last_heading, self.compass_change)
             self.last_heading = data['heading']
 
         # if heading offset alignment changed, keep same course
@@ -327,7 +323,11 @@ class Autopilot:
         heading_command = self.heading_command.value
 
         # error +- 30 degrees
-        err = minmax(resolv(heading - heading_command), 30)
+        err = resolv(heading - heading_command)
+        if err > 30:
+            err = 30
+        elif err < -30:
+            err = -30
 
         # since wind direction is where the wind is from, the sign is reversed
         if 'wind' in self.mode.value:
@@ -339,17 +339,20 @@ class Autopilot:
         dt = min(dt, 1) # ensure dt is less than 1
         self.heading_error_int_time = t
         # int error +- 1, from 0 to 500 deg/s
-        heading_error_int = minmax(self.heading_error_int.value + (self.heading_error.value/50)*dt, 10)
+        heading_error_int = self.heading_error_int.value + (self.heading_error.value/50)*dt
 
         if self.enabled.value:
             heading_command_diff = resolv(self.heading_command.value - self.last_heading_command)
             mul = 1-max(abs(heading_command_diff), 30.0) / 30.0 # push integral gain to zero once course change is above 30
-            print('mul', mul, heading_command_diff, heading_error_int)
-        else:
-            mul = 1
-        self.heading_error_int.set(mul * heading_error_int)
-        
+            #print('mul', mul, heading_command_diff, heading_error_int)
+            heading_error_int *= mul
 
+        if heading_error_int > 10:
+            heading_error_int = 10
+        elif heading_error_int < -10:
+            heading_error_int = -10
+        self.heading_error_int.set(heading_error_int)
+        
     def iteration(self):
         data = False
         t0 = time.monotonic()
@@ -367,9 +370,8 @@ class Autopilot:
         if not self.enabled.value: # in standby, command servo here for lower latency
             if self.lastenabled: # if autopilot is disabled clear command
                 self.servo.command.command(0)
-
             self.servo.poll()
-
+            
         t1 = time.monotonic()
         if t1 - t0 > period/2 + rdt:
             print(_('server/client is running too _slowly_'), t1-t0)
@@ -424,7 +426,6 @@ class Autopilot:
             if sensors['truewind']:
                 modes.append('true wind')
             self.modes.update(modes)
-
 
         self.adjust_mode(pilot)
         pilot.compute_heading()
@@ -524,7 +525,8 @@ class Autopilot:
 
             time.sleep(dt)
 
-        #print("times", t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
+        #print('hz', 1/(time.monotonic() - t0))
+        #print('times', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4, t6-t5)
 
 def main():
     if os.geteuid() == 0:
