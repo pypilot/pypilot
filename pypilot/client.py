@@ -605,10 +605,11 @@ def main():
         if info:
             client.list_values(10)
     else:
-        watches = list(client.list_values(10))
+        watches = client.list_values(10)
         if not watches:
             print(_('failed to retrieve value list!'))
             exit(1)
+        watches = list(watches)
         for name in watches:
             client.watch(name, period)
 
