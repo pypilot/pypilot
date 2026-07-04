@@ -11,6 +11,7 @@
 
 import fcntl
 import os
+import re
 import socket
 import struct
 import threading
@@ -64,6 +65,35 @@ def get_local_addresses():
 
     return addresses
 
+def _register_service(zc, interface, address):
+    from zeroconf import NonUniqueNameException, ServiceInfo
+
+    host = socket.gethostname().partition('.')[0]
+    prefix = re.sub(r'[^A-Za-z0-9-]', '-', 'pypilot-' + host)
+    iface = re.sub(r'[^A-Za-z0-9-]', '-', interface).strip('-') or 'net'
+    service_type = '_pypilot._tcp.local.'
+    for use_mac in (False, True):
+        suffix = '-' + iface
+        if use_mac:
+            with open('/sys/class/net/' + interface + '/address') as f:
+                # Ethernet and Wi-Fi addresses are 12 hex digits.
+                mac = f.read().strip().replace(':', '')[-12:]
+            if not mac:
+                print('zeroconf has no MAC address for', interface)
+                return False
+            suffix = '-' + mac + suffix
+        # Keep the interface and collision suffix intact within one DNS label.
+        label = prefix[:63 - len(suffix)].rstrip('-') + suffix
+        info = ServiceInfo(service_type, label + '.' + service_type,
+                           addresses=[socket.inet_aton(address)], port=DEFAULT_PORT,
+                           properties={'version': strversion}, server=label + '.local.')
+        try:
+            zc.register_service(info)
+            return True
+        except NonUniqueNameException:
+            print('zeroconf name already in use:', label)
+    return False
+
 class zeroconf(threading.Thread):
     #def __del__(self):
     #self.close()
@@ -73,7 +103,7 @@ class zeroconf(threading.Thread):
         while True:
             try:
                 # register zeroconf service
-                from zeroconf import IPVersion, ServiceInfo, Zeroconf
+                from zeroconf import IPVersion, Zeroconf
 
             except ImportError:
                 time.sleep(10)
@@ -82,7 +112,6 @@ class zeroconf(threading.Thread):
 
         addresses = []
         zeroconf = {}
-        info = None
         event = threading.Event()
 
         #ip_version = IPVersion.All
@@ -107,26 +136,18 @@ class zeroconf(threading.Thread):
                     # register addresses
                     print('zeroconf registering address', address)
                     try:
-                        info = ServiceInfo(
-                            '_pypilot._tcp.local.',
-                            #"pypilot._pypilot._tcp.local.",
-                            f'pypilot-{address[0]}._pypilot._tcp.local.',
-                            addresses=[socket.inet_aton(address[1])],
-                            port=DEFAULT_PORT,
-                            properties={'version': strversion},
-                            server=f'pypilot-{address[0]}.local.',
-                        )
-
                         print(f'zeroconf[{address[0]}] = Zeroconf(ip_version={ip_version}, interfaces=[{address[1]}])')
                         zeroconf[address[0]] = Zeroconf(ip_version=ip_version, interfaces=[address[1]])
 
-                        zeroconf[address[0]].register_service(info)
+                        if not _register_service(zeroconf[address[0]], *address):
+                            addresses = []
+                            break
                     except Exception as e:
                         print('zeroconf exception type:', type(e).__name__)
                         print('zeroconf exception repr:', repr(e))
                         import traceback
                         traceback.print_exc()
-                        print('info/addresses:', info, addresses)
+                        print('address:', address)
                         addresses = []
                         break # maybe try again?
 
