@@ -60,6 +60,8 @@ def check_nmea_cksum(line):
         return False
 
 gps_timeoffset = 0
+
+# I think this is not needed, since there are separate processes not threads??
 _gps_time_lock = threading.Lock()  # guard gps_timeoffset across threads / bridge process parsers
 def parse_nmea_gps(line):
     def degrees_minutes_to_decimal(n):
