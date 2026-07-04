@@ -508,7 +508,8 @@ class Nmea:
                 self.send_nmea('APXDR,A,%.3f,D,PTCH' % values['imu.pitch'].value)
                 self.send_nmea('APXDR,A,%.3f,D,ROLL' % values['imu.roll'].value)
                 self.send_nmea('APHDM,%.3f,M' % values['imu.heading_lowpass'].value)
-                self.send_nmea('APROT,%.3f,A' % values['imu.headingrate_lowpass'].value)
+                # NMEA ROT is degrees per minute; the IMU reports degrees per second.
+                self.send_nmea('APROT,%.3f,A' % (60 * values['imu.headingrate_lowpass'].value))
                 self.last_imu_time = time.monotonic()
 
             # limit output rate of wind and rudder
