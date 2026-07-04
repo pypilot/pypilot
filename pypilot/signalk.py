@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.
 
 import multiprocessing
+import math
 import os
 import socket
 import time
@@ -53,6 +54,9 @@ SIGNALK_HTTP_TIMEOUT = 5
 # Exponential backoff bounds for reconnect attempts to the SignalK server.
 SIGNALK_BACKOFF_MIN = 5
 SIGNALK_BACKOFF_MAX = 60
+
+# Match the GPS sensor's loss timeout when assembling updates or reading a cached fix.
+GPS_TIMEOUT = 8
 
 # Default SignalK HTTP/WS port. Used when signalk.host is a bare hostname.
 SIGNALK_DEFAULT_PORT = 3000
@@ -352,15 +356,17 @@ class signalk:
         if requests is None:
             return
         if self.signalk_access_url:
-            dt = time.monotonic() - self.last_access_request_time
-            if dt < 10:
-                return
-            self.last_access_request_time = time.monotonic()
+            r = None
             try:
                 r = requests.get(self.signalk_access_url,
                                  timeout=SIGNALK_HTTP_TIMEOUT,
                                  verify=self.tls_verify.value)
-                contents = pyjson.loads(r.content)
+                try:
+                    contents = pyjson.loads(r.content)
+                except:
+                    print("request_access failed json loads", r)
+                    print("failed content", r.content)
+                    raise
                 debug('signalk ' + _('see if token is ready'), self.signalk_access_url, contents)
                 if contents['state'] == 'COMPLETED':
                     if 'accessRequest' in contents:
@@ -382,14 +388,14 @@ class signalk:
                         self.uid.set('pypilot') # re-enumerate a new ID
                         # if permission == DENIED should we try other servers??
                     self.signalk_access_url = False
+            except requests.exceptions.Timeout:
+                print('signalk ' + _('access request timed out, will retry'), self.signalk_access_url)
             except Exception as e:
                 print('signalk ' + _('error requesting access'), e)
                 import traceback
                 print(traceback.format_exc())
-                try:
+                if r is not None:
                     print('content', r.content)
-                except Exception as e:
-                    print('no content', e)
                 self.signalk_access_url = False
             return
 
@@ -449,12 +455,13 @@ class signalk:
             self.subscribed[sensor] = False
         self.subscriptions = [] # track signalk subscriptions
         self.signalk_values = {}
+        self.last_gps_fix = {}
+        self.server_clock_offset = None
         self.keep_token = False
 
         global websocket
         if websocket is None:
             try:
-                import ssl
                 import websocket
             except ImportError:
                 print('signalk ' + _('cannot create connection:') + ' websocket-client not installed')
@@ -472,6 +479,7 @@ class signalk:
             # certs). It also clears check_hostname when cert_reqs is
             # CERT_NONE, so this is sufficient.
             if self.signalk_ws_url.startswith('wss://') and not self.tls_verify.value:
+                import ssl
                 connect_kwargs['sslopt'] = {'cert_reqs': ssl.CERT_NONE}
             self.ws = websocket.create_connection(self.signalk_ws_url, **connect_kwargs)
             self.ws.settimeout(0) # nonblocking
@@ -522,11 +530,10 @@ class signalk:
 
     def setup_watches(self):
         # setup pypilot watches
-        watches = ['imu.heading_lowpass', 'imu.headingrate_lowpass', 'imu.roll', 'imu.pitch']
-        watches += ['gps.filtered.output'] # for gps generation
-        for watch in watches:
-            self.client.watch(watch, self.period.value)
-        self.client.watch('timestamp', self.period.value/2)
+        if self.token:
+            for watch in ('imu.heading_lowpass', 'imu.headingrate_lowpass', 'imu.roll', 'imu.pitch', 'gps.filtered.output'):
+                self.client.watch(watch, self.period.value)
+            self.client.watch('timestamp', self.period.value/2)
 
         for sensor in signalk_table:
             self.client.watch(sensor+'.source')
@@ -588,13 +595,18 @@ class signalk:
             return
 
         t2 = time.monotonic()
-        if not self.token:
+        if not self.token and t0 - self.last_access_request_time >= 10:
+            self.last_access_request_time = t0
             self.request_access()
-            return
+            if self.token and self.ws:
+                self.disconnect_signalk()  # Reconnect with the newly granted credentials.
+            return # continue on next iteration
 
         if not self.ws:
             self.connect_signalk()
             if not self.ws:
+                if not self.token:
+                    time.sleep(SIGNALK_BACKOFF_MIN)
                 return
             print('signalk ' + _('connected to'), self.signalk_ws_url)
             self.setup_watches()
@@ -614,7 +626,8 @@ class signalk:
             #debug('signalk pypilot msg', msg)
             name, value = msg
             if name == 'timestamp':
-                self.send_signalk()
+                if self.token:
+                    self.send_signalk()
                 self.last_values = {}
 
             if name.endswith('.source'):
@@ -659,6 +672,11 @@ class signalk:
         # convert received signalk values into sensor inputs if possible
         for sensor, sensor_table in signalk_table.items():
             for source, values in self.signalk_values.items():
+                if sensor == 'gps':
+                    data = self.gps_fix(source, values)
+                    if data and self.sensors_pipe:
+                        self.sensors_pipe.send([sensor, data])
+                    continue
                 data = {}
                 for signalk_path_conversion, pypilot_path in sensor_table.items():
                     signalk_path, signalk_conversion = signalk_path_conversion
@@ -694,6 +712,70 @@ class signalk:
                         debug('signalk ' + _('received'), sensor, data)
                     break
         #print('sigktimes', t1-t0, t2-t1, t3-t2, t4-t3, t5-t4)
+
+    def gps_fix(self, source, values):
+        # Signal K can send position (latitude and longitude), speed, and course in
+        # separate WebSocket messages for the same fix. Match later parts by source
+        # and timestamp; a stationary receiver may never report a course.
+        position = 'navigation.position'
+        speed = 'navigation.speedOverGround'
+        course = 'navigation.courseOverGroundTrue'
+        if not any(path in values for path in (position, speed, course)):
+            return
+
+        stamps = self.signalk_last_msg_time
+        previous = self.last_gps_fix.get(source)
+        if position in values:
+            coords = values.pop(position)
+            lat, lon = (coords.get('latitude'), coords.get('longitude')) if isinstance(coords, dict) else (None, None)
+            if (type(lat) not in (int, float) or not -90 <= lat <= 90 or
+                    type(lon) not in (int, float) or not -180 <= lon <= 180):
+                self.last_gps_fix.pop(source, None)
+                values.pop(speed, None)
+                values.pop(course, None)
+                return
+            stamp = stamps[source, position]
+            fix = {'lat': lat, 'lon': lon, 'speed': 0.0}
+        elif previous and any(path in values and stamps[source, path] == previous[0]
+                              for path in (speed, course)):
+            # Signal K may deliver another part of the same fix in a later WebSocket frame.
+            stamp, fix = previous
+            fix = fix.copy()
+        elif values.get(speed) is not None and values.get(course) is not None:
+            # Preserve the velocity-only input supported by earlier versions.
+            stamp = stamps[source, course]
+            fix = {}
+        else:
+            return
+
+        try:
+            fix['timestamp'] = _parse_signalk_timestamp(stamp)
+            if self.server_clock_offset is not None:
+                age = time.monotonic() + self.server_clock_offset - fix['timestamp']
+                if age >= GPS_TIMEOUT:
+                    for path in (speed, course):
+                        if stamps.get((source, path)) == stamp:
+                            values.pop(path, None)
+                    return
+            for path, key, scale in ((speed, 'speed', meters_s), (course, 'track', radians)):
+                if path not in values:
+                    continue
+                value = values.pop(path)
+                # An initial subscription may return a course from long before this fix.
+                dt = _parse_signalk_timestamp(stamps[source, path]) - fix['timestamp']
+                if abs(dt) >= GPS_TIMEOUT or type(value) not in (int, float) or not math.isfinite(value):
+                    fix.pop(key, None)
+                else:
+                    fix[key] = value / scale
+        except (TypeError, ValueError, OverflowError):
+            return
+        if 'lat' in fix:
+            fix.setdefault('speed', 0.0)  # Same default as a valid RMC with no speed.
+            self.last_gps_fix[source] = stamp, fix.copy()
+        elif 'speed' not in fix or 'track' not in fix:
+            return
+        fix['device'] = source + 'signalk'
+        return fix
 
     def send_signalk(self):
         # see if we can produce any signalk output from the data we have read
@@ -781,6 +863,13 @@ class signalk:
             debug('signalk non-dict message', type(data))
             return
 
+        if 'self' in data and 'version' in data and data.get('timestamp'):
+            # The Pi's clock need not agree with the server's.
+            try:
+                self.server_clock_offset = _parse_signalk_timestamp(data['timestamp']) - time.monotonic()
+            except (TypeError, ValueError, OverflowError):
+                pass
+
         updates = data.get('updates')
         if not isinstance(updates, list):
             return
@@ -812,7 +901,7 @@ class signalk:
             # delta updates with a `put` array. Act on them when the user
             # has opted in via signalk.put.enabled.
             puts = update.get('put')
-            if isinstance(puts, list):
+            if isinstance(puts, list) and self.token:
                 self._handle_signalk_put(puts, update.get('requestId'))
 
             values = update.get('values')
@@ -887,7 +976,7 @@ class signalk:
 
     def update_sensor_source(self, sensor, source):
         priority = source_priority[source]
-        watch = priority < signalk_priority # translate from pypilot -> signalk
+        watch = priority < signalk_priority and bool(self.token) # translate from pypilot -> signalk
         if watch:
             watch = self.period.value
 
@@ -929,12 +1018,15 @@ class signalk:
 
         signalk_sensor = signalk_table[sensor]
         if subscribe: # translate from signalk -> pypilot
+            if sensor == 'gps':
+                self.last_gps_fix.clear()
             subscriptions = []
             for signalk_path_conversion in signalk_sensor:
                 signalk_path, signalk_conversion = signalk_path_conversion
                 for source_path in list(self.signalk_last_msg_time):
                     if source_path[1] == signalk_path:
                         del self.signalk_last_msg_time[source_path]
+                        self.signalk_values.get(source_path[0], {}).pop(signalk_path, None)
                 subscriptions.append({
                     'path': signalk_path,
                     'minPeriod': int(self.period.value * 1000),
@@ -955,6 +1047,8 @@ class signalk:
                     subscriptions.append(subscription)
             self.subscriptions = subscriptions
             self.signalk_last_msg_time = {}
+            self.signalk_values.clear()
+            self.last_gps_fix.clear()
 
         subscription = {'context': 'vessels.self'}
         subscription['subscribe'] = subscriptions

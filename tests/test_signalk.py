@@ -232,3 +232,75 @@ def test_access_request_asks_for_readwrite(monkeypatch):
     obj.request_access()
     assert sent['data']['permissions'] == 'readwrite'
     assert sent['data']['clientId'] == 'pypilot-12345678901'
+
+
+def test_anonymous_input_then_approved_connection(monkeypatch, tmp_path, capsys):
+    import json
+    from types import SimpleNamespace as Stub
+    from unittest.mock import Mock
+    import signalk as sk
+
+    token_file = tmp_path / 'signalk-token'
+    monkeypatch.setattr(sk, 'token_path', str(token_file))
+    requests = pytest.importorskip('requests')
+    http = Mock(spec=requests)
+    http.exceptions = requests.exceptions
+    http.get.side_effect = [
+        requests.exceptions.ConnectTimeout(),
+        Stub(content=b'{"state":"PENDING"}'),
+        Stub(content=b'{"state":"COMPLETED","accessRequest":{"permission":"APPROVED","token":"approved"}}'),
+    ]
+    monkeypatch.setattr(sk, 'requests', http)
+    now = 100
+    monkeypatch.setattr(sk.time, 'monotonic', lambda: now)
+    sockets = []
+    def connect(url, **kwargs):
+        ws = Mock()
+        ws.recv.side_effect = BlockingIOError
+        sockets.append((kwargs, ws))
+        return ws
+    monkeypatch.setattr(sk, 'websocket', Stub(create_connection=connect))
+    obj = sk.signalk.__new__(sk.signalk)
+    obj.process = obj.zero_conf = obj.last_manual_signalk_host = obj.token = obj.ws = False
+    obj.initialized = True
+    obj.enabled = obj.tls_verify = obj.put_enabled = _Value(True)
+    obj.signalk_host = _Value('')
+    obj.signalk_host_port = 'test:3000'
+    obj.signalk_ws_url = 'ws://test:3000/stream'
+    obj.signalk_access_url = 'http://test:3000/requests/request'
+    obj.last_access_request_time = float('-inf')
+    obj.period = _Value(.5)
+    obj.subscribe_policy = _Value('instant')
+    obj.last_values = {}
+    obj.last_sources = {}
+    obj.signalk_last_msg_time = {}
+    obj.client = Mock()
+    pending_url = obj.signalk_access_url
+    obj.poll()
+    lines = capsys.readouterr().out.splitlines()
+    assert len(lines) == 1 and 'timed out' in lines[0]
+    assert obj.signalk_access_url == pending_url
+    now += 9
+    obj.poll()
+    assert http.get.call_count == 1
+    assert len(sockets) == 1 and 'header' not in sockets[0][0]
+    assert obj.token is False
+    obj.client.receive_single.side_effect = [('gps.source', 'none'), ('timestamp', 1), None]
+    obj.send_signalk = Mock()
+    obj.poll()
+    assert 'navigation.position' in sockets[0][1].send.call_args.args[0]
+    obj.send_signalk.assert_not_called()
+    obj.receive_signalk(json.dumps({'updates': [{'timestamp': 't', 'put': [
+        {'path': 'steering.autopilot.engaged', 'value': True}]}]}))
+    obj.client.set.assert_not_called()
+    now += 1
+    obj.poll()  # Retry the same pending GET after ten seconds.
+    assert http.get.call_count == 2 and obj.signalk_access_url == pending_url
+    now += 10
+    obj.poll()  # Approval arrives.
+    assert [call.args[0] for call in http.get.call_args_list] == [pending_url] * 3
+    http.post.assert_not_called()
+    sockets[0][1].close.assert_called_once()
+    obj.poll()  # Connect using the approved token.
+    assert len(sockets) == 2 and sockets[1][0]['header'] == {'Authorization': 'JWT approved'}
+    assert token_file.read_text() == 'approved'
