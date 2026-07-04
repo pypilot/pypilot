@@ -45,11 +45,33 @@ class ModeProperty(EnumProperty):
         # update the preferred mode when the mode changes from user
         self.ap.preferred_mode.update(value)
         self.ap.preferred_mode.command = None
+
+        pilot = self.ap.pilots[self.ap.pilot.value] # select pilot
+        pilot.mode.update(value) # update current pilot's mode with the current mode
+
         super().set(value)
 
     def set_internal(self, value):
         super().set(value)
 
+class PilotProperty(EnumProperty):
+    def __init__(self, name, ap):
+        self.ap = ap
+        pilot_names = list(ap.pilots)
+        print(_('Available Pilots') + ':', pilot_names)
+        super().__init__(name, 'basic', pilot_names, persistent=True, profiled=True)
+
+    def set(self, value):
+        lastvalue = getattr(self, 'value', None)
+        super().set(value)
+        # when changing the pilot, change the mode to the mode of the pilot (logic might be wrong if pilot's modes are profiled)
+        if hasattr(self, "value") and lastvalue != value and value in self.ap.pilots and hasattr(self.ap, "mode"):
+            pilot = self.ap.pilots[value]
+            mode = pilot.mode.value
+            self.ap.preferred_mode.update(mode)
+            self.ap.preferred_mode.command = None
+            self.ap.mode.update(mode)
+        
 class HeadingProperty(RangeProperty):
     def __init__(self, name, mode):
         self.mode = mode
@@ -93,17 +115,27 @@ class Autopilot:
         super().__init__()
         self.watchdog_device = False
 
+        self.starttime = time.monotonic()
         self.server = pypilotServer()
         self.client = pypilotClient(self.server, use_udp=True)
+        self.timestamp = self.client.register(TimeStamp())
         self.boatimu = BoatIMU(self.client)
         self.sensors = Sensors(self.client, self.boatimu)
         self.servo = servo.Servo(self.client, self.sensors)
         self.version = self.register(Value, 'version', 'pypilot' + ' ' + strversion)
-        self.timestamp = self.client.register(TimeStamp())
-        self.starttime = time.monotonic()
+
+        self.pilots = {}
+        for pilot_type in pilots.default:
+            try:
+                pilot = pilot_type(self)
+                self.pilots[pilot.name] = pilot
+
+            except Exception as e:
+                print(_('failed to load pilot'), pilot_type, e)
+
+        self.pilot = self.register(PilotProperty, 'pilot', self)
         self.preferred_mode = self.register(Value, 'preferred_mode', 'compass')
         self.preferred_mode.command = None
-
         self.mode = self.register(ModeProperty, 'mode', self)
         self.modes = self.register(JSONValue, 'modes', [])
         self.modes.sensors = {}
@@ -126,19 +158,6 @@ class Autopilot:
         # track heading command changes
         self.heading_command_rate = self.register(SensorValue, 'heading_command_rate')
         self.heading_command_rate.time = 0
-
-        self.pilots = {}
-        for pilot_type in pilots.default:
-            try:
-                pilot = pilot_type(self)
-                self.pilots[pilot.name] = pilot
-
-            except Exception as e:
-                print(_('failed to load pilot'), pilot_type, e)
-
-        pilot_names = list(self.pilots)
-        print(_('Available Pilots') + ':', pilot_names)
-        self.pilot = self.register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True, profiled=True)
 
         self.tack = tacking.Tack(self)
 
@@ -244,11 +263,12 @@ class Autopilot:
             d = .002
             gps_speed = self.sensors.gps.speed.value
             self.gps_speed = (1-d)*self.gps_speed + d*gps_speed
-            if gps_speed > 1: # don't update gps offset below 1 knot
-                gps_track  = self.sensors.gps.track.value
-                # weight gps compass offset higher with more gps speed
-                d = .005*math.log(self.gps_speed + 1)
-                self.gps_compass_offset.update(gps_track - compass, d)
+            if gps_speed > 1:
+                gps_track = self.sensors.gps.track.value
+                if gps_track is not False:
+                    # weight gps compass offset higher with more gps speed
+                    d = .005*math.log(self.gps_speed + 1)
+                    self.gps_compass_offset.update(gps_track - compass, d)
 
         if self.sensors.wind.source.value != 'none':
             offset = resolv(self.sensors.wind.filtered_direction.value + compass, self.wind_compass_offset.value)

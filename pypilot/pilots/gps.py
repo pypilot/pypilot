@@ -21,7 +21,7 @@ disabled = True
 
 class GPSPilot(AutopilotPilot):
   def __init__(self, ap):
-    super().__init__('gps', ap)
+    super().__init__('gps', ap, 'gps')
 
     # create filters
     self.wind_gps_offset = HeadingOffset()
