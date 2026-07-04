@@ -36,6 +36,13 @@ configfilename = 'pypilot.conf'
 server_persistent_period = int(os.getenv('PYPILOT_PERSIST_PERIOD', '60'))
 use_multiprocessing = os.getenv('PYPILOT_MULTIPROCESSING', '1') != '0'
 
+def config_file_version(path_or_fd):
+    try:
+        st = os.stat(path_or_fd)
+    except FileNotFoundError:
+        return None
+    return st.st_dev, st.st_ino, st.st_mtime_ns, st.st_size
+
 class Watch:
     def __init__(self, value, connection, period):
         self.value = value
@@ -446,17 +453,27 @@ class ServerValues(pypilotValue):
 
         self.values[name].set(msg, connection)
 
-    def load_file(self, filename):
+    def load_file(self, filename, writing=False, confirm_incomplete=False):
         profile = None
-        self.persistent_data = {None : {}, 'default' : {}}
         print("load file",filename)
-        f = open(filename)
-        linei=0
-        while True:
-            linei+=1
-            line = f.readline()
-            if not line:
-                break
+        primary = filename == configfilepath + configfilename
+        with open(filename) as f:
+            if primary:
+                version = config_file_version(f.fileno())
+            lines = f.readlines()
+        # IN_MODIFY can arrive after truncation or partway through a record.
+        if not lines or not lines[-1].endswith('\n'):
+            if writing:
+                return
+            # A pre-save stat can't tell if the editor has closed the file. Wait
+            # for its close event or for the same version on the next save attempt.
+            if primary and confirm_incomplete and version != self.deferred_config_version:
+                self.deferred_config_version = version
+                return
+            if lines:
+                lines[-1] += '\n'  # Values forwarded to clients are newline-delimited.
+        self.persistent_data = {None : {}, 'default' : {}}
+        for linei, line in enumerate(lines, 1):
             try:
                 name, data = line.rstrip().split('=', 1)
             except Exception:
@@ -489,11 +506,16 @@ class ServerValues(pypilotValue):
                 self.values[name] = pypilotValue(self, name, msg=line)
                 self.persistent_values[name] = self.values[name]
 
-        f.close()
+        if primary:
+            self.config_version = version
+            self.deferred_config_version = None
 
     def load(self):
         self.inotify = None
         self.inotify_time = time.monotonic()
+        self.config_version = None
+        self.deferred_config_version = None
+        self.persistent_data = {None: {}, 'default': {}}
 
         try:
             if not os.path.exists(configfilepath):
@@ -502,7 +524,10 @@ class ServerValues(pypilotValue):
             if not os.path.isdir(configfilepath):
                 raise Exception(configfilepath + 'should be a directory')
 
-            self.load_file(configfilepath + configfilename)
+            filename = configfilepath + configfilename
+            # If startup falls back to .bak, guard against later edits to the failed primary.
+            self.config_version = config_file_version(filename)
+            self.load_file(filename)
         except Exception as e:
             print(_('failed to load'), configfilename, e)
             # log failing to load persistent data
@@ -521,48 +546,54 @@ class ServerValues(pypilotValue):
         # backup persistent_data if it loaded with success
         self.store_file(configfilepath + configfilename + '.bak')
 
+    def watch_config_directory(self):
+        try:
+            import inotify.adapters
+            from inotify.constants import IN_MODIFY, IN_CLOSE_WRITE, IN_MOVED_TO
+            if self.inotify is None:
+                self.inotify = inotify.adapters.Inotify(block_duration_s=0)
+            self.inotify.add_watch(configfilepath, mask=IN_MODIFY | IN_CLOSE_WRITE | IN_MOVED_TO)
+        except Exception as e:
+            self.inotify = None
+            print(_('server failed to monitor with inotify'), ': ', configfilepath, e, time.monotonic())
+
     def poll_config(self, t0):
         if not self.inotify:
             if t0 - self.inotify_time < 20:
                 return
             self.inotify_time = t0
+            self.watch_config_directory()
+            return
 
-            try:
-                import inotify.adapters
-                self.inotify = inotify.adapters.Inotify(block_duration_s=0)
-                self.inotify.add_watch(configfilepath + configfilename)
-            except Exception as e:
-                self.inotify = None
-                print(_('server failed to monitor with inotify'), ': ', configfilepath + configfilename, e, time.monotonic())
-        
         if t0 - self.inotify_time < 3:
             return
         self.inotify_time = t0
-        loaded = False
-        for event in self.inotify.event_gen(timeout_s=0):
+        last_change = None
+        try:
+            # Drain the batch before reloading: a single save can trigger several events.
+            for _, types, _, name in self.inotify.event_gen(timeout_s=0, yield_nones=False):
+                if name == configfilename and 'IN_ISDIR' not in types:
+                    last_change = types
+        except Exception as e:
+            self.inotify = None
+            print('inotify failed to read configuration events', e)
+
+        if last_change:
             try:
-                if event[1][0] == 'IN_CLOSE_WRITE':
-                    if not loaded:
-                        print('detected configuration file updated: reloading', configfilename)
-                        self.load_file(configfilepath + configfilename)
-                        loaded = True
+                print('detected configuration file updated: reloading', configfilename)
+                self.load_file(configfilepath + configfilename, writing='IN_MODIFY' in last_change)
             except Exception as e:
-                print('pypilot server failed to detect or load config change', e)
-                #print('pypilot server will now overwrite config file')
-                #self.store_file(configfilepath + configfilename)
+                print('pypilot server failed to load config change', e)
 
     def store_file(self, filename):
-        if self.inotify:
-            try:
-                self.inotify.remove_watch(configfilepath + configfilename)
-            except Exception as e:
-                print('inotify failed to remove watch', e)
-
         print('store_file', filename, '%.3f'%time.monotonic(), self.need_store)
         # Write to a sibling tempfile then atomically rename, so a crash or
         # power loss mid-write cannot leave a truncated/corrupt config.
         target_dir = os.path.dirname(filename) or '.'
         tmp_fd, tmp_path = tempfile.mkstemp(prefix='.pypilot_conf.', dir=target_dir)
+        primary = filename == configfilepath + configfilename
+        resume_watch = False
+        changed_on_disk = False
         try:
             with os.fdopen(tmp_fd, 'w') as file:
                 for name, value in self.persistent_data[None].items():
@@ -577,16 +608,49 @@ class ServerValues(pypilotValue):
                             file.write(value)
                 file.flush()
                 os.fsync(file.fileno())
-            os.replace(tmp_path, filename)
+                if primary:
+                    new_version = config_file_version(file.fileno())
+            # The temporary file and backups are already excluded by the name filter.
+            if self.inotify and primary:
+                resume_watch = True
+                try:
+                    self.inotify.remove_watch(configfilepath)
+                except Exception as e:
+                    self.inotify = None
+                    print('inotify failed to remove watch', e)
+            if primary:
+                changed_on_disk = config_file_version(filename) != self.config_version
+            if changed_on_disk:
+                os.unlink(tmp_path)
+            else:
+                os.replace(tmp_path, filename)
+                if primary:
+                    self.config_version = new_version
         except Exception:
             try:
                 os.unlink(tmp_path)
             except OSError:
                 pass
             raise
+        finally:
+            if resume_watch:
+                self.watch_config_directory()
 
-        if self.inotify:
-            self.inotify.add_watch(configfilepath + configfilename)
+        if changed_on_disk:
+            print('configuration changed on disk; deferring save', filename)
+            try:
+                self.load_file(filename, confirm_incomplete=True)
+            except FileNotFoundError:
+                self.config_version = None  # Allow creation on the next save if still absent.
+            return False
+
+        # Persist the rename after rearming the watch.
+        dir_fd = os.open(target_dir, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+        return True
 
     def persist_msg(self, value, msg=None):
         if not value.info.get('persistent'):
@@ -614,8 +678,8 @@ class ServerValues(pypilotValue):
 
         if self.need_store:
             try:
-                self.store_file(configfilepath + configfilename)
-                self.need_store = False
+                if self.store_file(configfilepath + configfilename):
+                    self.need_store = False
             except Exception as e:
                 print(_('failed to write'), configfilename, e)
 
