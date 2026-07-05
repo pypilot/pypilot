@@ -19,7 +19,7 @@ from pypilot.values import *
 
 class WindPilot(AutopilotPilot):
     def __init__(self, ap):
-        super().__init__('wind', ap, 'wind')
+        super().__init__('wind', ap)
 
         # create filters
         self.gps_wind_offset = self.register(HeadingOffset, 'gps_wind_offset')

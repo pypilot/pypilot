@@ -16,13 +16,11 @@ class AutopilotGain(RangeProperty):
         self.info['AutopilotGain'] = True
 
 class AutopilotPilot:
-    def __init__(self, name, ap, mode='compass'):
+    def __init__(self, name, ap):
         super().__init__()
         self.name = name
         self.ap = ap
         self.gains = {}
-        # this could technically be profiled.. but not sure how useful that is
-        self.mode = self.register(Value, 'mode', mode, persistent=True)
 
     def register(self, _type, name, *args, **kwargs):
         return self.ap.client.register(_type(*(['ap.pilot.' + self.name + '.' + name] + list(args)), **kwargs))
