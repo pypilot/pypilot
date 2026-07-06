@@ -116,7 +116,7 @@ class pypilotValue:
         # find minimum watch period from all watches
         watching = False
 
-        # TODO:  now that writable persistent updates are directlyupdated in persistent_data can this be removed??
+        # TODO:  now that writable persistent updates are directly updated in persistent_data can this be removed??
         if 'persistent' in self.info and self.info['persistent']:
             watching = server_persistent_period
         for watch in self.awatches:
@@ -283,14 +283,14 @@ class ServerProfile(pypilotValue):
 
     def set(self, msg, connection):
         n, profile = msg.rstrip().split('=', 1)
-        if profile == self.profile: # no change, do nothing
-            return
-
         try:
             strprofile = str(pyjson.loads(profile))
             strprofile.replace('"', '')
         except Exception as e:
             print('server bad profile', e, msg)
+            return
+
+        if strprofile == self.profile: # no change, do nothing
             return
 
         if strprofile != profile:
@@ -415,7 +415,7 @@ class ServerValues(pypilotValue):
                 value.connection = connection
                 value.info = info # update info
                 value.watching = False
-                if value.msg:
+                if value.msg and info.get('persistent'):
                     connection.write(value.get_msg()) # send value
                 value.calculate_watch_period()
             else:
@@ -499,11 +499,11 @@ class ServerValues(pypilotValue):
                 value = self.values[name]
                 if name != value.name:
                     print("ERROR with values!", name, value.name)
-                if value.msg != line:
+                if value.msg != line and (not value.info or value.info.get('persistent')):
                     if profile is None or self.values['profile'].profile == profile:
                         self.values[name].set(line, False)
             else:
-                self.values[name] = pypilotValue(self, name, msg=line)
+                self.values[name] = pypilotValue(self, name, msg=line if profile is None or self.values['profile'].profile == profile else None)
                 self.persistent_values[name] = self.values[name]
 
         if primary:
@@ -676,6 +676,14 @@ class ServerValues(pypilotValue):
         for name in self.persistent_values:
             self.persist_msg(self.persistent_values[name])
 
+        # clean out any values in persistent_data that is not persistent 
+        for data in self.persistent_data.values():
+            for name in list(data):
+                info = self.values[name].info
+                if info and not info.get('persistent'):
+                    del data[name]
+                    self.need_store = name
+            
         if self.need_store:
             try:
                 if self.store_file(configfilepath + configfilename):
