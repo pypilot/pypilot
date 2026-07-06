@@ -468,6 +468,9 @@ class BoatIMU:
                 nextdata = self.imu.pipe.recv()
                 if not nextdata:
                     break
+                # Keep a calibration update even if a newer sample supersedes this one.
+                if data and data.get('compass_calibration_updated'):
+                    nextdata['compass_calibration_updated'] = True
                 data = nextdata
 
         if not data:
