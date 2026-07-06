@@ -239,18 +239,30 @@ class MaxRangeSetting(RangeSetting):
         if self.maxvalue and self.value > self.maxvalue.value:
             self.maxvalue.set(self.value)
 
-class Servo:
-    pypilot_dir = os.path.expanduser('~') + '/.pypilot/'
-    calibration_filename = pypilot_dir + 'servocalibration'
+class ServoCalibration(DictionaryValue):
+    def __init__(self, name, **kwargs):
+        self.default_calibration = {'port': [.2, .8], 'starboard': [.2, .8]}
+        super().__init__(name, self.default_calibration, [list], persistent=True, **kwargs)
 
+    def valid(self, value):
+        if not super().valid(value) or value.keys() != {'port', 'starboard'}:
+            return False
+        return all(
+            len(pair) == 2
+            and all(type(x) in (int, float) and math.isfinite(x) for x in pair)
+            for pair in value.values())
+        
+    def reset(self):
+        self.set(self.default_calibration)
+            
+class Servo:
     def __init__(self, client, sensors):
         self.client = client
         self.sensors = sensors
         self.lastdir = 0 # doesn't matter
 
         #self.servo_calibration = ServoCalibration(self)
-        self.calibration = self.register(JSONValue, 'calibration', {})
-        self.load_calibration()
+        self.calibration = self.register(ServoCalibration, 'calibration')
 
         self.position_command = self.register(TimedProperty, 'position_command')
         self.command = self.register(TimedProperty, 'command')
@@ -464,9 +476,9 @@ class Servo:
                 return
 
             command = cal[0] + abs(speed)*cal[1]
-        except (KeyError, ValueError, TypeError):
+        except (KeyError, ValueError, TypeError): # can probably removed
             print (_('servo calibration invalid'), self.calibration.value)
-            self.calibration.set({'port': [.2, .8], 'starboard': [.2, .8]})
+            self.calibration.reset()
             return
 
         if speed < 0:
@@ -758,21 +770,6 @@ class Servo:
         if not self.driver:
             return False
         return self.driver.fault()
-
-    def load_calibration(self):
-        import pyjson
-        try:
-            filename = Servo.calibration_filename
-            print(_('loading servo calibration'), filename)
-            file = open(filename)
-            self.calibration.set(pyjson.loads(file.readline()))
-        except (OSError, ValueError):
-            print(_('WARNING: using default servo calibration!!'))
-            self.calibration.set(False)
-
-    def save_calibration(self):
-        file = open(Servo.calibration_filename, 'w')
-        file.write(pyjson.dumps(self.calibration))
 
 def test(device_path):
     from arduino_servo.arduino_servo import ArduinoServo

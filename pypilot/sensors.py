@@ -172,9 +172,11 @@ class APB(Sensor):
         # 300 is 30 degrees for 1/10th mile
         self.gain = self.register(RangeProperty, 'xte.gain', 300, 0, 3000, persistent=True)
         self.last_time = time.monotonic()
+        self.pending_command = None
 
     def reset(self):
-       self.xte.update(0)
+        self.pending_command = None
+        self.xte.update(0)
 
     def update(self, data):
         t = time.monotonic()
@@ -193,18 +195,18 @@ class APB(Sensor):
         if data_mode != 'gps':
             return False
 
-        mode = self.client.values.values['ap.mode']
-        # do not apply heading change message if not enabled in nav mod
-        if mode.value != 'nav' or not self.client.values.values['ap.enabled'].value:
-            return True
-
-        command = data['track'] + self.gain.value*xte
-        #print('apb command', command, data)
-
-        heading_command = self.client.values.values['ap.heading_command']
-        if abs(heading_command.value - command) > .1:
-            heading_command.set(command)
+        self.pending_command = data['track'] + self.gain.value*xte
         return True
+
+    def apply_command(self, ap):
+        # This APB sentence may itself have made nav available this iteration.
+        command = self.pending_command
+        self.pending_command = None
+        if command is None or ap.mode.value != 'nav' or not ap.enabled.value:
+            return
+        heading = ap.heading_command
+        if heading.command_mode != 'nav' or abs(heading.value - command) > .1:
+            heading.internal_set(command, 'nav')
 
 class gps(Sensor):
     def __init__(self, client):

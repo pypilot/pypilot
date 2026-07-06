@@ -67,13 +67,7 @@ class GPSPilot(AutopilotPilot):
       true_wind = resolve(self.true_wind_gps_offset.value - gps_course, 180)
       ap.heading.set(true_wind)
 
-  def best_mode(self, mode):
-      modes = self.ap.modes.value
-      if mode not in modes:  # fallback to compass
-          if 'gps' in modes:
-              return 'gps'
-          return 'compass'
-      return mode
+  mode_fallbacks = {'nav': 'gps', 'wind': 'gps', 'true wind': 'gps'}
 
   def process(self):
       ap = self.ap

@@ -110,6 +110,8 @@ class VMGPilot(AutopilotPilot):
 
         self.noise = 1
 
+    def best_pilot(self):
+        return self.ap.pilots['basic'] if self.ap.sensors.wind.source.value == 'none' else self
 
     def process(self):
         t = time.monotonic()
@@ -117,10 +119,6 @@ class VMGPilot(AutopilotPilot):
         vmg = self.vmg[ap.mode.value]
 
         vmg.update_time()
-
-        if ap.sensors.wind.source.value == 'none':
-            ap.pilot.set('basic') # fall back to basic pilot if gps input fails
-            return
 
         # compute command
         headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value

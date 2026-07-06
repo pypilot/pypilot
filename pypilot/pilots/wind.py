@@ -35,16 +35,13 @@ class WindPilot(AutopilotPilot):
 
     def compute_heading(self):
         ap = self.ap
-        # compute the difference from wind to other headings
-        compass = self.ap.boatimu.SensorValues['heading_lowpass'].value
-
         sensors = self.ap.sensors
         wind = sensors.wind.filtered_direction.value
 
         if sensors.gps.source.value != 'none':
             gps_track  = sensors.gps.track.value
             # difference from gps to wind
-            if ap.gps_speed > 1:
+            if ap.gps_speed > 1 and gps_track is not False:
                 d = .005*math.log(ap.gps_speed + 1)
                 self.gps_wind_offset.update(wind + gps_track, d)
 
@@ -58,43 +55,22 @@ class WindPilot(AutopilotPilot):
             gps = resolv(self.gps_wind_offset.value - wind, 180)
             ap.heading.set(gps)
         elif mode == 'true wind':
-            if ap.true_wind_sensor.value == 'water':
-                boat_speed = sensors.water.speed
-            elif ap.true_wind_sensor.value == 'gps':
-                boat_speed = ap.gps_speed
-            else:
-                boat_speed = 0
-
-            true_wind = TrueWind.compute_true_wind_direction(boat_speed, sensors.wind.filtered_speed, wind)
-            ap.heading.set(true_wind)
-
+            ap.heading.set(sensors.truewind.filtered_direction.value)
         elif mode == 'wind':
             ap.heading.set(wind)
 
+    def best_pilot(self):
+        return self if 'wind' in self.ap.modes.value else self.ap.pilots['basic']
+
+    mode_fallbacks = {'nav': 'gps', 'gps': 'wind', 'true wind': 'wind'}
     def best_mode(self, mode):
-        sensors = self.ap.sensors
-        nocompass = self.ap.boatimu.SensorValues['compass'] == False
-        nogps = sensors.gps.source.value == 'none'
-        nowater = sensors.water.source.value == 'none'
-
-        if mode == 'compass':
-            if nocompass:
-                return 'wind'
-        elif mode == 'gps':
-            if nogps:
-                return 'wind'
-        elif mode == 'true wind':
-            if nogps and nowater: # need one of these for true wind
-                return 'wind'
-
-        return mode
+        # Compass is still always listed in ap.modes. Wind can steer without it.
+        if mode == 'compass' and self.ap.boatimu.SensorValues['compass'].value is False:
+            return 'wind'
+        return super().best_mode(mode)
 
     def process(self):
         ap = self.ap
-
-        if ap.sensors.wind.source.value == 'none':
-            ap.pilot.set('basic') # fall back to basic pilot if wind input fails
-            return
 
         # compute command
         headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value

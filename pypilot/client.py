@@ -37,6 +37,8 @@ except AttributeError:
 class Watch:
     def __init__(self, value, period):
         self.value = value
+        if value.info.get('profiled') == 'immediate':
+            period = 0  # override watch period
         self.period = period
         self.time = time.monotonic() + period
 

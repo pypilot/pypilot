@@ -21,7 +21,7 @@ class Value:
 
         self.info = {'type': 'Value'}
         if 'profiled' in kwargs and kwargs['profiled']:
-            self.info['profiled'] = True
+            self.info['profiled'] = kwargs['profiled']
             self.info['persistent'] = True
         # if persistent argument make the server store/load this value regularly
         if 'persistent' in kwargs and kwargs['persistent']:
@@ -58,6 +58,31 @@ class JSONValue(Value):
     def get_msg(self):
         return pyjson.dumps(self.value)
 
+class DictionaryValue(JSONValue):
+    def __init__(self, name, initial, types, **kwargs):
+        self.types = types
+        super().__init__(name, initial, **kwargs)
+
+    def valid(self, value):
+        if not isinstance(value, dict):
+            print('invalid set:', self.name, 'requires dictionary')
+            return False
+        for name, item in value.items():
+            if not isinstance(name, str) or not isinstance(item, tuple(self.types)):
+                print('invalid value in dictionary for', self.name, ':', name, ',', item)
+                return False
+        return True
+        
+    def set(self, value):
+        if self.valid(value):
+            super().set(value)
+
+    # modifies the existing dictionary in place
+    def update(self, key, value):
+        if self.value.get(key) != value:
+            self.value[key] = value
+            super().set(self.value)
+    
 def round_value(value, fmt):
     if type(value) == type([]):
         ret = '['
