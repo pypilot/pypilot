@@ -79,13 +79,20 @@ class ModeProperty(EnumProperty):
 class HeadingProperty(RangeProperty):
     def __init__(self, name, mode):
         self.mode = mode
+        self.pending_delta = 0
         super().__init__(name, 0, -180, 360)
         self.command_mode = None      # the current mode when the command was set
         self.last_user_command = None # (mode, accepted heading, monotonic time that mode was lost)
 
     def set(self, value):
         if self.internal_set(value, self.mode.pending_mode):
+            self.pending_delta = 0  # An explicit heading supersedes earlier relative commands.
             self.last_user_command = self.command_mode, self.value, None
+
+    def apply_delta(self, windmode):
+        delta = self.pending_delta
+        if delta:  # Positive is starboard in every mode.
+            self.set(self.value - delta if windmode else self.value + delta)
 
     @staticmethod
     def _degrees(value, mode):
@@ -137,6 +144,21 @@ class HeadingProperty(RangeProperty):
             corrected = self._degrees(target + change, mode)
             if corrected is not None:
                 self.last_user_command = mode, corrected, lost_at
+
+class HeadingDeltaProperty(Property):
+    def __init__(self, name, heading_command):
+        self.heading_command = heading_command
+        super().__init__(name, 0)
+
+    def set(self, value):
+        try:
+            delta = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return
+        if isinstance(value, bool) or not math.isfinite(delta):
+            return
+        self.heading_command.pending_delta += math.fmod(delta, 360)
+        super().set(delta)  # The published value is the last individual request.
 
 class PilotProperty(EnumProperty):
     def __init__(self, name, ap):
@@ -203,6 +225,7 @@ class Autopilot:
         self.lastmode = False
 
         self.heading_command = self.register(HeadingProperty, 'heading_command', self.mode)
+        self.heading_command_delta = self.register(HeadingDeltaProperty, 'heading_command_delta', self.heading_command)
         self.enabled = self.register(BooleanProperty, 'enabled', False)
         self.lastenabled = False
 
@@ -437,6 +460,8 @@ class Autopilot:
             self.heading_command.handover(heading, self.heading_error.value, t)
             self.lastmode = self.mode.value
 
+        # Apply relative commands to the target in the resolved mode.
+        self.heading_command.apply_delta(windmode)
         # compute heading error
         heading_command = self.heading_command.value
 

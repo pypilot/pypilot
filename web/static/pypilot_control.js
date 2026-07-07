@@ -524,9 +524,6 @@ $(document).ready(function() {
     });
     
     var heading = 0;
-    var heading_command = 0;
-    var heading_set_time = new Date().getTime();
-    var heading_local_command;
     var last_rudder_data = {};
     var current_mode = "NA";
 
@@ -615,10 +612,8 @@ $(document).ready(function() {
             }
         }
 
-        if('ap.heading_command' in data) {
-            heading_command = data['ap.heading_command'];
-            $('#heading_command').text(heading_str(heading_command));
-        }
+        if('ap.heading_command' in data)
+            $('#heading_command').text(heading_str(data['ap.heading_command']));
 
         if('ap.pilot' in data) {
             value= data['ap.pilot'];
@@ -823,14 +818,7 @@ $(document).ready(function() {
         if(!engaged)
             return;
         
-        time = new Date().getTime();
-        if(time - heading_set_time > 1000)
-            heading_local_command = heading_command;
-        heading_set_time = time;
-        if($('#mode').val().includes('wind'))
-            x = -x;
-        heading_local_command += x;
-        pypilot_set('ap.heading_command', heading_local_command);
+        pypilot_set('ap.heading_command_delta', x);
     }
 
     // update manual servo command
