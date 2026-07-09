@@ -18,7 +18,7 @@ from pypilot.web import gettext_helper
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, async_mode=None)
+socketio = SocketIO(app, async_mode='threading')
 gettext_helper.load(app)
 
 web_port = 33333
