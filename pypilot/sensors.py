@@ -216,6 +216,7 @@ class gps(Sensor):
         self.declination = self.register(SensorValue, 'declination')
         self.alignmentCounter = self.register(Property, 'alignmentCounter', 0)
         self.last_alignmentCounter = False
+        self.gps_alignment_track = False
 
         self.filtered = GPSFilterProcess(client)
         self.lastpredictt = time.monotonic()
@@ -235,33 +236,36 @@ class gps(Sensor):
         self.fix.set(data)
         self.filtered.update(data, time.monotonic())
 
-        if self.alignmentCounter.value > 0:
-            # initiated,  reset average
+        if self.alignmentCounter.value > 0 and 'track' in data:
+            # Reset the circular average when a new alignment is initiated.
             t0 = time.monotonic()
-            if self.alignmentCounter.value != last:
-                x, y, last = 0, 0, self.alignmentCounter.value, t0
+            if self.alignmentCounter.value != self.last_alignmentCounter or not self.gps_alignment_track:
+                x, y, t = 0, 0, t0
             else:
-                x, y, last, t = self.gps_alignment_track
+                x, y, t = self.gps_alignment_track
 
             if t0 - t > 20: # too long without gps
                 self.alignmentCounter.set(0)
+                self.gps_alignment_track = False
             else:
-                x+=math.sin(math.radians(self.track.value))
-                y+=math.cos(math.radians(self.track.value))
-                last -= 1
-                self.gps_alignment_track = x, y, last, t0
-                self.alignmentCounter.set(last)
+                x += math.sin(math.radians(self.track.value))
+                y += math.cos(math.radians(self.track.value))
+                self.gps_alignment_track = x, y, t0
+                self.alignmentCounter.set(self.alignmentCounter.value - 1)
 
                 if self.alignmentCounter.value == 0:  # alignment complete
                     if x or y:
-                        avg_track = math.degrees(math.atan2(y, x))
-                        mag_track = avg_track
-                        if self.declination.value:
-                            mag_track -= self.declination
-                        heading = self.client.values.values['imu.heading']
-                        self.client.values.values['imu.heading_offset'].set(heading - mag_track)
+                        avg_track = math.degrees(math.atan2(x, y))
+                        mag_track = avg_track - (self.declination.value or 0)
+                        heading = self.client.values.values['imu.heading'].value
+                        heading_offset = self.client.values.values['imu.heading_offset']
+                        heading_offset.set(resolv(heading_offset.value + mag_track - heading))
+                    self.gps_alignment_track = False
 
-                self.gps_alignment_track = total, count, self.alignmentCounter.value
+            self.last_alignmentCounter = self.alignmentCounter.value
+        elif self.alignmentCounter.value <= 0:
+            self.gps_alignment_track = False
+            self.last_alignmentCounter = self.alignmentCounter.value
 
         return True
 
