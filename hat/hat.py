@@ -318,6 +318,9 @@ class LCD(Process):
             else:
                 while True:
                     self.lcd.poll()
+                    if self.lcd.screen is None:
+                        # headless: no LCD to drive, idle (avoid busy-loop)
+                        time.sleep(1)
 
         print('lcd create2', time.monotonic())
         super().create(process)
