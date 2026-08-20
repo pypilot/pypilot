@@ -415,9 +415,12 @@ class signalk:
 
             contents = pyjson.loads(r.content)
             print('signalk post', contents)
-            if contents['statusCode'] == 202 or contents['statusCode'] == 400:
+            if r.status_code == 202 or r.status_code == 400:
                 self.signalk_access_url = base + contents['href']
                 print('signalk ' + _('request access url'), self.signalk_access_url)
+            elif r.status_code == 404:
+                print('signalk ' + _('security not enabled, connecting without token'))
+                self.token = 'none'
         except Exception as e:
             print('signalk ' + _('error posting access'), e)
             import traceback
@@ -456,7 +459,9 @@ class signalk:
                 return
 
         try:
-            connect_kwargs = {'header': {'Authorization': 'JWT ' + self.token}}
+            connect_kwargs = {}
+            if self.token and self.token != 'none':
+                connect_kwargs['header'] = {'Authorization': 'JWT ' + self.token}
             # For a wss:// stream with verification disabled, tell
             # websocket-client to skip certificate checks (self-signed
             # certs). It also clears check_hostname when cert_reqs is
