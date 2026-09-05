@@ -295,21 +295,16 @@ class Arduino(Process):
 
 class LCD(Process):
     def __init__(self, hat):
-        print('lcd __init__', time.monotonic())
         super().__init__(hat)
-        print('lcd __init__ done', time.monotonic())
 
     def create(self):
-        print('lcd create', time.monotonic())
         def process(pipe, config):
             print('lcd process start', time.monotonic())
             sys.stdout.reconfigure(line_buffering=True)
             import lcd
-            print('lcd process imported lcd', time.monotonic())
             self.lcd = lcd.LCD(self.hat.config)
-            print('lcd process create lcd', time.monotonic())
             self.lcd.pipe = pipe
-
+            
             print('lcd process main loop running', time.monotonic())
             if self.lcd.use_glut:
                 from OpenGL.GLUT import glutIdleFunc, glutMainLoop
@@ -319,9 +314,7 @@ class LCD(Process):
                 while True:
                     self.lcd.poll()
 
-        print('lcd create2', time.monotonic())
         super().create(process)
-        print('lcd create3', time.monotonic())
 
     def keypad(self, index, count):
         self.send((index, count))
