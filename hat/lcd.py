@@ -382,6 +382,7 @@ class LCD:
 
     def poll(self):
         if self.screen == None:
+            time.sleep(1000)
             return
 
         t0 = gettime()
