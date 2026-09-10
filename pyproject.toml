@@ -30,7 +30,7 @@ dependencies = [
     "numpy",
     "scipy",
     "zeroconf",
-    "RTIMULib @ git+https://github.com/seandepagnier/RTIMULib2@master#subdirectory=Linux/python",
+    "RTIMULib @ git+https://github.com/pypilot/RTIMULib2@master#subdirectory=Linux/python",
     "pypilot_data @ git+https://github.com/pypilot/pypilot_data@1df915910725d586cb846cdca42ee445c2709ff6"
 ]
 
