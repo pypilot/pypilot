@@ -32,7 +32,7 @@ class gpio(object):
             self.lastkeystate[p] = False
 
         self.keystate = 0
-        self.keypin = False
+        self.keypin = ''
         self.lastkeyevent = 0
 
         self.thread_running = True
@@ -62,7 +62,7 @@ class gpio(object):
                 continue
 
             for ev in self.request.read_edge_events():
-                self.pipe[0].send(ev.line_offset) # wake up poll for gpio
+                self.pipe[0].send((ev.line_offset, ev.event_type == ev.Type.FALLING_EDGE)) # wake up poll for gpio
             time.sleep(.01)
 
     def poll(self):
@@ -70,14 +70,13 @@ class gpio(object):
             return []
 
         while True:
-            pin = self.pipe[1].recv()
-            if not pin:
+            self.evalkeys()
+            res = self.pipe[1].recv()
+            if not res:
                 break
 
-            value = self.request.get_value(pin)
-            self.lastkeystate[pin] = value == gpiod.line.Value.INACTIVE
-
-        self.evalkeys()
+            pin, value = res
+            self.lastkeystate[pin] = value
 
         events = self.events
         self.events = []
@@ -106,7 +105,10 @@ class gpio(object):
             self.keystate = 1
         elif self.keypin:     # any key released, send release code
             self.events.append(('gpio' + self.keypin, 0))
-            self.keypin = False  # require all keys to release before new code
+            if pin:
+                self.keypin = False  # require all keys to release before new code
+            else:
+                self.keypin = ''
             return
 
         if self.keypin:

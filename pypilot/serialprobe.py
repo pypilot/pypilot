@@ -26,6 +26,8 @@ def read_config(filename, fail):
                 if not device:
                     break
                 device = device.split()
+                if len(device) == 0:
+                    continue
                 if len(device) > 1:
                     baud = device[1]
                 else:
@@ -33,8 +35,8 @@ def read_config(filename, fail):
                 devices[device[0]] = baud
             f.close()
             return devices
-        except Exception:
-            print(_('error reading'), pypilot_dir + filename)
+        except Exception as e:
+            print(_('error reading'), pypilot_dir + filename, e)
     return fail
 
 blacklist_serial_ports = 'init'
