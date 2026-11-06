@@ -50,6 +50,10 @@ class gpio(object):
             return
         print('gpio thread main loaded', time.monotonic())
 
+        if not hasattr(gpiod, 'request_lines'):
+            self.thread_main_v1()
+            return
+
         config = {}
         for pin in self.pins:
             config[pin] = gpiod.LineSettings(direction=gpiod.line.Direction.INPUT, edge_detection=gpiod.line.Edge.BOTH,
@@ -63,6 +67,25 @@ class gpio(object):
 
             for ev in self.request.read_edge_events():
                 self.pipe[0].send((ev.line_offset, ev.event_type == ev.Type.FALLING_EDGE)) # wake up poll for gpio
+            time.sleep(.01)
+
+    def thread_main_v1(self):
+        # libgpiod 1.x python bindings (python3-libgpiod on debian bookworm)
+        # have no LineSettings or request_lines, and no debounce
+        chip = gpiod.Chip('/dev/gpiochip0')
+        lines = chip.get_lines(self.pins)
+        lines.request(consumer='keys', type=gpiod.LINE_REQ_EV_BOTH_EDGES, flags=gpiod.LINE_REQ_FLAG_BIAS_PULL_UP)
+
+        while self.thread_running:
+            # This blocks waiting for GPIO edge events.
+            events = lines.event_wait(sec=1)
+            if not events:
+                continue
+
+            time.sleep(.02) # debounce: let the input settle, then read its level
+            for line in events:
+                line.event_read_multiple() # discard the queued edges
+                self.pipe[0].send((line.offset(), not line.get_value())) # pulled up, so low is pressed
             time.sleep(.01)
 
     def poll(self):
