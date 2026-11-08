@@ -409,7 +409,12 @@ class signalk:
             # if probe has not run yet.
             base = self.signalk_http_base or ('http://' + self.signalk_host_port)
             r = requests.post(base + '/signalk/v1/access/requests',
-                              data={"clientId": self.uid.value, "description": "pypilot"},
+                              # pypilot writes heading, attitude and rate of turn to
+                              # SignalK: without "permissions" the server offers the
+                              # request as read only, and an approval left at that
+                              # default silently drops everything pypilot publishes.
+                              data={"clientId": self.uid.value, "description": "pypilot",
+                                    "permissions": "readwrite"},
                               timeout=SIGNALK_HTTP_TIMEOUT,
                               verify=self.tls_verify.value)
 
@@ -472,8 +477,16 @@ class signalk:
             self.ws.settimeout(0) # nonblocking
             self.connect_attempts = 0            
         except websocket.WebSocketBadStatusException as e:
-            print('signalk ' + _('bad status, rejecting token'), e)
-            self.invalid_token()
+            # Only 401/403 mean the token is bad. A server that is starting
+            # or restarting answers 502/503: keep the token and retry, or
+            # every SignalK restart costs a new access request that someone
+            # has to approve again.
+            status = getattr(e, 'status_code', None)
+            if status in (401, 403):
+                print('signalk ' + _('bad status, rejecting token'), e)
+                self.invalid_token()
+            else:
+                print('signalk ' + _('bad status, keeping token'), e)
             self.ws = False
         except ConnectionRefusedError:
             print('signalk ' + _('connection refused'))
