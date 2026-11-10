@@ -80,3 +80,10 @@ def test_mwv_true_vs_apparent(nmea_module):
     true = nmea_module.parse_nmea_wind('$APMWV,90.0,T,10.0,N,A*00')
     assert apparent[0] == 'wind'
     assert true[0] == 'truewind'
+
+
+@pytest.mark.parametrize('reference', ['R', 'T'])
+def test_mwv_rejects_invalid_wind(nmea_module, reference):
+    sentence = _full_sentence(f'WIMWV,90.0,{reference},10.0,N,V')
+    assert nmea_module.check_nmea_cksum(sentence)
+    assert nmea_module.parse_nmea_wind(sentence) is False
