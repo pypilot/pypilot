@@ -80,3 +80,15 @@ def test_mwv_true_vs_apparent(nmea_module):
     true = nmea_module.parse_nmea_wind('$APMWV,90.0,T,10.0,N,A*00')
     assert apparent[0] == 'wind'
     assert true[0] == 'truewind'
+
+
+@pytest.mark.parametrize('status', ['V,A', 'A,V'])
+def test_apb_rejects_navigation_warning(nmea_module, status):
+    sentence = _full_sentence(f'APAPB,{status},0.05,R,N,V,V,12.3,M,WP1,45.0,M,67.0,M')
+    assert nmea_module.check_nmea_cksum(sentence)
+    assert nmea_module.parse_nmea_apb(sentence) is False
+
+
+def test_apb_accepts_valid_guidance_before_arrival(nmea_module):
+    sentence = _full_sentence('APAPB,A,A,0.05,R,N,V,V,12.3,M,WP1,45.0,M,67.0,M')
+    assert nmea_module.parse_nmea_apb(sentence)[1]['track'] == 67.0
