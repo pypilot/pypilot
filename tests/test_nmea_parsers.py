@@ -80,3 +80,15 @@ def test_mwv_true_vs_apparent(nmea_module):
     true = nmea_module.parse_nmea_wind('$APMWV,90.0,T,10.0,N,A*00')
     assert apparent[0] == 'wind'
     assert true[0] == 'truewind'
+
+
+@pytest.mark.parametrize('status', ['V', 'N', ''])
+def test_rsa_rejects_invalid_rudder(nmea_module, status):
+    sentence = _full_sentence(f'IIRSA,12.5,{status},,')
+    assert nmea_module.check_nmea_cksum(sentence)
+    assert nmea_module.parse_nmea_rudder(sentence) is False
+
+
+def test_rsa_accepts_valid_rudder(nmea_module):
+    sentence = _full_sentence('IIRSA,12.5,A,,')
+    assert nmea_module.parse_nmea_rudder(sentence) == ('rudder', {'angle': -12.5})
