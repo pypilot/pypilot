@@ -92,3 +92,14 @@ def test_rsa_rejects_invalid_rudder(nmea_module, status):
 def test_rsa_accepts_valid_rudder(nmea_module):
     sentence = _full_sentence('IIRSA,12.5,A,,')
     assert nmea_module.parse_nmea_rudder(sentence) == ('rudder', {'angle': -12.5})
+
+@pytest.mark.parametrize('unit', ['', 'X'])
+def test_mwv_rejects_unknown_speed_units(nmea_module, unit):
+    sentence = _full_sentence(f'WIMWV,90.0,R,10.0,{unit},A')
+    assert nmea_module.parse_nmea_wind(sentence) is False
+
+
+@pytest.mark.parametrize('unit, expected', [('N', 10.0), ('K', 5.3995), ('M', 19.4384)])
+def test_mwv_converts_supported_speed_units(nmea_module, unit, expected):
+    sentence = _full_sentence(f'WIMWV,90.0,R,10.0,{unit},A')
+    assert nmea_module.parse_nmea_wind(sentence)[1]['speed'] == pytest.approx(expected)

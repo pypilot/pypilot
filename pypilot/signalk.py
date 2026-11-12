@@ -509,7 +509,7 @@ class signalk:
 
     def setup_watches(self):
         # setup pypilot watches
-        watches = ['imu.heading_lowpass', 'imu.roll', 'imu.pitch']
+        watches = ['imu.heading_lowpass', 'imu.headingrate_lowpass', 'imu.roll', 'imu.pitch']
         watches += ['gps.filtered.output'] # for gps generation
         for watch in watches:
             self.client.watch(watch, self.period.value)

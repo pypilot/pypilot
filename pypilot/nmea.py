@@ -160,6 +160,8 @@ def parse_nmea_wind(line):
             speed *= .53995
         elif speedunit == 'M': # m/s
             speed *= 1.94384
+        elif speedunit != 'N':
+            return False
         msg['speed'] = speed
     except Exception as e:
         print(_('nmea failed to parse wind'), line, e)
