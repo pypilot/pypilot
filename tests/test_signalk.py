@@ -153,3 +153,82 @@ def test_timestamp_non_string_rejected():
     import signalk as sk
     with pytest.raises(ValueError):
         sk._parse_signalk_timestamp(1234567890)
+
+
+class _Value:
+    def __init__(self, v): self.value = v
+    def set(self, v): self.value = v
+
+
+def _bad_status_websocket(status_code):
+    """A stand-in for the websocket module whose handshake fails."""
+    class WebSocketBadStatusException(Exception):
+        def __init__(self, msg, status):
+            super().__init__(msg)
+            self.status_code = status
+
+    class _Module:
+        pass
+    mod = _Module()
+    mod.WebSocketBadStatusException = WebSocketBadStatusException
+
+    def create_connection(url, **kwargs):
+        raise WebSocketBadStatusException('Handshake status %d' % status_code, status_code)
+    mod.create_connection = create_connection
+    return mod
+
+
+def _connect_with_status(monkeypatch, tmp_path, status_code):
+    import signalk as sk
+    token_file = tmp_path / 'signalk-token'
+    token_file.write_text('stored-token')
+    monkeypatch.setattr(sk, 'token_path', str(token_file))
+    monkeypatch.setattr(sk, 'websocket', _bad_status_websocket(status_code))
+    obj = sk.signalk.__new__(sk.signalk)
+    obj.token = 'stored-token'
+    obj.signalk_ws_url = 'ws://192.168.1.104:3000/signalk/v1/stream?subscribe=none'
+    obj.tls_verify = _Value(True)
+    obj.connect_signalk()
+    return obj, token_file
+
+
+def test_restarting_server_does_not_discard_token(monkeypatch, tmp_path):
+    """A SignalK server that is (re)starting answers 503: the token is still
+    good and must not be thrown away (that forced a new access request, to be
+    approved again by hand, after every SignalK restart)."""
+    obj, token_file = _connect_with_status(monkeypatch, tmp_path, 503)
+    assert obj.token == 'stored-token'
+    assert token_file.exists()
+
+
+def test_unauthorized_discards_token(monkeypatch, tmp_path):
+    obj, token_file = _connect_with_status(monkeypatch, tmp_path, 401)
+    assert obj.token is False
+    assert not token_file.exists()
+
+
+def test_access_request_asks_for_readwrite(monkeypatch):
+    """pypilot publishes heading and attitude, so it needs write access;
+    without "permissions" the SignalK admin offers the request as read only."""
+    import signalk as sk
+    sent = {}
+
+    class _Resp:
+        status_code = 202
+        content = b'{"state": "PENDING", "href": "/signalk/v1/requests/1"}'
+
+    class _Requests:
+        def post(self, url, data=None, **kwargs):
+            sent['url'] = url
+            sent['data'] = data
+            return _Resp()
+    monkeypatch.setattr(sk, 'requests', _Requests())
+    obj = sk.signalk.__new__(sk.signalk)
+    obj.signalk_access_url = False
+    obj.uid = _Value('pypilot-12345678901')
+    obj.signalk_http_base = 'http://192.168.1.104:3000'
+    obj.signalk_host_port = '192.168.1.104:3000'
+    obj.tls_verify = _Value(True)
+    obj.request_access()
+    assert sent['data']['permissions'] == 'readwrite'
+    assert sent['data']['clientId'] == 'pypilot-12345678901'
