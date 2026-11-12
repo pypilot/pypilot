@@ -282,7 +282,7 @@ def parse_nmea_water(line):
     elif line[3:6] == 'LWY':
         try:
             # for now only use the knots field
-            data = line.split(',')
+            data = line.partition('*')[0].split(',')
             if data[1] == 'A':
                 leeway = float(data[2])
                 return 'water', {'leeway': leeway}
