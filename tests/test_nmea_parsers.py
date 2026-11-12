@@ -92,3 +92,20 @@ def test_apb_rejects_navigation_warning(nmea_module, status):
 def test_apb_accepts_valid_guidance_before_arrival(nmea_module):
     sentence = _full_sentence('APAPB,A,A,0.05,R,N,V,V,12.3,M,WP1,45.0,M,67.0,M')
     assert nmea_module.parse_nmea_apb(sentence)[1]['track'] == 67.0
+@pytest.mark.parametrize('reference', ['R', 'T'])
+def test_mwv_rejects_invalid_wind(nmea_module, reference):
+    sentence = _full_sentence(f'WIMWV,90.0,{reference},10.0,N,V')
+    assert nmea_module.check_nmea_cksum(sentence)
+    assert nmea_module.parse_nmea_wind(sentence) is False
+
+@pytest.mark.parametrize('unit', ['', 'X'])
+def test_mwv_rejects_unknown_speed_units(nmea_module, unit):
+    sentence = _full_sentence(f'WIMWV,90.0,R,10.0,{unit},A')
+    assert nmea_module.parse_nmea_wind(sentence) is False
+
+
+@pytest.mark.parametrize('unit, expected', [('N', 10.0), ('K', 5.3995), ('M', 19.4384)])
+def test_mwv_converts_supported_speed_units(nmea_module, unit, expected):
+    sentence = _full_sentence(f'WIMWV,90.0,R,10.0,{unit},A')
+    assert nmea_module.parse_nmea_wind(sentence)[1]['speed'] == pytest.approx(expected)
+

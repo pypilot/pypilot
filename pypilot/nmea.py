@@ -146,7 +146,10 @@ def parse_nmea_wind(line):
     if line[3:6] != 'MWV':
         return False
 
-    data = line.split(',')
+    data = line.partition('*')[0].split(',')
+    if len(data) < 6 or data[5] != 'A':
+        return False
+
     msg = {}
     try:
         msg['direction'] = float(data[1])
@@ -160,6 +163,8 @@ def parse_nmea_wind(line):
             speed *= .53995
         elif speedunit == 'M': # m/s
             speed *= 1.94384
+        elif speedunit != 'N':
+            return False
         msg['speed'] = speed
     except Exception as e:
         print(_('nmea failed to parse wind'), line, e)
