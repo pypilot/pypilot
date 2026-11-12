@@ -146,7 +146,10 @@ def parse_nmea_wind(line):
     if line[3:6] != 'MWV':
         return False
 
-    data = line.split(',')
+    data = line.partition('*')[0].split(',')
+    if len(data) < 6 or data[5] != 'A':
+        return False
+
     msg = {}
     try:
         msg['direction'] = float(data[1])
@@ -225,6 +228,8 @@ def parse_nmea_apb(line):
             # short APB sentence can drive the autopilot; bail before indexing
             print(_('nmea short apb sentence'), len(data), line)
             return False
+        if data[0] != 'A' or data[1] != 'A':
+            return False
         mode = 'compass' if data[13] == 'M' else 'gps'
         track = float(data[12])
         xte = float(data[2])
@@ -280,7 +285,7 @@ def parse_nmea_water(line):
     elif line[3:6] == 'LWY':
         try:
             # for now only use the knots field
-            data = line.split(',')
+            data = line.partition('*')[0].split(',')
             if data[1] == 'A':
                 leeway = float(data[2])
                 return 'water', {'leeway': leeway}
