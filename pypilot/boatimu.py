@@ -35,6 +35,11 @@ except ImportError:
     RTIMU = False
     print(_('RTIMU library not detected, please install it'))
 
+try:
+    import imuserial
+except ImportError:
+    imuserial = False
+
 class IMU:
     def __init__(self, server):
         self.client = pypilotClient(server)
@@ -58,6 +63,16 @@ class IMU:
         self.gyrobias = self.client.register(SensorValue('imu.gyrobias', fmt='%.2f', persistent=True))
         self.error = self.client.register(StringValue('imu.error', ''))
         self.lastgyrobiastime = time.monotonic()
+
+        # external serial (USB) IMU injection, see imuserial.py
+        self.injection = self.client.register(BooleanProperty('imu.injection', False, persistent=True))
+        self.injection_port = self.client.register(Property('imu.serial_port', '/dev/ttyACM0', persistent=True))
+        self.injection_baud = self.client.register(EnumProperty('imu.serial_baud', 115200, [9600, 57600, 115200, 230400, 460800, 921600]))
+        self.injection_sample_rate = self.client.register(EnumProperty('imu.serial_sample_rate', 100, [20, 25, 50, 100, 200]))
+        self.injection_mode = False
+        self.serial_reader = False
+        self._last_serial_error = ''
+        self._serial_retry_time = 0.0
 
         SETTINGS_FILE = "RTIMULib"
         print(_('Using settings file') + ' ' + SETTINGS_FILE + '.ini')
@@ -85,29 +100,37 @@ class IMU:
         self.s = s
         self.imu_detect_time = 0
         self.rtimu = None
+        if imuserial and self.injection.value:
+            self.start_serial_reader()  # may fail, the reader keeps retrying
         self.init()
         self.lastdata = False
         self.rate = 10
 
     def init(self):
         t0 = time.monotonic()
-        self.s.IMUType = 0 # always autodetect imu
+        if self.injection_mode:
+            self.s.IMUType = 1 # RTIMU_TYPE_NULL, data injected from serial
+        else:
+            self.s.IMUType = 0 # always autodetect imu
         # avoid detecting so often filling log file
         if t0 - self.imu_detect_time < 1:
             return
         self.imu_detect_time = t0
 
         rtimu = RTIMU.RTIMU(self.s)
-        if rtimu.IMUName() == 'Null IMU':
+        if not self.injection_mode and rtimu.IMUName() == 'Null IMU':
             if self.rtimu:
                 print(_('ERROR: No IMU Detected'), t0)
                 self.error.set('No IMU')
             self.s.IMUType = 0
             return
 
-        print('IMU Name: ' + rtimu.IMUName())
+        if not self.injection_mode:
+            print('IMU Name: ' + rtimu.IMUName())
+        else:
+            print(_('imu serial injection mode, waiting for') + ' ' + self.injection_port.value)
 
-        if not rtimu.IMUInit():
+        if not self.injection_mode and not rtimu.IMUInit():
             print(_('ERROR: IMU Init Failed, no inertial data available'), t0)
             self.error.set('IMU Failed')
             self.s.IMUType = 0
@@ -118,7 +141,8 @@ class IMU:
         rtimu.setGyroEnable(True)
         rtimu.setAccelEnable(True)
         rtimu.setCompassEnable(True)
-        time.sleep(.1)
+        if not self.injection_mode:
+            time.sleep(.1)
         self.rtimu = rtimu
 
         self.avggyro = [0, 0, 0]
@@ -172,7 +196,19 @@ class IMU:
         if not self.s.IMUType:
             self.init()
             return False
-        if not self.rtimu.IMURead():
+        if self.injection_mode:
+            if not self.serial_reader:
+                self.init()
+                return False
+            if not self.serial_reader.fresh():
+                return False
+            # fuse every sample received since the last loop iteration with
+            # its own timestamp; RTQF/Kalman4 use the deltas internally, so
+            # processing a small backlog in one go is equivalent to real time
+            for sample in self.serial_reader.drain():
+                gx, gy, gz, ax, ay, az, mx, my, mz, timestamp = sample
+                self.rtimu.setExtIMUData(gx, gy, gz, ax, ay, az, mx, my, mz, timestamp)
+        elif not self.rtimu.IMURead():
             print(_('failed to read IMU!'), t0)
             self.init() # reinitialize imu
             return False
@@ -187,7 +223,72 @@ class IMU:
             self.compass_calibration_updated = False
 
         self.lastdata = list(data['accel']), list(data['gyro']), list(data['compass'])
+        if self.injection_mode and self.error.value:
+            # injection data is flowing again; clear stale startup/serial error
+            self.error.set('')
         return data
+
+    def start_serial_reader(self):
+        if self.serial_reader:
+            return
+        try:
+            self.serial_reader = imuserial.IMUSerialReader(
+                self.injection_port.value, self.injection_baud.value, self.injection_sample_rate.value)
+            self.serial_reader.start()
+            print(_('imu external serial injection enabled on') + ' ' + self.injection_port.value)
+        except Exception as e:
+            print(_('failed to start serial injection'), e)
+            self.serial_reader = False
+            self.error.set('serial injection failed')
+            self._serial_retry_time = time.monotonic() + 2.0
+
+    def stop_serial_reader(self):
+        if self.serial_reader:
+            self.serial_reader.stop()
+            self.serial_reader = False
+
+    def update_injection(self):
+        '''apply any change to the serial injection configuration, returns
+        True if the imu must be re-initialized'''
+        changed = False
+
+        if self.injection.value and not self.injection_mode:
+            self.injection_mode = True
+            self.start_serial_reader()
+            changed = True
+        elif not self.injection.value and self.injection_mode:
+            self.injection_mode = False
+            self.stop_serial_reader()
+            changed = True
+
+        if self.injection_mode:
+            # retry enabling the reader if it previously failed to start
+            if not self.serial_reader and time.monotonic() >= self._serial_retry_time:
+                self.start_serial_reader()
+                changed = True
+
+            if self.serial_reader:
+                reader = self.serial_reader
+                # restart the reader if connection parameters changed
+                if reader.port != self.injection_port.value or \
+                   reader.baud != self.injection_baud.value or \
+                   reader.sample_rate != self.injection_sample_rate.value:
+                    self.stop_serial_reader()
+                    self.start_serial_reader()
+                    changed = True
+                # surface serial errors through imu.error once, and clear it
+                # when the stream recovers
+                err = reader.error()
+                if err:
+                    if err != self._last_serial_error:
+                        self._last_serial_error = err
+                        print(_('imu serial error'), err)
+                        self.error.set('serial error: ' + err)
+                elif self._last_serial_error:
+                    self._last_serial_error = ''
+                    if self.error.value.startswith('serial error:'):
+                        self.error.set('IMU not initialized')
+        return changed
 
     def poll(self):
         msgs = self.client.receive()
@@ -207,6 +308,13 @@ class IMU:
             elif name == 'imu.rate':
                 self.rate = value
                 print(_('imu rate set to rate'), value)
+
+        # external injection configuration changes
+        if self.update_injection():
+            self.s.IMUType = 0
+            self.rtimu = False
+            self.imu_detect_time = 0
+            self.error.set('')
 
         if not self.lastdata:
             return
