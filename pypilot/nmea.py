@@ -176,7 +176,10 @@ def parse_nmea_rudder(line):
     if line[3:6] != 'RSA':
         return False
 
-    data = line.split(',')
+    data = line.partition('*')[0].split(',')
+    if len(data) < 3 or data[2] != 'A':
+        return False
+
     try:
         angle = float(data[1])
     except (ValueError, IndexError):
