@@ -80,3 +80,15 @@ def test_mwv_true_vs_apparent(nmea_module):
     true = nmea_module.parse_nmea_wind('$APMWV,90.0,T,10.0,N,A*00')
     assert apparent[0] == 'wind'
     assert true[0] == 'truewind'
+
+
+@pytest.mark.parametrize('unit', ['', 'X'])
+def test_mwv_rejects_unknown_speed_units(nmea_module, unit):
+    sentence = _full_sentence(f'WIMWV,90.0,R,10.0,{unit},A')
+    assert nmea_module.parse_nmea_wind(sentence) is False
+
+
+@pytest.mark.parametrize('unit, expected', [('N', 10.0), ('K', 5.3995), ('M', 19.4384)])
+def test_mwv_converts_supported_speed_units(nmea_module, unit, expected):
+    sentence = _full_sentence(f'WIMWV,90.0,R,10.0,{unit},A')
+    assert nmea_module.parse_nmea_wind(sentence)[1]['speed'] == pytest.approx(expected)
