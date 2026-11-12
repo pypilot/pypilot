@@ -80,3 +80,15 @@ def test_mwv_true_vs_apparent(nmea_module):
     true = nmea_module.parse_nmea_wind('$APMWV,90.0,T,10.0,N,A*00')
     assert apparent[0] == 'wind'
     assert true[0] == 'truewind'
+
+
+@pytest.mark.parametrize('angle', [3.5, -2.25, 0.0])
+def test_lwy_accepts_checksummed_leeway(nmea_module, angle):
+    sentence = _full_sentence(f'IILWY,A,{angle}')
+    assert nmea_module.check_nmea_cksum(sentence)
+    assert nmea_module.parse_nmea_water(sentence) == ('water', {'leeway': angle})
+
+
+def test_lwy_rejects_invalid_status(nmea_module):
+    sentence = _full_sentence('IILWY,V,3.5')
+    assert not nmea_module.parse_nmea_water(sentence)
