@@ -92,3 +92,14 @@ def test_lwy_accepts_checksummed_leeway(nmea_module, angle):
 def test_lwy_rejects_invalid_status(nmea_module):
     sentence = _full_sentence('IILWY,V,3.5')
     assert not nmea_module.parse_nmea_water(sentence)
+
+@pytest.mark.parametrize('unit', ['', 'X'])
+def test_mwv_rejects_unknown_speed_units(nmea_module, unit):
+    sentence = _full_sentence(f'WIMWV,90.0,R,10.0,{unit},A')
+    assert nmea_module.parse_nmea_wind(sentence) is False
+
+
+@pytest.mark.parametrize('unit, expected', [('N', 10.0), ('K', 5.3995), ('M', 19.4384)])
+def test_mwv_converts_supported_speed_units(nmea_module, unit, expected):
+    sentence = _full_sentence(f'WIMWV,90.0,R,10.0,{unit},A')
+    assert nmea_module.parse_nmea_wind(sentence)[1]['speed'] == pytest.approx(expected)
