@@ -20,15 +20,15 @@ msgstr ""
 
 #: templates/index.html:4
 msgid "pypilot hat configuration"
-msgstr "configuración del sombrero de pypilot"
+msgstr "configuración del HAT de pypilot"
 
 #: templates/index.html:16
 msgid "lcd and remote control setup"
-msgstr "configuración de lcd y control remoto"
+msgstr "configuración de la LCD y de los mandos"
 
 #: templates/index.html:17
 msgid "clear"
-msgstr "claro"
+msgstr "borrar"
 
 #: templates/index.html:17
 msgid "default"
@@ -38,17 +38,15 @@ msgstr "por defecto"
 msgid ""
 "press button(s) on the keypad or remote then assign a command with the "
 "button."
-msgstr ""
-"presione el (los) botón(es) en el teclado o en el control remoto y luego "
-"asigne un comando con el botón."
+msgstr "pulse los botones del teclado o del mando y luego asígneles una orden."
 
 #: templates/index.html:19
 msgid "Actions for LCD interface"
-msgstr "Acciones para la interfaz LCD"
+msgstr "Acciones de la interfaz LCD"
 
 #: templates/index.html:21 templates/index.html:25
 msgid "key"
-msgstr "llave"
+msgstr "tecla"
 
 #: templates/index.html:22 templates/index.html:26
 msgid "action"
@@ -58,39 +56,34 @@ msgstr "acción"
 msgid ""
 "These actions do not depend on the state of the display and can be used by "
 "wireless remotes."
-msgstr ""
-"Estas acciones no dependen del estado de la pantalla y pueden ser utilizadas"
-" por controles remotos inalámbricos."
+msgstr "Estas acciones no dependen de lo que muestre la pantalla y las pueden usar los mandos inalámbricos."
 
 #: templates/index.html:28
 msgid "infared receiver port"
-msgstr "puerto receptor de infrarrojos"
+msgstr "puerto del receptor de infrarrojos"
 
 #: templates/index.html:29
 msgid ""
 "The ir port can be handled direcly from the pi or the arduino.  Using the "
 "arduino can receive from many different remotes without special calibration "
 "recordings."
-msgstr ""
-"El puerto ir se puede manejar directamente desde el pi o el arduino. Usando "
-"el arduino puede recibir desde muchos controles remotos diferentes sin "
-"grabaciones de calibración especiales."
+msgstr "El puerto de infrarrojos lo puede gestionar directamente la Pi o el Arduino. Con el Arduino se reciben muchos mandos distintos sin grabar calibraciones especiales."
 
 #: templates/index.html:36
 msgid "remote mode"
-msgstr "modo remoto"
+msgstr "modo del mando"
 
 #: templates/index.html:37
 msgid "remote"
-msgstr "remoto"
+msgstr "mando"
 
 #: templates/index.html:41
 msgid "nmea current baud rate"
-msgstr "nmea tasa de baudios actual"
+msgstr "velocidad NMEA actual (baudios)"
 
 #: templates/index.html:42
 msgid "voltages"
-msgstr "voltajes"
+msgstr "tensiones"
 
 #: templates/index.html:43
 msgid "status"
@@ -102,7 +95,7 @@ msgstr "conexión"
 
 #: templates/index.html:45
 msgid "Web Server Latency"
-msgstr ""
+msgstr "Latencia del servidor web"
 
 #~ msgid "pypilot hat configuration"
 #~ msgstr "configuración del sombrero pypilot"

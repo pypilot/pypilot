@@ -40,7 +40,7 @@ msgstr "¿Eliminar el perfil actual?"
 
 #: static/pypilot_control.js:267
 msgid "The following settings are captured by the current profile"
-msgstr "Los siguientes ajustes son capturados por el perfil actual"
+msgstr "El perfil actual guarda estos ajustes"
 
 #: static/pypilot_control.js:303
 msgid "Disconnected"
@@ -48,7 +48,7 @@ msgstr "Desconectado"
 
 #: static/pypilot_control.js:382
 msgid "compass or gyro failure!"
-msgstr "¡falla de brújula o giroscopio!"
+msgstr "¡fallo del compás o del giróscopo!"
 
 #: static/pypilot_control.js:395 templates/index.html:161
 #: templates/index.html:163
@@ -61,7 +61,7 @@ msgstr "Cancelar"
 
 #: static/pypilot_control.js:468
 msgid "Engaged"
-msgstr "Comprometido"
+msgstr "Acoplado"
 
 #: static/pypilot_control.js:470
 msgid "Disengaged"
@@ -73,7 +73,7 @@ msgstr "Temperatura del motor"
 
 #: static/pypilot_control.js:562
 msgid "no motor controller!"
-msgstr "sin controlador de motor!"
+msgstr "¡sin controlador de motor!"
 
 #: templates/calibrationplot.html:4
 msgid "Calibration Plot"
@@ -83,9 +83,7 @@ msgstr "Gráfico de calibración"
 msgid ""
 "The raw sensor readings should fall on a sphere when calibrated.  The age "
 "will reset when the calibration updates."
-msgstr ""
-"Las lecturas sin procesar del sensor deben caer en una esfera cuando se "
-"calibran. La edad se restablecerá cuando se actualice la calibración."
+msgstr "Con el sensor calibrado, las lecturas en bruto deben quedar sobre una esfera. La antigüedad se pone a cero al actualizarse la calibración."
 
 #: templates/calibrationplot.html:32
 msgid "Connection"
@@ -97,7 +95,7 @@ msgstr "Control"
 
 #: templates/index.html:33
 msgid "Gain"
-msgstr "Ganar"
+msgstr "Ganancias"
 
 #: templates/index.html:36
 msgid "Calibration"
@@ -113,15 +111,15 @@ msgstr "Estadísticas"
 
 #: templates/index.html:49
 msgid "Heading"
-msgstr "Título"
+msgstr "Rumbo"
 
 #: templates/index.html:52
 msgid "Command"
-msgstr "Dominio"
+msgstr "Consigna"
 
 #: templates/index.html:89
 msgid "Add"
-msgstr "Agregar"
+msgstr "Añadir"
 
 #: templates/index.html:90
 msgid "Remove"
@@ -129,19 +127,19 @@ msgstr "Eliminar"
 
 #: templates/index.html:96
 msgid "Magnetic Heading"
-msgstr "Rumbo Magnético"
+msgstr "Rumbo magnético"
 
 #: templates/index.html:97
 msgid "Pitch"
-msgstr "Paso"
+msgstr "Cabeceo"
 
 #: templates/index.html:98
 msgid "Roll"
-msgstr "Rollo"
+msgstr "Balanceo"
 
 #: templates/index.html:99 templates/index.html:105
 msgid "Press"
-msgstr "Prensa"
+msgstr "Pulse"
 
 #: templates/index.html:99 templates/index.html:105
 msgid "here"
@@ -149,27 +147,25 @@ msgstr "aquí"
 
 #: templates/index.html:100
 msgid "when the boat is level to align the inertial sensors."
-msgstr "cuando el barco esté nivelado para alinear los sensores de inercia."
+msgstr "cuando el barco esté adrizado para alinear los sensores inerciales."
 
 #: templates/index.html:106
 msgid ""
 "when the boat is traveling straight with no leeway, no currents, and gps to "
 "align the compass, or manually enter the compass offset"
-msgstr ""
-"cuando el barco navega en línea recta sin abatimiento, sin corrientes y gps "
-"para alinear la brújula o ingresar manualmente la compensación de la brújula"
+msgstr "cuando el barco navegue recto, sin abatimiento ni corriente y con GPS, para alinear el compás, o introduzca a mano la corrección del compás"
 
 #: templates/index.html:111
 msgid "Magnetic Heading Offset"
-msgstr "Desplazamiento de rumbo magnético"
+msgstr "Corrección del rumbo magnético"
 
 #: templates/index.html:113
 msgid "Lock Accelerometer Calibration"
-msgstr "Calibración del acelerómetro de bloqueo"
+msgstr "Bloquear calibración del acelerómetro"
 
 #: templates/index.html:114
 msgid "Lock Compass Calibration"
-msgstr "Bloquear calibración de brújula"
+msgstr "Bloquear calibración del compás"
 
 #: templates/index.html:116
 msgid "calibration plot"
@@ -185,19 +181,19 @@ msgstr "centrado"
 
 #: templates/index.html:121
 msgid "port range"
-msgstr "rango de puertos"
+msgstr "límite a babor"
 
 #: templates/index.html:122
 msgid "starboard range"
-msgstr "rango de estribor"
+msgstr "límite a estribor"
 
 #: templates/index.html:123 templates/index.html:146
 msgid "reset"
-msgstr "reiniciar"
+msgstr "restablecer"
 
 #: templates/index.html:126
 msgid "Rudder Range"
-msgstr "Rango de timón"
+msgstr "Recorrido del timón"
 
 #: templates/index.html:127
 msgid "Degrees"
@@ -205,7 +201,7 @@ msgstr "Grados"
 
 #: templates/index.html:133
 msgid "Display"
-msgstr "Mostrar"
+msgstr "Pantalla"
 
 #: templates/index.html:134
 msgid "Clear"
@@ -217,17 +213,15 @@ msgstr "Oscuro"
 
 #: templates/index.html:139
 msgid "NMEA Client host:port (leave blank for none) eg: 192.168.0.1:10110"
-msgstr ""
-"Host del cliente NMEA: puerto (dejar en blanco para ninguno), por ejemplo: "
-"192.168.0.1:10110"
+msgstr "Cliente NMEA host:puerto (en blanco para ninguno), p. ej.: 192.168.0.1:10110"
 
 #: templates/index.html:144
 msgid "Amp Hours"
-msgstr "Amperios Horas"
+msgstr "Amperios hora"
 
 #: templates/index.html:147
 msgid "Voltage"
-msgstr "Voltaje"
+msgstr "Tensión"
 
 #: templates/index.html:148
 msgid "Controller temperature"
@@ -235,7 +229,7 @@ msgstr "Temperatura del controlador"
 
 #: templates/index.html:150
 msgid "Runtime"
-msgstr "tiempo de ejecución"
+msgstr "Tiempo de funcionamiento"
 
 #: templates/index.html:151 templates/index.html:153
 msgid "Version"
@@ -243,7 +237,7 @@ msgstr "Versión"
 
 #: templates/index.html:152
 msgid "Servo"
-msgstr "servo"
+msgstr "Servo"
 
 #: templates/index.html:155 templates/logs.html:9
 msgid "Logs"
@@ -251,7 +245,7 @@ msgstr "Registros"
 
 #: templates/index.html:161
 msgid "Port"
-msgstr "Puerto"
+msgstr "Babor"
 
 #: templates/index.html:163
 msgid "Starboard"
@@ -263,7 +257,7 @@ msgstr "Servidor"
 
 #: templates/index.html:172
 msgid "Errors"
-msgstr "errores"
+msgstr "Errores"
 
 #: templates/index.html:173
 msgid "Web Server Latency"
@@ -283,7 +277,7 @@ msgstr "Punto de acceso"
 
 #: templates/wifi.html:17 templates/wifi.html:22
 msgid "Key (leave blank for no encryption)"
-msgstr "Clave (dejar en blanco para no cifrar)"
+msgstr "Clave (en blanco para red sin cifrar)"
 
 #: templates/wifi.html:21 templates/wifi.html:22
 msgid "Client"
@@ -291,15 +285,23 @@ msgstr "Cliente"
 
 #: templates/wifi.html:24
 msgid "Client Mode Address (leave blank for dhcp)"
-msgstr "Dirección de modo de cliente (dejar en blanco para dhcp)"
+msgstr "Dirección en modo cliente (en blanco para DHCP)"
 
 #: templates/wifi.html:28
 msgid "If there is a problem, edit the file"
-msgstr "Si hay un problema, edite el archivo."
+msgstr "Si hay un problema, edite el archivo"
 
 #: templates/wifi.html:33
 msgid "back"
-msgstr "atrás"
+msgstr "volver"
+
+#: static/pypilot_control.js:275
+msgid "Configure Wifi"
+msgstr "Configurar wifi"
+
+#: static/pypilot_control.js:280
+msgid "Configure LCD Keypad and Remotes"
+msgstr "Configurar teclado LCD y mandos"
 
 #~ msgid "Wireless Configuration"
 #~ msgstr "Configuracion inalambrica"
@@ -430,9 +432,6 @@ msgstr "atrás"
 
 #~ msgid "Dark"
 #~ msgstr "Oscuro"
-
-#~ msgid "Configure LCD Keypad and Remotes"
-#~ msgstr "Configurar el teclado LCD y los controles remotos"
 
 #~ msgid "NMEA Client host:port (leave blank for default) eg: 192.168.0.1:10110"
 #~ msgstr ""
