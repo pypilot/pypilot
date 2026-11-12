@@ -225,6 +225,8 @@ def parse_nmea_apb(line):
             # short APB sentence can drive the autopilot; bail before indexing
             print(_('nmea short apb sentence'), len(data), line)
             return False
+        if data[0] != 'A' or data[1] != 'A':
+            return False
         mode = 'compass' if data[13] == 'M' else 'gps'
         track = float(data[12])
         xte = float(data[2])
