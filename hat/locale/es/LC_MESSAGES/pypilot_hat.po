@@ -28,7 +28,7 @@ msgstr "ganancia"
 
 #: ../menu.py:387
 msgid "range"
-msgstr "rango"
+msgstr "recorrido"
 
 #: ../menu.py:387 ../menu.py:558 ../menu.py:559
 msgid "degrees"
@@ -44,11 +44,11 @@ msgstr "calibrar"
 
 #: ../menu.py:408
 msgid "level"
-msgstr "nivel"
+msgstr "nivelar"
 
 #: ../menu.py:409
 msgid "heading"
-msgstr "Bóveda"
+msgstr "rumbo"
 
 #: ../menu.py:410
 msgid "lock"
@@ -60,19 +60,19 @@ msgstr "motor"
 
 #: ../menu.py:439
 msgid "min speed"
-msgstr "velocidad mín"
+msgstr "vel. mín"
 
 #: ../menu.py:439 ../menu.py:440
 msgid "relative"
-msgstr "relativo"
+msgstr "relativa"
 
 #: ../menu.py:440
 msgid "max speed"
-msgstr "velocidad máx"
+msgstr "vel. máx"
 
 #: ../menu.py:441
 msgid "max current"
-msgstr "corriente max"
+msgstr "corriente máx"
 
 #: ../menu.py:441
 msgid "amps"
@@ -80,7 +80,7 @@ msgstr "amperios"
 
 #: ../menu.py:442
 msgid "period"
-msgstr "período"
+msgstr "periodo"
 
 #: ../menu.py:442
 msgid "seconds"
@@ -88,7 +88,7 @@ msgstr "segundos"
 
 #: ../menu.py:443
 msgid "clutch pwm"
-msgstr "embrague pwm"
+msgstr "pwm embrague"
 
 #: ../menu.py:443
 msgid "percent"
@@ -96,11 +96,11 @@ msgstr "por ciento"
 
 #: ../menu.py:485
 msgid "defaults"
-msgstr "predeterminados"
+msgstr "por defecto"
 
 #: ../menu.py:515
 msgid "Wifi not managed"
-msgstr "Wifi no gestionado"
+msgstr "Wifi no gestionada"
 
 #: ../menu.py:521
 msgid "No Connetion"
@@ -108,23 +108,23 @@ msgstr "Sin conexión"
 
 #: ../menu.py:556
 msgid "control"
-msgstr "controlar"
+msgstr "control"
 
 #: ../menu.py:558
 msgid "small step"
-msgstr "pasito"
+msgstr "paso corto"
 
 #: ../menu.py:559
 msgid "big step"
-msgstr "Gran paso"
+msgstr "paso largo"
 
 #: ../menu.py:574
 msgid "backlight"
-msgstr "iluminar fondo"
+msgstr "luz"
 
 #: ../menu.py:583
 msgid "hue"
-msgstr "matiz"
+msgstr "tono"
 
 #: ../menu.py:585
 msgid "buzzer"
@@ -132,7 +132,7 @@ msgstr "zumbador"
 
 #: ../menu.py:586
 msgid "display"
-msgstr "monitor"
+msgstr "pantalla"
 
 #: ../menu.py:587
 msgid "contrast"
@@ -144,7 +144,7 @@ msgstr "invertir"
 
 #: ../menu.py:588
 msgid "flip"
-msgstr "dar la vuelta"
+msgstr "girar"
 
 #: ../menu.py:617
 msgid "language"
@@ -172,7 +172,7 @@ msgstr "Cargando"
 
 #: ../menu.py:670
 msgid "timeout"
-msgstr "se acabó el tiempo"
+msgstr "tiempo agotado"
 
 #: ../page.py:330
 msgid "info"
@@ -188,31 +188,31 @@ msgstr "Vatios"
 
 #: ../page.py:352
 msgid "Amp Hours"
-msgstr "Amp horas"
+msgstr "amp hora"
 
 #: ../page.py:352
 msgid "runtime"
-msgstr "tiempo de ejecución"
+msgstr "en marcha"
 
 #: ../page.py:358
 msgid "voltage"
-msgstr "voltaje"
+msgstr "tensión"
 
 #: ../page.py:358
 msgid "rate"
-msgstr "Velocidad"
+msgstr "frec IMU"
 
 #: ../page.py:358
 msgid "uptime"
-msgstr "tiempo de actividad"
+msgstr "activo"
 
 #: ../page.py:363
 msgid "cont temp"
-msgstr "cont temp"
+msgstr "temp ctrl"
 
 #: ../page.py:363
 msgid "motor temp"
-msgstr "temperatura del motor"
+msgstr "temp motor"
 
 #: ../page.py:365
 msgid "battery"
@@ -220,7 +220,7 @@ msgstr "batería"
 
 #: ../page.py:367
 msgid "faults"
-msgstr "fallas"
+msgstr "fallos"
 
 #: ../page.py:372
 msgid "version"
@@ -232,11 +232,11 @@ msgstr "autor"
 
 #: ../page.py:394
 msgid "Calibrate Info"
-msgstr "Calibrar información"
+msgstr "info calibración"
 
 #: ../page.py:405
 msgid "incomplete"
-msgstr "incompleto"
+msgstr "incompleta"
 
 #: ../page.py:405
 msgid "excellent"
@@ -244,23 +244,23 @@ msgstr "excelente"
 
 #: ../page.py:405
 msgid "good"
-msgstr "bueno"
+msgstr "buena"
 
 #: ../page.py:406
 msgid "fair"
-msgstr "justa"
+msgstr "regular"
 
 #: ../page.py:406
 msgid "poor"
-msgstr "pobre"
+msgstr "deficiente"
 
 #: ../page.py:406
 msgid "bad"
-msgstr "malo"
+msgstr "mala"
 
 #: ../page.py:414
 msgid "compass"
-msgstr "Brújula"
+msgstr "compás"
 
 #: ../page.py:669
 msgid "ERROR"
@@ -268,7 +268,7 @@ msgstr "ERROR"
 
 #: ../page.py:669
 msgid "compass or gyro failure!"
-msgstr "falla de la brújula o del giroscopio!"
+msgstr "¡fallo del compás o del giróscopo!"
 
 #: ../page.py:712
 msgid "not detected"
@@ -276,11 +276,11 @@ msgstr "no detectado"
 
 #: ../page.py:720
 msgid "WARNING no motor controller"
-msgstr "ADVERTENCIA sin controlador"
+msgstr "AVISO sin controlador"
 
 #: ../page.py:732
 msgid "standby"
-msgstr "colocarse"
+msgstr "en espera"
 
 #: ../page.py:738
 msgid "tack"
@@ -288,19 +288,19 @@ msgstr "virar"
 
 #: ../page.py:740
 msgid "tacking"
-msgstr "virar"
+msgstr "virando"
 
 #: ../page.py:763
 msgid "No Cal"
-msgstr "Sin Cal"
+msgstr "sin cal"
 
 #: ../page.py:766
 msgid "Bad Cal"
-msgstr "Mala cal"
+msgstr "cal mala"
 
 #: ../page.py:865
 msgid "connect to server"
-msgstr "Conectar al servidor"
+msgstr "conectar al servidor"
 
 #~ msgid "GPS not detected"
 #~ msgstr "GPS no detectado"

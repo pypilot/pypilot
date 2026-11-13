@@ -21,56 +21,53 @@ msgstr ""
 
 #: ../rudder.py:118
 msgid "bad rudder calibration"
-msgstr "mala calibración del timón"
+msgstr "calibración del timón incorrecta"
 
 #: ../rudder.py:122
 msgid "bad servo rudder calibration"
-msgstr "mala calibración del timón del servo"
+msgstr "calibración del timón del servo incorrecta"
 
 #: ../rudder.py:193
 msgid "servo rudder autogain failed"
-msgstr "Error de ganancia automática del timón servo"
+msgstr "falló la ganancia automática del timón del servo"
 
 #: ../failedimports.py:12
 msgid ""
 "pypilot failed to import required modules.  Did you forget to run sudo "
 "python3 setup.py install?"
-msgstr ""
-"pypilot no pudo importar los módulos requeridos. ¿Olvidó ejecutar sudo "
-"python3 setup.py install?"
+msgstr "pypilot no pudo importar los módulos necesarios. ¿Olvidó ejecutar sudo python3 setup.py install?"
 
 #: ../pyjson.py:14
 msgid "WARNING: python ujson library failed, parsing will consume more cpu"
-msgstr ""
-"ADVERTENCIA: la biblioteca python ujson falló, el análisis consumirá más cpu"
+msgstr "AVISO: falló la biblioteca ujson de python; el análisis consumirá más CPU"
 
 #: ../servo.py:453
 msgid "servo calibration invalid"
-msgstr "servocalibración inválida"
+msgstr "calibración del servo no válida"
 
 #: ../servo.py:588
 msgid "failed to open servo on:"
-msgstr "no pudo abrir el servo en:"
+msgstr "no se pudo abrir el servo en:"
 
 #: ../servo.py:595
 msgid "failed set nonblocking/exclusive"
-msgstr "conjunto fallido no bloqueante / exclusivo"
+msgstr "no se pudo poner en modo no bloqueante/exclusivo"
 
 #: ../servo.py:626 ../signalk.py:189
 msgid "found"
-msgstr "encontró"
+msgstr "encontrado"
 
 #: ../servo.py:743
 msgid "loading servo calibration"
-msgstr "carga de servocalibración"
+msgstr "cargando la calibración del servo"
 
 #: ../servo.py:747
 msgid "WARNING: using default servo calibration!!"
-msgstr "ADVERTENCIA: ¡utilizando la calibración de servo predeterminada!"
+msgstr "AVISO: ¡se usa la calibración del servo por defecto!"
 
 #: ../servo.py:756
 msgid "probing"
-msgstr "sondeo"
+msgstr "sondeando"
 
 #: ../servo.py:772
 msgid "arduino servo detected"
@@ -78,47 +75,47 @@ msgstr "servo arduino detectado"
 
 #: ../servo.py:781
 msgid "device needed for option"
-msgstr "dispositivo necesario para la opción"
+msgstr "hace falta un dispositivo para la opción"
 
 #: ../nmea.py:109
 msgid "nmea failed to parse gps"
-msgstr "nmea no pudo analizar gps"
+msgstr "nmea no pudo interpretar el gps"
 
 #: ../nmea.py:149
 msgid "nmea failed to parse wind"
-msgstr "nmea no pudo analizar el viento"
+msgstr "nmea no pudo interpretar el viento"
 
 #: ../nmea.py:211
 msgid "exception parsing apb"
-msgstr "excepción analizando apb"
+msgstr "excepción al interpretar apb"
 
 #: ../nmea.py:253 ../nmea.py:263
 msgid "exception parsing vhw"
-msgstr "análisis de excepción vhw"
+msgstr "excepción al interpretar vhw"
 
 #: ../nmea.py:352
 msgid "unhandled nmea pipe string"
-msgstr "cadena de tubería nmea sin manipular"
+msgstr "cadena de la tubería nmea no gestionada"
 
 #: ../nmea.py:405
 msgid "lost serial"
-msgstr "serie perdida"
+msgstr "puerto serie perdido"
 
 #: ../nmea.py:428
 msgid "nmea got flag for process pipe:"
-msgstr "nmea tiene una bandera para la tubería de proceso:"
+msgstr "nmea recibió un indicador en la tubería del proceso:"
 
 #: ../nmea.py:450
 msgid "is another process accessing it?"
-msgstr "¿Otro proceso está accediendo a él?"
+msgstr "¿lo está usando otro proceso?"
 
 #: ../nmea.py:452
 msgid "serial device timed out"
-msgstr "dispositivo serie agotó el tiempo de espera"
+msgstr "tiempo de espera agotado en el dispositivo serie"
 
 #: ../nmea.py:521
 msgid "failed to open"
-msgstr "Falló al abrir"
+msgstr "no se pudo abrir"
 
 #: ../nmea.py:587
 msgid "nmea server on port"
@@ -126,7 +123,7 @@ msgstr "servidor nmea en el puerto"
 
 #: ../nmea.py:587
 msgid "bind failed."
-msgstr "enlazar falló."
+msgstr "falló bind."
 
 #: ../nmea.py:589
 msgid "listening on port"
@@ -146,19 +143,19 @@ msgstr "el cliente nmea perdió la conexión"
 
 #: ../nmea.py:691
 msgid "nmea sock not in sockets!"
-msgstr "¡Calcetín de nmea no en enchufes!"
+msgstr "¡el socket nmea no está en la lista de sockets!"
 
 #: ../nmea.py:702
 msgid "nmea failed to unregister socket"
-msgstr "nmea no pudo anular el registro del socket"
+msgstr "nmea no pudo dar de baja el socket"
 
 #: ../nmea.py:707
 msgid "nmea failed to remove fd"
-msgstr "nmea no pudo eliminar fd"
+msgstr "nmea no pudo quitar el descriptor de archivo"
 
 #: ../nmea.py:712
 msgid "nmea failed to remove address"
-msgstr "nmea no pudo eliminar la dirección"
+msgstr "nmea no pudo quitar la dirección"
 
 #: ../nmea.py:737
 msgid "invalid value"
@@ -178,35 +175,35 @@ msgstr "cliente nmea conectado"
 
 #: ../nmea.py:813
 msgid "poll took too long in nmea process!"
-msgstr "¡La encuesta tomó demasiado tiempo en el proceso de nmea!"
+msgstr "¡poll tardó demasiado en el proceso nmea!"
 
 #: ../nmea.py:820
 msgid "nmea bridge lost server connection"
-msgstr "nmea bridge perdió la conexión del servidor"
+msgstr "el puente nmea perdió la conexión con el servidor"
 
 #: ../nmea.py:823
 msgid "nmea bridge lost pipe to autopilot"
-msgstr "puente de nmea tubería perdida al piloto automático"
+msgstr "el puente nmea perdió la tubería al piloto automático"
 
 #: ../nmea.py:847
 msgid "nmea bridge unhandled poll flag"
-msgstr "bandera de votación no manejada del puente de la nmea"
+msgstr "indicador de poll no gestionado en el puente nmea"
 
 #: ../nmea.py:907
 msgid "nmea process loop too slow:"
-msgstr "bucle de proceso nmea demasiado lento:"
+msgstr "bucle del proceso nmea demasiado lento:"
 
 #: ../nonblockingpipe.py:40
 msgid "error pipe block on recv!"
-msgstr "error bloque de tubería en recv!"
+msgstr "¡error: la tubería se bloqueó en recv!"
 
 #: ../nonblockingpipe.py:42
 msgid "failed to recv nonblocking pipe!"
-msgstr "no se pudo recuperar la tubería no bloqueante!"
+msgstr "¡no se pudo recibir de la tubería no bloqueante!"
 
 #: ../nonblockingpipe.py:69
 msgid "pipe full"
-msgstr "tubo lleno"
+msgstr "tubería llena"
 
 #: ../nonblockingpipe.py:69
 msgid "cannot send"
@@ -214,35 +211,35 @@ msgstr "no se puede enviar"
 
 #: ../nonblockingpipe.py:89 ../nonblockingpipe.py:145
 msgid "failed to decode data socket!"
-msgstr "no se pudo decodificar el conector de datos!"
+msgstr "¡no se pudieron decodificar los datos del socket!"
 
 #: ../nonblockingpipe.py:103
 msgid "failed to encode data socket!"
-msgstr "no se pudo codificar el conector de datos!"
+msgstr "¡no se pudieron codificar los datos del socket!"
 
 #: ../nonblockingpipe.py:155
 msgid "failed write"
-msgstr "escritura fallida"
+msgstr "falló la escritura"
 
 #: ../server.py:106
 msgid "ERROR no connections in watch"
-msgstr "ERROR no hay conexiones en el reloj"
+msgstr "ERROR no hay conexiones en la vigilancia"
 
 #: ../server.py:209
 msgid "remove duplicate udp connection"
-msgstr "eliminar la conexión udp duplicada"
+msgstr "quitar conexión udp duplicada"
 
 #: ../server.py:486
 msgid "failed to monitor "
-msgstr "no pudo monitorear"
+msgstr "no se pudo vigilar "
 
 #: ../server.py:490
 msgid "creating config directory: "
-msgstr "creando directorio de configuración:"
+msgstr "creando el directorio de configuración: "
 
 #: ../server.py:497
 msgid "failed to load"
-msgstr "falló al cargar"
+msgstr "no se pudo cargar"
 
 #: ../server.py:508
 msgid "backup data failed as well"
@@ -250,31 +247,31 @@ msgstr "los datos de respaldo también fallaron"
 
 #: ../server.py:570
 msgid "failed to write"
-msgstr "no pudo escribir"
+msgstr "no se pudo escribir"
 
 #: ../server.py:625
 msgid "pypilot_server: bind failed; already running a server?"
-msgstr "pypilot_server: enlace fallido; ya está ejecutando un servidor?"
+msgstr "pypilot_server: falló bind; ¿ya hay un servidor en marcha?"
 
 #: ../server.py:688
 msgid "persistent store took too long!"
-msgstr "¡La tienda persistente tardó demasiado!"
+msgstr "¡el guardado persistente tardó demasiado!"
 
 #: ../server.py:706
 msgid "max connections reached"
-msgstr "conexiones máximas alcanzadas"
+msgstr "alcanzado el máximo de conexiones"
 
 #: ../server.py:709
 msgid "server add socket"
-msgstr "servidor agregar socket"
+msgstr "el servidor añade el socket"
 
 #: ../server.py:719
 msgid "internal pipe closed, server exiting"
-msgstr "tubería interna cerrada, servidor saliendo"
+msgstr "tubería interna cerrada, el servidor se cierra"
 
 #: ../server.py:771
 msgid "server socket closed from flush!!"
-msgstr "zócalo del servidor cerrado por descarga !!"
+msgstr "¡¡socket del servidor cerrado al vaciar el búfer!!"
 
 #: ../signalk.py:52
 msgid "service removed"
@@ -286,19 +283,19 @@ msgstr "servidor perdido"
 
 #: ../signalk.py:61
 msgid "service add"
-msgstr "agregar servicio"
+msgstr "servicio añadido"
 
 #: ../signalk.py:86 ../client.py:210
 msgid "failed to"
-msgstr "Fallado"
+msgstr "no se pudo"
 
 #: ../signalk.py:86
 msgid "autodetection not possible"
-msgstr "no es posible la autodetección"
+msgstr "la detección automática no es posible"
 
 #: ../signalk.py:87 ../signalk.py:176 ../signalk.py:246 ../client.py:211
 msgid "try"
-msgstr "intentar"
+msgstr "pruebe"
 
 #: ../signalk.py:87 ../signalk.py:176 ../signalk.py:246 ../client.py:211
 msgid "or"
@@ -306,7 +303,7 @@ msgstr "o"
 
 #: ../signalk.py:138
 msgid "read token"
-msgstr "token de lectura"
+msgstr "token leído"
 
 #: ../signalk.py:141
 msgid "failed to read token"
@@ -314,19 +311,19 @@ msgstr "no se pudo leer el token"
 
 #: ../signalk.py:171
 msgid "probe"
-msgstr "Investigacion"
+msgstr "sondear"
 
 #: ../signalk.py:175
 msgid "could not"
-msgstr "no pude"
+msgstr "no se pudo"
 
 #: ../signalk.py:185
 msgid "failed to retrieve/parse data from"
-msgstr "no se pudieron recuperar / analizar datos de"
+msgstr "no se pudieron obtener/interpretar los datos de"
 
 #: ../signalk.py:201
 msgid "see if token is ready"
-msgstr "ver si el token está listo"
+msgstr "comprobando si el token está listo"
 
 #: ../signalk.py:207
 msgid "received token"
@@ -334,7 +331,7 @@ msgstr "token recibido"
 
 #: ../signalk.py:213
 msgid "failed to store token"
-msgstr "no se pudo almacenar el token"
+msgstr "no se pudo guardar el token"
 
 #: ../signalk.py:217 ../signalk.py:238
 msgid "error requesting access"
@@ -342,19 +339,19 @@ msgstr "error al solicitar acceso"
 
 #: ../signalk.py:236
 msgid "request access url"
-msgstr "solicitar url de acceso"
+msgstr "url de solicitud de acceso"
 
 #: ../signalk.py:245
 msgid "cannot create connection:"
-msgstr "no se puede crear conexión:"
+msgstr "no se puede crear la conexión:"
 
 #: ../signalk.py:260
 msgid "bad status, rejecting token"
-msgstr "mal estado, rechazando token"
+msgstr "estado incorrecto, se rechaza el token"
 
 #: ../signalk.py:264
 msgid "connection refused"
-msgstr "conexión denegada"
+msgstr "conexión rechazada"
 
 #: ../signalk.py:313
 msgid "server found"
@@ -366,19 +363,19 @@ msgstr "conectado a"
 
 #: ../signalk.py:416
 msgid "Exception converting signalk->pypilot"
-msgstr "Señal de conversión de excepciónk-> pypilot"
+msgstr "Excepción al convertir signalk->pypilot"
 
 #: ../signalk.py:430
 msgid "received"
-msgstr "recibió"
+msgstr "recibido"
 
 #: ../signalk.py:493
 msgid "failed to send updates"
-msgstr "no pudo enviar actualizaciones"
+msgstr "no se pudieron enviar las actualizaciones"
 
 #: ../signalk.py:507
 msgid "failed to parse msg:"
-msgstr "no pudo analizar el mensaje:"
+msgstr "no se pudo interpretar el mensaje:"
 
 #: ../sensors.py:49
 msgid "sensor found"
@@ -386,17 +383,15 @@ msgstr "sensor encontrado"
 
 #: ../sensors.py:413
 msgid "unknown data parsed!"
-msgstr "datos desconocidos analizados!"
+msgstr "¡datos desconocidos!"
 
 #: ../calibration_fit.py:38
 msgid "failed to load scientific library, cannot perform calibration update!"
-msgstr ""
-"no se pudo cargar la biblioteca científica, no se puede realizar la "
-"actualización de la calibración."
+msgstr "no se pudo cargar la biblioteca científica; ¡no se puede actualizar la calibración!"
 
 #: ../calibration_fit.py:701
 msgid "Bad Accelerometer Calibration"
-msgstr "Mala calibración del acelerómetro"
+msgstr "Calibración del acelerómetro incorrecta"
 
 #: ../calibration_fit.py:735
 msgid "magnetic distortions"
@@ -404,7 +399,7 @@ msgstr "distorsiones magnéticas"
 
 #: ../pilots/__init__.py:22
 msgid "ERROR loading"
-msgstr "Error al cargar"
+msgstr "ERROR al cargar"
 
 #: ../autopilot.py:135
 msgid "failed to load pilot"
@@ -416,131 +411,127 @@ msgstr "Pilotos disponibles"
 
 #: ../autopilot.py:157
 msgid "warning: failed to open special file"
-msgstr "advertencia: no se pudo abrir el archivo especial"
+msgstr "aviso: no se pudo abrir el archivo especial"
 
 #: ../autopilot.py:157
 msgid "for writing"
-msgstr "para la escritura"
+msgstr "para escribir"
 
 #: ../autopilot.py:158
 msgid "cannot stroke the watchdog"
-msgstr "no puedo acariciar al perro guardián"
+msgstr "no se puede refrescar el watchdog"
 
 #: ../autopilot.py:162
 msgid "warning: failed to make autopilot process realtime"
-msgstr ""
-"advertencia: no se pudo realizar el proceso de piloto automático en tiempo "
-"real"
+msgstr "aviso: no se pudo poner en tiempo real el proceso del piloto automático"
 
 #: ../autopilot.py:347
 msgid "server/client is running too _slowly_"
-msgstr "el servidor / cliente se está ejecutando demasiado _ lentamente_"
+msgstr "el servidor/cliente va demasiado _lento_"
 
 #: ../autopilot.py:353
 msgid "sensors is running too _slowly_"
-msgstr "los sensores funcionan demasiado lento"
+msgstr "los sensores van demasiado _lentos_"
 
 #: ../autopilot.py:453
 msgid "autopilot routine is running too _slowly_"
-msgstr "la rutina del piloto automático se está ejecutando demasiado lento"
+msgstr "la rutina del piloto automático va demasiado _lenta_"
 
 #: ../autopilot.py:465
 msgid "servo is running too _slowly_"
-msgstr "el servo funciona demasiado lento"
+msgstr "el servo va demasiado _lento_"
 
 #: ../autopilot.py:475
 msgid "autopilot iteration running too slow"
-msgstr "iteración de piloto automático funcionando demasiado lento"
+msgstr "la iteración del piloto automático va demasiado lenta"
 
 #: ../autopilot.py:488
 msgid "WARNING: running autopilot as root!!"
-msgstr "ADVERTENCIA: ¡ejecutando el piloto automático como root!"
+msgstr "AVISO: ¡¡el piloto automático se está ejecutando como root!!"
 
 #: ../autopilot.py:490
 msgid "init complete"
-msgstr "inicio completo"
+msgstr "inicio completado"
 
 #: ../boatimu.py:33
 msgid "RTIMU library not detected, please install it"
-msgstr "Biblioteca RTIMU no detectada, instálela"
+msgstr "no se detecta la biblioteca RTIMU; instálela"
 
 #: ../boatimu.py:57
 msgid "Using settings file"
-msgstr "Usando el archivo de configuración"
+msgstr "Usando el archivo de ajustes"
 
 #: ../boatimu.py:97
 msgid "ERROR: No IMU Detected"
-msgstr "ERROR: No se detectó IMU"
+msgstr "ERROR: no se detecta la IMU"
 
 #: ../boatimu.py:105
 msgid "ERROR: IMU Init Failed, no inertial data available"
-msgstr "ERROR: IMU Init Failed, no hay datos inerciales disponibles"
+msgstr "ERROR: falló el inicio de la IMU, no hay datos inerciales"
 
 #: ../boatimu.py:131
 msgid "warning, failed to make imu process realtime"
-msgstr "advertencia, no se pudo realizar el proceso imu en tiempo real"
+msgstr "aviso: no se pudo poner en tiempo real el proceso de la imu"
 
 #: ../boatimu.py:133
 msgid "made imu process realtime"
-msgstr "hizo el proceso imu en tiempo real"
+msgstr "proceso de la imu en tiempo real"
 
 #: ../boatimu.py:145
 msgid "setting initial gyro bias"
-msgstr "establecer el sesgo inicial del giroscopio"
+msgstr "ajustando el sesgo inicial del giróscopo"
 
 #: ../boatimu.py:161
 msgid "imu process failed to keep time"
-msgstr "El proceso de imu no pudo mantener el tiempo"
+msgstr "el proceso de la imu no pudo mantener el ritmo"
 
 #: ../boatimu.py:169
 msgid "failed to read IMU!"
-msgstr "no pudo leer IMU!"
+msgstr "¡no se pudo leer la IMU!"
 
 #: ../boatimu.py:202
 msgid "imu rate set to rate"
-msgstr "tasa imu establecida en tasa"
+msgstr "frecuencia de la imu ajustada a"
 
 #: ../boatimu.py:230
 msgid "too high standing gyro bias, resetting sensors"
-msgstr "sesgo del giróscopo demasiado alto, restableciendo los sensores"
+msgstr "sesgo del giróscopo en reposo demasiado alto, reiniciando los sensores"
 
 #: ../boatimu.py:235
 msgid "compass out of range, resetting"
-msgstr "brújula fuera de rango, reiniciando"
+msgstr "compás fuera de rango, reiniciando"
 
 #: ../boatimu.py:327
 msgid "warning, failed to make calibration process other"
-msgstr "advertencia, no se pudo realizar otro proceso de calibración"
+msgstr "aviso: no se pudo pasar el proceso de calibración a prioridad normal"
 
 #: ../boatimu.py:329
 msgid "warning, failed to make calibration process idle, trying renice"
-msgstr ""
-"advertencia, no pudo hacer que el proceso de calibración estuviera inactivo,"
-" probando renice"
+msgstr "aviso: no se pudo pasar el proceso de calibración a prioridad mínima, probando renice"
 
 #: ../boatimu.py:331
 msgid "warning, failed to renice calibration process"
-msgstr "advertencia, no se pudo renice el proceso de calibración"
+msgstr "aviso: falló renice en el proceso de calibración"
 
 #: ../boatimu.py:338
 msgid "calibration loaded, starting"
-msgstr "calibración cargada, comenzando"
+msgstr "calibración cargada, empezando"
 
 #: ../boatimu.py:342
 msgid "failed import calibration fit"
-msgstr "ajuste de calibración de importación fallido"
+msgstr "no se pudo importar el ajuste de calibración"
 
 #: ../boatimu.py:460
 msgid "accel values invalid"
-msgstr "valores de aceleración no válidos"
+msgstr "valores del acelerómetro no válidos"
 
 #: ../bufferedsocket.py:55
 msgid "overflow in pypilot udp socket"
-msgstr "desbordamiento en el zócalo pypilot udp"
+msgstr "desbordamiento en el socket udp de pypilot"
 
 #: ../bufferedsocket.py:60
 msgid "overflow in pypilot socket"
-msgstr "desbordamiento en pypilot socket"
+msgstr "desbordamiento en el socket de pypilot"
 
 #: ../bufferedsocket.py:75
 msgid "failed to send udp packet"
@@ -548,27 +539,27 @@ msgstr "no se pudo enviar el paquete udp"
 
 #: ../bufferedsocket.py:84
 msgid "pypilot socket failed to send to"
-msgstr "pypilot socket no se pudo enviar a"
+msgstr "el socket de pypilot no pudo enviar a"
 
 #: ../bufferedsocket.py:98
 msgid "socket send took too long!?!?"
-msgstr "el envío de socket tardó demasiado!?!?"
+msgstr "¡¿el envío por el socket tardó demasiado?!"
 
 #: ../bufferedsocket.py:100
 msgid "socket send error"
-msgstr "error de envío de socket"
+msgstr "error de envío por el socket"
 
 #: ../bufferedsocket.py:104
 msgid "pypilot socket exception"
-msgstr "excepción de socket pypilot"
+msgstr "excepción en el socket de pypilot"
 
 #: ../bufferedsocket.py:108
 msgid "falling back to python nonblocking socket, will consume more cpu"
-msgstr "recurriendo al socket sin bloqueo de Python, consumirá más CPU"
+msgstr "se usa el socket no bloqueante de python; consumirá más CPU"
 
 #: ../bufferedsocket.py:134
 msgid "socket send error in server flush"
-msgstr "error de envío de socket en el servidor flush"
+msgstr "error de envío por el socket al vaciar el búfer del servidor"
 
 #: ../bufferedsocket.py:149
 msgid "error receiving data"
@@ -576,31 +567,31 @@ msgstr "error al recibir datos"
 
 #: ../serialprobe.py:30
 msgid "error reading"
-msgstr "error de lectura"
+msgstr "error al leer"
 
 #: ../serialprobe.py:86
 msgid "found more devices by path"
-msgstr "encontré más dispositivos por ruta"
+msgstr "encontrados más dispositivos por ruta"
 
 #: ../serialprobe.py:118
 msgid "removing gps device"
-msgstr "quitar dispositivo gps"
+msgstr "quitando el dispositivo gps"
 
 #: ../serialprobe.py:197
 msgid "no pyudev module! will scan usb devices often!"
-msgstr "sin módulo pyudev! ¡Escaneará los dispositivos USB a menudo!"
+msgstr "¡no está el módulo pyudev! ¡se buscarán dispositivos USB a menudo!"
 
 #: ../serialprobe.py:359
 msgid "success"
-msgstr "éxito"
+msgstr "correcto"
 
 #: ../serialprobe.py:367
 msgid "failed to record device"
-msgstr "no se pudo grabar el dispositivo"
+msgstr "no se pudo registrar el dispositivo"
 
 #: ../client.py:93
 msgid "warning, registering existing value:"
-msgstr "advertencia, registrando valor existente:"
+msgstr "aviso: se registra un valor que ya existe:"
 
 #: ../client.py:154
 msgid "failed to read config file:"
@@ -616,19 +607,19 @@ msgstr "Excepción al escribir el archivo de configuración:"
 
 #: ../client.py:210
 msgid "autodetecting pypilot server not possible"
-msgstr "no es posible la detección automática del servidor pypilot"
+msgstr "no es posible detectar automáticamente el servidor pypilot"
 
 #: ../client.py:319
 msgid "invalid message from server:"
-msgstr "mensaje inválido del servidor:"
+msgstr "mensaje no válido del servidor:"
 
 #: ../client.py:343
 msgid "warning, pypilot client aleady has connection"
-msgstr "advertencia, el cliente pypilot ya tiene conexión"
+msgstr "aviso: el cliente pypilot ya tiene conexión"
 
 #: ../client.py:363
 msgid "connect failed to"
-msgstr "no se pudo conectar"
+msgstr "falló la conexión a"
 
 #: ../client.py:460 ../client.py:463
 msgid "failed to connect to"
@@ -644,11 +635,11 @@ msgstr "uso"
 
 #: ../client.py:525
 msgid "set the host or ip address"
-msgstr "configurar el host o la dirección IP"
+msgstr "indica el host o la dirección IP"
 
 #: ../client.py:526
 msgid "print info about each value type"
-msgstr "imprimir información sobre cada tipo de valor"
+msgstr "muestra información de cada tipo de valor"
 
 #: ../client.py:527
 msgid "continuous watch"
@@ -660,23 +651,23 @@ msgstr "muestra este mensaje"
 
 #: ../client.py:555
 msgid "failed to retrieve value list!"
-msgstr "no se pudo recuperar la lista de valores!"
+msgstr "¡no se pudo obtener la lista de valores!"
 
 #: ../client.py:566
 msgid "timeout retrieving"
-msgstr "recuperando el tiempo de espera"
+msgstr "tiempo agotado al obtener"
 
 #: ../client.py:569
 msgid "missing"
-msgstr "desaparecido"
+msgstr "falta"
 
 #: ../values.py:135
 msgid "invalid initial value for range property"
-msgstr "valor inicial no válido para la propiedad del rango"
+msgstr "valor inicial no válido para la propiedad de rango"
 
 #: ../values.py:184
 msgid "invalid set"
-msgstr "conjunto no válido"
+msgstr "asignación no válida"
 
 #: ../gpsd.py:46
 msgid "gpsd connected"
@@ -684,11 +675,11 @@ msgstr "gpsd conectado"
 
 #: ../gpsd.py:50
 msgid "gpsd failed to connect"
-msgstr "gpsd no pudo conectarse"
+msgstr "gpsd no pudo conectar"
 
 #: ../gpsd.py:56
 msgid "exception connecting to gps"
-msgstr "excepción de conexión a gps"
+msgstr "excepción al conectar con el gps"
 
 #: ../gpsd.py:60
 msgid "gpsd disconnected"
@@ -696,11 +687,11 @@ msgstr "gpsd desconectado"
 
 #: ../gpsd.py:74
 msgid "gpsd PROBE success"
-msgstr "Éxito de la SONDA gpsd"
+msgstr "gpsd: sondeo correcto"
 
 #: ../gpsd.py:82
 msgid "gpsd probe failed"
-msgstr "sonda gpsd fallida"
+msgstr "gpsd: falló el sondeo"
 
 #: ../gpsd.py:105
 msgid "gpsd deactivated"
@@ -708,12 +699,11 @@ msgstr "gpsd desactivado"
 
 #: ../gpsd.py:147
 msgid "gpsd failed to determine serial baud rate of device"
-msgstr ""
-"gpsd no pudo determinar la velocidad en baudios en serie del dispositivo"
+msgstr "gpsd no pudo determinar la velocidad en baudios del dispositivo serie"
 
 #: ../gpsd.py:164
 msgid "gpsd timeout from lack of data"
-msgstr "tiempo de espera de gpsd por falta de datos"
+msgstr "gpsd: tiempo agotado por falta de datos"
 
 #: ../gpsd.py:179
 msgid "gpsd received invalid message"
@@ -721,11 +711,11 @@ msgstr "gpsd recibió un mensaje no válido"
 
 #: ../gpsd.py:224
 msgid "gpsd got flag for pipe:"
-msgstr "gpsd tiene bandera para tubería:"
+msgstr "gpsd recibió un indicador en la tubería:"
 
 #: ../gpsd.py:233
 msgid "gpsd serial probe"
-msgstr "sonda serial gpsd"
+msgstr "gpsd: sondeo serie"
 
 #~ msgid "exception in calibration:"
 #~ msgstr "excepción en la calibración:"
