@@ -16,43 +16,71 @@
 // implement line buffering and
 // nmea checksum test in c++ for efficiency
 
+#define INITIAL_SIZE 16384
+#define MAX_SIZE (1 << 20)
+
 LineBuffer::LineBuffer(int _fd) 
     : fd(_fd)
 {
     pos = len = b = 0;
+    discarding = false;
+    buf[0].resize(INITIAL_SIZE);
+    buf[1].resize(INITIAL_SIZE);
+}
+
+bool LineBuffer::grow()
+{
+    if(buf[0].size() >= MAX_SIZE)
+        return false;
+    buf[0].resize(buf[0].size() * 2);
+    buf[1].resize(buf[1].size() * 2);
+    return true;
 }
 
 const char *LineBuffer::line()
 {
     if(readline_buf())
-        return buf[!b];
+        return buf[!b].data();
     return NULL;
 }
 
 const char *LineBuffer::line_nmea()
 {
     if(readline_buf_nmea())
-        return buf[!b];
+        return buf[!b].data();
     return NULL;
 }
 
 bool LineBuffer::recv()
 {
-    if(len == sizeof buf[0]) {
+    // one byte is kept for the terminator readline_buf puts after a line
+    if(len + 1 >= (int)buf[b].size() && !grow()) {
         printf("linebuffer overflow!!!! %d\n", len);
-        len = 0;
+        pos = len = 0;
+        discarding = true;
     }
-    int c = read(fd, buf[b] + len, sizeof buf[0] - len);
+    int c = read(fd, buf[b].data() + len, buf[b].size() - 1 - len);
     if(c <= 0)
         return false;
     len += c;
+    if(discarding) {
+        // Ignore the rest of the oversized line, including its newline.
+        const char *newline = (const char *)memchr(buf[b].data(), '\n', len);
+        if(newline) {
+            int end = newline - buf[b].data() + 1;
+            len -= end;
+            memmove(buf[b].data(), buf[b].data() + end, len);
+            discarding = false;
+        } else
+            len = 0;
+    }
     return true;
 }
 
 const char *LineBuffer::readline_nmea()
 {
     if(next_nmea())
-        return buf[!b];
+        return buf[!b].data();
     return NULL;
 }
 
@@ -93,7 +121,7 @@ bool LineBuffer::readline_buf_nmea()
             len--;
         }
         buf[!b][len] = 0;
-        if(check_nmea_cksum(buf[!b], len))
+        if(check_nmea_cksum(buf[!b].data(), len))
             return true;
     }
     return false;
@@ -110,7 +138,7 @@ int LineBuffer::readline_buf()
 
         int bpos = pos+1;
         len -= bpos;
-        memcpy(buf[!b], buf[b]+bpos, len);
+        memcpy(buf[!b].data(), buf[b].data()+bpos, len);
 
         buf[b][bpos] = 0;
         pos = 0;

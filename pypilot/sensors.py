@@ -16,7 +16,7 @@ from resolv import resolv
 from values import *
 
 # favor lower priority sources
-source_priority = {'gpsd' : 1, 'servo': 1, 'serial' : 2, 'tcp' : 3,
+source_priority = {'gpsd' : 1, 'servo': 1, 'can': 2, 'serial' : 2, 'tcp' : 3,
                    'signalk' : 4, 'water+wind' : 5, 'gps+wind' : 6, 'none' : 7}
 
 class Sensor:
@@ -381,11 +381,13 @@ class Sensors:
         from nmea import Nmea
         from rudder import Rudder
         from signalk import signalk
+        from n2k import N2K
 
         self.client = client
 
         # services that can receive sensor data
         self.nmea = Nmea(self)
+        self.n2k = N2K(self)
         self.signalk = signalk(self)
         self.gpsd = gpsd(self)
 
@@ -402,6 +404,7 @@ class Sensors:
 
     def poll(self):
         self.nmea.poll()
+        self.n2k.poll()
         self.signalk.poll()
         self.gpsd.poll()
         self.rudder.poll()

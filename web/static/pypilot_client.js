@@ -26,6 +26,8 @@ $(document).ready(function() {
     }
 
     function pypilot_set(name, value) {
+        if (typeof value === 'number' && !Number.isFinite(value))
+            return;
         socket.emit('pypilot', name + '=' + JSON.stringify(value));
     }
 
@@ -47,7 +49,10 @@ $(document).ready(function() {
             var type = info['type'];
 
             rows += '<div id="value_' + id + '" />';
-            if(type == 'RangeProperty') {
+            if(type == 'RangeProperty' && 'step' in info) {
+                // a stepped range is a number, like an instance or a count
+                rows += '<input type="number" id="val_' + id + '" min="' + info['min'] + '" max="' + info['max'] + '" step="' + info['step'] + '" />';
+            } else if(type == 'RangeProperty') {
                 min = info['min'];
                 max = info['max'];
                 rows += '<input type="range" id="val_' + id + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" style="width: 100%" />';
@@ -76,7 +81,8 @@ $(document).ready(function() {
             var id = name.split('.').join('_')
             if(type == 'RangeProperty') {
                 $('#val_' + id).change(name, function(event) {
-                    pypilot_set(event.data, this.valueAsNumber);
+                    if (Number.isFinite(this.valueAsNumber))
+                        pypilot_set(event.data, this.valueAsNumber);
                 });
             } else if(type == 'BooleanProperty') {
                 $('#check_' + id).change(name, function(event) {
