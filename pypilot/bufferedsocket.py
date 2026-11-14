@@ -21,7 +21,7 @@ try:
 
         self.socket = connection
         self.address = address
-        self.out_buffer = ''
+        self.out_buffer = b''
 
         self.udp_port = False
         self.udp_out_buffer = ''
@@ -58,10 +58,10 @@ try:
             print(_('overflow in pypilot udp socket'), self.address, len(self.udp_out_buffer))
             self.udp_out_buffer = ''
         else:
-          self.out_buffer += data
+          self.out_buffer += data.encode()
           if len(self.out_buffer) > 65536:
             print(_('overflow in pypilot socket'), self.address, len(self.out_buffer), os.getpid())
-            self.out_buffer = ''
+            self.out_buffer = b''
             self.close()
 
     def flush(self):
@@ -93,7 +93,7 @@ try:
                     return
 
             t0 = time.monotonic()
-            count = self.socket.send(self.out_buffer.encode())
+            count = self.socket.send(self.out_buffer)
             #print('write', count, self.out_buffer, time.monotonic())
             t1 = time.monotonic()
 
@@ -117,7 +117,7 @@ except Exception as e:
         self.b = False # in python
         self.in_buffer = ''
         self.no_newline_pos = 0
-        self.out_buffer = ''
+        self.out_buffer = b''
 
     def close(self):
         self.socket.close()
@@ -126,22 +126,22 @@ except Exception as e:
         return self.socket.fileno()
 
     def write(self, data):
-        self.out_buffer += data
+        self.out_buffer += data.encode()
 
     def flush(self):
         if not len(self.out_buffer):
             return
         try:
-            count = self.socket.send(self.out_buffer.encode())
+            count = self.socket.send(self.out_buffer)
             if count < 0:
                 print(_('socket send error in server flush'))
-                self.out_buffer = ''
+                self.out_buffer = b''
                 self.socket.close()
                 return
 
             self.out_buffer = self.out_buffer[count:]
         except OSError:
-            self.out_buffer = ''
+            self.out_buffer = b''
             self.socket.close()
 
     def recvdata(self):
