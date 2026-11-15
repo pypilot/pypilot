@@ -19,7 +19,7 @@ class Rudder(Sensor):
 
         self.angle = self.register(SensorValue, 'angle')
         self.speed = self.register(SensorValue, 'speed')
-        self.last = 0
+        self.last = None
         self.last_time = time.monotonic()
         self.offset = self.register(Value, 'offset', 0.0, persistent=True)
         self.scale = self.register(Value, 'scale', 100.0, persistent=True)
@@ -200,18 +200,18 @@ class Rudder(Sensor):
 
     def update(self, data):
         if not data:
-            self.angle.update(False)
+            self.reset()
             return False
 
         # prevent data echo
         if data['device'] != self.lastdevice:
             self.lastdevice = data['device']
-            self.angle.update(False)
+            self.reset()
             return False
 
         self.raw = data['angle']
         if math.isnan(self.raw):
-            self.angle.update(False)
+            self.reset()
             return False
 
         # rudder = ((nonlinearity*self.raw + 1  + offset)*self.raw + offset)*scale
@@ -232,7 +232,11 @@ class Rudder(Sensor):
 
         if dt > 1:
             dt = 1
-        if dt > 0:
+        if self.last is None:
+            self.last_time = t
+            self.last = self.angle.value
+            self.speed.set(0.0)
+        elif dt > 0:
             speed = (self.angle.value - self.last) / dt
             self.last_time = t
             self.last = self.angle.value
@@ -241,3 +245,5 @@ class Rudder(Sensor):
 
     def reset(self):
         self.angle.set(False)
+        self.speed.set(False)
+        self.last = None
