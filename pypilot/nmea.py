@@ -71,7 +71,7 @@ def parse_nmea_gps(line):
 
     try:
         data = line[7:len(line)-3].split(',')
-        if data[1] == 'V':
+        if data[1] != 'A' or (len(data) > 11 and data[11] == 'N'):
             return False
         gps = {}
 
