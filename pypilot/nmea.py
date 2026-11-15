@@ -23,6 +23,7 @@
 DEFAULT_PORT = 20220
 
 import fcntl
+import calendar
 import multiprocessing
 import select
 import socket
@@ -98,6 +99,14 @@ def parse_nmea_gps(line):
                         gps_timeoffset += sec_in_day
                         ts += sec_in_day
                     print('reset gps timeoffset', day, ts, t0)
+            if len(data) > 8 and data[8]:
+                try:
+                    date = time.strptime(data[8], '%d%m%y')
+                except ValueError:
+                    pass # Preserve nearest-day fallback when the date is invalid.
+                else:
+                    ts = calendar.timegm((date.tm_year, date.tm_mon, date.tm_mday,
+                                          0, 0, 0)) + tod
         except Exception:
             ts = time.time()
 
