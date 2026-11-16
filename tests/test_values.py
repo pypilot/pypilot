@@ -83,3 +83,17 @@ def test_rounded_value_format(values):
 def test_rounded_value_list(values):
     rv = values.RoundedValue('rv', [1.0, 2.5])
     assert rv.get_msg() == '[1.0000, 2.5000]'
+
+
+def test_range_limit_clamp_notifies_watchers(values):
+    from types import SimpleNamespace
+    messages = []
+    p = values.RangeProperty('servo.max_current', 40, 0, 50)
+    p.watch = SimpleNamespace(period=0)
+    p.client = SimpleNamespace(send=messages.append)
+    p.set_max(20)
+    assert p.value == 20
+    assert messages == ['servo.max_current=20.0000\n']
+    p.set_max(50)
+    assert p.value == 20
+    assert len(messages) == 1

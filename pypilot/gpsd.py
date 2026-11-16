@@ -8,6 +8,7 @@
 # version 3 of the License, or (at your option) any later version.
 
 import multiprocessing
+from datetime import datetime
 import select
 import socket
 import time
@@ -113,7 +114,7 @@ class gpsProcess(multiprocessing.Process):
                     self.devices.remove(device)
                     ret = True
         elif cls == 'TPV':
-            if msg['mode'] == 3:
+            if msg['mode'] in (2, 3):
                 fix = {'speed': 0}
                 for key in ['track', 'speed', 'lat', 'lon', 'device', 'climb']:
                     if key in msg:
@@ -122,8 +123,8 @@ class gpsProcess(multiprocessing.Process):
                     fix['alt'] = msg['altHAE']
                 if 'time' in msg:
                     try:
-                        ts = time.strptime(msg['time'], '%Y-%m-%dT%H:%M:%S.%f%z')
-                        fix['timestamp'] = time.mktime(ts)
+                        ts = datetime.strptime(msg['time'], '%Y-%m-%dT%H:%M:%S.%f%z')
+                        fix['timestamp'] = ts.timestamp()
                     except ValueError:
                         pass
 

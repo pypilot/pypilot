@@ -158,11 +158,11 @@ class GPSFilter:
         residual_accel_magnetic = vector.sub(accel_ned_magnetic, [0, 0, 1])
 
         # rotate by declination
-        decl_q = quaternion.angvec2quat(self.declination.value, [0, 0, 1])
+        decl_q = quaternion.angvec2quat(math.radians(self.declination.value), [0, 0, 1])
         accel_true = quaternion.rotvecquat(residual_accel_magnetic, decl_q)
 
         # apply predicted compass error
-        error_q = quaternion.angvec2quat(self.compass_offset.value, [0, 0, 1])
+        error_q = quaternion.angvec2quat(math.radians(self.compass_offset.value), [0, 0, 1])
         accel_ned = quaternion.rotvecquat(accel_true, error_q)
 
         U = 9.81*np.array(accel_ned)
