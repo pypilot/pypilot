@@ -114,7 +114,7 @@ class gpsProcess(multiprocessing.Process):
                     self.devices.remove(device)
                     ret = True
         elif cls == 'TPV':
-            if msg['mode'] == 3:
+            if msg['mode'] in (2, 3):
                 fix = {'speed': 0}
                 for key in ['track', 'speed', 'lat', 'lon', 'device', 'climb']:
                     if key in msg:
