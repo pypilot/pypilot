@@ -23,6 +23,7 @@
 DEFAULT_PORT = 20220
 
 import fcntl
+from datetime import datetime
 import multiprocessing
 import select
 import socket
@@ -76,9 +77,9 @@ def parse_nmea_gps(line):
         gps = {}
 
         try: # since we are given only time and not date, use current day
-            x = time.strptime(data[0], '%H%M%S.%f')
+            x = datetime.strptime(data[0], '%H%M%S.%f')
             sec_in_day = 86400
-            tod = (x.tm_hour*60+x.tm_min)*60+x.tm_sec
+            tod = (x.hour*60+x.minute)*60+x.second+x.microsecond/1e6
             t0 = time.time()
             global gps_timeoffset
             with _gps_time_lock:
