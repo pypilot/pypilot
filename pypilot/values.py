@@ -166,9 +166,9 @@ class RangeProperty(Property):
             super().set(value)
 
     def set_max(self, max_value):
-        if self.value > max_value:
-            self.value = max_value
         self.max_value = max_value
+        if self.value > max_value:
+            self.set(max_value)
 
 # a range property that is persistent and specifies the units
 class RangeSetting(RangeProperty):
