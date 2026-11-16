@@ -43,7 +43,7 @@ def xy_to_ll(x, y, lat0, lon0):
     cs = math.cos(math.radians(lat0))
     xc = x/earth_md/cs
     yc = y/earth_md
-    return yc + lat0, xc + lon0
+    return yc + lat0, resolv(xc + lon0)
 
 
 class GPSFilterProcess(multiprocessing.Process):
