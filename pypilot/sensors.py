@@ -118,7 +118,7 @@ class BaseWind(Sensor):
         # weight wind direction more with higher wind speed
         d = self.filter_constant.value*math.log(filtered_speed/5.0 + 1.1)
         direction = resolv(self.direction.value, self.filtered_direction.value)
-        if self.filtered_direction is False:
+        if self.filtered_direction.value is False:
             filtered_direction = direction
         else:
             filtered_direction = (1-d)*self.filtered_direction.value + d*direction
