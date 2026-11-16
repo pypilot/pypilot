@@ -157,7 +157,7 @@ def parse_nmea_wind(line):
         return False
 
     data = line.partition('*')[0].split(',')
-    if len(data) < 6 or data[5] != 'A':
+    if len(data) < 6 or data[5] != 'A' or data[2] not in ('R', 'T'):
         return False
 
     msg = {}
