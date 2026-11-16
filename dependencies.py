@@ -146,6 +146,7 @@ class data_dep(dep):
     def install(self):
         return os.system('. scripts/install_data.sh') == 0
 
+
 class subsystem(object):
     def __init__(self, name, info, deps):
         self.name = name
@@ -192,6 +193,9 @@ ss('autopilot', 'core autopilot or imu-only mode',
 # dependencies not required but reduce cpu usage considerably
 ss('optimize', '(recommended) core autopilot operations',
    [py_dep('ujson'), py_dep('pyudev'), py_dep('inotify')])
+
+ss('nmea2000', 'nmea2000 support',
+   [py_dep('nmea2000')])
 
 # signalk dependencies: python3-zerconf python3-requests python3-websocket
 ss('signalk', 'communicate with signalk-node-server distributed with openploter',

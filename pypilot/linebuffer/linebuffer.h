@@ -6,6 +6,8 @@
  * version 3 of the License, or (at your option) any later version.
  */
 
+#include <vector>
+
 class LineBuffer {
 public:
     LineBuffer(int _fd);
@@ -23,8 +25,13 @@ private:
 #endif    
     bool readline_buf_nmea();
     int readline_buf();
+    bool grow();
 
     int fd;
     int b, pos, len;
-    char buf[2][16384];
+    bool discarding;
+    // two buffers of the same size, doubled as needed for longer lines
+    // (pypilot's list of values is one line) up to a limit, for input with
+    // no newlines
+    std::vector<char> buf[2];
 };

@@ -143,9 +143,12 @@ class ResettableValue(Property):
         super().set(value)
 
 class RangeProperty(Property):
-    def __init__(self, name, initial, min_value, max_value, **kwargs):
+    # step: values snap to min_value + a multiple of it, and clients edit
+    # the value as a number rather than with a slider. An int step keeps ints.
+    def __init__(self, name, initial, min_value, max_value, step=None, **kwargs):
         self.min_value = min_value
         self.max_value = max_value
+        self.step = step
         if initial < min_value or initial > max_value:
             print(_('invalid initial value for range property'), name, initial)
         super().__init__(name, initial, **kwargs)
@@ -153,15 +156,27 @@ class RangeProperty(Property):
         self.info['type'] = 'RangeProperty'
         self.info['min'] = self.min_value
         self.info['max'] = self.max_value
+        if step:
+            self.info['step'] = step
 
     def get_msg(self):
+        if isinstance(self.value, int):
+            return str(self.value)
         return '%.4f' % self.value
 
     def set(self, value):
+        if value is None:
+            return
         try:
             value = float(value) # try to convert to number
         except ValueError:
             return # ignore invalid value
+        if not math.isfinite(value):
+            return
+        if self.step:
+            value = self.min_value + round((value - self.min_value) / self.step) * self.step
+            if isinstance(self.step, int) and isinstance(self.min_value, int):
+                value = int(value)
         if value >= self.min_value and value <= self.max_value:
             super().set(value)
 

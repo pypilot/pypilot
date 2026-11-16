@@ -7,7 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.
 
-import math
+from decimal import Decimal
 import os
 import subprocess
 import sys
@@ -119,7 +119,9 @@ class MainFrame(wx.Frame):
                 proc()
 
             elif t == 'RangeProperty' or t == 'RangeSetting':
-                useSlider = True
+                # a stepped range is a number, like an instance or a count
+                step = value_list[name].get('step')
+                useSlider = not step
                 def proc():
                     r = value_list[name]['min'], value_list[name]['max']
                     if useSlider:
@@ -128,8 +130,10 @@ class MainFrame(wx.Frame):
                     else:
                         s = wx.SpinCtrlDouble(self.scrolledWindow)
                         s.SetRange(r[0], r[1])
-                        s.SetIncrement(min(1, (r[1] - r[0]) / 100.0))
-                        s.SetDigits(-math.log(s.GetIncrement()) / math.log(10) + 1)
+                        s.SetIncrement(step or min(1, (r[1] - r[0]) / 100.0))
+                        digits = max(-Decimal(str(v)).normalize().as_tuple().exponent
+                                     for v in (s.GetIncrement(), r[0]))
+                        s.SetDigits(max(0, digits))
                     sizer.Add( s, 0, wx.EXPAND)
                     self.controls[name] = s
                     sname = name
