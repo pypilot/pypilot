@@ -73,8 +73,6 @@ def parse_nmea_gps(line):
 
     try:
         data = line[7:len(line)-3].split(',')
-        if data[3] not in ('N', 'S') or data[5] not in ('E', 'W'):
-            return False
         if data[1] == 'V':
             return False
         gps = {}
@@ -116,10 +114,14 @@ def parse_nmea_gps(line):
         lat = degrees_minutes_to_decimal(float(data[2]))
         if data[3] == 'S':
             lat = -lat
+        elif data[3] != 'N':
+            return False
 
         lon = degrees_minutes_to_decimal(float(data[4]))
         if data[5] == 'W':
             lon = -lon
+        elif data[5] != 'E':
+            return False
 
         speed = float(data[6]) if data[6] else 0
 
