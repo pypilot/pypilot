@@ -52,3 +52,19 @@ def test_invalid_reading_discards_speed_history(sensor, invalidation):
     clock[0] = 200
     assert instance.update({"device": device, "angle": 0.1})
     assert instance.speed.value == 0
+
+
+def test_reset_publishes_zero_to_invalid_once(sensor):
+    from types import SimpleNamespace
+
+    instance, _ = sensor
+    messages = []
+    for value in (instance.angle, instance.speed):
+        value.set(0.0)
+        value.client = SimpleNamespace(send=messages.append)
+        value.watch = SimpleNamespace(period=0)
+    instance.reset()
+    instance.reset()
+    assert instance.angle.value is False
+    assert instance.speed.value is False
+    assert messages == ['rudder.angle=false\n', 'rudder.speed=false\n']

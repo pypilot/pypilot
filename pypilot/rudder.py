@@ -244,6 +244,8 @@ class Rudder(Sensor):
         return True
 
     def reset(self):
-        self.angle.set(False)
-        self.speed.set(False)
+        if self.angle.value is not False:
+            self.angle.set(False)
+        if self.speed.value is not False:
+            self.speed.set(False)
         self.last = None
