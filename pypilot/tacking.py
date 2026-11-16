@@ -100,10 +100,10 @@ class Tack:
     def poll(self):
         # if we have wind data, use it to determine the tacking direction
         r = False
-        if self.use_wind_direction and self.ap.sensors.wind.source.value != 'none':
+        if self.use_wind_direction.value and self.ap.sensors.wind.source.value != 'none':
             d = resolv(self.ap.sensors.wind.direction.value)
             r = self.wind_log.update(d)
-        elif self.use_heel and time.monotonic() - self.time > 30:
+        elif self.use_heel.value and time.monotonic() - self.time > 30:
             r = self.heel_log.update(self.ap.boatimu.heel)
 
         if r:
