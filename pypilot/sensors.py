@@ -302,13 +302,14 @@ class Water(Sensor):
 
     def update(self, data):
         t = time.monotonic()
-        if 'speed' not in data:
+        if 'speed' not in data and 'leeway' not in data:
             return False
 
-        self.speed.set(data['speed'])
+        if 'speed' in data:
+            self.speed.set(data['speed'])
         if 'leeway' in data:
             self.leeway.set(data['leeway'])
-            self.leeway_source.update('sensor')
+            self.leeway.source.update('sensor')
             self.last_leeway_measurement = t
         return True
 
