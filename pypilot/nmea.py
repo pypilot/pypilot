@@ -72,6 +72,8 @@ def parse_nmea_gps(line):
 
     try:
         data = line[7:len(line)-3].split(',')
+        if data[3] not in ('N', 'S') or data[5] not in ('E', 'W'):
+            return False
         if data[1] == 'V':
             return False
         gps = {}
