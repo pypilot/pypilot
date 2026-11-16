@@ -31,6 +31,12 @@ def vec2vec2quat(a, b):
     fac = vector.dot(a, b) / vector.norm(a) / vector.norm(b)
     fac = min(max(fac, -1), 1) # protect against possible slight numerical errors
 
+    if fac < 0 and vector.norm(n) == 0:
+        # Opposite vectors need a perpendicular axis for the half-turn.
+        axis = [0, 0, 0]
+        axis[min(range(3), key=lambda i: abs(a[i]))] = 1
+        n = vector.cross(a, axis)
+
     ang = math.acos(fac)
     return angvec2quat(ang, n)
 
