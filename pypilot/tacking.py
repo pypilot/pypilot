@@ -117,6 +117,7 @@ class Tack:
             self.direction.update('none')
 
         if self.state.value == 'none':  # not tacking
+            self.timeout.update(0)
             return # done
 
         # tacking initiated, enter waiting state
