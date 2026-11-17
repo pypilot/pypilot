@@ -110,6 +110,9 @@ class BaseWind(Sensor):
     def reset(self):
         self.direction.set(False)
         self.speed.set(False)
+        self.filtered_direction.set(False)
+        self.filtered_speed.set(0)
+        self.filter_factor.set(False)
 
     def weight(self):
         d = .01
