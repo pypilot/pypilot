@@ -78,7 +78,8 @@ def parse_nmea_gps(line):
         gps = {}
 
         try: # since we are given only time and not date, use current day
-            x = datetime.strptime(data[0], '%H%M%S.%f')
+            time_format = '%H%M%S.%f' if '.' in data[0] else '%H%M%S'
+            x = datetime.strptime(data[0], time_format)
             sec_in_day = 86400
             tod = (x.hour*60+x.minute)*60+x.second+x.microsecond/1e6
             t0 = time.time()

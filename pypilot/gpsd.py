@@ -123,7 +123,9 @@ class gpsProcess(multiprocessing.Process):
                     fix['alt'] = msg['altHAE']
                 if 'time' in msg:
                     try:
-                        ts = datetime.strptime(msg['time'], '%Y-%m-%dT%H:%M:%S.%f%z')
+                        time_format = ('%Y-%m-%dT%H:%M:%S.%f%z' if '.' in msg['time']
+                                       else '%Y-%m-%dT%H:%M:%S%z')
+                        ts = datetime.strptime(msg['time'], time_format)
                         fix['timestamp'] = ts.timestamp()
                     except ValueError:
                         pass
