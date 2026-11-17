@@ -14,13 +14,32 @@ import nmea
     ('2026-11-15T00:00:00+00:00', '235959.875', '2026-11-14T23:59:59.875+00:00'),
     ('2026-11-14T23:59:59.9+00:00', '000000.125', '2026-11-15T00:00:00.125+00:00'),
 ])
-def test_rmc_sample_time_keeps_fractional_seconds(monkeypatch, clock, received, expected):
+@pytest.mark.parametrize('date_mode', ['supplied', 'omitted', 'invalid'])
+def test_rmc_sample_time_keeps_fractional_seconds(monkeypatch, clock, received, expected, date_mode):
     monkeypatch.setattr(nmea.time, 'time', lambda: datetime.fromisoformat(clock).timestamp())
     monkeypatch.setattr(nmea, 'gps_timeoffset', 0)
-    body = 'GPRMC,' + received + ',A,5000.000,N,00100.000,W,5.0,90.0,141126,,,A'
+    # A valid receiver date is authoritative. Only absent or invalid dates
+    # should exercise the nearest-day fallback using the computer clock.
+    date = datetime.fromisoformat(expected).strftime('%d%m%y')
+    if date_mode == 'omitted':
+        date = ''
+    elif date_mode == 'invalid':
+        date = '321126'
+    body = 'GPRMC,' + received + ',A,5000.000,N,00100.000,W,5.0,90.0,' + date + ',,,A'
     sentence = '$' + body + '*%02X' % nmea.nmea_cksum(body)
     name, fix = nmea.parse_nmea_gps(sentence)
     assert name == 'gps'
     assert fix['timestamp'] == pytest.approx(datetime.fromisoformat(expected).timestamp(), rel=0, abs=1e-6)
     assert fix['lat'] == 50
     assert fix['lon'] == -1
+
+
+def test_supplied_date_overrides_nearest_day_at_midnight(monkeypatch):
+    monkeypatch.setattr(nmea.time, 'time', lambda: datetime.fromisoformat('2026-11-14T23:59:59.9+00:00').timestamp())
+    monkeypatch.setattr(nmea, 'gps_timeoffset', 0)
+    body = 'GPRMC,000000.125,A,5000.000,N,00100.000,W,5.0,90.0,141126,,,A'
+    sentence = '$' + body + '*%02X' % nmea.nmea_cksum(body)
+    name, fix = nmea.parse_nmea_gps(sentence)
+    assert name == 'gps'
+    expected = datetime.fromisoformat('2026-11-14T00:00:00.125+00:00').timestamp()
+    assert fix['timestamp'] == pytest.approx(expected, rel=0, abs=1e-6)
