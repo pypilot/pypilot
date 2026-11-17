@@ -257,11 +257,11 @@ class Autopilot:
             boat_speed = None
             if self.sensors.water.source.value != 'none':
                 boat_speed = self.sensors.water.speed.value
-                if self.sensors.truewind.source.value == 'none':
+                if self.sensors.truewind.source.value in ('none', 'water+wind', 'gps+wind'):
                     self.sensors.truewind.source.update('water+wind')
             elif self.sensors.gps.source.value != 'none':
                 boat_speed = self.gps_speed
-                if self.sensors.truewind.source.value == 'none':
+                if self.sensors.truewind.source.value in ('none', 'water+wind', 'gps+wind'):
                     self.sensors.truewind.source.update('gps+wind')
             if boat_speed != None:
                 self.sensors.truewind.update_from_apparent(boat_speed, self.sensors.wind.speed.value,
