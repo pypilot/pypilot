@@ -664,9 +664,10 @@ class signalk:
                     signalk_path, signalk_conversion = signalk_path_conversion
                     if signalk_path in values and values[signalk_path] is not None:
                         try:
-                            if 'timestamp' not in data and signalk_path in self.signalk_last_msg_time:
+                            source_path = (source, signalk_path)
+                            if 'timestamp' not in data and source_path in self.signalk_last_msg_time:
                                 data['timestamp'] = _parse_signalk_timestamp(
-                                    self.signalk_last_msg_time[signalk_path])
+                                    self.signalk_last_msg_time[source_path])
 
                             value = values[signalk_path]
                             if type(pypilot_path) == dict: # single path translates to multiple pypilot
@@ -827,11 +828,12 @@ class signalk:
                 # message for each path was silently discarded, which lost
                 # the first value after every reconnect. Now we store the
                 # value on first sight as well.
-                if self.signalk_last_msg_time.get(path) == timestamp:
+                source_path = (source, path)
+                if self.signalk_last_msg_time.get(source_path) == timestamp:
                     debug('signalk skip duplicate timestamp', source, path, timestamp)
                     continue
                 self.signalk_values[source][path] = value['value']
-                self.signalk_last_msg_time[path] = timestamp
+                self.signalk_last_msg_time[source_path] = timestamp
 
     def _handle_signalk_put(self, puts, request_id):
         if not self.put_enabled.value:
@@ -926,8 +928,9 @@ class signalk:
             subscriptions = []
             for signalk_path_conversion in signalk_sensor:
                 signalk_path, signalk_conversion = signalk_path_conversion
-                if signalk_path in self.signalk_last_msg_time:
-                    del self.signalk_last_msg_time[signalk_path]
+                for source_path in list(self.signalk_last_msg_time):
+                    if source_path[1] == signalk_path:
+                        del self.signalk_last_msg_time[source_path]
                 subscriptions.append({
                     'path': signalk_path,
                     'minPeriod': int(self.period.value * 1000),
