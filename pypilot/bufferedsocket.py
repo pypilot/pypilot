@@ -7,6 +7,7 @@
 # License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.
 
+import codecs
 import os
 import select
 import socket
@@ -116,6 +117,7 @@ except Exception as e:
         self.address = address
         self.b = False # in python
         self.in_buffer = ''
+        self.decoder = codecs.getincrementaldecoder('utf-8')()
         self.no_newline_pos = 0
         self.out_buffer = b''
 
@@ -147,12 +149,13 @@ except Exception as e:
     def recvdata(self):
         size = 4096
         try:
-          data = self.socket.recv(size).decode()
+          raw = self.socket.recv(size)
+          data = self.decoder.decode(raw)
         except Exception as e:
           print(_('error receiving data'), e)
           return False
 
-        l = len(data)
+        l = len(raw)
         if l == 0:
             return False
 
