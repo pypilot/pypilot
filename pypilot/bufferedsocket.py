@@ -103,6 +103,8 @@ try:
                 print(_('socket send error'), self.address, count)
                 self.socket.close()
             self.out_buffer = self.out_buffer[count:]
+        except (BlockingIOError, InterruptedError):
+            return  # Keep pending bytes for the next flush.
         except Exception as e:
             print(_('pypilot socket exception'), self.address, e, os.getpid(), self.socket)
             self.close()
@@ -140,6 +142,8 @@ except Exception as e:
                 return
 
             self.out_buffer = self.out_buffer[count:]
+        except (BlockingIOError, InterruptedError):
+            return  # Keep pending bytes for the next flush.
         except OSError:
             self.out_buffer = b''
             self.socket.close()
