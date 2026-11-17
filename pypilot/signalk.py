@@ -740,8 +740,9 @@ class signalk:
                             v = kv[pypilot_path]
                     else:
                         key = sensor+'.'+pypilot_path
-                        if self.last_values.get(key):
-                            v = self.last_values[key]
+                        value = self.last_values.get(key)
+                        if value is not None and value is not False:
+                            v = value
                     if v is not None:
                         v *= signalk_conversion
                         updates.append({'path': signalk_path, 'value': v})
