@@ -710,14 +710,17 @@ class signalk:
             for signalk_path_conversion, pypilot_path in signalk_table[sensor].items():
                 signalk_path, signalk_conversion = signalk_path_conversion
                 if type(pypilot_path) == dict: # single path translates to multiple pypilot
-                    keys = self.last_values_keys[signalk_path]
+                    # A GPS position must come from one fix, not coordinates
+                    # accumulated from different samples.
+                    keys = {} if sensor == 'gps' else self.last_values_keys[signalk_path]
                     # store keys we need for this signalk path in dictionary
                     for signalk_key, pypilot_key in pypilot_path.items():
                         key = sensor_key+'.'+pypilot_key
                         if sensor == 'gps':
                             kf = sensor_key+'.fix'
-                            if self.last_values.get(kf):
-                                keys[key] = self.last_values[kf][pypilot_key]
+                            fix = self.last_values.get(kf)
+                            if fix and pypilot_key in fix:
+                                keys[key] = fix[pypilot_key]
                         else:
                             if key in self.last_values:
                                 keys[key] = self.last_values[key]
