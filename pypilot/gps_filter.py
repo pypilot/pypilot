@@ -350,8 +350,9 @@ class GPSFilter:
                 d = .0005 # filter
                 self.compass_offset.set(resolv(self.compass_offset.value + d*comp_adj))
 
-        # fast forward previous measurements
-        for h in self.history[-i:]:
+        # A zero replay count must not select the entire history ([-0:]).
+        replay = self.history[len(self.history)-i:]
+        for h in replay:
             self.apply_prediction(h['dt'], h['U'])
 
-        self.history = self.history[-i:] # reset history
+        self.history = replay # reset history
