@@ -782,7 +782,7 @@ $(document).ready(function() {
     }
 
     function pypilot_watch(name, period=true) {
-        if(period === false && !(name in watches && watches[name]))
+        if(period === false && !(name in watches && watches[name] !== false))
             return; // already not watching, no need to inform server
         watches[name] = period;
         try {
