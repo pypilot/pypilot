@@ -47,7 +47,7 @@ $(document).ready(function() {
             var type = info['type'];
 
             rows += '<div id="value_' + id + '" />';
-            if(type == 'RangeProperty') {
+            if(type == 'RangeProperty' || type == 'RangeSetting') {
                 min = info['min'];
                 max = info['max'];
                 rows += '<input type="range" id="val_' + id + '" min="' + min + '" max="' + max + '" value = "' + 0 + '" step=".0001" style="width: 100%" />';
@@ -74,7 +74,7 @@ $(document).ready(function() {
             var info = list_values[name];
             var type = info['type'];
             var id = name.split('.').join('_')
-            if(type == 'RangeProperty') {
+            if(type == 'RangeProperty' || type == 'RangeSetting') {
                 $('#val_' + id).change(name, function(event) {
                     pypilot_set(event.data, this.valueAsNumber);
                 });
@@ -108,7 +108,7 @@ $(document).ready(function() {
             var type = info['type'];
             var id = name.split('.').join('_')
 
-            if(type == 'RangeProperty')                
+            if(type == 'RangeProperty' || type == 'RangeSetting')                
                 $('#val_' + id).val(data[name]);
             else if(type == 'EnumProperty')
                 $('#val_' + id).val(data[name].toString());
