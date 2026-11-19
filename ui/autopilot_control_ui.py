@@ -552,7 +552,7 @@ class CalibrationDialogBase ( wx.Dialog ):
 
 		fgSizer14.Add( self.m_staticText25, 0, wx.ALL, 5 )
 
-		self.sHeadingOffset = wx.SpinCtrl( self.m_panel5, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, -180, 180, 0 )
+		self.sHeadingOffset = wx.SpinCtrl( self.m_panel5, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, -360, 360, 0 )
 		fgSizer14.Add( self.sHeadingOffset, 0, wx.ALL, 5 )
 
 
