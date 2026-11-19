@@ -497,8 +497,11 @@ $(document).ready(function() {
 //        socket.disconnect();
     }
     
+    var ping_timer;
+    socket.on('disconnect', () => window.clearInterval(ping_timer));
     socket.on('connect', () => {
-        window.setInterval(function() {
+        window.clearInterval(ping_timer);
+        ping_timer = window.setInterval(function() {
             start_time = (new Date).getTime();
             try {
                 socket.emit('ping');
