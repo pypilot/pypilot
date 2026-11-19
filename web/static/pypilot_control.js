@@ -208,7 +208,7 @@ $(document).ready(function() {
 
                 if(cur_profile != profile) {
                     alert(_("Failed to capture profiles for export!"));
-                    if(exporing_profiles.length)
+                    if(exporting_profiles.length)
                         pypilot_set('profile', exporting_profiles[exporting_profiles.length-1]);
                     else
                         pypilot_set('profile', cur_profile);
@@ -229,7 +229,7 @@ $(document).ready(function() {
                     for(var p in profiled_values) {
                         text.push('[profile="' + p + '"]');
                         for(var name in profiled_values[p])
-                            text.push(name + '=' + profiled_values[profile][name]);
+                            text.push(name + '=' + JSON.stringify(profiled_values[p][name]));
                     }
 
                     function saveTextFile(text, filename) {
