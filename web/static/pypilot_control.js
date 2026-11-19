@@ -290,6 +290,10 @@ $(document).ready(function() {
             var initial_profile = profile;
             var cur_profile = null;
             var tries = 0;
+            function failImport(message) {
+                pypilot_set('profile', initial_profile);
+                alert(message);
+            }
             function import_profiles(lines) {
                 while(lines.length) {
                     line = lines.shift();
@@ -304,7 +308,7 @@ $(document).ready(function() {
                         if(name.slice(1) == 'profile') {
                             const m = data.match(/"([^"]*)"/);
                             if(!m) {
-                                alert(_("Malformed profile config!"));
+                                failImport(_("Malformed profile config!"));
                                 return;
                             }
 
@@ -314,15 +318,20 @@ $(document).ready(function() {
                             setTimeout(import_profiles, 0, lines);
                             return;
                         } else {
-                            alert(_("Malformed profile config!"));
+                            failImport(_("Malformed profile config!"));
                             return;
                         }
                     } else if (cur_profile != null) {
-                        if(cur_profile == profile)
-                            pypilot_set(name, data);
-                        else {
+                        if(cur_profile == profile) {
+                            try {
+                                pypilot_set(name, JSON.parse(data));
+                            } catch (error) {
+                                failImport(_("Malformed profile config!"));
+                                return;
+                            }
+                        } else {
                             if(tries > 150)
-                                alert(_('Failed to import profiles'));
+                                failImport(_('Failed to import profiles'));
                             else {
                                 lines.unshift(line);
                                 tries++;
