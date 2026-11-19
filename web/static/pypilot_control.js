@@ -155,14 +155,14 @@ $(document).ready(function() {
 
         $('#add_profile').off('click');
         $('#add_profile').click(function(event) {
-            profile = prompt(_("Enter profile name."));
-            if(profile != null) {
-                if(profiles.includes(profile))
-                    alert("Already have profile " + profile);
+            var new_profile = prompt(_("Enter profile name."));
+            if(new_profile != null) {
+                if(profiles.includes(new_profile))
+                    alert("Already have profile " + new_profile);
                 else {
-                    profiles.push(profile);
+                    profiles.push(new_profile);
                     //pypilot_set('profiles', profiles);
-                    pypilot_set('profile', profile);
+                    pypilot_set('profile', new_profile);
                 }
             }
         });
