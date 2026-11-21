@@ -7,6 +7,7 @@ import ast
 import math
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 from pypilot import sensors
@@ -33,6 +34,7 @@ class Client:
 @pytest.mark.parametrize('initial,water,expected', [
     ('none', True, 'water+wind'), ('none', False, 'gps+wind'),
     ('gps+wind', True, 'water+wind'), ('water+wind', False, 'gps+wind'),
+    ('water+wind', True, 'water+wind'), ('gps+wind', False, 'gps+wind'),
     ('serial', True, 'serial'), ('signalk', False, 'signalk'),
 ])
 def test_synthetic_source_tracks_current_speed_provider(initial, water, expected):
@@ -60,7 +62,12 @@ def test_synthetic_source_tracks_current_speed_provider(initial, water, expected
     ap.wind_compass_offset = HeadingOffset('wind.offset')
     ap.true_wind_compass_offset = HeadingOffset('truewind.offset')
     ap.wind_offset_filter = SensorValue('filter', 0.1)
-    ap.compute_offsets()
+    with patch.object(truewind.source, 'update', wraps=truewind.source.update) as update:
+        ap.compute_offsets()
+        if initial == expected:
+            update.assert_not_called()
+        else:
+            update.assert_called_once_with(expected)
     assert truewind.source.value == expected
     if initial in ('serial', 'signalk'):
         assert truewind.direction.value == 120
