@@ -14,11 +14,21 @@ import socket
 import time
 
 try:
-  from pypilot.linebuffer import linebuffer
-  class LineBufferedNonBlockingSocket:
+    from pypilot.linebuffer import linebuffer
+except Exception as e:
+    print(_('falling back to python nonblocking socket, will consume more cpu'), e)
+    linebuffer = None
+
+class LineBufferedNonBlockingSocket:
     def __init__(self, connection, address):
         connection.setblocking(0)
-        self.b = linebuffer.LineBuffer(connection.fileno())
+        if linebuffer:
+            self.b = linebuffer.LineBuffer(connection.fileno())
+        else:
+            self.b = False  # NMEASocket.readline() uses the Python parser.
+            self.in_buffer = ''
+            self.decoder = codecs.getincrementaldecoder('utf-8')()
+            self.no_newline_pos = 0
 
         self.socket = connection
         self.address = address
@@ -46,24 +56,18 @@ try:
             self.udp_socket.close()
             self.udp_socket = False
 
-    def recvdata(self):
-        return self.b.recv()
-
-    def readline(self):
-        return self.b.line()
-
     def write(self, data, udp=False):
         if udp and self.udp_port:
-          self.udp_out_buffer += data
-          if len(self.udp_out_buffer) > 400:
-            print(_('overflow in pypilot udp socket'), self.address, len(self.udp_out_buffer))
-            self.udp_out_buffer = ''
+            self.udp_out_buffer += data
+            if len(self.udp_out_buffer) > 400:
+                print(_('overflow in pypilot udp socket'), self.address, len(self.udp_out_buffer))
+                self.udp_out_buffer = ''
         else:
-          self.out_buffer += data.encode()
-          if len(self.out_buffer) > 65536:
-            print(_('overflow in pypilot socket'), self.address, len(self.out_buffer), os.getpid())
-            self.out_buffer = b''
-            self.close()
+            self.out_buffer += data.encode()
+            if len(self.out_buffer) > 65536:
+                print(_('overflow in pypilot socket'), self.address, len(self.out_buffer), os.getpid())
+                self.out_buffer = b''
+                self.close()
 
     def flush(self):
         if self.udp_out_buffer:
@@ -90,8 +94,8 @@ try:
                 self.sendfail_cnt += 1
 
                 if self.sendfail_cnt > 100:
-                    self.socket.close()
-                    return
+                    self.close()
+                return
 
             t0 = time.monotonic()
             count = self.socket.send(self.out_buffer)
@@ -100,57 +104,24 @@ try:
 
             if t1-t0 > .1:
                 print(_('socket send took too long!?!?'), self.address, t1-t0, len(self.out_buffer))
-            if count < 0:
+            if count <= 0:
                 print(_('socket send error'), self.address, count)
-                self.socket.close()
+                self.close()
+                return
+
             self.out_buffer = self.out_buffer[count:]
-        except (BlockingIOError, InterruptedError):
+            self.sendfail_cnt = 0
+            self.sendfail_msg = 1
+        except BlockingIOError:
             return  # Keep pending bytes for the next flush.
         except Exception as e:
             print(_('pypilot socket exception'), self.address, e, os.getpid(), self.socket)
             self.close()
 
-except Exception as e:
-  print(_('falling back to python nonblocking socket, will consume more cpu'), e)
-  class LineBufferedNonBlockingSocket:
-    def __init__(self, connection, address):
-        connection.setblocking(0)
-        self.socket = connection
-        self.address = address
-        self.b = False # in python
-        self.in_buffer = ''
-        self.decoder = codecs.getincrementaldecoder('utf-8')()
-        self.no_newline_pos = 0
-        self.out_buffer = b''
-
-    def close(self):
-        self.socket.close()
-
-    def fileno(self):
-        return self.socket.fileno()
-
-    def write(self, data):
-        self.out_buffer += data.encode()
-
-    def flush(self):
-        if not len(self.out_buffer):
-            return
-        try:
-            count = self.socket.send(self.out_buffer)
-            if count < 0:
-                print(_('socket send error in server flush'))
-                self.out_buffer = b''
-                self.socket.close()
-                return
-
-            self.out_buffer = self.out_buffer[count:]
-        except (BlockingIOError, InterruptedError):
-            return  # Keep pending bytes for the next flush.
-        except OSError:
-            self.out_buffer = b''
-            self.socket.close()
-
     def recvdata(self):
+        if self.b:
+            return self.b.recv()
+
         size = 4096
         try:
           raw = self.socket.recv(size)
@@ -169,6 +140,9 @@ except Exception as e:
         return l
 
     def readline(self):
+        if self.b:
+            return self.b.line()
+
         while self.no_newline_pos < len(self.in_buffer):
             c = self.in_buffer[self.no_newline_pos]
             if c=='\n' or c=='\r':

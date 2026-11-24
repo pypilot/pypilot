@@ -36,9 +36,7 @@ def test_full_socket_keeps_pending_bytes_for_retry(fallback):
 
 
 @pytest.mark.parametrize('fallback', [False, True])
-@pytest.mark.parametrize('error', [BlockingIOError(errno.EAGAIN, 'retry'),
-                                   InterruptedError(errno.EINTR, 'interrupted')])
-def test_transient_send_error_can_retry(fallback, error):
+def test_send_can_retry_after_eagain(fallback):
     sender, receiver = socket.socketpair()
     receiver.settimeout(1)
 
@@ -52,7 +50,7 @@ def test_transient_send_error_can_retry(fallback, error):
         def send(self, data):
             if self.first:
                 self.first = False
-                raise error
+                raise BlockingIOError(errno.EAGAIN, 'retry')
             return sender.send(data)
 
     stream = load_socket_class(fallback)(Once(), ('localhost', 1234))

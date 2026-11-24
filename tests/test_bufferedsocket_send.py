@@ -1,4 +1,4 @@
-"""Real socket pairs with a wrapper limiting each send to a few bytes."""
+"""Buffered socket output over local stream and datagram sockets."""
 import builtins
 import importlib.util
 from pathlib import Path
@@ -59,3 +59,22 @@ def test_partial_send_preserves_message(fallback, limit, message):
     finally:
         stream.close()
         receiver.close()
+
+
+@pytest.mark.parametrize('fallback', [False, True])
+def test_watch_uses_udp_only_after_port_is_set(fallback):
+    sender, receiver = socket.socketpair()
+    with sender, receiver, socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp:
+        udp.bind(('127.0.0.1', 0))
+        udp.settimeout(1)
+        receiver.settimeout(1)
+        stream = load_socket_class(fallback)(sender, ('127.0.0.1', 1234))
+        try:
+            stream.write('heading=1\n', True)
+            stream.udp_port = udp.getsockname()[1]
+            stream.write('heading=2\n', True)
+            stream.flush()
+            assert receiver.recv(1024) == b'heading=1\n'
+            assert udp.recv(1024) == b'heading=2\n'
+        finally:
+            stream.close()
