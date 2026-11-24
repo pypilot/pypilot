@@ -555,7 +555,7 @@ class Servo:
     def close_driver(self):
         #print('servo lost connection')
         self.controller.update('none')
-        self.sensors.rudder.update(False)
+        self.sensors.rudder.reset()
 
         # for unknown reasons setting timeout to 0 here (already 0)
         # makes device.close() take only .001 seconds instead of .02 seconds
