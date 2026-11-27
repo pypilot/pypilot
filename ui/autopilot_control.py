@@ -66,7 +66,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         self.client = False
 
         self.mode = 'compass'
-        self.heading_command = 0
         self.heading = 0
         self.lastcommand = False
         self.recv = {}
@@ -317,7 +316,6 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
                     n += 1
             elif name == 'ap.heading_command':
                 self.stHeadingCommand.SetLabel('%.1f' % value)
-                self.heading_command = value
             elif name == 'ap.pilot':
                 self.cPilot.SetStringSelection(value)
                 self.enumerate_gains()
@@ -418,10 +416,7 @@ class AutopilotControl(autopilot_control_ui.AutopilotControlBase):
         else:
             return
 
-        if 'wind' in self.mode:
-            command = -command
-        self.heading_command += command
-        self.client.set('ap.heading_command', self.heading_command)
+        self.client.set('ap.heading_command_delta', command)
 
     def onCommandMouseDown( self, event ):
         if self.apenabled:
