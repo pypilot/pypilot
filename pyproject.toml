@@ -36,6 +36,7 @@ dependencies = [
 
 [project.optional-dependencies]
 optimize = ["ujson", "pyudev", "inotify"]
+gps = ["pygeomag>=1.1"]
 signalk = ["zeroconf", "requests", "websocket-client"]
 hat = ["pillow", "gpiod"]
 web = [

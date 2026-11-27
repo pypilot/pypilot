@@ -39,7 +39,7 @@ class Sensor:
            data['device'] != self.device:
             return False
 
-        if not self.update(data):
+        if not self.update(data, source):
             return False
 
         if self.source.value != source:
@@ -53,7 +53,7 @@ class Sensor:
     def reset(self):
         raise NotImplementedError('reset should be overloaded')
 
-    def update(self, data):
+    def update(self, data, source=None):
         raise NotImplementedError('update should be overloaded')
 
     def register(self, _type, name, *args, **kwargs):
@@ -74,7 +74,7 @@ class BaseWind(Sensor):
         self.filter_constant = self.register(RangeProperty, 'filter_constant', 0.1, 0.01, 1.0, persistent=True)
         self.filter_factor = self.register(SensorValue, 'filter_factor')
 
-    def update(self, data):
+    def update(self, data, source=None):
         if 'direction' in data:
             data['direction'] += self.offset.value
 
@@ -178,7 +178,7 @@ class APB(Sensor):
         self.pending_command = None
         self.xte.update(0)
 
-    def update(self, data):
+    def update(self, data, source=None):
         t = time.monotonic()
         if t - self.last_time < .5: # only accept apb update at 2hz
             return False
@@ -228,7 +228,7 @@ class gps(Sensor):
 
         self.rate.set(1.0)
 
-    def update(self, data):
+    def update(self, data, source=None):
         if 'fix' in data: # flatten if needed
             data.update(data['fix'])
             del data['fix']
@@ -239,7 +239,7 @@ class gps(Sensor):
             self.declination.set(data['declination'])
 
         self.fix.set(data)
-        self.filtered.update(data, time.monotonic())
+        self.filtered.update(data, time.monotonic(), source)
 
         if self.alignmentCounter.value > 0 and 'track' in data:
             # Reset the circular average when a new alignment is initiated.
@@ -281,7 +281,7 @@ class gps(Sensor):
         accel = ap.boatimu.SensorValues['accel'].value
         fusionQPose = ap.boatimu.SensorValues['fusionQPose'].value
         if accel and fusionQPose:
-            self.filtered.predict(accel, fusionQPose, time.monotonic())
+            self.filtered.predict(accel, fusionQPose, ap.boatimu.lasttimestamp)
 
     def reset(self):
         self.track.set(False)
@@ -305,7 +305,7 @@ class Water(Sensor):
         self.water_wind_speed = self.register(SensorValue, 'wind.speed')
         self.water_wind_direction = self.register(SensorValue, 'wind.direction')
 
-    def update(self, data):
+    def update(self, data, source=None):
         t = time.monotonic()
         if 'speed' not in data and 'leeway' not in data:
             return False

@@ -13,7 +13,7 @@ class StubValue:
 
 
 class StubFiltered:
-    def update(self, _data, _timestamp):
+    def update(self, _data, _timestamp, _source):
         pass
 
 

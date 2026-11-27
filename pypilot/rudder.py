@@ -198,7 +198,7 @@ class Rudder(Sensor):
             self.calibration(self.calibration_state.value)
             self.calibration_state.set('idle')
 
-    def update(self, data):
+    def update(self, data, source=None):
         if not data:
             self.reset()
             return False
