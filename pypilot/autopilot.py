@@ -36,34 +36,149 @@ from server import pypilotServer
 from values import *
 from version import strversion
 
+AUTOPILOT_MODES = ['compass', 'gps', 'nav', 'wind', 'true wind']
+
+def exclusive_gps_nav_mode(preferred, modes):
+    """GPS and NAV share one selection when only one of them is offered."""
+    if preferred == 'gps' and 'gps' not in modes and 'nav' in modes:
+        return 'nav'
+    if preferred == 'nav' and 'nav' not in modes and 'gps' in modes:
+        return 'gps'
+    return preferred
+
+class ModeValue(Value):
+    def __init__(self, name):
+        super().__init__(name, 'compass', persistent=True)
+
+    def set(self, value):
+        if value in AUTOPILOT_MODES:
+            super().set(value)
+
 class ModeProperty(EnumProperty):
-    def __init__(self, name, ap):
-        self.ap = ap
-        super().__init__(name, 'compass', ['compass', 'gps', 'nav', 'wind', 'true wind'], persistent=True)
+    def __init__(self, name, preferred):
+        self.preferred = preferred
+        initial = 'compass'
+        super().__init__(name, initial, AUTOPILOT_MODES)
+        super().set(initial)
+        self.pending_mode = None
 
     def set(self, value):
         # update the preferred mode when the mode changes from user
-        self.ap.preferred_mode.update(value)
-        self.ap.preferred_mode.command = None
+        if not value in self.choices:
+            return
+        self.preferred.update(value)
         super().set(value)
+        self.pending_mode = value
 
-    def set_internal(self, value):
-        super().set(value)
+    def update_internal(self, value):
+        self.automatic = value != self.pending_mode
+        if value != self.value:
+            super().set(value)
+        self.pending_mode = None
 
 class HeadingProperty(RangeProperty):
     def __init__(self, name, mode):
         self.mode = mode
+        self.pending_delta = 0
         super().__init__(name, 0, -180, 360)
+        self.command_mode = None      # the current mode when the command was set
+        self.last_user_command = None # (mode, accepted heading, monotonic time that mode was lost)
 
-    # +-180 for wind modes 0-360 for compass and gps modes
+    def set(self, value):
+        if self.internal_set(value, self.mode.pending_mode):
+            self.pending_delta = 0  # An explicit heading supersedes earlier relative commands.
+            self.last_user_command = self.command_mode, self.value, None
+
+    def apply_delta(self, windmode):
+        delta = self.pending_delta
+        if delta:  # Positive is starboard in every mode.
+            self.set(self.value - delta if windmode else self.value + delta)
+
+    @staticmethod
+    def _degrees(value, mode):
+        try:
+            # +-180 for wind modes 0-360 for compass and gps modes
+            value = resolv(math.fmod(float(value), 360), 0 if 'wind' in mode else 180)
+            return round(value*10)/10
+        except (TypeError, ValueError, OverflowError):
+            return None
+
+    def _set_target(self, degrees, mode):
+        super().set(degrees)
+        self.command_mode = mode
+
+    def internal_set(self, value, mode=None):
+        mode = mode or self.mode.value
+        degrees = self._degrees(value, mode)
+        if degrees is None:
+            return False
+        self._set_target(degrees, mode)
+        return True
+
+    def handover(self, heading, error, t):
+        mode = self.mode.value
+        if self.last_user_command is not None:
+            saved_mode, target, lost_at = self.last_user_command
+            if mode != saved_mode and lost_at is None:
+                self.last_user_command = saved_mode, target, t
+            elif mode == saved_mode and lost_at is not None:
+                if self.mode.automatic and t - lost_at < 30: # restore the exact command for 30 seconds after losing its mode
+                    if self.command_mode != mode:
+                        self._set_target(target, mode)  # Already rounded in this mode, restore it
+                    self.last_user_command = saved_mode, target, None
+                else:
+                    self.last_user_command = None
+
+        # A client may already have sent a heading after its mode command.
+        if self.command_mode != mode:
+            self.internal_set(heading + error if 'wind' in mode else heading - error)
+
+    def adjust_compass(self, change):
+        if self.command_mode == 'compass':
+            # This target still belongs to compass even if a mode change is pending.
+            corrected = self._degrees(self.value + change, 'compass')
+            if corrected is not None:
+                super().set(corrected)
+        if self.last_user_command and self.last_user_command[0] == 'compass':
+            mode, target, lost_at = self.last_user_command
+            corrected = self._degrees(target + change, mode)
+            if corrected is not None:
+                self.last_user_command = mode, corrected, lost_at
+
+class HeadingDeltaProperty(Property):
+    def __init__(self, name, heading_command):
+        self.heading_command = heading_command
+        super().__init__(name, 0)
+
     def set(self, value):
         try:
-            value = resolv(float(value), 0 if 'wind' in self.mode.value else 180)
-            # set to tenth of degree
-            value = round(value*10)/10
+            delta = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return
+        if isinstance(value, bool) or not math.isfinite(delta):
+            return
+        self.heading_command.pending_delta += math.fmod(delta, 360)
+        super().set(delta)  # The published value is the last individual request.
+
+class PilotProperty(EnumProperty):
+    def __init__(self, name, ap):
+        self.ap = ap
+        initial = 'basic'
+        super().__init__(name, initial, list(ap.pilots))
+        super().set(initial)
+
+    def set(self, value):
+        if not value in self.choices:
+            return
+        self.ap.preferred_pilots.update(self.ap.mode.value, value)
+            
+        # could set a flag here instead and set it on update internal
+        # if we dont want to publish attempted pilot changes
+        super().set(value)
+
+    def update_internal(self, value):
+        if self.value != value:
             super().set(value)
-        except Exception:
-            pass # ignore for now
 
 class TimeStamp(SensorValue):
     def __init__(self):
@@ -101,10 +216,8 @@ class Autopilot:
         self.version = self.register(Value, 'version', 'pypilot' + ' ' + strversion)
         self.timestamp = self.client.register(TimeStamp())
         self.starttime = time.monotonic()
-        self.preferred_mode = self.register(Value, 'preferred_mode', 'compass')
-        self.preferred_mode.command = None
-
-        self.mode = self.register(ModeProperty, 'mode', self)
+        self.preferred_mode = self.register(ModeValue, 'preferred_mode')
+        self.mode = self.register(ModeProperty, 'mode', self.preferred_mode)        
         self.modes = self.register(JSONValue, 'modes', [])
         self.modes.sensors = {}
         self.gps_and_nav_modes = self.register(BooleanProperty, 'gps_and_nav_modes', True, persistent=True)
@@ -112,6 +225,7 @@ class Autopilot:
         self.lastmode = False
 
         self.heading_command = self.register(HeadingProperty, 'heading_command', self.mode)
+        self.heading_command_delta = self.register(HeadingDeltaProperty, 'heading_command_delta', self.heading_command)
         self.enabled = self.register(BooleanProperty, 'enabled', False)
         self.lastenabled = False
 
@@ -136,9 +250,9 @@ class Autopilot:
             except Exception as e:
                 print(_('failed to load pilot'), pilot_type, e)
 
-        pilot_names = list(self.pilots)
-        print(_('Available Pilots') + ':', pilot_names)
-        self.pilot = self.register(EnumProperty, 'pilot', 'basic', pilot_names, persistent=True, profiled=True)
+        print(_('Available Pilots') + ':', list(self.pilots))
+        self.preferred_pilots = self.register(DictionaryValue, 'preferred_pilots', {}, [str], profiled='immediate')
+        self.pilot = self.register(PilotProperty, 'pilot', self)
 
         self.tack = tacking.Tack(self)
 
@@ -227,16 +341,50 @@ class Autopilot:
     def register(self, _type, name, *args, **kwargs):
         return self.client.register(_type(*(['ap.' + name] + list(args)), **kwargs))
 
-    def adjust_mode(self, pilot):
-        # if the mode must change
-        newmode = pilot.best_mode(self.preferred_mode.value)
-        if self.mode.value != newmode:
-            # remember the command on the preferred mode so it can be restored
-            if self.mode.value == self.preferred_mode.value:
-                self.preferred_mode.command = self.heading_command.value
-                self.preferred_mode.time = time.monotonic()
-            self.mode.set_internal(newmode)
+    def update_modes(self):
+        sensors = self.sensors
+        gps = sensors.gps.source.value != 'none'
+        wind = sensors.wind.source.value != 'none'
+        modes = ['compass'] # for now always offer compass mode
+        if gps:
+            nav = sensors.apb.source.value != 'none'
+            if self.gps_and_nav_modes.value or not nav:
+                modes.append('gps')
+            if nav:
+                modes.append('nav')
+        if wind:
+            modes.append('wind')
 
+        # A synthesized source can outlive its inputs until the sensor timeout.
+        source = sensors.truewind.source.value
+        if source == 'gps+wind':
+            truewind = gps and wind
+        elif source == 'water+wind':
+            truewind = wind and sensors.water.source.value != 'none'
+        else:
+            truewind = source != 'none'
+        if truewind:
+            modes.append('true wind')
+        self.modes.update(modes)
+
+    def resolve_pilot(self):
+        mode = self.preferred_mode.value
+        if not self.gps_and_nav_modes.value:
+            mode = exclusive_gps_nav_mode(mode, self.modes.value)            
+            self.preferred_mode.update(mode)
+
+        preferred_pilots = self.preferred_pilots.value
+        basic = self.pilots['basic']
+        seen = set()
+        while mode not in seen:
+            seen.add(mode)
+            pilot = self.pilots.get(preferred_pilots.get(mode), basic).best_pilot()
+            mode = pilot.best_mode(mode)
+        # If different pilots form a cycle, keep the pilot that offered this mode.
+        self.pilot.update_internal(pilot.name)
+        self.mode.update_internal(mode)
+        return pilot
+            
     def compute_offsets(self):
         # compute difference between compass to gps and compass to wind
         compass = self.boatimu.SensorValues['heading_lowpass'].value
@@ -246,9 +394,10 @@ class Autopilot:
             self.gps_speed = (1-d)*self.gps_speed + d*gps_speed
             if gps_speed > 1: # don't update gps offset below 1 knot
                 gps_track  = self.sensors.gps.track.value
-                # weight gps compass offset higher with more gps speed
-                d = .005*math.log(self.gps_speed + 1)
-                self.gps_compass_offset.update(gps_track - compass, d)
+                if gps_track is not False:
+                    # weight gps compass offset higher with more gps speed
+                    d = .005*math.log(self.gps_speed + 1)
+                    self.gps_compass_offset.update(gps_track - compass, d)
 
         if self.sensors.wind.source.value != 'none':
             offset = resolv(self.sensors.wind.filtered_direction.value + compass, self.wind_compass_offset.value)
@@ -279,7 +428,7 @@ class Autopilot:
         # update the autopilot command so the course remains constant
         self.compass_change = 0
         if data:
-            if 'compass_calibration_updated' in data and self.last_heading:
+            if 'compass_calibration_updated' in data and self.last_heading is not False:
                 # with compass calibration updates, adjust the compass offset to hold the same course
                 # to prevent actual course change
                 last_heading = resolv(self.last_heading, data['heading'])
@@ -297,9 +446,8 @@ class Autopilot:
             self.gps_compass_offset.value -= self.compass_change
             self.wind_compass_offset.value += self.compass_change
             self.true_wind_compass_offset.value += self.compass_change
-            if self.mode.value == 'compass' and self.enabled.value:
-                heading_command = self.heading_command.value + self.compass_change
-                self.heading_command.set(resolv(heading_command, 180))
+            if self.enabled.value:
+                self.heading_command.adjust_compass(self.compass_change)
             # reset feed-forward gain
             self.heading_command_rate.time = 0
 
@@ -308,19 +456,12 @@ class Autopilot:
         windmode = 'wind' in self.mode.value
 
         # keep same heading if mode changes
-        if self.mode.value != self.lastmode:
-            # restore preferred mode command (for example if the sensor is lost then restored)
-            if self.mode.value == self.preferred_mode.value and \
-               self.preferred_mode.command is not None and t-self.preferred_mode.time < 30:
-                self.heading_command.set(self.preferred_mode.command)
-            else:
-                error = self.heading_error.value
-                if windmode:
-                    error = -error # wind error is reversed
-                self.heading_command.set(heading - error)
-
+        if self.mode.value != self.lastmode or self.heading_command.command_mode != self.mode.value:
+            self.heading_command.handover(heading, self.heading_error.value, t)
             self.lastmode = self.mode.value
 
+        # Apply relative commands to the target in the resolved mode.
+        self.heading_command.apply_delta(windmode)
         # compute heading error
         heading_command = self.heading_command.value
 
@@ -332,7 +473,7 @@ class Autopilot:
             err = -30
 
         # since wind direction is where the wind is from, the sign is reversed
-        if 'wind' in self.mode.value:
+        if windmode:
             err = -err
         self.heading_error.set(err)
 
@@ -399,32 +540,9 @@ class Autopilot:
 
         self.fix_compass_calibration_change(data, t0)
         self.compute_offsets()
-
-        pilot = self.pilots[self.pilot.value] # select pilot
-
-        # compute available modes
-        s = self.sensors
-        sensors = {'gps': s.gps, 'apb': s.apb, 'wind': s.wind, 'truewind': s.truewind}
-        for sensor in sensors:
-            sensors[sensor] = sensors[sensor].source.value != 'none'
-        sensors['gps_and_nav_modes'] = self.gps_and_nav_modes.value
-        if sensors != self.modes.sensors: # available modes changed?
-            self.modes.sensors = sensors
-            modes = ['compass']
-            if sensors['gps']:
-                if self.gps_and_nav_modes.value:
-                    modes.append('gps')
-                elif not sensors['apb']:
-                    modes.append('gps')
-                if sensors['apb']:
-                    modes.append('nav')
-            if sensors['wind']:
-                modes.append('wind')
-            if sensors['truewind']:
-                modes.append('true wind')
-            self.modes.update(modes)
-
-        self.adjust_mode(pilot)
+        self.update_modes()
+        pilot = self.resolve_pilot()
+        self.sensors.apb.apply_command(self)
         pilot.compute_heading()
         self.compute_heading_error(t0)
 

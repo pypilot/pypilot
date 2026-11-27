@@ -24,12 +24,11 @@ class AbsolutePilot(AutopilotPilot):
     self.PosGain('D', .05, .5)
     self.PosGain('FF',  0, 1)
 
+  def best_pilot(self):
+    return self.ap.pilots['basic'] if self.ap.sensors.rudder.invalid() else self
+
   def process(self):
     ap = self.ap
-
-    if type(ap.sensors.rudder.angle.value) == bool:
-        ap.pilot.set('basic') # fall back to basic pilot if rudder feedback fails
-        return
 
     headingrate = ap.boatimu.SensorValues['headingrate_lowpass'].value
     gain_values = {'P': ap.heading_error.value,

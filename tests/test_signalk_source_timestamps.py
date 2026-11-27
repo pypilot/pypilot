@@ -30,6 +30,8 @@ def test_converted_gps_fix_keeps_its_own_source_time():
     obj = signalk.signalk.__new__(signalk.signalk)
     obj.signalk_values = {}
     obj.signalk_last_msg_time = {}
+    obj.last_gps_fix = {}
+    obj.server_clock_offset = None
     for source, second in [('a', 0), ('b', 1)]:
         obj.receive_signalk(json.dumps({'updates': [{'$source': source,
             'timestamp': f'2026-07-15T12:00:0{second}Z',
@@ -63,6 +65,35 @@ def test_converted_gps_fix_keeps_its_own_source_time():
     assert [data['device'] for data in gps] == ['asignalk', 'bsignalk']
     expected = datetime(2026, 7, 15, 12, tzinfo=timezone.utc).timestamp()
     assert [data['timestamp'] for data in gps] == [expected, expected + 1]
+
+
+def test_stopped_fix_and_separately_delivered_course():
+    obj = signalk.signalk.__new__(signalk.signalk)
+    obj.signalk_values = {}
+    obj.signalk_last_msg_time = {}
+    obj.last_gps_fix = {}
+    obj.server_clock_offset = None
+
+    def fix(second, fields):
+        obj.receive_signalk(json.dumps({'updates': [{'$source': 'receiver',
+            'timestamp': f'2026-07-15T12:00:{second:02}Z',
+            'values': [{'path': 'navigation.' + name, 'value': value}
+                       for name, value in fields.items()]}]}))
+        return obj.gps_fix('receiver', obj.signalk_values['receiver'])
+
+    pos = {'latitude': 0, 'longitude': 0}
+    stopped = fix(0, {'position': pos, 'speedOverGround': 0})
+    assert stopped['speed'] == 0 and 'track' not in stopped
+    assert stopped['lat'] == stopped['lon'] == 0
+    assert obj.gps_fix('receiver', obj.signalk_values['receiver']) is None
+    assert fix(0, {'courseOverGroundTrue': 0})['track'] == 0
+    fresh = fix(1, {'position': pos})
+    assert 'track' not in fresh and fresh['speed'] == 0
+    assert fix(1, {'speedOverGround': signalk.meters_s})['speed'] == 1
+    assert fix(2, {'position': {'latitude': None, 'longitude': 2}}) is None
+    obj.receive_signalk(json.dumps({'self': 'vessels.example', 'version': '1.0.0',
+                                    'timestamp': '2026-07-15T12:00:45Z'}))
+    assert fix(3, {'position': pos, 'speedOverGround': 2}) is None
 
 
 def test_resubscribing_clears_all_sources_for_that_sensor():

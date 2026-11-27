@@ -88,11 +88,8 @@ class ActionHeading(Action):
 
         if self.hat.last_msg['ap.enabled']:
             if not count: # only do something if a key is released
-                off = self.offset
-                if 'wind' in self.hat.last_msg['ap.mode']:
-                    off = -off
-                self.hat.client.set('ap.heading_command',
-                                    int(self.hat.last_msg['ap.heading_command']) + off)
+                self.hat.client.set('ap.heading_command_delta', self.offset)
+
         elif count >= 0: # manual mode
             if count:
                 self.hat.servo_timeout = time.monotonic() + .5

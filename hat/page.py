@@ -529,33 +529,13 @@ class control(controlbase):
         self.control = {} # used to keep track of what is drawn on screen to avoid redrawing it
         self.lastspeed = 0
         self.lasttime = 0
-        self.ap_heading_command_time = gettime()-5
-        self.ap_heading_command = 0
         self.resetmanualkeystate()
-        self.tack_hint = 0, ''
 
     def get_ap_heading_command(self):
-        if gettime() - self.ap_heading_command_time < 5:
-            return self.ap_heading_command
         return self.last_val('ap.heading_command', default='   ')
 
-    def set_ap_heading_command(self, command):
-        if 'wind' in self.control['mode']:
-            d = -180
-        else:
-            d = 0
-        while command < d:
-            command += 360
-        while command >= d+360:
-            command -= 360
-        self.set('ap.heading_command', command)
-        self.ap_heading_command = command
-        self.ap_heading_command_time = gettime()
-
     def resetmanualkeystate(self, k=0):
-        self.manualkeystate = {'key': k,
-                               'command': self.get_ap_heading_command(),
-                               'change': 0}
+        self.manualkeystate = {'key': k, 'change': 0}
 
     def display_mode(self):
         mode = self.last_val('ap.mode')
@@ -776,7 +756,7 @@ class control(controlbase):
             self.lcd.reset_keys()
 
             if self.last_val('ap.enabled') == False:
-                self.set_ap_heading_command(self.last_val('ap.heading'))
+                self.set('ap.heading_command', self.last_val('ap.heading'))
                 self.set('ap.enabled', True)
             else:
                 self.set('servo.command', 0) # stop
@@ -831,17 +811,11 @@ class control(controlbase):
                     if dt > 1:
                         change = self.lcd.config['bigstep']*int(dt)
 
-                # update exact heading change if it is now different
-                if self.manualkeystate['change'] != change:
+                previous = self.manualkeystate['change']
+                if change != previous:
                     self.manualkeystate['change'] = change
                     sign = keys[key][1]
-                    if 'wind' in self.control['mode']:
-                        sign = -sign
-
-                    change = float(change)
-                    cmd = int(self.manualkeystate['command']) + sign*change
-                    self.tack_hint = time.monotonic(), sign
-                    self.set_ap_heading_command(cmd)
+                    self.set('ap.heading_command_delta', sign * (change - previous))
 
         else: # manual control
             speed = self.speed_of_keys()

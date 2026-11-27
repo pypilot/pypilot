@@ -75,3 +75,28 @@ def test_synthetic_source_tracks_current_speed_provider(initial, water, expected
     else:
         assert truewind.speed.value == pytest.approx(
             sensors.TrueWind.compute_true_wind_speed(5 if water else 4, 10, 45))
+
+
+@pytest.mark.parametrize('speed,previous_track,adjust', [
+    (0, 45, False), (1, 45, False), (4, False, False), (4, 45, True), (4, 0, True),
+])
+def test_gps_offset_after_fix_without_course(speed, previous_track, adjust):
+    cls = autopilot_class()
+    ap = cls.__new__(cls)
+    ap.server = SimpleNamespace(__del__=lambda: None)
+    ap.watchdog_device = False
+    ap.boatimu = SimpleNamespace(SensorValues={'heading_lowpass': SensorValue('heading', 90)})
+    absent = SimpleNamespace(source=StringValue('source', 'none'))
+    with patch.object(sensors, 'GPSFilterProcess'):
+        gps = sensors.gps(Client())
+    gps.source.set('signalk')
+    if previous_track is not False:
+        gps.update({'speed': 4, 'track': previous_track})
+    gps.update({'speed': speed})
+    assert 'track' not in gps.fix.value
+    ap.sensors = SimpleNamespace(gps=gps, wind=absent, truewind=absent)
+    ap.gps_speed = 4
+    ap.gps_compass_offset = HeadingOffset('gps.offset')
+    ap.gps_compass_offset.set(12)
+    ap.compute_offsets()
+    assert (ap.gps_compass_offset.value != 12) == adjust

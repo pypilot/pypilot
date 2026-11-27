@@ -10,10 +10,17 @@ as a builtin by `pypilot/gettext_loader.py`. For test purposes we install
 an identity function so modules can import even when no locale data is
 available.
 """
+import atexit
 import builtins
+from contextlib import redirect_stderr, redirect_stdout
+import io
 import os
+import signal
 import sys
 import types
+from unittest.mock import Mock
+
+import pytest
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 _PKG_DIR = os.path.join(_REPO_ROOT, 'pypilot')
@@ -55,3 +62,56 @@ except Exception:
     pkg_shim.linebuffer = linebuffer_shim
     sys.modules['pypilot.linebuffer'] = pkg_shim
     sys.modules['pypilot.linebuffer.linebuffer'] = linebuffer_shim
+
+
+@pytest.fixture
+def make_autopilot(monkeypatch):
+    # autopilot.py detaches stdout and stderr on import. Give it its own streams.
+    with redirect_stdout(io.TextIOWrapper(io.BytesIO())), redirect_stderr(io.TextIOWrapper(io.BytesIO())):
+        import autopilot
+    from pilots.absolute import AbsolutePilot
+    from pilots.basic import BasicPilot
+    from pilots.simple import SimplePilot
+    from pilots.wind import WindPilot
+    from rudder import Rudder
+    from values import Value
+
+    class TestController(autopilot.Autopilot):
+        def __del__(self):
+            # The fixture closes the server; a delayed finalizer can run during another test.
+            pass
+
+    def make(client=None):
+        if client is None:
+            client = types.SimpleNamespace(server=autopilot.pypilotServer(), register=lambda value: value)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(autopilot, 'pypilotClient', lambda *args, **kwargs: client)
+            patch.setattr(autopilot, 'pypilotServer', lambda: client.server)
+            patch.setattr(client.server, 'poll', lambda: None)
+            patch.setattr(autopilot, 'BoatIMU', Mock())
+            patch.setattr(autopilot, 'Sensors', Mock())
+            patch.setattr(autopilot.servo, 'Servo', Mock())
+            patch.setattr(autopilot.pilots, 'default', [BasicPilot, AbsolutePilot, WindPilot, SimplePilot])
+            patch.setattr(os, 'system', lambda cmd: 0)
+            patch.setattr(signal, 'signal', lambda *args: None)
+            patch.setattr(atexit, 'register', lambda callback: None)
+            ap = TestController()
+
+        for name in ('gps', 'apb', 'wind', 'truewind', 'water'):
+            getattr(ap.sensors, name).source = Value('source', 'none')
+        ap.sensors.rudder = Rudder(client)
+        ap.boatimu.SensorValues = {'compass': Value('compass', [1, 2, 3])}
+        ap.update_modes()
+        ap.heading.set(90)
+        ap.heading_error_int_time = 0
+        ap.compute_heading_error(1)
+        assert ap.heading_command.value == 90 and ap.heading_command.last_user_command is None
+        return ap
+
+    return make
+
+
+@pytest.fixture
+def ap(make_autopilot):
+    return make_autopilot()

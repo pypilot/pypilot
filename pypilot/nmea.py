@@ -60,6 +60,8 @@ def check_nmea_cksum(line):
         return False
 
 gps_timeoffset = 0
+
+# I think this is not needed, since there are separate processes not threads??
 _gps_time_lock = threading.Lock()  # guard gps_timeoffset across threads / bridge process parsers
 def parse_nmea_gps(line):
     def degrees_minutes_to_decimal(n):
@@ -508,7 +510,7 @@ class Nmea:
                 self.send_nmea('APXDR,A,%.3f,D,PTCH' % values['imu.pitch'].value)
                 self.send_nmea('APXDR,A,%.3f,D,ROLL' % values['imu.roll'].value)
                 self.send_nmea('APHDM,%.3f,M' % values['imu.heading_lowpass'].value)
-                # IMU rates are degrees/second; NMEA ROT requires degrees/minute.
+                # NMEA ROT is degrees per minute; the IMU reports degrees per second.
                 self.send_nmea('APROT,%.3f,A' % (60 * values['imu.headingrate_lowpass'].value))
                 self.last_imu_time = time.monotonic()
 

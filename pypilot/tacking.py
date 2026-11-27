@@ -169,7 +169,8 @@ class Tack:
             if 100*d > self.threshold.value:
                 self.state.update('none')
                 self.direction.set('none')
-                ap.heading_command.set(tack_heading)
+                ap.heading_command.internal_set(tack_heading)
+                ap.heading_command.last_user_command = None
                 self.count.set(self.count.value + 1)
                 return
 

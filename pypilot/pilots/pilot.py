@@ -62,12 +62,15 @@ class AutopilotPilot:
         elif ap.mode.value == 'compass':
             ap.heading.set(compass)
 
+    def best_pilot(self):
+        """Return a pilot that can steer with the current sensor inputs."""
+        return self
+
+    mode_fallbacks = {'nav': 'gps', 'gps': 'compass', 'wind': 'compass', 'true wind': 'wind'}
+
     # return new mode if sensors don't support it
     def best_mode(self, mode):
         modes = self.ap.modes.value
-        while mode not in modes:
-            fallbacks = {'nav': 'gps', 'gps': 'compass', 'wind': 'compass', 'true wind': 'wind'}
-            if mode not in fallbacks:
-                break
-            mode = fallbacks[mode]
+        while mode not in modes and mode in self.mode_fallbacks:
+            mode = self.mode_fallbacks[mode]
         return mode
